@@ -11,6 +11,7 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.internal.valueAs
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.internal.RPCClient
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
@@ -21,7 +22,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.list
-import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.internal.messaging.CheckpointRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -299,7 +300,7 @@ class InteractiveShellIntegrationTest {
             (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
             alice.rpc.startFlow(::ExternalOperationFlow)
             ExternalOperation.lock.acquire()
-            InteractiveShell.runDumpCheckpoints(alice.rpc as InternalCordaRPCOps)
+            alice.checkpointsRpc.use { InteractiveShell.runDumpCheckpoints(it) }
             ExternalOperation.lock2.release()
 
             val zipFile = (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
@@ -322,7 +323,7 @@ class InteractiveShellIntegrationTest {
             (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
             alice.rpc.startFlow(::ExternalAsyncOperationFlow)
             ExternalAsyncOperation.lock.acquire()
-            InteractiveShell.runDumpCheckpoints(alice.rpc as InternalCordaRPCOps)
+            alice.checkpointsRpc.use { InteractiveShell.runDumpCheckpoints(it) }
             ExternalAsyncOperation.future.complete(null)
             val zipFile = (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
             val json = ZipInputStream(zipFile.inputStream()).use { zip ->
@@ -350,7 +351,7 @@ class InteractiveShellIntegrationTest {
             assertThrows<TimeoutException> {
                 alice.rpc.startFlow(::WaitForStateConsumptionFlow, stateRefs).returnValue.getOrThrow(10.seconds)
             }
-            InteractiveShell.runDumpCheckpoints(alice.rpc as InternalCordaRPCOps)
+            alice.checkpointsRpc.use { InteractiveShell.runDumpCheckpoints(it) }
             val zipFile = (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
             val json = ZipInputStream(zipFile.inputStream()).use { zip ->
                 zip.nextEntry
@@ -390,7 +391,7 @@ class InteractiveShellIntegrationTest {
             Thread.sleep(5000)
 
             mockRenderPrintWriter()
-            InteractiveShell.runDumpCheckpoints(aliceNode.rpc as InternalCordaRPCOps)
+            aliceNode.checkpointsRpc.use { InteractiveShell.runDumpCheckpoints(it) }
 
             val zipFile = (aliceNode.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
             val json = ZipInputStream(zipFile.inputStream()).use { zip ->
@@ -574,4 +575,20 @@ class InteractiveShellIntegrationTest {
             waitForStateConsumption(stateRefs)
         }
     }
+
+    private interface CloseableCheckpointRPCOps : CheckpointRPCOps, AutoCloseable
+
+    private val NodeHandle.checkpointsRpc: CloseableCheckpointRPCOps
+        get() {
+            val user = rpcUsers.first()
+
+            val rpcConnection = RPCClient<CheckpointRPCOps>(rpcAddress).start(CheckpointRPCOps::class.java, user.username, user.password)
+            val proxy = rpcConnection.proxy
+
+            return object : CloseableCheckpointRPCOps, CheckpointRPCOps by proxy {
+                override fun close() {
+                    rpcConnection.close()
+                }
+            }
+        }
 }

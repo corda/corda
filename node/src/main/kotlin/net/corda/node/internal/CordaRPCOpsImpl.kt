@@ -73,7 +73,6 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
-        private val checkpointDumper: CheckpointDumperImpl,
         private val shutdownNode: () -> Unit
 ) : InternalCordaRPCOps, AutoCloseable {
 
@@ -154,8 +153,6 @@ internal class CordaRPCOpsImpl(
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return services.validatedTransactions.track()
     }
-
-    override fun dumpCheckpoints() = checkpointDumper.dumpCheckpoints()
 
     override val attachmentTrustInfos: List<AttachmentTrustInfo>
         get() {

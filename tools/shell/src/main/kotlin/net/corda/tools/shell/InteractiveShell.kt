@@ -26,6 +26,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.messaging.CheckpointRPCOps
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.rootCause
@@ -579,7 +580,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runDumpCheckpoints(rpcOps: InternalCordaRPCOps) {
+    fun runDumpCheckpoints(rpcOps: CheckpointRPCOps) {
         rpcOps.dumpCheckpoints()
     }
 

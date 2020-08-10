@@ -37,6 +37,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
+import net.corda.core.internal.messaging.CheckpointRPCOps
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
@@ -71,6 +72,7 @@ import net.corda.djvm.source.EmptyApi
 import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
+import net.corda.node.internal.checkpoints.CheckpointRPCOpsImpl
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
@@ -402,22 +404,22 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumperImpl): List<RPCOps> {
+    open fun makeRPCOps(cordappLoader: CordappLoader): List<RPCOps> {
         val cordaRPCOpsImpl = Pair(InternalCordaRPCOps::class.java, CordaRPCOpsImpl(
                 services,
                 smm,
-                flowStarter,
-                checkpointDumper
+                flowStarter
         ) {
             shutdownExecutor.submit(::stop)
         }.also { it.closeOnStop() })
 
-        return listOf(cordaRPCOpsImpl).map { rpcOpsImplPair ->
+        val checkpointRPCOpsImpl = Pair(CheckpointRPCOps::class.java, CheckpointRPCOpsImpl(checkpointDumper))
+
+        return listOf(cordaRPCOpsImpl, checkpointRPCOpsImpl).map { rpcOpsImplPair ->
             // Mind that order of proxies is important
             val targetInterface = rpcOpsImplPair.first
             val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(rpcOpsImplPair.second, targetInterface)
-            val stage2Proxy = ThreadContextAdjustingRpcOpsProxy.proxy(stage1Proxy, targetInterface,
-                    cordappLoader.appClassLoader)
+            val stage2Proxy = ThreadContextAdjustingRpcOpsProxy.proxy(stage1Proxy, targetInterface, cordappLoader.appClassLoader)
 
             stage2Proxy
         }
@@ -490,7 +492,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
+        val rpcOps = makeRPCOps(cordappLoader)
         startShell()
         networkMapClient?.start(trustRoot)
 
