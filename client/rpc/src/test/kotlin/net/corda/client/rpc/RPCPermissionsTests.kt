@@ -1,6 +1,8 @@
 package net.corda.client.rpc
 
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
+import net.corda.node.internal.rpc.proxies.RpcAuthHelper.methodFullName
 import net.corda.node.services.rpc.rpcContext
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.RPCDriverDSL
@@ -25,16 +27,17 @@ class RPCPermissionsTests : AbstractRPCTest() {
         fun validatePermission(method: String, target: String? = null)
     }
 
-    class TestOpsImpl : TestOps {
+    private class TestOpsImpl : TestOps {
         override val protocolVersion = 1000
         override fun validatePermission(method: String, target: String?) {
+            val methodFullName = methodFullName(CordaRPCOps::class.java, method)
             val authorized = if (target == null) {
-                rpcContext().isPermitted(method)
+                rpcContext().isPermitted(methodFullName)
             } else {
-                rpcContext().isPermitted(method, target)
+                rpcContext().isPermitted(methodFullName, target)
             }
             if (!authorized) {
-                throw PermissionException("RPC user not authorized")
+                throw PermissionException("RPC user not authorized for: $method")
             }
         }
     }
