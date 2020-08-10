@@ -20,6 +20,7 @@ import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConn
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.ValueOrException
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.openFuture
@@ -401,22 +402,11 @@ class ReconnectingCordaRPCOps private constructor(
 
                     val initialFuture = initialHandle.returnValue
                     val retFuture = openFuture<Any?>()
-                    initialFuture.thenMatch(
-                            success = {
-                                retFuture.set(it)
-                            } ,
-                            failure = {
-                                if (it is ConnectionFailureException) {
-                                    val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, 1000))
-                                    val reconnectedFuture = handle.returnValue
-                                    reconnectedFuture.then {
-                                        retFuture.set(it.get())
-                                    }
-                                } else {
-                                    retFuture.setException(it)
-                                }
-                            }
-                    )
+
+                    tryConnect(initialFuture, retFuture) {
+                        val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts))
+                        handle.returnValue
+                    }
 
 //                    val retFuture = ReconnectingCordaFuture(initialHandle.returnValue) {
 //                        val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts))
@@ -428,6 +418,22 @@ class ReconnectingCordaRPCOps private constructor(
                 // TODO - add handlers for Observable return types.
                 else -> doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts)
             }
+        }
+
+        private fun tryConnect(currentFuture: CordaFuture<*>, retFuture: OpenFuture<Any?>, doInvoke: () -> CordaFuture<*>) {
+            currentFuture.thenMatch(
+                    success = {
+                        retFuture.set(it)
+                    } ,
+                    failure = {
+                        if (it is ConnectionFailureException) {
+                            val reconnectedFuture = doInvoke()
+                            tryConnect(reconnectedFuture, retFuture, doInvoke)
+                        } else {
+                            retFuture.setException(it)
+                        }
+                    }
+            )
         }
     }
 
