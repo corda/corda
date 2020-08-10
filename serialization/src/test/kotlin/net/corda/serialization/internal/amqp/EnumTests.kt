@@ -3,7 +3,6 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
@@ -184,7 +183,7 @@ class EnumTests {
         data class C(val a: OldBras2)
 
         // DO NOT CHANGE THIS, it's important we serialise with a value that doesn't
-        // change position in the upated enum class
+        // change position in the updated enum class
 
         // Original version of the class for the serialised version of this class
         //
