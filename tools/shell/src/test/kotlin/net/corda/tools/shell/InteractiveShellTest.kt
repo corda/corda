@@ -18,7 +18,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -42,7 +42,7 @@ import kotlin.test.assertFailsWith
 
 class InteractiveShellTest {
     lateinit var inputObjectMapper: ObjectMapper
-    lateinit var cordaRpcOps: InternalCordaRPCOps
+    lateinit var cordaRpcOps: CordaRPCOps
     lateinit var invocationContext: InvocationContext<Map<Any, Any>>
     lateinit var printWriter: RenderPrintWriter
 

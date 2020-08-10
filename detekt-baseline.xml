@@ -1348,7 +1348,6 @@
     <ID>SpreadOperator:PropertyValidationTest.kt$PropertyValidationTest$(*key.split(".").toTypedArray(), nestedKey)</ID>
     <ID>SpreadOperator:RPCClient.kt$RPCClient$(*haPoolTransportConfigurations.toTypedArray())</ID>
     <ID>SpreadOperator:RPCDriver.kt$RandomRpcUser.Companion$(handle.proxy, *arguments.toTypedArray())</ID>
-    <ID>SpreadOperator:RPCOpsWithContext.kt$(cordaRPCOps, *(args ?: arrayOf()))</ID>
     <ID>SpreadOperator:RPCSecurityManagerTest.kt$RPCSecurityManagerTest$(methodName, *args)</ID>
     <ID>SpreadOperator:RPCServer.kt$RPCServer$(invocationTarget.instance, *arguments.toTypedArray())</ID>
     <ID>SpreadOperator:ReactiveArtemisConsumer.kt$ReactiveArtemisConsumer.Companion$(queueName, *queueNames)</ID>
@@ -1628,7 +1627,7 @@
     <ID>TooManyFunctions:ContractUpgradeTransactions.kt$ContractUpgradeLedgerTransaction : FullTransactionTransactionWithSignatures</ID>
     <ID>TooManyFunctions:CordaRPCOps.kt$CordaRPCOps : RPCOps</ID>
     <ID>TooManyFunctions:CordaRPCOps.kt$net.corda.core.messaging.CordaRPCOps.kt</ID>
-    <ID>TooManyFunctions:CordaRPCOpsImpl.kt$CordaRPCOpsImpl : InternalCordaRPCOpsAutoCloseable</ID>
+    <ID>TooManyFunctions:CordaRPCOpsImpl.kt$CordaRPCOpsImpl : CordaRPCOpsAutoCloseable</ID>
     <ID>TooManyFunctions:Crypto.kt$Crypto</ID>
     <ID>TooManyFunctions:CryptoUtils.kt$net.corda.core.crypto.CryptoUtils.kt</ID>
     <ID>TooManyFunctions:Currencies.kt$net.corda.finance.Currencies.kt</ID>

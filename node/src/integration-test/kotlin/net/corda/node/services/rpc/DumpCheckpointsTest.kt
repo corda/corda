@@ -11,7 +11,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -45,10 +44,9 @@ class DumpCheckpointsTest {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                val proxy = it.proxy as InternalCordaRPCOps
 
                 // 1 for GetNumberOfCheckpointsFlow itself
-                val checkPointCountFuture = proxy.startFlow(::GetNumberOfCheckpointsFlow).returnValue
+                val checkPointCountFuture = it.proxy.startFlow(::GetNumberOfCheckpointsFlow).returnValue
 
                 val logDirPath = nodeAHandle.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
                 logDirPath.createDirectories()

@@ -25,7 +25,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.messaging.CheckpointRPCOps
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.rootCause
 import net.corda.core.internal.uncheckedCast
@@ -93,8 +92,8 @@ const val STANDALONE_SHELL_PERMISSION = "ALL"
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var rpcOpsProducer: RPCOpsProducer
-    private lateinit var startupValidation: Lazy<InternalCordaRPCOps>
-    private var rpcConn: RPCConnection<InternalCordaRPCOps>? = null
+    private lateinit var startupValidation: Lazy<CordaRPCOps>
+    private var rpcConn: RPCConnection<CordaRPCOps>? = null
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
@@ -243,7 +242,7 @@ object InteractiveShell {
             this.config = config
             start(context)
             startupValidation = lazy {
-                rpcOpsProducer(localUserName, localUserPassword, InternalCordaRPCOps::class.java).let {
+                rpcOpsProducer(localUserName, localUserPassword, CordaRPCOps::class.java).let {
                     rpcConn = it
                     it.proxy
                 }

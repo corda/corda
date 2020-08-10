@@ -5,7 +5,6 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 
@@ -20,7 +19,7 @@ internal class DefaultRPCOpsProducer(private val configuration: ShellConfigurati
 
     override fun <T : RPCOps> invoke(username: String?, credential: String?, rpcOpsClass: Class<T>): RPCConnection<T> {
 
-        return if (rpcOpsClass == InternalCordaRPCOps::class.java || rpcOpsClass == CordaRPCOps::class.java) {
+        return if (rpcOpsClass == CordaRPCOps::class.java) {
             // For CordaRPCOps we are using CordaRPCClient
             val connection = if (standalone) {
                 CordaRPCClient(

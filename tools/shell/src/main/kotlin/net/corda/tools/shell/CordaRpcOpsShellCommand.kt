@@ -2,10 +2,10 @@ package net.corda.tools.shell
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.type.TypeFactory
-import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.messaging.CordaRPCOps
 
-internal abstract class CordaRpcOpsShellCommand : InteractiveShellCommand<InternalCordaRPCOps>() {
-    override val rpcOpsClass: Class<out InternalCordaRPCOps> = InternalCordaRPCOps::class.java
+internal abstract class CordaRpcOpsShellCommand : InteractiveShellCommand<CordaRPCOps>() {
+    override val rpcOpsClass: Class<out CordaRPCOps> = CordaRPCOps::class.java
 
     fun objectMapper(classLoader: ClassLoader?): ObjectMapper {
         val om = createYamlInputMapper()

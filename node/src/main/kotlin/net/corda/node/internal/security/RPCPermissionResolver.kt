@@ -3,7 +3,6 @@ package net.corda.node.internal.security
 import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.toMultiMap
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -77,7 +76,7 @@ internal object RPCPermissionResolver : PermissionResolver {
     }
 
     private fun Set<String>.toFullyQualified(): Set<String> {
-        return flatMap { setOf(methodFullName(CordaRPCOps::class.java, it), methodFullName(InternalCordaRPCOps::class.java, it)) }.toSet()
+        return map { methodFullName(CordaRPCOps::class.java, it) }.toSet()
     }
 
     /**

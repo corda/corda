@@ -39,7 +39,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.messaging.CheckpointRPCOps
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
@@ -405,9 +404,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return this
     }
 
-    /** The implementation of the [CordaRPCOps] interface used by this node. */
+    /** The implementation of the [RPCOps] interfaces used by this node. */
     open fun makeRPCOps(cordappLoader: CordappLoader): List<RPCOps> {
-        val cordaRPCOpsImpl = Pair(InternalCordaRPCOps::class.java, CordaRPCOpsImpl(
+        val cordaRPCOpsImpl = Pair(CordaRPCOps::class.java, CordaRPCOpsImpl(
                 services,
                 smm,
                 flowStarter

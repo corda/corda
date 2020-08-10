@@ -26,8 +26,7 @@ internal object AuthenticatedRpcOpsProxy {
         private val exemptMethod = RPCOps::class.java.getMethod("getProtocolVersion")
 
         private val namedInterfaces = setOf(
-                net.corda.core.messaging.CordaRPCOps::class.java,
-                net.corda.core.internal.messaging.InternalCordaRPCOps::class.java)
+                net.corda.core.messaging.CordaRPCOps::class.java)
         private val namedMethods = setOf("startFlowDynamic", "startTrackedFlowDynamic")
 
         override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {

@@ -21,8 +21,8 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.sign
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
@@ -72,7 +72,7 @@ internal class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
-) : InternalCordaRPCOps, AutoCloseable {
+) : CordaRPCOps, AutoCloseable {
 
     private companion object {
         private val logger = loggerFor<CordaRPCOpsImpl>()
