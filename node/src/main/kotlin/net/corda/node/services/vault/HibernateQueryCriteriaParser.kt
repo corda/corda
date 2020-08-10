@@ -276,6 +276,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                                    val vaultStates: Root<VaultSchemaV1.VaultStates>) : AbstractQueryCriteriaParser<QueryCriteria, IQueryCriteriaParser, Sort>(), IQueryCriteriaParser {
     private companion object {
         private val log = contextLogger()
+        private val disableCorda3879 = System.getProperty("net.corda.vault.query.disable.corda3879")?.toBoolean() ?: false
     }
 
     // incrementally build list of join predicates
@@ -652,7 +653,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         val forceJoinPredicates = joinStateRefPredicate()
 
-        if(forceJoinPredicates.isEmpty()) {
+        if(forceJoinPredicates.isEmpty() || disableCorda3879) {
             criteriaQuery.where(*combinedPredicates.toTypedArray())
         } else {
             criteriaQuery.where(*combinedPredicates.toTypedArray(), criteriaBuilder.or(*forceJoinPredicates.toTypedArray()))

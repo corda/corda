@@ -54,6 +54,8 @@ class VaultQueryJoinTest {
             repeat(numObjectsInLedger) { index ->
                 createdStateRefs.add(addSimpleObjectToLedger(DummyData(index)))
             }
+
+            System.setProperty("net.corda.vault.query.disable.corda3879", "false");
         }
 
         private fun addSimpleObjectToLedger(dummyObject: DummyData): StateRef {
