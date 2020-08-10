@@ -227,6 +227,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     FlowContinuation.Abort -> abortFiber()
                 }
             }
+        } catch(t: Throwable) {
+            logUnexpectedExceptionInFlowEventLoop(isDbTransactionOpenOnExit, t)
+            throw t
         } finally {
             checkDbTransaction(isDbTransactionOpenOnExit)
             openThreadLocalWormhole()
@@ -294,6 +297,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         } else {
             require(contextTransactionOrNull == null) { "Transaction is marked as not present, but is not null" }
+        }
+    }
+
+    private fun logUnexpectedExceptionInFlowEventLoop(isDbTransactionOpenOnExit: Boolean, throwable: Throwable) {
+        if (isDbTransactionOpenOnExit && contextTransactionOrNull == null) {
+            logger.error("Unexpected error thrown from flow event loop, transaction context missing", throwable)
+        } else if (!isDbTransactionOpenOnExit && contextTransactionOrNull != null) {
+            logger.error("Unexpected error thrown from flow event loop, transaction is marked as not present, but is not null", throwable)
         }
     }
 
