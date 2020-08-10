@@ -188,7 +188,7 @@ fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
  * The above will test our expectation that the getWaitingFlows action was executed successfully considering
  * that it may take a few hundreds of milliseconds for the flow state machine states to settle.
  */
-@Suppress("TooGenericExceptionCaught", "MagicNumber")
+@Suppress("TooGenericExceptionCaught", "MagicNumber", "ComplexMethod")
 fun <T> executeTest(
         timeout: Duration,
         cleanup: (() -> Unit)? = null,
