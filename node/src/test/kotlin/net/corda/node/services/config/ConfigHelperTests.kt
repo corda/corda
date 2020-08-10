@@ -20,6 +20,7 @@ import org.apache.logging.log4j.core.LogEvent
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
@@ -73,6 +74,7 @@ class ConfigHelperTests {
                 "corda.sshd.port" to sshPort.toString())
     }
 
+    @Ignore("CORDA-3981: Test is not stable")
     @Test(timeout = 300_000)
     fun `bad keys are ignored and warned for`() {
         val appender = mock<Appender>()
