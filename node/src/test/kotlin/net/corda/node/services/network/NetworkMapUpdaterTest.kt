@@ -19,6 +19,7 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.createDirectory
 import net.corda.core.internal.delete
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -276,6 +277,37 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).addOrUpdateNode(any())
         verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned.nodeInfo)
         assertThat(nodeReadyFuture).isDone()
+
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
+    }
+
+    @Test(timeout=300_000)
+	fun `receive node infos from directory after an error due to missing additional-node-infos directory`() {
+        setUpdater(netMapClient = null)
+        val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
+
+        // Not subscribed yet
+        verify(networkMapCache, times(0)).addOrUpdateNode(any())
+
+        nodeInfoDir.delete()
+        assertFalse(nodeInfoDir.exists())
+        // Observable will get a NoSuchFileException and log it
+        startUpdater()
+        // Updater will resubscribe to observable with delayed retry
+        advanceTime()
+        // no changes will be made to networkMapCache at this point
+        verify(networkMapCache, times(0)).addOrUpdateNode(any())
+
+        nodeInfoDir.createDirectory()
+        assertTrue(nodeInfoDir.exists())
+
+        // Now that directory has been created, save a nodeInfo and assert that the file polling watcher behaves as expected
+        NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned)
+        assertThat(nodeReadyFuture).isNotDone
+        advanceTime()
+
+        verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned.nodeInfo)
+        assertThat(nodeReadyFuture).isDone
 
         assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
     }

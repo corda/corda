@@ -66,8 +66,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 ) : AutoCloseable, NetworkParameterUpdateListener {
     companion object {
         private val logger = contextLogger()
-        private val defaultRetryInterval = 1.minutes
+        private val defaultWatchHttpNetworkMapRetryInterval = 1.minutes
         private const val bulkNodeInfoFetchThreshold = 50
+        private const val defaultWatchNodeInfoFilesRetryIntervalSeconds = 10L
     }
 
     private val parametersUpdatesTrack = PublishSubject.create<ParametersUpdateInfo>()
@@ -136,6 +137,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private fun watchForNodeInfoFiles(): Subscription {
         return nodeInfoWatcher
                 .nodeInfoUpdates()
+                .doOnError { logger.warn("Error encountered while polling directory for network map updates, " +
+                        "will retry in $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds - $it") }
+                .retryWhen { t -> t.delay(defaultWatchNodeInfoFilesRetryIntervalSeconds, TimeUnit.SECONDS, nodeInfoWatcher.scheduler) }
                 .subscribe {
                     for (update in it) {
                         when (update) {
@@ -163,8 +167,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 val nextScheduleDelay = try {
                     updateNetworkMapCache()
                 } catch (e: Exception) {
-                    logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", e)
-                    defaultRetryInterval
+                    logger.warn("Error encountered while updating network map, will retry in $defaultWatchHttpNetworkMapRetryInterval", e)
+                    defaultWatchHttpNetworkMapRetryInterval
                 }
                 // Schedule the next update.
                 networkMapPoller.schedule(this, nextScheduleDelay.toMillis(), TimeUnit.MILLISECONDS)
