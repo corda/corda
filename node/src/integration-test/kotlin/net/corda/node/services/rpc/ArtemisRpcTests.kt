@@ -129,7 +129,7 @@ class ArtemisRpcTests {
 
     private fun <OPS : RPCOps> InternalRPCMessagingClient.start(ops: OPS, securityManager: RPCSecurityManager, brokerControl: ActiveMQServerControl) {
         apply {
-            init(ops, securityManager, TestingNamedCacheFactory())
+            init(listOf(ops), securityManager, TestingNamedCacheFactory())
             start(brokerControl)
         }
     }
