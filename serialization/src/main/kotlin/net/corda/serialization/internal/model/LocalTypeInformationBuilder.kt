@@ -115,13 +115,22 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             baseTypes.mapClass.isAssignableFrom(type) -> AMap(type, typeIdentifier, Unknown, Unknown)
             type === baseTypes.stringClass -> Atomic(type, typeIdentifier)
             type.kotlin.javaPrimitiveType != null -> Atomic(type, typeIdentifier)
-            baseTypes.isEnum.test(type) -> baseTypes.enumConstants.apply(type).let { enumConstants ->
+            baseTypes.isEnum.test(type) -> baseTypes.enumConstantNames.apply(type).let { enumConstantNames ->
                 AnEnum(
                     type,
                     typeIdentifier,
-                    enumConstants,
+                    enumConstantNames,
+                    /**
+                     * Calculate "fallbacks" for any [Enum] incorrectly serialised
+                     * as its [Enum.toString] value. We are only interested in the
+                     * cases where these are different from [Enum.name].
+                     * These fallbacks DO NOT contribute to this type's fingerprint.
+                     */
+                    baseTypes.enumConstants.apply(type).map(Any::toString).mapIndexed { ord, fallback ->
+                        fallback to enumConstantNames[ord]
+                    }.filterNot { it.first == it.second }.toMap(),
                     buildInterfaceInformation(type),
-                    getEnumTransforms(type, enumConstants)
+                    getEnumTransforms(type, enumConstantNames)
                 )
             }
             type.kotlinObjectInstance != null -> Singleton(

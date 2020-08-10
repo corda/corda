@@ -40,7 +40,8 @@ class DefaultEvolutionSerializerFactory(
         private val localSerializerFactory: LocalSerializerFactory,
         private val classLoader: ClassLoader,
         private val mustPreserveDataWhenEvolving: Boolean,
-        override val primitiveTypes: Map<Class<*>, Class<*>>
+        override val primitiveTypes: Map<Class<*>, Class<*>>,
+        private val baseTypes: BaseLocalTypes
 ): EvolutionSerializerFactory {
     // Invert the "primitive -> boxed primitive" mapping.
     private val primitiveBoxedTypes: Map<Class<*>, Class<*>>
@@ -154,16 +155,16 @@ class DefaultEvolutionSerializerFactory(
         val localTransforms = localTypeInformation.transforms
         val transforms = if (remoteTransforms.size > localTransforms.size) remoteTransforms else localTransforms
 
-        val localOrdinals = localTypeInformation.members.asSequence().mapIndexed { ord, member -> member to ord }.toMap()
-        val remoteOrdinals = members.asSequence().mapIndexed { ord, member -> member to ord }.toMap()
+        val localOrdinals = localTypeInformation.members.mapIndexed { ord, member -> member to ord }.toMap()
+        val remoteOrdinals = members.mapIndexed { ord, member -> member to ord }.toMap()
         val rules = transforms.defaults + transforms.renames
 
         // We just trust our transformation rules not to contain cycles here.
         tailrec fun findLocal(remote: String): String =
-            if (remote in localOrdinals) remote
-            else findLocal(rules[remote] ?: throw EvolutionSerializationException(
-                    this,
-                    "Cannot resolve local enum member $remote to a member of ${localOrdinals.keys} using rules $rules"
+            if (remote in localOrdinals.keys) remote
+            else localTypeInformation.fallbacks[remote] ?: findLocal(rules[remote] ?: throw EvolutionSerializationException(
+                this,
+                "Cannot resolve local enum member $remote to a member of ${localOrdinals.keys} using rules $rules"
             ))
 
         val conversions = members.associate { it to findLocal(it) }
@@ -172,7 +173,7 @@ class DefaultEvolutionSerializerFactory(
         if (constantsAreReordered(localOrdinals, convertedOrdinals)) throw EvolutionSerializationException(this,
                 "Constants have been reordered, additions must be appended to the end")
 
-        return EnumEvolutionSerializer(localTypeInformation.observedType, localSerializerFactory, conversions, localOrdinals)
+        return EnumEvolutionSerializer(localTypeInformation.observedType, localSerializerFactory, baseTypes, conversions, localOrdinals)
     }
 
     private fun constantsAreReordered(localOrdinals: Map<String, Int>, convertedOrdinals: Map<Int, String>): Boolean =
