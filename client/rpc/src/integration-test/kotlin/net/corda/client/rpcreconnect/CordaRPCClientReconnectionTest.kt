@@ -403,7 +403,7 @@ class CordaRPCClientReconnectionTest {
 
                 node.stop()
                 thread {
-                    Thread.sleep(35000)
+                    Thread.sleep(1000)
                     startNode()
                 }
 

@@ -10,8 +10,6 @@ import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.UnrecoverableRPCException
-import net.corda.client.rpc.internal.RPCUtils.isShutdown
-import net.corda.client.rpc.internal.RPCUtils.isStartFlow
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CLOSED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTING
@@ -21,8 +19,6 @@ import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.ValueOrException
-import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.messaging.InternalCordaRPCOps
@@ -38,7 +34,6 @@ import net.corda.core.messaging.FlowHandleWithClientIdImpl
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
@@ -408,11 +403,6 @@ class ReconnectingCordaRPCOps private constructor(
                         handle.returnValue
                     }
 
-//                    val retFuture = ReconnectingCordaFuture(initialHandle.returnValue) {
-//                        val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts))
-//                        handle.returnValue
-//                    }
-
                     return (initialHandle as FlowHandleWithClientIdImpl<Any?>).copy(returnValue = retFuture)
                 }
                 // TODO - add handlers for Observable return types.
@@ -427,32 +417,22 @@ class ReconnectingCordaRPCOps private constructor(
                     } ,
                     failure = {
                         if (it is ConnectionFailureException) {
-                            val reconnectedFuture = doInvoke()
-                            tryConnect(reconnectedFuture, retFuture, doInvoke)
+                            reconnectingRPCConnection.observersPool.execute {
+                                val reconnectedFuture = doInvoke()
+                                tryConnect(reconnectedFuture, retFuture, doInvoke)
+                            }
                         } else {
                             retFuture.setException(it)
                         }
                     }
             )
         }
+
     }
 
     fun close() {
         retryFlowsPool.shutdown()
         reconnectingRPCConnection.forceClose()
-    }
-
-    class ReconnectingCordaFuture<T>(@Volatile private var currentFuture: CordaFuture<T>, val callback: () -> CordaFuture<T>) : CordaFuture<T> by currentFuture {
-
-        override fun get(): T {
-            return try {
-                currentFuture.getOrThrow()
-            } catch (e: ConnectionFailureException) {
-                currentFuture = callback()
-                currentFuture.getOrThrow()
-                //throw e
-            }
-        }
     }
 }
 
