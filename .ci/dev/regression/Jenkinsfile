@@ -22,8 +22,14 @@ boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 **  * stage-release:  for release candidates and for health checks
 **  * operate: for final release
 */
-def nexusIqStage = "operate"
-
+def nexusDefaultIqStage = "build"
+if (isReleaseTag) {
+    switch (env.TAG_NAME) {
+        case ~/.*-RC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
+        case ~/.*-HC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
+        default: nexusDefaultIqStage = "release"
+    }
+}
 /**
  * make sure calculated default value of NexusIQ stage is first in the list
  * thus making it default for the `choice` parameter
