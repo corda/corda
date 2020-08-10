@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.core.ALICE_NAME
