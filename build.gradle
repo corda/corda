@@ -738,14 +738,14 @@ distributedTesting {
     parallelTestGroups {
         allParallelIntegrationTest {
             testGroups 'integrationTest'
-            profile 'generalPurpose.yml'
+            profile.set( new com.r3.testing.TestingProfile(5, false, 5, 16, Collections.singletonList("small"), Collections.emptyList(), Collections.emptyMap()))
             podLogLevel PodLogLevel.INFO
             distribution DistributeTestsBy.METHOD
         }
         allParallelUnitTest {
             podLogLevel PodLogLevel.INFO
             testGroups 'test'
-            profile.set( new com.r3.testing.TestingProfile(2, false, 3, 10, Collections.singletonList("small"), Collections.emptyList(), Collections.emptyMap()))
+            profile.set( new com.r3.testing.TestingProfile(5, false, 4, 10, Collections.singletonList("small"), Collections.emptyList(), Collections.emptyMap()))
             distribution DistributeTestsBy.CLASS
         }
         allParallelUnitAndIntegrationTest {
