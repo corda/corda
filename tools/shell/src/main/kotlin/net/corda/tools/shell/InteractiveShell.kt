@@ -14,6 +14,7 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.internal.RPCUtils.isShutdownMethodName
 import net.corda.client.rpc.notUsed
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -110,8 +111,6 @@ object InteractiveShell {
         JSON,
         YAML
     }
-
-    private fun isShutdownCmd(cmd: String) = cmd == "shutdown" || cmd == "gracefulShutdown" || cmd == "terminate"
 
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
         makeRPCConnection = { username: String, password: String ->
@@ -625,7 +624,7 @@ object InteractiveShell {
                     throw e.rootCause
                 }
             }
-            if (isShutdownCmd(cmd)) {
+            if (isShutdownMethodName(cmd)) {
                 out.println("Called 'shutdown' on the node.\nQuitting the shell now.").also { out.flush() }
                 onExit.invoke()
             }
