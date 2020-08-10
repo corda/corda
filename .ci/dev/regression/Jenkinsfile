@@ -2,7 +2,6 @@
 /**
  * Jenkins pipeline to build Corda OS release branches and tags
  */
-
 /**
  * Kill already started job.
  * Assume new commit takes precendence and results from previous
@@ -11,9 +10,7 @@
  */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
-
 /**
  * Sense environment
  */
@@ -39,20 +36,16 @@ def nexusIqStageChoices = [nexusDefaultIqStage].plus(
                         'release',
                         'operate'
                 ].minus([nexusDefaultIqStage]))
-
 pipeline {
     agent { label 'k8s' }
     options {
         timestamps()
-        disableConcurrentBuilds()
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
-
     parameters {
         choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
-
     environment {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
         DOCKER_URL = "https://index.docker.io/v1/"
@@ -60,18 +53,9 @@ pipeline {
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", "::")
-        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
-        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
     }
-
     stages {
-        /*
-        * Temporarily disable Sonatype checks for regression builds
-        */
         stage('Sonatype Check') {
-            when {
-                expression { isReleaseTag }
-            }
             steps {
                 sh "./gradlew --no-daemon clean jar"
                 script {
@@ -90,13 +74,11 @@ pipeline {
                 )
             }
         }
-
         stage('Deploy Nodes') {
             steps {
                 sh "./gradlew --no-daemon jar deployNodes"
             }
         }
-
         stage('Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
@@ -104,15 +86,12 @@ pipeline {
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_USERNAME=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
-                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_PASSWORD=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                             " clean preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest pushBuildImage --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
         }
-
         stage('Testing phase') {
             parallel {
                 stage('Regression Test') {
@@ -143,7 +122,6 @@ pipeline {
                 }
             }
         }
-
         stage('Publish to Artifactory') {
             when {
                 expression { isReleaseTag }
@@ -173,14 +151,11 @@ pipeline {
                 )
             }
         }
-
     }
-
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
-
             script {
                 try {
                     /*
@@ -205,13 +180,11 @@ pipeline {
                            results: [[path: '**/allure-input']]
                 } catch (err) {
                     echo("Allure report generation failed: $err")
-
                     if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                         currentBuild.result = 'UNSTABLE'
                     }
                 }
             }
-
             script
             {
                 if (!isReleaseTag) {
@@ -222,7 +195,6 @@ pipeline {
                             currentBuild?.previousBuild.timeInMillis ?: 0).clearTime()
                     def currentBuildDate = new Date(
                             currentBuild.timeInMillis).clearTime()
-
                     if (prevBuildDate != currentBuildDate) {
                         def statusSymbol = '\u2753'
                         switch(currentBuild.result) {
@@ -236,7 +208,6 @@ pipeline {
                             default:
                                 break;
                         }
-
                         echo('First build for this date, sending summary email')
                         emailext to: '$DEFAULT_RECIPIENTS',
                             subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
