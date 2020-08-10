@@ -1349,7 +1349,7 @@
     <ID>SpreadOperator:RPCClient.kt$RPCClient$(*haPoolTransportConfigurations.toTypedArray())</ID>
     <ID>SpreadOperator:RPCDriver.kt$RandomRpcUser.Companion$(handle.proxy, *arguments.toTypedArray())</ID>
     <ID>SpreadOperator:RPCOpsWithContext.kt$(cordaRPCOps, *(args ?: arrayOf()))</ID>
-    <ID>SpreadOperator:RPCSecurityManagerTest.kt$RPCSecurityManagerTest$(request.first(), *args)</ID>
+    <ID>SpreadOperator:RPCSecurityManagerTest.kt$RPCSecurityManagerTest$(methodName, *args)</ID>
     <ID>SpreadOperator:RPCServer.kt$RPCServer$(invocationTarget.instance, *arguments.toTypedArray())</ID>
     <ID>SpreadOperator:ReactiveArtemisConsumer.kt$ReactiveArtemisConsumer.Companion$(queueName, *queueNames)</ID>
     <ID>SpreadOperator:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$(reconnectingRPCConnection.proxy, *(args ?: emptyArray()))</ID>
