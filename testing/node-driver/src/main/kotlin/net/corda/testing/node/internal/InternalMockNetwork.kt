@@ -589,12 +589,11 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     }
 
     fun stopNodes() {
-        cordappClassLoader.use { _ ->
-            // Serialization env must be unset even if other parts of this method fail.
-            serializationEnv.use {
-                nodes.forEach { it.started?.dispose() }
-            }
-            messagingNetwork.stop()
+        try {
+            nodes.forEach { node -> node.started?.dispose() }
+        } finally {
+            serializationEnv.close()
+            cordappClassLoader?.close()
         }
     }
 

@@ -129,7 +129,7 @@ class FlowFrameworkPersistenceTests {
         mockNet.runNetwork()
         fut1.getOrThrow()
 
-        val receivedCount = receivedSessionMessages.count { it.isPayloadTransfer } ?: 0
+        val receivedCount = receivedSessionMessages.count { it.isPayloadTransfer }
         // Check flows completed cleanly and didn't get out of phase
         assertEquals(4, receivedCount, "Flow should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
