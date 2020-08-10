@@ -239,12 +239,12 @@ apply plugin: 'com.r3.testing.distributed-testing'
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
 // the latest git commit hash and timestamp and create a version postfix from that
-if (project.hasProperty("versionFromGit")){
+if (project.hasProperty("versionFromGit")) {
     ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
 }
 
 // Need the `toString()` call on these, because they need to be converted from GStringImpl to Java Strings.
-if (ext.versionSuffix != ""){
+if (ext.versionSuffix != "") {
     ext.corda_release_version = "${ext.baseVersion}-${ext.versionSuffix}".toString()
 } else {
     ext.corda_release_version = "${ext.baseVersion}".toString()
@@ -444,7 +444,7 @@ allprojects {
                 // Demand that everything uses our given version of Netty.
                 eachDependency { details ->
                     if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
-                        if (details.requested.name.startsWith('netty-tcnative')){
+                        if (details.requested.name.startsWith('netty-tcnative')) {
                             details.useVersion tcnative_version
                         } else {
                             details.useVersion netty_version
@@ -545,19 +545,19 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
                     // these exclusions are necessary because jacoco gets confused by same class names
                     // which occur due to deterministic versions of non deterministic classes
                     exclude: ['**/net/corda/core/crypto/SHA256DigestSupplier**',
-                    '**/net/corda/core/crypto/DelegatingSecureRandomService',
-                    '**/net/corda/core/internal/ThreadLocalToggleField**',
-                    '**/net/corda/core/internal/InheritableThreadLocalToggleField**',
-                    '**/net/corda/core/internal/ToggleField**',
-                    'net/corda/core/internal/rules/StateContractValidationEnforcementRule**',
-                    'net/corda/core/internal/SimpleToggleField**',
-                    'net/corda/core/serialization/SerializationFactory**',
-                    'net/corda/serialization/internal/amqp/AMQPStreams**',
-                    'net/corda/serialization/internal/amqp/AMQPSerializerFactories**',
-                    'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext**',
-                    'net/corda/serialization/internal/ByteBufferStreams**',
-                    'net/corda/serialization/internal/model/DefaultCacheProvider**',
-                    'net/corda/serialization/internal/DefaultWhitelist**'
+                              '**/net/corda/core/crypto/DelegatingSecureRandomService',
+                              '**/net/corda/core/internal/ThreadLocalToggleField**',
+                              '**/net/corda/core/internal/InheritableThreadLocalToggleField**',
+                              '**/net/corda/core/internal/ToggleField**',
+                              'net/corda/core/internal/rules/StateContractValidationEnforcementRule**',
+                              'net/corda/core/internal/SimpleToggleField**',
+                              'net/corda/core/serialization/SerializationFactory**',
+                              'net/corda/serialization/internal/amqp/AMQPStreams**',
+                              'net/corda/serialization/internal/amqp/AMQPSerializerFactories**',
+                              'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext**',
+                              'net/corda/serialization/internal/ByteBufferStreams**',
+                              'net/corda/serialization/internal/model/DefaultCacheProvider**',
+                              'net/corda/serialization/internal/DefaultWhitelist**'
                     ])
         })
     }
@@ -745,7 +745,7 @@ distributedTesting {
         allParallelUnitTest {
             podLogLevel PodLogLevel.INFO
             testGroups 'test'
-            profile 'generalPurpose.yml'
+            profile.set( new com.r3.testing.TestingProfile(2, false, 3, 10, Collections.singletonList("small"), Collections.emptyList(), Collections.emptyMap()))
             distribution DistributeTestsBy.CLASS
         }
         allParallelUnitAndIntegrationTest {
@@ -771,6 +771,6 @@ distributedTesting {
     }
 
     ignoredTests = [
-        ':core-deterministic:testing:data:test'
+            ':core-deterministic:testing:data:test'
     ]
 }
