@@ -23,6 +23,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.messaging.CheckpointRPCOps
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.packageName_
@@ -556,7 +557,7 @@ object InteractiveShell {
     @JvmStatic
     fun runAttachmentTrustInfoView(
         out: RenderPrintWriter,
-        rpcOps: InternalCordaRPCOps
+        rpcOps: AttachmentTrustInfoRPCOps
     ): Any {
         return AttachmentTrustTable(out, rpcOps.attachmentTrustInfos)
     }

@@ -37,6 +37,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
+import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.messaging.CheckpointRPCOps
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
@@ -72,6 +73,7 @@ import net.corda.djvm.source.EmptyApi
 import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
+import net.corda.node.internal.attachments.AttachmentTrustInfoRPCOpsImpl
 import net.corda.node.internal.checkpoints.CheckpointRPCOpsImpl
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
@@ -415,7 +417,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val checkpointRPCOpsImpl = Pair(CheckpointRPCOps::class.java, CheckpointRPCOpsImpl(checkpointDumper))
 
-        return listOf(cordaRPCOpsImpl, checkpointRPCOpsImpl).map { rpcOpsImplPair ->
+        val attachmentTrustInfoRPCOps = Pair(AttachmentTrustInfoRPCOps::class.java, AttachmentTrustInfoRPCOpsImpl(services.attachmentTrustCalculator))
+
+        return listOf(cordaRPCOpsImpl, checkpointRPCOpsImpl, attachmentTrustInfoRPCOps).map { rpcOpsImplPair ->
             // Mind that order of proxies is important
             val targetInterface = rpcOpsImplPair.first
             val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(rpcOpsImplPair.second, targetInterface)

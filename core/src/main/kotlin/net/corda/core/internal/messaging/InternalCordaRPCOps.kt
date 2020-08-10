@@ -8,6 +8,5 @@ import net.corda.core.messaging.CordaRPCOps
  */
 interface InternalCordaRPCOps : CordaRPCOps {
 
-    /** Get all attachment trust information */
-    val attachmentTrustInfos: List<AttachmentTrustInfo>
+
 }
