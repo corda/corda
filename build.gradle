@@ -161,7 +161,7 @@ buildscript {
 
         maven {
             name "k8s-local-proxy"
-            url "http://nexus-service:8080/repository/public-proxy"
+            url "http://nexus-service/repository/maven-public"
         }
 
         if (System.getenv("CORDA_USE_CACHE")) {
@@ -393,7 +393,7 @@ allprojects {
 
         maven {
             name "k8s-local-proxy"
-            url "http://nexus-service:8080/repository/public-proxy"
+            url "http://nexus-service/repository/maven-public"
         }
 
         // Use system environment to activate caching with Artifactory,
