@@ -109,7 +109,7 @@ interface TestStartedNode {
     val services: StartedNodeServices
     val smm: StateMachineManager
     val attachments: NodeAttachmentService
-    val rpcOps: CordaRPCOps
+    val rpcOpsList: List<RPCOps>
     val network: MockNodeMessagingService
     val database: CordaPersistence
     val notaryService: NotaryService?
@@ -135,6 +135,10 @@ interface TestStartedNode {
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
+
+    @Deprecated("Deprecated in favour of `rpcOpsList`", ReplaceWith("rpcOpsList"))
+    val rpcOps: CordaRPCOps
+        get() = rpcOpsList.mapNotNull { it as? CordaRPCOps }.single()
 }
 
 open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
@@ -301,7 +305,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                 override val info: NodeInfo,
                 override val smm: StateMachineManager,
                 override val database: CordaPersistence,
-                override val rpcOps: CordaRPCOps,
+                override val rpcOpsList: List<RPCOps>,
                 override val notaryService: NotaryService?) : TestStartedNode {
 
             override fun dispose() = internals.stop()
@@ -340,7 +344,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         override val started: TestStartedNode? get() = super.started
 
-        override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): TestStartedNode {
+        override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: List<RPCOps>, notaryService: NotaryService?): TestStartedNode {
             return TestStartedNodeImpl(
                     this,
                     attachments,
@@ -373,7 +377,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             return MockNodeMessagingService(configuration, serverThread).closeOnStop()
         }
 
-        override fun startMessagingService(rpcOps: RPCOps,
+        override fun startMessagingService(rpcOps: List<RPCOps>,
                                            nodeInfo: NodeInfo,
                                            myNotaryIdentity: PartyAndCertificate?,
                                            networkParameters: NetworkParameters) {

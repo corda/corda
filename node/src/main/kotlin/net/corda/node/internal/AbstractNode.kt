@@ -402,20 +402,25 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumperImpl): CordaRPCOps {
-        val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
+    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumperImpl): List<RPCOps> {
+        val cordaRPCOpsImpl = Pair(InternalCordaRPCOps::class.java, CordaRPCOpsImpl(
                 services,
                 smm,
                 flowStarter,
                 checkpointDumper
         ) {
             shutdownExecutor.submit(::stop)
-        }.also { it.closeOnStop() }
-        val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
-        // Mind that order is relevant here.
-        proxies += ::AuthenticatedRpcOpsProxy
-        proxies += { ThreadContextAdjustingRpcOpsProxy.proxy(it, InternalCordaRPCOps::class.java, cordappLoader.appClassLoader) }
-        return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
+        }.also { it.closeOnStop() })
+
+        return listOf(cordaRPCOpsImpl).map { rpcOpsImplPair ->
+            // Mind that order of proxies is important
+            val targetInterface = rpcOpsImplPair.first
+            val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(rpcOpsImplPair.second, targetInterface)
+            val stage2Proxy = ThreadContextAdjustingRpcOpsProxy.proxy(stage1Proxy, targetInterface,
+                    cordappLoader.appClassLoader)
+
+            stage2Proxy
+        }
     }
 
     private fun initKeyStores(): X509Certificate {
@@ -595,7 +600,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** Subclasses must override this to create a "started" node of the desired type, using the provided machinery. */
-    abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): S
+    abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: List<RPCOps>, notaryService: NotaryService?): S
 
     private fun verifyCheckpointsCompatible(tokenizableServices: List<Any>) {
         try {
@@ -1026,7 +1031,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected abstract fun makeMessagingService(): MessagingService
 
-    protected abstract fun startMessagingService(rpcOps: RPCOps,
+    protected abstract fun startMessagingService(rpcOps: List<RPCOps>,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
