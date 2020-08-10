@@ -34,7 +34,6 @@ class FlowFrameworkPersistenceTests {
     }
 
     private lateinit var mockNet: InternalMockNetwork
-    private var receivedSessionMessages: List<SessionTransfer>? = null
     private lateinit var aliceNode: TestStartedNode
     private lateinit var bobNode: TestStartedNode
 
@@ -51,14 +50,12 @@ class FlowFrameworkPersistenceTests {
         bobNode = MockNodeFlowManager().let { bobFlowManager ->
             mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, flowManager = bobFlowManager))
         }
-
-        receivedSessionMessages = mutableListOf<SessionTransfer>().also { messages ->
-            receivedSessionMessagesObservable().forEach { messages += it }
-        }
     }
 
     @After
     fun cleanUp() {
+        aliceNode.internals.manuallyCloseDB()
+        bobNode.internals.manuallyCloseDB()
         mockNet.close()
     }
 
@@ -85,7 +82,6 @@ class FlowFrameworkPersistenceTests {
         mockNet.runNetwork()
         val restoredFlow = bobNode.restartAndGetRestoredFlow<InitiatedReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
-        bobNode.internals.manuallyCloseDB()
     }
 
     @Test(timeout=300_000)
@@ -100,6 +96,9 @@ class FlowFrameworkPersistenceTests {
     @Ignore("Some changes in startup order make this test's assumptions fail.")
     @Test(timeout=300_000)
 	fun `flow with send will resend on interrupted restart`() {
+        val receivedSessionMessages: List<SessionTransfer> = mutableListOf<SessionTransfer>().also { messages ->
+            receivedSessionMessagesObservable().forEach { messages += it }
+        }
         val payload = random63BitValue()
         val payload2 = random63BitValue()
 
@@ -130,7 +129,7 @@ class FlowFrameworkPersistenceTests {
         mockNet.runNetwork()
         fut1.getOrThrow()
 
-        val receivedCount = receivedSessionMessages?.count { it.isPayloadTransfer } ?: 0
+        val receivedCount = receivedSessionMessages.count { it.isPayloadTransfer } ?: 0
         // Check flows completed cleanly and didn't get out of phase
         assertEquals(4, receivedCount, "Flow should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
