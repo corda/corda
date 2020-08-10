@@ -2,7 +2,6 @@
 /**
  * Jenkins pipeline to build Corda OS release branches and tags
  */
-
 /**
  * Kill already started job.
  * Assume new commit takes precendence and results from previous
@@ -11,21 +10,38 @@
  */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
-
 /**
  * Sense environment
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
+boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 /*
 ** calculate the stage for NexusIQ evaluation
 **  * build for snapshots
 **  * stage-release:  for release candidates and for health checks
 **  * operate: for final release
 */
-def nexusIqStage = "operate"
-
+def nexusDefaultIqStage = "build"
+if (isReleaseTag) {
+    switch (env.TAG_NAME) {
+        case ~/.*-RC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
+        case ~/.*-HC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
+        default: nexusDefaultIqStage = "release"
+    }
+}
+/**
+ * make sure calculated default value of NexusIQ stage is first in the list
+ * thus making it default for the `choice` parameter
+ */
+def nexusIqStageChoices = [nexusDefaultIqStage].plus(
+                [
+                        'develop',
+                        'build',
+                        'stage-release',
+                        'release',
+                        'operate'
+                ].minus([nexusDefaultIqStage]))
 pipeline {
     agent { label 'k8s' }
     options {
@@ -33,7 +49,9 @@ pipeline {
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
-
+    parameters {
+        choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
+    }
     environment {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
         DOCKER_URL = "https://index.docker.io/v1/"
@@ -42,33 +60,31 @@ pipeline {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", "::")
     }
-
     stages {
         stage('Sonatype Check') {
             steps {
                 sh "./gradlew --no-daemon clean jar"
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
-                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\.[0-9]\\+\\).*\$/\\1/'").trim()
                     def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
                     def artifactId = 'corda'
-                    nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
+                    nexusAppId = "${groupId}-${artifactId}-${version}"
                 }
                 nexusPolicyEvaluation (
                         failBuildOnNetworkError: false,
-                        iqApplication: manualApplication(nexusAppId),
+                        iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
                         iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
-                        iqStage: nexusIqStage
+                        iqStage: params.nexusIqStage
                 )
             }
         }
-
         stage('Deploy Nodes') {
             steps {
                 sh "./gradlew --no-daemon jar deployNodes"
             }
         }
-
         stage('Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
@@ -82,7 +98,6 @@ pipeline {
                 sh "kubectl auth can-i get pods"
             }
         }
-
         stage('Testing phase') {
             parallel {
                 stage('Regression Test') {
@@ -113,7 +128,6 @@ pipeline {
                 }
             }
         }
-
         stage('Publish to Artifactory') {
             when {
                 expression { isReleaseTag }
@@ -143,15 +157,11 @@ pipeline {
                 )
             }
         }
-
     }
-
-
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
-
             script {
                 try {
                     /*
@@ -176,13 +186,11 @@ pipeline {
                            results: [[path: '**/allure-input']]
                 } catch (err) {
                     echo("Allure report generation failed: $err")
-
                     if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                         currentBuild.result = 'UNSTABLE'
                     }
                 }
             }
-
             script
             {
                 if (!isReleaseTag) {
@@ -193,7 +201,6 @@ pipeline {
                             currentBuild?.previousBuild.timeInMillis ?: 0).clearTime()
                     def currentBuildDate = new Date(
                             currentBuild.timeInMillis).clearTime()
-
                     if (prevBuildDate != currentBuildDate) {
                         def statusSymbol = '\u2753'
                         switch(currentBuild.result) {
@@ -207,7 +214,6 @@ pipeline {
                             default:
                                 break;
                         }
-
                         echo('First build for this date, sending summary email')
                         emailext to: '$DEFAULT_RECIPIENTS',
                             subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
