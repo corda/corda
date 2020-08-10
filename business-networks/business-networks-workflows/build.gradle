@@ -4,6 +4,25 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 description 'Corda Business Networks'
 
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntimeClasspath
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 dependencies {
     cordaCompile project(':core')
     cordaCompile project(':business-networks:business-networks-contracts')
@@ -12,4 +31,9 @@ dependencies {
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testCompile project(":node-driver")
+}
+
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
 }
