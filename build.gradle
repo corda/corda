@@ -158,6 +158,12 @@ buildscript {
         // because it is actually easier to pass that during parallel build.
         // NOTE: it has to be a name of a virtual repository with all
         // required remote or local repositories!
+
+        maven {
+            name "k8s-local-proxy"
+            url "http://nexus-service:8080/repository/public-proxy"
+        }
+
         if (System.getenv("CORDA_USE_CACHE")) {
             maven {
                 name "R3 Maven remote repositories"
@@ -384,10 +390,17 @@ allprojects {
 
     repositories {
         mavenLocal()
+
+        maven {
+            name "k8s-local-proxy"
+            url "http://nexus-service:8080/repository/public-proxy"
+        }
+
         // Use system environment to activate caching with Artifactory,
         // because it is actually easier to pass that during parallel build.
         // NOTE: it has to be a name of a virtual repository with all
         // required remote or local repositories!
+
         if (System.getenv("CORDA_USE_CACHE")) {
             maven {
                 name "R3 Maven remote repositories"
