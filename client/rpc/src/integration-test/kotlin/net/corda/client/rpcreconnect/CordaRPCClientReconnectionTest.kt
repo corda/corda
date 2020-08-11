@@ -383,7 +383,7 @@ class CordaRPCClientReconnectionTest {
     }
 
     @Test(timeout=300_000)
-    fun `rpc returned flow result future continue working when the server crashes and restarts`() {
+    fun `rpc returned flow result future continue working when the node crashes and restarts`() {
         driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
             fun startNode(): NodeHandle {
@@ -415,7 +415,41 @@ class CordaRPCClientReconnectionTest {
     }
 
     @Test(timeout=300_000)
-    fun `rpc remove client id retries to connect when the server is down`() {
+    fun `rpc re attach to flow with client id tries to reconnect when the node is down`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val clientId = UUID.randomUUID().toString()
+                rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
+
+                node.stop()
+                thread {
+                    sleep(1000)
+                    startNode()
+                }
+                val flowHandle = rpcOps.reattachFlowWithClientId<Int>(clientId)
+
+                val result = flowHandle!!.returnValue.get()
+
+                assertEquals(5, result!!)
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `rpc remove client id tries to reconnect when the node is down`() {
         driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
             fun startNode(): NodeHandle {
