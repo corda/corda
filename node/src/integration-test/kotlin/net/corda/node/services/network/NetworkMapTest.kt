@@ -34,7 +34,7 @@ import org.junit.Test
 import java.net.URL
 import java.time.Instant
 
-class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneParams) {
+class NetworkMapTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
