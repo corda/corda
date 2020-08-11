@@ -36,7 +36,7 @@ typealias PropertyName = String
  * If a concrete type does not have a unique deserialization constructor, it is represented by [NonComposable], meaning
  * that we know how to take it apart but do not know how to put it back together again.
  *
- * An array of any type is represented by [ArrayOf]. Enums are represented by [AnEnum].
+ * An array of any type is represented by [AnArray]. Enums are represented by [AnEnum].
  *
  * The type of [Any]/[java.lang.Object] is represented by [Top]. Unbounded wildcards, or wildcards whose upper bound is
  * [Top], are represented by [Unknown]. Bounded wildcards are always resolved to their upper bounds, e.g.
@@ -178,6 +178,7 @@ sealed class LocalTypeInformation {
             override val observedType: Class<*>,
             override val typeIdentifier: TypeIdentifier,
             val members: List<String>,
+            val fallbacks: Map<String, String>,
             val interfaces: List<LocalTypeInformation>,
             val transforms: EnumTransforms): LocalTypeInformation()
 

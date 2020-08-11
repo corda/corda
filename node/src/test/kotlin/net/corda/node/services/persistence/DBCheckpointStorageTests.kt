@@ -1,12 +1,15 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.toSet
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -38,7 +41,6 @@ import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
@@ -155,7 +157,7 @@ class DBCheckpointStorageTests {
         }
         database.transaction {
             assertEquals(
-                completedCheckpoint.copy(flowState = FlowState.Completed),
+                completedCheckpoint.copy(flowState = FlowState.Finished),
                 checkpointStorage.checkpoints().single().deserialize()
             )
         }
@@ -181,51 +183,6 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Ignore
-    @Test(timeout = 300_000)
-    fun `removing a checkpoint deletes from all checkpoint tables`() {
-        val exception = IllegalStateException("I am a naughty exception")
-        val (id, checkpoint) = newCheckpoint()
-        val serializedFlowState = checkpoint.serializeFlowState()
-        database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
-        }
-        val updatedCheckpoint = checkpoint.addError(exception).copy(result = "The result")
-        val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
-        database.transaction { checkpointStorage.updateCheckpoint(id, updatedCheckpoint, updatedSerializedFlowState, updatedCheckpoint.serializeCheckpointState()) }
-
-        database.transaction {
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
-            // The result not stored yet
-            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
-            // The saving of checkpoint blobs needs to be fixed
-            assertEquals(2, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
-        }
-
-        database.transaction {
-            checkpointStorage.removeCheckpoint(id)
-        }
-        database.transaction {
-            assertThat(checkpointStorage.checkpoints()).isEmpty()
-        }
-        newCheckpointStorage()
-        database.transaction {
-            assertThat(checkpointStorage.checkpoints()).isEmpty()
-        }
-
-        database.transaction {
-            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
-            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
-            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
-            // The saving of checkpoint blobs needs to be fixed
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
-            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
-        }
-    }
-
-    @Ignore
     @Test(timeout = 300_000)
     fun `removing a checkpoint when there is no result does not fail`() {
         val exception = IllegalStateException("I am a naughty exception")
@@ -240,11 +197,9 @@ class DBCheckpointStorageTests {
 
         database.transaction {
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
-            // The result not stored yet
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
-            // The saving of checkpoint blobs needs to be fixed
-            assertEquals(2, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
         }
 
@@ -263,8 +218,7 @@ class DBCheckpointStorageTests {
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
-            // The saving of checkpoint blobs needs to be fixed
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
         }
     }
@@ -276,14 +230,13 @@ class DBCheckpointStorageTests {
         database.transaction {
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
         }
-        val updatedCheckpoint = checkpoint.copy(result = "The result")
+        val updatedCheckpoint = checkpoint.copy(result = "The result", status = Checkpoint.FlowStatus.COMPLETED)
         val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
         database.transaction { checkpointStorage.updateCheckpoint(id, updatedCheckpoint, updatedSerializedFlowState, updatedCheckpoint.serializeCheckpointState()) }
 
         database.transaction {
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
-            // The result not stored yet
-            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
@@ -457,7 +410,6 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
-    @Ignore
     fun `update checkpoint with result information creates new result database record`() {
         val result = "This is the result"
         val (id, checkpoint) = newCheckpoint()
@@ -466,7 +418,7 @@ class DBCheckpointStorageTests {
         database.transaction {
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
         }
-        val updatedCheckpoint = checkpoint.copy(result = result)
+        val updatedCheckpoint = checkpoint.copy(result = result, status = Checkpoint.FlowStatus.COMPLETED)
         val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
         database.transaction {
             checkpointStorage.updateCheckpoint(id, updatedCheckpoint, updatedSerializedFlowState, updatedCheckpoint.serializeCheckpointState())
@@ -481,64 +433,6 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Test(timeout = 300_000)
-    @Ignore
-    fun `update checkpoint with result information updates existing result database record`() {
-        val result = "This is the result"
-        val somehowThereIsANewResult = "Another result (which should not be possible!)"
-        val (id, checkpoint) = newCheckpoint()
-        val serializedFlowState =
-            checkpoint.serializeFlowState()
-        database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
-        }
-        val updatedCheckpoint = checkpoint.copy(result = result)
-        val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
-        database.transaction {
-            checkpointStorage.updateCheckpoint(id, updatedCheckpoint, updatedSerializedFlowState, updatedCheckpoint.serializeCheckpointState())
-        }
-        val updatedCheckpoint2 = checkpoint.copy(result = somehowThereIsANewResult)
-        val updatedSerializedFlowState2 = updatedCheckpoint2.serializeFlowState()
-        database.transaction {
-            checkpointStorage.updateCheckpoint(id, updatedCheckpoint2, updatedSerializedFlowState2, updatedCheckpoint2.serializeCheckpointState())
-        }
-        database.transaction {
-            assertEquals(
-                somehowThereIsANewResult,
-                checkpointStorage.getCheckpoint(id)!!.deserialize().result
-            )
-            assertNotNull(session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).result)
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `removing result information from checkpoint deletes existing result database record`() {
-        val result = "This is the result"
-        val (id, checkpoint) = newCheckpoint()
-        val serializedFlowState =
-            checkpoint.serializeFlowState()
-        database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
-        }
-        val updatedCheckpoint = checkpoint.copy(result = result)
-        val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
-        database.transaction {
-            checkpointStorage.updateCheckpoint(id, updatedCheckpoint, updatedSerializedFlowState, updatedCheckpoint.serializeCheckpointState())
-        }
-        val updatedCheckpoint2 = checkpoint.copy(result = null)
-        val updatedSerializedFlowState2 = updatedCheckpoint2.serializeFlowState()
-        database.transaction {
-            checkpointStorage.updateCheckpoint(id, updatedCheckpoint2, updatedSerializedFlowState2, updatedCheckpoint2.serializeCheckpointState())
-        }
-        database.transaction {
-            assertNull(checkpointStorage.getCheckpoint(id)!!.deserialize().result)
-            assertNull(session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).result)
-            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
-        }
-    }
-
-    @Ignore
     @Test(timeout = 300_000)
     fun `update checkpoint with error information creates a new error database record`() {
         val exception = IllegalStateException("I am a naughty exception")
@@ -557,58 +451,12 @@ class DBCheckpointStorageTests {
             assertNotNull(exceptionDetails)
             assertEquals(exception::class.java.name, exceptionDetails!!.type)
             assertEquals(exception.message, exceptionDetails.message)
-            assertEquals(1,  findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
-        }
-    }
-
-    @Ignore
-    @Test(timeout = 300_000)
-    fun `update checkpoint with new error information updates the existing error database record`() {
-        val illegalStateException = IllegalStateException("I am a naughty exception")
-        val illegalArgumentException = IllegalArgumentException("I am a very naughty exception")
-        val (id, checkpoint) = newCheckpoint()
-        val serializedFlowState = checkpoint.serializeFlowState()
-        database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
-        }
-        val updatedCheckpoint1 = checkpoint.addError(illegalStateException)
-        val updatedSerializedFlowState1 = updatedCheckpoint1.serializeFlowState()
-        database.transaction { checkpointStorage.updateCheckpoint(id, updatedCheckpoint1, updatedSerializedFlowState1, updatedCheckpoint1.serializeCheckpointState()) }
-        // Set back to clean
-        val updatedCheckpoint2 = checkpoint.addError(illegalArgumentException)
-        val updatedSerializedFlowState2 = updatedCheckpoint2.serializeFlowState()
-        database.transaction { checkpointStorage.updateCheckpoint(id, updatedCheckpoint2, updatedSerializedFlowState2, updatedCheckpoint2.serializeCheckpointState()) }
-        database.transaction {
-            assertTrue(checkpointStorage.getCheckpoint(id)!!.deserialize().errorState is ErrorState.Clean)
-            val exceptionDetails = session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).exceptionDetails
-            assertNotNull(exceptionDetails)
-            assertEquals(illegalArgumentException::class.java.name, exceptionDetails!!.type)
-            assertEquals(illegalArgumentException.message, exceptionDetails.message)
-            assertEquals(1,  findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `clean checkpoints delete the error record from the database`() {
-        val exception = IllegalStateException("I am a naughty exception")
-        val (id, checkpoint) = newCheckpoint()
-        val serializedFlowState = checkpoint.serializeFlowState()
-        database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
-        }
-        val updatedCheckpoint = checkpoint.addError(exception)
-        val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
-        database.transaction { checkpointStorage.updateCheckpoint(id, updatedCheckpoint, updatedSerializedFlowState, updatedCheckpoint.serializeCheckpointState()) }
-        database.transaction {
-            // Checkpoint always returns clean error state when retrieved via [getCheckpoint]
-            assertTrue(checkpointStorage.getCheckpoint(id)!!.deserialize().errorState is ErrorState.Clean)
-        }
-        // Set back to clean
-        database.transaction { checkpointStorage.updateCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState()) }
-        database.transaction {
-            assertTrue(checkpointStorage.getCheckpoint(id)!!.deserialize().errorState is ErrorState.Clean)
-            assertNull(session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).exceptionDetails)
-            assertEquals(0,  findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            val deserializedException = exceptionDetails.value?.let { SerializedBytes<Any>(it) }?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+            // IllegalStateException does not implement [CordaThrowable] therefore gets deserialized as a [CordaRuntimeException]
+            assertTrue(deserializedException is CordaRuntimeException)
+            val cordaRuntimeException = deserializedException as CordaRuntimeException
+            assertEquals(IllegalStateException::class.java.name, cordaRuntimeException.originalExceptionClassName)
+            assertEquals("I am a naughty exception", cordaRuntimeException.originalMessage!!)
         }
     }
 
@@ -668,10 +516,10 @@ class DBCheckpointStorageTests {
         val (_, checkpoint) = newCheckpoint(1)
         // runnables
         val runnable = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-        val hospitalized = checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
+        val hospitalized = checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.HOSPITALIZED)
         // not runnables
         val completed = checkpoint.copy(status = Checkpoint.FlowStatus.COMPLETED)
-        val failed = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+        val failed = checkpoint.addError(IllegalStateException("bla bla"),status = Checkpoint.FlowStatus.FAILED)
         val killed = checkpoint.copy(status = Checkpoint.FlowStatus.KILLED)
         // paused
         val paused = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED)
@@ -701,7 +549,6 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Ignore
     @Test(timeout = 300_000)
     fun `-not greater than DBCheckpointStorage_MAX_STACKTRACE_LENGTH- stackTrace gets persisted as a whole`() {
         val smallerDummyStackTrace = ArrayList<StackTraceElement>()
@@ -734,7 +581,6 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Ignore
     @Test(timeout = 300_000)
     fun `-greater than DBCheckpointStorage_MAX_STACKTRACE_LENGTH- stackTrace gets truncated to MAX_LENGTH_VARCHAR, and persisted`() {
         val smallerDummyStackTrace = ArrayList<StackTraceElement>()
@@ -780,9 +626,9 @@ class DBCheckpointStorageTests {
 
     private fun iterationsBasedOnLineSeparatorLength() = when {
         System.getProperty("line.separator").length == 1 -> // Linux or Mac
-            158
+            78
         System.getProperty("line.separator").length == 2 -> // Windows
-            152
+            75
         else -> throw IllegalStateException("Unknown line.separator")
     }
 
@@ -799,8 +645,8 @@ class DBCheckpointStorageTests {
             val (extractedId, extractedCheckpoint)  = checkpointStorage.getPausedCheckpoints().toList().single()
             assertEquals(id, extractedId)
             //We don't extract the result or the flowstate from a paused checkpoint
-            assertEquals(null, extractedCheckpoint.serializedFlowState)
-            assertEquals(null, extractedCheckpoint.result)
+            assertNull(extractedCheckpoint.serializedFlowState)
+            assertNull(extractedCheckpoint.result)
 
             assertEquals(pausedCheckpoint.status, extractedCheckpoint.status)
             assertEquals(pausedCheckpoint.progressStep, extractedCheckpoint.progressStep)
@@ -817,10 +663,16 @@ class DBCheckpointStorageTests {
         val (_, checkpoint) = newCheckpoint(1)
         // runnables
         val runnable = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
-        val hospitalized = changeStatus(checkpoint, Checkpoint.FlowStatus.HOSPITALIZED)
+        val hospitalized = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.HOSPITALIZED)
+        )
         // not runnables
         val completed = changeStatus(checkpoint, Checkpoint.FlowStatus.COMPLETED)
-        val failed = changeStatus(checkpoint, Checkpoint.FlowStatus.FAILED)
+        val failed = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.FAILED)
+        )
         val killed = changeStatus(checkpoint, Checkpoint.FlowStatus.KILLED)
         // paused
         val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.PAUSED)
@@ -853,7 +705,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
-    fun `updateCheckpoint setting DBFlowCheckpoint_blob to null whenever flow fails or gets hospitalized doesn't break ORM relationship`() {
+    fun `'updateCheckpoint' setting 'DBFlowCheckpoint_blob' to null whenever flow fails or gets hospitalized doesn't break ORM relationship`() {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
@@ -862,8 +714,8 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.FAILED) // the exact same behaviour applies for 'HOSPITALIZED' as well
-            checkpointStorage.updateCheckpoint(id, paused.checkpoint, serializedFlowState, paused.checkpoint.serializeCheckpointState())
+            val failed = checkpoint.addError(IllegalStateException()) // the exact same behaviour applies for 'HOSPITALIZED' as well
+            checkpointStorage.updateCheckpoint(id, failed, serializedFlowState, failed.serializeCheckpointState())
         }
 
         database.transaction {
@@ -888,6 +740,67 @@ class DBCheckpointStorageTests {
                 checkpointStorage.checkpoints().single().deserialize()
             )
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `update only compatible`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
+            checkpointStorage.updateCompatible(id, !checkpoint.compatible)
+        }
+        database.transaction {
+            assertEquals(
+                checkpoint.copy(compatible = !checkpoint.compatible),
+                checkpointStorage.checkpoints().single().deserialize()
+            )
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `'getFinishedFlowsResultsMetadata' fetches flows results metadata for finished flows only`() {
+        val (_, checkpoint) = newCheckpoint(1)
+        val runnable = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
+        val hospitalized = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.HOSPITALIZED)
+        )
+        val completed = changeStatus(checkpoint, Checkpoint.FlowStatus.COMPLETED)
+        val failed = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.FAILED)
+        )
+        val killed = changeStatus(checkpoint, Checkpoint.FlowStatus.KILLED)
+        val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.PAUSED)
+
+        database.transaction {
+            val serializedFlowState =
+                checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+
+            checkpointStorage.addCheckpoint(runnable.id, runnable.checkpoint, serializedFlowState, runnable.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(hospitalized.id, hospitalized.checkpoint, serializedFlowState, hospitalized.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(completed.id, completed.checkpoint, serializedFlowState, completed.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(failed.id, failed.checkpoint, serializedFlowState, failed.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(killed.id, killed.checkpoint, serializedFlowState, killed.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(paused.id, paused.checkpoint, serializedFlowState, paused.checkpoint.serializeCheckpointState())
+        }
+
+        val checkpointsInDb = database.transaction {
+            checkpointStorage.getCheckpoints().toList().size
+        }
+
+        val resultsMetadata = database.transaction {
+            checkpointStorage.getFinishedFlowsResultsMetadata()
+        }.toList()
+
+        assertEquals(6, checkpointsInDb)
+
+        val finishedStatuses = resultsMetadata.map { it.second.status }
+        assertTrue(Checkpoint.FlowStatus.COMPLETED in finishedStatuses)
+        assertTrue(Checkpoint.FlowStatus.FAILED in finishedStatuses)
     }
 
     data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)
@@ -943,7 +856,7 @@ class DBCheckpointStorageTests {
         return deserialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 
-    private fun Checkpoint.addError(exception: Exception): Checkpoint {
+    private fun Checkpoint.addError(exception: Exception, status: Checkpoint.FlowStatus = Checkpoint.FlowStatus.FAILED): Checkpoint {
         return copy(
             errorState = ErrorState.Errored(
                 listOf(
@@ -952,7 +865,8 @@ class DBCheckpointStorageTests {
                         exception
                     )
                 ), 0, false
-            )
+            ),
+            status = status
         )
     }
 

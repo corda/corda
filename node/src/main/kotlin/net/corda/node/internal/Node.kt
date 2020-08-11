@@ -125,7 +125,8 @@ open class Node(configuration: NodeConfiguration,
                 flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
                 cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory(),
                 djvmBootstrapSource: ApiSource = createBootstrapSource(configuration),
-                djvmCordaSource: UserSource? = createCordaSource(configuration)
+                djvmCordaSource: UserSource? = createCordaSource(configuration),
+                allowHibernateToManageAppSchema: Boolean = false
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -135,7 +136,8 @@ open class Node(configuration: NodeConfiguration,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1),
         djvmBootstrapSource = djvmBootstrapSource,
-        djvmCordaSource = djvmCordaSource
+        djvmCordaSource = djvmCordaSource,
+        allowHibernateToManageAppSchema = allowHibernateToManageAppSchema
 ) {
 
     override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
@@ -524,12 +526,7 @@ open class Node(configuration: NodeConfiguration,
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val baseDir = Paths.get(databaseName).parent.toString()
-                val server = org.h2.tools.Server.createTcpServer(
-                        "-tcpPort", effectiveH2Settings.address.port.toString(),
-                        "-tcpAllowOthers",
-                        "-tcpDaemon",
-                        "-baseDir", baseDir,
-                        "-key", "node", databaseName)
+                val server = createH2Server(baseDir, databaseName, effectiveH2Settings.address.port)
                 // override interface that createTcpServer listens on (which is always 0.0.0.0)
                 System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)
                 runOnStop += server::stop
@@ -551,12 +548,30 @@ open class Node(configuration: NodeConfiguration,
         database.closeOnStop()
     }
 
+    open fun createH2Server(baseDir: String, databaseName: String, port: Int): org.h2.tools.Server =
+        org.h2.tools.Server.createTcpServer(
+                "-tcpPort", port.toString(),
+                "-tcpAllowOthers",
+                "-tcpDaemon",
+                "-baseDir", baseDir,
+                "-key", "node", databaseName)
+
     private val _startupComplete = openFuture<Unit>()
     val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
     override fun generateAndSaveNodeInfo(): NodeInfo {
         initialiseSerialization()
         return super.generateAndSaveNodeInfo()
+    }
+
+    override fun runDatabaseMigrationScripts(
+            updateCoreSchemas: Boolean,
+            updateAppSchemas: Boolean,
+            updateAppSchemasWithCheckpoints: Boolean) {
+        if (allowHibernateToManageAppSchema) {
+            initialiseSerialization()
+        }
+        super.runDatabaseMigrationScripts(updateCoreSchemas, updateAppSchemas, updateAppSchemasWithCheckpoints)
     }
 
     override fun start(): NodeInfo {

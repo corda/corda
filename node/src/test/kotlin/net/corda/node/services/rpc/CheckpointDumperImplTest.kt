@@ -126,7 +126,7 @@ class CheckpointDumperImplTest {
             checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
         val newCheckpoint = checkpoint.copy(
-            flowState = FlowState.Completed,
+            flowState = FlowState.Finished,
             status = Checkpoint.FlowStatus.COMPLETED
         )
         database.transaction {
