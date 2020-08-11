@@ -384,7 +384,7 @@ class CordaRPCClientReconnectionTest {
 
     @Test(timeout=300_000)
     fun `rpc returned flow result future continue working when the server crashes and restarts`() {
-        driver(DriverParameters(cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
             fun startNode(): NodeHandle {
                 return startNode(
@@ -403,14 +403,12 @@ class CordaRPCClientReconnectionTest {
 
                 node.stop()
                 thread {
-                    Thread.sleep(1000)
+                    sleep(1000)
                     startNode()
                 }
-
                 val result = flowHandle.returnValue.get()
 
                 assertEquals(5, result!!)
-
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
         }
