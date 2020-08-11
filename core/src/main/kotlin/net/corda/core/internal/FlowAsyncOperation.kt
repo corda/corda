@@ -40,13 +40,7 @@ fun <T, R : Any> FlowLogic<T>.executeAsync(operation: FlowAsyncOperation<R>, may
  */
 val FlowAsyncOperation<*>.externalOperationImplName: String
     get() = when (this) {
-        is WrappedFlowExternalAsyncOperation<*> -> {
-            operation.javaClass.canonicalName
-        }
-        is WrappedFlowExternalOperation<*> -> {
-            operation.javaClass.canonicalName
-        }
-        else -> {
-            javaClass.canonicalName
-        }
+        is WrappedFlowExternalAsyncOperation<*> -> operation.javaClass.canonicalName
+        is WrappedFlowExternalOperation<*> -> operation.javaClass.canonicalName
+        else -> javaClass.canonicalName
     }
