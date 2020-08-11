@@ -416,6 +416,38 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `rpc remove client id retries to connect when the server is down`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val clientId = UUID.randomUUID().toString()
+                val flowHandle = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow).returnValue.getOrThrow()
+
+                node.stop()
+                thread {
+                    sleep(1000)
+                    startNode()
+                }
+                val removed = rpcOps.removeClientId(clientId)
+
+                assertTrue(removed)
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
+
     @StartableByRPC
     class SimpleFlow : FlowLogic<Int>() {
 
