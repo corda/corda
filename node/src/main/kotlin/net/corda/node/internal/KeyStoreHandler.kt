@@ -13,7 +13,8 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import java.io.IOException
 import java.math.BigInteger
-import java.security.KeyStoreException
+import java.nio.file.NoSuchFileException
+import java.security.GeneralSecurityException
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 
@@ -62,17 +63,22 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
 
     private fun getCertificateStores(): AllCertificateStores {
         return try {
-            // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
+            // The following will throw NoSuchFileException if key file not found
+            // or IOException with GeneralSecurityException cause if keystore password is incorrect.
             val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
             val signingCertificateStore = configuration.signingCertificateStore.get()
             val trustStore = configuration.p2pSslOptions.trustStore.get()
             AllCertificateStores(trustStore, sslKeyStore, signingCertificateStore)
-        } catch (e: IOException) {
+        } catch (e: NoSuchFileException) {
             throw IllegalArgumentException("One or more keyStores (identity or TLS) or trustStore not found. " +
                     "Please either copy your existing keys and certificates from another node, " +
                     "or if you don't have one yet, fill out the config file and run corda.jar initial-registration.", e)
-        } catch (e: KeyStoreException) {
-            throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
+        } catch (e: IOException) {
+            if (e.cause is GeneralSecurityException) {
+                throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.", e)
+            } else {
+                throw e
+            }
         }
     }
 

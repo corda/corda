@@ -1,32 +1,57 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.Crypto
+import net.corda.core.internal.div
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.testing.core.ALICE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.io.IOException
-import java.security.KeyStoreException
-import java.security.cert.X509Certificate
+import org.junit.rules.TemporaryFolder
+import kotlin.test.assertTrue
 
 class KeyStoreHandlerTest {
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
+
+    private val certificateDir get() = tempFolder.root.toPath() / "certificates"
+
+    private val config = mock<NodeConfiguration>()
+
+    private val keyStoreHandler = KeyStoreHandler(config, mock())
+
+    @Before
+    fun before() {
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificateDir)
+        val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(certificateDir)
+
+        p2pSslOptions.configureDevKeyAndTrustStores(ALICE_NAME, signingCertificateStore, certificateDir)
+
+        whenever(config.devMode).thenReturn(false)
+        whenever(config.signingCertificateStore).thenReturn(signingCertificateStore)
+        whenever(config.p2pSslOptions).thenReturn(p2pSslOptions)
+        whenever(config.myLegalName).thenReturn(ALICE_NAME)
+    }
+
     @Test(timeout = 300_000)
-    fun `initializing key store in non-dev mode with no key store`() {
-        whenever(signingSupplier.get()).doAnswer { throw IOException() }
+    fun `initializing key store in non-dev mode with no node key store`() {
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificateDir,
+                certificateStoreFileName = "invalid.jks")
+        whenever(config.signingCertificateStore).thenReturn(signingCertificateStore)
 
         assertThatThrownBy {
             keyStoreHandler.initKeyStores()
@@ -34,8 +59,49 @@ class KeyStoreHandlerTest {
     }
 
     @Test(timeout = 300_000)
-    fun `initializing key store in non-dev mode with invalid password`() {
-        whenever(signingSupplier.get()).doAnswer { throw KeyStoreException() }
+    fun `initializing key store in non-dev mode with no trust store`() {
+        val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(certificateDir, trustStoreFileName = "invalid.jks")
+        whenever(config.p2pSslOptions).thenReturn(p2pSslOptions)
+
+        assertThatThrownBy {
+            keyStoreHandler.initKeyStores()
+        }.hasMessageContaining("One or more keyStores (identity or TLS) or trustStore not found.")
+    }
+
+    @Test(timeout = 300_000)
+    fun `initializing key store in non-dev mode with no TLS key store`() {
+        val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(certificateDir, keyStoreFileName = "invalid.jks")
+        whenever(config.p2pSslOptions).thenReturn(p2pSslOptions)
+
+        assertThatThrownBy {
+            keyStoreHandler.initKeyStores()
+        }.hasMessageContaining("One or more keyStores (identity or TLS) or trustStore not found.")
+    }
+
+    @Test(timeout = 300_000)
+    fun `initializing key store in non-dev mode with invalid node key store password`() {
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificateDir, password = "invalid")
+        whenever(config.signingCertificateStore).thenReturn(signingCertificateStore)
+
+        assertThatThrownBy {
+            keyStoreHandler.initKeyStores()
+        }.hasMessageContaining("At least one of the keystores or truststore passwords does not match configuration")
+    }
+
+    @Test(timeout = 300_000)
+    fun `initializing key store in non-dev mode with invalid trust store password`() {
+        val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(certificateDir, trustStorePassword = "invalid")
+        whenever(config.p2pSslOptions).thenReturn(p2pSslOptions)
+
+        assertThatThrownBy {
+            keyStoreHandler.initKeyStores()
+        }.hasMessageContaining("At least one of the keystores or truststore passwords does not match configuration")
+    }
+
+    @Test(timeout = 300_000)
+    fun `initializing key store in non-dev mode with invalid TLS key store password`() {
+        val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(certificateDir, keyStorePassword = "invalid")
+        whenever(config.p2pSslOptions).thenReturn(p2pSslOptions)
 
         assertThatThrownBy {
             keyStoreHandler.initKeyStores()
@@ -44,8 +110,9 @@ class KeyStoreHandlerTest {
 
     @Test(timeout = 300_000)
     fun `initializing key store in non-dev mode without trusted root`() {
-        whenever(trustStore.contains(CORDA_ROOT_CA)).thenReturn(false)
-        whenever(trustStore.iterator()).thenReturn(mock())
+        config.p2pSslOptions.trustStore.get().update {
+            internal.deleteEntry(CORDA_ROOT_CA)
+        }
 
         assertThatThrownBy {
             keyStoreHandler.initKeyStores()
@@ -54,7 +121,9 @@ class KeyStoreHandlerTest {
 
     @Test(timeout = 300_000)
     fun `initializing key store in non-dev mode without alias for TLS key`() {
-        whenever(keyStore.contains(CORDA_CLIENT_TLS)).thenReturn(false)
+        config.p2pSslOptions.keyStore.get().update {
+            internal.deleteEntry(CORDA_CLIENT_TLS)
+        }
 
         assertThatThrownBy {
             keyStoreHandler.initKeyStores()
@@ -63,8 +132,15 @@ class KeyStoreHandlerTest {
 
     @Test(timeout = 300_000)
     fun `initializing key store should throw exception if TLS certificate does not chain to the trust root`() {
-        val untrustedRoot = mock<X509Certificate>()
-        whenever(keyStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(untrustedRoot))
+        val keyPair  = Crypto.generateKeyPair()
+        val tlsKeyPair  = Crypto.generateKeyPair()
+        val untrustedRoot = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, keyPair)
+        val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, untrustedRoot, keyPair, ALICE_NAME.x500Principal,
+                tlsKeyPair.public)
+
+        config.p2pSslOptions.keyStore.get().update {
+            setPrivateKey(CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, untrustedRoot), config.p2pSslOptions.keyStore.entryPassword)
+        }
 
         assertThatThrownBy {
             keyStoreHandler.initKeyStores()
@@ -73,69 +149,33 @@ class KeyStoreHandlerTest {
 
     @Test(timeout = 300_000)
     fun `initializing key store should return valid certificate if certificate is valid`() {
+        val trustRoot = config.p2pSslOptions.trustStore.get()[CORDA_ROOT_CA]
         val certificate = keyStoreHandler.initKeyStores()
 
         assertThat(certificate).isEqualTo(listOf(trustRoot))
     }
 
     @Test(timeout = 300_000)
-    fun `initializing key store in dev mode check te supplier`() {
+    fun `initializing key store in dev mode check keystore creation`() {
+        val devCertificateDir = tempFolder.root.toPath() / "certificates-dev"
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(devCertificateDir)
+        val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(devCertificateDir)
+        val cryptoService = mock<BCCryptoService>()
+
         whenever(config.devMode).thenReturn(true)
-        whenever(config.myLegalName).thenReturn(ALICE_NAME)
-        whenever(config.certificatesDirectory).thenReturn(mock())
-        whenever(trustSupplier.getOptional()).thenReturn(mock())
-        whenever(keySupplier.getOptional()).thenReturn(mock())
-        whenever(signingSupplier.getOptional()).thenReturn(mock())
+        whenever(config.signingCertificateStore).thenReturn(signingCertificateStore)
+        whenever(config.p2pSslOptions).thenReturn(p2pSslOptions)
+        whenever(config.certificatesDirectory).thenReturn(devCertificateDir)
 
-        keyStoreHandler.initKeyStores()
+        assertThat(devCertificateDir).doesNotExist()
 
-        verify(signingSupplier).getOptional()
-    }
+        KeyStoreHandler(config, cryptoService).initKeyStores()
 
-    @Test(timeout = 300_000)
-    fun `initializing key store in dev mode with BCCryptoService call resyncKeystore`() {
-        val bCryptoService = mock<BCCryptoService>()
-        whenever(config.devMode).thenReturn(true)
-        whenever(config.myLegalName).thenReturn(ALICE_NAME)
-        whenever(config.certificatesDirectory).thenReturn(mock())
-        whenever(trustSupplier.getOptional()).thenReturn(mock())
-        whenever(keySupplier.getOptional()).thenReturn(mock())
-        whenever(signingSupplier.getOptional()).thenReturn(mock())
+        verify(cryptoService).resyncKeystore()
+        assertThat(devCertificateDir).exists()
 
-        KeyStoreHandler(config, bCryptoService).initKeyStores()
-
-        verify(bCryptoService).resyncKeystore()
-    }
-
-    private val config = mock<NodeConfiguration>()
-
-    private val trustStore = mock<CertificateStore>()
-    private val signingStore = mock<CertificateStore>()
-    private val keyStore = mock<CertificateStore>()
-    private val sslOptions = mock<MutualSslConfiguration>()
-    private val trustSupplier = mock<FileBasedCertificateStoreSupplier>()
-    private val signingSupplier = mock<FileBasedCertificateStoreSupplier>()
-    private val keySupplier = mock<FileBasedCertificateStoreSupplier>()
-    private val trustRoot = mock<X509Certificate>()
-    private val cryptoService = mock<CryptoService>()
-    private val keyStoreHandler = KeyStoreHandler(config, cryptoService)
-
-    init {
-        whenever(config.devMode).thenReturn(false)
-
-        whenever(sslOptions.keyStore).thenReturn(keySupplier)
-        whenever(sslOptions.trustStore).thenReturn(trustSupplier)
-        whenever(config.signingCertificateStore).thenReturn(signingSupplier)
-        whenever(trustSupplier.get()).thenReturn(trustStore)
-        whenever(signingSupplier.get()).thenReturn(signingStore)
-        whenever(keySupplier.get()).thenReturn(keyStore)
-        whenever(trustStore.contains(CORDA_ROOT_CA)).thenReturn(true)
-        whenever(keyStore.contains(CORDA_CLIENT_TLS)).thenReturn(true)
-        whenever(signingStore.contains(CORDA_CLIENT_CA)).thenReturn(true)
-        whenever(config.p2pSslOptions).thenReturn(sslOptions)
-        whenever(trustStore[CORDA_ROOT_CA]).thenReturn(trustRoot)
-        whenever(signingStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(trustRoot))
-        whenever(keyStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(trustRoot))
-        whenever(trustStore.iterator()).thenReturn(listOf(CORDA_ROOT_CA to trustRoot).listIterator())
+        assertTrue(config.p2pSslOptions.trustStore.get().contains(CORDA_ROOT_CA))
+        assertTrue(config.p2pSslOptions.keyStore.get().contains(CORDA_CLIENT_TLS))
+        assertTrue(config.signingCertificateStore.get().contains(NODE_IDENTITY_KEY_ALIAS))
     }
 }
