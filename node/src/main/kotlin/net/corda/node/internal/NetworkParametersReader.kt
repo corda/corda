@@ -20,8 +20,7 @@ import java.security.cert.X509Certificate
 
 class NetworkParametersReader(private val trustRoot: X509Certificate,
                               private val networkMapClient: NetworkMapClient?,
-                              private val baseDirectory: Path,
-                              private val networkParamsPath: Path = baseDirectory) {
+                              private val networkParamsPath: Path) {
     companion object {
         private val logger = contextLogger()
     }
