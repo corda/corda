@@ -11,10 +11,19 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
 
+@DeleteForDJVM
+@DoNotImplement
+interface FlowStateMachineHandle<FLOWRETURN> {
+    val logic: FlowLogic<FLOWRETURN>?
+    val id: StateMachineRunId
+    val resultFuture: CordaFuture<FLOWRETURN>
+    val clientId: String?
+}
+
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 @DeleteForDJVM
 @DoNotImplement
-interface FlowStateMachine<FLOWRETURN> {
+interface FlowStateMachine<FLOWRETURN> : FlowStateMachineHandle<FLOWRETURN> {
     @Suspendable
     fun <SUSPENDRETURN : Any> suspend(ioRequest: FlowIORequest<SUSPENDRETURN>, maySkipCheckpoint: Boolean): SUSPENDRETURN
 
@@ -38,11 +47,8 @@ interface FlowStateMachine<FLOWRETURN> {
 
     fun updateTimedFlowTimeout(timeoutSeconds: Long)
 
-    val logic: FlowLogic<FLOWRETURN>
     val serviceHub: ServiceHub
     val logger: Logger
-    val id: StateMachineRunId
-    val resultFuture: CordaFuture<FLOWRETURN>
     val context: InvocationContext
     val ourIdentity: Party
     val ourSenderUUID: String?

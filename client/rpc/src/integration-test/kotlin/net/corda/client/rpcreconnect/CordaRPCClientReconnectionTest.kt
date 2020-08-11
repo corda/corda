@@ -6,6 +6,7 @@ import net.corda.client.rpc.CordaRPCClientTest
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
@@ -81,6 +82,29 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
+
+    @Test(timeout=300_000)
+    fun `minimum server protocol version should cause exception if higher than allowed`() {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            assertThatThrownBy {
+                val node = startNode ()
+                val client = CordaRPCClient(node.rpcAddress, config.copy(minimumServerProtocolVersion = 100, maxReconnectAttempts = 1))
+                client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)
+            }
+                    .isInstanceOf(UnrecoverableRPCException::class.java)
+                    .hasMessageStartingWith("Requested minimum protocol version (100) is higher than the server's supported protocol version ")
+        }
+    }
 
     @Test(timeout=300_000)
     fun `rpc client calls and returned observables continue working when the server crashes and restarts`() {
@@ -292,7 +316,7 @@ class CordaRPCClientReconnectionTest {
             val node = startNode()
             CordaRPCClient(node.rpcAddress, config).start(rpcUser.username, rpcUser.password, gracefulReconnect).use {
                 node.stop()
-                thread() {
+                thread {
                     it.proxy.startTrackedFlow(
                             ::CashIssueFlow,
                             10.DOLLARS,

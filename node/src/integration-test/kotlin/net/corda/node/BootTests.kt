@@ -44,7 +44,7 @@ class BootTests {
                 rpc.startFlow(::ObjectInputStreamFlow).returnValue.getOrThrow()
             }
         }
-        driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
             val devModeNode = startNode(devParams).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 

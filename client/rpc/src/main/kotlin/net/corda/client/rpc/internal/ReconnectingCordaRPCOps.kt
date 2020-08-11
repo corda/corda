@@ -9,6 +9,9 @@ import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.UnrecoverableRPCException
+import net.corda.client.rpc.internal.RPCUtils.isShutdown
+import net.corda.client.rpc.internal.RPCUtils.isStartFlow
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CLOSED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTING
@@ -210,7 +213,7 @@ class ReconnectingCordaRPCOps private constructor(
          * Establishes a connection by automatically retrying if the attempt to establish a connection fails.
          *
          * @param retryInterval the interval between retries.
-         * @param roundRobinIndex index of the address that will be used for the connection.
+         * @param roundRobinIndex the index of the address that will be used for the connection.
          * @param retries the number of retries remaining. A negative value implies infinite retries.
          */
         private tailrec fun establishConnectionWithRetry(
@@ -239,7 +242,7 @@ class ReconnectingCordaRPCOps private constructor(
                 }
             } catch (ex: Exception) {
                 when (ex) {
-                    is ActiveMQSecurityException -> {
+                    is UnrecoverableRPCException, is ActiveMQSecurityException -> {
                         log.error("Failed to login to node.", ex)
                         throw ex
                     }
@@ -290,9 +293,6 @@ class ReconnectingCordaRPCOps private constructor(
         fun isClosed(): Boolean = currentState == CLOSED
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
-        private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
-        private fun Method.isShutdown() = name == "shutdown" || name == "gracefulShutdown" || name == "terminate"
-
         private fun checkIfIsStartFlow(method: Method, e: InvocationTargetException) {
             if (method.isStartFlow()) {
                 // Don't retry flows

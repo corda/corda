@@ -4,13 +4,16 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -22,6 +25,7 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import java.lang.IllegalStateException
 import java.time.Instant
 import java.util.concurrent.Future
+import java.util.concurrent.Semaphore
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -41,9 +45,12 @@ import java.util.concurrent.Future
  * @param isRemoved true if the flow has been removed from the state machine manager. This is used to avoid any further
  *   work.
  * @param isKilled true if the flow has been marked as killed. This is used to cause a flow to move to a killed flow transition no matter
- * what event it is set to process next. [isKilled] is a `var` and set as [Volatile] to prevent concurrency errors that can occur if a flow
- * is killed during the middle of a state transition.
+ * what event it is set to process next.
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
+ * @param reloadCheckpointAfterSuspendCount The number of times a flow has been reloaded (not retried). This is [null] when
+ * [NodeConfiguration.reloadCheckpointAfterSuspendCount] is not enabled.
+ * @param lock The flow's lock, used to prevent the flow performing a transition while being interacted with from external threads, and
+ * vise-versa.
  */
 // TODO perhaps add a read-only environment to the state machine for things that don't change over time?
 // TODO evaluate persistent datastructure libraries to replace the inefficient copying we currently do.
@@ -57,10 +64,10 @@ data class StateMachineState(
     val isAnyCheckpointPersisted: Boolean,
     val isStartIdempotent: Boolean,
     val isRemoved: Boolean,
-    @Volatile
-    var isKilled: Boolean,
+    val isKilled: Boolean,
     val senderUUID: String?,
-    val reloadCheckpointAfterSuspendCount: Int?
+    val reloadCheckpointAfterSuspendCount: Int?,
+    val lock: Semaphore
 ) : KryoSerializable {
     override fun write(kryo: Kryo?, output: Output?) {
         throw IllegalStateException("${StateMachineState::class.qualifiedName} should never be serialized")
@@ -124,8 +131,8 @@ data class Checkpoint(
                         listOf(topLevelSubFlow),
                         numberOfSuspends = 0
                     ),
-                    errorState = ErrorState.Clean,
-                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic)
+                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
+                    errorState = ErrorState.Clean
                 )
             }
         }
@@ -203,7 +210,7 @@ data class Checkpoint(
         fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
             val flowState = when(status) {
                 FlowStatus.PAUSED -> FlowState.Paused
-                FlowStatus.COMPLETED -> FlowState.Completed
+                FlowStatus.COMPLETED, FlowStatus.FAILED -> FlowState.Finished
                 else -> serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
             }
             return Checkpoint(
@@ -346,9 +353,9 @@ sealed class FlowState {
     object Paused: FlowState()
 
     /**
-     * The flow has completed. It does not have a running fiber that needs to be serialized and checkpointed.
+     * The flow has finished. It does not have a running fiber that needs to be serialized and checkpointed.
      */
-    object Completed : FlowState()
+    object Finished : FlowState()
 
 }
 
@@ -408,3 +415,13 @@ sealed class SubFlowVersion {
     data class CoreFlow(override val platformVersion: Int) : SubFlowVersion()
     data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }
+
+sealed class FlowWithClientIdStatus {
+    data class Active(val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>) : FlowWithClientIdStatus()
+    data class Removed(val flowId: StateMachineRunId, val succeeded: Boolean) : FlowWithClientIdStatus()
+}
+
+data class FlowResultMetadata(
+    val status: Checkpoint.FlowStatus,
+    val clientId: String?
+)

@@ -10,7 +10,7 @@ import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
+import net.corda.client.rpc.internal.RPCUtils.isShutdownCmd
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
@@ -34,6 +34,7 @@ import net.corda.nodeapi.internal.DeduplicationChecker
 import net.corda.nodeapi.internal.rpc.client.CallSite
 import net.corda.nodeapi.internal.rpc.client.CallSiteMap
 import net.corda.nodeapi.internal.rpc.client.ObservableContext
+import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.nodeapi.internal.rpc.client.RpcObservableMap
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -45,10 +46,12 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
+import org.apache.activemq.artemis.api.core.client.FailoverEventListener
 import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
+import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -122,7 +125,7 @@ internal class RPCClientProxyHandler(
         val toStringMethod: Method = Object::toString.javaMethod!!
         val equalsMethod: Method = Object::equals.javaMethod!!
         val hashCodeMethod: Method = Object::hashCode.javaMethod!!
-
+        var terminating  = false
         private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: CallSite) {
             var currentThrowable = throwable
             while (true) {
@@ -139,6 +142,19 @@ internal class RPCClientProxyHandler(
                 } else {
                     currentThrowable = cause
                 }
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun closeObservable(observable: UnicastSubject<Notification<*>>) {
+            // Notify listeners of the observables that the connection is being terminated.
+            try {
+                observable.onError(ConnectionFailureException())
+            } catch (ex: OnErrorNotImplementedException) {
+                // Indicates the observer does not have any error handling.
+                log.debug { "Closed connection on observable whose observers have no error handling." }
+            } catch (ex: Exception) {
+                log.error("Unexpected exception when RPC connection failure handling", ex)
             }
         }
     }
@@ -202,7 +218,7 @@ internal class RPCClientProxyHandler(
                         .weakValues()
                         .removalListener(onObservableRemove)
                         .executor(MoreExecutors.directExecutor()),
-        "RpcClientProxyHandler_rpcObservable"
+                "RpcClientProxyHandler_rpcObservable"
         )
     }
 
@@ -218,6 +234,22 @@ internal class RPCClientProxyHandler(
     private val sendingEnabled = AtomicBoolean(true)
     // Used to interrupt failover thread (i.e. client is closed while failing over).
     private var haFailoverThread: Thread? = null
+    private val haFailoverHandler: FailoverHandler = FailoverHandler(
+            detected = { log.warn("Connection failure. Attempting to reconnect using back-up addresses.")
+                cleanUpOnConnectionLoss()
+                sessionFactory?.apply {
+                    connection.destroy()
+                    cleanup()
+                    close()
+                }
+                haFailoverThread = Thread.currentThread()
+                attemptReconnect()
+            })
+    private val defaultFailoverHandler: FailoverHandler = FailoverHandler(
+            detected = { cleanUpOnConnectionLoss() },
+            completed = { sendingEnabled.set(true)
+                log.info("RPC server available.")},
+            failed = { log.error("Could not reconnect to the RPC server.")})
 
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
@@ -250,13 +282,25 @@ internal class RPCClientProxyHandler(
         }
         // Depending on how the client is constructed, connection failure is treated differently
         if (serverLocator.staticTransportConfigurations.size == 1) {
-            sessionFactory!!.addFailoverListener(this::failoverHandler)
+            sessionFactory!!.addFailoverListener(defaultFailoverHandler)
         } else {
-            sessionFactory!!.addFailoverListener(this::haFailoverHandler)
+            sessionFactory!!.addFailoverListener(haFailoverHandler)
         }
         initSessions()
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         startSessions()
+    }
+
+    class FailoverHandler(private val detected: () -> Unit = {},
+                          private val completed: () -> Unit = {},
+                          private val failed: () -> Unit = {}): FailoverEventListener {
+        override fun failoverEvent(eventType: FailoverEventType?) {
+            when (eventType) {
+                FailoverEventType.FAILURE_DETECTED -> { detected() }
+                FailoverEventType.FAILOVER_COMPLETED -> { completed() }
+                FailoverEventType.FAILOVER_FAILED -> { if (!terminating) failed() }
+            }
+        }
     }
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
@@ -296,6 +340,10 @@ internal class RPCClientProxyHandler(
             val replyFuture = SettableFuture.create<Any>()
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
                 "Generated several RPC requests with same ID $replyId"
+            }
+
+            if (request.isShutdownCmd()){
+                terminating = true
             }
 
             sendMessage(request)
@@ -451,14 +499,9 @@ internal class RPCClientProxyHandler(
         }
 
         reaperScheduledFuture?.cancel(false)
-        val observablesMap = observableContext.observableMap.asMap()
-        observablesMap.keys.forEach { key ->
+        observableContext.observableMap.asMap().forEach { (key, observable) ->
             observationExecutorPool.run(key) {
-                try {
-                    observablesMap[key]?.onError(ConnectionFailureException())
-                } catch (e: Exception) {
-                    log.error("Unexpected exception when RPC connection failure handling", e)
-                }
+                observable?.also(Companion::closeObservable)
             }
         }
         observableContext.observableMap.invalidateAll()
@@ -563,7 +606,7 @@ internal class RPCClientProxyHandler(
 
             log.debug { "Connected successfully after $reconnectAttempt attempts using ${transport.params}." }
             log.info("RPC server available.")
-            sessionFactory!!.addFailoverListener(this::haFailoverHandler)
+            sessionFactory!!.addFailoverListener(haFailoverHandler)
             initSessions()
             startSessions()
             sendingEnabled.set(true)
@@ -590,38 +633,6 @@ internal class RPCClientProxyHandler(
     private fun startSessions() {
         consumerSession!!.start()
         producerSession!!.start()
-    }
-
-    private fun haFailoverHandler(event: FailoverEventType) {
-        if (event == FailoverEventType.FAILURE_DETECTED) {
-            log.warn("Connection failure. Attempting to reconnect using back-up addresses.")
-            cleanUpOnConnectionLoss()
-            sessionFactory?.apply {
-                connection.destroy()
-                cleanup()
-                close()
-            }
-            haFailoverThread = Thread.currentThread()
-            attemptReconnect()
-        }
-        // Other events are not considered as reconnection is not done by Artemis.
-    }
-
-    private fun failoverHandler(event: FailoverEventType) {
-        when (event) {
-            FailoverEventType.FAILURE_DETECTED -> {
-               cleanUpOnConnectionLoss()
-            }
-
-            FailoverEventType.FAILOVER_COMPLETED -> {
-                sendingEnabled.set(true)
-                log.info("RPC server available.")
-            }
-
-            FailoverEventType.FAILOVER_FAILED -> {
-                log.error("Could not reconnect to the RPC server.")
-            }
-        }
     }
 
     private fun cleanUpOnConnectionLoss() {
