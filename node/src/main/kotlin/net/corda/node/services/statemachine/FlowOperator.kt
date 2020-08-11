@@ -1,10 +1,10 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.flows.externalOperationImplName
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.externalOperationImplName
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

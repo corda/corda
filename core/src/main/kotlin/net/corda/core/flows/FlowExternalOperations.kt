@@ -101,20 +101,3 @@ internal class WrappedFlowExternalOperation<R : Any>(
         ).asCordaFuture()
     }
 }
-
-/**
- * Returns a name of the external operation implementation considering that it can wrapped
- * by WrappedFlowExternalAsyncOperation<T> or WrappedFlowExternalOperation<T>
- */
-val FlowAsyncOperation<*>.externalOperationImplName: String
-    get() = when (this) {
-        is WrappedFlowExternalAsyncOperation<*> -> {
-            operation.javaClass.canonicalName
-        }
-        is WrappedFlowExternalOperation<*> -> {
-            operation.javaClass.canonicalName
-        }
-        else -> {
-            javaClass.canonicalName
-        }
-    }
