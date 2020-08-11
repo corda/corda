@@ -148,11 +148,10 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
 	fun `errors for nested config keys contain path`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         val missingPropertyPath = "rpcSettings.address"
-        rawConfig = rawConfig.withoutPath(missingPropertyPath)
+        val config = rawConfig.withoutPath(missingPropertyPath)
 
-        assertThat(rawConfig.parseAsNodeConfiguration().errors.single()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
+        assertThat(config.parseAsNodeConfiguration().errors.single()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
             assertThat(error.message).contains(missingPropertyPath)
             assertThat(error.typeName).isEqualTo(NodeConfiguration::class.java.simpleName)
         }
@@ -187,17 +186,14 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
 	fun `rpcAddress and rpcSettings_address are equivalent`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-        rawConfig = rawConfig.withoutPath("rpcSettings.address")
-        rawConfig = rawConfig.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
+        var config = rawConfig.withoutPath("rpcSettings.address")
+        config = config.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
 
-        assertThat(rawConfig.parseAsNodeConfiguration().isValid).isTrue()
+        assertThat(config.parseAsNodeConfiguration().isValid).isTrue()
     }
 
     @Test(timeout=6_000)
 	fun `absolute base directory leads to correct cordapp directories`() {
-        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-
         // Override base directory to have predictable experience on diff OSes
         val finalConfig = configOf(
                 // Add substitution values here
@@ -214,13 +210,11 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
     fun `absolute base directory leads to correct default cordapp directory`() {
-        val rawConfig = ConfigFactory.parseResources("working-config-no-cordapps.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-
         // Override base directory to have predictable experience on diff OSes
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to tempFolder.root.canonicalPath)
-                .withFallback(rawConfig)
+                .withFallback(rawConfigNoCordapps)
                 .resolve()
 
         val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
@@ -232,8 +226,6 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
     fun `relative base dir leads to correct cordapp directories`() {
-        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-
         val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
         val fullPath = File(".").resolve(path).toString()
         // Override base directory to have predictable experience on diff OSes
@@ -251,15 +243,13 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
     fun `relative base dir leads to correct default cordapp directory`() {
-        val rawConfig = ConfigFactory.parseResources("working-config-no-cordapps.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-
         val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
         val fullPath = File(".").resolve(path).toString()
         // Override base directory to have predictable experience on diff OSes
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to fullPath)
-                .withFallback(rawConfig)
+                .withFallback(rawConfigNoCordapps)
                 .resolve()
 
         val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
@@ -270,12 +260,11 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
 	fun `missing rpcSettings_adminAddress cause a graceful failure`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-        rawConfig = rawConfig.withoutPath("rpcSettings.adminAddress")
+        val config = rawConfig.withoutPath("rpcSettings.adminAddress")
 
-        val config = rawConfig.parseAsNodeConfiguration()
+        val nodeConfiguration = config.parseAsNodeConfiguration()
 
-        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
+        assertThat(nodeConfiguration.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
     }
 
     @Test(timeout=6_000)
@@ -348,7 +337,6 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
     fun `network parameters path is set as specified by node config with overridden base directory`() {
-        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         val finalConfig = configOf(
                 "baseDirectory" to "/path-to-base-directory",
                 "networkParametersPath" to "/network")
@@ -366,7 +354,6 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=6_000)
     fun `network parameters path defaults to overridden base directory`() {
-        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         val finalConfig = configOf(
                 "baseDirectory" to "/path-to-base-directory")
                 .withFallback(rawConfig)
@@ -384,6 +371,9 @@ class NodeConfigurationImplTest {
     }
 
     private val testConfiguration = testNodeConfiguration()
+
+    private val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+    private val rawConfigNoCordapps = ConfigFactory.parseResources("working-config-no-cordapps.conf", ConfigParseOptions.defaults().setAllowMissing(false))
 
     private fun testNodeConfiguration(): NodeConfigurationImpl {
         val baseDirectory = Paths.get(".")
