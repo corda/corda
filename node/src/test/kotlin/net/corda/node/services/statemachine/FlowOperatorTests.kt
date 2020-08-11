@@ -109,13 +109,13 @@ class FlowOperatorTests {
 
             assertEquals(2, result.size)
 
-            val bob = result.first { it.waitingForParties.first().party.name == BOB_NAME }
+            val bob = result.first { it.waitingForParties.first().name == BOB_NAME }
             assertNull(bob.externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, bob.source)
             assertEquals(1, bob.waitingForParties.size)
             assertEquals(bobStart.id, bob.id)
 
-            val dave = result.first { it.waitingForParties.first().party.name == DAVE_NAME }
+            val dave = result.first { it.waitingForParties.first().name == DAVE_NAME }
             assertNull(dave.externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, dave.source)
             assertEquals(daveStart.id, dave.id)
@@ -140,7 +140,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.first().source)
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(DAVE_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(DAVE_NAME, result.first().waitingForParties.first().name)
         }
     }
 
@@ -160,8 +160,8 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.first().source)
             assertEquals(2, result.first().waitingForParties.size)
-            assertTrue(result.first().waitingForParties.any { it.party.name == BOB_NAME })
-            assertTrue(result.first().waitingForParties.any { it.party.name == DAVE_NAME })
+            assertTrue(result.first().waitingForParties.any { it.name == BOB_NAME })
+            assertTrue(result.first().waitingForParties.any { it.name == DAVE_NAME })
         }
     }
 
@@ -184,7 +184,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.first().source)
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(DAVE_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(DAVE_NAME, result.first().waitingForParties.first().name)
         }
     }
 
@@ -208,7 +208,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.first().source)
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(BOB_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(BOB_NAME, result.first().waitingForParties.first().name)
         }
     }
 
@@ -237,13 +237,13 @@ class FlowOperatorTests {
             assertNull(receive.externalOperationImplName)
             assertEquals(1, receive.waitingForParties.size)
             assertEquals(bobStart.id, receive.id)
-            assertEquals(BOB_NAME, receive.waitingForParties.first().party.name)
+            assertEquals(BOB_NAME, receive.waitingForParties.first().name)
 
             val getFlowInfo = result.first { it.source == WaitingSource.GET_FLOW_INFO }
             assertNull(getFlowInfo.externalOperationImplName)
             assertEquals(1, getFlowInfo.waitingForParties.size)
             assertEquals(daveStart.id, getFlowInfo.id)
-            assertEquals(DAVE_NAME, getFlowInfo.waitingForParties.first().party.name)
+            assertEquals(DAVE_NAME, getFlowInfo.waitingForParties.first().name)
         }
     }
 
@@ -267,13 +267,13 @@ class FlowOperatorTests {
             assertEquals(bobStart.id, result.getValue(bobParty).first().id)
             assertEquals(WaitingSource.RECEIVE, result.getValue(bobParty).first().source)
             assertEquals(1, result.getValue(bobParty).first().waitingForParties.size)
-            assertEquals(BOB_NAME, result.getValue(bobParty).first().waitingForParties.first().party.name)
+            assertEquals(BOB_NAME, result.getValue(bobParty).first().waitingForParties.first().name)
             assertEquals(1, result.getValue(daveParty).size)
             assertEquals(daveStart.id, result.getValue(daveParty).first().id)
             assertNull(result.getValue(daveParty).first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.getValue(daveParty).first().source)
             assertEquals(1, result.getValue(daveParty).first().waitingForParties.size)
-            assertEquals(DAVE_NAME, result.getValue(daveParty).first().waitingForParties.first().party.name)
+            assertEquals(DAVE_NAME, result.getValue(daveParty).first().waitingForParties.first().name)
         }
     }
 
@@ -311,7 +311,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.first().source)
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().name)
         }
     }
 
@@ -331,7 +331,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.GET_FLOW_INFO, result.first().source)
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().name)
         }
     }
 
@@ -351,7 +351,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.first().source) // yep, it's receive
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().name)
         }
     }
 
@@ -374,7 +374,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.SEND_AND_RECEIVE, result.first().source)
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().name)
         }
     }
 
@@ -452,7 +452,7 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.SEND, result.first().source)
             assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().party.name)
+            assertEquals(EUGENE_NAME, result.first().waitingForParties.first().name)
         }
     }
 

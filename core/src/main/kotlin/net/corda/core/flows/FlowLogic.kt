@@ -32,7 +32,8 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
 import org.slf4j.Logger
 import java.time.Duration
-import java.util.*
+import java.util.HashMap
+import java.util.LinkedHashMap
 import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
 
@@ -161,7 +162,7 @@ abstract class FlowLogic<out T> {
     fun initiateFlow(destination: Destination): FlowSession {
         require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
         return stateMachine.initiateFlow(destination, serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty)
-                ?: throw IllegalArgumentException("Could not resolve destination: $destination"))
+            ?: throw IllegalArgumentException("Could not resolve destination: $destination"))
     }
 
     /**
@@ -552,7 +553,6 @@ abstract class FlowLogic<out T> {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var _stateMachine: FlowStateMachine<*>? = null
-
     /**
      * @suppress
      * Internal only. Reference to the [co.paralleluniverse.fibers.Fiber] instance that is the top level controller for
@@ -674,15 +674,15 @@ private class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExte
  * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
  */
 private class WrappedFlowExternalOperation<R : Any>(
-        val serviceHub: ServiceHubCoreInternal,
-        val operation: FlowExternalOperation<R>
+    val serviceHub: ServiceHubCoreInternal,
+    val operation: FlowExternalOperation<R>
 ) : FlowAsyncOperation<R> {
     override fun execute(deduplicationId: String): CordaFuture<R> {
         // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
         // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
         return CompletableFuture.supplyAsync(
-                Supplier { this.operation.execute(deduplicationId) },
-                serviceHub.externalOperationExecutor
+            Supplier { this.operation.execute(deduplicationId) },
+            serviceHub.externalOperationExecutor
         ).asCordaFuture()
     }
 }
@@ -704,6 +704,10 @@ data class FlowInfo(
          */
         val appName: String)
 
+/**
+ * Returns a name of the external operation implementation considering that it can wrapped
+ * by WrappedFlowExternalAsyncOperation<T> or WrappedFlowExternalOperation<T>
+ */
 val FlowAsyncOperation<*>.externalOperationImplName: String
     get() = when (this) {
         is WrappedFlowExternalAsyncOperation<*> -> {

@@ -5,7 +5,6 @@ import net.corda.core.flows.externalOperationImplName
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.serialization.SerializedBytes
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -26,16 +25,6 @@ enum class WaitingSource {
 }
 
 /**
- * Waiting party information and the payload for operations
- *  - send
- *  - send and receive
- */
-data class WaitingPartyInfo(
-        val payload: SerializedBytes<Any>?,
-        val party: Party
-)
-
-/**
  * Information about a flow which is waiting to be resumed
  * The flow is considered to be waiting if:
  *  - It's started.
@@ -46,7 +35,7 @@ data class WaitingFlowInfo(
         val id: StateMachineRunId,
         val suspendedTimestamp: Instant,
         val source: WaitingSource,
-        val waitingForParties: List<WaitingPartyInfo>,
+        val waitingForParties: List<Party>,
         val externalOperationImplName: String? = null
 )
 
@@ -126,7 +115,7 @@ class FlowOperator(private val smm: StateMachineManager, private val clock: Cloc
     override fun queryFlowsCurrentlyWaitingForPartiesGrouped(query: WaitingFlowQuery): Map<Party, List<WaitingFlowInfo>> {
         return queryWaitingFlows(query)
                 .flatMap { info -> info.waitingForParties.map { it to info } }
-                .groupBy({ it.first.party }) { it.second }
+                .groupBy({ it.first }) { it.second }
     }
 
     override fun getAllWaitingFlows(): Sequence<FlowStateMachineImpl<*>> {
@@ -172,19 +161,19 @@ private fun FlowStateMachineImpl<*>.waitingFlowInfo(): WaitingFlowInfo? {
         when (request) {
             is FlowIORequest.Send -> flowInfoOf(
                     WaitingSource.SEND,
-                    request.sessionToMessage.map { WaitingPartyInfo(it.value, it.key.counterparty) }
+                    request.sessionToMessage.map { it.key.counterparty }
             )
             is FlowIORequest.Receive -> flowInfoOf(
                     WaitingSource.RECEIVE,
-                    request.sessions.map { WaitingPartyInfo(null, it.counterparty) }
+                    request.sessions.map { it.counterparty }
             )
             is FlowIORequest.SendAndReceive -> flowInfoOf(
                     WaitingSource.SEND_AND_RECEIVE,
-                    request.sessionToMessage.map { WaitingPartyInfo(it.value, it.key.counterparty) }
+                    request.sessionToMessage.map { it.key.counterparty }
             )
             is FlowIORequest.CloseSessions -> flowInfoOf(
                     WaitingSource.CLOSE_SESSIONS,
-                    request.sessions.map { WaitingPartyInfo(null, it.counterparty) }
+                    request.sessions.map { it.counterparty }
             )
             is FlowIORequest.WaitForLedgerCommit -> flowInfoOf(
                     WaitingSource.WAIT_FOR_LEDGER_COMMIT,
@@ -192,7 +181,7 @@ private fun FlowStateMachineImpl<*>.waitingFlowInfo(): WaitingFlowInfo? {
             )
             is FlowIORequest.GetFlowInfo -> flowInfoOf(
                     WaitingSource.GET_FLOW_INFO,
-                    request.sessions.map { WaitingPartyInfo(null, it.counterparty) }
+                    request.sessions.map { it.counterparty }
             )
             is FlowIORequest.Sleep -> flowInfoOf(
                     WaitingSource.SLEEP,
@@ -216,7 +205,7 @@ private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = c
 
 private fun FlowStateMachineImpl<*>.flowInfoOf(
         source: WaitingSource,
-        waitingForParties: List<WaitingPartyInfo>,
+        waitingForParties: List<Party>,
         externalOperationName: String? = null
 ): WaitingFlowInfo =
         WaitingFlowInfo(
