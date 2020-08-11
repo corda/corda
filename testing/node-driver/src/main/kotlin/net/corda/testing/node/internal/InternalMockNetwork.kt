@@ -413,7 +413,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             //No mock shell
         }
 
-        override val devModeKeyEntropy: BigInteger get() = entropyCounter.updateAndGet { it.add(BigInteger.ONE) }
+        override fun initKeyStores() = keyStoreHandler.initKeyStores(entropyCounter.updateAndGet { it.add(BigInteger.ONE) })
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
         // The non-empty addresses check is important to have and so we tolerate the ugliness here.
