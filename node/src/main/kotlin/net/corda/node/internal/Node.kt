@@ -526,12 +526,7 @@ open class Node(configuration: NodeConfiguration,
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val baseDir = Paths.get(databaseName).parent.toString()
-                val server = org.h2.tools.Server.createTcpServer(
-                        "-tcpPort", effectiveH2Settings.address.port.toString(),
-                        "-tcpAllowOthers",
-                        "-tcpDaemon",
-                        "-baseDir", baseDir,
-                        "-key", "node", databaseName)
+                val server = createH2Server(baseDir, databaseName, effectiveH2Settings.address.port)
                 // override interface that createTcpServer listens on (which is always 0.0.0.0)
                 System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)
                 runOnStop += server::stop
@@ -552,6 +547,14 @@ open class Node(configuration: NodeConfiguration,
         super.startDatabase()
         database.closeOnStop()
     }
+
+    open fun createH2Server(baseDir: String, databaseName: String, port: Int): org.h2.tools.Server =
+        org.h2.tools.Server.createTcpServer(
+                "-tcpPort", port.toString(),
+                "-tcpAllowOthers",
+                "-tcpDaemon",
+                "-baseDir", baseDir,
+                "-key", "node", databaseName)
 
     private val _startupComplete = openFuture<Unit>()
     val startupComplete: CordaFuture<Unit> get() = _startupComplete

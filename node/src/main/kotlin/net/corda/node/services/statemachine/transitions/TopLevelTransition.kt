@@ -37,33 +37,38 @@ class TopLevelTransition(
         val event: Event
 ) : Transition {
 
-    @Suppress("ComplexMethod")
+    @Suppress("ComplexMethod", "TooGenericExceptionCaught")
     override fun transition(): TransitionResult {
+        return try {
+            if (startingState.isKilled) {
+                return KilledFlowTransition(context, startingState, event).transition()
+            }
 
-        if (startingState.isKilled) {
-            return KilledFlowTransition(context, startingState, event).transition()
-        }
-
-        return when (event) {
-            is Event.DoRemainingWork -> DoRemainingWorkTransition(context, startingState).transition()
-            is Event.DeliverSessionMessage -> DeliverSessionMessageTransition(context, startingState, event).transition()
-            is Event.Error -> errorTransition(event)
-            is Event.TransactionCommitted -> transactionCommittedTransition(event)
-            is Event.SoftShutdown -> softShutdownTransition()
-            is Event.StartErrorPropagation -> startErrorPropagationTransition()
-            is Event.EnterSubFlow -> enterSubFlowTransition(event)
-            is Event.LeaveSubFlow -> leaveSubFlowTransition()
-            is Event.Suspend -> suspendTransition(event)
-            is Event.FlowFinish -> flowFinishTransition(event)
-            is Event.InitiateFlow -> initiateFlowTransition(event)
-            is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
-            is Event.AsyncOperationThrows -> asyncOperationThrowsTransition(event)
-            is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition()
-            is Event.ReloadFlowFromCheckpointAfterSuspend -> reloadFlowFromCheckpointAfterSuspendTransition()
-            is Event.OvernightObservation -> overnightObservationTransition()
-            is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
-            is Event.Pause -> pausedFlowTransition()
-            is Event.TerminateSessions -> terminateSessionsTransition(event)
+            when (event) {
+                is Event.DoRemainingWork -> DoRemainingWorkTransition(context, startingState).transition()
+                is Event.DeliverSessionMessage -> DeliverSessionMessageTransition(context, startingState, event).transition()
+                is Event.Error -> errorTransition(event)
+                is Event.TransactionCommitted -> transactionCommittedTransition(event)
+                is Event.SoftShutdown -> softShutdownTransition()
+                is Event.StartErrorPropagation -> startErrorPropagationTransition()
+                is Event.EnterSubFlow -> enterSubFlowTransition(event)
+                is Event.LeaveSubFlow -> leaveSubFlowTransition()
+                is Event.Suspend -> suspendTransition(event)
+                is Event.FlowFinish -> flowFinishTransition(event)
+                is Event.InitiateFlow -> initiateFlowTransition(event)
+                is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
+                is Event.AsyncOperationThrows -> asyncOperationThrowsTransition(event)
+                is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition()
+                is Event.ReloadFlowFromCheckpointAfterSuspend -> reloadFlowFromCheckpointAfterSuspendTransition()
+                is Event.OvernightObservation -> overnightObservationTransition()
+                is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
+                is Event.Pause -> pausedFlowTransition()
+                is Event.TerminateSessions -> terminateSessionsTransition(event)
+            }
+        } catch (t: Throwable) {
+            // All errors coming from the transition should be sent back to the flow
+            // Letting the flow re-enter standard error handling
+            builder { resumeFlowLogic(t) }
         }
     }
 
