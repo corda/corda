@@ -31,8 +31,8 @@ import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FlowOperatorTests {
 
@@ -108,25 +108,18 @@ class FlowOperatorTests {
                     ))
 
             assertEquals(2, result.size)
-            assertNull(result.first().externalOperationImplName)
-            assertEquals(WaitingSource.RECEIVE, result.first().source)
-            assertNull(result.last().externalOperationImplName)
-            assertEquals(WaitingSource.RECEIVE, result.last().source)
-            assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(1, result.last().waitingForParties.size)
-            val firstName = result.first().waitingForParties.first().party.name
-            val lastName = result.last().waitingForParties.first().party.name
-            assertNotEquals(firstName, lastName)
-            if (firstName == BOB_NAME) {
-                assertEquals(bobStart.id, result.first().id)
-                assertEquals(daveStart.id, result.last().id)
-                assertEquals(DAVE_NAME, lastName)
-            } else {
-                assertEquals(bobStart.id, result.last().id)
-                assertEquals(daveStart.id, result.first().id)
-                assertEquals(DAVE_NAME, firstName)
-                assertEquals(BOB_NAME, lastName)
-            }
+
+            val bob = result.first { it.waitingForParties.first().party.name == BOB_NAME }
+            assertNull(bob.externalOperationImplName)
+            assertEquals(WaitingSource.RECEIVE, bob.source)
+            assertEquals(1, bob.waitingForParties.size)
+            assertEquals(bobStart.id, bob.id)
+
+            val dave = result.first { it.waitingForParties.first().party.name == DAVE_NAME }
+            assertNull(dave.externalOperationImplName)
+            assertEquals(WaitingSource.RECEIVE, dave.source)
+            assertEquals(daveStart.id, dave.id)
+            assertEquals(1, dave.waitingForParties.size)
         }
     }
 
@@ -167,15 +160,8 @@ class FlowOperatorTests {
             assertNull(result.first().externalOperationImplName)
             assertEquals(WaitingSource.RECEIVE, result.first().source)
             assertEquals(2, result.first().waitingForParties.size)
-            val firstName = result.first().waitingForParties.first().party.name
-            val lastName = result.first().waitingForParties.last().party.name
-            assertNotEquals(firstName, lastName)
-            if (firstName == BOB_NAME) {
-                assertEquals(DAVE_NAME, lastName)
-            } else {
-                assertEquals(DAVE_NAME, firstName)
-                assertEquals(BOB_NAME, lastName)
-            }
+            assertTrue(result.first().waitingForParties.any { it.party.name == BOB_NAME })
+            assertTrue(result.first().waitingForParties.any { it.party.name == DAVE_NAME })
         }
     }
 
@@ -246,25 +232,18 @@ class FlowOperatorTests {
                     ))
 
             assertEquals(2, result.size)
-            assertNull(result.first().externalOperationImplName)
-            assertEquals(WaitingSource.RECEIVE, result.first().source)
-            assertNull(result.last().externalOperationImplName)
-            assertEquals(WaitingSource.GET_FLOW_INFO, result.last().source)
-            assertEquals(1, result.first().waitingForParties.size)
-            assertEquals(1, result.last().waitingForParties.size)
-            val firstName = result.first().waitingForParties.first().party.name
-            val lastName = result.last().waitingForParties.first().party.name
-            assertNotEquals(firstName, lastName)
-            if (firstName == BOB_NAME) {
-                assertEquals(bobStart.id, result.first().id)
-                assertEquals(daveStart.id, result.last().id)
-                assertEquals(DAVE_NAME, lastName)
-            } else {
-                assertEquals(bobStart.id, result.last().id)
-                assertEquals(daveStart.id, result.first().id)
-                assertEquals(DAVE_NAME, firstName)
-                assertEquals(BOB_NAME, lastName)
-            }
+
+            val receive = result.first { it.source == WaitingSource.RECEIVE }
+            assertNull(receive.externalOperationImplName)
+            assertEquals(1, receive.waitingForParties.size)
+            assertEquals(bobStart.id, receive.id)
+            assertEquals(BOB_NAME, receive.waitingForParties.first().party.name)
+
+            val getFlowInfo = result.first { it.source == WaitingSource.GET_FLOW_INFO }
+            assertNull(getFlowInfo.externalOperationImplName)
+            assertEquals(1, getFlowInfo.waitingForParties.size)
+            assertEquals(daveStart.id, getFlowInfo.id)
+            assertEquals(DAVE_NAME, getFlowInfo.waitingForParties.first().party.name)
         }
     }
 
