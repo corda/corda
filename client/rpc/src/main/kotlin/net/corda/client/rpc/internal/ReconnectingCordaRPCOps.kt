@@ -396,33 +396,34 @@ class ReconnectingCordaRPCOps private constructor(
                             reconnectingRPCConnection.gracefulReconnect.maxAttempts))
 
                     val initialFuture = initialHandle.returnValue
-                    val retFuture = openFuture<Any?>()
+                    // This is the future that is returned to the client. It will get carried until we reconnect to the node.
+                    val returnFuture = openFuture<Any?>()
 
-                    tryConnect(initialFuture, retFuture) {
+                    tryConnect(initialFuture, returnFuture) {
                         val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts))
                         handle.returnValue
                     }
 
-                    return (initialHandle as FlowHandleWithClientIdImpl<Any?>).copy(returnValue = retFuture)
+                    return (initialHandle as FlowHandleWithClientIdImpl<Any?>).copy(returnValue = returnFuture)
                 }
                 // TODO - add handlers for Observable return types.
                 else -> doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts)
             }
         }
 
-        private fun tryConnect(currentFuture: CordaFuture<*>, retFuture: OpenFuture<Any?>, doInvoke: () -> CordaFuture<*>) {
+        private fun tryConnect(currentFuture: CordaFuture<*>, returnFuture: OpenFuture<Any?>, doInvoke: () -> CordaFuture<*>) {
             currentFuture.thenMatch(
                     success = {
-                        retFuture.set(it)
+                        returnFuture.set(it)
                     } ,
                     failure = {
                         if (it is ConnectionFailureException) {
                             reconnectingRPCConnection.observersPool.execute {
                                 val reconnectedFuture = doInvoke()
-                                tryConnect(reconnectedFuture, retFuture, doInvoke)
+                                tryConnect(reconnectedFuture, returnFuture, doInvoke)
                             }
                         } else {
-                            retFuture.setException(it)
+                            returnFuture.setException(it)
                         }
                     }
             )
