@@ -94,6 +94,16 @@ interface ObjectBuilder {
                                     "but property $name is not constructor-paired"
                     )
                 }
+            }.toMutableMap()
+
+            // Add constructor parameters not in the list of properties
+            // so we can use them in object evolution
+            val constructorIndicesForAllParameters = constructor.parameters.mapIndexed {
+                index, parameterInformation -> parameterInformation.name to index
+            }
+            for ((parameterName, parameterIndex) in constructorIndicesForAllParameters) {
+                // Only use the parameters not already matched to properties
+                constructorIndices.putIfAbsent(parameterName, parameterIndex)
             }
 
             val propertySlots = constructorIndices.keys.mapIndexed { slot, name -> name to slot }.toMap()
