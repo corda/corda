@@ -104,3 +104,6 @@ virtualenv/
 PLAN
 NOTES
 TODO
+
+# gradle-dependx plugin
+.dependx/

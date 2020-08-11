@@ -17,6 +17,7 @@ internal interface StateMachineInnerState {
     val changesPublisher: PublishSubject<Change>
     /** Flows scheduled to be retried if not finished within the specified timeout period. */
     val timedFlows: MutableMap<StateMachineRunId, ScheduledTimeout>
+    val clientIdsToFlowIds: MutableMap<String, FlowWithClientIdStatus>
 
     fun <R> withMutex(block: StateMachineInnerState.() -> R): R
 }
@@ -30,6 +31,7 @@ internal class StateMachineInnerStateImpl : StateMachineInnerState {
     override val pausedFlows = HashMap<StateMachineRunId, NonResidentFlow>()
     override val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
     override val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
+    override val clientIdsToFlowIds = HashMap<String, FlowWithClientIdStatus>()
 
     override fun <R> withMutex(block: StateMachineInnerState.() -> R): R = lock.withLock { block(this) }
 }

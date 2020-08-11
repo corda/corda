@@ -6,7 +6,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.core.makeUnique
@@ -48,12 +48,12 @@ interface WithMockNet {
     /**
      * Start a flow
      */
-    fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = services.startFlow(logic)
+    fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): FlowStateMachineHandle<T> = services.startFlow(logic)
 
     /**
      * Start a flow and run the network immediately afterwards
      */
-    fun <T> TestStartedNode.startFlowAndRunNetwork(logic: FlowLogic<T>): FlowStateMachine<T> =
+    fun <T> TestStartedNode.startFlowAndRunNetwork(logic: FlowLogic<T>): FlowStateMachineHandle<T> =
             startFlow(logic).andRunNetwork()
 
     fun TestStartedNode.createConfidentialIdentity(party: Party) =

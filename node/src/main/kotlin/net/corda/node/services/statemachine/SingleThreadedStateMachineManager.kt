@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.instrument.JavaAgent
+import co.paralleluniverse.strands.channels.Channel
 import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.concurrent.CordaFuture
@@ -13,12 +14,16 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.mapNotNull
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -72,12 +77,29 @@ internal class SingleThreadedStateMachineManager(
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
+
+        private val VALID_KILL_FLOW_STATUSES = setOf(
+            Checkpoint.FlowStatus.RUNNABLE,
+            Checkpoint.FlowStatus.FAILED,
+            Checkpoint.FlowStatus.COMPLETED,
+            Checkpoint.FlowStatus.HOSPITALIZED,
+            Checkpoint.FlowStatus.PAUSED
+        )
+
+        @VisibleForTesting
+        var beforeClientIDCheck: (() -> Unit)? = null
+        @VisibleForTesting
+        var onClientIDNotFound: (() -> Unit)? = null
+        @VisibleForTesting
+        var onCallingStartFlowInternal: (() -> Unit)? = null
+        @VisibleForTesting
+        var onStartFlowInternalThrewAndAboutToRemove: (() -> Unit)? = null
     }
 
     private val innerState = StateMachineInnerStateImpl()
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
     private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
-        ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
+            ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
     )
     // How many Fibers are running (this includes suspended flows). If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
@@ -89,7 +111,7 @@ internal class SingleThreadedStateMachineManager(
     private val flowTimeoutScheduler = FlowTimeoutScheduler(innerState, scheduledFutureExecutor, serviceHub)
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
-    private var checkpointSerializationContext: CheckpointSerializationContext? = null
+    private lateinit var checkpointSerializationContext: CheckpointSerializationContext
     private lateinit var flowCreator: FlowCreator
 
     override val flowHospital: StaffedFlowHospital = makeFlowHospital()
@@ -102,6 +124,26 @@ internal class SingleThreadedStateMachineManager(
     private val totalStartedFlows = metrics.counter("Flows.Started")
     private val totalFinishedFlows = metrics.counter("Flows.Finished")
 
+    private inline fun <R> Flow<R>.withFlowLock(
+        validStatuses: Set<Checkpoint.FlowStatus>,
+        block: FlowStateMachineImpl<R>.() -> Boolean
+    ): Boolean {
+        if (!fiber.hasValidStatus(validStatuses)) return false
+        return fiber.withFlowLock {
+            // Get the flow again, in case another thread removed it from the map
+            innerState.withLock {
+                flows[id]?.run {
+                    if (!fiber.hasValidStatus(validStatuses)) return false
+                    block(uncheckedCast(this.fiber))
+                }
+            } ?: false
+        }
+    }
+
+    private fun FlowStateMachineImpl<*>.hasValidStatus(validStatuses: Set<Checkpoint.FlowStatus>): Boolean {
+        return transientState.checkpoint.status in validStatuses
+    }
+
     /**
      * An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
      * which may change across restarts.
@@ -110,6 +152,7 @@ internal class SingleThreadedStateMachineManager(
      */
     override val changes: Observable<StateMachineManager.Change> = innerState.changesPublisher
 
+    @Suppress("ComplexMethod")
     override fun start(tokenizableServices: List<Any>, startMode: StateMachineManager.StartMode): CordaFuture<Unit> {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
@@ -139,12 +182,11 @@ internal class SingleThreadedStateMachineManager(
             flowTimeoutScheduler::resetCustomTimeout
         )
 
-        val fibers = restoreFlowsFromCheckpoints()
+        val (fibers, pausedFlows) = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { innerState.flows.size })
 
         setFlowDefaultUncaughtExceptionHandler()
 
-        val pausedFlows = restoreNonResidentFlowsFromPausedCheckpoints()
         innerState.withLock {
             this.pausedFlows.putAll(pausedFlows)
             for ((id, flow) in pausedFlows) {
@@ -154,6 +196,33 @@ internal class SingleThreadedStateMachineManager(
                 }
             }
         }
+
+        // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
+        for (flow in fibers.values) {
+            flow.fiber.clientId?.let {
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
+            }
+        }
+
+        for (pausedFlow in pausedFlows) {
+            pausedFlow.value.checkpoint.checkpointState.invocationContext.clientId?.let {
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
+                    doneClientIdFuture(pausedFlow.key, pausedFlow.value.resultFuture, it)
+                )
+            }
+        }
+
+        val finishedFlowsResults = checkpointStorage.getFinishedFlowsResultsMetadata().toList()
+        for ((id, finishedFlowResult) in finishedFlowsResults) {
+            finishedFlowResult.clientId?.let {
+                if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
+                    innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, true)
+                } else {
+                    innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, false)
+                }
+            } ?: logger.error("Found finished flow $id without a client id. Something is very wrong and this flow will be ignored.")
+        }
+
         return serviceHub.networkMapCache.nodeReady.map {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
@@ -221,52 +290,88 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
+    @Suppress("ComplexMethod")
     private fun <A> startFlow(
             flowId: StateMachineRunId,
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
             ourIdentity: Party?,
             deduplicationHandler: DeduplicationHandler?
-    ): CordaFuture<FlowStateMachine<A>> {
-        return startFlowInternal(
+    ): CordaFuture<out FlowStateMachineHandle<A>> {
+        beforeClientIDCheck?.invoke()
+
+        var newFuture: OpenFuture<FlowStateMachineHandle<A>>? = null
+
+        val clientId = context.clientId
+        if (clientId != null) {
+            var existingStatus: FlowWithClientIdStatus? = null
+            innerState.withLock {
+                clientIdsToFlowIds.compute(clientId) { _, status ->
+                    if (status != null) {
+                        existingStatus = status
+                        status
+                    } else {
+                        newFuture = openFuture()
+                        FlowWithClientIdStatus.Active(newFuture!!)
+                    }
+                }
+            }
+
+            // Flow -started with client id- already exists, return the existing's flow future and don't start a new flow.
+            existingStatus?.let {
+                val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
+                return@startFlow uncheckedCast(existingFuture)
+            }
+            onClientIDNotFound?.invoke()
+        }
+
+        return try {
+            startFlowInternal(
                 flowId,
                 invocationContext = context,
                 flowLogic = flowLogic,
                 flowStart = FlowStart.Explicit,
                 ourIdentity = ourIdentity ?: ourFirstIdentity,
                 deduplicationHandler = deduplicationHandler
-        )
+            ).also {
+                newFuture?.captureLater(uncheckedCast(it))
+            }
+        } catch (t: Throwable) {
+            onStartFlowInternalThrewAndAboutToRemove?.invoke()
+            innerState.withLock {
+                clientIdsToFlowIds.remove(clientId)
+                newFuture?.setException(t)
+            }
+            // Throwing the exception plain here is the same as to return an exceptionally completed future since the caller calls
+            // getOrThrow() on the returned future at [CordaRPCOpsImpl.startFlow].
+            throw t
+        }
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean {
-        val killFlowResult = innerState.withLock {
-            val flow = flows[id]
-            if (flow != null) {
+        val flow = innerState.withLock { flows[id] }
+        val killFlowResult = if (flow != null) {
+            flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
                 logger.info("Killing flow $id known to this node.")
                 // The checkpoint and soft locks are removed here instead of relying on the processing of the next event after setting
                 // the killed flag. This is to ensure a flow can be removed from the database, even if it is stuck in a infinite loop.
                 database.transaction {
-                    checkpointStorage.removeCheckpoint(id)
+                    checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
                     serviceHub.vaultService.softLockRelease(id.uuid)
                 }
-                // the same code is NOT done in remove flow when an error occurs
-                // what is the point of this latch?
+
                 unfinishedFibers.countDown()
 
-                val state = flow.fiber.transientState
-                state.isKilled = true
-                flow.fiber.scheduleEvent(Event.DoRemainingWork)
+                flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
+                scheduleEvent(Event.DoRemainingWork)
                 true
-            } else {
-                // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
-                database.transaction { checkpointStorage.removeCheckpoint(id) }
             }
-        }
-        return if (killFlowResult) {
-            true
         } else {
-            flowHospital.dropSessionInit(id)
+            // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
+            database.transaction { checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true) }
         }
+
+        return killFlowResult || flowHospital.dropSessionInit(id)
     }
 
     private fun markAllFlowsAsPaused() {
@@ -342,30 +447,41 @@ internal class SingleThreadedStateMachineManager(
         liveFibers.countUp()
     }
 
-    private fun restoreFlowsFromCheckpoints(): List<Flow<*>> {
-        return checkpointStorage.getCheckpointsToRun().use {
-            it.mapNotNull { (id, serializedCheckpoint) ->
-                // If a flow is added before start() then don't attempt to restore it
-                innerState.withLock { if (id in flows) return@mapNotNull null }
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                flowCreator.createFlowFromCheckpoint(id, checkpoint)
-            }.toList()
+    @Suppress("ComplexMethod")
+    private fun restoreFlowsFromCheckpoints(): Pair<MutableMap<StateMachineRunId, Flow<*>>, MutableMap<StateMachineRunId, NonResidentFlow>> {
+        val flows = mutableMapOf<StateMachineRunId, Flow<*>>()
+        val pausedFlows = mutableMapOf<StateMachineRunId, NonResidentFlow>()
+        checkpointStorage.getCheckpointsToRun().forEach Checkpoints@{(id, serializedCheckpoint) ->
+            // If a flow is added before start() then don't attempt to restore it
+            innerState.withLock { if (id in flows) return@Checkpoints }
+            val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.also {
+                if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                    if (checkpointStorage.removeFlowException(id)) {
+                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
+                    } else {
+                        logger.error("Unable to remove database exception for flow $id. Something is very wrong. The flow will not be loaded and run.")
+                        return@Checkpoints
+                    }
+                }
+            } ?: return@Checkpoints
+            val flow = flowCreator.createFlowFromCheckpoint(id, checkpoint)
+            if (flow == null) {
+                // Set the flowState to paused so we don't waste memory storing it anymore.
+                pausedFlows[id] = NonResidentFlow(id, checkpoint.copy(flowState = FlowState.Paused), resumable = false)
+            } else {
+                flows[id] = flow
+            }
         }
+        checkpointStorage.getPausedCheckpoints().forEach Checkpoints@{ (id, serializedCheckpoint) ->
+            val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@Checkpoints
+            pausedFlows[id] = NonResidentFlow(id, checkpoint)
+        }
+        return Pair(flows, pausedFlows)
     }
 
-    private fun restoreNonResidentFlowsFromPausedCheckpoints(): Map<StateMachineRunId, NonResidentFlow> {
-        return checkpointStorage.getPausedCheckpoints().use {
-            it.mapNotNull { (id, serializedCheckpoint) ->
-                // If a flow is added before start() then don't attempt to restore it
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                id to NonResidentFlow(id, checkpoint)
-            }.toList().toMap()
-        }
-    }
-
-    private fun resumeRestoredFlows(flows: List<Flow<*>>) {
-        for (flow in flows) {
-            addAndStartFlow(flow.fiber.id, flow)
+    private fun resumeRestoredFlows(flows: Map<StateMachineRunId, Flow<*>>) {
+        for ((id, flow) in flows.entries) {
+            addAndStartFlow(id, flow)
         }
     }
 
@@ -382,15 +498,33 @@ internal class SingleThreadedStateMachineManager(
         val flow = if (currentState.isAnyCheckpointPersisted) {
             // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
             // we mirror exactly what happens when restarting the node.
-            val serializedCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
-            if (serializedCheckpoint == null) {
-                logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                return
-            }
+            val checkpoint = database.transaction {
+                val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
+                if (serializedCheckpoint == null) {
+                    logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
+                    return@transaction null
+                }
 
-            val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
+                tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
+                    if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                        if (checkpointStorage.removeFlowException(flowId)) {
+                            checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
+                        } else {
+                            logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not be loaded and run.")
+                            return@transaction null
+                        }
+                    }
+                } ?: return@transaction null
+            } ?: return
+
             // Resurrect flow
-            flowCreator.createFlowFromCheckpoint(flowId, checkpoint, currentState.reloadCheckpointAfterSuspendCount) ?: return
+            flowCreator.createFlowFromCheckpoint(
+                flowId,
+                checkpoint,
+                currentState.reloadCheckpointAfterSuspendCount,
+                currentState.lock,
+                firstRestore = false
+            ) ?: return
         } else {
             // Just flow initiation message
             null
@@ -407,17 +541,56 @@ internal class SingleThreadedStateMachineManager(
                 injectOldProgressTracker(currentState.flowLogic.progressTracker, flow.fiber.logic)
                 addAndStartFlow(flowId, flow)
             }
-            // Deliver all the external events from the old flow instance.
-            val unprocessedExternalEvents = mutableListOf<ExternalEvent>()
-            do {
-                val event = oldFlowLeftOver.tryReceive()
-                if (event is Event.GeneratedByExternalEvent) {
-                    unprocessedExternalEvents += event.deduplicationHandler.externalCause
-                }
-            } while (event != null)
-            val externalEvents = currentState.pendingDeduplicationHandlers.map { it.externalCause } + unprocessedExternalEvents
-            for (externalEvent in externalEvents) {
-                deliverExternalEvent(externalEvent)
+            extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState)
+        }
+    }
+
+    /**
+     * Extract all the [ExternalEvent] from this flows event queue and queue them (in the correct order) in the PausedFlow.
+     * This differs from [extractAndScheduleEventsForRetry] which also extracts (and schedules) [Event.Pause]. This means that if there are
+     * more events in the flows eventQueue then the flow won't pause again (after it is retried). These events are then scheduled (along
+     * with any [ExistingSessionMessage] which arrive in the interim) when the flow is retried.
+     */
+    private fun extractAndQueueExternalEventsForPausedFlow(
+        currentEventQueue: Channel<Event>,
+        currentPendingDeduplicationHandlers: List<DeduplicationHandler>,
+        pausedFlow: NonResidentFlow
+    ) {
+        pausedFlow.events += currentPendingDeduplicationHandlers.map{it.externalCause}
+        do {
+            val event = currentEventQueue.tryReceive()
+            if (event is Event.GeneratedByExternalEvent) {
+                pausedFlow.events.add(event.deduplicationHandler.externalCause)
+            }
+        } while (event != null)
+    }
+
+
+    /**
+     * Extract all the incomplete deduplication handlers as well as the [ExternalEvent] and [Event.Pause] events from this flows event queue
+     * [oldEventQueue]. Then schedule them (in the same order) for the new flow. This means that if a retried flow has a pause event
+     * scheduled then the retried flow will eventually pause. The new flow will not retry again if future retry events have been scheduled.
+     * When this method is called this flow must have been replaced by the new flow in [StateMachineInnerState.flows]. This method differs
+     * from [extractAndQueueExternalEventsForPausedFlow] where (only) [externalEvents] are extracted and scheduled straight away.
+     */
+    private fun extractAndScheduleEventsForRetry(oldEventQueue: Channel<Event>, currentState: StateMachineState) {
+        val flow = innerState.withLock {
+            flows[currentState.flowLogic.runId]
+        }
+        val events = mutableListOf<Event>()
+        do {
+            val event = oldEventQueue.tryReceive()
+            if (event is Event.Pause || event is Event.GeneratedByExternalEvent) events.add(event)
+        } while (event != null)
+
+        for (externalEvent in currentState.pendingDeduplicationHandlers) {
+            deliverExternalEvent(externalEvent.externalCause)
+        }
+        for (event in events) {
+            if (event is Event.GeneratedByExternalEvent) {
+                deliverExternalEvent(event.deduplicationHandler.externalCause)
+            } else {
+                flow?.fiber?.scheduleEvent(event)
             }
         }
     }
@@ -456,7 +629,7 @@ internal class SingleThreadedStateMachineManager(
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, event.deduplicationHandler, sender)
+                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event)
                 is InitialSessionMessage -> onSessionInit(sessionMessage, sender, event)
             }
         } else {
@@ -466,8 +639,13 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, deduplicationHandler: DeduplicationHandler, sender: Party) {
+    private fun onExistingSessionMessage(
+        sessionMessage: ExistingSessionMessage,
+        sender: Party,
+        externalEvent: ExternalEvent.ExternalMessageEvent
+    ) {
         try {
+            val deduplicationHandler = externalEvent.deduplicationHandler
             val recipientId = sessionMessage.recipientSessionId
             val flowId = sessionToFlow[recipientId]
             if (flowId == null) {
@@ -486,7 +664,7 @@ internal class SingleThreadedStateMachineManager(
                 innerState.withLock {
                     flows[flowId]?.run { fiber.scheduleEvent(event) }
                         // If flow is not running add it to the list of external events to be processed if/when the flow resumes.
-                        ?: pausedFlows[flowId]?.run { addExternalEvent(event) }
+                        ?: pausedFlows[flowId]?.run { addExternalEvent(externalEvent) }
                         ?: logger.info("Cannot find fiber corresponding to flow ID $flowId")
                 }
             }
@@ -578,6 +756,7 @@ internal class SingleThreadedStateMachineManager(
             ourIdentity: Party,
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
+        onCallingStartFlowInternal?.invoke()
 
         val existingFlow = innerState.withLock { flows[flowId] }
         val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState.isAnyCheckpointPersisted) {
@@ -586,24 +765,25 @@ internal class SingleThreadedStateMachineManager(
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
             val existingCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
             existingCheckpoint?.let { serializedCheckpoint ->
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId)
-                if (checkpoint == null) {
-                    return openFuture<FlowStateMachine<A>>().mapError {
-                        IllegalStateException(
-                            "Unable to deserialize database checkpoint for flow $flowId. " +
-                                    "Something is very wrong. The flow will not retry."
-                        )
-                    }
-                } else {
-                    checkpoint
-                }
+                tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: throw IllegalStateException(
+                    "Unable to deserialize database checkpoint for flow $flowId. Something is very wrong. The flow will not retry."
+                )
             }
         } else {
             // This is a brand new flow
             null
         }
 
-        val flow = flowCreator.createFlowFromLogic(flowId, invocationContext, flowLogic, flowStart, ourIdentity, existingCheckpoint, deduplicationHandler, ourSenderUUID)
+        val flow = flowCreator.createFlowFromLogic(
+            flowId,
+            invocationContext,
+            flowLogic,
+            flowStart,
+            ourIdentity,
+            existingCheckpoint,
+            deduplicationHandler,
+            ourSenderUUID
+        )
         val startedFuture = openFuture<Unit>()
         innerState.withLock {
             startedFutures[flowId] = startedFuture
@@ -621,9 +801,29 @@ internal class SingleThreadedStateMachineManager(
         flowTimeoutScheduler.cancel(flowId)
     }
 
+    override fun moveFlowToPaused(currentState: StateMachineState) {
+        currentState.cancelFutureIfRunning()
+        flowTimeoutScheduler.cancel(currentState.flowLogic.runId)
+        innerState.withLock {
+            val id = currentState.flowLogic.runId
+            val flow = flows.remove(id)
+            if (flow != null) {
+                decrementLiveFibers()
+                //Setting flowState = FlowState.Paused means we don't hold the frozen fiber in memory.
+                val checkpoint = currentState.checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED, flowState = FlowState.Paused)
+                val pausedFlow = NonResidentFlow(id, checkpoint, flow.resultFuture)
+                val eventQueue = flow.fiber.transientValues.eventQueue
+                extractAndQueueExternalEventsForPausedFlow(eventQueue, currentState.pendingDeduplicationHandlers, pausedFlow)
+                pausedFlows.put(id, pausedFlow)
+            } else {
+                logger.warn("Flow $id already removed before pausing")
+            }
+        }
+    }
+
     private fun tryDeserializeCheckpoint(serializedCheckpoint: Checkpoint.Serialized, flowId: StateMachineRunId): Checkpoint? {
         return try {
-            serializedCheckpoint.deserialize(checkpointSerializationContext!!)
+            serializedCheckpoint.deserialize(checkpointSerializationContext)
         } catch (e: Exception) {
             if (reloadCheckpointAfterSuspend && currentStateMachine() != null) {
                 logger.error(
@@ -671,7 +871,7 @@ internal class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
-            is FlowState.Completed -> throw IllegalStateException("Cannot start (or resume) a completed flow.")
+            is FlowState.Finished -> throw IllegalStateException("Cannot start (or resume) a finished flow.")
         }
     }
 
@@ -725,6 +925,7 @@ internal class SingleThreadedStateMachineManager(
         require(lastState.isRemoved) { "Flow must be in removable state before removal" }
         require(lastState.checkpoint.checkpointState.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
         require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
+        flow.fiber.clientId?.let { setClientIdAsSucceeded(it, flow.fiber.id) }
         flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
@@ -736,13 +937,19 @@ internal class SingleThreadedStateMachineManager(
             lastState: StateMachineState
     ) {
         drainFlowEventQueue(flow)
+        // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
+        startedFutures.remove(flow.fiber.id)?.set(Unit)
+        flow.fiber.clientId?.let {
+            if (flow.fiber.isKilled) {
+                clientIdsToFlowIds.remove(it)
+            } else {
+                setClientIdAsFailed(it, flow.fiber.id) }
+            }
         val flowError = removalReason.flowErrors[0] // TODO what to do with several?
         val exception = flowError.exception
         (exception as? FlowException)?.originalErrorId = flowError.errorId
         flow.resultFuture.setException(exception)
         lastState.flowLogic.progressTracker?.endWithError(exception)
-        // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
-        startedFutures.remove(flow.fiber.id)?.set(Unit)
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Failure<Nothing>(exception)))
     }
 
@@ -777,5 +984,118 @@ internal class SingleThreadedStateMachineManager(
             if (!isDone) cancel(true)
             future = null
         }
+    }
+
+    private fun StateMachineInnerState.setClientIdAsSucceeded(clientId: String, id: StateMachineRunId) {
+        setClientIdAsRemoved(clientId, id, true)
+    }
+
+    private fun StateMachineInnerState.setClientIdAsFailed(clientId: String, id: StateMachineRunId) {
+        setClientIdAsRemoved(clientId, id, false)
+    }
+
+    private fun StateMachineInnerState.setClientIdAsRemoved(
+        clientId: String,
+        id: StateMachineRunId,
+        succeeded: Boolean
+    ) {
+        clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
+            require(existingStatus != null && existingStatus is FlowWithClientIdStatus.Active)
+            FlowWithClientIdStatus.Removed(id, succeeded)
+        }
+    }
+
+    private fun activeOrRemovedClientIdFuture(existingStatus: FlowWithClientIdStatus, clientId: String) = when (existingStatus) {
+        is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
+        is FlowWithClientIdStatus.Removed -> {
+            val flowId = existingStatus.flowId
+            val resultFuture = if (existingStatus.succeeded) {
+                val flowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, throwIfMissing = true) }
+                doneFuture(flowResult)
+            } else {
+                val flowException =
+                    database.transaction { checkpointStorage.getFlowException(existingStatus.flowId, throwIfMissing = true) }
+                openFuture<Any?>().apply { setException(flowException as Throwable) }
+            }
+
+            doneClientIdFuture(flowId, resultFuture, clientId)
+        }
+    }
+
+    /**
+     * The flow out of which a [doneFuture] will be produced should be a started flow,
+     * i.e. it should not exist in [mutex.content.startedFutures].
+     */
+    private fun doneClientIdFuture(
+        id: StateMachineRunId,
+        resultFuture: CordaFuture<Any?>,
+        clientId: String
+    ): CordaFuture<FlowStateMachineHandle<out Any?>> =
+        doneFuture(object : FlowStateMachineHandle<Any?> {
+            override val logic: Nothing? = null
+            override val id: StateMachineRunId = id
+            override val resultFuture: CordaFuture<Any?> = resultFuture
+            override val clientId: String? = clientId
+        }
+        )
+
+    override fun <T> reattachFlowWithClientId(clientId: String): FlowStateMachineHandle<T>? {
+        return innerState.withLock {
+            clientIdsToFlowIds[clientId]?.let {
+                val existingFuture = activeOrRemovedClientIdFutureForReattach(it, clientId)
+                existingFuture?.let { uncheckedCast(existingFuture.get()) }
+            }
+        }
+    }
+
+    @Suppress("NestedBlockDepth")
+    private fun activeOrRemovedClientIdFutureForReattach(
+        existingStatus: FlowWithClientIdStatus,
+        clientId: String
+    ): CordaFuture<out FlowStateMachineHandle<out Any?>>? {
+        return when (existingStatus) {
+            is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
+            is FlowWithClientIdStatus.Removed -> {
+                val flowId = existingStatus.flowId
+                val resultFuture = if (existingStatus.succeeded) {
+                    try {
+                        val flowResult =
+                            database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, throwIfMissing = true) }
+                        doneFuture(flowResult)
+                    } catch (e: IllegalStateException) {
+                        null
+                    }
+                } else {
+                    try {
+                        val flowException =
+                            database.transaction { checkpointStorage.getFlowException(existingStatus.flowId, throwIfMissing = true) }
+                        openFuture<Any?>().apply { setException(flowException as Throwable) }
+                    } catch (e: IllegalStateException) {
+                        null
+                    }
+                }
+
+                resultFuture?.let { doneClientIdFuture(flowId, it, clientId) }
+            }
+        }
+    }
+
+    override fun removeClientId(clientId: String): Boolean {
+        var removedFlowId: StateMachineRunId? = null
+        innerState.withLock {
+            clientIdsToFlowIds.computeIfPresent(clientId) { _, existingStatus ->
+                if (existingStatus is FlowWithClientIdStatus.Removed) {
+                    removedFlowId = existingStatus.flowId
+                    null
+                } else {
+                    existingStatus
+                }
+            }
+        }
+
+        removedFlowId?.let {
+            return database.transaction { checkpointStorage.removeCheckpoint(it, mayHavePersistentResults = true) }
+        }
+        return false
     }
 }

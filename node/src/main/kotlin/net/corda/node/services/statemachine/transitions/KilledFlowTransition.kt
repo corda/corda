@@ -44,7 +44,7 @@ class KilledFlowTransition(
             }
             // The checkpoint and soft locks are also removed directly in [StateMachineManager.killFlow]
             if (startingState.isAnyCheckpointPersisted) {
-                actions.add(Action.RemoveCheckpoint(context.id))
+                actions.add(Action.RemoveCheckpoint(context.id, mayHavePersistentResults = true))
             }
             actions.addAll(
                 arrayOf(

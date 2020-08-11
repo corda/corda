@@ -19,11 +19,12 @@ import javax.persistence.AttributeConverter
 
 class HibernateConfiguration(
         schemas: Set<MappedSchema>,
-        private val databaseConfig: DatabaseConfig,
+        private val exportHibernateJMXStatistics: Boolean,
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
         jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
-        val customClassLoader: ClassLoader? = null
+        val customClassLoader: ClassLoader? = null,
+        val allowHibernateToManageAppSchema: Boolean = false
 ) {
     companion object {
         private val logger = contextLogger()
@@ -64,10 +65,10 @@ class HibernateConfiguration(
     fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory = sessionFactories.get(key, ::makeSessionFactoryForSchemas)!!
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
-        val sessionFactory = sessionFactoryFactory.makeSessionFactoryForSchemas(databaseConfig, schemas, customClassLoader, attributeConverters)
+        val sessionFactory = sessionFactoryFactory.makeSessionFactoryForSchemas(schemas, customClassLoader, attributeConverters, allowHibernateToManageAppSchema)
 
         // export Hibernate JMX statistics
-        if (databaseConfig.exportHibernateJMXStatistics)
+        if (exportHibernateJMXStatistics)
             initStatistics(sessionFactory)
 
         return sessionFactory
@@ -75,7 +76,7 @@ class HibernateConfiguration(
 
     // NOTE: workaround suggested to overcome deprecation of StatisticsService (since Hibernate v4.0)
     // https://stackoverflow.com/questions/23606092/hibernate-upgrade-statisticsservice
-    fun initStatistics(sessionFactory: SessionFactory) {
+    private fun initStatistics(sessionFactory: SessionFactory) {
         val statsName = ObjectName("org.hibernate:type=statistics")
         val mbeanServer = ManagementFactory.getPlatformMBeanServer()
 

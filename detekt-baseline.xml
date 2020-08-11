@@ -640,6 +640,9 @@
     <ID>LongParameterList:CordaRPCOps.kt$( @Suppress("UNUSED_PARAMETER") flowConstructor: (A, B, C, D, E, F) -&gt; R, arg0: A, arg1: B, arg2: C, arg3: D, arg4: E, arg5: F )</ID>
     <ID>LongParameterList:CordaRPCOps.kt$( @Suppress("unused_parameter") flowConstructor: (A, B, C, D, E) -&gt; R, arg0: A, arg1: B, arg2: C, arg3: D, arg4: E )</ID>
     <ID>LongParameterList:CordaRPCOps.kt$( @Suppress("unused_parameter") flowConstructor: (A, B, C, D, E, F) -&gt; R, arg0: A, arg1: B, arg2: C, arg3: D, arg4: E, arg5: F )</ID>
+    <ID>LongParameterList:CordaRPCOps.kt$( clientId: String, @Suppress("unused_parameter") flowConstructor: (A, B, C, D) -&gt; R, arg0: A, arg1: B, arg2: C, arg3: D )</ID>
+    <ID>LongParameterList:CordaRPCOps.kt$( clientId: String, @Suppress("unused_parameter") flowConstructor: (A, B, C, D, E) -&gt; R, arg0: A, arg1: B, arg2: C, arg3: D, arg4: E )</ID>
+    <ID>LongParameterList:CordaRPCOps.kt$( clientId: String, @Suppress("unused_parameter") flowConstructor: (A, B, C, D, E, F) -&gt; R, arg0: A, arg1: B, arg2: C, arg3: D, arg4: E, arg5: F )</ID>
     <ID>LongParameterList:Driver.kt$DriverParameters$( isDebug: Boolean, driverDirectory: Path, portAllocation: PortAllocation, debugPortAllocation: PortAllocation, systemProperties: Map&lt;String, String&gt;, useTestClock: Boolean, startNodesInProcess: Boolean, waitForAllNodesToFinish: Boolean, notarySpecs: List&lt;NotarySpec&gt;, extraCordappPackagesToScan: List&lt;String&gt;, jmxPolicy: JmxPolicy, networkParameters: NetworkParameters )</ID>
     <ID>LongParameterList:Driver.kt$DriverParameters$( isDebug: Boolean, driverDirectory: Path, portAllocation: PortAllocation, debugPortAllocation: PortAllocation, systemProperties: Map&lt;String, String&gt;, useTestClock: Boolean, startNodesInProcess: Boolean, waitForAllNodesToFinish: Boolean, notarySpecs: List&lt;NotarySpec&gt;, extraCordappPackagesToScan: List&lt;String&gt;, jmxPolicy: JmxPolicy, networkParameters: NetworkParameters, cordappsForAllNodes: Set&lt;TestCordapp&gt;? )</ID>
     <ID>LongParameterList:DriverDSL.kt$DriverDSL$( defaultParameters: NodeParameters = NodeParameters(), providedName: CordaX500Name? = defaultParameters.providedName, rpcUsers: List&lt;User&gt; = defaultParameters.rpcUsers, verifierType: VerifierType = defaultParameters.verifierType, customOverrides: Map&lt;String, Any?&gt; = defaultParameters.customOverrides, startInSameProcess: Boolean? = defaultParameters.startInSameProcess, maximumHeapSize: String = defaultParameters.maximumHeapSize )</ID>
@@ -1261,7 +1264,6 @@
     <ID>SpreadOperator:ConfigUtilities.kt$(*pairs)</ID>
     <ID>SpreadOperator:Configuration.kt$Configuration.Validation.Error$(*(containingPath.toList() + this.containingPath).toTypedArray())</ID>
     <ID>SpreadOperator:ContractJarTestUtils.kt$ContractJarTestUtils$(jarName, *contractNames.map{ "${it.replace(".", "/")}.class" }.toTypedArray())</ID>
-    <ID>SpreadOperator:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$(logicType, context(), *args)</ID>
     <ID>SpreadOperator:CordaX500Name.kt$CordaX500Name.Companion$(*Locale.getISOCountries(), unspecifiedCountry)</ID>
     <ID>SpreadOperator:CustomCordapp.kt$CustomCordapp$(*classes.map { it.name }.toTypedArray())</ID>
     <ID>SpreadOperator:CustomCordapp.kt$CustomCordapp$(*packages.map { it.replace('.', '/') }.toTypedArray())</ID>

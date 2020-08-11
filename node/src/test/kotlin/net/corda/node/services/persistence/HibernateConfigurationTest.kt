@@ -48,6 +48,7 @@ import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.`in`
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.SessionFactory
@@ -976,7 +977,7 @@ class HibernateConfigurationTest {
                     doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
                 }
             }
-            database = configureDatabase(dataSourceProps, DatabaseConfig(initialiseSchema = initialiseSchema), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+            database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, runMigrationScripts = initialiseSchema, allowHibernateToManageAppSchema = initialiseSchema)
             return database
         }
 
