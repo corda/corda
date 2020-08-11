@@ -117,6 +117,11 @@ class CordaRPCOpsImplTest {
 
     @Test(timeout=300_000)
 	fun `cash issue accepted`() {
+
+        if (Thread.currentThread().name != "never match"){
+            throw IllegalStateException()
+        }
+
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
                 invokeRpc("vaultTrackBy"),
