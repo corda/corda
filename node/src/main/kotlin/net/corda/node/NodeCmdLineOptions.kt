@@ -168,17 +168,18 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     var networkRootTrustStorePathParameter: Path? = null
 
     @Option(
-            names = ["-s", "--skip-schema-creation"],
-            description = ["Prevent database migration scripts to run during initial node registration "]
-    )
-    var skipSchemaCreation: Boolean = false
-
-    @Option(
             names = ["-p", "--network-root-truststore-password"],
             description = ["DEPRECATED. Network root trust store password obtained from network operator."],
             hidden = true
     )
     var networkRootTrustStorePassword: String? = null
+
+    @Option(
+            names = ["-s", "--skip-schema-creation"],
+            description = ["DEPRECATED. Prevent database migration scripts to run during initial node registration."],
+            hidden = true
+    )
+    var skipSchemaCreation: Boolean = false
 
     override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         return super.parseConfiguration(configuration).doIfValid { config ->
