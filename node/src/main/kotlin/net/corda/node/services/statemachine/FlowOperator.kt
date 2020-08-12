@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
@@ -10,18 +11,18 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * Stage in which the flow is suspended
+ * Defines criteria to get waiting flows
  */
-enum class WaitingSource {
-    SEND,
-    RECEIVE,
-    SEND_AND_RECEIVE,
-    CLOSE_SESSIONS,
-    WAIT_FOR_LEDGER_COMMIT,
-    GET_FLOW_INFO,
-    SLEEP,
-    WAIT_FOR_SESSIONS_CONFIRMATIONS,
-    EXTERNAL_OPERATION
+data class WaitingFlowQuery(
+        val flowIds: MutableList<StateMachineRunId> = mutableListOf(),
+        val onlyIfSuspendedLongerThan: Duration = Duration.ZERO,
+        val waitingSources: MutableList<WaitingSource> = mutableListOf(),
+        val counterParties: MutableList<CordaX500Name> = mutableListOf()
+) {
+    fun isDefined() = flowIds.isNotEmpty()
+            || waitingSources.isNotEmpty()
+            || counterParties.isNotEmpty()
+            || onlyIfSuspendedLongerThan > Duration.ZERO
 }
 
 /**
@@ -40,18 +41,18 @@ data class WaitingFlowInfo(
 )
 
 /**
- * Defines criteria to get waiting flows
+ * Stage in which the flow is suspended
  */
-data class WaitingFlowQuery(
-        val ids: MutableList<StateMachineRunId> = mutableListOf(),
-        val onlyIfSuspendedLongerThan: Duration = Duration.ZERO,
-        val waitingSource: MutableList<WaitingSource> = mutableListOf(),
-        val counterParties: MutableList<Party> = mutableListOf()
-) {
-    fun isDefined() = ids.isNotEmpty()
-            || waitingSource.isNotEmpty()
-            || counterParties.isNotEmpty()
-            || onlyIfSuspendedLongerThan > Duration.ZERO
+enum class WaitingSource {
+    SEND,
+    RECEIVE,
+    SEND_AND_RECEIVE,
+    CLOSE_SESSIONS,
+    WAIT_FOR_LEDGER_COMMIT,
+    GET_FLOW_INFO,
+    SLEEP,
+    WAIT_FOR_SESSIONS_CONFIRMATIONS,
+    EXTERNAL_OPERATION
 }
 
 /**
@@ -89,14 +90,14 @@ class FlowOperator(private val smm: StateMachineManager, private val clock: Cloc
 
     override fun queryWaitingFlows(query: WaitingFlowQuery): Set<WaitingFlowInfo> {
         var sequence = getAllWaitingFlows()
-        if (query.ids.isNotEmpty()) {
-            sequence = sequence.filter { it.id in query.ids }
+        if (query.flowIds.isNotEmpty()) {
+            sequence = sequence.filter { it.id in query.flowIds }
         }
         if (query.counterParties.isNotEmpty()) {
             sequence = sequence.filter { it.isWaitingForParties(query.counterParties) }
         }
-        if (query.waitingSource.isNotEmpty()) {
-            sequence = sequence.filter { it.waitingSource() in query.waitingSource }
+        if (query.waitingSources.isNotEmpty()) {
+            sequence = sequence.filter { it.waitingSource() in query.waitingSources }
         }
         if (query.onlyIfSuspendedLongerThan > Duration.ZERO) {
             val now = clock.instant()
@@ -125,13 +126,13 @@ class FlowOperator(private val smm: StateMachineManager, private val clock: Cloc
     }
 }
 
-private fun FlowStateMachineImpl<*>.isWaitingForParties(parties: List<Party>): Boolean {
+private fun FlowStateMachineImpl<*>.isWaitingForParties(parties: List<CordaX500Name>): Boolean {
     return ioRequest()?.let { request ->
         when (request) {
-            is FlowIORequest.GetFlowInfo -> request.sessions.any { it.counterparty in parties }
-            is FlowIORequest.Receive -> request.sessions.any { it.counterparty in parties }
-            is FlowIORequest.Send -> request.sessionToMessage.keys.any { it.counterparty in parties }
-            is FlowIORequest.SendAndReceive -> request.sessionToMessage.keys.any { it.counterparty in parties }
+            is FlowIORequest.GetFlowInfo -> request.sessions.any { it.counterparty.name in parties }
+            is FlowIORequest.Receive -> request.sessions.any { it.counterparty.name in parties }
+            is FlowIORequest.Send -> request.sessionToMessage.keys.any { it.counterparty.name in parties }
+            is FlowIORequest.SendAndReceive -> request.sessionToMessage.keys.any { it.counterparty.name in parties }
             else -> false
         }
     } ?: false
