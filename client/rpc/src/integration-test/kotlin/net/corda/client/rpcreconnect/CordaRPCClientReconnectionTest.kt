@@ -9,6 +9,7 @@ import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlowWithClientId
@@ -34,6 +35,7 @@ import net.corda.testing.node.internal.rpcDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.lang.RuntimeException
 import java.lang.Thread.sleep
 import java.time.Duration
@@ -42,6 +44,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -415,6 +418,40 @@ class CordaRPCClientReconnectionTest {
     }
 
     @Test(timeout=300_000)
+    fun `rpc returned flow exception future continue working when the node crashes and restarts`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val clientId = UUID.randomUUID().toString()
+                val flowHandle = rpcOps.startFlowWithClientId(clientId, ::ThrowingFlow)
+
+                node.stop()
+                thread {
+                    sleep(1000)
+                    startNode()
+                }
+
+                val e = assertFailsWith<CordaRuntimeException> {
+                    flowHandle.returnValue.getOrThrow()
+                }
+
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
     fun `rpc re attach to flow with client id tries to reconnect when the node is down`() {
         driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
@@ -487,6 +524,16 @@ class CordaRPCClientReconnectionTest {
         override fun call(): Int {
             sleep(10.seconds)
             return 5
+        }
+    }
+
+    @StartableByRPC
+    class ThrowingFlow : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            sleep(10.seconds)
+            throw IllegalStateException("bye")
         }
     }
 }
