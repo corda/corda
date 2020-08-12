@@ -12,6 +12,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.millis
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -22,7 +23,10 @@ import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.X509Certificate
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.fail
 
 /**
  *  JAVA INTEROP
@@ -162,3 +166,60 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
 
+/**
+ * Executes a test action, if test fails then it retries with a small delay until test succeeds or the timeout expires.
+ * Useful in cases when a the action side effect is not immediately observable and may take a ONLY few seconds.
+ * Which will allow the make the tests more deterministic instead of relaying on thread sleeping before asserting the side effects.
+ *
+ * Don't use with the large timeouts.
+ *
+ * Example usage:
+ *
+ * executeTest(5.seconds) {
+ *      val result = cut.getWaitingFlows(WaitingFlowQuery(counterParties = listOf(bobParty, daveParty)))
+ *      assertEquals(1, result.size)
+ *      assertEquals(daveStart.id, result.first().id)
+ *      assertNull(result.first().externalOperationImplName)
+ *      assertEquals(WaitingSource.RECEIVE, result.first().source)
+ *      assertEquals(1, result.first().waitingForParties.size)
+ *      assertEquals(DAVE_NAME, result.first().waitingForParties.first().party.name)
+ * }
+ *
+ * The above will test our expectation that the getWaitingFlows action was executed successfully considering
+ * that it may take a few hundreds of milliseconds for the flow state machine states to settle.
+ */
+@Suppress("TooGenericExceptionCaught", "MagicNumber", "ComplexMethod")
+fun <T> executeTest(
+        timeout: Duration,
+        cleanup: (() -> Unit)? = null,
+        retryDelay: Duration = 50.millis,
+        block: () -> T
+): T {
+    val end = Instant.now().plus(timeout)
+    var lastException: Throwable?
+    do {
+        try {
+            val result = block()
+            try {
+                cleanup?.invoke()
+            } catch (e: Throwable) {
+                // Intentional
+            }
+            return result
+        } catch (e: Throwable) {
+            lastException = e
+        }
+        Thread.sleep(retryDelay.toMillis())
+        val now = Instant.now()
+    } while (now < end)
+    try {
+        cleanup?.invoke()
+    } catch (e: Throwable) {
+        // Intentional
+    }
+    if(lastException == null) {
+        fail("Failed to execute the operation n time")
+    } else {
+        throw lastException
+    }
+}

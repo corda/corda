@@ -260,7 +260,11 @@ class FlowFrameworkTests {
     }
 
     private fun monitorFlows(script: (FlowMonitor, FlowMonitor) -> Unit) {
-        script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO), FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO))
+        val clock = Clock.systemUTC()
+        script(
+            FlowMonitor(FlowOperator(aliceNode.smm, clock), Duration.ZERO, Duration.ZERO),
+            FlowMonitor(FlowOperator(bobNode.smm, clock), Duration.ZERO, Duration.ZERO)
+        )
     }
 
     @Test(timeout = 300_000)

@@ -15,7 +15,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 internal class FlowMonitor(
-    private val smm: StateMachineManager,
+    private val flowOperator: FlowOperator,
     private val monitoringPeriod: Duration,
     private val suspensionLoggingThreshold: Duration,
     private var scheduler: ScheduledExecutorService? = null
@@ -62,9 +62,7 @@ internal class FlowMonitor(
     @VisibleForTesting
     fun waitingFlowDurations(suspensionLoggingThreshold: Duration): Sequence<Pair<FlowStateMachineImpl<*>, Duration>> {
         val now = Instant.now()
-        return smm.snapshot()
-                .asSequence()
-                .filter { flow -> flow !in smm.flowHospital && flow.isStarted() && flow.isSuspended() }
+        return flowOperator.getAllWaitingFlows()
                 .map { flow -> flow to flow.ongoingDuration(now) }
                 .filter { (_, suspensionDuration) -> suspensionDuration >= suspensionLoggingThreshold }
     }
@@ -92,16 +90,6 @@ internal class FlowMonitor(
     }
 
     private fun Iterable<FlowSession>.partiesInvolved() = map { it.counterparty }.joinToString(", ", "[", "]")
-
-    private fun FlowStateMachineImpl<*>.ioRequest() = (snapshot().checkpoint.flowState as? FlowState.Started)?.flowIORequest
-
-    private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant): Duration {
-        return transientState.checkpoint.timestamp.let { Duration.between(it, now) } ?: Duration.ZERO
-    }
-
-    private fun FlowStateMachineImpl<*>.isSuspended() = !snapshot().isFlowResumed
-
-    private fun FlowStateMachineImpl<*>.isStarted() = transientState.checkpoint.flowState is FlowState.Started
 
     private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = contains(flow.id)
 }

@@ -32,6 +32,8 @@ val BOB_NAME = CordaX500Name("Bob Plc", "Rome", "IT")
 /** A test node name **/
 @JvmField
 val CHARLIE_NAME = CordaX500Name("Charlie Ltd", "Athens", "GR")
+@JvmField
+val DAVE_NAME = CordaX500Name("Dave Unlimited", "Warsaw", "PL")
 
 /** Generates a dummy command that doesn't do anything useful for use in tests **/
 fun dummyCommand(vararg signers: PublicKey = arrayOf(generateKeyPair().public)) = Command<TypeOnlyCommandData>(DummyCommandData, signers.toList())
