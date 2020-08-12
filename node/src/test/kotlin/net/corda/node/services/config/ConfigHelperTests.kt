@@ -11,6 +11,7 @@ import net.corda.node.internal.Node
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.mockito.ArgumentMatchers.contains
 import org.slf4j.Logger
@@ -67,6 +68,7 @@ class ConfigHelperTests {
                 "corda.sshd.port" to sshPort.toString())
     }
 
+    @Ignore("CORDA-3981: Logging framework does not appear reliable on Jenkins")
     @Test(timeout = 300_000)
     fun `bad keys are ignored and warned for`() {
         val loggerField = Node::class.java.getDeclaredField("staticLog")
