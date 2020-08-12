@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.div
@@ -21,7 +20,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import kotlin.test.assertTrue
 
 class KeyStoreHandlerTest {
     @Rule
@@ -156,26 +154,24 @@ class KeyStoreHandlerTest {
     }
 
     @Test(timeout = 300_000)
-    fun `initializing key store in dev mode check keystore creation`() {
+    fun `initializing key store in dev mode check keystore creation and crypto service`() {
         val devCertificateDir = tempFolder.root.toPath() / "certificates-dev"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(devCertificateDir)
         val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(devCertificateDir)
-        val cryptoService = mock<BCCryptoService>()
+        val cryptoService = BCCryptoService(config.myLegalName.x500Principal, signingCertificateStore)
 
         whenever(config.devMode).thenReturn(true)
         whenever(config.signingCertificateStore).thenReturn(signingCertificateStore)
         whenever(config.p2pSslOptions).thenReturn(p2pSslOptions)
         whenever(config.certificatesDirectory).thenReturn(devCertificateDir)
 
-        assertThat(devCertificateDir).doesNotExist()
+        assertThat(cryptoService.containsKey(NODE_IDENTITY_KEY_ALIAS)).isFalse()
 
         KeyStoreHandler(config, cryptoService).initKeyStores()
 
-        verify(cryptoService).resyncKeystore()
-        assertThat(devCertificateDir).exists()
-
-        assertTrue(config.p2pSslOptions.trustStore.get().contains(CORDA_ROOT_CA))
-        assertTrue(config.p2pSslOptions.keyStore.get().contains(CORDA_CLIENT_TLS))
-        assertTrue(config.signingCertificateStore.get().contains(NODE_IDENTITY_KEY_ALIAS))
+        assertThat(config.p2pSslOptions.trustStore.get().contains(CORDA_ROOT_CA)).isTrue()
+        assertThat(config.p2pSslOptions.keyStore.get().contains(CORDA_CLIENT_TLS)).isTrue()
+        assertThat(config.signingCertificateStore.get().contains(NODE_IDENTITY_KEY_ALIAS)).isTrue()
+        assertThat(cryptoService.containsKey(NODE_IDENTITY_KEY_ALIAS)).isTrue()
     }
 }
