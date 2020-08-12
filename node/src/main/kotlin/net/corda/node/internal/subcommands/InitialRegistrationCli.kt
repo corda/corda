@@ -81,11 +81,10 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         // Minimal changes to make registration tool create node identity.
         // TODO: Move node identity generation logic from node to registration helper.
         val node = startup.createNode(conf, versionInfo)
-
-        if(!skipSchemaMigration)
+        if(!skipSchemaMigration) {
             node.runDatabaseMigrationScripts(updateCoreSchemas = true, updateAppSchemas = true, updateAppSchemasWithCheckpoints = false)
-
-        var nodeInfo = node.generateAndSaveNodeInfo()
+        }
+        node.generateAndSaveNodeInfo()
 
         println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${conf.certificatesDirectory}', it is advised to backup the private keys and certificates.")
         println("Corda node will now terminate.")
