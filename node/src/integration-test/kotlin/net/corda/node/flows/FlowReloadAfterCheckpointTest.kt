@@ -34,6 +34,7 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.sql.SQLTransientConnectionException
+import java.time.Duration
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -43,6 +44,7 @@ import kotlin.test.assertTrue
 class FlowReloadAfterCheckpointTest {
 
     private companion object {
+        private val DEFAULT_TIMEOUT = Duration.ofSeconds(10)
         val cordapps = listOf(enclosedCordapp())
     }
 
@@ -122,8 +124,8 @@ class FlowReloadAfterCheckpointTest {
             val flowStartedByAlice: StateMachineRunId = handle.id
 
             // We can't wait on the flow ending, because it breaks, so we need to wait on internal status changes instead
-            observations.await()
-            reloads.await()
+            observations.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+            reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             assertEquals(flowStartedByAlice, observations.singleOrNull())
             assertEquals(4, reloads.filter { it == flowStartedByAlice }.count())
             assertEquals(4, reloads.filter { it == ReloadFromCheckpointResponder.flowId }.count())
@@ -151,7 +153,7 @@ class FlowReloadAfterCheckpointTest {
             val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, false, true)
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow()
-            reloads.await()
+            reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             assertEquals(5, reloads.filter { it == flowStartedByAlice }.count())
             assertEquals(6, reloads.filter { it == ReloadFromCheckpointResponder.flowId }.count())
         }
@@ -257,7 +259,7 @@ class FlowReloadAfterCheckpointTest {
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            reloads.await()
+            reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             assertEquals(5, reloads.size)
         }
     }
@@ -296,7 +298,7 @@ class FlowReloadAfterCheckpointTest {
 
             // restarts completely from the beginning and forgets the in-memory reload count therefore
             // it reloads an extra 2 times for checkpoints it had already reloaded before the node shutdown
-            reloads.await()
+            reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             assertEquals(7, reloads.size)
         }
     }
@@ -333,7 +335,7 @@ class FlowReloadAfterCheckpointTest {
                 .map(StateMachineTransactionMapping::stateMachineRunId)
                 .toSet()
                 .single()
-            reloads.await()
+            reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
             assertEquals(7, reloads.filter { it == flowStartedByAlice }.size)
             assertEquals(6, reloads.filter { it == flowStartedByBob }.size)
         }
