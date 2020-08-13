@@ -25,7 +25,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
-import net.corda.core.internal.messaging.CheckpointRPCOps
+import net.corda.core.internal.messaging.FlowManagerRPCOps
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.rootCause
 import net.corda.core.internal.uncheckedCast
@@ -561,7 +561,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runDumpCheckpoints(rpcOps: CheckpointRPCOps) {
+    fun runDumpCheckpoints(rpcOps: FlowManagerRPCOps) {
         rpcOps.dumpCheckpoints()
     }
 

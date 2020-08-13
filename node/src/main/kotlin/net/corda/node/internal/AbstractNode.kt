@@ -38,7 +38,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
-import net.corda.core.internal.messaging.CheckpointRPCOps
+import net.corda.core.internal.messaging.FlowManagerRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
@@ -73,7 +73,7 @@ import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.attachments.AttachmentTrustInfoRPCOpsImpl
-import net.corda.node.internal.checkpoints.CheckpointRPCOpsImpl
+import net.corda.node.internal.checkpoints.FlowManagerRPCOpsImpl
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
@@ -405,7 +405,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             shutdownExecutor.submit(::stop)
         }.also { it.closeOnStop() })
 
-        val checkpointRPCOpsImpl = Pair(CheckpointRPCOps::class.java, CheckpointRPCOpsImpl(checkpointDumper))
+        val checkpointRPCOpsImpl = Pair(FlowManagerRPCOps::class.java, FlowManagerRPCOpsImpl(checkpointDumper))
 
         val attachmentTrustInfoRPCOps = Pair(AttachmentTrustInfoRPCOps::class.java, AttachmentTrustInfoRPCOpsImpl(services.attachmentTrustCalculator))
 
