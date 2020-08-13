@@ -60,14 +60,14 @@ class Corda3824
         val bytes = this::class.java.getResource("Corda3824.Step 1 to Step 3").readBytes()
 
         val serializerFactory: SerializerFactory = testDefaultFactory()
-        val deserializedException = DeserializationInput(serializerFactory)
+        val deserializedObject = DeserializationInput(serializerFactory)
                 .deserialize(SerializedBytes<TemplateState>(bytes))
 
-        Assertions.assertThat(deserializedException.cordappVersion).isEqualTo(cordappVersionTestValue)
-        Assertions.assertThat(deserializedException.data).isEqualTo(dataTestValue)
-//        Assertions.assertThat(deserializedException.x).isEqualTo(xTestValue)
-        Assertions.assertThat(deserializedException.y).isEqualTo(xTestValue.toString())
-        Assertions.assertThat(deserializedException).isInstanceOf(TemplateState::class.java)
+        Assertions.assertThat(deserializedObject.cordappVersion).isEqualTo(cordappVersionTestValue)
+        Assertions.assertThat(deserializedObject.data).isEqualTo(dataTestValue)
+//        Assertions.assertThat(deserializedObject.x).isEqualTo(xTestValue)
+        Assertions.assertThat(deserializedObject.y).isEqualTo(xTestValue.toString())
+        Assertions.assertThat(deserializedObject).isInstanceOf(TemplateState::class.java)
     }
 
     /**
