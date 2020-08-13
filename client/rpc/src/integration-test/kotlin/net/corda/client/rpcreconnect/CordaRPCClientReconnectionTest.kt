@@ -402,6 +402,7 @@ class CordaRPCClientReconnectionTest {
             client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).use {
                 val rpcOps = it.proxy as ReconnectingCordaRPCOps
                 val clientId = UUID.randomUUID().toString()
+                // assert result reconnectable futures returned from both 'startFlowWithClientId' and 'reattachFlowWithClientId'
                 val flowHandle0 = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
                 val flowHandle1 = rpcOps.reattachFlowWithClientId<Int>(clientId)
 
