@@ -124,7 +124,7 @@ pipeline {
 
         stage('Testing phase') {
             parallel {
-                stage('unit Test') {
+                stage('Unit Test') {
                     steps {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
