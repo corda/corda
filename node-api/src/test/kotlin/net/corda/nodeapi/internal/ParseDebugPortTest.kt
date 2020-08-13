@@ -1,4 +1,4 @@
-package net.corda.node.internal
+package net.corda.nodeapi.internal
 
 import org.junit.Assert
 import org.junit.Test
@@ -26,7 +26,7 @@ class ParseDebugPortTest(private val args: Iterable<String>,
 
     @Test(timeout = 10_000)
     fun test() {
-        val port = NodeStartup.parseDebugPort(args)
+        val port = JVMAgentUtilities.parseDebugPort(args)
         Assert.assertEquals(expectedPort, port)
     }
 }
