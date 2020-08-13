@@ -14,7 +14,7 @@ import net.corda.serialization.internal.amqp.testutils.writeTestResource
 import org.assertj.core.api.Assertions
 import org.junit.Test
 
-class Corda3824
+class EvolutionObjectBuilderRenamedPropertyTests
 {
     private val cordappVersionTestValue = 38854445
     private val dataTestValue = "d7af8af0-c10e-45bc-a5f7-92de432be0ef"
