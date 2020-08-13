@@ -531,7 +531,7 @@ class CordaRPCClientReconnectionTest {
             (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
                 val rpcOps = it.proxy as ReconnectingCordaRPCOps
                 val clientId = UUID.randomUUID().toString()
-                val flowHandle = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow).returnValue.getOrThrow()
+                rpcOps.startFlowWithClientId(clientId, ::SimpleFlow).returnValue.getOrThrow()
 
                 node.stop()
                 thread {
