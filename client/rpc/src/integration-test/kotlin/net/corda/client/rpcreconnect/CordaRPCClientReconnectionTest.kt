@@ -65,10 +65,6 @@ class CordaRPCClientReconnectionTest {
         val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     }
 
-
-
-
-
     @Test(timeout=300_000)
     fun `rpc node start when FlowsDrainingModeEnabled throws RejectedCommandException and won't attempt to reconnect`() {
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
