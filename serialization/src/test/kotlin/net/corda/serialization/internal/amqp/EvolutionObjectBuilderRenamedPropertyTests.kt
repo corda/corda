@@ -62,6 +62,9 @@ class EvolutionObjectBuilderRenamedPropertyTests
     @Test(timeout=300_000)
     fun `Step 1 to Step 3`() {
 
+        // The next two commented lines are how the serialized data is generated. To regenerate the data, uncomment these along
+        // with the correct version of the class and rerun the test. This will generate a new file in the project resources.
+
 //        val step1 = TemplateState(cordappVersionTestValue, dataTestValue, xTestValue)
 //        saveSerializedObject(step1)
 
