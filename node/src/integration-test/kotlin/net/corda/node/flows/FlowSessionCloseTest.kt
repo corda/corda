@@ -187,7 +187,7 @@ class FlowSessionCloseTest {
             session.send(responderReaction)
 
             // Give time to the other flow to receive the message, close its session and send the end session message back
-            sleep(20.seconds)
+            sleep(5.seconds)
 
             if (accessClosedSessionWithApi != null) {
                 when(accessClosedSessionWithApi) {
