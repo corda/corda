@@ -14,6 +14,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -133,6 +134,7 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
         assertTrue(consumingTransaction.outputs.single().constraint is HashAttachmentConstraint)
     }
 
+    @Ignore("ENT-5676: Disabling to isolate Gradle process death cause")
     @Test(timeout=300_000)
 	fun `HashConstraint cannot be migrated to SignatureConstraint if a HashConstraint is specified for one state and another uses an AutomaticPlaceholderConstraint`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
