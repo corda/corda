@@ -45,6 +45,7 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -401,19 +402,29 @@ class CordaRPCClientReconnectionTest {
             client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).use {
                 val rpcOps = it.proxy as ReconnectingCordaRPCOps
                 val clientId = UUID.randomUUID().toString()
-                val flowHandle = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
+                val flowHandle0 = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
+                val flowHandle1 = rpcOps.reattachFlowWithClientId<Int>(clientId)
 
-                var completedCounter = 0
-                flowHandle.returnValue.doOnComplete {
-                    completedCounter++
+                val completedCounter = AtomicInteger(0)
+                flowHandle0.returnValue.doOnComplete {
+                    completedCounter.incrementAndGet()
+                }
+                flowHandle1!!.returnValue.doOnComplete {
+                    completedCounter.incrementAndGet()
                 }
 
-                flowHandle.returnValue.thenMatch({
-                    completedCounter++
+                flowHandle0.returnValue.thenMatch({
+                    completedCounter.incrementAndGet()
+                }, {})
+                flowHandle1.returnValue.thenMatch({
+                    completedCounter.incrementAndGet()
                 }, {})
 
-                flowHandle.returnValue.toCompletableFuture().thenApply {
-                    completedCounter++
+                flowHandle0.returnValue.toCompletableFuture().thenApply {
+                    completedCounter.incrementAndGet()
+                }
+                flowHandle1.returnValue.toCompletableFuture().thenApply {
+                    completedCounter.incrementAndGet()
                 }
 
                 node.stop()
@@ -421,11 +432,18 @@ class CordaRPCClientReconnectionTest {
                     sleep(1000)
                     startNode()
                 }
-                val result = flowHandle.returnValue.get()
+
+                var result1: Int? = null
+                thread {
+                    result1 = flowHandle1.returnValue.get()
+                }
+
+                val result0 = flowHandle0.returnValue.get()
 
                 sleep(1000)
-                assertEquals(3, completedCounter)
-                assertEquals(5, result!!)
+                assertEquals(6, completedCounter.get())
+                assertEquals(5, result0!!)
+                assertEquals(5, result1!!)
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
         }
