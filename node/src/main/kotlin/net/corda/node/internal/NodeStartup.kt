@@ -120,6 +120,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
                 requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
                 initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
                 initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
+                initialRegistrationCli.skipSchemaCreation = cmdLineOptions.skipSchemaCreation
                 initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 initialRegistrationCli.runProgram()
             }
