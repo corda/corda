@@ -163,7 +163,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             started = true
             log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions)
+            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions, lowMemoryMode = lowMemoryMode)
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.

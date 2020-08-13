@@ -504,7 +504,7 @@ class CordaRPCClient private constructor(
         return when {
         // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(
-                    rpcConnectorTcpTransport(hostAndPort!!, config = sslConfiguration),
+                    rpcConnectorTcpTransport(hostAndPort!!, config = sslConfiguration, lowMemoryMode = lowMemoryMode),
                     configuration,
                     if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT,
                     lowMemoryMode = lowMemoryMode)

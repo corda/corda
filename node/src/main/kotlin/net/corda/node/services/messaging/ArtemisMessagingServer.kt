@@ -132,7 +132,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         // The transaction cache is configurable, and drives other cache sizes.
         globalMaxSize = max(config.transactionCacheSizeBytes, 10L * maxMessageSize)
 
-        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config.p2pSslOptions))
+        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config.p2pSslOptions, lowMemoryMode = lowMemoryMode))
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
         idCacheSize = if (lowMemoryMode) 125 else 2000 // Artemis Default duplicate cache size i.e. a guess

@@ -40,8 +40,9 @@ class RPCClient<I : RPCOps>(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-    ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+            lowMemoryMode: Boolean = false
+    ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration, lowMemoryMode = lowMemoryMode), configuration, serializationContext)
 
     constructor(
             hostAndPort: NetworkHostAndPort,
@@ -56,8 +57,8 @@ class RPCClient<I : RPCOps>(
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
             lowMemoryMode: Boolean = false
-    ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
-            configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration), lowMemoryMode)
+    ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration, lowMemoryMode = lowMemoryMode),
+            configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration, lowMemoryMode = lowMemoryMode), lowMemoryMode)
 
     companion object {
         private val log = contextLogger()
