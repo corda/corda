@@ -14,10 +14,8 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import org.junit.Test
 
-@Ignore("ENT-5680: Needs to be stabler before this is re-enabled, fails about 1 in 10 times")
 class FlowVersioningTest : NodeBasedTest() {
     @Test(timeout=300_000)
 	fun `getFlowContext returns the platform version for core flows`() {
