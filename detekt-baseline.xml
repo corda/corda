@@ -218,7 +218,6 @@
     <ID>ForbiddenComment:AbstractCashSelection.kt$AbstractCashSelection$// TODO: future implementation to retrieve contract states from a Vault BLOB store</ID>
     <ID>ForbiddenComment:AbstractCashSelection.kt$AbstractCashSelection$// TODO: make parameters configurable when we get CorDapp configuration.</ID>
     <ID>ForbiddenComment:AbstractCashSelection.kt$AbstractCashSelection$// TODO: revisit the back off strategy for contended spending.</ID>
-    <ID>ForbiddenComment:AbstractNode.kt$AbstractNode$// TODO: Use configuration to indicate composite key should be used instead of public key for the identity.</ID>
     <ID>ForbiddenComment:AbstractNode.kt$AbstractNode$// TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the</ID>
     <ID>ForbiddenComment:AbstractNode.kt$AbstractNode.&lt;no name provided&gt;$// TODO: Exponential backoff? It should reach max interval of eventHorizon/2.</ID>
     <ID>ForbiddenComment:AbstractStateReplacementFlow.kt$AbstractStateReplacementFlow.Acceptor$// TODO: This step should not be necessary, as signatures are re-checked in verifyRequiredSignatures.</ID>
@@ -342,7 +341,6 @@
     <ID>ForbiddenComment:IdentitySyncFlow.kt$IdentitySyncFlow.Send$// TODO: Can this be triggered automatically from [SendTransactionFlow]?</ID>
     <ID>ForbiddenComment:IdentitySyncFlow.kt$IdentitySyncFlow.Send$// TODO: Consider if this too restrictive - we perhaps should be checking the name on the signing certificate in the certificate path instead</ID>
     <ID>ForbiddenComment:InMemoryIdentityServiceTests.kt$InMemoryIdentityServiceTests$// TODO: Generate certificate with an EdDSA key rather than ECDSA</ID>
-    <ID>ForbiddenComment:InitialRegistrationCli.kt$InitialRegistration$// TODO: Move node identity generation logic from node to registration helper.</ID>
     <ID>ForbiddenComment:InteractiveShell.kt$// TODO: Add a command to view last N lines/tail/control log4j2 loggers.</ID>
     <ID>ForbiddenComment:InteractiveShell.kt$// TODO: Add command history.</ID>
     <ID>ForbiddenComment:InteractiveShell.kt$// TODO: Command completion.</ID>
@@ -1394,6 +1392,7 @@
     <ID>ThrowsCount:EnumTransforms.kt$EnumTransforms$ private fun validateNoCycles(constants: Map&lt;String, Int&gt;)</ID>
     <ID>ThrowsCount:JacksonSupport.kt$JacksonSupport.PartyDeserializer$private fun lookupByNameSegment(mapper: PartyObjectMapper, parser: JsonParser): Party</ID>
     <ID>ThrowsCount:JarScanningCordappLoader.kt$JarScanningCordappLoader$private fun parseVersion(versionStr: String?, attributeName: String): Int</ID>
+    <ID>ThrowsCount:KeyStoreHandler.kt$KeyStoreHandler$private fun getCertificateStores(): AllCertificateStores</ID>
     <ID>ThrowsCount:LedgerDSLInterpreter.kt$Verifies$ fun failsWith(expectedMessage: String?): EnforceVerifyOrFail</ID>
     <ID>ThrowsCount:MockServices.kt$ fun &lt;T : SerializeAsToken&gt; createMockCordaService(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -&gt; T): T</ID>
     <ID>ThrowsCount:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$private fun validateCertificates( registeringPublicKey: PublicKey, registeringLegalName: CordaX500Name, expectedCertRole: CertRole, certificates: List&lt;X509Certificate&gt; )</ID>
