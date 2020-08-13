@@ -423,11 +423,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Generating nodeInfo ...")
         val trustRoots = initKeyStores()
         startDatabase()
-        val (identity, notaryIdentity, keyPairs) = keyStoreHandler.obtainIdentities(trustRoots)
-        identityService.start(trustRoots, identity, pkToIdCache)
+        val myIdentities = keyStoreHandler.obtainIdentities()
+        identityService.start(trustRoots, myIdentities.nodeIdentity, pkToIdCache)
         return database.use {
             it.transaction {
-                val nodeInfoAndSigned = updateNodeInfo(identity, notaryIdentity, keyPairs, publish = false)
+                val nodeInfoAndSigned = updateNodeInfo(myIdentities, publish = false)
                 nodeInfoAndSigned.nodeInfo
             }
         }
@@ -550,12 +550,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         schedulerService.closeOnStop()
         val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
 
-        val (identity, myNotaryIdentity, keyPairs) = keyStoreHandler.obtainIdentities(trustRoots)
+        val myIdentities = keyStoreHandler.obtainIdentities()
 
-        identityService.start(trustRoots, identity, pkToIdCache)
+        identityService.start(trustRoots, myIdentities.nodeIdentity, pkToIdCache)
 
         val nodeInfoAndSigned = database.transaction {
-            updateNodeInfo(identity, myNotaryIdentity, keyPairs, publish = true)
+            updateNodeInfo(myIdentities, publish = true)
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
@@ -582,7 +582,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 networkParametersHotloader)
 
         try {
-            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, keyPairs.filter { it.rotated }.map { it.key }, netParams)
+            startMessagingService(rpcOps, nodeInfo, myIdentities.notaryIdentity, myIdentities.signingKeys.map { it.key }, netParams)
         } catch (e: Exception) {
             // Try to stop any started messaging services.
             stop()
@@ -603,9 +603,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
-            keyManagementService.start(keyPairs.map { it.key to it.alias })
+            keyManagementService.start(myIdentities.signingKeys.map { it.key to it.alias })
             installCordaServices()
-            notaryService = maybeStartNotaryService(myNotaryIdentity, keyPairs.filter { it.notary }.map { it.key }.toSet())
+            notaryService = maybeStartNotaryService(myIdentities.notaryIdentity, myIdentities.oldNotaryKeys)
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
@@ -680,18 +680,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    private fun updateNodeInfo(identity: PartyAndCertificate,
-                               myNotaryIdentity: PartyAndCertificate?,
-                               keyPairs: Set<KeyStoreHandler.KeyAndAlias>,
-                               publish: Boolean): NodeInfoAndSigned {
+    private fun updateNodeInfo(myIdentities: KeyStoreHandler.Identities, publish: Boolean): NodeInfoAndSigned {
         val potentialNodeInfo = NodeInfo(
                 myAddresses(),
-                setOf(identity, myNotaryIdentity).filterNotNull(),
+                setOf(myIdentities.nodeIdentity, myIdentities.notaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
                 serial = 0
         )
 
-        val nodeInfoFromDb = getPreviousNodeInfoIfPresent(identity)
+        val nodeInfoFromDb = getPreviousNodeInfoIfPresent(myIdentities.nodeIdentity)
 
         val nodeInfo = if (potentialNodeInfo == nodeInfoFromDb?.copy(serial = 0)) {
             // The node info hasn't changed. We use the one from the database to preserve the serial.
@@ -706,7 +703,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val nodeInfoAndSigned = NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
-            val alias = keyPairs.single { it.key == publicKey }.alias
+            val alias = myIdentities.signingKeys.single { it.key == publicKey }.alias
             DigitalSignature(cryptoService.sign(alias, serialised.bytes))
         }
 
@@ -994,11 +991,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** Loads and starts a notary service if it is configured. */
-    private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?, rotatedKeys: Set<PublicKey>): NotaryService? {
+    private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?, oldNotaryKeys: Set<PublicKey>): NotaryService? {
         return notaryLoader?.let { loader ->
             val service = loader.loadService(myNotaryIdentity, services, cordappLoader)
-            /** TODO: include rotated composite identity  */
-            service.rotatedKeys = rotatedKeys
+            service.rotatedKeys = oldNotaryKeys
 
             service.run {
                 tokenize()
