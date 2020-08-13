@@ -20,13 +20,13 @@ import java.security.PublicKey
 import java.security.cert.X509Certificate
 
 class KeyStoreHandler(private val configuration: NodeConfiguration, private val cryptoService: CryptoService) {
-    private lateinit var trustRoots: List<X509Certificate>
-
-    private lateinit var certificateStore: CertificateStore
-
     companion object {
         private val log = contextLogger()
     }
+
+    private lateinit var trustRoots: List<X509Certificate>
+
+    private lateinit var certificateStore: CertificateStore
 
     fun initKeyStores(devModeKeyEntropy: BigInteger? = null): List<X509Certificate> {
         if (configuration.devMode) {
@@ -225,13 +225,13 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
             "Key for node identity alias '$alias' not found in CryptoService."
         }
         val key = getPublicKey(alias)!!
-        log.info("Loaded node identity key ${key.toStringShort()}, alias: $alias")
+        log.info("Loaded node identity key: ${key.toStringShort()}, alias: $alias")
         return KeyAndAlias(key, alias)
     }
 
     private fun CertificateStore.loadCompositeKey(alias: String): KeyAndAlias {
         val key = query { getPublicKey(alias) }
-        log.info("Loaded composite identity key ${key.toStringShort()}, alias: $alias")
+        log.info("Loaded composite identity key: ${key.toStringShort()}, alias: $alias")
         return KeyAndAlias(key, alias)
     }
 }
