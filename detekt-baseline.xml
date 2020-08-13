@@ -1004,6 +1004,8 @@
     <ID>MagicNumber:NodeConfiguration.kt$NodeConfiguration$5</ID>
     <ID>MagicNumber:NodeConfiguration.kt$NodeConfiguration.Companion$20</ID>
     <ID>MagicNumber:NodeConfiguration.kt$NodeConfiguration.Companion$300</ID>
+    <ID>MagicNumber:NodeConfiguration.kt$NodeConfiguration.Companion$40</ID>
+    <ID>MagicNumber:NodeConfiguration.kt$NodeConfiguration.Companion$400</ID>
     <ID>MagicNumber:NodeConfigurationImpl.kt$NodeConfigurationImpl.Defaults$5</ID>
     <ID>MagicNumber:NodeInfo.kt$NodeInfoSigner$4</ID>
     <ID>MagicNumber:NodeInfoWatcher.kt$NodeInfoWatcher$5</ID>

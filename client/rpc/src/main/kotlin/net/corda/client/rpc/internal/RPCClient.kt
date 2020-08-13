@@ -33,7 +33,8 @@ class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
         val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
-        val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
+        val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList(),
+        val lowMemoryMode: Boolean = false
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
@@ -53,9 +54,10 @@ class RPCClient<I : RPCOps>(
             haAddressPool: List<NetworkHostAndPort>,
             sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+            lowMemoryMode: Boolean = false
     ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
-            configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration))
+            configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration), lowMemoryMode)
 
     companion object {
         private val log = contextLogger()
@@ -85,6 +87,7 @@ class RPCClient<I : RPCOps>(
                 reconnectAttempts = if (haPoolTransportConfigurations.isEmpty()) rpcConfiguration.maxReconnectAttempts else 0
                 minLargeMessageSize = rpcConfiguration.maxFileSize
                 isUseGlobalPools = nodeSerializationEnv != null
+                threadPoolMaxSize = if (lowMemoryMode) 2 else 5
             }
             val sessionId = Trace.SessionId.newInstance()
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress,

@@ -54,7 +54,8 @@ class CordaRPCConnection private constructor(
                 rpcConfiguration: CordaRPCClientConfiguration,
                 gracefulReconnect: GracefulReconnect,
                 sslConfiguration: ClientRpcSslOptions? = null,
-                classLoader: ClassLoader? = null
+                classLoader: ClassLoader? = null,
+                lowMemoryMode: Boolean = false
         ): CordaRPCConnection {
             val observersPool: ExecutorService = Executors.newCachedThreadPool()
             return CordaRPCConnection(null, observersPool, ReconnectingCordaRPCOps(
@@ -65,7 +66,8 @@ class CordaRPCConnection private constructor(
                     gracefulReconnect,
                     sslConfiguration,
                     classLoader,
-                    observersPool
+                    observersPool,
+                    lowMemoryMode
             ))
         }
     }
@@ -353,7 +355,8 @@ class CordaRPCClient private constructor(
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val sslConfiguration: ClientRpcSslOptions? = null,
         private val classLoader: ClassLoader? = null,
-        private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null
+        private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null,
+        private val lowMemoryMode: Boolean = false
 ) {
 
     @JvmOverloads
@@ -380,12 +383,14 @@ class CordaRPCClient private constructor(
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
-            classLoader: ClassLoader? = null
+            classLoader: ClassLoader? = null,
+            lowMemoryMode: Boolean = false
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
             sslConfiguration = sslConfiguration,
-            classLoader = classLoader
+            classLoader = classLoader,
+            lowMemoryMode = lowMemoryMode
     )
 
     @JvmOverloads
@@ -393,13 +398,15 @@ class CordaRPCClient private constructor(
             hostAndPort: NetworkHostAndPort,
             configuration: CordaRPCClientConfiguration,
             sslConfiguration: ClientRpcSslOptions?,
-            classLoader: ClassLoader? = null
+            classLoader: ClassLoader? = null,
+            lowMemoryMode: Boolean = false
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
             configuration = configuration,
             sslConfiguration = sslConfiguration,
-            classLoader = classLoader
+            classLoader = classLoader,
+            lowMemoryMode = lowMemoryMode
     )
 
     @JvmOverloads
@@ -499,12 +506,14 @@ class CordaRPCClient private constructor(
             haAddressPool.isEmpty() -> RPCClient(
                     rpcConnectorTcpTransport(hostAndPort!!, config = sslConfiguration),
                     configuration,
-                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT,
+                    lowMemoryMode = lowMemoryMode)
             else -> {
                 RPCClient(haAddressPool,
                         sslConfiguration,
                         configuration,
-                        if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+                        if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT,
+                        lowMemoryMode)
             }
         }
     }
@@ -614,7 +623,8 @@ class CordaRPCClient private constructor(
                     configuration,
                     gracefulReconnect,
                     sslConfiguration,
-                    classLoader
+                    classLoader,
+                    lowMemoryMode
             )
         } else {
             CordaRPCConnection(getRpcClient().start(

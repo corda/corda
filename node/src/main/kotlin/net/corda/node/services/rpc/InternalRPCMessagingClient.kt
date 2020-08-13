@@ -21,7 +21,7 @@ class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serv
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer? = null
 
-    fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
+    fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory, lowMemoryMode: Boolean = false) = synchronized(this) {
 
         val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
@@ -31,6 +31,7 @@ class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serv
             clientFailureCheckPeriod = 30000
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
+            threadPoolMaxSize = if (lowMemoryMode) 2 else 5
         }
 
         rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration, cacheFactory)

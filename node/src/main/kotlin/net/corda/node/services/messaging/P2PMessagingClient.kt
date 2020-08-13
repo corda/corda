@@ -154,7 +154,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
      * in the network map data.
      * @param maxMessageSize A bound applied to the message size.
      */
-    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress) {
+    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress, lowMemoryMode: Boolean = false) {
         this.myIdentity = myIdentity
         this.serviceIdentity = serviceIdentity
         this.advertisedAddress = advertisedAddress
@@ -171,6 +171,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 clientFailureCheckPeriod = 30000
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
+                threadPoolMaxSize = if (lowMemoryMode) 2 else 5
             }
             val sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)

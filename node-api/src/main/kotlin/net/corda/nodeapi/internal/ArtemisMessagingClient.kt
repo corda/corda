@@ -25,7 +25,8 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val confirmationWindowSize: Int = -1,
                              private val messagingServerConnectionConfig: MessagingServerConnectionConfiguration? = null,
                              private val backupServerAddressPool: List<NetworkHostAndPort> = emptyList(),
-                             private val failoverCallback: ((FailoverEventType) -> Unit)? = null
+                             private val failoverCallback: ((FailoverEventType) -> Unit)? = null,
+                             private val lowMemoryMode: Boolean = false
 )  : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
@@ -69,6 +70,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                 isFailoverOnInitialConnection = messagingServerConnectionConfig.failoverOnInitialAttempt(isHA)
                 initialConnectAttempts = messagingServerConnectionConfig.initialConnectAttempts(isHA)
             }
+            threadPoolMaxSize = if (lowMemoryMode) 2 else 5
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         }
         val sessionFactory = locator.createSessionFactory()
