@@ -386,7 +386,7 @@ class CordaRPCClientReconnectionTest {
     }
 
     @Test(timeout=300_000)
-    fun `rpc returned flow result future continue working when the node crashes and restarts`() {
+    fun `rpc returned flow -started with cient id- result future continue working when the node crashes and restarts`() {
         driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
             fun startNode(): NodeHandle {
@@ -450,7 +450,7 @@ class CordaRPCClientReconnectionTest {
     }
 
     @Test(timeout=300_000)
-    fun `rpc returned flow exception future continue working when the node crashes and restarts`() {
+    fun `rpc returned flow -started with cient id- exception future continue working when the node crashes and restarts`() {
         driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
             fun startNode(): NodeHandle {
