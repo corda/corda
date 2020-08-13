@@ -65,8 +65,8 @@ class EvolutionObjectBuilderRenamedPropertyTests
 //        val step1 = TemplateState(cordappVersionTestValue, dataTestValue, xTestValue)
 //        saveSerializedObject(step1)
 
-        // serialization/src/test/resources/net/corda/serialization/internal/amqp/Corda3824.Step 1 to Step 3
-        val bytes = this::class.java.getResource("Corda3824.Step 1 to Step 3").readBytes()
+        // serialization/src/test/resources/net/corda/serialization/internal/amqp/EvolutionObjectBuilderRenamedPropertyTests.Step1
+        val bytes = this::class.java.getResource("EvolutionObjectBuilderRenamedPropertyTests.Step1").readBytes()
 
         val serializerFactory: SerializerFactory = testDefaultFactory()
         val deserializedObject = DeserializationInput(serializerFactory)
