@@ -12,6 +12,9 @@ import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.concurrent.doOnComplete
+import net.corda.core.internal.concurrent.doOnError
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
@@ -41,6 +44,7 @@ import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
@@ -404,6 +408,19 @@ class CordaRPCClientReconnectionTest {
                 val clientId = UUID.randomUUID().toString()
                 val flowHandle = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
 
+                var completedCounter = 0
+                flowHandle.returnValue.doOnComplete {
+                    completedCounter++
+                }
+
+                flowHandle.returnValue.thenMatch({
+                    completedCounter++
+                }, {})
+
+                flowHandle.returnValue.toCompletableFuture().thenApply {
+                    completedCounter++
+                }
+
                 node.stop()
                 thread {
                     sleep(1000)
@@ -411,6 +428,8 @@ class CordaRPCClientReconnectionTest {
                 }
                 val result = flowHandle.returnValue.get()
 
+                sleep(1000)
+                assertEquals(3, completedCounter)
                 assertEquals(5, result!!)
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
@@ -436,16 +455,27 @@ class CordaRPCClientReconnectionTest {
                 val clientId = UUID.randomUUID().toString()
                 val flowHandle = rpcOps.startFlowWithClientId(clientId, ::ThrowingFlow)
 
+                var erroredCounter = 0
+                flowHandle.returnValue.doOnError {
+                    erroredCounter++
+                }
+
+                flowHandle.returnValue.toCompletableFuture().exceptionally {
+                    erroredCounter++
+                }
+
                 node.stop()
                 thread {
                     sleep(1000)
                     startNode()
                 }
 
-                val e = assertFailsWith<CordaRuntimeException> {
+                assertFailsWith<CordaRuntimeException> {
                     flowHandle.returnValue.getOrThrow()
                 }
 
+                sleep(1000)
+                assertEquals(2, erroredCounter)
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
         }
