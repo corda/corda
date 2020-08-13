@@ -27,12 +27,17 @@ class EvolutionObjectBuilderRenamedPropertyTests
 
     /**
      * Step 1
+     *
+     * This is the original class definition in object evolution.
      */
 //    @BelongsToContract(TemplateContract::class)
 //    data class TemplateState(val cordappVersion: Int, val data: String, val x : Int?, override val participants: List<AbstractParty> = listOf()) : ContractState
 
     /**
      * Step 2
+     *
+     * This is an intermediate class definition in object evolution.
+     * The y property has been added and a constructor copies the value of x into y. x is now set to null by the constructor.
      */
 //    @BelongsToContract(TemplateContract::class)
 //    data class TemplateState(val cordappVersion: Int, val data: String, val x : Int?, val y : String?, override val participants: List<AbstractParty> = listOf()) : ContractState {
@@ -43,6 +48,10 @@ class EvolutionObjectBuilderRenamedPropertyTests
 
     /**
      * Step 3
+     *
+     * This is the final class definition in object evolution.
+     * The x property has been removed but the constructor that copies values of x into y still exists. We expect previous versions of this
+     * object to pass the value of x to the constructor when deserialized.
      */
     @BelongsToContract(TemplateContract::class)
     data class TemplateState(val cordappVersion: Int, val data: String, val y : String?, override val participants: List<AbstractParty> = listOf()) : ContractState {
