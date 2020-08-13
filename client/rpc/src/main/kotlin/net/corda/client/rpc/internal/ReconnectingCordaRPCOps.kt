@@ -19,7 +19,6 @@ import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConn
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.UNCONNECTED
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.min
 import net.corda.core.internal.times
 import net.corda.core.internal.uncheckedCast
@@ -65,7 +64,7 @@ import java.util.concurrent.TimeUnit
 //  ReconnectingObservables and other things can attach themselves as listeners for reconnect events.
 class ReconnectingCordaRPCOps private constructor(
         val reconnectingRPCConnection: ReconnectingRPCConnection
-) : InternalCordaRPCOps by proxy(reconnectingRPCConnection) {
+) : CordaRPCOps by proxy(reconnectingRPCConnection) {
     constructor(
             nodeHostAndPorts: List<NetworkHostAndPort>,
             username: String,
@@ -86,11 +85,11 @@ class ReconnectingCordaRPCOps private constructor(
             observersPool))
     private companion object {
         private val log = contextLogger()
-        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection): InternalCordaRPCOps {
+        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection): CordaRPCOps {
             return Proxy.newProxyInstance(
                     this::class.java.classLoader,
-                    arrayOf(InternalCordaRPCOps::class.java),
-                    ErrorInterceptingHandler(reconnectingRPCConnection)) as InternalCordaRPCOps
+                    arrayOf(CordaRPCOps::class.java),
+                    ErrorInterceptingHandler(reconnectingRPCConnection)) as CordaRPCOps
         }
     }
     private val retryFlowsPool = Executors.newScheduledThreadPool(1)

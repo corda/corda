@@ -13,7 +13,7 @@ import java.util.*;
 import static java.util.stream.Collectors.joining;
 
 @Named("start")
-public class StartShellCommand extends InteractiveShellCommand {
+public class StartShellCommand extends CordaRpcOpsShellCommand {
 
     private static Logger logger = LoggerFactory.getLogger(StartShellCommand.class);
 

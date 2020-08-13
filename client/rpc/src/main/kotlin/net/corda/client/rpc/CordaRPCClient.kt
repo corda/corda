@@ -12,7 +12,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createInstancesOfClassesImplementing
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -494,7 +493,7 @@ class CordaRPCClient private constructor(
         }
     }
 
-    private fun getRpcClient(): RPCClient<InternalCordaRPCOps> {
+    private fun getRpcClient(): RPCClient<CordaRPCOps> {
         return when {
         // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(
@@ -619,7 +618,7 @@ class CordaRPCClient private constructor(
             )
         } else {
             CordaRPCConnection(getRpcClient().start(
-                    InternalCordaRPCOps::class.java,
+                    CordaRPCOps::class.java,
                     username,
                     password,
                     externalTrace,

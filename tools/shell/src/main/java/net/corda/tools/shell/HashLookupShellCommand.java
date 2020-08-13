@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Named("hashLookup")
-public class HashLookupShellCommand extends InteractiveShellCommand {
+public class HashLookupShellCommand extends CordaRpcOpsShellCommand {
     private static Logger logger = LoggerFactory.getLogger(HashLookupShellCommand.class);
     private static final String manualText ="Checks if a transaction matching a specified Id hash value is recorded on this node.\n\n" +
             "Both the transaction Id and the hashed value of a transaction Id (as returned by the Notary in case of a double-spend) is a valid input.\n" +

@@ -18,12 +18,11 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.AttachmentTrustInfo
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.sign
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
@@ -54,7 +53,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
@@ -75,9 +73,8 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
-        private val checkpointDumper: CheckpointDumperImpl,
         private val shutdownNode: () -> Unit
-) : InternalCordaRPCOps, AutoCloseable {
+) : CordaRPCOps, AutoCloseable {
 
     private companion object {
         private val logger = loggerFor<CordaRPCOpsImpl>()
@@ -156,13 +153,6 @@ internal class CordaRPCOpsImpl(
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return services.validatedTransactions.track()
     }
-
-    override fun dumpCheckpoints() = checkpointDumper.dumpCheckpoints()
-
-    override val attachmentTrustInfos: List<AttachmentTrustInfo>
-        get() {
-            return services.attachmentTrustCalculator.calculateAllTrustInfo()
-        }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         val (snapshot, updates) = stateMachinesFeed()

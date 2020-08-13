@@ -19,7 +19,6 @@ import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -363,10 +362,10 @@ internal class RPCClientProxyHandler(
     private fun produceMethodFullyQualifiedName(method: Method) : String {
         /*
          * Until version 4.3, rpc calls did not include class names.
-         * Up to this version, only CordaRPCOps and InternalCordaRPCOps were supported.
+         * Up to this version, only CordaRPCOps was supported.
          * So, for these classes only methods are sent across the wire to preserve backwards compatibility.
          */
-        return if (CordaRPCOps::class.java == rpcOpsClass || InternalCordaRPCOps::class.java == rpcOpsClass) {
+        return if (CordaRPCOps::class.java == rpcOpsClass) {
             method.name
         } else {
             rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name

@@ -21,7 +21,7 @@ class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serv
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer? = null
 
-    fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
+    fun init(rpcOps: List<RPCOps>, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
 
         val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {

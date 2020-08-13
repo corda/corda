@@ -1,14 +1,13 @@
 package net.corda.tools.shell
 
-import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
-class CordaAuthenticationPlugin(private val makeRPCConnection: (username: String, credential: String) -> CordaRPCConnection) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+internal class CordaAuthenticationPlugin(private val rpcOpsProducer: RPCOpsProducer) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
 
     companion object {
         private val logger = loggerFor<CordaAuthenticationPlugin>()
@@ -24,9 +23,10 @@ class CordaAuthenticationPlugin(private val makeRPCConnection: (username: String
             return AuthInfo.UNSUCCESSFUL
         }
         try {
-            val connection = makeRPCConnection(username, credential)
-            val ops = connection.proxy as InternalCordaRPCOps
-            return CordaSSHAuthInfo(true, ops, isSsh = true, rpcConn = connection)
+            val cordaSSHAuthInfo = CordaSSHAuthInfo(rpcOpsProducer, username, credential, isSsh = true)
+            // We cannot guarantee authentication happened successfully till `RCPClient` session been established, hence doing a dummy call
+            cordaSSHAuthInfo.getOrCreateRpcOps(CordaRPCOps::class.java).protocolVersion
+            return cordaSSHAuthInfo
         } catch (e: ActiveMQSecurityException) {
             logger.warn(e.message)
         } catch (e: Exception) {
