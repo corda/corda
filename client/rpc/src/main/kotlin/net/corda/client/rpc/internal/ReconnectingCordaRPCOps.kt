@@ -303,7 +303,8 @@ class ReconnectingCordaRPCOps private constructor(
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
         private fun checkIfIsStartFlow(method: Method, e: InvocationTargetException) {
             if (method.isStartFlow() && !method.isStartFlowWithClientId()) {
-                // Don't retry flows
+                // Only retry flows that have started with a client id. For such flows alone it is safe to recall them since,
+                // on recalling trying to reconnect they will not start a new flow but re-hook to an existing one ,that matches the client id, instead.
                 throw CouldNotStartFlowException(e.targetException)
             }
         }
