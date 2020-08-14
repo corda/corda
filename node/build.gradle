@@ -226,9 +226,6 @@ dependencies {
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
     compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
 
-    // Required by JVMAgentUtil (x-compatible java 8 & 11 agent lookup mechanism)
-    compile files("${System.properties['java.home']}/../lib/tools.jar")
-    
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
     slowIntegrationTestCompile "org.jboss.byteman:byteman-submit:4.0.11"

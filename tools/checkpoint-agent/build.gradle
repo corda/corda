@@ -31,23 +31,22 @@ apply plugin: 'com.jfrog.artifactory'
 description 'A javaagent to allow hooking into Kryo checkpoints'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "javassist:javassist:$javaassist_version"
-    compile "com.esotericsoftware:kryo:$kryo_version"
-    compile "co.paralleluniverse:quasar-core:$quasar_version"
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compileOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compileOnly "javassist:javassist:$javaassist_version"
+    compileOnly "com.esotericsoftware:kryo:$kryo_version"
+    compileOnly "co.paralleluniverse:quasar-core:$quasar_version"
 
-    compile (project(':core')) {
+    compileOnly (project(':core')) {
         transitive = false
     }
 
     // Unit testing helpers.
-    compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    compile "junit:junit:$junit_version"
+    testCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testCompile "junit:junit:$junit_version"
 
     // SLF4J: commons-logging bindings for a SLF4J back end
-    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
-    compile "org.slf4j:slf4j-api:$slf4j_version"
+    compileOnly "org.slf4j:slf4j-api:$slf4j_version"
 }
 
 jar {
