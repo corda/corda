@@ -41,7 +41,6 @@ import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInter
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -517,7 +516,8 @@ internal class SingleThreadedStateMachineManager(
                     checkpointLoadingStatus.checkpoint,
                     currentState.reloadCheckpointAfterSuspendCount,
                     currentState.lock,
-                    firstRestore = false
+                    firstRestore = false,
+                    progressTracker = currentState.flowLogic.progressTracker
                 ) ?: return
             }
             checkpointLoadingStatus is CheckpointLoadingStatus.NotFound && currentState.isAnyCheckpointPersisted -> {
@@ -540,7 +540,6 @@ internal class SingleThreadedStateMachineManager(
                 sessionToFlow.remove(sessionId)
             }
             if (flow != null) {
-                injectOldProgressTracker(currentState.flowLogic.progressTracker, flow.fiber.logic)
                 addAndStartFlow(flowId, flow)
             }
             extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState)
@@ -812,7 +811,11 @@ internal class SingleThreadedStateMachineManager(
                 decrementLiveFibers()
                 //Setting flowState = FlowState.Paused means we don't hold the frozen fiber in memory.
                 val checkpoint = currentState.checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED, flowState = FlowState.Paused)
-                val pausedFlow = NonResidentFlow(id, checkpoint, flow.resultFuture)
+                val pausedFlow = NonResidentFlow(
+                    id,
+                    checkpoint, flow.resultFuture,
+                    progressTracker = currentState.flowLogic.progressTracker
+                )
                 val eventQueue = flow.fiber.transientValues.eventQueue
                 extractAndQueueExternalEventsForPausedFlow(eventQueue, currentState.pendingDeduplicationHandlers, pausedFlow)
                 pausedFlows.put(id, pausedFlow)
