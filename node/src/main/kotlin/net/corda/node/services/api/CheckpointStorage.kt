@@ -78,7 +78,7 @@ interface CheckpointStorage {
      * until the underlying database connection is closed, so any processing should happen before it is closed.
      * This method does not fetch [Checkpoint.Serialized.serializedFlowState] to save memory.
      */
-    fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+    fun getPausedCheckpoints(): Stream<Triple<StateMachineRunId, Checkpoint.Serialized, Boolean>>
 
     fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>>
 
