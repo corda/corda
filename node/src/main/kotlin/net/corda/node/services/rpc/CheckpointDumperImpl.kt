@@ -33,7 +33,6 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.WaitForStateConsumption
@@ -43,6 +42,7 @@ import net.corda.core.internal.exists
 import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.outputStream
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -54,9 +54,6 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
@@ -68,7 +65,9 @@ import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.SubFlow
-import net.corda.node.utilities.JVMAgentUtil.getJvmAgentProperties
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
@@ -77,21 +76,24 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.companionObject
+import kotlin.reflect.full.memberProperties
 
 class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence,
-                                    private val serviceHub: ServiceHub, val baseDirectory: Path) : NodeLifecycleObserver {
+                           private val serviceHub: ServiceHub, val baseDirectory: Path) : NodeLifecycleObserver {
     companion object {
         internal val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
         private val DUMPABLE_CHECKPOINTS = setOf(
-            Checkpoint.FlowStatus.RUNNABLE,
-            Checkpoint.FlowStatus.HOSPITALIZED,
-            Checkpoint.FlowStatus.PAUSED
+                Checkpoint.FlowStatus.RUNNABLE,
+                Checkpoint.FlowStatus.HOSPITALIZED,
+                Checkpoint.FlowStatus.PAUSED
         )
     }
 
@@ -102,12 +104,10 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     private lateinit var checkpointSerializationContext: CheckpointSerializationContext
     private lateinit var writer: ObjectWriter
 
-    private val isCheckpointAgentRunning by lazy {
-        checkpointAgentRunning()
-    }
+    private val isCheckpointAgentRunning by lazy(::checkpointAgentRunning)
 
     override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
-        return when(nodeLifecycleEvent) {
+        return when (nodeLifecycleEvent) {
             is NodeLifecycleEvent.AfterNodeStart<*> -> Try.on {
                 checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                         CheckpointSerializeAsTokenContextImpl(
@@ -190,13 +190,20 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
         }
     }
 
-    private fun checkpointAgentRunning(): Boolean {
-        val agentProperties = getJvmAgentProperties(log)
-        val pattern = "(.+)?checkpoint-agent(-.+)?\\.jar.*".toRegex()
-        return agentProperties.values.any { value ->
-            value is String && value.contains(pattern)
-        }
-    }
+    /**
+     * Note that this method dynamically uses [net.corda.tools.CheckpointAgent.running], make sure to keep it up to date with
+     * the checkpoint agent source code
+     */
+    private fun checkpointAgentRunning() = try {
+        javaClass.classLoader.loadClass("net.corda.tools.CheckpointAgent").kotlin.companionObject
+    } catch (e: ClassNotFoundException) {
+        null
+    }?.let { cls ->
+        @Suppress("UNCHECKED_CAST")
+        cls.memberProperties.find { it.name == "running"}
+                ?.let {it as KProperty1<Any, Boolean>}
+                ?.get(cls.objectInstance!!)
+    } ?: false
 
     private fun Checkpoint.toJson(id: UUID, now: Instant): CheckpointJson {
         val (fiber, flowLogic) = when (flowState) {
@@ -402,6 +409,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     private interface FlowAsyncOperationMixin {
         @get:JsonIgnore
         val serviceHub: ServiceHub
+
         // [Any] used so this single mixin can serialize [FlowExternalOperation] and [FlowExternalAsyncOperation]
         @get:JsonUnwrapped
         val operation: Any

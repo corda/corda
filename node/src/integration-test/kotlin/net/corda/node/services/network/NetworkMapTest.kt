@@ -31,13 +31,10 @@ import org.junit.Assert.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import java.net.URL
 import java.time.Instant
 
-@RunWith(Parameterized::class)
-class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneParams) {
+class NetworkMapTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -48,40 +45,18 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
 
-    companion object {
-        @JvmStatic
-        @Parameterized.Parameters(name = "{0}")
-        fun runParams() = listOf(
-                {
-                    addr: URL,
-                    nms: NetworkMapServer -> SharedCompatibilityZoneParams(
-                            addr,
-                            pnm = null,
-                            publishNotaries = {
-                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
-                            }
-                    )
-                },
-                {
-                    addr: URL,
-                    nms: NetworkMapServer -> SplitCompatibilityZoneParams (
-                            doormanURL = URL("http://I/Don't/Exist"),
-                            networkMapURL = addr,
-                            pnm = null,
-                            publishNotaries = {
-                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
-                            }
-                    )
-                }
-
-        )
-    }
-
     @Before
     fun start() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
-        compatibilityZone = initFunc(URL("http://$address"), networkMapServer)
+        compatibilityZone = SplitCompatibilityZoneParams(
+                doormanURL = URL("https://example.org/does/not/exist"),
+                networkMapURL = URL("http://$address"),
+                pnm = null,
+                publishNotaries = {
+                    networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
+                }
+        )
     }
 
     @After
@@ -89,8 +64,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         networkMapServer.close()
     }
 
-    @Test(timeout=300_000)
-	fun `parameters update test`() {
+    @Test(timeout = 300_000)
+    fun `parameters update test`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -211,27 +186,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test(timeout = 300_000)
-    fun `Can not hotload parameters if notary and a non-hotloadable parameter changes and the node will shut down`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList(),
-                allowHibernateToManageAppSchema = false
-        ) {
-
-            val oldParams = networkMapServer.networkParameters
-            val notary: Party = TestIdentity.fresh("test notary").party
-            val paramsWithUpdatedMaxMessageSizeAndNotary = oldParams.copy(
-                    epoch = 3,
-                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
-                    maxMessageSize = oldParams.maxMessageSize + 1).addNotary(notary)
-            startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSizeAndNotary).use { alice ->
-                eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
-            }
-        }
-    }
-
     private fun DriverDSLImpl.startNodeAndRunFlagDay(newParams: NetworkParameters): NodeHandleInternal {
 
         val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
@@ -247,8 +201,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         return alice
     }
 
-    @Test(timeout=300_000)
-	fun `nodes process additions and removals from the network map correctly (and also download the network parameters)`() {
+    @Test(timeout = 300_000)
+    fun `nodes process additions and removals from the network map correctly (and also download the network parameters)`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -277,8 +231,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test(timeout=300_000)
-	fun `test node heartbeat`() {
+    @Test(timeout = 300_000)
+    fun `test node heartbeat`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -322,7 +276,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         val nodeInfosDir = baseDirectory / NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
             assertThat(nodeInfosDir.list().size, `is`(1))
-            assertThat(nodeInfosDir.list().single().readObject<SignedNodeInfo>().verified().legalIdentities.first(), `is`( this.nodeInfo.legalIdentities.first()))
+            assertThat(nodeInfosDir.list().single().readObject<SignedNodeInfo>()
+                    .verified().legalIdentities.first(), `is`(this.nodeInfo.legalIdentities.first()))
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }
