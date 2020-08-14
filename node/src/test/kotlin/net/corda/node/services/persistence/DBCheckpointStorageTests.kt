@@ -829,10 +829,10 @@ class DBCheckpointStorageTests {
         }
         database.transaction {
             val checkpoints = checkpointStorage.getPausedCheckpoints().toList()
-            val dbHospitalizedPaused = checkpoints[0]
+            val dbHospitalizedPaused = checkpoints.single { it.first == hospitalizedPaused.id }
             assertEquals(hospitalizedPaused.id, dbHospitalizedPaused.first)
             assertTrue(dbHospitalizedPaused.third)
-            val dbCleanPaused = checkpoints[1]
+            val dbCleanPaused = checkpoints.single { it.first == cleanPaused.id }
             assertEquals(cleanPaused.id, dbCleanPaused.first)
             assertFalse(dbCleanPaused.third)
         }
