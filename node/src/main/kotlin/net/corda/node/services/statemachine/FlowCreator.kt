@@ -32,7 +32,8 @@ data class NonResidentFlow(
     val runId: StateMachineRunId,
     var checkpoint: Checkpoint,
     val resultFuture: OpenFuture<Any?> = openFuture(),
-    val resumable: Boolean = true
+    val resumable: Boolean = true,
+    val hospitalized: Boolean = false
 ) {
     val events = mutableListOf<ExternalEvent>()
 

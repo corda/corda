@@ -456,12 +456,8 @@ internal class SingleThreadedStateMachineManager(
             innerState.withLock { if (id in flows) return@Checkpoints }
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.also {
                 if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                    if (checkpointStorage.removeFlowException(id)) {
-                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
-                    } else {
-                        logger.error("Unable to remove database exception for flow $id. Something is very wrong. The flow will not be loaded and run.")
-                        return@Checkpoints
-                    }
+                    checkpointStorage.removeFlowException(id)
+                    checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
                 }
             } ?: return@Checkpoints
             val flow = flowCreator.createFlowFromCheckpoint(id, checkpoint)
@@ -472,9 +468,9 @@ internal class SingleThreadedStateMachineManager(
                 flows[id] = flow
             }
         }
-        checkpointStorage.getPausedCheckpoints().forEach Checkpoints@{ (id, serializedCheckpoint) ->
+        checkpointStorage.getPausedCheckpoints().forEach Checkpoints@{ (id, serializedCheckpoint, hospitalised) ->
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@Checkpoints
-            pausedFlows[id] = NonResidentFlow(id, checkpoint)
+            pausedFlows[id] = NonResidentFlow(id, checkpoint, hospitalized = hospitalised)
         }
         return Pair(flows, pausedFlows)
     }
@@ -504,13 +500,8 @@ internal class SingleThreadedStateMachineManager(
             val checkpoint = serializedCheckpoint.let {
                 tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
                     if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                        if (checkpointStorage.removeFlowException(flowId)) {
-                            checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
-                        } else {
-                            logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not be loaded and run.")
-                            // This code branch is being removed in a different PR
-                            return@transaction CheckpointLoadingStatus.CouldNotDeserialize
-                        }
+                        checkpointStorage.removeFlowException(flowId)
+                        checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
                     }
                 } ?: return@transaction CheckpointLoadingStatus.CouldNotDeserialize
             }
