@@ -12,4 +12,5 @@ object RPCUtils {
     fun RPCApi.ClientToServer.RpcRequest.isShutdownCmd() = isShutdownMethodName(methodName)
     fun Method.isShutdown() = isShutdownMethodName(name)
     fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
+    fun Method.isStartFlowWithClientId() = name == "startFlowWithClientId" || name == "startFlowDynamicWithClientId"
 }
