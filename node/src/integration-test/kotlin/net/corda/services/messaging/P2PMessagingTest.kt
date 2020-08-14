@@ -10,9 +10,13 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.messaging.MessageIdentifier
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.messaging.SenderDeduplicationInfo
 import net.corda.node.services.messaging.send
+import net.corda.node.services.statemachine.MessageType
+import net.corda.node.services.statemachine.SessionId
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
@@ -23,12 +27,15 @@ import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.Test
+import java.math.BigInteger
+import java.time.Clock
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 class P2PMessagingTest {
     private companion object {
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")
+        private val MESSAGE_IDENTIFIER = MessageIdentifier(MessageType.DATA_MESSAGE, "XXXXXXXX", SessionId(BigInteger.valueOf(14)), 0, Clock.systemUTC().instant())
     }
 
     @Test(timeout=300_000)
@@ -72,7 +79,7 @@ class P2PMessagingTest {
     private fun InProcess.respondWith(message: Any) {
         internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes)
+            val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes, SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
             internalServices.networkService.send(response, request.replyTo)
             handler.afterDatabaseTransaction()
         }
@@ -83,7 +90,7 @@ class P2PMessagingTest {
         internalServices.networkService.runOnNextMessage("test.response") { netMessage ->
             response.set(netMessage.data.deserialize())
         }
-        internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target)
+        internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target, SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         return response
     }
 

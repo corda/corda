@@ -4,14 +4,24 @@ import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.node.services.messaging.Message
 import net.corda.coretesting.internal.rigorousMock
+import net.corda.node.services.messaging.MessageIdentifier
+import net.corda.node.services.messaging.SenderDeduplicationInfo
+import net.corda.node.services.statemachine.MessageType
+import net.corda.node.services.statemachine.SessionId
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
+import java.math.BigInteger
+import java.time.Clock
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class InternalMockNetworkTests {
+    companion object {
+        private val MESSAGE_IDENTIFIER = MessageIdentifier(MessageType.DATA_MESSAGE, "XXXXXXXX", SessionId(BigInteger.valueOf(14)), 0, Clock.systemUTC().instant())
+    }
+
     lateinit var mockNet: InternalMockNetwork
 
     @After
@@ -39,7 +49,7 @@ class InternalMockNetworkTests {
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
-        node1.network.send(node1.network.createMessage("test.topic", data = bits), node2.network.myAddress)
+        node1.network.send(node1.network.createMessage("test.topic", bits, SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap()), node2.network.myAddress)
 
         mockNet.runNetwork(rounds = 1)
 
@@ -58,7 +68,7 @@ class InternalMockNetworkTests {
 
         var counter = 0
         listOf(node1, node2, node3).forEach { it.network.addMessageHandler("test.topic") { _, _, _ -> counter++ } }
-        node1.network.send(node2.network.createMessage("test.topic", data = bits), rigorousMock<AllPossibleRecipients>())
+        node1.network.send(node2.network.createMessage("test.topic", bits, SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap()), rigorousMock<AllPossibleRecipients>())
         mockNet.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }
@@ -79,8 +89,8 @@ class InternalMockNetworkTests {
             received++
         }
 
-        val invalidMessage = node2.network.createMessage("invalid_message", data = ByteArray(1))
-        val validMessage = node2.network.createMessage("valid_message", data = ByteArray(1))
+        val invalidMessage = node2.network.createMessage("invalid_message", ByteArray(1), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
+        val validMessage = node2.network.createMessage("valid_message", ByteArray(1), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         node2.network.send(invalidMessage, node1.network.myAddress)
         mockNet.runNetwork()
         assertEquals(0, received)
@@ -91,8 +101,8 @@ class InternalMockNetworkTests {
 
         // Here's the core of the test; previously the unhandled message would cause runNetwork() to abort early, so
         // this would fail. Make fresh messages to stop duplicate uniqueMessageId causing drops
-        val invalidMessage2 = node2.network.createMessage("invalid_message", data = ByteArray(1))
-        val validMessage2 = node2.network.createMessage("valid_message", data = ByteArray(1))
+        val invalidMessage2 = node2.network.createMessage("invalid_message", ByteArray(1), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
+        val validMessage2 = node2.network.createMessage("valid_message", ByteArray(1), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         node2.network.send(invalidMessage2, node1.network.myAddress)
         node2.network.send(validMessage2, node1.network.myAddress)
         mockNet.runNetwork()

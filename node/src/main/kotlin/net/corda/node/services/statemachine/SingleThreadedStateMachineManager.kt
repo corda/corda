@@ -37,6 +37,10 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.MessageIdentifier
+import net.corda.node.services.messaging.SenderDeduplicationInfo
+import net.corda.node.services.messaging.SenderSequenceNumber
+import net.corda.node.services.messaging.SenderUUID
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
@@ -703,7 +707,7 @@ internal class SingleThreadedStateMachineManager(
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event)
+                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event, event.receivedMessage.uniqueMessageId, event.receivedMessage.senderUUID, event.receivedMessage.senderSeqNo)
                 is InitialSessionMessage -> onSessionInit(sessionMessage, sender, event)
             }
         } else {
@@ -716,7 +720,10 @@ internal class SingleThreadedStateMachineManager(
     private fun onExistingSessionMessage(
         sessionMessage: ExistingSessionMessage,
         sender: Party,
-        externalEvent: ExternalEvent.ExternalMessageEvent
+        externalEvent: ExternalEvent.ExternalMessageEvent,
+        messageIdentifier: MessageIdentifier,
+        senderUUID: SenderUUID?,
+        senderSequenceNumber: SenderSequenceNumber?
     ) {
         try {
             val deduplicationHandler = externalEvent.deduplicationHandler
@@ -734,7 +741,7 @@ internal class SingleThreadedStateMachineManager(
                     logger.info("Cannot find flow corresponding to session ID - $recipientId.")
                 }
             } else {
-                val event = Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender)
+                val event = Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender, messageIdentifier, senderUUID, senderSequenceNumber)
                 innerState.withLock {
                     flows[flowId]?.run { fiber.scheduleEvent(event) }
                         // If flow is not running add it to the list of external events to be processed if/when the flow resumes.
@@ -751,7 +758,7 @@ internal class SingleThreadedStateMachineManager(
     private fun onSessionInit(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent) {
         try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
-            val initiatedSessionId = SessionId.createRandom(secureRandom)
+            val initiatedSessionId = event.receivedMessage.uniqueMessageId.sessionIdentifier
             val senderSession = FlowSessionImpl(sender, sender, initiatedSessionId)
             val flowLogic = initiatedFlowFactory.createFlow(senderSession)
             val initiatedFlowInfo = when (initiatedFlowFactory) {
@@ -763,9 +770,8 @@ internal class SingleThreadedStateMachineManager(
                 is InitiatedFlowFactory.CorDapp -> null
             }
             startInitiatedFlow(
-                    event.flowId,
+                    event,
                     flowLogic,
-                    event.deduplicationHandler,
                     senderSession,
                     initiatedSessionId,
                     sessionMessage,
@@ -800,24 +806,24 @@ internal class SingleThreadedStateMachineManager(
 
     @Suppress("LongParameterList")
     private fun <A> startInitiatedFlow(
-            flowId: StateMachineRunId,
+            event: ExternalEvent.ExternalMessageEvent,
             flowLogic: FlowLogic<A>,
-            initiatingMessageDeduplicationHandler: DeduplicationHandler,
             peerSession: FlowSessionImpl,
             initiatedSessionId: SessionId,
             initiatingMessage: InitialSessionMessage,
             senderCoreFlowVersion: Int?,
             initiatedFlowInfo: FlowInfo
     ) {
-        val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo)
+        val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo,
+                event.receivedMessage.uniqueMessageId.shardIdentifier, event.receivedMessage.senderUUID, event.receivedMessage.senderSeqNo)
         val ourIdentity = ourFirstIdentity
         startFlowInternal(
-                flowId,
+                event.flowId,
                 InvocationContext.peer(peerSession.counterparty.name),
                 flowLogic,
                 flowStart,
                 ourIdentity,
-                initiatingMessageDeduplicationHandler
+                event.deduplicationHandler
         )
     }
 

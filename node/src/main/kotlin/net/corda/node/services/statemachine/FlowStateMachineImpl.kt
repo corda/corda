@@ -179,7 +179,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val stateMachine = transientValues.stateMachine
             val oldState = transientState
             val actionExecutor = transientValues.actionExecutor
-            val transition = stateMachine.transition(event, oldState)
+            val transition = stateMachine.transition(event, oldState, serviceHub.clock.instant())
             val (continuation, newState) = transitionExecutor.executeTransition(
                 this,
                 oldState,

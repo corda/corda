@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -9,9 +8,8 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
-import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SessionId
 import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
 import java.time.Instant
 import javax.annotation.concurrent.ThreadSafe
@@ -32,7 +30,7 @@ interface MessagingService : ServiceLifecycleSupport {
      * A unique identifier for this sender that changes whenever a node restarts.  This is used in conjunction with a sequence
      * number for message de-duplication at the recipient.
      */
-    val ourSenderUUID: String
+    val ourSenderUUID: SenderUUID
 
     /**
      * The provided function will be invoked for each received message whose topic and session matches.  The callback
@@ -93,14 +91,24 @@ interface MessagingService : ServiceLifecycleSupport {
     fun sendAll(addressedMessages: List<AddressedMessage>)
 
     /**
+     * Signal that a session has ended to the messaging layer, so that any necessary cleanup is performed.
+     *
+     * @param sessionId the identifier of the session that ended.
+     * @param senderUUID the sender UUID of the last message seen in the session or null if there was no sender UUID in that message.
+     * @param senderSequenceNumber the sender sequence number of the last message seen in the session or null if there was no sender sequence number in that message.
+     */
+    @Suspendable
+    fun sessionEnded(sessionId: SessionId, senderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?)
+
+    /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
      *
      * @param topic identifier for the topic the message is sent to.
      * @param data the payload for the message.
-     * @param deduplicationId optional message deduplication ID including sender identifier.
+     * @param deduplicationInfo optional message deduplication information.
      * @param additionalHeaders optional additional message headers.
      */
-    fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()): Message
+    fun createMessage(topic: String, data: ByteArray, deduplicationInfo: SenderDeduplicationInfo, additionalHeaders: Map<String, String>): Message
 
     /** Given information about either a specific node or a service returns its corresponding address */
     fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
@@ -109,7 +117,7 @@ interface MessagingService : ServiceLifecycleSupport {
     val myAddress: SingleMessageRecipient
 }
 
-fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to)
+fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationInfo: SenderDeduplicationInfo, additionalHeaders: Map<String, String>) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationInfo, additionalHeaders), to)
 
 interface MessageHandlerRegistration
 
@@ -128,7 +136,7 @@ interface Message {
     val topic: String
     val data: ByteSequence
     val debugTimestamp: Instant
-    val uniqueMessageId: DeduplicationId
+    val uniqueMessageId: MessageIdentifier
     val senderUUID: String?
     val additionalHeaders: Map<String, String>
 }

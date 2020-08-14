@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.trace
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.ConfirmSessionMessage
 import net.corda.node.services.statemachine.DataSessionMessage
@@ -13,7 +14,7 @@ import net.corda.node.services.statemachine.ExistingSessionMessage
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.RejectSessionMessage
-import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.messaging.SenderDeduplicationInfo
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
 
@@ -87,56 +88,78 @@ class DeliverSessionMessageTransition(
                 val initiatedSession = SessionState.Initiated(
                         peerParty = event.sender,
                         peerFlowInfo = message.initiatedFlowInfo,
-                        receivedMessages = emptyList(),
+                        receivedMessages = emptyMap(),
                         peerSinkSessionId = message.initiatedSessionId,
                         deduplicationSeed = sessionState.deduplicationSeed,
-                        otherSideErrored = false
+                        otherSideErrored = false,
+                        nextSendingSeqNumber = sessionState.nextSendingSeqNumber,
+                        lastProcessedSeqNumber = 0,
+                        shardId = sessionState.shardId,
+                        lastSenderUUID = event.senderUUID,
+                        lastSenderSeqNo = event.senderSequenceNumber
                 )
                 val newCheckpoint = currentState.checkpoint.addSession(
                         event.sessionMessage.recipientSessionId to initiatedSession
                 )
                 // Send messages that were buffered pending confirmation of session.
-                val sendActions = sessionState.bufferedMessages.map { (deduplicationId, bufferedMessage) ->
+                val sendActions = sessionState.bufferedMessages.map { (messageId, bufferedMessage) ->
                     val existingMessage = ExistingSessionMessage(message.initiatedSessionId, bufferedMessage)
-                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
+                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationInfo(messageId, startingState.senderUUID))
                 }
                 actions.addAll(sendActions)
                 currentState = currentState.copy(checkpoint = newCheckpoint)
             }
-            else -> freshErrorTransition(UnexpectedEventInState())
+            is SessionState.Initiated -> {
+                log.trace { "Discarding duplicate confirmation for session ${event.sessionMessage.recipientSessionId} with ${sessionState.peerParty}" }
+            }
+            is SessionState.Uninitiated -> {
+                val newSessionState = sessionState.copy(hasBeenAcknowledged = Pair(event.sender, message))
+                val newCheckpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to newSessionState)
+                currentState = currentState.copy(checkpoint = newCheckpoint)
+            }
         }
     }
 
     private fun TransitionBuilder.dataMessageTransition(sessionState: SessionState, message: DataSessionMessage) {
-        // We received a data message. The corresponding session must be Initiated.
         return when (sessionState) {
             is SessionState.Initiated -> {
-                // Buffer the message in the session's receivedMessages buffer.
-                val newSessionState = sessionState.copy(
-                        receivedMessages = sessionState.receivedMessages + message
-                )
-
+                if (!sessionState.isDuplicate(event.messageIdentifier)) {
+                    val newSessionState = sessionState.addReceivedMessages(message, event.messageIdentifier, event.senderUUID, event.senderSequenceNumber)
+                    currentState = currentState.copy(
+                            checkpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to newSessionState)
+                    )
+                } else {
+                    log.trace { "Discarding duplicate data message for session ${event.sessionMessage.recipientSessionId} with ${sessionState.peerParty}" }
+                }
+            }
+            is SessionState.Initiating, is SessionState.Uninitiated -> {
+                val newSessionState = sessionState.addReceivedMessages(message, event.messageIdentifier, event.senderUUID, event.senderSequenceNumber)
                 currentState = currentState.copy(
-                        checkpoint = currentState.checkpoint.addSession(
-                                event.sessionMessage.recipientSessionId to newSessionState
-                        )
+                        checkpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to newSessionState)
                 )
             }
-            else -> freshErrorTransition(UnexpectedEventInState())
         }
     }
 
     private fun TransitionBuilder.errorMessageTransition(sessionState: SessionState, payload: ErrorSessionMessage) {
+        val sequenceNumber = event.messageIdentifier.sessionSequenceNumber
         return when (sessionState) {
             is SessionState.Initiated -> {
-                val checkpoint = currentState.checkpoint
-                val sessionId = event.sessionMessage.recipientSessionId
-                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages + payload)
+                if (sequenceNumber > sessionState.lastProcessedSeqNumber) {
+                    val newSessionState = sessionState.addReceivedMessages(payload, event.messageIdentifier, event.senderUUID, event.senderSequenceNumber)
+                    currentState = currentState.copy(
+                            checkpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to newSessionState)
+                    )
+                } else {
+                    log.trace { "Discarding duplicate error message for session ${event.sessionMessage.recipientSessionId} with ${sessionState.peerParty}" }
+                }
+            }
+            is SessionState.Initiating, is SessionState.Uninitiated -> {
+                val newSessionState = sessionState.addReceivedMessages(payload, event.messageIdentifier, event.senderUUID, event.senderSequenceNumber)
                 currentState = currentState.copy(
-                        checkpoint = checkpoint.addSession(sessionId to newSessionState)
+                        checkpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to newSessionState)
                 )
             }
-            else -> freshErrorTransition(UnexpectedEventInState())
         }
     }
 
@@ -145,41 +168,41 @@ class DeliverSessionMessageTransition(
         return when (sessionState) {
             is SessionState.Initiating -> {
                 if (sessionState.rejectionError != null) {
-                    // Double reject
-                    freshErrorTransition(UnexpectedEventInState())
+                    log.trace { "Discarding duplicate session rejection message for session ${event.sessionMessage.recipientSessionId}" }
                 } else {
-                    val checkpoint = currentState.checkpoint
-                    val sessionId = event.sessionMessage.recipientSessionId
                     val flowError = FlowError(payload.errorId, exception)
                     currentState = currentState.copy(
-                            checkpoint = checkpoint.addSession(sessionId to sessionState.copy(rejectionError = flowError))
+                            checkpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to sessionState.copy(rejectionError = flowError))
                     )
                 }
             }
-            else -> freshErrorTransition(UnexpectedEventInState())
+            is SessionState.Uninitiated -> {
+                currentState = currentState.copy(
+                        checkpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to sessionState.copy(hasBeenRejected = payload))
+                )
+            }
+            is SessionState.Initiated -> {
+                freshErrorTransition(UnexpectedEventInState("A session rejection message was received for an already established session ${event.messageIdentifier.sessionIdentifier}."))
+            }
         }
     }
 
     private fun TransitionBuilder.endMessageTransition(payload: EndSessionMessage) {
+        val flowState = currentState.checkpoint.flowState
+        // flow must have already been started when session end messages are being delivered.
+        if (flowState !is FlowState.Started)
+            return freshErrorTransition(UnexpectedEventInState())
 
         val sessionId = event.sessionMessage.recipientSessionId
         val sessions = currentState.checkpoint.checkpointState.sessions
         // a check has already been performed to confirm the session exists for this message before this method is invoked.
         val sessionState = sessions[sessionId]!!
         when (sessionState) {
-            is SessionState.Initiated -> {
-                val flowState = currentState.checkpoint.flowState
-                // flow must have already been started when session end messages are being delivered.
-                if (flowState !is FlowState.Started)
-                    return freshErrorTransition(UnexpectedEventInState())
-
-                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages + payload)
+            is SessionState.Initiated, is SessionState.Initiating, is SessionState.Uninitiated -> {
+                val newSessionState = sessionState.addReceivedMessages(payload, event.messageIdentifier, event.senderUUID, event.senderSequenceNumber)
                 val newCheckpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to newSessionState)
                                                            .addSessionsToBeClosed(setOf(event.sessionMessage.recipientSessionId))
                 currentState = currentState.copy(checkpoint = newCheckpoint)
-            }
-            else -> {
-                freshErrorTransition(PrematureSessionEndException(event.sessionMessage.recipientSessionId))
             }
         }
     }

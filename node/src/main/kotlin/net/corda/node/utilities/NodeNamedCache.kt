@@ -55,7 +55,7 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "FlowDrainingMode_nodeProperties" -> caffeine.maximumSize(defaultCacheSize)
                 name == "ContractUpgradeService_upgrades" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentUniquenessProvider_transactions" -> caffeine.maximumSize(defaultCacheSize)
-                name == "P2PMessageDeduplicator_processedMessages" -> caffeine.maximumSize(defaultCacheSize)
+                name == "P2PMessageDeduplicator_sessionData" -> caffeine.maximumSize(defaultCacheSize)
                 name == "DeduplicationChecker_watermark" -> caffeine
                 name == "BFTNonValidatingNotaryService_transactions" -> caffeine.maximumSize(defaultCacheSize)
                 name == "RaftUniquenessProvider_transactions" -> caffeine.maximumSize(defaultCacheSize)

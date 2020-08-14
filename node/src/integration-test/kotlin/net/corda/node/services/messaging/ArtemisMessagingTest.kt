@@ -24,6 +24,8 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.node.services.statemachine.MessageType
+import net.corda.node.services.statemachine.SessionId
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
@@ -35,7 +37,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import rx.subjects.PublishSubject
+import java.math.BigInteger
 import java.net.ServerSocket
+import java.time.Clock
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -47,6 +51,7 @@ import kotlin.test.assertTrue
 class ArtemisMessagingTest {
     companion object {
         const val TOPIC = "platform.self"
+        private val MESSAGE_IDENTIFIER = MessageIdentifier(MessageType.DATA_MESSAGE, "XXXXXXXX", SessionId(BigInteger.valueOf(14)), 0, Clock.systemUTC().instant())
     }
 
     @Rule
@@ -142,7 +147,7 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `client should be able to send message to itself`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
-        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
+        val message = messagingClient.createMessage(TOPIC, "first msg".toByteArray(), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
@@ -153,14 +158,14 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `client should fail if message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
-        val message = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE))
+        val message = messagingClient.createMessage(TOPIC, ByteArray(MAX_MESSAGE_SIZE), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
         assertTrue(ByteArray(MAX_MESSAGE_SIZE).contentEquals(actual.data.bytes))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
 
-        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE + 1))
+        val tooLagerMessage = messagingClient.createMessage(TOPIC, ByteArray(MAX_MESSAGE_SIZE + 1), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         assertThatThrownBy {
             messagingClient.send(tooLagerMessage, messagingClient.myAddress)
         }.isInstanceOf(IllegalArgumentException::class.java)
@@ -172,14 +177,14 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
-        val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
+        val message = messagingClient.createMessage(TOPIC, ByteArray(50_000), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         messagingClient.send(message, messagingClient.myAddress)
 
         val actual: Message = receivedMessages.take()
         assertTrue(ByteArray(50_000).contentEquals(actual.data.bytes))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
 
-        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
+        val tooLagerMessage = messagingClient.createMessage(TOPIC, ByteArray(100_000), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         assertThatThrownBy {
             messagingClient.send(tooLagerMessage, messagingClient.myAddress)
         }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
@@ -189,7 +194,7 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `platform version is included in the message`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
-        val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
+        val message = messagingClient.createMessage(TOPIC, "first msg".toByteArray(), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
         messagingClient.send(message, messagingClient.myAddress)
 
         val received = receivedMessages.take()

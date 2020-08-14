@@ -8,6 +8,9 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.MessageIdentifier
+import net.corda.node.services.messaging.SenderSequenceNumber
+import net.corda.node.services.messaging.SenderUUID
 import java.util.UUID
 
 /**
@@ -34,7 +37,10 @@ sealed class Event {
     data class DeliverSessionMessage(
             val sessionMessage: ExistingSessionMessage,
             override val deduplicationHandler: DeduplicationHandler,
-            val sender: Party
+            val sender: Party,
+            val messageIdentifier: MessageIdentifier,
+            val senderUUID: SenderUUID?,
+            val senderSequenceNumber: SenderSequenceNumber?
     ) : Event(), GeneratedByExternalEvent
 
     /**

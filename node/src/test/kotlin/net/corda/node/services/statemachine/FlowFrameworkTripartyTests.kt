@@ -18,6 +18,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import java.math.BigInteger
 import java.util.*
 
 class FlowFrameworkTripartyTests {
@@ -168,7 +169,7 @@ class FlowFrameworkTripartyTests {
         )
     }
 
-    private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
+    private val normalEnd = ExistingSessionMessage(SessionId(BigInteger.valueOf(0)), EndSessionMessage) // NormalSessionEnd(0)
 
     private fun assertSessionTransfers(node: TestStartedNode, vararg expected: SessionTransfer): List<SessionTransfer> {
         val actualForNode = receivedSessionMessages.filter { it.from == node.internals.id || it.to == node.network.myAddress }

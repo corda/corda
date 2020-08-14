@@ -75,7 +75,7 @@ class MessagingExecutor(
             putStringProperty(P2PMessagingHeaders.topicProperty, SimpleString(message.topic))
             writeBodyBufferBytes(message.data.bytes)
             // Use the magic deduplication property built into Artemis as our message identity too
-            putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
+            putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
             // If we are the sender (ie. we are not going through recovery of some sort), use sequence number short cut.
             if (ourSenderUUID == message.senderUUID) {
                 putStringProperty(P2PMessagingHeaders.senderUUID, SimpleString(ourSenderUUID))

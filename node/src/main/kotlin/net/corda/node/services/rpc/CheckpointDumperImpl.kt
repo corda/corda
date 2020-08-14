@@ -513,7 +513,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
 
     private fun SessionState.toActiveSession(sessionId: SessionId): ActiveSession? {
         return if (this is SessionState.Initiated) {
-            ActiveSession(peerParty, sessionId, receivedMessages, peerFlowInfo, peerSinkSessionId)
+            ActiveSession(peerParty, sessionId, receivedMessages.values.toList(), peerFlowInfo, peerSinkSessionId)
         } else {
             null
         }

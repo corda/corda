@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.flows.StateMachineRunId
 import net.corda.node.services.statemachine.StateMachineState
 import java.security.SecureRandom
+import java.time.Instant
 
 /**
  * An interface used to separate out different parts of the state machine transition function.
@@ -28,5 +29,6 @@ interface Transition {
 
 class TransitionContext(
         val id: StateMachineRunId,
-        val secureRandom: SecureRandom
+        val secureRandom: SecureRandom,
+        val time: Instant
 )

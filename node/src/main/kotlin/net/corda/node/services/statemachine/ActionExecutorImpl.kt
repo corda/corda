@@ -10,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.messaging.SenderDeduplicationInfo
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
@@ -58,6 +59,7 @@ internal class ActionExecutorImpl(
             is Action.AddSessionBinding -> executeAddSessionBinding(action)
             is Action.RemoveSessionBindings -> executeRemoveSessionBindings(action)
             is Action.SignalFlowHasStarted -> executeSignalFlowHasStarted(action)
+            is Action.SignalSessionsHasEnded -> executeSignalSessionsHasEnded(action)
             is Action.RemoveFlow -> executeRemoveFlow(action)
             is Action.CreateTransaction -> executeCreateTransaction()
             is Action.RollbackTransaction -> executeRollbackTransaction()
@@ -132,16 +134,17 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     private fun executePropagateErrors(action: Action.PropagateErrors) {
-        action.errorMessages.forEach { (exception) ->
+        val errors = action.errorsPerSession.values.flatMap { it.map { it.second } }.distinct()
+        errors.forEach { errorSessionMessage ->
+            val exception = errorSessionMessage.flowException
             log.warn("Propagating error", exception)
         }
-        for (sessionState in action.sessions) {
+        action.errorsPerSession.forEach { (sessionState, sessionErrors) ->
             // Don't propagate errors to the originating session
-            for (errorMessage in action.errorMessages) {
+            for ((id, msg) in sessionErrors) {
                 val sinkSessionId = sessionState.peerSinkSessionId
-                val existingMessage = ExistingSessionMessage(sinkSessionId, errorMessage)
-                val deduplicationId = DeduplicationId.createForError(errorMessage.errorId, sinkSessionId)
-                flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, action.senderUUID))
+                val errorMsg = ExistingSessionMessage(sinkSessionId, msg)
+                flowMessaging.sendSessionMessage(sessionState.peerParty, errorMsg, SenderDeduplicationInfo(id, action.senderUUID))
             }
         }
     }
@@ -162,18 +165,18 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendInitial(action: Action.SendInitial) {
-        flowMessaging.sendSessionMessage(action.destination, action.initialise, action.deduplicationId)
+        flowMessaging.sendSessionMessage(action.destination, action.initialise, action.deduplicationInfo)
     }
 
     @Suspendable
     private fun executeSendExisting(action: Action.SendExisting) {
-        flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId)
+        flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationInfo)
     }
 
     @Suspendable
     private fun executeSendMultiple(action: Action.SendMultiple) {
-        val messages = action.sendInitial.map { Message(it.destination, it.initialise, it.deduplicationId) } +
-                action.sendExisting.map { Message(it.peerParty, it.message, it.deduplicationId) }
+        val messages = action.sendInitial.map { Message(it.destination, it.initialise, it.deduplicationInfo) } +
+                action.sendExisting.map { Message(it.peerParty, it.message, it.deduplicationInfo) }
         flowMessaging.sendSessionMessages(messages)
     }
 
@@ -190,6 +193,13 @@ internal class ActionExecutorImpl(
     @Suspendable
     private fun executeSignalFlowHasStarted(action: Action.SignalFlowHasStarted) {
         stateMachineManager.signalFlowHasStarted(action.flowId)
+    }
+
+    @Suspendable
+    private fun executeSignalSessionsHasEnded(action: Action.SignalSessionsHasEnded) {
+        action.terminatedSessions.forEach { (sessionId, senderData) ->
+            flowMessaging.sessionEnded(sessionId, senderData.first, senderData.second)
+        }
     }
 
     @Suspendable

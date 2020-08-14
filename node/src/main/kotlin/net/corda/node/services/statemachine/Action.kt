@@ -6,6 +6,10 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.MessageIdentifier
+import net.corda.node.services.messaging.SenderDeduplicationInfo
+import net.corda.node.services.messaging.SenderSequenceNumber
+import net.corda.node.services.messaging.SenderUUID
 import java.time.Instant
 import java.util.*
 
@@ -25,7 +29,7 @@ sealed class Action {
     data class SendInitial(
             val destination: Destination,
             val initialise: InitialSessionMessage,
-            val deduplicationId: SenderDeduplicationId
+            val deduplicationInfo: SenderDeduplicationInfo
     ) : Action()
 
     /**
@@ -34,7 +38,7 @@ sealed class Action {
     data class SendExisting(
             val peerParty: Party,
             val message: ExistingSessionMessage,
-            val deduplicationId: SenderDeduplicationId
+            val deduplicationInfo: SenderDeduplicationInfo
     ) : Action()
 
     /**
@@ -95,12 +99,11 @@ sealed class Action {
     data class AcknowledgeMessages(val deduplicationHandlers: List<DeduplicationHandler>) : Action()
 
     /**
-     * Propagate [errorMessages] to [sessions].
-     * @param sessions a map from source session IDs to initiated sessions.
+     * Propagate the specified error messages to the specified sessions.
+     * @param errorsPerSession a map containing the error messages to be sent per session along with their identifiers.
      */
     data class PropagateErrors(
-            val errorMessages: List<ErrorSessionMessage>,
-            val sessions: List<SessionState.Initiated>,
+            val errorsPerSession: Map<SessionState.Initiated, List<Pair<MessageIdentifier, ErrorSessionMessage>>>,
             val senderUUID: String?
     ) : Action()
 
@@ -113,6 +116,11 @@ sealed class Action {
      * Remove the session bindings corresponding to [sessionIds].
      */
     data class RemoveSessionBindings(val sessionIds: Set<SessionId>) : Action()
+
+    /**
+     * Signal sessions ended at the messaging layer.
+     */
+    data class SignalSessionsHasEnded(val terminatedSessions: Map<SessionId, Pair<SenderUUID?, SenderSequenceNumber?>>): Action()
 
     /**
      * Signal that the flow corresponding to [flowId] is considered started.

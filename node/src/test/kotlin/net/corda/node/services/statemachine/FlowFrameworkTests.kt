@@ -8,7 +8,6 @@ import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
@@ -42,6 +41,8 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import net.corda.node.services.messaging.MessageIdentifier
+import net.corda.node.services.messaging.SenderDeduplicationInfo
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
@@ -80,6 +81,8 @@ import org.junit.Before
 import org.junit.Test
 import rx.Notification
 import rx.Observable
+import java.math.BigInteger
+import java.security.SecureRandom
 import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
@@ -571,7 +574,7 @@ class FlowFrameworkTests {
 
     @Test(timeout=300_000)
 	fun `session init with unknown class is sent to the flow hospital, from where we then drop it`() {
-        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, "not.a.real.Class", 1, "", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId.createRandom(SecureRandom()), 0, "not.a.real.Class", 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(1) // Only the session-init is expected as the session-reject is blocked by the flow hospital
         val medicalRecords = bobNode.smm.flowHospital.track().apply { updates.notUsed() }.snapshot
@@ -587,7 +590,7 @@ class FlowFrameworkTests {
 
     @Test(timeout=300_000)
 	fun `non-flow class in session init`() {
-        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, String::class.java.name, 1, "", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId.createRandom(SecureRandom()), 0, String::class.java.name, 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
         val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
@@ -897,7 +900,7 @@ class FlowFrameworkTests {
     }
         //region Helpers
 
-    private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
+    private val normalEnd = ExistingSessionMessage(SessionId(BigInteger.valueOf(0)), EndSessionMessage) // NormalSessionEnd(0)
 
     private fun assertSessionTransfers(vararg expected: SessionTransfer) {
         assertThat(receivedSessionMessages).containsExactly(*expected)
@@ -1039,21 +1042,21 @@ class FlowFrameworkTests {
 }
 
 internal fun sessionConfirm(flowVersion: Int = 1) =
-    ExistingSessionMessage(SessionId(0), ConfirmSessionMessage(SessionId(0), FlowInfo(flowVersion, "")))
+    ExistingSessionMessage(SessionId(BigInteger.valueOf(0)), ConfirmSessionMessage(SessionId(BigInteger.valueOf(0)), FlowInfo(flowVersion, "")))
 
 internal inline fun <reified P : FlowLogic<*>> TestStartedNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
     return smm.findStateMachines(P::class.java).single()
 }
 
 private fun sanitise(message: SessionMessage) = when (message) {
-    is InitialSessionMessage -> message.copy(initiatorSessionId = SessionId(0), initiationEntropy = 0, appName = "")
+    is InitialSessionMessage -> message.copy(initiatorSessionId = SessionId(BigInteger.valueOf(0)), initiationEntropy = 0, appName = "")
     is ExistingSessionMessage -> {
         val payload = message.payload
         message.copy(
-            recipientSessionId = SessionId(0),
+            recipientSessionId = SessionId(BigInteger.valueOf(0)),
             payload = when (payload) {
                 is ConfirmSessionMessage -> payload.copy(
-                    initiatedSessionId = SessionId(0),
+                    initiatedSessionId = SessionId(BigInteger.valueOf(0)),
                     initiatedFlowInfo = payload.initiatedFlowInfo.copy(appName = "")
                 )
                 is ErrorSessionMessage -> payload.copy(
@@ -1076,7 +1079,8 @@ internal fun Observable<MessageTransfer>.toSessionTransfers(): Observable<Sessio
 internal fun TestStartedNode.sendSessionMessage(message: SessionMessage, destination: Party) {
     services.networkService.apply {
         val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
-        send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes), address)
+        val messageIdentifier = MessageIdentifier(MessageType.DATA_MESSAGE, "XXXXXXXX", SessionId(BigInteger.valueOf(14)), 0, Clock.systemUTC().instant())
+        send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes, SenderDeduplicationInfo(messageIdentifier, null), emptyMap()), address)
     }
 }
 
@@ -1087,7 +1091,7 @@ inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
 }
 
 internal fun errorMessage(errorResponse: FlowException? = null) =
-    ExistingSessionMessage(SessionId(0), ErrorSessionMessage(errorResponse, 0))
+    ExistingSessionMessage(SessionId(BigInteger.valueOf(0)), ErrorSessionMessage(errorResponse, 0))
 
 internal infix fun TestStartedNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(internals.id, message)
 internal infix fun Pair<Int, SessionMessage>.to(node: TestStartedNode): SessionTransfer =
@@ -1103,10 +1107,10 @@ internal data class SessionTransfer(val from: Int, val message: SessionMessage, 
 }
 
 internal fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
-    return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
+    return InitialSessionMessage(SessionId(BigInteger.valueOf(0)), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
 }
 
-internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), DataSessionMessage(payload.serialize()))
+internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(BigInteger.valueOf(0)), DataSessionMessage(payload.serialize()))
 
 @InitiatingFlow
 internal open class SendFlow(private val payload: Any, private vararg val otherParties: Party) : FlowLogic<FlowInfo>() {

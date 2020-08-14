@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import java.math.BigInteger
 import java.security.SecureRandom
 
 /**
@@ -21,9 +22,28 @@ import java.security.SecureRandom
 sealed class SessionMessage
 
 @CordaSerializable
-data class SessionId(val toLong: Long) {
+data class SessionId(val value: BigInteger) {
+    init {
+        require(value.signum() >= 0) { "Session identifier cannot be a negative number, but it was $value" }
+        require(value.bitLength() <= MAX_BIT_SIZE) { "The size of a session identifier cannot exceed $MAX_BIT_SIZE bits, but it was $value" }
+    }
+
+    /**
+     * This calculates the initiated session ID assuming this is the initiating session ID.
+     * This is the next larger number in the range [0, 2^[MAX_BIT_SIZE]] with wrap around the largest number in the interval.
+     */
+    fun calculateInitiatedSessionId(): SessionId {
+        return if (this.value == LARGEST_SESSION_ID)
+            SessionId(BigInteger.ZERO)
+        else
+            SessionId(this.value.plus(BigInteger.ONE))
+    }
+
     companion object {
-        fun createRandom(secureRandom: SecureRandom) = SessionId(secureRandom.nextLong())
+        const val MAX_BIT_SIZE = 128
+        val LARGEST_SESSION_ID = BigInteger.valueOf(2).pow(MAX_BIT_SIZE).minus(BigInteger.ONE)
+
+        fun createRandom(secureRandom: SecureRandom) = SessionId(BigInteger(MAX_BIT_SIZE, secureRandom))
     }
 }
 
@@ -118,3 +138,29 @@ data class RejectSessionMessage(val message: String, val errorId: Long) : Existi
  * protocols don't match up, e.g. one is waiting for the other, but the other side has already finished.
  */
 object EndSessionMessage : ExistingSessionMessagePayload()
+
+enum class MessageType {
+    SESSION_INIT,
+    SESSION_CONFIRM,
+    SESSION_REJECT,
+    DATA_MESSAGE,
+    SESSION_END,
+    SESSION_ERROR;
+
+    companion object {
+        fun inferFromMessage(message: SessionMessage): MessageType {
+            return when (message) {
+                is InitialSessionMessage -> SESSION_INIT
+                is ExistingSessionMessage -> {
+                    when(message.payload) {
+                        is ConfirmSessionMessage -> SESSION_CONFIRM
+                        is RejectSessionMessage -> SESSION_REJECT
+                        is DataSessionMessage -> DATA_MESSAGE
+                        is EndSessionMessage -> SESSION_END
+                        is ErrorSessionMessage -> SESSION_ERROR
+                    }
+                }
+            }
+        }
+    }
+}

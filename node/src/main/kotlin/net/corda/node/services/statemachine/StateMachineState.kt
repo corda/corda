@@ -22,11 +22,16 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.MessageIdentifier
+import net.corda.node.services.messaging.SenderSequenceNumber
+import net.corda.node.services.messaging.SenderUUID
+import java.lang.IllegalArgumentException
 import java.lang.IllegalStateException
 import java.security.Principal
 import java.time.Instant
 import java.util.concurrent.Future
 import java.util.concurrent.Semaphore
+import kotlin.math.max
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -35,6 +40,7 @@ import java.util.concurrent.Semaphore
  * @param checkpoint the persisted part of the state.
  * @param flowLogic the [FlowLogic] associated with the flow. Note that this is mutable by the user.
  * @param pendingDeduplicationHandlers the list of incomplete deduplication handlers.
+ * @param closedSessionsPendingToBeSignalled the sessions that have been closed and need to be signalled to the messaging layer on the next checkpoint (along with some metadata).
  * @param isFlowResumed true if the control is returned (or being returned) to "user-space" flow code. This is used
  *   to make [Event.DoRemainingWork] idempotent.
  * @param isWaitingForFuture true if the flow is waiting for the completion of a future triggered by one of the statemachine's actions
@@ -61,6 +67,7 @@ data class StateMachineState(
     val checkpoint: Checkpoint,
     val flowLogic: FlowLogic<*>,
     val pendingDeduplicationHandlers: List<DeduplicationHandler>,
+    val closedSessionsPendingToBeSignalled: Map<SessionId, Pair<SenderUUID?, SenderSequenceNumber?>>,
     val isFlowResumed: Boolean,
     val isWaitingForFuture: Boolean,
     var future: Future<*>?,
@@ -123,7 +130,8 @@ data class Checkpoint(
                 frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
                 ourIdentity: Party,
                 subFlowVersion: SubFlowVersion,
-                isEnabledTimedFlow: Boolean
+                isEnabledTimedFlow: Boolean,
+                timestamp: Instant
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion, isEnabledTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
@@ -135,7 +143,8 @@ data class Checkpoint(
                         listOf(topLevelSubFlow),
                         numberOfSuspends = 0,
                         // We set this to 1 here to avoid an extra copy and increment in UnstartedFlowTransition.createInitialCheckpoint
-                        numberOfCommits = 1
+                        numberOfCommits = 1,
+                        suspensionTime = timestamp
                     ),
                     flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
                     errorState = ErrorState.Clean
@@ -235,6 +244,7 @@ data class Checkpoint(
 }
 
 /**
+<<<<<<< HEAD
  * @param invocationContext The initiator of the flow.
  * @param ourIdentity The identity the flow is run as.
  * @param sessions Map of source session ID to session state.
@@ -242,6 +252,7 @@ data class Checkpoint(
  * @param subFlowStack The stack of currently executing subflows.
  * @param numberOfSuspends The number of flow suspends due to IO API calls.
  * @param numberOfCommits The number of times this checkpoint has been persisted.
+ * @param suspensionTime the time of the last suspension. This is supposed to be used as a stable timestamp in case of replays.
  */
 @CordaSerializable
 data class CheckpointState(
@@ -251,7 +262,8 @@ data class CheckpointState(
     val sessionsToBeClosed: Set<SessionId>,
     val subFlowStack: List<SubFlow>,
     val numberOfSuspends: Int,
-    val numberOfCommits: Int
+    val numberOfCommits: Int,
+    val suspensionTime: Instant
 )
 
 /**
@@ -262,44 +274,162 @@ sealed class SessionState {
     abstract val deduplicationSeed: String
 
     /**
-     * We haven't yet sent the initialisation message
+     * the sender UUID last seen in this session, if there was one.
+     */
+    abstract val lastSenderUUID: SenderUUID?
+
+    /**
+     * the sender sequence number last seen in this session, if there was one.
+     */
+    abstract val lastSenderSeqNo: SenderSequenceNumber?
+
+    /**
+     * the messages that have been received and are pending processing indexed by their sequence number.
+     * this could be any [ExistingSessionMessagePayload] type in theory, but it in practice it can only be one of the following types now:
+     *   * [DataSessionMessage]
+     *   * [ErrorSessionMessage]
+     *   * [EndSessionMessage]
+     */
+    abstract val receivedMessages: Map<Int, ExistingSessionMessagePayload>
+
+    /**
+     * Returns a new session state with the specified messages added to the list of received messages.
+     */
+    fun addReceivedMessages(message: ExistingSessionMessagePayload, messageIdentifier: MessageIdentifier, senderUUID: String?, senderSequenceNumber: Long?): SessionState {
+        val newReceivedMessages = receivedMessages.plus(messageIdentifier.sessionSequenceNumber to message)
+        val (newLastSenderUUID, newLastSenderSeqNo) = calculateSenderInfo(lastSenderUUID, lastSenderSeqNo, senderUUID, senderSequenceNumber)
+        return when(this) {
+            is Uninitiated -> { copy(receivedMessages = newReceivedMessages, lastSenderUUID = newLastSenderUUID, lastSenderSeqNo = newLastSenderSeqNo) }
+            is Initiating -> { copy(receivedMessages = newReceivedMessages, lastSenderUUID = newLastSenderUUID, lastSenderSeqNo = newLastSenderSeqNo) }
+            is Initiated -> { copy(receivedMessages = newReceivedMessages, lastSenderUUID = newLastSenderUUID, lastSenderSeqNo = newLastSenderSeqNo) }
+        }
+    }
+
+    private fun calculateSenderInfo(currentSender: String?, currentSenderSeqNo: Long?, msgSender: String?, msgSenderSeqNo: Long?): Pair<String?, Long?> {
+        return if (msgSender != null && msgSenderSeqNo != null) {
+            if (currentSenderSeqNo != null)
+                Pair(msgSender, max(msgSenderSeqNo, currentSenderSeqNo))
+            else
+                Pair(msgSender, msgSenderSeqNo)
+        } else {
+            Pair(currentSender, currentSenderSeqNo)
+        }
+    }
+
+    /**
+     * We haven't yet sent the initialisation message.
+     * This really means that the flow is in a state before sending the initialisation message,
+     * but in reality it could have sent it before and fail before reaching the next checkpoint, thus ending up replaying from the last checkpoint.
+     *
+     * @param hasBeenAcknowledged whether a positive response to a session initiation has already been received and the associated confirmation message, if so.
+     * @param hasBeenRejected whether a negative response to a session initiation has already been received and the associated rejection message, if so.
      */
     data class Uninitiated(
             val destination: Destination,
             val initiatingSubFlow: SubFlow.Initiating,
             val sourceSessionId: SessionId,
-            val additionalEntropy: Long
+            val additionalEntropy: Long,
+            val hasBeenAcknowledged: Pair<Party, ConfirmSessionMessage>?,
+            val hasBeenRejected: RejectSessionMessage?,
+            override val receivedMessages: Map<Int, ExistingSessionMessagePayload>,
+            override val lastSenderUUID: String?,
+            override val lastSenderSeqNo: Long?
     ) : SessionState() {
-        override val deduplicationSeed: String get() = "R-${sourceSessionId.toLong}-$additionalEntropy"
+        override val deduplicationSeed: String get() = "R-${sourceSessionId.value}-$additionalEntropy"
     }
 
     /**
      * We have sent the initialisation message but have not yet received a confirmation.
+     * @property bufferedMessages the messages that have been buffered to be sent after the session is confirmed from the other side.
      * @property rejectionError if non-null the initiation failed.
+     * @property nextSendingSeqNumber the sequence number of the next message to be sent.
+     * @property shardId the shard ID of the associated flow to be embedded on all the messages sent from this session.
      */
     data class Initiating(
-            val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
+            val bufferedMessages: List<Pair<MessageIdentifier, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
-            override val deduplicationSeed: String
-    ) : SessionState()
+            override val deduplicationSeed: String,
+            val nextSendingSeqNumber: Int,
+            val shardId: String,
+            override val receivedMessages: Map<Int, ExistingSessionMessagePayload>,
+            override val lastSenderUUID: String?,
+            override val lastSenderSeqNo: Long?
+    ) : SessionState() {
+
+        /**
+         * Buffers an outgoing message to be sent when ready.
+         * Returns the new form of the state
+         */
+        fun bufferMessage(messageIdentifier: MessageIdentifier, messagePayload: ExistingSessionMessagePayload): SessionState {
+            return this.copy(bufferedMessages = bufferedMessages + Pair(messageIdentifier, messagePayload), nextSendingSeqNumber = nextSendingSeqNumber + 1)
+        }
+
+        /**
+         * A batched form of [bufferMessage].
+         */
+        fun bufferMessages(messages: List<Pair<MessageIdentifier, ExistingSessionMessagePayload>>): SessionState {
+            return this.copy(bufferedMessages = bufferedMessages + messages, nextSendingSeqNumber = nextSendingSeqNumber + messages.size)
+        }
+    }
 
     /**
      * We have received a confirmation, the peer party and session id is resolved.
-     * @property receivedMessages the messages that have been received and are pending processing.
-     *   this could be any [ExistingSessionMessagePayload] type in theory, but it in practice it can only be one of the following types now:
-     *   * [DataSessionMessage]
-     *   * [ErrorSessionMessage]
-     *   * [EndSessionMessage]
      * @property otherSideErrored whether the session has received an error from the other side.
+     * @property nextSendingSeqNumber the sequence number that corresponds to the next message to be sent.
+     * @property lastProcessedSeqNumber the sequence number of the last message that has been processed.
+     * @property shardId the shard ID of the associated flow to be embedded on all the messages sent from this session.
      */
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: List<ExistingSessionMessagePayload>,
             val otherSideErrored: Boolean,
             val peerSinkSessionId: SessionId,
-            override val deduplicationSeed: String
-    ) : SessionState()
+            override val deduplicationSeed: String,
+            val nextSendingSeqNumber: Int,
+            val lastProcessedSeqNumber: Int,
+            val shardId: String,
+            override val receivedMessages: Map<Int, ExistingSessionMessagePayload>,
+            override val lastSenderUUID: String?,
+            override val lastSenderSeqNo: Long?
+    ) : SessionState() {
+
+        /**
+         * Indicates whether this message has already been processed.
+         */
+        fun isDuplicate(messageIdentifier: MessageIdentifier): Boolean {
+            return messageIdentifier.sessionSequenceNumber <= lastProcessedSeqNumber
+        }
+
+        /**
+         * Indicates whether the session has an error message pending from the other side.
+         */
+        fun hasErrored(): Boolean {
+            return hasNextMessageArrived() && receivedMessages[lastProcessedSeqNumber + 1] is ErrorSessionMessage
+        }
+
+        /**
+         * Indicates whether the next expected message has arrived.
+         */
+        fun hasNextMessageArrived(): Boolean {
+            return receivedMessages.containsKey(lastProcessedSeqNumber + 1)
+        }
+
+        /**
+         * Returns the next message to be processed and the new session state.
+         * If you want to check first whether the next message has arrived, call [hasNextMessageArrived]
+         *
+         * @throws [IllegalArgumentException] if the next hasn't arrived.
+         */
+        fun extractMessage(): Pair<ExistingSessionMessagePayload, Initiated> {
+            if (!hasNextMessageArrived()) {
+                throw IllegalArgumentException("Tried to extract a message that hasn't arrived yet.")
+            }
+
+            val message = receivedMessages[lastProcessedSeqNumber + 1]!!
+            val newState = this.copy(receivedMessages = receivedMessages.minus(lastProcessedSeqNumber + 1), lastProcessedSeqNumber = lastProcessedSeqNumber + 1)
+            return Pair(message, newState)
+        }
+    }
 }
 
 typealias SessionMap = Map<SessionId, SessionState>
@@ -321,7 +451,10 @@ sealed class FlowStart {
             val initiatedSessionId: SessionId,
             val initiatingMessage: InitialSessionMessage,
             val senderCoreFlowVersion: Int?,
-            val initiatedFlowInfo: FlowInfo
+            val initiatedFlowInfo: FlowInfo,
+            val shardIdentifier: String,
+            val senderUUID: String?,
+            val senderSequenceNumber: Long?
     ) : FlowStart() { override fun toString() = "Initiated" }
 }
 

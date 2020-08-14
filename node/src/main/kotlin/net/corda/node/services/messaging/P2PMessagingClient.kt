@@ -25,9 +25,9 @@ import net.corda.node.internal.artemis.ReactiveArtemisConsumer
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multiplex
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
-import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.MessageType
+import net.corda.node.services.statemachine.SessionId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
@@ -101,8 +101,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private class NodeClientMessage(override val topic: String,
                                     override val data: ByteSequence,
-                                    override val uniqueMessageId: DeduplicationId,
-                                    override val senderUUID: String?,
+                                    override val uniqueMessageId: MessageIdentifier,
+                                    override val senderUUID: SenderUUID?,
                                     override val additionalHeaders: Map<String, String>) : Message {
         override val debugTimestamp: Instant = Instant.now()
         override fun toString() = "$topic#${String(data.bytes)}"
@@ -371,7 +371,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
             val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
-            val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { DeduplicationId(message.getStringProperty(it)) }
+            val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { MessageIdentifier.parse(message.getStringProperty(it)) }
             val receivedSenderUUID = message.getStringProperty(P2PMessagingHeaders.senderUUID)
             val receivedSenderSeqNo = if (message.containsProperty(P2PMessagingHeaders.senderSeqNo)) message.getLongProperty(P2PMessagingHeaders.senderSeqNo) else null
             val isSessionInit = message.getStringProperty(P2PMessagingHeaders.Type.KEY) == P2PMessagingHeaders.Type.SESSION_INIT_VALUE
@@ -392,8 +392,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private class ArtemisReceivedMessage(override val topic: String,
                                          override val peer: CordaX500Name,
                                          override val platformVersion: Int,
-                                         override val uniqueMessageId: DeduplicationId,
-                                         override val senderUUID: String?,
+                                         override val uniqueMessageId: MessageIdentifier,
+                                         override val senderUUID: SenderUUID?,
                                          override val senderSeqNo: Long?,
                                          override val isSessionInit: Boolean,
                                          private val message: ClientMessage) : ReceivedMessage {
@@ -405,12 +405,17 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     internal fun deliver(artemisMessage: ClientMessage) {
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
-            if (!deduplicator.isDuplicate(cordaMessage)) {
-                deduplicator.signalMessageProcessStart(cordaMessage)
-                deliver(cordaMessage, artemisMessage)
+            if (cordaMessage.uniqueMessageId.messageType == MessageType.SESSION_INIT) {
+                if (!deduplicator.isDuplicateSessionInit(cordaMessage)) {
+                    deduplicator.signalMessageProcessStart(cordaMessage)
+                    deliver(cordaMessage, artemisMessage)
+                } else {
+                    log.debug { "Discarding duplicate session-init message with identifier: ${cordaMessage.uniqueMessageId}, senderUUID: ${cordaMessage.senderUUID}, senderSeqNo: ${cordaMessage.senderSeqNo}" }
+                    messagingExecutor!!.acknowledge(artemisMessage)
+                }
             } else {
-                log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
-                messagingExecutor!!.acknowledge(artemisMessage)
+                // non session-init messages are directly handed to the state machine, which is responsible for performing deduplication.
+                deliver(cordaMessage, artemisMessage)
             }
         }
     }
@@ -420,7 +425,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
         val deliverTo = handlers[msg.topic]
         if (deliverTo != null) {
             try {
-                deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), MessageDeduplicationHandler(artemisMessage, msg))
+                if (msg.uniqueMessageId.messageType == MessageType.SESSION_INIT) {
+                    deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), MessageDeduplicationHandlerForSessionInitMessages(artemisMessage, msg))
+                } else {
+                    deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), MessageDeduplicationHandlerForRegularMessages(artemisMessage, msg))
+                }
             } catch (e: Exception) {
                 log.error("Caught exception whilst executing message handler for ${msg.topic}", e)
             }
@@ -429,11 +438,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
-    private inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+    private inner class MessageDeduplicationHandlerForSessionInitMessages(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
         override val externalCause: ExternalEvent
             get() = this
         override val flowId: StateMachineRunId by lazy { StateMachineRunId.createRandom() }
-        override val deduplicationHandler: MessageDeduplicationHandler
+        override val deduplicationHandler: MessageDeduplicationHandlerForSessionInitMessages
             get() = this
 
         override fun insideDatabaseTransaction() {
@@ -442,6 +451,27 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         override fun afterDatabaseTransaction() {
             deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId)
+            messagingExecutor!!.acknowledge(artemisMessage)
+        }
+
+        override fun toString(): String {
+            return "${javaClass.simpleName}(${receivedMessage.uniqueMessageId})"
+        }
+    }
+
+    private inner class MessageDeduplicationHandlerForRegularMessages(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+        override val externalCause: ExternalEvent
+            get() = this
+        override val flowId: StateMachineRunId by lazy { StateMachineRunId.createRandom() }
+        override val deduplicationHandler: MessageDeduplicationHandlerForRegularMessages
+            get() = this
+
+        /**
+         * Nothing to do, since deduplication information is kept in the state machine.
+         */
+        override fun insideDatabaseTransaction() {}
+
+        override fun afterDatabaseTransaction() {
             messagingExecutor!!.acknowledge(artemisMessage)
         }
 
@@ -520,6 +550,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
+    @Suspendable
+    override fun sessionEnded(sessionId: SessionId, senderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?) {
+        deduplicator.signalSessionEnd(sessionId, senderUUID, senderSequenceNumber)
+    }
+
     override fun resolveTargetToArtemisQueue(address: MessageRecipients): String {
         return if (address == myAddress) {
             // If we are sending to ourselves then route the message directly to our P2P queue.
@@ -586,8 +621,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         handlers.remove(registration.topic)
     }
 
-    override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
-        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, deduplicationId.senderUUID, additionalHeaders)
+    override fun createMessage(topic: String, data: ByteArray, deduplicationInfo: SenderDeduplicationInfo, additionalHeaders: Map<String, String>): Message {
+        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationInfo.messageIdentifier, deduplicationInfo.senderUUID, additionalHeaders)
     }
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {

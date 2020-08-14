@@ -21,6 +21,8 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
+import net.corda.node.services.messaging.MessageIdentifier
+import net.corda.node.services.messaging.SenderDeduplicationInfo
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.io.Closeable
@@ -169,7 +171,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
         log.info("Sending session initiation error back to $sender", error)
 
-        flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(DeduplicationId.createRandom(secureRandom), ourSenderUUID))
+        val messageType = MessageType.inferFromMessage(replyError)
+        val messageIdentifier = MessageIdentifier(messageType, event.receivedMessage.uniqueMessageId.shardIdentifier, sessionMessage.initiatorSessionId, 0, event.receivedMessage.uniqueMessageId.timestamp)
+        flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationInfo(messageIdentifier, ourSenderUUID))
         event.deduplicationHandler.afterDatabaseTransaction()
     }
 

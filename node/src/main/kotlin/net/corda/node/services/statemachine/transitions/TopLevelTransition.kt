@@ -7,9 +7,9 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.MessageIdentifier
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.EndSessionMessage
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.Event
@@ -19,7 +19,8 @@ import net.corda.node.services.statemachine.FlowRemovalReason
 import net.corda.node.services.statemachine.FlowSessionImpl
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.InitialSessionMessage
-import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.messaging.SenderDeduplicationInfo
+import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionMessage
 import net.corda.node.services.statemachine.SessionState
@@ -197,7 +198,8 @@ class TopLevelTransition(
                        checkpointState.invocationContext
                    },
                    numberOfSuspends = checkpointState.numberOfSuspends + 1,
-                   numberOfCommits = checkpointState.numberOfCommits + 1
+                   numberOfCommits = checkpointState.numberOfCommits + 1,
+                   suspensionTime = context.time
                 )
                 copy(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
@@ -217,11 +219,13 @@ class TopLevelTransition(
                 currentState = startingState.copy(
                     checkpoint = newCheckpoint,
                     pendingDeduplicationHandlers = emptyList(),
+                    closedSessionsPendingToBeSignalled = emptyMap(),
                     isFlowResumed = false,
                     isAnyCheckpointPersisted = true
                 )
                 actions += Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = startingState.isAnyCheckpointPersisted)
                 actions += Action.PersistDeduplicationFacts(startingState.pendingDeduplicationHandlers)
+                actions += Action.SignalSessionsHasEnded(startingState.closedSessionsPendingToBeSignalled)
                 actions += Action.CommitTransaction(currentState)
                 actions += Action.AcknowledgeMessages(startingState.pendingDeduplicationHandlers)
                 actions += Action.ScheduleEvent(Event.DoRemainingWork)
@@ -240,12 +244,14 @@ class TopLevelTransition(
                         checkpoint = checkpoint.copy(
                             checkpointState = checkpoint.checkpointState.copy(
                                 numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1,
-                                numberOfCommits = checkpoint.checkpointState.numberOfCommits + 1
+                                numberOfCommits = checkpoint.checkpointState.numberOfCommits + 1,
+                                    suspensionTime = context.time
                             ),
                             flowState = FlowState.Finished,
                             result = event.returnValue,
                             status = Checkpoint.FlowStatus.COMPLETED
-                        ),
+                        ).removeSessions(checkpoint.checkpointState.sessions.keys),
+                        closedSessionsPendingToBeSignalled = emptyMap(),
                         pendingDeduplicationHandlers = emptyList(),
                         isFlowResumed = false,
                         isRemoved = true
@@ -263,7 +269,12 @@ class TopLevelTransition(
                         )
                     }
 
+                    val signalSessionsEndMap = startingState.checkpoint.checkpointState.sessions.map { (sessionId, sessionState) ->
+                        sessionId to Pair(sessionState.lastSenderUUID, sessionState.lastSenderSeqNo)
+                    }.toMap()
+
                     actions += Action.PersistDeduplicationFacts(startingState.pendingDeduplicationHandlers)
+                    actions += Action.SignalSessionsHasEnded(signalSessionsEndMap)
                     actions += Action.ReleaseSoftLocks(event.softLocksId)
                     actions += Action.CommitTransaction(currentState)
                     actions += Action.AcknowledgeMessages(startingState.pendingDeduplicationHandlers)
@@ -284,11 +295,12 @@ class TopLevelTransition(
     }
 
     private fun TransitionBuilder.sendEndMessages() {
-        val sendEndMessageActions = currentState.checkpoint.checkpointState.sessions.values.mapIndexed { index, state ->
+        val sendEndMessageActions = startingState.checkpoint.checkpointState.sessions.map { (sessionId, state) ->
             if (state is SessionState.Initiated) {
                 val message = ExistingSessionMessage(state.peerSinkSessionId, EndSessionMessage)
-                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
-                Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
+                val messageType = MessageType.inferFromMessage(message)
+                val messageIdentifier = MessageIdentifier(messageType, state.shardId, state.peerSinkSessionId, state.nextSendingSeqNumber, startingState.checkpoint.checkpointState.suspensionTime)
+                Action.SendExisting(state.peerParty, message, SenderDeduplicationInfo(messageIdentifier, startingState.senderUUID))
             } else {
                 null
             }
@@ -306,7 +318,7 @@ class TopLevelTransition(
             }
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
             val sessionImpl = FlowSessionImpl(event.destination, event.wellKnownParty, sourceSessionId)
-            val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
+            val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong(), null, null, emptyMap(), null, null))
             currentState = currentState.copy(checkpoint = checkpoint.setSessions(newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))
             FlowContinuation.Resume(sessionImpl)
@@ -361,10 +373,12 @@ class TopLevelTransition(
                         numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1
                     )
                 ),
-                pendingDeduplicationHandlers = startingState.pendingDeduplicationHandlers - flowStartEvents
+                pendingDeduplicationHandlers = startingState.pendingDeduplicationHandlers - flowStartEvents,
+                closedSessionsPendingToBeSignalled = emptyMap()
             )
             actions += Action.CreateTransaction
             actions += Action.PersistDeduplicationFacts(flowStartEvents)
+            actions += Action.SignalSessionsHasEnded(startingState.closedSessionsPendingToBeSignalled)
             actions += Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = startingState.isAnyCheckpointPersisted)
             actions += Action.CommitTransaction(currentState)
             actions += Action.AcknowledgeMessages(flowStartEvents)
@@ -401,4 +415,5 @@ class TopLevelTransition(
             FlowContinuation.Abort
         }
     }
+
 }

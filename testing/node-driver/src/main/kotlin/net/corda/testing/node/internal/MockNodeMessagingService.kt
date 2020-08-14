@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -13,9 +14,9 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.*
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
-import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.messaging.SenderDeduplicationInfo
+import net.corda.node.services.statemachine.SessionId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
@@ -46,9 +47,9 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     }
 
     private val state = ThreadBox(InnerState())
-    private val processedMessages: MutableSet<DeduplicationId> = Collections.synchronizedSet(HashSet<DeduplicationId>())
+    private val processedMessages: MutableSet<MessageIdentifier> = Collections.synchronizedSet(HashSet())
 
-    override val ourSenderUUID: String = UUID.randomUUID().toString()
+    override val ourSenderUUID: SenderUUID = UUID.randomUUID().toString()
 
     private var _myAddress: InMemoryMessagingNetwork.PeerHandle? = null
     override val myAddress: InMemoryMessagingNetwork.PeerHandle get() = checkNotNull(_myAddress) { "Not started" }
@@ -167,6 +168,11 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         }
     }
 
+    @Suspendable
+    override fun sessionEnded(sessionId: SessionId, senderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?) {
+        // nothing to do here.
+    }
+
     override fun close() {
         backgroundThread?.let {
             it.interrupt()
@@ -178,8 +184,8 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     }
 
     /** Returns the given (topic & session, data) pair as a newly created message object. */
-    override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
-        return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, senderUUID = deduplicationId.senderUUID)
+    override fun createMessage(topic: String, data: ByteArray, deduplicationInfo: SenderDeduplicationInfo, additionalHeaders: Map<String, String>): Message {
+        return InMemoryMessage(topic, OpaqueBytes(data), deduplicationInfo.messageIdentifier, senderUUID = deduplicationInfo.senderUUID)
     }
 
     /**
@@ -269,7 +275,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     private data class InMemoryReceivedMessage(override val topic: String,
                                                override val data: ByteSequence,
                                                override val platformVersion: Int,
-                                               override val uniqueMessageId: DeduplicationId,
+                                               override val uniqueMessageId: MessageIdentifier,
                                                override val debugTimestamp: Instant,
                                                override val peer: CordaX500Name,
                                                override val senderUUID: String? = null,

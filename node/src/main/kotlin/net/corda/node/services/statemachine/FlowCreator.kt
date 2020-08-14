@@ -155,7 +155,8 @@ class FlowCreator(
             frozenFlowLogic,
             ourIdentity,
             flowCorDappVersion,
-            flowLogic.isEnabledTimedFlow()
+            flowLogic.isEnabledTimedFlow(),
+            serviceHub.clock.instant()
         ).getOrThrow()
 
         val state = createStateMachineState(
@@ -253,6 +254,7 @@ class FlowCreator(
         return StateMachineState(
             checkpoint = checkpoint,
             pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
+            closedSessionsPendingToBeSignalled = emptyMap(),
             isFlowResumed = false,
             future = null,
             isWaitingForFuture = false,
