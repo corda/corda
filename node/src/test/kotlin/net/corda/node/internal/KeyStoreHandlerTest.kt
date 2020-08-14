@@ -13,6 +13,7 @@ import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
@@ -30,6 +31,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.KeyPair
 import java.security.PublicKey
 
 class KeyStoreHandlerTest {
@@ -301,11 +303,20 @@ class KeyStoreHandlerTest {
             name.x500Principal,
             publicKey)
 
-    private fun generateNotaryIdentity(alias: String, name: CordaX500Name): PublicKey {
+    private fun generateIdentity(alias: String, name: CordaX500Name, type: CertificateType, parentAlias: String? = null): PublicKey {
         val keyPair = Crypto.generateKeyPair()
-        val certificates = listOf(createNotaryCertificate(keyPair.public, name), DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate)
+        val (parent, chain) = if (parentAlias != null) {
+            keyStore.query {
+                val parentCert = getCertificate(parentAlias)
+                val parentKey = getPrivateKey(parentAlias, DEV_CA_KEY_STORE_PASS)
+                CertificateAndKeyPair(parentCert, KeyPair(parentCert.publicKey, parentKey)) to getCertificateChain(parentAlias)
+            }
+        } else {
+            DEV_INTERMEDIATE_CA to listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate)
+        }
+        val certificate = X509Utilities.createCertificate(type, parent.certificate, parent.keyPair, name.x500Principal, keyPair.public)
         keyStore.update {
-            setPrivateKey(alias, keyPair.private, certificates, DEV_CA_KEY_STORE_PASS)
+            setPrivateKey(alias, keyPair.private, listOf(certificate) + chain, DEV_CA_KEY_STORE_PASS)
         }
         cryptoService.resyncKeystore()
         return keyPair.public
@@ -317,7 +328,7 @@ class KeyStoreHandlerTest {
         whenever(notaryConfig.serviceLegalName).thenReturn(BOB_NAME)
         whenever(config.notary).thenReturn(notaryConfig)
 
-        generateNotaryIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, BOB_NAME)
+        generateIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, BOB_NAME, CertificateType.SERVICE_IDENTITY)
 
         keyStoreHandler.initKeyStores()
         val identities = keyStoreHandler.obtainIdentities()
@@ -338,7 +349,7 @@ class KeyStoreHandlerTest {
         whenever(notaryConfig.serviceLegalName).thenReturn(BOB_NAME)
         whenever(config.notary).thenReturn(notaryConfig)
 
-        generateNotaryIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, ALICE_NAME)
+        generateIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, ALICE_NAME, CertificateType.SERVICE_IDENTITY)
 
         keyStoreHandler.initKeyStores()
         assertThatThrownBy {
@@ -352,7 +363,7 @@ class KeyStoreHandlerTest {
         whenever(notaryConfig.serviceLegalName).thenReturn(BOB_NAME)
         whenever(config.notary).thenReturn(notaryConfig)
 
-        val notaryKey = generateNotaryIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, BOB_NAME)
+        val notaryKey = generateIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, BOB_NAME, CertificateType.SERVICE_IDENTITY)
         val compositeKey = CompositeKey.Builder().addKey(notaryKey).build()
         keyStore[DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS] = createNotaryCertificate(compositeKey, BOB_NAME)
 
@@ -374,7 +385,7 @@ class KeyStoreHandlerTest {
         whenever(notaryConfig.serviceLegalName).thenReturn(BOB_NAME)
         whenever(config.notary).thenReturn(notaryConfig)
 
-        val notaryKey = generateNotaryIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, BOB_NAME)
+        val notaryKey = generateIdentity(DISTRIBUTED_NOTARY_KEY_ALIAS, BOB_NAME, CertificateType.SERVICE_IDENTITY)
         val compositeKey = CompositeKey.Builder().addKey(notaryKey).build()
         keyStore[DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS] = createNotaryCertificate(compositeKey, ALICE_NAME)
 
@@ -382,5 +393,22 @@ class KeyStoreHandlerTest {
         assertThatThrownBy {
             keyStoreHandler.obtainIdentities()
         }.hasMessageContaining("The configured legalName").hasMessageContaining("doesn't match what's in the key store")
+    }
+
+    @Test(timeout = 300_000)
+    fun `load node identity after key rotation`() {
+        generateIdentity("$CORDA_CLIENT_CA-2", ALICE_NAME, CertificateType.NODE_CA)
+        val key2 = generateIdentity("$NODE_IDENTITY_KEY_ALIAS-2", ALICE_NAME, CertificateType.LEGAL_IDENTITY, "$CORDA_CLIENT_CA-2")
+        val key3 = generateIdentity("$NODE_IDENTITY_KEY_ALIAS-3", ALICE_NAME, CertificateType.LEGAL_IDENTITY, "$CORDA_CLIENT_CA-2")
+
+        keyStoreHandler.initKeyStores()
+        val identities = keyStoreHandler.obtainIdentities()
+
+        assertThat(identities.nodeIdentity.certificate).isEqualTo(keyStore["$NODE_IDENTITY_KEY_ALIAS-3"])
+        assertThat(identities.notaryIdentity).isNull()
+        assertThat(identities.signingKeys.map { it.key }).containsExactly(keyStore[NODE_IDENTITY_KEY_ALIAS].publicKey, key2, key3)
+        assertThat(identities.signingKeys.map { it.alias }).containsExactly(NODE_IDENTITY_KEY_ALIAS, "$NODE_IDENTITY_KEY_ALIAS-2",
+                "$NODE_IDENTITY_KEY_ALIAS-3")
+        assertThat(identities.oldNotaryKeys).isEmpty()
     }
 }
