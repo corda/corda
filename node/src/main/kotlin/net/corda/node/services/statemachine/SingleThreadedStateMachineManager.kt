@@ -470,7 +470,7 @@ internal class SingleThreadedStateMachineManager(
         }
         checkpointStorage.getPausedCheckpoints().forEach Checkpoints@{ (id, serializedCheckpoint, hospitalised) ->
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@Checkpoints
-            pausedFlows[id] = NonResidentFlow(id, checkpoint, hospitalized =  hospitalised)
+            pausedFlows[id] = NonResidentFlow(id, checkpoint, hospitalized = hospitalised)
         }
         return Pair(flows, pausedFlows)
     }
