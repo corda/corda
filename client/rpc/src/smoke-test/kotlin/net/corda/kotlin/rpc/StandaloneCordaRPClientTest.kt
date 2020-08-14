@@ -30,6 +30,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
+import org.hamcrest.text.MatchesPattern
 import org.junit.*
 import org.junit.rules.ExpectedException
 import java.io.FilterInputStream
@@ -37,6 +38,7 @@ import java.io.InputStream
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.regex.Pattern
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -238,7 +240,7 @@ class StandaloneCordaRPClientTest {
     @Test(timeout=300_000)
 	fun `test kill flow without killFlow permission`() {
         exception.expect(PermissionException::class.java)
-        exception.expectMessage("User not authorized to perform RPC call killFlow")
+        exception.expectMessage(MatchesPattern(Pattern.compile("User not authorized to perform RPC call .*killFlow.*")))
 
         val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity)
         notary.connect(nonUser).use { connection ->
