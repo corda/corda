@@ -24,7 +24,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.min
 import net.corda.core.internal.times
 import net.corda.core.internal.uncheckedCast
