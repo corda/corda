@@ -130,6 +130,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
     private lateinit var myIdentity: PublicKey
+    private var serviceIdentity: PublicKey? = null
     private lateinit var advertisedAddress: NetworkHostAndPort
     private var maxMessageSize: Int = -1
 
@@ -149,14 +150,14 @@ class P2PMessagingClient(val config: NodeConfiguration,
     /**
      * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
      * It is also used to construct the myAddress field, which is ultimately advertised in the network map.
-     * @param myOtherIdentities An optional second identity if the node is also part of a group address, for example a notary,
-     * or previously used (rotated) node identity keys.
+     * @param serviceIdentity An optional second identity if the node is also part of a group address, for example a notary.
      * @param advertisedAddress The externally advertised version of the Artemis broker address used to construct myAddress and included
      * in the network map data.
      * @param maxMessageSize A bound applied to the message size.
      */
-    fun start(myIdentity: PublicKey, myOtherIdentities: List<PublicKey>, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress) {
+    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress) {
         this.myIdentity = myIdentity
+        this.serviceIdentity = serviceIdentity
         this.advertisedAddress = advertisedAddress
         this.maxMessageSize = maxMessageSize
         state.locked {
@@ -186,12 +187,16 @@ class P2PMessagingClient(val config: NodeConfiguration,
             producerSession!!.start()
             bridgeSession!!.start()
 
+            val inboxes = mutableSetOf<String>()
             // Create a queue, consumer and producer for handling P2P network messages.
             // Create a general purpose producer.
             producer = producerSession!!.createProducer()
             executorProducer = executorSession!!.createProducer()
 
-            val inboxes = (listOf(myIdentity) + myOtherIdentities).map { RemoteInboxAddress(it).queueName }.toSet()
+            inboxes += RemoteInboxAddress(myIdentity).queueName
+            serviceIdentity?.let {
+                inboxes += RemoteInboxAddress(it).queueName
+            }
 
             inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true, isServiceAddress = false) }
 

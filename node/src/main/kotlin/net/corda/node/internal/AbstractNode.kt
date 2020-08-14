@@ -582,7 +582,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 networkParametersHotloader)
 
         try {
-            startMessagingService(rpcOps, nodeInfo, myIdentities.notaryIdentity, myIdentities.signingKeys.map { it.key }, netParams)
+            startMessagingService(rpcOps, nodeInfo, myIdentities.notaryIdentity, netParams)
         } catch (e: Exception) {
             // Try to stop any started messaging services.
             stop()
@@ -1041,7 +1041,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected abstract fun startMessagingService(rpcOps: RPCOps,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
-                                                 rotatedIdentities: List<PublicKey>,
                                                  networkParameters: NetworkParameters)
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,

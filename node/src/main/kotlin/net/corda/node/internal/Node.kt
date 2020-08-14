@@ -101,7 +101,6 @@ import java.net.InetAddress
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -341,11 +340,7 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    override fun startMessagingService(rpcOps: RPCOps,
-                                       nodeInfo: NodeInfo,
-                                       myNotaryIdentity: PartyAndCertificate?,
-                                       rotatedIdentities: List<PublicKey>,
-                                       networkParameters: NetworkParameters) {
+    override fun startMessagingService(rpcOps: RPCOps, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
         require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
 
         network as P2PMessagingClient
@@ -410,11 +405,10 @@ open class Node(configuration: NodeConfiguration,
             closeOnStop()
             init(rpcOps, securityManager, cacheFactory)
         }
-        val serviceIdentity = nodeInfo.legalIdentities.getOrNull(1)?.owningKey
         network.closeOnStop()
         network.start(
                 myIdentity = nodeInfo.legalIdentities[0].owningKey,
-                myOtherIdentities = (rotatedIdentities + serviceIdentity).filterNotNull(),
+                serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
                 advertisedAddress = nodeInfo.addresses[0],
                 maxMessageSize = networkParameters.maxMessageSize
         )

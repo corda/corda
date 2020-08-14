@@ -77,7 +77,6 @@ import java.math.BigInteger
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -395,7 +394,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         override fun startMessagingService(rpcOps: RPCOps,
                                            nodeInfo: NodeInfo,
                                            myNotaryIdentity: PartyAndCertificate?,
-                                           rotatedIdentities: List<PublicKey>,
                                            networkParameters: NetworkParameters) {
             (network as MockNodeMessagingService).start(mockNet.messagingNetwork, !mockNet.threadPerNode, id, myNotaryIdentity)
         }
