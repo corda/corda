@@ -746,19 +746,19 @@ buildScan {
 }
 
 distributedTesting {
-    profilesURL = 'https://raw.githubusercontent.com/corda/infrastructure-profiles/master'
+    profilesURL = projectDir.toURI()
 
     parallelTestGroups {
         allParallelIntegrationTest {
             testGroups 'integrationTest'
-            profile.set(new com.r3.testing.TestingProfile(6, false, 4, 16, Collections.singletonList("small"), Collections.emptyList(), Collections.emptyMap()))
+            profile = "integration.yaml"
             podLogLevel PodLogLevel.INFO
             distribution DistributeTestsBy.METHOD
         }
         allParallelUnitTest {
             podLogLevel PodLogLevel.INFO
             testGroups 'test'
-            profile.set(new com.r3.testing.TestingProfile(5, false, 3, 8, Collections.singletonList("small"), Collections.emptyList(), Collections.emptyMap()))
+            profile = "unit.yaml"
             distribution DistributeTestsBy.CLASS
         }
         allParallelUnitAndIntegrationTest {
