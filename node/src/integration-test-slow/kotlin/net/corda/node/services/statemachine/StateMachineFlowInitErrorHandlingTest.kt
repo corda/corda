@@ -332,6 +332,62 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     }
 
     /**
+     * Throws an exception when after the first [Action.CommitTransaction] event before the flow has initialised (remains in an unstarted state).
+     * This is to cover transient issues, where the transaction committed the checkpoint but failed to respond to the node.
+     *
+     * The exception is thrown when performing [Action.SignalFlowHasStarted], the error won't actually appear here but it makes it easier
+     * to test.
+     *
+     * The exception is thrown 3 times.
+     *
+     * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
+     * succeeds and the flow finishes.
+     *
+     * Each time the flow retries, it starts from the beginning of the flow (due to being in an unstarted state).
+     *
+     * The first retry will load the checkpoint that the flow doesn't know exists ([StateMachineState.isAnyCheckpointPersisted] is false
+     * at this point). The flag gets switched to true after this first retry and the flow has now returned to an expected state.
+     *
+     */
+    @Test(timeout = 300_000)
+    fun `error during transition when checkpoint commits but transient db exception is thrown during flow initialisation will retry and complete successfully`() {
+        startDriver {
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
+
+            val rules = """
+                RULE Create Counter
+                CLASS $actionExecutorClassName
+                METHOD executeCommitTransaction
+                AT ENTRY
+                IF createCounter("counter", $counter)
+                DO traceln("Counter created")
+                ENDRULE
+
+                RULE Throw exception on executeSignalFlowHasStarted action
+                CLASS $actionExecutorClassName
+                METHOD executeSignalFlowHasStarted
+                AT ENTRY
+                IF readCounter("counter") < 3
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("i wish i was a sql exception")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            alice.rpc.startFlow(
+                StateMachineErrorHandlingTest::SendAMessageFlow,
+                charlie.nodeInfo.singleIdentity()
+            ).returnValue.getOrThrow(
+                30.seconds
+            )
+
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            alice.rpc.assertHospitalCounts(discharged = 3)
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+        }
+    }
+
+    /**
      * Throws an exception when performing an [Action.CommitTransaction] event on a responding node before the flow has initialised and
      * saved its first checkpoint (remains in an unstarted state).
      *
@@ -463,7 +519,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF createCounter("counter", $counter) 
+                IF createCounter("counter", $counter) && createCounter("counter_2", $counter) 
                 DO traceln("Counter created")
                 ENDRULE
 
@@ -479,8 +535,8 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 INTERFACE ${CheckpointStorage::class.java.name}
                 METHOD getCheckpoint
                 AT ENTRY
-                IF true
-                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                IF readCounter("counter_2") < 3
+                DO incrementCounter("counter_2"); traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
                 ENDRULE
             """.trimIndent()
 
@@ -496,7 +552,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             alice.rpc.assertNumberOfCheckpointsAllZero()
             charlie.rpc.assertHospitalCounts(
                 discharged = 3,
-                observation = 0
+                dischargedRetry = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(0, charlie.rpc.stateMachinesSnapshot().size)
@@ -527,7 +583,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF createCounter("counter", $counter) 
+                IF createCounter("counter", $counter) && createCounter("counter_2", $counter) 
                 DO traceln("Counter created")
                 ENDRULE
 
@@ -543,8 +599,8 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 INTERFACE ${CheckpointStorage::class.java.name}
                 METHOD getCheckpoint
                 AT ENTRY
-                IF true
-                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                IF readCounter("counter_2") < 3
+                DO incrementCounter("counter_2"); traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
                 ENDRULE
             """.trimIndent()
 
@@ -562,7 +618,8 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(
                 discharged = 3,
-                observation = 1
+                observation = 1,
+                dischargedRetry = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
