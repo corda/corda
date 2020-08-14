@@ -1,6 +1,5 @@
 package net.corda.node.services.config
 
-import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.verify
 import com.typesafe.config.Config
@@ -11,7 +10,6 @@ import net.corda.node.internal.Node
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.ArgumentMatchers.contains
 import org.slf4j.Logger
@@ -68,7 +66,6 @@ class ConfigHelperTests {
                 "corda.sshd.port" to sshPort.toString())
     }
 
-    @Ignore("CORDA-3981: Logging framework does not appear reliable on Jenkins")
     @Test(timeout = 300_000)
     fun `bad keys are ignored and warned for`() {
         val loggerField = Node::class.java.getDeclaredField("staticLog")
@@ -80,16 +77,11 @@ class ConfigHelperTests {
         val spyLogger = spy(originalLogger)
         loggerField.set(null, spyLogger)
 
-        val baseDirectory = mock<Path>()
-        val configFile = createTempFile()
-        configFile.deleteOnExit()
-        System.setProperty("corda_bad_key", "2077")
-        val config = ConfigHelper.loadConfig(baseDirectory, configFile.toPath())
+        val config = loadConfig("corda_bad_key" to "2077")
 
         verify(spyLogger).warn(contains("(property or environment variable) cannot be mapped to an existing Corda"))
-        assertFalse(config.hasPath("corda_bad_key"))
+        assertFalse(config?.hasPath("corda_bad_key") ?: true)
 
-        System.clearProperty("corda_bad_key")
         loggerField.set(null, originalLogger)
     }
 
