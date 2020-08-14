@@ -495,40 +495,51 @@ internal class SingleThreadedStateMachineManager(
             logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
             return
         }
-        val flow = if (currentState.isAnyCheckpointPersisted) {
-            // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
-            // we mirror exactly what happens when restarting the node.
-            val checkpoint = database.transaction {
-                val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
-                if (serializedCheckpoint == null) {
-                    logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                    return@transaction null
-                }
+        // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
+        // we mirror exactly what happens when restarting the node.
+        // Ignore [isAnyCheckpointPersisted] as the checkpoint could be committed but the flag remains un-updated
+        val checkpointLoadingStatus = database.transaction {
+            val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId) ?: return@transaction CheckpointLoadingStatus.NotFound
 
+            val checkpoint = serializedCheckpoint.let {
                 tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
                     if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
                         if (checkpointStorage.removeFlowException(flowId)) {
                             checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
                         } else {
                             logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not be loaded and run.")
-                            return@transaction null
+                            // This code branch is being removed in a different PR
+                            return@transaction CheckpointLoadingStatus.CouldNotDeserialize
                         }
                     }
-                } ?: return@transaction null
-            } ?: return
+                } ?: return@transaction CheckpointLoadingStatus.CouldNotDeserialize
+            }
 
-            // Resurrect flow
-            flowCreator.createFlowFromCheckpoint(
-                flowId,
-                checkpoint,
-                currentState.reloadCheckpointAfterSuspendCount,
-                currentState.lock,
-                firstRestore = false
-            ) ?: return
-        } else {
-            // Just flow initiation message
-            null
+            CheckpointLoadingStatus.Success(checkpoint)
         }
+
+        val flow = when {
+            // Resurrect flow
+            checkpointLoadingStatus is CheckpointLoadingStatus.Success -> {
+                flowCreator.createFlowFromCheckpoint(
+                    flowId,
+                    checkpointLoadingStatus.checkpoint,
+                    currentState.reloadCheckpointAfterSuspendCount,
+                    currentState.lock,
+                    firstRestore = false
+                ) ?: return
+            }
+            checkpointLoadingStatus is CheckpointLoadingStatus.NotFound && currentState.isAnyCheckpointPersisted -> {
+                logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
+                return
+            }
+            checkpointLoadingStatus is CheckpointLoadingStatus.CouldNotDeserialize -> return
+            else -> {
+                // Just flow initiation message
+                null
+            }
+        }
+
         innerState.withLock {
             if (stopping) {
                 return
@@ -758,8 +769,7 @@ internal class SingleThreadedStateMachineManager(
     ): CordaFuture<FlowStateMachine<A>> {
         onCallingStartFlowInternal?.invoke()
 
-        val existingFlow = innerState.withLock { flows[flowId] }
-        val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState.isAnyCheckpointPersisted) {
+        val existingCheckpoint = if (innerState.withLock { flows[flowId] != null }) {
             // Load the flow's checkpoint
             // The checkpoint will be missing if the flow failed before persisting the original checkpoint
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
@@ -1097,5 +1107,11 @@ internal class SingleThreadedStateMachineManager(
             return database.transaction { checkpointStorage.removeCheckpoint(it, mayHavePersistentResults = true) }
         }
         return false
+    }
+
+    private sealed class CheckpointLoadingStatus {
+        class Success(val checkpoint: Checkpoint) : CheckpointLoadingStatus()
+        object NotFound : CheckpointLoadingStatus()
+        object CouldNotDeserialize : CheckpointLoadingStatus()
     }
 }
