@@ -814,6 +814,7 @@ internal class SingleThreadedStateMachineManager(
                 val pausedFlow = NonResidentFlow(
                     id,
                     checkpoint, flow.resultFuture,
+                    hospitalized = currentState.checkpoint.status == Checkpoint.FlowStatus.HOSPITALIZED,
                     progressTracker = currentState.flowLogic.progressTracker
                 )
                 val eventQueue = flow.fiber.transientValues.eventQueue
