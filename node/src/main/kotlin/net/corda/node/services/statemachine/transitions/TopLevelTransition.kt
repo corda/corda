@@ -72,7 +72,7 @@ class TopLevelTransition(
         } catch (t: Throwable) {
             // All errors coming from the transition should be sent back to the flow
             // Letting the flow re-enter standard error handling
-            log.warn("Error occurred while creating transition for event: $event", t)
+            log.error("Error occurred while creating transition for event: $event", t)
             builder { resumeFlowLogic(t) }
         }
     }
