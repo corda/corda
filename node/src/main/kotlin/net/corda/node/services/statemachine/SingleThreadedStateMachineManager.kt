@@ -813,7 +813,8 @@ internal class SingleThreadedStateMachineManager(
                 val checkpoint = currentState.checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED, flowState = FlowState.Paused)
                 val pausedFlow = NonResidentFlow(
                     id,
-                    checkpoint, flow.resultFuture,
+                    checkpoint, 
+                    flow.resultFuture,
                     hospitalized = currentState.checkpoint.status == Checkpoint.FlowStatus.HOSPITALIZED,
                     progressTracker = currentState.flowLogic.progressTracker
                 )
