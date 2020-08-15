@@ -6,6 +6,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.identity.AbstractParty
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
@@ -22,7 +23,9 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.cordappsForPackages
+import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
 import javax.persistence.Column
@@ -33,29 +36,41 @@ import kotlin.test.assertEquals
 
 class VaultQueryJoinTest {
     companion object {
-        private val mockNetwork = MockNetwork(
-                MockNetworkParameters(
-                        cordappsForAllNodes = cordappsForPackages(
-                                listOf(
-                                        "net.corda.node.services.vault"
-                                )
-                        )
-                )
-        )
-        private val aliceNode = mockNetwork.createPartyNode(ALICE_NAME)
-        private val notaryNode = mockNetwork.defaultNotaryNode
-        private val serviceHubHandle = aliceNode.services
+        private var mockNetwork: MockNetwork? = null
+        private lateinit var aliceNode: StartedMockNode
+        private lateinit var notaryNode: StartedMockNode
+        private lateinit var serviceHubHandle: ServiceHub
         private val createdStateRefs = mutableListOf<StateRef>()
         private const val numObjectsInLedger = DEFAULT_PAGE_SIZE + 1
 
         @BeforeClass
         @JvmStatic
         fun setup() {
+            mockNetwork = MockNetwork(
+                    MockNetworkParameters(
+                            cordappsForAllNodes = cordappsForPackages(
+                                    listOf(
+                                            "net.corda.node.services.vault"
+                                    )
+                            )
+                    )
+            ).also { mockNetwork ->
+                aliceNode = mockNetwork.createPartyNode(ALICE_NAME)
+                notaryNode = mockNetwork.defaultNotaryNode
+                serviceHubHandle = aliceNode.services
+            }
             repeat(numObjectsInLedger) { index ->
                 createdStateRefs.add(addSimpleObjectToLedger(DummyData(index)))
             }
 
             System.setProperty("net.corda.vault.query.disable.corda3879", "false");
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun teardown() {
+            mockNetwork?.stopNodes()
+            mockNetwork = null
         }
 
         private fun addSimpleObjectToLedger(dummyObject: DummyData): StateRef {
