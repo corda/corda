@@ -4,8 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.KilledFlowException
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -18,22 +20,18 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.startFlowWithClientId
-import net.corda.core.flows.KilledFlowException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import net.corda.core.internal.concurrent.transpose
-import net.corda.core.utilities.minutes
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
-import java.lang.IllegalArgumentException
 import java.sql.SQLTransientConnectionException
-import java.util.UUID
+import java.util.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.IllegalStateException
 import kotlin.concurrent.thread
-import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -782,13 +780,13 @@ class FlowClientIdTests {
     @Test(timeout = 300_000)
     fun `finishedFlowsWithClientIds returns completed flows with client ids`() {
         val clientIds = listOf("a", "b", "c", "d", "e")
-        val lock = Semaphore(0)
+        val lock = CountDownLatch(1)
         ResultFlow.hook = { clientId ->
             if (clientId == clientIds[3]) {
                 throw java.lang.IllegalStateException("This didn't go so well")
             }
             if (clientId == clientIds[4]) {
-                lock.acquire()
+                lock.await(30, TimeUnit.SECONDS)
             }
         }
         val flows = listOf(
@@ -797,20 +795,28 @@ class FlowClientIdTests {
             aliceNode.services.startFlowWithClientId(clientIds[2], ResultFlow(10))
         )
         val failedFlow = aliceNode.services.startFlowWithClientId(clientIds[3], ResultFlow(10))
-        val runningFlow = aliceNode.services.startFlowWithClientId(clientIds[4], NeverEndingFlow(10))
+        val runningFlow = aliceNode.services.startFlowWithClientId(clientIds[4], ResultFlow(10))
         flows.map { it.resultFuture }.transpose().getOrThrow(30.seconds)
         assertFailsWith<java.lang.IllegalStateException> { failedFlow.resultFuture.getOrThrow(20.seconds) }
 
-        val flowIds = flows.map { it.id } + failedFlow.id + runningFlow.id
-        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds().toList()
+        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds()
 
-        lock.release()
+        lock.countDown()
 
         assertEquals(4, finishedFlows.size)
-        assertEquals(3, finishedFlows.filter { (_, _, successful) -> successful }.size)
-        assertEquals(1, finishedFlows.filterNot { (_, _, successful) -> successful }.size)
-        assertEquals(setOf("a", "b", "c", "d"), finishedFlows.map { (_, clientId, _) -> clientId }.toSet())
-        assertEquals((flowIds - runningFlow.id).toSet(), finishedFlows.map { (flowId, _, _) -> flowId }.toSet())
+        assertEquals(3, finishedFlows.filterValues { it }.size)
+        assertEquals(1, finishedFlows.filterValues { !it }.size)
+        assertEquals(setOf("a", "b", "c", "d"), finishedFlows.map { it.key }.toSet())
+        assertTrue(runningFlow.clientId !in finishedFlows.keys)
+
+        assertEquals(
+            listOf(10, 10, 10),
+            finishedFlows.filterValues { it }.map { aliceNode.smm.reattachFlowWithClientId<Int>(it.key)?.resultFuture?.get() }
+        )
+        // [CordaRunTimeException] returned because [IllegalStateException] is not serializable
+        assertFailsWith<CordaRuntimeException> {
+            finishedFlows.filterValues { !it }.map { aliceNode.smm.reattachFlowWithClientId<Int>(it.key)?.resultFuture?.getOrThrow() }
+        }
     }
 }
 
@@ -824,15 +830,6 @@ internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
     override fun call(): A {
         hook?.invoke(stateMachine.clientId)
         suspendableHook?.let { subFlow(it) }
-        return result
-    }
-}
-
-internal class NeverEndingFlow<A>(private val result: A): FlowLogic<A>() {
-
-    @Suspendable
-    override fun call(): A {
-        sleep(3.minutes)
         return result
     }
 }

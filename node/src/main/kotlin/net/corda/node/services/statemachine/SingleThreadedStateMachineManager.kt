@@ -813,7 +813,7 @@ internal class SingleThreadedStateMachineManager(
                 val checkpoint = currentState.checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED, flowState = FlowState.Paused)
                 val pausedFlow = NonResidentFlow(
                     id,
-                    checkpoint, 
+                    checkpoint,
                     flow.resultFuture,
                     hospitalized = currentState.checkpoint.status == Checkpoint.FlowStatus.HOSPITALIZED,
                     progressTracker = currentState.flowLogic.progressTracker
@@ -1105,15 +1105,12 @@ internal class SingleThreadedStateMachineManager(
         return false
     }
 
-    override fun finishedFlowsWithClientIds(): List<Triple<StateMachineRunId, String, Boolean>> {
+    override fun finishedFlowsWithClientIds(): Map<String, Boolean> {
         return innerState.withLock {
             clientIdsToFlowIds.asSequence()
-                    .filter { (_, status) -> status is FlowWithClientIdStatus.Removed }
-                    .map { (clientId, status) ->
-                        status as FlowWithClientIdStatus.Removed
-                        Triple(status.flowId, clientId, status.succeeded)
-                    }
-                    .toList()
+                .filter { (_, status) -> status is FlowWithClientIdStatus.Removed }
+                .map { (clientId, status) -> clientId to (status as FlowWithClientIdStatus.Removed).succeeded }
+                .toMap()
         }
     }
 

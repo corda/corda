@@ -297,8 +297,6 @@ interface CordaRPCOps : RPCOps {
      */
     fun killFlow(id: StateMachineRunId): Boolean
 
-    fun finishedFlowsWithClientIds(): List<Triple<StateMachineRunId, String, Boolean>>
-
     /**
      * Reattach to an existing flow that was started with [startFlowDynamicWithClientId] and has a [clientId].
      *
@@ -322,6 +320,14 @@ interface CordaRPCOps : RPCOps {
      * @return whether the mapping was removed.
      */
     fun removeClientId(clientId: String): Boolean
+
+    /**
+     * Returns all finished flows that were started with a client id.
+     *
+     * @return A [Map] containing client ids for finished flows, mapped to [true] if finished successfully,
+     * [false] if completed exceptionally.
+     */
+    fun finishedFlowsWithClientIds(): Map<String, Boolean>
 
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
