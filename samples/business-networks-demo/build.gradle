@@ -1,0 +1,91 @@
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+
+description 'Corda Business Networks Integration demo'
+
+cordapp {
+    info {
+        name "Corda Business Networks Integration Demo"
+        vendor "R3"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    // Cordformation needs a SLF4J implementation when executing the Network
+    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
+    // Use a much simpler SLF4J implementation here instead.
+    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+
+    // Corda integration dependencies
+    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':client:jfx')
+    cordaCompile project(':client:rpc')
+    cordaCompile(project(':testing:testserver')) {
+        exclude group: "org.apache.logging.log4j"
+    }
+    cordaCompile(project(':node-driver')) {
+        exclude group: "org.apache.logging.log4j"
+    }
+
+    cordapp project(':business-networks:business-networks-contracts')
+    cordapp project(':business-networks:business-networks-workflows')
+    cordapp project(':samples:business-networks-demo:business-networks-demo-contracts')
+    cordapp project(':samples:business-networks-demo:business-networks-demo-workflows')
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
+        cordapp project(':business-networks:business-networks-contracts')
+        cordapp project(':business-networks:business-networks-workflows')
+        cordapp project(':samples:business-networks-demo:business-networks-demo-contracts')
+        cordapp project(':samples:business-networks-demo:business-networks-demo-workflows')
+    }
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating: true]
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10004"
+        }
+    }
+    node {
+        name "O=Bank A,L=London,C=GB"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10007"
+        }
+        rpcUsers = [[user: "BNOUser", password: "test", permissions: ["ALL"]]]
+    }
+    node {
+        name "O=Bank B,L=New York,C=US"
+        p2pPort 10008
+        rpcSettings {
+            address "localhost:10009"
+            adminAddress "localhost:10010"
+        }
+        rpcUsers = [[user: "Member1", password: "test", permissions: ["ALL"]]]
+    }
+    node {
+        name "O=Bank C,L=New York,C=US"
+        p2pPort 10011
+        rpcSettings {
+            address "localhost:10012"
+            adminAddress "localhost:10013"
+        }
+        rpcUsers = [[user: "Member2", password: "test", permissions: ["ALL"]]]
+    }
+}

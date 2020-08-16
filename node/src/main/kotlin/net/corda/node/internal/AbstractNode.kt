@@ -59,6 +59,8 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -107,6 +109,8 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.network.NetworkParameterUpdateListener
+import net.corda.node.services.network.NetworkParametersHotloader
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
@@ -131,7 +135,6 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.BasicVerifierFactoryService
 import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.VerifierFactoryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
@@ -175,7 +178,6 @@ import org.slf4j.Logger
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
@@ -184,7 +186,7 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.Properties
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -194,6 +196,8 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import javax.sql.DataSource
+import kotlin.collections.ArrayList
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -211,9 +215,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
                                djvmBootstrapSource: ApiSource = EmptyApi,
-                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
+                               djvmCordaSource: UserSource? = null,
+                               protected val allowHibernateToManageAppSchema: Boolean = false,
+                               private val allowAppSchemaUpgradeWithCheckpoints: Boolean = false) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
+
     @Suppress("LeakingThis")
     private var tokenizableServices: MutableList<SerializeAsToken>? = mutableListOf(platformClock, this)
 
@@ -222,6 +229,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val monitoringService = MonitoringService(metricRegistry).tokenize()
 
     protected val runOnStop = ArrayList<() -> Any?>()
+
+    protected open val runMigrationScripts: Boolean = configuredDbIsInMemory()
+
+    // if the configured DB is in memory, we will need to run db migrations, as the db does not persist between runs.
+    private fun configuredDbIsInMemory() = configuration.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:mem:")
 
     init {
         (serverThread as? ExecutorService)?.let {
@@ -234,6 +246,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         quasarExcludePackages(configuration)
+
+        if (allowHibernateToManageAppSchema && !configuration.devMode) {
+            throw ConfigurationException("Hibernate can only be used to manage app schema in development while using dev mode. " +
+                    "Please remove the --allow-hibernate-to-manage-app-schema command line flag and provide schema migration scripts for your CorDapps."
+            )
+        }
     }
 
     private val notaryLoader = configuration.notary?.let {
@@ -249,7 +267,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schemaService,
             configuration.dataSourceProperties,
             cacheFactory,
-            cordappLoader.appClassLoader)
+            cordappLoader.appClassLoader,
+            allowHibernateToManageAppSchema)
 
     private val transactionSupport = CordaTransactionSupportImpl(database)
 
@@ -317,6 +336,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     } else {
         BasicVerifierFactoryService()
     }
+    private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
@@ -459,6 +479,54 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    open fun runDatabaseMigrationScripts(
+            updateCoreSchemas: Boolean,
+            updateAppSchemas: Boolean,
+            updateAppSchemasWithCheckpoints: Boolean
+    ) {
+        check(started == null) { "Node has already been started" }
+        Node.printBasicNodeInfo("Running database schema migration scripts ...")
+        val props = configuration.dataSourceProperties
+        if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
+        database.startHikariPool(props, metricRegistry) { dataSource, haveCheckpoints ->
+            SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+                    .checkOrUpdate(schemaService.internalSchemas, updateCoreSchemas, haveCheckpoints, true)
+                    .checkOrUpdate(schemaService.appSchemas, updateAppSchemas, !updateAppSchemasWithCheckpoints && haveCheckpoints, false)
+        }
+        // Now log the vendor string as this will also cause a connection to be tested eagerly.
+        logVendorString(database, log)
+        if (allowHibernateToManageAppSchema) {
+            Node.printBasicNodeInfo("Initialising CorDapps to get schemas created by hibernate")
+            val trustRoot = initKeyStores()
+            networkMapClient?.start(trustRoot)
+            val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
+            log.info("Loaded network parameters: $netParams")
+            check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
+                "Node's platform version is lower than network's required minimumPlatformVersion"
+            }
+            networkMapCache.start(netParams.notaries)
+
+            database.transaction {
+                networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
+                cordappProvider.start()
+            }
+        }
+        Node.printBasicNodeInfo("Database migration done.")
+    }
+
+    fun runSchemaSync() {
+        check(started == null) { "Node has already been started" }
+        Node.printBasicNodeInfo("Synchronising CorDapp schemas to the changelog ...")
+        val hikariProperties = configuration.dataSourceProperties
+        if (hikariProperties.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
+
+        val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
+        SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+                .synchroniseSchemas(schemaService.appSchemas, false)
+        Node.printBasicNodeInfo("CorDapp schemas synchronised")
+    }
+
+    @Suppress("ComplexMethod")
     open fun start(): S {
         check(started == null) { "Node has already been started" }
 
@@ -484,7 +552,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         startShell()
         networkMapClient?.start(trustRoot)
 
-        val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
+        val networkParametersReader = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory)
+        val (netParams, signedNetParams) = networkParametersReader.read()
         log.info("Loaded network parameters: $netParams")
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
@@ -505,13 +574,27 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
         services.start(nodeInfo, netParams)
+
+        val networkParametersHotloader = if (networkMapClient == null) {
+            null
+        } else {
+            NetworkParametersHotloader(networkMapClient, trustRoot, netParams, networkParametersReader, networkParametersStorage).also {
+                it.addNotaryUpdateListener(networkMapCache)
+                it.addNotaryUpdateListener(identityService)
+                it.addNetworkParametersChangedListeners(services)
+                it.addNetworkParametersChangedListeners(networkMapUpdater)
+            }
+        }
+
         networkMapUpdater.start(
                 trustRoot,
                 signedNetParams.raw.hash,
                 signedNodeInfo,
                 netParams,
                 keyManagementService,
-                configuration.networkParameterAcceptanceSettings!!)
+                configuration.networkParameterAcceptanceSettings!!,
+                networkParametersHotloader)
+
         try {
             startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
         } catch (e: Exception) {
@@ -611,11 +694,22 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val myNotaryIdentity = configuration.notary?.let {
             if (it.serviceLegalName != null) {
-                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryClusterIdentity(it.serviceLegalName)
+                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryServiceIdentity(it.serviceLegalName)
                 keyPairs += notaryIdentityKeyPair
                 notaryIdentity
             } else {
-                // In case of a single notary service myNotaryIdentity will be the node's single identity.
+                // The only case where the myNotaryIdentity will be the node's legal identity is for existing single notary services running
+                // an older version. Current single notary services (V4.6+) sign requests using a separate notary service identity so the
+                // notary identity will be different from the node's legal identity.
+
+                // This check is here to ensure that a user does not accidentally/intentionally remove the serviceLegalName configuration
+                // parameter after a notary has been registered. If that was possible then notary would start and sign incoming requests
+                // with the node's legal identity key, corrupting the data.
+                check (!cryptoService.containsKey(DISTRIBUTED_NOTARY_KEY_ALIAS)) {
+                    "The notary service key exists in the key store but no notary service legal name has been configured. " +
+                    "Either include the relevant 'notary.serviceLegalName' configuration or validate this key is not necessary " +
+                    "and remove from the key store."
+                }
                 identity
             }
         }
@@ -776,10 +870,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             LinkedBlockingQueue<Runnable>(),
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").setDaemon(true).build()
         )
-    }
-
-    private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
-        return configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
@@ -947,7 +1037,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+        database.startHikariPool(props, metricRegistry) { dataSource, haveCheckpoints ->
+            SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+                    .checkOrUpdate(schemaService.internalSchemas, runMigrationScripts, haveCheckpoints, true)
+                    .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints && !allowAppSchemaUpgradeWithCheckpoints, false)
+        }
+
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1054,8 +1149,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    /** Loads pre-generated notary service cluster identity. */
-    private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
+    /**
+     * Loads notary service identity. In the case of the experimental RAFT and BFT notary clusters, this loads the pre-generated
+     * cluster identity that all worker nodes share. In the case of a simple single notary, this loads the notary service identity
+     * that is generated during initial registration and is used to sign notarisation requests.
+     * */
+    private fun loadNotaryServiceIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
         val privateKeyAlias = "$DISTRIBUTED_NOTARY_KEY_ALIAS"
         val compositeKeyAlias = "$DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS"
 
@@ -1140,7 +1239,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution {
+    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution, NetworkParameterUpdateListener {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
         override val identityService: IdentityService get() = this@AbstractNode.identityService
@@ -1171,6 +1270,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
 
+        override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
+
+        @Volatile
         private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters
 
@@ -1257,6 +1359,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val ledgerTransaction = servicesForResolution.specialise(ltx)
             return verifierFactoryService.apply(ledgerTransaction)
         }
+
+        override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
+            this._networkParameters = networkParameters
+        }
     }
 }
 
@@ -1314,13 +1420,15 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 
 class ConfigurationException(message: String) : CordaException(message)
 
+@Suppress("LongParameterList")
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                            schemaService: SchemaService,
                            hikariProperties: Properties,
                            cacheFactory: NamedCacheFactory,
-                           customClassLoader: ClassLoader?): CordaPersistence {
+                           customClassLoader: ClassLoader?,
+                           allowHibernateToManageAppSchema: Boolean = false): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
@@ -1331,25 +1439,31 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
-        databaseConfig,
-        schemaService.schemas,
-        jdbcUrl,
-        cacheFactory,
-        attributeConverters, customClassLoader,
-        errorHandler = { e ->
-            // "corrupting" a DatabaseTransaction only inside a flow state machine execution
-            FlowStateMachineImpl.currentStateMachine()?.let {
-                // register only the very first exception thrown throughout a chain of logical transactions
-                setException(e)
-            }
-        })
+            databaseConfig.exportHibernateJMXStatistics,
+            schemaService.schemas,
+            jdbcUrl,
+            cacheFactory,
+            attributeConverters, customClassLoader,
+            errorHandler = { e ->
+                // "corrupting" a DatabaseTransaction only inside a flow state machine execution
+                FlowStateMachineImpl.currentStateMachine()?.let {
+                    // register only the very first exception thrown throughout a chain of logical transactions
+                    setException(e)
+                }
+            },
+            allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
+@Suppress("ThrowsCount")
+fun CordaPersistence.startHikariPool(
+        hikariProperties: Properties,
+        metricRegistry: MetricRegistry? = null,
+        schemaMigration: (DataSource, Boolean) -> Unit) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
-        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+        val haveCheckpoints = dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }
+
+        schemaMigration(dataSource, haveCheckpoints)
         start(dataSource)
     } catch (ex: Exception) {
         when {
@@ -1371,6 +1485,14 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
             }
         }
     }
+}
+
+fun SchemaMigration.checkOrUpdate(schemas: Set<MappedSchema>, update: Boolean, haveCheckpoints: Boolean, forceThrowOnMissingMigration: Boolean): SchemaMigration {
+    if (update)
+        this.runMigration(haveCheckpoints, schemas, forceThrowOnMissingMigration)
+    else
+        this.checkState(schemas, forceThrowOnMissingMigration)
+    return this
 }
 
 fun clientSslOptionsCompatibleWith(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOptions? {

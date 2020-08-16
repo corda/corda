@@ -5,6 +5,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -57,9 +58,11 @@ class RpcExceptionHandlingTest {
             }
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
-            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
-            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
+            val (devModeNode, node) = listOf(startNode(params, BOB_NAME),
+                    startNode(ALICE_NAME, devMode = false, parameters = params))
+                    .transpose()
+                    .getOrThrow()
 
             assertThatThrownExceptionIsReceivedUnwrapped(devModeNode)
             assertThatThrownExceptionIsReceivedUnwrapped(node)
@@ -76,9 +79,11 @@ class RpcExceptionHandlingTest {
             rpc.startFlow(::FlowExceptionFlow, expectedMessage, expectedErrorId).returnValue.getOrThrow()
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
-            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
-            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
+            val (devModeNode, node) = listOf(startNode(params, BOB_NAME),
+                    startNode(ALICE_NAME, devMode = false, parameters = params))
+                    .transpose()
+                    .getOrThrow()
 
             assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(FlowException::class.java) { exception ->
                 assertThat(exception).hasNoCause()
@@ -102,13 +107,15 @@ class RpcExceptionHandlingTest {
 
         fun DriverDSL.scenario(nameA: CordaX500Name, nameB: CordaX500Name, devMode: Boolean) {
 
-            val nodeA = startNode(nameA, devMode, params).getOrThrow()
-            val nodeB = startNode(nameB, devMode, params).getOrThrow()
+            val (nodeA, nodeB) = listOf(nameA, nameB)
+                    .map { startNode(it, devMode, params) }
+                    .transpose()
+                    .getOrThrow()
 
             nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow()
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
 
             assertThatThrownBy { scenario(ALICE_NAME, BOB_NAME,true) }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 

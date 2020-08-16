@@ -30,11 +30,9 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
@@ -89,7 +87,6 @@ internal class SingleThreadedStateMachineManager(
     private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
     private val actionFutureExecutor = ActionFutureExecutor(innerState, serviceHub, scheduledFutureExecutor)
     private val flowTimeoutScheduler = FlowTimeoutScheduler(innerState, scheduledFutureExecutor, serviceHub)
-    private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
     private var checkpointSerializationContext: CheckpointSerializationContext? = null
@@ -97,6 +94,7 @@ internal class SingleThreadedStateMachineManager(
 
     override val flowHospital: StaffedFlowHospital = makeFlowHospital()
     private val transitionExecutor = makeTransitionExecutor()
+    private val reloadCheckpointAfterSuspend = serviceHub.configuration.reloadCheckpointAfterSuspend
 
     override val allStateMachines: List<FlowLogic<*>>
         get() = innerState.withLock { flows.values.map { it.fiber.logic } }
@@ -124,7 +122,6 @@ internal class SingleThreadedStateMachineManager(
         )
         this.checkpointSerializationContext = checkpointSerializationContext
         val actionExecutor = makeActionExecutor(checkpointSerializationContext)
-        fiberDeserializationChecker?.start(checkpointSerializationContext)
         when (startMode) {
             StateMachineManager.StartMode.ExcludingPaused -> {}
             StateMachineManager.StartMode.Safe -> markAllFlowsAsPaused()
@@ -207,10 +204,6 @@ internal class SingleThreadedStateMachineManager(
         // Account for any expected Fibers in a test scenario.
         liveFibers.countDown(allowedUnsuspendedFiberCount)
         liveFibers.await()
-        fiberDeserializationChecker?.let {
-            val foundUnrestorableFibers = it.stop()
-            check(!foundUnrestorableFibers) { "Unrestorable checkpoints were created, please check the logs for details." }
-        }
         flowHospital.close()
         scheduledFutureExecutor.shutdown()
         scheduler.shutdown()
@@ -261,14 +254,9 @@ internal class SingleThreadedStateMachineManager(
                 unfinishedFibers.countDown()
 
                 val state = flow.fiber.transientState
-                return@withLock if (state != null) {
-                    state.value.isKilled = true
-                    flow.fiber.scheduleEvent(Event.DoRemainingWork)
-                    true
-                } else {
-                    logger.info("Flow $id has not been initialised correctly and cannot be killed")
-                    false
-                }
+                state.isKilled = true
+                flow.fiber.scheduleEvent(Event.DoRemainingWork)
+                true
             } else {
                 // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
                 database.transaction { checkpointStorage.removeCheckpoint(id) }
@@ -386,7 +374,7 @@ internal class SingleThreadedStateMachineManager(
         currentState.cancelFutureIfRunning()
         // Get set of external events
         val flowId = currentState.flowLogic.runId
-        val oldFlowLeftOver = innerState.withLock { flows[flowId] }?.fiber?.transientValues?.value?.eventQueue
+        val oldFlowLeftOver = innerState.withLock { flows[flowId] }?.fiber?.transientValues?.eventQueue
         if (oldFlowLeftOver == null) {
             logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
             return
@@ -402,7 +390,7 @@ internal class SingleThreadedStateMachineManager(
 
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
             // Resurrect flow
-            flowCreator.createFlowFromCheckpoint(flowId, checkpoint) ?: return
+            flowCreator.createFlowFromCheckpoint(flowId, checkpoint, currentState.reloadCheckpointAfterSuspendCount) ?: return
         } else {
             // Just flow initiation message
             null
@@ -592,7 +580,7 @@ internal class SingleThreadedStateMachineManager(
     ): CordaFuture<FlowStateMachine<A>> {
 
         val existingFlow = innerState.withLock { flows[flowId] }
-        val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState?.value?.isAnyCheckpointPersisted == true) {
+        val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState.isAnyCheckpointPersisted) {
             // Load the flow's checkpoint
             // The checkpoint will be missing if the flow failed before persisting the original checkpoint
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
@@ -637,8 +625,16 @@ internal class SingleThreadedStateMachineManager(
         return try {
             serializedCheckpoint.deserialize(checkpointSerializationContext!!)
         } catch (e: Exception) {
-            logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
-            null
+            if (reloadCheckpointAfterSuspend && currentStateMachine() != null) {
+                logger.error(
+                    "Unable to deserialize checkpoint for flow $flowId. [reloadCheckpointAfterSuspend] is turned on, throwing exception",
+                    e
+                )
+                throw ReloadFlowFromCheckpointException(e)
+            } else {
+                logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+                null
+            }
         }
     }
 
@@ -705,9 +701,6 @@ internal class SingleThreadedStateMachineManager(
         if (serviceHub.configuration.devMode) {
             interceptors.add { DumpHistoryOnErrorInterceptor(it) }
         }
-        if (serviceHub.configuration.shouldCheckCheckpoints()) {
-            interceptors.add { FiberDeserializationCheckingInterceptor(fiberDeserializationChecker!!, it) }
-        }
         if (logger.isDebugEnabled) {
             interceptors.add { PrintingInterceptor(it) }
         }
@@ -756,7 +749,7 @@ internal class SingleThreadedStateMachineManager(
     // The flow's event queue may be non-empty in case it shut down abruptly. We handle outstanding events here.
     private fun drainFlowEventQueue(flow: Flow<*>) {
         while (true) {
-            val event = flow.fiber.transientValues!!.value.eventQueue.tryReceive() ?: return
+            val event = flow.fiber.transientValues.eventQueue.tryReceive() ?: return
             when (event) {
                 is Event.DoRemainingWork -> {}
                 is Event.DeliverSessionMessage -> {

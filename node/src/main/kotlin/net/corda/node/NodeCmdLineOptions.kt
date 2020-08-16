@@ -48,6 +48,14 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
+    @Option(
+            names = ["--allow-hibernate-to-manage-app-schema"],
+            description = ["Allows hibernate to create/modify app schema for CorDapps based on their mapped schema.",
+                "Use this for rapid app development or for compatibility with pre-4.6 CorDapps.",
+                "Only available in dev mode."]
+    )
+    var allowHibernateToManageAppSchema: Boolean = false
+
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
         return configuration.parseAsNodeConfiguration(option)

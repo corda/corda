@@ -18,6 +18,7 @@ import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -185,6 +186,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findServices(this),
                 findWhitelists(url),
                 findSerializers(this),
+                findCheckpointSerializers(this),
                 findCustomSchemas(this),
                 findAllFlows(this),
                 url.url,
@@ -332,6 +334,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun findSerializers(scanResult: RestrictedScanResult): List<SerializationCustomSerializer<*, *>> {
         return scanResult.getClassesImplementingWithClassVersionCheck(SerializationCustomSerializer::class)
+    }
+
+    private fun findCheckpointSerializers(scanResult: RestrictedScanResult): List<CheckpointCustomSerializer<*, *>> {
+        return scanResult.getClassesImplementingWithClassVersionCheck(CheckpointCustomSerializer::class)
     }
 
     private fun findCustomSchemas(scanResult: RestrictedScanResult): Set<MappedSchema> {

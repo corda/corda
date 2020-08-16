@@ -1,6 +1,7 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaException
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -16,7 +17,6 @@ import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.node.internal.ListenProcessDeathException
 import net.corda.testing.node.internal.assertUncompletedCheckpoints
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
@@ -37,7 +37,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
                 startNodesInProcess = false,
                 inMemoryDB = false, // Ensure database is persisted between node restarts so we can keep suspended flows
                 cordappsForAllNodes = emptyList(),
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         )) {
             createSuspendedFlowInBob()
             val cordappsDir = baseDirectory(BOB_NAME) / "cordapps"
@@ -77,7 +78,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     private fun DriverDSL.assertBobFailsToStartWithLogMessage(logMessage: String) {
         assertUncompletedCheckpoints(BOB_NAME, 1)
 
-        assertFailsWith(ListenProcessDeathException::class) {
+        assertFailsWith(CordaException::class) {
             startNode(NodeParameters(
                     providedName = BOB_NAME,
                     customOverrides = mapOf("devMode" to false)

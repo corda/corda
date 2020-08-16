@@ -18,7 +18,6 @@ import net.corda.node.services.statemachine.FlowRemovalReason
 import net.corda.node.services.statemachine.FlowSessionImpl
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.InitialSessionMessage
-import net.corda.node.services.statemachine.InitiatedSessionState
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionMessage
@@ -59,9 +58,11 @@ class TopLevelTransition(
             is Event.InitiateFlow -> initiateFlowTransition(event)
             is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
             is Event.AsyncOperationThrows -> asyncOperationThrowsTransition(event)
-            is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition(startingState)
+            is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition()
+            is Event.ReloadFlowFromCheckpointAfterSuspend -> reloadFlowFromCheckpointAfterSuspendTransition()
             is Event.OvernightObservation -> overnightObservationTransition()
             is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
+            is Event.TerminateSessions -> terminateSessionsTransition(event)
         }
     }
 
@@ -199,8 +200,8 @@ class TopLevelTransition(
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        isFlowResumed = false
+                    checkpoint = newCheckpoint,
+                    isFlowResumed = false
                 )
             } else {
                 actions.addAll(arrayOf(
@@ -211,10 +212,10 @@ class TopLevelTransition(
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        pendingDeduplicationHandlers = emptyList(),
-                        isFlowResumed = false,
-                        isAnyCheckpointPersisted = true
+                    checkpoint = newCheckpoint,
+                    pendingDeduplicationHandlers = emptyList(),
+                    isFlowResumed = false,
+                    isAnyCheckpointPersisted = true
                 )
             }
             FlowContinuation.ProcessEvents
@@ -267,8 +268,8 @@ class TopLevelTransition(
 
     private fun TransitionBuilder.sendEndMessages() {
         val sendEndMessageActions = currentState.checkpoint.checkpointState.sessions.values.mapIndexed { index, state ->
-            if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
-                val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
+            if (state is SessionState.Initiated) {
+                val message = ExistingSessionMessage(state.peerSinkSessionId, EndSessionMessage)
                 val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
                 Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
             } else {
@@ -316,10 +317,18 @@ class TopLevelTransition(
         }
     }
 
-    private fun retryFlowFromSafePointTransition(startingState: StateMachineState): TransitionResult {
+    private fun retryFlowFromSafePointTransition(): TransitionResult {
         return builder {
             // Need to create a flow from the prior checkpoint or flow initiation.
-            actions.add(Action.RetryFlowFromSafePoint(startingState))
+            actions.add(Action.RetryFlowFromSafePoint(currentState))
+            FlowContinuation.Abort
+        }
+    }
+
+    private fun reloadFlowFromCheckpointAfterSuspendTransition(): TransitionResult {
+        return builder {
+            currentState = currentState.copy(reloadCheckpointAfterSuspendCount = currentState.reloadCheckpointAfterSuspendCount!! + 1)
+            actions.add(Action.RetryFlowFromSafePoint(currentState))
             FlowContinuation.Abort
         }
     }
@@ -356,6 +365,18 @@ class TopLevelTransition(
     private fun wakeUpFromSleepTransition(): TransitionResult {
         return builder {
             resumeFlowLogic(Unit)
+        }
+    }
+
+    private fun terminateSessionsTransition(event: Event.TerminateSessions): TransitionResult {
+        return builder {
+            val sessions = event.sessions
+            val newCheckpoint = currentState.checkpoint
+                .removeSessions(sessions)
+                .removeSessionsToBeClosed(sessions)
+            currentState = currentState.copy(checkpoint = newCheckpoint)
+            actions.add(Action.RemoveSessionBindings(sessions))
+            FlowContinuation.ProcessEvents
         }
     }
 }

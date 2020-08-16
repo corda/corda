@@ -2,19 +2,22 @@ package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.deleteRecursively
+import net.corda.core.internal.div
+import net.corda.core.internal.toPath
+import net.corda.core.internal.writeText
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.common.internal.testNetworkParameters
-import java.lang.IllegalStateException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -32,6 +35,7 @@ class NodeProcess(
     companion object {
         const val CORDAPPS_DIR_NAME = "cordapps"
         private val log = contextLogger()
+        private const val schemaCreationTimeOutSeconds: Long = 180
     }
 
     fun connect(user: User): CordaRPCConnection {
@@ -103,6 +107,7 @@ class NodeProcess(
             (nodeDir / "node.conf").writeText(config.toText())
             createNetworkParameters(NotaryInfo(notaryParty!!, true), nodeDir)
 
+            createSchema(nodeDir)
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
             waitForNode(process, config, client)
@@ -138,9 +143,25 @@ class NodeProcess(
             }
         }
 
-        private fun startNode(nodeDir: Path): Process {
+        class SchemaCreationTimedOutError(nodeDir: Path) : Exception("Creating node schema timed out for $nodeDir")
+        class SchemaCreationFailedError(nodeDir: Path) : Exception("Creating node schema failed for $nodeDir")
+
+
+        private fun createSchema(nodeDir: Path){
+            val process = startNode(nodeDir, arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas"))
+            if (!process.waitFor(schemaCreationTimeOutSeconds, SECONDS)) {
+                process.destroy()
+                throw SchemaCreationTimedOutError(nodeDir)
+            }
+            if (process.exitValue() != 0){
+                throw SchemaCreationFailedError(nodeDir)
+            }
+        }
+
+        @Suppress("SpreadOperator")
+        private fun startNode(nodeDir: Path, extraArgs: Array<String> = emptyArray()): Process {
             val builder = ProcessBuilder()
-                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString())
+                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString(), *extraArgs)
                     .directory(nodeDir.toFile())
                     .redirectError(ProcessBuilder.Redirect.INHERIT)
                     .redirectOutput(ProcessBuilder.Redirect.INHERIT)

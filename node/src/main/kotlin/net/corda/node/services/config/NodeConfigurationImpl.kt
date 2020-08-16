@@ -15,7 +15,6 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -84,7 +83,9 @@ data class NodeConfigurationImpl(
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
         override val configurationWithOptions: ConfigurationWithOptions,
         override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize,
-        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages
+        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages,
+        override val reloadCheckpointAfterSuspend: Boolean = Defaults.reloadCheckpointAfterSuspend
+
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -123,14 +124,13 @@ data class NodeConfigurationImpl(
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1
         val quasarExcludePackages: List<String> = emptyList()
+        val reloadCheckpointAfterSuspend: Boolean = System.getProperty("reloadCheckpointAfterSuspend", "false")!!.toBoolean()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
         fun messagingServerExternal(messagingServerAddress: NetworkHostAndPort?) = messagingServerAddress != null
 
         fun database(devMode: Boolean) = DatabaseConfig(
-                initialiseSchema = devMode,
-                initialiseAppSchema = if(devMode) SchemaInitializationType.UPDATE else SchemaInitializationType.VALIDATE,
                 exportHibernateJMXStatistics = devMode
         )
     }

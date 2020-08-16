@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -45,6 +46,7 @@ internal class ActionFutureExecutor(
      * @param fiber The [FlowFiber] to resume after completing the async operation
      * @param action The [Action.ExecuteAsyncOperation] to create a future from
      */
+    @Suspendable
     fun awaitAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         cancelFutureIfRunning(fiber, action.currentState)
         val instance = fiber.instanceId
@@ -63,6 +65,7 @@ internal class ActionFutureExecutor(
      * @param fiber The [FlowFiber] to resume after the committing the specified transaction
      * @param action [Action.TrackTransaction] contains the transaction hash to wait for
      */
+    @Suspendable
     fun awaitTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
         cancelFutureIfRunning(fiber, action.currentState)
         val instance = fiber.instanceId

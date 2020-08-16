@@ -125,7 +125,8 @@ open class Node(configuration: NodeConfiguration,
                 flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
                 cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory(),
                 djvmBootstrapSource: ApiSource = createBootstrapSource(configuration),
-                djvmCordaSource: UserSource? = createCordaSource(configuration)
+                djvmCordaSource: UserSource? = createCordaSource(configuration),
+                allowHibernateToManageAppSchema: Boolean = false
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -135,7 +136,8 @@ open class Node(configuration: NodeConfiguration,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1),
         djvmBootstrapSource = djvmBootstrapSource,
-        djvmCordaSource = djvmCordaSource
+        djvmCordaSource = djvmCordaSource,
+        allowHibernateToManageAppSchema = allowHibernateToManageAppSchema
 ) {
 
     override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
@@ -559,6 +561,16 @@ open class Node(configuration: NodeConfiguration,
         return super.generateAndSaveNodeInfo()
     }
 
+    override fun runDatabaseMigrationScripts(
+            updateCoreSchemas: Boolean,
+            updateAppSchemas: Boolean,
+            updateAppSchemasWithCheckpoints: Boolean) {
+        if (allowHibernateToManageAppSchema) {
+            initialiseSerialization()
+        }
+        super.runDatabaseMigrationScripts(updateCoreSchemas, updateAppSchemas, updateAppSchemasWithCheckpoints)
+    }
+
     override fun start(): NodeInfo {
         registerDefaultExceptionHandler()
         initialiseSerialization()
@@ -644,8 +656,8 @@ open class Node(configuration: NodeConfiguration,
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
 
                 checkpointSerializer = KryoCheckpointSerializer,
-                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
-            )
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader).withCheckpointCustomSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers })
+        )
     }
 
     /** Starts a blocking event loop for message dispatch. */

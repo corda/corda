@@ -1,3 +1,14 @@
+#!groovy
+/**
+ * Jenkins pipeline to build Corda OS release with JDK11
+ */
+
+/**
+ * Kill already started job.
+ * Assume new commit takes precendence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -19,16 +30,16 @@ if (isReleaseTag) {
     switch (env.TAG_NAME) {
         case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
         case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
-        default: nexusIqStage = "operate"
+        default: nexusIqStage = "release"
     }
 }
+
 pipeline {
-    agent {
-        label 'k8s'
-    }
+    agent { label 'k8s' }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {
@@ -37,22 +48,31 @@ pipeline {
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish JDK 11 Release to Artifactory".replaceAll("/", "::")
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
     }
 
     stages {
+        /*
+        * Temporarily disable Sonatype checks for regression builds
+        */
         stage('Sonatype Check') {
+            when {
+                expression { isReleaseTag }
+            }
             steps {
                 sh "./gradlew --no-daemon clean jar"
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
-                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\.[0-9]\\+\\).*\$/\\1/'").trim()
                     def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
                     def artifactId = 'corda'
                     nexusAppId = "jenkins-${groupId}-${artifactId}-jdk11-${version}"
                 }
                 nexusPolicyEvaluation (
                         failBuildOnNetworkError: false,
-                        iqApplication: manualApplication(nexusAppId),
+                        iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
                         iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
                         iqStage: nexusIqStage
                 )
@@ -68,6 +88,8 @@ pipeline {
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\" " +
                             "-Ddocker.buildbase.tag=11latest " +
+                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_USERNAME=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_PASSWORD=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                             "-Ddocker.dockerfile=DockerfileJDK11Azul" +
                             " clean pushBuildImage preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest --stacktrace"
                 }
@@ -126,7 +148,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'r3-corda-releases'
+                        repo: 'corda-releases'
                 )
                 rtGradleRun(
                         usesPlugin: true,
@@ -147,7 +169,7 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
+            junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
         }
         cleanup {
             deleteDir() /* clean up our workspace */

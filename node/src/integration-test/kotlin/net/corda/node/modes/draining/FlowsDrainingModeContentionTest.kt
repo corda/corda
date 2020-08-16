@@ -7,6 +7,7 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
@@ -57,8 +58,10 @@ class FlowsDrainingModeContentionTest {
                 portAllocation = portAllocation,
                 extraCordappPackagesToScan = listOf(MessageState::class.packageName)
         )) {
-            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
-            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+            val (nodeA, nodeB) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = users) }
+                    .transpose()
+                    .getOrThrow()
 
             val nodeARpcInfo = RpcInfo(nodeA.rpcAddress, user.username, user.password)
             val flow = nodeA.rpc.startFlow(::ProposeTransactionAndWaitForCommit, message, nodeARpcInfo, nodeB.nodeInfo.singleIdentity(), defaultNotaryIdentity)

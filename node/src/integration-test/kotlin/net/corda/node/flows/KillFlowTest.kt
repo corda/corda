@@ -14,6 +14,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.StatesNotAvailableException
@@ -36,6 +37,7 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Duration
 import java.util.concurrent.Semaphore
@@ -68,9 +70,10 @@ class KillFlowTest {
     @Test(timeout = 300_000)
     fun `a killed flow will propagate the killed error to counter parties when it reaches the next suspension point`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
+            val (alice, bob, charlie) = listOf(ALICE_NAME, BOB_NAME, CHARLIE_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(
                     ::AFlowThatGetsMurderedWhenItTriesToSuspendAndSomehowKillsItsFriends,
@@ -118,8 +121,10 @@ class KillFlowTest {
     @Test(timeout = 300_000)
     fun `killing a flow suspended in send + receive + sendAndReceive ends the flow immediately`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             val bobParty = bob.nodeInfo.singleIdentity()
             bob.stop()
             val terminated = (bob as OutOfProcess).process.waitFor(30, TimeUnit.SECONDS)
@@ -189,12 +194,14 @@ class KillFlowTest {
         }
     }
 
+    @Ignore("CORDA-3948: Disabled pending availability of engineers to diagnose")
     @Test(timeout = 300_000)
     fun `a killed flow will propagate the killed error to counter parties if it was suspended`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
+            val (alice, bob, charlie) = listOf(ALICE_NAME, BOB_NAME, CHARLIE_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(
                     ::AFlowThatGetsMurderedAndSomehowKillsItsFriends,
@@ -224,9 +231,10 @@ class KillFlowTest {
     @Test(timeout = 300_000)
     fun `a killed initiated flow will propagate the killed error to the initiator and its counter parties`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
+            val (alice, bob, charlie) = listOf(ALICE_NAME, BOB_NAME, CHARLIE_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             val handle = alice.rpc.startFlow(
                 ::AFlowThatGetsMurderedByItsFriend,
                 listOf(bob.nodeInfo.singleIdentity(), charlie.nodeInfo.singleIdentity())

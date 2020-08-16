@@ -26,6 +26,7 @@ import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.newContext
 import rx.Observable
+import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -65,6 +66,8 @@ interface NodeHandle : AutoCloseable {
      */
     fun stop()
 }
+
+fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }.single()
 
 /** Interface which represents an out of process node and exposes its process handle. **/
 @DoNotImplement
@@ -202,7 +205,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
                     djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
                     djvmCordaSource = defaultParameters.djvmCordaSource,
-                    environmentVariables = defaultParameters.environmentVariables
+                    environmentVariables = defaultParameters.environmentVariables,
+                    allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema
             ),
             coerce = { it },
             dsl = dsl
@@ -263,7 +267,8 @@ data class DriverParameters(
         val cordappsForAllNodes: Collection<TestCordapp>? = null,
         val djvmBootstrapSource: Path? = null,
         val djvmCordaSource: List<Path> = emptyList(),
-        val environmentVariables : Map<String, String> = emptyMap()
+        val environmentVariables : Map<String, String> = emptyMap(),
+        val allowHibernateToManageAppSchema: Boolean = true
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
@@ -424,6 +429,7 @@ data class DriverParameters(
     fun withDjvmBootstrapSource(djvmBootstrapSource: Path?): DriverParameters = copy(djvmBootstrapSource = djvmBootstrapSource)
     fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
     fun withEnvironmentVariables(variables : Map<String, String>): DriverParameters = copy(environmentVariables = variables)
+    fun withAllowHibernateToManageAppSchema(value: Boolean): DriverParameters = copy(allowHibernateToManageAppSchema = value)
 
     fun copy(
             isDebug: Boolean,

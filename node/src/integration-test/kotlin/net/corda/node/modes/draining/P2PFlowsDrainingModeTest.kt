@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
@@ -53,8 +54,11 @@ class P2PFlowsDrainingModeTest {
     @Test(timeout=300_000)
 	fun `flows draining mode suspends consumption of initial session messages`() {
         driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
-            val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
-            val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
+            val (initiatedNode, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = users) }
+                    .transpose()
+                    .getOrThrow()
+            val initiating = bob.rpc
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
             val initiated = initiatedNode.rpc
 
@@ -85,8 +89,10 @@ class P2PFlowsDrainingModeTest {
 
         driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
-            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
-            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+            val (nodeA, nodeB) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = users) }
+                    .transpose()
+                    .getOrThrow()
             var successful = false
             val latch = CountDownLatch(1)
 
@@ -133,8 +139,10 @@ class P2PFlowsDrainingModeTest {
 
         driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
-            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
-            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+            val (nodeA, nodeB) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = users) }
+                    .transpose()
+                    .getOrThrow()
             var successful = false
             val latch = CountDownLatch(1)
 
