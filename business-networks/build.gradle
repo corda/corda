@@ -8,8 +8,8 @@ apply plugin: 'net.corda.plugins.cordformation'
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
-    cordapp project(':business-networks:contracts')
-    cordapp project(':business-networks:workflows')
+    cordapp project(':business-networks:business-networks-contracts')
+    cordapp project(':business-networks:business-networks-workflows')
 
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
@@ -41,8 +41,8 @@ cordapp {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     nodeDefaults {
-        cordapp project(':business-networks:workflows')
-        cordapp project(':business-networks:contracts')
+        cordapp project(':business-networks:business-networks-workflows')
+        cordapp project(':business-networks:business-networks-contracts')
     }
     node {
         name "O=Notary,L=Zurich,C=CH"
