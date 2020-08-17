@@ -15,14 +15,20 @@ interface CheckpointStorage {
     /**
      * Add a checkpoint for a new id to the store. Will throw if there is already a checkpoint for this id
      */
-    fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>,
-                      serializedCheckpointState: SerializedBytes<CheckpointState>)
+    fun addCheckpoint(
+        id: StateMachineRunId, checkpoint: Checkpoint,
+        serializedFlowState: SerializedBytes<FlowState>?,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
+    )
 
     /**
      * Update an existing checkpoint. Will throw if there is not checkpoint for this id.
      */
-    fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
-                         serializedCheckpointState: SerializedBytes<CheckpointState>)
+    fun updateCheckpoint(
+        id: StateMachineRunId, checkpoint: Checkpoint,
+        serializedFlowState: SerializedBytes<FlowState>?,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
+    )
 
     /**
      * Update an existing checkpoints status ([Checkpoint.status]).
