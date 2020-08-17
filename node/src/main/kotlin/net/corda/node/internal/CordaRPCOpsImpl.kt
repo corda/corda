@@ -180,6 +180,8 @@ internal class CordaRPCOpsImpl(
 
     override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId)
 
+    override fun finishedFlowsWithClientIds(): Map<String, Boolean> = smm.finishedFlowsWithClientIds()
+
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
 
         val (allStateMachines, changes) = smm.track()
