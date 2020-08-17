@@ -94,10 +94,7 @@ internal class ActionExecutorImpl(
         if (action.isCheckpointUpdate) {
             checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         } else {
-            if (flowState is FlowState.Finished) {
-                throw IllegalStateException("A new checkpoint cannot be created with a finished flow state.")
-            }
-            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!, serializedCheckpointState)
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         }
     }
 

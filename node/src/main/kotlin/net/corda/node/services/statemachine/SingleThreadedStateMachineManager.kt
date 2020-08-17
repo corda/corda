@@ -199,13 +199,14 @@ internal class SingleThreadedStateMachineManager(
         // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
         for (flow in fibers.values) {
             flow.fiber.clientId?.let {
-                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(flow.fiber.id, doneFuture(flow.fiber))
             }
         }
 
         for (pausedFlow in pausedFlows) {
             pausedFlow.value.checkpoint.checkpointState.invocationContext.clientId?.let {
                 innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
+                    pausedFlow.key,
                     doneClientIdFuture(pausedFlow.key, pausedFlow.value.resultFuture, it)
                 )
             }
@@ -311,17 +312,20 @@ internal class SingleThreadedStateMachineManager(
                         status
                     } else {
                         newFuture = openFuture()
-                        FlowWithClientIdStatus.Active(newFuture!!)
+                        FlowWithClientIdStatus.Active(flowId, newFuture!!)
                     }
                 }
             }
 
             // Flow -started with client id- already exists, return the existing's flow future and don't start a new flow.
             existingStatus?.let {
-                val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
-                return@startFlow uncheckedCast(existingFuture)
-            }
-            onClientIDNotFound?.invoke()
+                // If the flow ID is the same as the one recorded in the client ID map,
+                // then this start flow event has been retried, and we should not de-duplicate.
+                if (flowId != it.flowId) {
+                    val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
+                    return@startFlow uncheckedCast(existingFuture)
+                }
+            } ?: onClientIDNotFound?.invoke()
         }
 
         return try {
