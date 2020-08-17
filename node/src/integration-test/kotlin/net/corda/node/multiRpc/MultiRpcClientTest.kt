@@ -10,6 +10,7 @@ import net.corda.client.rpc.ext.RPCConnectionListener
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._rpcClientSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -21,6 +22,8 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import rx.Observer
 import kotlin.test.assertEquals
@@ -28,6 +31,30 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
 class MultiRpcClientTest {
+
+    companion object {
+        private fun ensureSerialisationEnvNull() {
+            // Ensure that RPC client serialisation environment is definitely not set
+            if (_rpcClientSerializationEnv.get() != null) {
+                _rpcClientSerializationEnv.set(null)
+            }
+        }
+    }
+
+    private var prevRpcClientSerializationEnv: SerializationEnvironment? = null
+
+    @Before
+    fun setup() {
+        prevRpcClientSerializationEnv = _rpcClientSerializationEnv.get()
+        ensureSerialisationEnvNull()
+    }
+
+    @After
+    fun after() {
+        ensureSerialisationEnvNull()
+        // Restore something that was changed during setup
+        prevRpcClientSerializationEnv?.let { _rpcClientSerializationEnv.set(prevRpcClientSerializationEnv) }
+    }
 
     @Test(timeout = 300_000)
     fun `can connect to custom RPC interface`() {
@@ -37,9 +64,6 @@ class MultiRpcClientTest {
 
         // Create a specific RPC user
         val rpcUser = User("MultiRpcClientTest", "MultiRpcClientTestPwd", setOf(all()))
-
-        // Ensure that RPC client serialisation environment is definitely not set
-        if(_rpcClientSerializationEnv.get() != null )_rpcClientSerializationEnv.set(null)
 
         // Create client with RPC address specified
         val client = MultiRPCClient(rpcAddress, AttachmentTrustInfoRPCOps::class.java, rpcUser.username, rpcUser.password)
