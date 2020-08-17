@@ -513,6 +513,14 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 IF readCounter("counter_2") < 3
                 DO incrementCounter("counter_2"); traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
                 ENDRULE
+                
+                RULE Log external start flow event
+                CLASS $stateMachineManagerClassName
+                METHOD onExternalStartFlow
+                AT ENTRY
+                IF true
+                DO traceln("External start flow event")
+                ENDRULE
             """.trimIndent()
 
             submitBytemanRules(rules, port)

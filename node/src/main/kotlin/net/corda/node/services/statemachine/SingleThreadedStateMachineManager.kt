@@ -546,7 +546,13 @@ internal class SingleThreadedStateMachineManager(
             if (flow != null) {
                 addAndStartFlow(flowId, flow)
             }
-            extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState)
+
+            val numberOfSuspendsFromCheckpoint = when (checkpointLoadingStatus) {
+                is CheckpointLoadingStatus.Success -> checkpointLoadingStatus.checkpoint.checkpointState.numberOfSuspends
+                else -> -1 // No checkpoint was loaded from the database
+            }
+
+            extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState, numberOfSuspendsFromCheckpoint)
         }
     }
 
@@ -575,10 +581,23 @@ internal class SingleThreadedStateMachineManager(
      * Extract all the incomplete deduplication handlers as well as the [ExternalEvent] and [Event.Pause] events from this flows event queue
      * [oldEventQueue]. Then schedule them (in the same order) for the new flow. This means that if a retried flow has a pause event
      * scheduled then the retried flow will eventually pause. The new flow will not retry again if future retry events have been scheduled.
-     * When this method is called this flow must have been replaced by the new flow in [StateMachineInnerState.flows]. This method differs
-     * from [extractAndQueueExternalEventsForPausedFlow] where (only) [externalEvents] are extracted and scheduled straight away.
+     * When this method is called this flow must have been replaced by the new flow in [StateMachineInnerState.flows].
+     *
+     * This method differs from [extractAndQueueExternalEventsForPausedFlow] where (only) [externalEvents] are extracted and scheduled
+     * straight away.
+     *
+     * @param oldEventQueue The old event queue of the flow/fiber to unprocessed extract events from
+     *
+     * @param currentState The current state of the flow, used to extract processed events (held in [StateMachineState.pendingDeduplicationHandlers])
+     *
+     * @param numberOfSuspendsFromCheckpoint The number of suspends that the checkpoint loaded from the database had,
+     * to compare to the suspends the flow has currently reached
      */
-    private fun extractAndScheduleEventsForRetry(oldEventQueue: Channel<Event>, currentState: StateMachineState) {
+    private fun extractAndScheduleEventsForRetry(
+        oldEventQueue: Channel<Event>,
+        currentState: StateMachineState,
+        numberOfSuspendsFromCheckpoint: Int
+    ) {
         val flow = innerState.withLock {
             flows[currentState.flowLogic.runId]
         }
@@ -588,9 +607,13 @@ internal class SingleThreadedStateMachineManager(
             if (event is Event.Pause || event is Event.GeneratedByExternalEvent) events.add(event)
         } while (event != null)
 
-        for (externalEvent in currentState.pendingDeduplicationHandlers) {
-            deliverExternalEvent(externalEvent.externalCause)
+        // Only redeliver events if they were not persisted to the database
+        if (currentState.checkpoint.checkpointState.numberOfSuspends > numberOfSuspendsFromCheckpoint) {
+            for (externalEvent in currentState.pendingDeduplicationHandlers) {
+                deliverExternalEvent(externalEvent.externalCause)
+            }
         }
+
         for (event in events) {
             if (event is Event.GeneratedByExternalEvent) {
                 deliverExternalEvent(event.deduplicationHandler.externalCause)

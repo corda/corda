@@ -112,11 +112,10 @@ abstract class StateMachineErrorHandlingTest {
         submit.addScripts(listOf(ScriptText("Test script", rules)))
     }
 
-    internal fun getBytemanOutput(nodeHandle: NodeHandle): List<String> {
-        return nodeHandle.baseDirectory
-            .list()
-            .first { it.toString().contains("net.corda.node.Corda") && it.toString().contains("stdout.log") }
-            .readAllLines()
+    private fun NodeHandle.getBytemanOutput(): List<String> {
+        return baseDirectory.list()
+            .filter { "net.corda.node.Corda" in it.toString() && "stdout.log" in it.toString() }
+            .flatMap { it.readAllLines() }
     }
 
     internal fun OutOfProcessImpl.stop(timeout: Duration): Boolean {
@@ -124,6 +123,10 @@ abstract class StateMachineErrorHandlingTest {
             destroy()
             waitFor(timeout.seconds, TimeUnit.SECONDS)
         }.also { onStopCallback() }
+    }
+
+    internal fun NodeHandle.assertBytemanOutput(string: String, count: Int) {
+        assertEquals(count, getBytemanOutput().filter { string in it }.size)
     }
 
     @Suppress("LongParameterList")
