@@ -16,15 +16,15 @@ sourceSets {
 }
 //WHY are we doing this?? we need to depend only on the workflows / contracts jar themselves as otherwise they will drag in corda internals
 //to do this, we must depend on the actual output jar file from the jar task from these projects
-evaluationDependsOn(":business-networks:workflows")
-evaluationDependsOn(":business-networks:contracts")
+evaluationDependsOn(":business-networks:business-networks-workflows")
+evaluationDependsOn(":business-networks:business-networks-contracts")
 evaluationDependsOn(":business-networks:freighter-tests-cordapp")
 
 //force recompile of jars if they've changed before compiling our tests
 freighterTestClasses {
     dependsOn([
-            project(":business-networks:workflows").jar,
-            project(":business-networks:contracts").jar,
+            project(":business-networks:business-networks-workflows").jar,
+            project(":business-networks:business-networks-contracts").jar,
             project(":business-networks:freighter-tests-cordapp").jar
     ])
 }
@@ -49,8 +49,8 @@ dependencies {
     freighterTestCompile "freighter:freighter-testing-core-junit5:0.5.0-SNAPSHOT"
     //depend on jar files, not projects - this prevents core and other internal things being dragged into our sandbox
     freighterTestCompile files(
-            project(":business-networks:workflows").jar,
-            project(":business-networks:contracts").jar,
+            project(":business-networks:business-networks-workflows").jar,
+            project(":business-networks:business-networks-contracts").jar,
             project(":business-networks:freighter-tests-cordapp").jar
     )
 }

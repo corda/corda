@@ -7,7 +7,7 @@ description 'Corda Business Networks Testing Cordapp'
 
 dependencies {
     cordaCompile project(':core')
-    cordapp project(":business-networks:contracts")
+    cordapp project(":business-networks:business-networks-contracts")
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 }
 
