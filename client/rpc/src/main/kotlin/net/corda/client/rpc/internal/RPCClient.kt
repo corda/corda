@@ -3,9 +3,9 @@ package net.corda.client.rpc.internal
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.UnrecoverableRPCException
+import net.corda.client.rpc.ext.RPCConnectionListener
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.uncheckedCast
@@ -16,24 +16,28 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
+import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
 import net.corda.nodeapi.internal.config.SslConfiguration
-import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.lang.reflect.Proxy
+import java.util.concurrent.CopyOnWriteArraySet
 
 /**
- * This runs on the client JVM
+ * [RPCClient] is meant to run outside of Corda Node JVM and provide connectivity to a node using RPC protocol.
+ * Since Corda Node can expose multiple RPC interfaces, it is possible to specify which [RPCOps] interface should be used.
+ *
+ * When `haAddressPool` [RPCClient] will perform connectivity failover using parameters specified by [CordaRPCClientConfiguration].
+ * Whenever status of connection changes registered [RPCConnectionListener] will be informed about those events.
  */
 class RPCClient<I : RPCOps>(
-        val transport: TransportConfiguration,
-        val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-        val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
-        val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
+        private val transport: TransportConfiguration,
+        private val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+        private val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+        private val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
@@ -49,6 +53,9 @@ class RPCClient<I : RPCOps>(
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
 
+    /**
+     * A way to create RPC connections to a pool of RPC addresses for resiliency
+     */
     constructor(
             haAddressPool: List<NetworkHostAndPort>,
             sslConfiguration: ClientRpcSslOptions? = null,
@@ -61,6 +68,8 @@ class RPCClient<I : RPCOps>(
         private val log = contextLogger()
     }
 
+    private val listeners: MutableSet<RPCConnectionListener<I>> = CopyOnWriteArraySet()
+
     fun start(
             rpcOpsClass: Class<I>,
             username: String,
@@ -70,8 +79,6 @@ class RPCClient<I : RPCOps>(
             targetLegalIdentity: CordaX500Name? = null
     ): RPCConnection<I> {
         return log.logElapsedTime("Startup") {
-            val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
-
             val serverLocator = (if (haPoolTransportConfigurations.isEmpty()) {
                 ActiveMQClient.createServerLocatorWithoutHA(transport)
             } else {
@@ -85,10 +92,14 @@ class RPCClient<I : RPCOps>(
                 reconnectAttempts = if (haPoolTransportConfigurations.isEmpty()) rpcConfiguration.maxReconnectAttempts else 0
                 minLargeMessageSize = rpcConfiguration.maxFileSize
                 isUseGlobalPools = nodeSerializationEnv != null
+                // By default RoundRobinConnectionLoadBalancingPolicy is used that picks first endpoint from the pool
+                // at random. This may be undesired and non-deterministic. For more information, see [RoundRobinConnectionPolicy]
+                connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
             }
             val sessionId = Trace.SessionId.newInstance()
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress,
-                    rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor, targetLegalIdentity)
+            val distributionMux = DistributionMux(listeners, username)
+            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator,
+                    rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor, targetLegalIdentity, distributionMux)
             try {
                 proxyHandler.start()
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))
@@ -101,7 +112,7 @@ class RPCClient<I : RPCOps>(
                 proxyHandler.setServerProtocolVersion(serverProtocolVersion)
 
                 log.debug("RPC connected, returning proxy")
-                object : RPCConnection<I> {
+                val connection = object : RPCConnection<I> {
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
 
@@ -122,12 +133,32 @@ class RPCClient<I : RPCOps>(
                         close(false)
                     }
                 }
-            } catch (exception: Throwable) {
+                distributionMux.connectionOpt = connection
+                distributionMux.onConnect()
+                connection
+            } catch (throwable: Throwable) {
                 proxyHandler.notifyServerAndClose()
                 serverLocator.close()
-                throw exception
+                distributionMux.onPermanentFailure(throwable)
+                throw throwable
             }
         }
     }
-}
 
+    /**
+     * Adds [RPCConnectionListener] to this [RPCClient] to be informed about important connectivity events.
+     * @return `true` if the element has been added, `false` when listener is already contained in the set of listeners.
+     */
+    fun addConnectionListener(listener: RPCConnectionListener<I>) : Boolean {
+        return listeners.add(listener)
+    }
+
+    /**
+     * Removes [RPCConnectionListener] from this [RPCClient].
+     *
+     * @return `true` if the element has been successfully removed; `false` if it was not present in the set of listeners.
+     */
+    fun removeConnectionListener(listener: RPCConnectionListener<I>) : Boolean {
+        return listeners.remove(listener)
+    }
+}

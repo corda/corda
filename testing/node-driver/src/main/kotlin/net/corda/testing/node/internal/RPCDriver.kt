@@ -2,7 +2,9 @@ package net.corda.testing.node.internal
 
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.internal.RPCClient
+import net.corda.client.rpc.ext.RPCConnectionListener
 import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.AuthServiceId
@@ -89,15 +91,25 @@ data class RpcBrokerHandle(
         val hostAndPort: NetworkHostAndPort?,
         /** null if this is an InVM broker */
         val clientTransportConfiguration: TransportConfiguration,
-        val serverControl: ActiveMQServerControl
+        val serverControl: ActiveMQServerControl,
+        val shutdown: () -> Unit
 )
 
 data class RpcServerHandle(
         val broker: RpcBrokerHandle,
         val rpcServer: RPCServer
-)
+) {
+    fun shutdown() {
+        rpcServer.close()
+        broker.shutdown()
+    }
+}
 
 val rpcTestUser = User("user1", "test", permissions = emptySet())
+// A separate user for RPC server is necessary as there are scenarios that call `ActiveMQServerControl.closeConnectionsForUser`
+// to test disconnect/failover. If there is only a single Artemis broker user, `ActiveMQServerControl.closeConnectionsForUser` will do
+// damage to the internals of `RPCServer` rendering it unusable.
+val rpcServerUser = User("rpcServer", "rpcServerPassword", permissions = emptySet())
 val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
@@ -156,7 +168,7 @@ fun <A> rpcDriver(
     )
 }
 
-private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
+private class UserSetSecurityManager(val userSet: Set<User>) : ActiveMQSecurityManager3 {
     override fun validateUser(user: String?, password: String?) = isValid(user, password)
     override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = isValid(user, password)
     override fun validateUser(user: String?, password: String?, connection: RemotingConnection?): String? {
@@ -168,7 +180,7 @@ private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityMan
     }
 
     private fun isValid(user: String?, password: String?): Boolean {
-        return rpcUser.username == user && rpcUser.password == password
+        return userSet.any { it.username == user && it.password == password }
     }
 
     private fun validate(user: String?, password: String?): String? {
@@ -361,13 +373,37 @@ data class RPCDriverDSL(
             password: String = rpcTestUser.password,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
     ): CordaFuture<I> {
+        return startRpcClient(rpcOpsClass, rpcAddress, username, password, configuration, emptyList()).map { it.first.proxy }
+    }
+
+    /**
+     * Starts a Netty RPC client.
+     *
+     * @param rpcOpsClass The [Class] of the RPC interface.
+     * @param rpcAddress The address of the RPC server to connect to.
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     * @param configuration The RPC client configuration.
+     * @param listeners [RPCConnectionListener]s to be attached to the [RPCClient]
+     */
+    fun <I : RPCOps> startRpcClient(
+            rpcOpsClass: Class<I>,
+            rpcAddress: NetworkHostAndPort,
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            listeners: Iterable<RPCConnectionListener<I>> = emptyList()
+    ): CordaFuture<Pair<RPCConnection<I>, RPCClient<I>>> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.rpcConnectorTcpTransport(rpcAddress, null), configuration)
+            listeners.forEach {
+                client.addConnectionListener(it)
+            }
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
             }
-            connection.proxy
+            connection to client
         }
     }
 
@@ -387,13 +423,37 @@ data class RPCDriverDSL(
             password: String = rpcTestUser.password,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
     ): CordaFuture<I> {
+        return startRpcClient(rpcOpsClass, haAddressPool, username, password, configuration, emptyList()).map { it.first.proxy }
+    }
+
+    /**
+     * Starts a Netty RPC client.
+     *
+     * @param rpcOpsClass The [Class] of the RPC interface.
+     * @param haAddressPool The addresses of the RPC servers(configured in HA mode) to connect to.
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     * @param configuration The RPC client configuration.
+     * @param listeners listeners to be attached upon creation
+     */
+    fun <I : RPCOps> startRpcClient(
+            rpcOpsClass: Class<I>,
+            haAddressPool: List<NetworkHostAndPort>,
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            listeners: Iterable<RPCConnectionListener<I>> = emptyList()
+    ): CordaFuture<Pair<RPCConnection<I>, RPCClient<I>>> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(haAddressPool, null, configuration)
+            listeners.forEach {
+                client.addConnectionListener(it)
+            }
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
             }
-            connection.proxy
+            connection to client
         }
     }
 
@@ -451,7 +511,7 @@ data class RPCDriverDSL(
         addressMustNotBeBound(driverDSL.executorService, hostAndPort)
         return driverDSL.executorService.fork {
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
-            val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(rpcUser))
+            val server = ActiveMQServerImpl(artemisConfig, UserSetSecurityManager(setOf(rpcUser, rpcServerUser)))
             server.start()
             driverDSL.shutdownManager.registerShutdown {
                 server.stop()
@@ -460,7 +520,8 @@ data class RPCDriverDSL(
             RpcBrokerHandle(
                     hostAndPort = hostAndPort,
                     clientTransportConfiguration = createNettyClientTransportConfiguration(hostAndPort),
-                    serverControl = server.activeMQServerControl
+                    serverControl = server.activeMQServerControl,
+                    shutdown = { server.stop() }
             )
         }
     }
@@ -474,7 +535,7 @@ data class RPCDriverDSL(
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
             val server = EmbeddedActiveMQ()
             server.setConfiguration(artemisConfig)
-            server.setSecurityManager(SingleUserSecurityManager(rpcUser))
+            server.setSecurityManager(UserSetSecurityManager(setOf(rpcUser, rpcServerUser)))
             server.start()
             driverDSL.shutdownManager.registerShutdown {
                 server.activeMQServer.stop()
@@ -483,7 +544,8 @@ data class RPCDriverDSL(
             RpcBrokerHandle(
                     hostAndPort = null,
                     clientTransportConfiguration = inVmClientTransportConfiguration,
-                    serverControl = server.activeMQServer.activeMQServerControl
+                    serverControl = server.activeMQServer.activeMQServerControl,
+                    shutdown = { server.stop() }
             )
         }
     }
@@ -509,12 +571,14 @@ data class RPCDriverDSL(
             minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false
         }
-        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(InternalUser(rpcUser.username,
-                rpcUser.password, rpcUser.permissions)), id = AuthServiceId("TEST_SECURITY_MANAGER"))
+        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(
+                InternalUser(rpcUser.username, rpcUser.password, rpcUser.permissions),
+                InternalUser(rpcServerUser.username, rpcServerUser.password, rpcServerUser.permissions)),
+                id = AuthServiceId("TEST_SECURITY_MANAGER"))
         val rpcServer = RPCServer(
                 listOps,
-                rpcUser.username,
-                rpcUser.password,
+                rpcServerUser.username,
+                rpcServerUser.password,
                 locator,
                 rpcSecurityManager,
                 nodeLegalName,
