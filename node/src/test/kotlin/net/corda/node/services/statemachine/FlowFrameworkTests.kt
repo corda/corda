@@ -307,7 +307,7 @@ class FlowFrameworkTests {
             .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
             .withMessage("Nothing useful")
             .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
-            .withStackTraceContaining("Received counter-flow exception from peer")
+            .withStackTraceContaining("Received counter-flow exception from peer ${bob.name}")
         bobNode.database.transaction {
             assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
         }
@@ -630,6 +630,7 @@ class FlowFrameworkTests {
             Notification.createOnNext(ReceiveFlow.START_STEP),
             Notification.createOnError(receiveFlowException)
         )
+        assertThat(receiveFlowException).hasStackTraceContaining("Received unexpected counter-flow exception from peer ${bob.name}")
 
         assertSessionTransfers(
             aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,

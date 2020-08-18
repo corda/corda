@@ -389,22 +389,20 @@ class StartedFlowTransition(
     }
 
     private fun convertErrorMessageToException(errorMessage: ErrorSessionMessage, peer: Party): Throwable {
-        val exception: Throwable = if (errorMessage.flowException == null) {
-            UnexpectedFlowEndException("Counter-flow errored", cause = null, originalErrorId = errorMessage.errorId)
-        } else {
-            errorMessage.flowException.originalErrorId = errorMessage.errorId
-            errorMessage.flowException
-        }
-        when (exception) {
-            // reflection used to access private field
-            is UnexpectedFlowEndException -> DeclaredField<Party?>(
+        return if (errorMessage.flowException == null) {
+            UnexpectedFlowEndException("Counter-flow errored", cause = null, originalErrorId = errorMessage.errorId).apply {
+                DeclaredField<Party?>(
                     UnexpectedFlowEndException::class.java,
                     "peer",
-                    exception
-            ).value = peer
-            is FlowException -> DeclaredField<Party?>(FlowException::class.java, "peer", exception).value = peer
+                    this
+                ).value = peer
+            }
+        } else {
+            errorMessage.flowException.apply {
+                originalErrorId = errorMessage.errorId
+                DeclaredField<Party?>(FlowException::class.java, "peer", errorMessage.flowException).value = peer
+            }
         }
-        return exception
     }
 
     private fun collectUncloseableSessions(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
