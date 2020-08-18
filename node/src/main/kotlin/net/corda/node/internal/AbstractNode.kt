@@ -33,6 +33,7 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -588,6 +589,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             throw e
         }
 
+        val rootFuture = openFuture<Void?>()
+
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (resultingNodeInfo, readyFuture) = database.transaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
@@ -609,7 +612,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-            val smmStartedFuture = smm.start(frozenTokenizableServices)
+            val callback = smm.start(frozenTokenizableServices)
+            val smmStartedFuture = rootFuture.map { callback.invoke() }
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
@@ -628,6 +632,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             }
             resultingNodeInfo to readyFuture
         }
+
+        rootFuture.captureLater(services.networkMapCache.nodeReady)
 
         readyFuture.map { ready ->
             if (ready) {

@@ -688,9 +688,6 @@ class FlowFrameworkTests {
                 firstExecution = false
                 throw HospitalizeFlowException()
             } else {
-                // the below sleep should be removed once we fix : The thread's transaction executing StateMachineManager.start takes long
-                // and doesn't commit before flow starts running.
-                Thread.sleep(3000)
                 dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
                 currentDBSession().clear() // clear session as Hibernate with fails with 'org.hibernate.NonUniqueObjectException' once it tries to save a DBFlowCheckpoint upon checkpoint
                 inMemoryCheckpointStatusBeforeSuspension = flowFiber.transientState.checkpoint.status
@@ -739,9 +736,6 @@ class FlowFrameworkTests {
                 firstExecution = false
                 throw HospitalizeFlowException()
             } else {
-                // the below sleep should be removed once we fix : The thread's transaction executing StateMachineManager.start takes long
-                // and doesn't commit before flow starts running.
-                Thread.sleep(3000)
                 dbCheckpointStatus = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
                 inMemoryCheckpointStatus = flowFiber.transientState.checkpoint.status
 
@@ -856,9 +850,6 @@ class FlowFrameworkTests {
         var secondRun = false
         SuspendingFlow.hookBeforeCheckpoint = {
             if(secondRun) {
-                // the below sleep should be removed once we fix : The thread's transaction executing StateMachineManager.start takes long
-                // and doesn't commit before flow starts running.
-                Thread.sleep(3000)
                 aliceNode.database.transaction {
                     checkpointStatusAfterRestart = findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
                     dbExceptionAfterRestart = findRecordsFromDatabase()

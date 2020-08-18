@@ -43,6 +43,8 @@ import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
@@ -152,7 +154,7 @@ internal class SingleThreadedStateMachineManager(
     override val changes: Observable<StateMachineManager.Change> = innerState.changesPublisher
 
     @Suppress("ComplexMethod")
-    override fun start(tokenizableServices: List<Any>, startMode: StateMachineManager.StartMode): CordaFuture<Unit> {
+    override fun start(tokenizableServices: List<Any>, startMode: StateMachineManager.StartMode): () -> Unit {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                 CheckpointSerializeAsTokenContextImpl(
@@ -223,9 +225,10 @@ internal class SingleThreadedStateMachineManager(
             } ?: logger.error("Found finished flow $id without a client id. Something is very wrong and this flow will be ignored.")
         }
 
-        return serviceHub.networkMapCache.nodeReady.map {
+        return {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
+            Thread.sleep(10000)
             flowMessaging.start { _, deduplicationHandler ->
                 executor.execute {
                     deliverExternalEvent(deduplicationHandler.externalCause)
