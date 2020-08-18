@@ -15,6 +15,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.threadDumpAsString
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.internal.rpcDriver

@@ -1,4 +1,4 @@
-package net.corda.client.rpc
+package net.corda.core.utilities
 
 import java.lang.management.LockInfo
 import java.lang.management.ManagementFactory
