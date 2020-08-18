@@ -228,7 +228,6 @@ internal class SingleThreadedStateMachineManager(
         return {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
-            Thread.sleep(10000)
             flowMessaging.start { _, deduplicationHandler ->
                 executor.execute {
                     deliverExternalEvent(deduplicationHandler.externalCause)
