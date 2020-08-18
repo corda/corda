@@ -1,8 +1,8 @@
 package net.corda.client.rpc
 
-import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.client.rpc.internal.SerializationEnvironmentHelper
 import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.CordaInternal
@@ -11,7 +11,6 @@ import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -24,8 +23,6 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
-import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
-import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -33,7 +30,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
- * This class is essentially just a wrapper for an RPCConnection<CordaRPCOps> and can be treated identically.
+ * This class is essentially just a wrapper for an `RPCConnection<CordaRPCOps>` and can be treated identically.
  *
  * @see RPCConnection
  */
@@ -460,37 +457,7 @@ class CordaRPCClient private constructor(
     }
 
     init {
-        try {
-            effectiveSerializationEnv
-        } catch (e: IllegalStateException) {
-            try {
-                val cache = Caffeine.newBuilder().maximumSize(128)
-                        .build<SerializationFactoryCacheKey, SerializerFactory>().asMap()
-
-                // If the client has explicitly provided a classloader use this one to scan for custom serializers,
-                // otherwise use the current one.
-                val serializationClassLoader = this.classLoader ?: this.javaClass.classLoader
-                // If the client has explicitly provided a set of custom serializers, avoid performing any scanning and use these instead.
-                val discoveredCustomSerializers = customSerializers ?: createInstancesOfClassesImplementing(
-                        serializationClassLoader,
-                        SerializationCustomSerializer::class.java
-                )
-
-                val serializationWhitelists = ServiceLoader.load(
-                        SerializationWhitelist::class.java,
-                        serializationClassLoader
-                ).toSet()
-
-                AMQPClientSerializationScheme.initialiseSerialization(
-                        serializationClassLoader,
-                        discoveredCustomSerializers,
-                        serializationWhitelists,
-                        cache
-                )
-            } catch (e: IllegalStateException) {
-                // Race e.g. two of these constructed in parallel, ignore.
-            }
-        }
+        SerializationEnvironmentHelper.ensureEffectiveSerializationEnvSet(classLoader, customSerializers)
     }
 
     private fun getRpcClient(): RPCClient<CordaRPCOps> {

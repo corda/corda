@@ -14,6 +14,7 @@ import net.corda.client.rpc.internal.RPCUtils.isShutdownCmd
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
@@ -100,13 +101,13 @@ internal class RPCClientProxyHandler(
         private val rpcUsername: String,
         private val rpcPassword: String,
         private val serverLocator: ServerLocator,
-        private val clientAddress: SimpleString,
         private val rpcOpsClass: Class<out RPCOps>,
         serializationContext: SerializationContext,
         private val sessionId: Trace.SessionId,
         private val externalTrace: Trace?,
         private val impersonatedActor: Actor?,
         private val targetLegalIdentity: CordaX500Name?,
+        private val notificationDistributionMux: DistributionMux<out RPCOps>,
         private val cacheFactory: NamedCacheFactory = ClientCacheFactory()
 ) : InvocationHandler {
 
@@ -222,6 +223,7 @@ internal class RPCClientProxyHandler(
         )
     }
 
+    private var clientAddress: SimpleString? = null
     private var sessionFactory: ClientSessionFactory? = null
     private var producerSession: ClientSession? = null
     private var consumerSession: ClientSession? = null
@@ -329,7 +331,7 @@ internal class RPCClientProxyHandler(
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
             val request = RPCApi.ClientToServer.RpcRequest(
-                    clientAddress,
+                    clientAddress!!,
                     methodFqn,
                     serialisedArguments,
                     replyId,
@@ -519,6 +521,7 @@ internal class RPCClientProxyHandler(
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()
         observationExecutors.forEach { it.shutdownNow() }
+        notificationDistributionMux.onDisconnect(null)
         lifeCycle.justTransition(State.FINISHED)
     }
 
@@ -610,6 +613,7 @@ internal class RPCClientProxyHandler(
             initSessions()
             startSessions()
             sendingEnabled.set(true)
+            notificationDistributionMux.onConnect()
             break
         }
 
@@ -618,6 +622,7 @@ internal class RPCClientProxyHandler(
             val errMessage = "Could not reconnect to the RPC server after trying $reconnectAttempt times." +
                     if (sessionFactory != null) "" else " It was never possible to to establish connection with any of the endpoints."
             log.error(errMessage)
+            notificationDistributionMux.onPermanentFailure(IllegalStateException(errMessage))
         }
     }
 
@@ -625,6 +630,8 @@ internal class RPCClientProxyHandler(
         producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
         consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, 16384)
+        clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$rpcUsername.${random63BitValue()}")
+        log.debug { "Client address: $clientAddress" }
         consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
@@ -655,8 +662,11 @@ internal class RPCClientProxyHandler(
             replyFuture.setException(connectionFailureException)
         }
 
+        log.debug { "rpcReplyMap size before clear: ${rpcReplyMap.size}" }
         rpcReplyMap.clear()
+        log.debug { "callSiteMap size before clear: ${callSiteMap?.size}" }
         callSiteMap?.clear()
+        notificationDistributionMux.onDisconnect(connectionFailureException)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -666,7 +676,6 @@ internal class RPCClientProxyHandler(
         other as RPCClientProxyHandler
 
         if (rpcUsername != other.rpcUsername) return false
-        if (clientAddress != other.clientAddress) return false
         if (sessionId != other.sessionId) return false
         if (targetLegalIdentity != other.targetLegalIdentity) return false
 
@@ -675,7 +684,6 @@ internal class RPCClientProxyHandler(
 
     override fun hashCode(): Int {
         var result = rpcUsername.hashCode()
-        result = 31 * result + clientAddress.hashCode()
         result = 31 * result + sessionId.hashCode()
         result = 31 * result + (targetLegalIdentity?.hashCode() ?: 0)
         return result

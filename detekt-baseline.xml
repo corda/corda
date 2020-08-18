@@ -170,6 +170,7 @@
     <ID>ComplexMethod:StartedFlowTransition.kt$StartedFlowTransition$override fun transition(): TransitionResult</ID>
     <ID>ComplexMethod:StatusTransitions.kt$StatusTransitions$ fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:StringToMethodCallParser.kt$StringToMethodCallParser$ @Throws(UnparseableCallException::class) fun parse(target: T?, command: String): ParsedMethodCall</ID>
+    <ID>ComplexMethod:ThreadDumpUtils.kt$ fun ThreadInfo.asString(maxFrames : Int = 256): String</ID>
     <ID>ComplexMethod:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$@Test(timeout=300_000) fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$@Test(timeout=300_000) fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TransactionUtils.kt$ fun createComponentGroups(inputs: List&lt;StateRef&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;Command&lt;*&gt;&gt;, attachments: List&lt;SecureHash&gt;, notary: Party?, timeWindow: TimeWindow?, references: List&lt;StateRef&gt;, networkParametersHash: SecureHash?): List&lt;ComponentGroup&gt;</ID>
@@ -677,6 +678,8 @@
     <ID>LongParameterList:QueryCriteria.kt$QueryCriteria.VaultQueryCriteria$( status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED, contractStateTypes: Set&lt;Class&lt;out ContractState&gt;&gt;? = null, stateRefs: List&lt;StateRef&gt;? = null, notary: List&lt;AbstractParty&gt;? = null, softLockingCondition: SoftLockingCondition? = null, timeCondition: TimeCondition? = null, relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL, constraintTypes: Set&lt;Vault.ConstraintInfo.Type&gt; = emptySet(), constraints: Set&lt;Vault.ConstraintInfo&gt; = emptySet(), participants: List&lt;AbstractParty&gt;? = null, externalIds: List&lt;UUID&gt; = emptyList() )</ID>
     <ID>LongParameterList:QueryCriteria.kt$QueryCriteria.VaultQueryCriteria$( status: Vault.StateStatus = this.status, contractStateTypes: Set&lt;Class&lt;out ContractState&gt;&gt;? = this.contractStateTypes, stateRefs: List&lt;StateRef&gt;? = this.stateRefs, notary: List&lt;AbstractParty&gt;? = this.notary, softLockingCondition: SoftLockingCondition? = this.softLockingCondition, timeCondition: TimeCondition? = this.timeCondition )</ID>
     <ID>LongParameterList:RPCClient.kt$RPCClient$( rpcOpsClass: Class&lt;I&gt;, username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null, targetLegalIdentity: CordaX500Name? = null )</ID>
+    <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcOpsClass: Class&lt;I&gt;, haAddressPool: List&lt;NetworkHostAndPort&gt;, username: String = rpcTestUser.username, password: String = rpcTestUser.password, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT, listeners: Iterable&lt;RPCConnectionListener&lt;I&gt;&gt; = emptyList() )</ID>
+    <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcOpsClass: Class&lt;I&gt;, rpcAddress: NetworkHostAndPort, username: String = rpcTestUser.username, password: String = rpcTestUser.password, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT, listeners: Iterable&lt;RPCConnectionListener&lt;I&gt;&gt; = emptyList() )</ID>
     <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, listOps: List&lt;I&gt;, brokerHandle: RpcBrokerHandle, queueDrainTimeout: Duration = 5.seconds )</ID>
     <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, ops: I, brokerHandle: RpcBrokerHandle, queueDrainTimeout: Duration = 5.seconds )</ID>
     <ID>LongParameterList:RPCDriver.kt$RPCDriverDSL$( rpcUser: User = rpcTestUser, nodeLegalName: CordaX500Name = fakeNodeLegalName, maxFileSize: Int = MAX_MESSAGE_SIZE, maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE, configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT, ops: I, queueDrainTimeout: Duration = 5.seconds )</ID>
@@ -759,7 +762,6 @@
     <ID>MagicNumber:ConnectionStateMachine.kt$ConnectionStateMachine$1500</ID>
     <ID>MagicNumber:ConnectionStateMachine.kt$ConnectionStateMachine$4</ID>
     <ID>MagicNumber:CordaPersistence.kt$DatabaseConfig.Defaults$100L</ID>
-    <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClient$128</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$3</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$5</ID>
     <ID>MagicNumber:CordaSSHAuthInfo.kt$CordaSSHAuthInfo$10</ID>
@@ -1099,6 +1101,7 @@
     <ID>MagicNumber:SecureArtemisConfiguration.kt$SecureArtemisConfiguration$16</ID>
     <ID>MagicNumber:SecureHash.kt$SecureHash.Companion$32</ID>
     <ID>MagicNumber:SecureHash.kt$SecureHash.SHA256$32</ID>
+    <ID>MagicNumber:SerializationEnvironmentHelper.kt$SerializationEnvironmentHelper$128</ID>
     <ID>MagicNumber:ShutdownManager.kt$ShutdownManager$5</ID>
     <ID>MagicNumber:ShutdownManager.kt$ShutdownManager$60</ID>
     <ID>MagicNumber:SimmFlow.kt$100</ID>
@@ -1446,6 +1449,7 @@
     <ID>TooGenericExceptionCaught:DemoBenchView.kt$DemoBenchView$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DeserializationInput.kt$DeserializationInput$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DeserializeSimpleTypesTests.kt$DeserializeSimpleTypesTests$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DistributionMux.kt$DistributionMux$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:DockerInstantiator.kt$DockerInstantiator$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$DriverDSLImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$DriverDSLImpl.Companion$th: Throwable</ID>
@@ -1494,6 +1498,7 @@
     <ID>TooGenericExceptionCaught:MockAttachmentStorage.kt$MockAttachmentStorage$e: Exception</ID>
     <ID>TooGenericExceptionCaught:MockCryptoService.kt$MockCryptoService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:MockNodeMessagingService.kt$MockNodeMessagingService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:MultiRPCClient.kt$MultiRPCClient$ex: Throwable</ID>
     <ID>TooGenericExceptionCaught:MyCustomNotaryService.kt$MyValidatingNotaryFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NamedCacheTest.kt$NamedCacheTest$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NettyTestHandler.kt$NettyTestHandler$e: Throwable</ID>
@@ -1527,7 +1532,7 @@
     <ID>TooGenericExceptionCaught:QuasarInstrumentationHook.kt$QuasarInstrumentationHook$throwable: Throwable</ID>
     <ID>TooGenericExceptionCaught:R3Pty.kt$R3Pty$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RPCApi.kt$RPCApi.ServerToClient.Companion$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:RPCClient.kt$RPCClient$exception: Throwable</ID>
+    <ID>TooGenericExceptionCaught:RPCClient.kt$RPCClient$throwable: Throwable</ID>
     <ID>TooGenericExceptionCaught:RPCClientProxyHandler.kt$RPCClientProxyHandler$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RPCClientProxyHandler.kt$RPCClientProxyHandler$e: RuntimeException</ID>
     <ID>TooGenericExceptionCaught:RPCPermissionResolver.kt$RPCPermissionResolver.InterfaceMethodMapCacheLoader$ex: Exception</ID>
@@ -1659,6 +1664,7 @@
     <ID>TooManyFunctions:QueryCriteriaUtils.kt$Builder</ID>
     <ID>TooManyFunctions:RPCApi.kt$net.corda.nodeapi.RPCApi.kt</ID>
     <ID>TooManyFunctions:RPCClientProxyHandler.kt$RPCClientProxyHandler : InvocationHandler</ID>
+    <ID>TooManyFunctions:RPCDriver.kt$RPCDriverDSL : InternalDriverDSL</ID>
     <ID>TooManyFunctions:RPCServer.kt$RPCServer</ID>
     <ID>TooManyFunctions:SSLHelper.kt$net.corda.nodeapi.internal.protonwrapper.netty.SSLHelper.kt</ID>
     <ID>TooManyFunctions:SerializationHelper.kt$net.corda.serialization.internal.amqp.SerializationHelper.kt</ID>
