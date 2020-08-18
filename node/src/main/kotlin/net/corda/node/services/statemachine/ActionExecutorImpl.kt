@@ -62,6 +62,7 @@ internal class ActionExecutorImpl(
             is Action.CreateTransaction -> executeCreateTransaction()
             is Action.RollbackTransaction -> executeRollbackTransaction()
             is Action.CommitTransaction -> executeCommitTransaction()
+            is Action.IncrementNumberOfCommits -> executeIncrementNumberOfCommits(action)
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
             is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
@@ -226,6 +227,10 @@ internal class ActionExecutorImpl(
             contextTransaction.close()
             contextTransactionOrNull = null
         }
+    }
+
+    private fun executeIncrementNumberOfCommits(action: Action.IncrementNumberOfCommits) {
+        action.currentState.checkpoint.checkpointState.numberOfCommits += 1
     }
 
     @Suppress("TooGenericExceptionCaught")

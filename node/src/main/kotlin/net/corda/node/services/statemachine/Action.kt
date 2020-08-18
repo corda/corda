@@ -149,6 +149,8 @@ sealed class Action {
         override fun toString() = "CommitTransaction"
     }
 
+    data class IncrementNumberOfCommits(val currentState: StateMachineState) : Action()
+
     /**
      * Execute the specified [operation].
      */

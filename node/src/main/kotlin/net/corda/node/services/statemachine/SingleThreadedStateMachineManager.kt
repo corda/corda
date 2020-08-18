@@ -512,10 +512,11 @@ internal class SingleThreadedStateMachineManager(
             CheckpointLoadingStatus.Success(checkpoint)
         }
 
-        val flow = when {
+        val (flow, numberOfCommitsFromCheckpoint) = when {
             // Resurrect flow
             checkpointLoadingStatus is CheckpointLoadingStatus.Success -> {
-                flowCreator.createFlowFromCheckpoint(
+                val numberOfCommitsFromCheckpoint = checkpointLoadingStatus.checkpoint.checkpointState.numberOfCommits
+                val flow = flowCreator.createFlowFromCheckpoint(
                     flowId,
                     checkpointLoadingStatus.checkpoint,
                     currentState.reloadCheckpointAfterSuspendCount,
@@ -523,6 +524,7 @@ internal class SingleThreadedStateMachineManager(
                     firstRestore = false,
                     progressTracker = currentState.flowLogic.progressTracker
                 ) ?: return
+                flow to numberOfCommitsFromCheckpoint
             }
             checkpointLoadingStatus is CheckpointLoadingStatus.NotFound && currentState.isAnyCheckpointPersisted -> {
                 logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
@@ -531,7 +533,7 @@ internal class SingleThreadedStateMachineManager(
             checkpointLoadingStatus is CheckpointLoadingStatus.CouldNotDeserialize -> return
             else -> {
                 // Just flow initiation message
-                null
+                null to -1
             }
         }
 
@@ -547,12 +549,7 @@ internal class SingleThreadedStateMachineManager(
                 addAndStartFlow(flowId, flow)
             }
 
-            val numberOfSuspendsFromCheckpoint = when (checkpointLoadingStatus) {
-                is CheckpointLoadingStatus.Success -> checkpointLoadingStatus.checkpoint.checkpointState.numberOfSuspends
-                else -> -1 // No checkpoint was loaded from the database
-            }
-
-            extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState, numberOfSuspendsFromCheckpoint)
+            extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState, numberOfCommitsFromCheckpoint)
         }
     }
 
@@ -590,13 +587,13 @@ internal class SingleThreadedStateMachineManager(
      *
      * @param currentState The current state of the flow, used to extract processed events (held in [StateMachineState.pendingDeduplicationHandlers])
      *
-     * @param numberOfSuspendsFromCheckpoint The number of suspends that the checkpoint loaded from the database had,
-     * to compare to the suspends the flow has currently reached
+     * @param numberOfCommitsFromCheckpoint The number of commits that the checkpoint loaded from the database had,
+     * to compare to the commits the flow has currently reached
      */
     private fun extractAndScheduleEventsForRetry(
         oldEventQueue: Channel<Event>,
         currentState: StateMachineState,
-        numberOfSuspendsFromCheckpoint: Int
+        numberOfCommitsFromCheckpoint: Int
     ) {
         val flow = innerState.withLock {
             flows[currentState.flowLogic.runId]
@@ -608,7 +605,7 @@ internal class SingleThreadedStateMachineManager(
         } while (event != null)
 
         // Only redeliver events if they were not persisted to the database
-        if (currentState.checkpoint.checkpointState.numberOfSuspends > numberOfSuspendsFromCheckpoint) {
+        if (currentState.checkpoint.checkpointState.numberOfCommits > numberOfCommitsFromCheckpoint) {
             for (externalEvent in currentState.pendingDeduplicationHandlers) {
                 deliverExternalEvent(externalEvent.externalCause)
             }

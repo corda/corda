@@ -103,7 +103,9 @@ class FlowCreator(
             updateCompatibleInDb(runId, true)
             checkpoint = checkpoint.copy(compatible = true)
         }
+
         checkpoint = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
+        checkpoint.checkpointState.numberOfCommits += 1
 
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)

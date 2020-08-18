@@ -219,15 +219,18 @@ class TopLevelTransition(
                         Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.CommitTransaction,
-                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                        Action.ScheduleEvent(Event.DoRemainingWork)
+                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
                 ))
+
                 currentState = currentState.copy(
                     checkpoint = newCheckpoint,
                     pendingDeduplicationHandlers = emptyList(),
                     isFlowResumed = false,
                     isAnyCheckpointPersisted = true
                 )
+
+                actions += Action.IncrementNumberOfCommits(currentState)
+                actions += Action.ScheduleEvent(Event.DoRemainingWork)
             }
             FlowContinuation.ProcessEvents
         }
@@ -253,29 +256,30 @@ class TopLevelTransition(
                             isRemoved = true
                     )
 
-                    if (currentState.isAnyCheckpointPersisted) {
-                        if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
-                            actions.add(Action.RemoveCheckpoint(context.id))
-                        } else {
-                            actions.add(
-                                Action.PersistCheckpoint(
-                                    context.id,
-                                    currentState.checkpoint,
-                                    isCheckpointUpdate = currentState.isAnyCheckpointPersisted
-                                )
-                            )
+                    if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
+                        if (currentState.isAnyCheckpointPersisted) {
+                            actions += Action.RemoveCheckpoint(context.id)
                         }
+                    } else {
+                        actions += Action.PersistCheckpoint(
+                            context.id,
+                            currentState.checkpoint,
+                            isCheckpointUpdate = currentState.isAnyCheckpointPersisted
+                        )
                     }
 
-                    val allSourceSessionIds = currentState.checkpoint.checkpointState.sessions.keys
-                    actions.addAll(arrayOf(
-                        Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
-                            Action.ReleaseSoftLocks(event.softLocksId),
-                            Action.CommitTransaction,
-                            Action.AcknowledgeMessages(pendingDeduplicationHandlers),
-                            Action.RemoveSessionBindings(allSourceSessionIds),
-                            Action.RemoveFlow(context.id, FlowRemovalReason.OrderlyFinish(event.returnValue), currentState)
-                    ))
+                    actions += Action.PersistDeduplicationFacts(pendingDeduplicationHandlers)
+                    actions += Action.ReleaseSoftLocks(event.softLocksId)
+                    actions += Action.CommitTransaction
+                    actions += Action.AcknowledgeMessages(pendingDeduplicationHandlers)
+                    actions += Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
+
+                    if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
+                        actions += Action.IncrementNumberOfCommits(currentState)
+                    }
+
+                    actions += Action.RemoveFlow(context.id, FlowRemovalReason.OrderlyFinish(event.returnValue), currentState)
+
                     sendEndMessages()
                     // Resume to end fiber
                     FlowContinuation.Resume(null)
@@ -360,15 +364,16 @@ class TopLevelTransition(
         return builder {
             val flowStartEvents = currentState.pendingDeduplicationHandlers.filter(::isFlowStartEvent)
             val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
+            currentState = currentState.copy(
+                checkpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED),
+                pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers - flowStartEvents
+            )
             actions += Action.CreateTransaction
             actions += Action.PersistDeduplicationFacts(flowStartEvents)
             actions += Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted)
             actions += Action.CommitTransaction
             actions += Action.AcknowledgeMessages(flowStartEvents)
-            currentState = currentState.copy(
-                checkpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED),
-                pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers - flowStartEvents
-            )
+            actions += Action.IncrementNumberOfCommits(currentState)
             FlowContinuation.ProcessEvents
         }
     }

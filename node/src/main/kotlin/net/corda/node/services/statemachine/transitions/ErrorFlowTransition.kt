@@ -59,32 +59,41 @@ class ErrorFlowTransition(
 
             // If we haven't been removed yet remove the flow.
             if (!currentState.isRemoved) {
+                val pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers
                 val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
 
-                val removeOrPersistCheckpoint = if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
-                    Action.RemoveCheckpoint(context.id)
-                } else {
-                    Action.PersistCheckpoint(context.id, newCheckpoint.copy(flowState = FlowState.Finished), isCheckpointUpdate = currentState.isAnyCheckpointPersisted)
-                }
-
-                actions.addAll(arrayOf(
-                        Action.CreateTransaction,
-                        removeOrPersistCheckpoint,
-                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                        Action.ReleaseSoftLocks(context.id.uuid),
-                        Action.CommitTransaction,
-                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                        Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
-                ))
-
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        pendingDeduplicationHandlers = emptyList(),
-                        isRemoved = true
+                    checkpoint = newCheckpoint,
+                    pendingDeduplicationHandlers = emptyList(),
+                    isRemoved = true
                 )
 
-                val removalReason = FlowRemovalReason.ErrorFinish(allErrors)
-                actions.add(Action.RemoveFlow(context.id, removalReason, currentState))
+                actions += Action.CreateTransaction
+
+                if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
+                    if (currentState.isAnyCheckpointPersisted) {
+                        actions += Action.RemoveCheckpoint(context.id)
+                    }
+                } else {
+                    actions += Action.PersistCheckpoint(
+                        context.id,
+                        newCheckpoint.copy(flowState = FlowState.Finished),
+                        isCheckpointUpdate = currentState.isAnyCheckpointPersisted
+                    )
+                }
+
+                actions += Action.PersistDeduplicationFacts(pendingDeduplicationHandlers)
+                actions += Action.ReleaseSoftLocks(context.id.uuid)
+                actions += Action.CommitTransaction
+
+                if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
+                    actions += Action.IncrementNumberOfCommits(currentState)
+                }
+
+                actions += Action.AcknowledgeMessages(pendingDeduplicationHandlers)
+                actions += Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
+                actions += Action.RemoveFlow(context.id, FlowRemovalReason.ErrorFinish(allErrors), currentState)
+
                 FlowContinuation.Abort
             } else {
                 // Otherwise keep processing events. This branch happens when there are some outstanding initiating

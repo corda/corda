@@ -73,16 +73,17 @@ class UnstartedFlowTransition(
 
     // Create initial checkpoint and acknowledge triggering messages.
     private fun TransitionBuilder.createInitialCheckpoint() {
-        actions.addAll(arrayOf(
-                Action.CreateTransaction,
-                Action.PersistCheckpoint(context.id, currentState.checkpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
-                Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                Action.CommitTransaction,
-                Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
-        ))
+        val pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers
+        val isAnyCheckpointPersisted = currentState.isAnyCheckpointPersisted
         currentState = currentState.copy(
-                pendingDeduplicationHandlers = emptyList(),
-                isAnyCheckpointPersisted = true
+            pendingDeduplicationHandlers = emptyList(),
+            isAnyCheckpointPersisted = true
         )
+        actions += Action.CreateTransaction
+        actions += Action.PersistCheckpoint(context.id, currentState.checkpoint, isCheckpointUpdate = isAnyCheckpointPersisted)
+        actions += Action.PersistDeduplicationFacts(pendingDeduplicationHandlers)
+        actions += Action.CommitTransaction
+        actions += Action.AcknowledgeMessages(pendingDeduplicationHandlers)
+        actions += Action.IncrementNumberOfCommits(currentState)
     }
 }

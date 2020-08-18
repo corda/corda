@@ -384,10 +384,10 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 RULE Throw exception on executeSignalFlowHasStarted action
                 CLASS $actionExecutorClassName
-                METHOD executeSignalFlowHasStarted
-                AT ENTRY
+                METHOD executeCommitTransaction
+                AT EXIT
                 IF readCounter("counter") < 3
-                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("i wish i was a sql exception")
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
                 ENDRULE
                 
                 RULE Log external start flow event
@@ -676,11 +676,10 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 RULE Throw exception on executeSignalFlowHasStarted action
                 CLASS $actionExecutorClassName
-                METHOD executeSignalFlowHasStarted
-                # METHOD executeAcknowledgeMessages
-                AT ENTRY
+                METHOD executeCommitTransaction
+                AT EXIT
                 IF readCounter("counter") < 3
-                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("i wish i was a sql exception")
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
                 ENDRULE
                 
                 RULE Log external start flow event
@@ -1000,10 +999,10 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 RULE Throw exception on executeSignalFlowHasStarted action
                 CLASS $actionExecutorClassName
-                METHOD executeSignalFlowHasStarted
-                AT ENTRY
+                METHOD executeCommitTransaction
+                AT EXIT
                 IF readCounter("counter") < 3
-                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("i wish i was a sql exception")
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
                 ENDRULE
                 
                 RULE Log session init event

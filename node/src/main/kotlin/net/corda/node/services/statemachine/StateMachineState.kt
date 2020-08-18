@@ -129,7 +129,8 @@ data class Checkpoint(
                         emptyMap(),
                         emptySet(),
                         listOf(topLevelSubFlow),
-                        numberOfSuspends = 0
+                        numberOfSuspends = 0,
+                        numberOfCommits = 1
                     ),
                     flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
                     errorState = ErrorState.Clean
@@ -238,12 +239,13 @@ data class Checkpoint(
  */
 @CordaSerializable
 data class CheckpointState(
-        val invocationContext: InvocationContext,
-        val ourIdentity: Party,
-        val sessions: SessionMap, // This must preserve the insertion order!
-        val sessionsToBeClosed: Set<SessionId>,
-        val subFlowStack: List<SubFlow>,
-        val numberOfSuspends: Int
+    val invocationContext: InvocationContext,
+    val ourIdentity: Party,
+    val sessions: SessionMap, // This must preserve the insertion order!
+    val sessionsToBeClosed: Set<SessionId>,
+    val subFlowStack: List<SubFlow>,
+    val numberOfSuspends: Int,
+    var numberOfCommits: Int
 )
 
 /**
