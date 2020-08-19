@@ -588,10 +588,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             throw e
         }
 
-        // This future is used to delay the firing of future-callbacks chain created inside the below database.transaction lambda block
-        // to happen after transaction's committing. This was done to fix a bug: the callback created in [StateMachineManager.start] is
-        // firing flows execution and that was happening before the below transaction committed its changes, meaning, any database change
-        // done within the transaction was not yet visible to started flows.
+        // Only execute futures/callbacks linked to [rootFuture] after the database transaction below is committed.
+        // This ensures that the node is fully ready before starting flows.
         val rootFuture = openFuture<Void?>()
 
         // Do all of this in a database transaction so anything that might need a connection has one.
