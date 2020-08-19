@@ -588,6 +588,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             throw e
         }
 
+        // Only execute futures/callbacks linked to [rootFuture] after the database transaction below is committed.
+        // This ensures that the node is fully ready before starting flows.
+        val rootFuture = openFuture<Void?>()
+
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (resultingNodeInfo, readyFuture) = database.transaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
@@ -609,7 +613,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-            val smmStartedFuture = smm.start(frozenTokenizableServices)
+            val callback = smm.start(frozenTokenizableServices)
+            val smmStartedFuture = rootFuture.map { callback() }
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
@@ -628,6 +633,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             }
             resultingNodeInfo to readyFuture
         }
+
+        rootFuture.captureLater(services.networkMapCache.nodeReady)
 
         readyFuture.map { ready ->
             if (ready) {
