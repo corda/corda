@@ -69,7 +69,7 @@ interface ObjectBuilder {
          * Create an [ObjectBuilderProvider] for the given [LocalTypeInformation.Composable].
          */
         fun makeProvider(typeInformation: LocalTypeInformation.Composable): ObjectBuilderProvider =
-                makeProvider(typeInformation.typeIdentifier, typeInformation.constructor, typeInformation.properties)
+                makeProvider(typeInformation.typeIdentifier, typeInformation.constructor, typeInformation.properties, false)
 
         /**
          * Create an [ObjectBuilderProvider] for the given type, constructor and set of properties.
@@ -79,11 +79,12 @@ interface ObjectBuilder {
          */
         fun makeProvider(typeIdentifier: TypeIdentifier,
                          constructor: LocalConstructorInformation,
-                         properties: Map<String, LocalPropertyInformation>): ObjectBuilderProvider =
-            if (constructor.hasParameters) makeConstructorBasedProvider(properties, typeIdentifier, constructor)
+                         properties: Map<String, LocalPropertyInformation>,
+                         includeAllConstructorParameters: Boolean): ObjectBuilderProvider =
+            if (constructor.hasParameters) makeConstructorBasedProvider(properties, typeIdentifier, constructor, includeAllConstructorParameters)
             else makeGetterSetterProvider(properties, typeIdentifier, constructor)
 
-        private fun makeConstructorBasedProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation): ObjectBuilderProvider {
+        private fun makeConstructorBasedProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation, includeAllConstructorParameters: Boolean): ObjectBuilderProvider {
             val constructorIndices = properties.mapValues { (name, property) ->
                 when (property) {
                     is LocalPropertyInformation.ConstructorPairedProperty -> property.constructorSlot.parameterIndex
@@ -93,6 +94,15 @@ interface ObjectBuilder {
                             "Type ${typeIdentifier.prettyPrint(false)} has constructor arguments, " +
                                     "but property $name is not constructor-paired"
                     )
+                }
+            }.toMutableMap()
+
+            if (includeAllConstructorParameters) {
+                // Add constructor parameters not in the list of properties
+                // so we can use them in object evolution
+                for ((parameterIndex, parameter) in constructor.parameters.withIndex()) {
+                    // Only use the parameters not already matched to properties
+                    constructorIndices.putIfAbsent(parameter.name, parameterIndex)
                 }
             }
 
@@ -203,7 +213,7 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
                          localProperties: Map<String, LocalPropertyInformation>,
                          remoteTypeInformation: RemoteTypeInformation.Composable,
                          mustPreserveData: Boolean): () -> ObjectBuilder {
-            val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties)
+            val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties, true)
 
             val remotePropertyNames = remoteTypeInformation.properties.keys.sorted()
             val reroutedIndices = remotePropertyNames.map { propertyName ->
