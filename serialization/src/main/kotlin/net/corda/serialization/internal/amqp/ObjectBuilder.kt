@@ -124,18 +124,22 @@ interface ObjectBuilder {
             }.toMutableMap()
 
             if (includeAllConstructorParameters) {
-                // Add constructor parameters not in the list of properties
-                // so we can use them in object evolution
-                for ((parameterIndex, parameter) in constructor.parameters.withIndex()) {
-                    // Only use the parameters not already matched to properties
-                    constructorIndices.putIfAbsent(parameter.name, parameterIndex)
-                }
+                addMissingConstructorParameters(constructorIndices, constructor)
             }
 
             val propertySlots = constructorIndices.keys.mapIndexed { slot, name -> name to slot }.toMap()
 
             return ObjectBuilderProvider(propertySlots) {
                 ConstructorBasedObjectBuilder(constructor, constructorIndices.values.toIntArray())
+            }
+        }
+
+        private fun addMissingConstructorParameters(constructorIndices: MutableMap<String, Int>, constructor: LocalConstructorInformation) {
+            // Add constructor parameters not in the list of properties
+            // so we can use them in object evolution
+            for ((parameterIndex, parameter) in constructor.parameters.withIndex()) {
+                // Only use the parameters not already matched to properties
+                constructorIndices.putIfAbsent(parameter.name, parameterIndex)
             }
         }
 
