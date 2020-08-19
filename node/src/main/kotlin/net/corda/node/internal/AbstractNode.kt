@@ -612,7 +612,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
             val callback = smm.start(frozenTokenizableServices)
-            val smmStartedFuture = rootFuture.map { callback.invoke() }
+            val smmStartedFuture = rootFuture.map { callback() }
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
