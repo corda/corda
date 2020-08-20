@@ -147,8 +147,8 @@ class FlowFrameworkTests {
 
         SuspendingFlow.hookBeforeCheckpoint = {}
         SuspendingFlow.hookAfterCheckpoint = {}
-//        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
-//        StaffedFlowHospital.onFlowResuscitated.clear()
+        StaffedFlowHospital.onFlowResuscitated.clear()
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
     }
 
     @Test(timeout=300_000)
