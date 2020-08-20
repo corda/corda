@@ -61,8 +61,7 @@ internal class ActionExecutorImpl(
             is Action.RemoveFlow -> executeRemoveFlow(action)
             is Action.CreateTransaction -> executeCreateTransaction()
             is Action.RollbackTransaction -> executeRollbackTransaction()
-            is Action.CommitTransaction -> executeCommitTransaction()
-            is Action.IncrementNumberOfCommits -> executeIncrementNumberOfCommits(action)
+            is Action.CommitTransaction -> executeCommitTransaction(action)
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
             is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
@@ -220,17 +219,14 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     @Throws(SQLException::class)
-    private fun executeCommitTransaction() {
+    private fun executeCommitTransaction(action: Action.CommitTransaction) {
         try {
             contextTransaction.commit()
         } finally {
             contextTransaction.close()
             contextTransactionOrNull = null
         }
-    }
-
-    private fun executeIncrementNumberOfCommits(action: Action.IncrementNumberOfCommits) {
-        action.currentState.checkpoint.checkpointState.numberOfCommits += 1
+        action.currentState.run { numberOfCommits = checkpoint.checkpointState.numberOfCommits }
     }
 
     @Suppress("TooGenericExceptionCaught")

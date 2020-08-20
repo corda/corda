@@ -145,11 +145,9 @@ sealed class Action {
     /**
      * Commit the current database transaction.
      */
-    object CommitTransaction : Action() {
+    data class CommitTransaction(val currentState: StateMachineState) : Action() {
         override fun toString() = "CommitTransaction"
     }
-
-    data class IncrementNumberOfCommits(val currentState: StateMachineState) : Action()
 
     /**
      * Execute the specified [operation].

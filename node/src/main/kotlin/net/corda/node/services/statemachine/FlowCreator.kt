@@ -105,7 +105,6 @@ class FlowCreator(
         }
 
         checkpoint = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-        checkpoint.checkpointState.numberOfCommits += 1
 
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
@@ -116,6 +115,7 @@ class FlowCreator(
             anyCheckpointPersisted = true,
             reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
                 ?: if (reloadCheckpointAfterSuspend) checkpoint.checkpointState.numberOfSuspends else null,
+            numberOfCommits = checkpoint.checkpointState.numberOfCommits,
             lock = lock
         )
         injectOldProgressTracker(progressTracker, fiber.logic)
@@ -163,6 +163,7 @@ class FlowCreator(
             fiber = flowStateMachineImpl,
             anyCheckpointPersisted = existingCheckpoint != null,
             reloadCheckpointAfterSuspendCount = if (reloadCheckpointAfterSuspend) 0 else null,
+            numberOfCommits = 0,
             lock = Semaphore(1),
             deduplicationHandler = deduplicationHandler,
             senderUUID = senderUUID
@@ -244,6 +245,7 @@ class FlowCreator(
         fiber: FlowStateMachineImpl<*>,
         anyCheckpointPersisted: Boolean,
         reloadCheckpointAfterSuspendCount: Int?,
+        numberOfCommits: Int,
         lock: Semaphore,
         deduplicationHandler: DeduplicationHandler? = null,
         senderUUID: String? = null
@@ -261,6 +263,7 @@ class FlowCreator(
             flowLogic = fiber.logic,
             senderUUID = senderUUID,
             reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount,
+            numberOfCommits = numberOfCommits,
             lock = lock
         )
     }

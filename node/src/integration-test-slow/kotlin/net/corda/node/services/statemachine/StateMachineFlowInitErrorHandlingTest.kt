@@ -6,6 +6,7 @@ import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.CheckpointStorage
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
@@ -382,12 +383,20 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSignalFlowHasStarted action
+                RULE Flag when commit transaction reached
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
+                AT ENTRY
+                IF true
+                DO flag("commit")
+                ENDRULE
+                
+                RULE Throw exception on executeSignalFlowHasStarted action
+                CLASS ${DatabaseTransaction::class.java.name}
+                METHOD commit
                 AT EXIT
-                IF readCounter("counter") < 3
-                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
+                IF readCounter("counter") < 3 && flagged("commit")
+                DO incrementCounter("counter"); clear("commit"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
                 ENDRULE
                 
                 RULE Log external start flow event
@@ -674,12 +683,20 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSignalFlowHasStarted action
+                RULE Flag when commit transaction reached
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
+                AT ENTRY
+                IF true
+                DO flag("commit")
+                ENDRULE
+                
+                RULE Throw exception on executeSignalFlowHasStarted action
+                CLASS ${DatabaseTransaction::class.java.name}
+                METHOD commit
                 AT EXIT
-                IF readCounter("counter") < 3
-                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
+                IF readCounter("counter") < 3 && flagged("commit")
+                DO incrementCounter("counter"); clear("commit"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
                 ENDRULE
                 
                 RULE Log external start flow event
@@ -997,12 +1014,20 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSignalFlowHasStarted action
+               RULE Flag when commit transaction reached
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
+                AT ENTRY
+                IF true
+                DO flag("commit")
+                ENDRULE
+                
+                RULE Throw exception on executeSignalFlowHasStarted action
+                CLASS ${DatabaseTransaction::class.java.name}
+                METHOD commit
                 AT EXIT
-                IF readCounter("counter") < 3
-                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
+                IF readCounter("counter") < 3 && flagged("commit")
+                DO incrementCounter("counter"); clear("commit"); traceln("Throwing exception"); throw new java.sql.SQLException("you thought it worked didnt you!", "1")
                 ENDRULE
                 
                 RULE Log session init event

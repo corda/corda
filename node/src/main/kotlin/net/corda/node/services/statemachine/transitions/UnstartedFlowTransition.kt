@@ -27,14 +27,14 @@ class UnstartedFlowTransition(
                 createInitialCheckpoint()
             }
 
-            actions.add(Action.SignalFlowHasStarted(context.id))
+            actions += Action.SignalFlowHasStarted(context.id)
 
             if (unstarted.flowStart is FlowStart.Initiated) {
                 initialiseInitiatedSession(unstarted.flowStart)
             }
 
             currentState = currentState.copy(isFlowResumed = true)
-            actions.add(Action.CreateTransaction)
+            actions += Action.CreateTransaction
             FlowContinuation.Resume(null)
         }
     }
@@ -73,17 +73,14 @@ class UnstartedFlowTransition(
 
     // Create initial checkpoint and acknowledge triggering messages.
     private fun TransitionBuilder.createInitialCheckpoint() {
-        val pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers
-        val isAnyCheckpointPersisted = currentState.isAnyCheckpointPersisted
-        currentState = currentState.copy(
+        currentState = startingState.copy(
             pendingDeduplicationHandlers = emptyList(),
             isAnyCheckpointPersisted = true
         )
         actions += Action.CreateTransaction
-        actions += Action.PersistCheckpoint(context.id, currentState.checkpoint, isCheckpointUpdate = isAnyCheckpointPersisted)
-        actions += Action.PersistDeduplicationFacts(pendingDeduplicationHandlers)
-        actions += Action.CommitTransaction
-        actions += Action.AcknowledgeMessages(pendingDeduplicationHandlers)
-        actions += Action.IncrementNumberOfCommits(currentState)
+        actions += Action.PersistCheckpoint(context.id, startingState.checkpoint, isCheckpointUpdate = startingState.isAnyCheckpointPersisted)
+        actions += Action.PersistDeduplicationFacts(startingState.pendingDeduplicationHandlers)
+        actions += Action.CommitTransaction(currentState)
+        actions += Action.AcknowledgeMessages(startingState.pendingDeduplicationHandlers)
     }
 }

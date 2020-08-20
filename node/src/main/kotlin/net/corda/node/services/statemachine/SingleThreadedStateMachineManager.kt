@@ -587,8 +587,8 @@ internal class SingleThreadedStateMachineManager(
      *
      * @param currentState The current state of the flow, used to extract processed events (held in [StateMachineState.pendingDeduplicationHandlers])
      *
-     * @param numberOfCommitsFromCheckpoint The number of commits that the checkpoint loaded from the database had,
-     * to compare to the commits the flow has currently reached
+     * @param numberOfCommitsFromCheckpoint The number of commits that the checkpoint loaded from the database has, to compare to the
+     * commits the flow has currently reached
      */
     private fun extractAndScheduleEventsForRetry(
         oldEventQueue: Channel<Event>,
@@ -605,7 +605,7 @@ internal class SingleThreadedStateMachineManager(
         } while (event != null)
 
         // Only redeliver events if they were not persisted to the database
-        if (currentState.checkpoint.checkpointState.numberOfCommits > numberOfCommitsFromCheckpoint) {
+        if (currentState.numberOfCommits >= numberOfCommitsFromCheckpoint) {
             for (externalEvent in currentState.pendingDeduplicationHandlers) {
                 deliverExternalEvent(externalEvent.externalCause)
             }
