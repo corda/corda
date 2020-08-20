@@ -92,6 +92,7 @@ dependencies {
 jar {
     from sourceSets.main.output
     dependsOn clientInstall
+    archiveClassifier = 'thin'
 }
 
 def docker_dir = file("$project.buildDir/docker")
