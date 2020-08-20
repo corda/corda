@@ -36,6 +36,8 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
+import net.corda.node.services.statemachine.interceptors.CustomTransitionInterceptor
+import net.corda.node.services.statemachine.interceptors.CustomTransitionInterceptorHolder
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
@@ -57,6 +59,7 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+import kotlin.reflect.full.isSubclassOf
 import kotlin.streams.toList
 
 /**
@@ -113,7 +116,7 @@ internal class SingleThreadedStateMachineManager(
     private lateinit var flowCreator: FlowCreator
 
     override val flowHospital: StaffedFlowHospital = makeFlowHospital()
-    private val transitionExecutor = makeTransitionExecutor()
+    private lateinit var transitionExecutor: TransitionExecutor
     private val reloadCheckpointAfterSuspend = serviceHub.configuration.reloadCheckpointAfterSuspend
 
     override val allStateMachines: List<FlowLogic<*>>
@@ -162,6 +165,7 @@ internal class SingleThreadedStateMachineManager(
                 )
         )
         this.checkpointSerializationContext = checkpointSerializationContext
+        transitionExecutor = makeTransitionExecutor()
         val actionExecutor = makeActionExecutor(checkpointSerializationContext)
         when (startMode) {
             StateMachineManager.StartMode.ExcludingPaused -> {}
@@ -906,12 +910,31 @@ internal class SingleThreadedStateMachineManager(
 
     private fun makeTransitionExecutor(): TransitionExecutor {
         val interceptors = ArrayList<TransitionInterceptor>()
-        interceptors.add { HospitalisingInterceptor(flowHospital, it) }
+        interceptors += { HospitalisingInterceptor(flowHospital, it) }
         if (serviceHub.configuration.devMode) {
-            interceptors.add { DumpHistoryOnErrorInterceptor(it) }
+            interceptors += { delegate -> DumpHistoryOnErrorInterceptor(delegate) }
         }
         if (logger.isDebugEnabled) {
-            interceptors.add { PrintingInterceptor(it) }
+            interceptors += { delegate -> PrintingInterceptor(delegate) }
+        }
+        serviceHub.configuration.customTransitionInterceptor?.let { name ->
+            val interceptorClass = serviceHub.cordappProvider.cordapps.flatMap { it.services }.singleOrNull { it.name == name }
+            interceptorClass?.let { clazz ->
+                if (clazz.kotlin.isSubclassOf(CustomTransitionInterceptor::class)) {
+                    try {
+                        interceptors += { delegate ->
+                            CustomTransitionInterceptorHolder(
+                                delegate,
+                                uncheckedCast(serviceHub.cordaService(clazz))
+                            )
+                        }
+                    } catch (e: IllegalStateException) {
+                        logger.info("Custom transition interceptor [$name] does is not annotated with @CordaService, will not load")
+                    }
+                } else {
+                    logger.info("Custom transition interceptor [$name] does not implement [${CustomTransitionInterceptor::class.qualifiedName}], will not load")
+                }
+            } ?: logger.info("Could not find custom transition interceptor [$name], will not load (OR THERE WAS MULTIPLE)")
         }
         val transitionExecutor: TransitionExecutor = TransitionExecutorImpl(secureRandom, database)
         return interceptors.fold(transitionExecutor) { executor, interceptor -> interceptor(executor) }
