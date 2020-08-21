@@ -24,6 +24,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
+import net.corda.node.services.StateMachineCleanUp
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.notary.jpa.JPAUniquenessProvider
 import net.corda.testing.core.ALICE_NAME
@@ -49,7 +50,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class VaultObserverExceptionTest {
+class VaultObserverExceptionTest : StateMachineCleanUp() {
     companion object {
 
         val log = contextLogger()
@@ -62,9 +63,6 @@ class VaultObserverExceptionTest {
 
     @After
     fun tearDown() {
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
-        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
-        StaffedFlowHospital.onFlowAdmitted.clear()
         DbListenerService.onError = null
         DbListenerService.safeSubscription = true
         DbListenerService.onNextVisited = {}

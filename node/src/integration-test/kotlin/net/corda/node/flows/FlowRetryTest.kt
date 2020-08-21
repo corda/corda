@@ -17,6 +17,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.node.services.StateMachineCleanUp
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowTimeoutException
 import net.corda.node.services.statemachine.StaffedFlowHospital
@@ -29,7 +30,6 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.hibernate.exception.ConstraintViolationException
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.lang.management.ManagementFactory
@@ -45,7 +45,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class FlowRetryTest {
+class FlowRetryTest : StateMachineCleanUp() {
 
     private companion object {
         val user = User("mark", "dadada", setOf(Permissions.all()))
@@ -60,11 +60,6 @@ class FlowRetryTest {
         WrappedTransientConnectionFailureFlow.retryCount = -1
         GeneralExternalFailureFlow.retryCount = -1
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { true }
-    }
-
-    @After
-    fun cleanUp() {
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 
     @Test(timeout = 300_000)

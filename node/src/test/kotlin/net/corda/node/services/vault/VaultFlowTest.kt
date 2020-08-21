@@ -11,6 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.node.services.StateMachineCleanUp
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.DummyCommandData
 import net.corda.testing.core.singleIdentity
@@ -30,7 +31,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class VaultFlowTest {
+class VaultFlowTest : StateMachineCleanUp() {
     private lateinit var mockNetwork: MockNetwork
     private lateinit var partyA: StartedMockNode
     private lateinit var partyB: StartedMockNode
@@ -55,7 +56,6 @@ class VaultFlowTest {
     @After
     fun tearDown() {
         mockNetwork.stopNodes()
-        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
     }
 
     @Test(timeout=300_000)

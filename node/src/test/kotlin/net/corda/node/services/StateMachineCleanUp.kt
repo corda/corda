@@ -24,5 +24,6 @@ abstract class StateMachineCleanUp {
         StaffedFlowHospital.onFlowErrorPropagated.clear()
         StaffedFlowHospital.onFlowResuscitated.clear()
         StaffedFlowHospital.onFlowAdmitted.clear()
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 }
