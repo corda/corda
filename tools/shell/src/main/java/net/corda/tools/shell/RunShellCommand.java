@@ -25,7 +25,7 @@ import static java.util.Comparator.comparing;
 // is the closest you can get in Kotlin to raw types.
 
 @Named("run")
-public class RunShellCommand extends InteractiveShellCommand {
+public class RunShellCommand extends CordaRpcOpsShellCommand {
 
     private static final Logger logger = LoggerFactory.getLogger(RunShellCommand.class);
 

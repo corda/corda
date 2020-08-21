@@ -86,7 +86,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = node.rpcOps
+                        ops = node.cordaRPCOps
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password

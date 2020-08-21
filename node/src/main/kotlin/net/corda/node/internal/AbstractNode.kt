@@ -37,7 +37,8 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
-import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
+import net.corda.core.internal.messaging.FlowManagerRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
@@ -71,6 +72,8 @@ import net.corda.djvm.source.EmptyApi
 import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
+import net.corda.node.internal.attachments.AttachmentTrustInfoRPCOpsImpl
+import net.corda.node.internal.checkpoints.FlowManagerRPCOpsImpl
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
@@ -128,6 +131,7 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowMonitor
+import net.corda.node.services.statemachine.FlowOperator
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
@@ -336,6 +340,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory, DBCheckpointStorage.MAX_CLIENT_ID_LENGTH)
+	val flowOperator = FlowOperator(smm, platformClock)
     private val schedulerService = makeNodeSchedulerService()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
@@ -392,21 +397,28 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return this
     }
 
-    /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumperImpl): CordaRPCOps {
-        val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
+    /** The implementation of the [RPCOps] interfaces used by this node. */
+    open fun makeRPCOps(cordappLoader: CordappLoader): List<RPCOps> {
+        val cordaRPCOpsImpl = Pair(CordaRPCOps::class.java, CordaRPCOpsImpl(
                 services,
                 smm,
-                flowStarter,
-                checkpointDumper
+                flowStarter
         ) {
             shutdownExecutor.submit(::stop)
-        }.also { it.closeOnStop() }
-        val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
-        // Mind that order is relevant here.
-        proxies += ::AuthenticatedRpcOpsProxy
-        proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
-        return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
+        }.also { it.closeOnStop() })
+
+        val checkpointRPCOpsImpl = Pair(FlowManagerRPCOps::class.java, FlowManagerRPCOpsImpl(checkpointDumper))
+
+        val attachmentTrustInfoRPCOps = Pair(AttachmentTrustInfoRPCOps::class.java, AttachmentTrustInfoRPCOpsImpl(services.attachmentTrustCalculator))
+
+        return listOf(cordaRPCOpsImpl, checkpointRPCOpsImpl, attachmentTrustInfoRPCOps).map { rpcOpsImplPair ->
+            // Mind that order of proxies is important
+            val targetInterface = rpcOpsImplPair.first
+            val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(rpcOpsImplPair.second, targetInterface)
+            val stage2Proxy = ThreadContextAdjustingRpcOpsProxy.proxy(stage1Proxy, targetInterface, cordappLoader.appClassLoader)
+
+            stage2Proxy
+        }
     }
 
     private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
@@ -511,7 +523,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
+        val rpcOps = makeRPCOps(cordappLoader)
         startShell()
         networkMapClient?.start(trustRoot)
 
@@ -591,7 +603,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
-                    smm,
+                    flowOperator,
                     configuration.flowMonitorPeriodMillis,
                     configuration.flowMonitorSuspensionLoggingThresholdMillis
             )
@@ -621,7 +633,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** Subclasses must override this to create a "started" node of the desired type, using the provided machinery. */
-    abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): S
+    abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: List<RPCOps>, notaryService: NotaryService?): S
 
     private fun verifyCheckpointsCompatible(tokenizableServices: List<Any>) {
         try {
@@ -1033,7 +1045,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected abstract fun makeMessagingService(): MessagingService
 
-    protected abstract fun startMessagingService(rpcOps: RPCOps,
+    protected abstract fun startMessagingService(rpcOps: List<RPCOps>,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)

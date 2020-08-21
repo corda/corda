@@ -227,10 +227,6 @@ class DriverDSLImpl(
         }
     }
 
-    /**
-     * @param pollInterval the interval to wait between attempting to connect, if
-     * a connection attempt fails.
-     */
     private fun establishRpc(config: NodeConfig,
                              processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
@@ -297,7 +293,7 @@ class DriverDSLImpl(
             p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()
     ): NodeConfig {
         val baseDirectory = baseDirectory(providedName).createDirectories()
-        val rpcAddress = portAllocation.nextHostAndPort()
+        val rpcAddress = parameters.rpcAddress ?: portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val users = parameters.rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val czUrlConfig = when (compatibilityZone) {

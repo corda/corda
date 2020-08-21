@@ -8467,8 +8467,70 @@ public class net.corda.client.rpc.RPCException extends net.corda.core.CordaRunti
 public @interface net.corda.client.rpc.RPCSinceVersion
   public abstract int version()
 ##
+public class net.corda.client.rpc.UnrecoverableRPCException extends net.corda.client.rpc.RPCException
+  public <init>(String, Throwable)
+  public <init>(String, Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker)
+##
 public final class net.corda.client.rpc.UtilsKt extends java.lang.Object
   public static final void notUsed(rx.Observable<T>)
+##
+public final class net.corda.client.rpc.ext.MultiRPCClient extends java.lang.Object implements java.lang.AutoCloseable
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.identity.CordaX500Name)
+  public <init>(java.util.List, Class, String, String, java.util.Set, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.identity.CordaX500Name, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, net.corda.client.rpc.CordaRPCClientConfiguration)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, Class<I>, String, String, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader)
+  public <init>(java.util.List, Class, String, String, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, ClassLoader, net.corda.client.rpc.CordaRPCClientConfiguration)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class, String, String, ClassLoader, net.corda.client.rpc.CordaRPCClientConfiguration, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, java.util.Set<? extends net.corda.core.serialization.SerializationCustomSerializer<?, ?>>, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.identity.CordaX500Name)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class, String, String, java.util.Set, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.identity.CordaX500Name, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, net.corda.client.rpc.CordaRPCClientConfiguration)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class, String, String, net.corda.client.rpc.CordaRPCClientConfiguration, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class, String, String, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class<I>, String, String, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader)
+  public <init>(net.corda.core.utilities.NetworkHostAndPort, Class, String, String, net.corda.core.messaging.ClientRpcSslOptions, ClassLoader, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public final boolean addConnectionListener(net.corda.client.rpc.ext.RPCConnectionListener<I>)
+  public void close()
+  public final boolean removeConnectionListener(net.corda.client.rpc.ext.RPCConnectionListener<I>)
+  @NotNull
+  public final java.util.concurrent.CompletableFuture<net.corda.client.rpc.RPCConnection<I>> start()
+  public final void stop()
+  public static final net.corda.client.rpc.ext.MultiRPCClient$Companion Companion
+##
+public interface net.corda.client.rpc.ext.RPCConnectionListener
+  public abstract void onConnect(net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>)
+  public abstract void onDisconnect(net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>)
+  public abstract void onPermanentFailure(net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext<I>)
+##
+public static interface net.corda.client.rpc.ext.RPCConnectionListener$ConnectionContext
+  @Nullable
+  public abstract net.corda.client.rpc.RPCConnection<I> getConnectionOpt()
+  @Nullable
+  public abstract Throwable getThrowableOpt()
+  @NotNull
+  public abstract String getUserName()
+##
+public final class net.corda.client.rpc.reconnect.CouldNotStartFlowException extends net.corda.client.rpc.RPCException
+  public <init>()
+  public <init>(Throwable)
+  public <init>(Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker)
 ##
 public final class net.corda.finance.test.CashSchema extends java.lang.Object
   public static final net.corda.finance.test.CashSchema INSTANCE

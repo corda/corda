@@ -14,7 +14,6 @@ import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
@@ -177,10 +176,10 @@ class RPCServer(
                 val groupedMethods = with(interfaceClass) {
                     /*
                      * Until version 4.3, rpc calls did not include class names.
-                     * Up to this version, only CordaRPCOps and InternalCordaRPCOps were supported.
+                     * Up to this version, only CordaRPCOps was supported.
                      * So, for these classes methods are registered without their class name as well to preserve backwards compatibility.
                      */
-                    if(interfaceClass == CordaRPCOps::class.java || interfaceClass == InternalCordaRPCOps::class.java) {
+                    if (interfaceClass == CordaRPCOps::class.java) {
                         methods.groupBy { it.name }
                     } else {
                         methods.groupBy { interfaceClass.name + CLASS_METHOD_DIVIDER + it.name }

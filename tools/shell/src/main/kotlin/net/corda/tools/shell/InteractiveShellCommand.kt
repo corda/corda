@@ -1,23 +1,24 @@
 package net.corda.tools.shell
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.type.TypeFactory
+import net.corda.core.messaging.RPCOps
 import org.crsh.command.BaseCommand
 import org.crsh.shell.impl.command.CRaSHSession
 
 /**
  * Simply extends CRaSH BaseCommand to add easy access to the RPC ops class.
  */
-open class InteractiveShellCommand : BaseCommand() {
-    fun ops() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).rpcOps
-    fun ansiProgressRenderer() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).ansiProgressRenderer
-    fun objectMapper(classLoader: ClassLoader?): ObjectMapper {
-        val om = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).yamlInputMapper
-        if (classLoader != null) {
-            om.typeFactory = TypeFactory.defaultInstance().withClassLoader(classLoader)
-        }
-        return om
+internal abstract class InteractiveShellCommand<T : RPCOps> : BaseCommand() {
+
+    abstract val rpcOpsClass: Class<out T>
+
+    @Suppress("UNCHECKED_CAST")
+    fun ops(): T {
+        val cRaSHSession = context.session as CRaSHSession
+        val authInfo = cRaSHSession.authInfo as SshAuthInfo
+        return authInfo.getOrCreateRpcOps(rpcOpsClass)
     }
+
+    fun ansiProgressRenderer() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).ansiProgressRenderer
 
     fun isSsh() = ((context.session as CRaSHSession).authInfo as CordaSSHAuthInfo).isSsh
 }
