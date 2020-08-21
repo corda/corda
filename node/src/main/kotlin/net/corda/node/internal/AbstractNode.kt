@@ -266,7 +266,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         metricRegistry,
         cacheFactory,
         database,
-        configuration.devMode
+        configuration.devMode,
+        configuration.lowMemoryMode
     ).tokenize()
     val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
     @Suppress("LeakingThis")
@@ -731,7 +732,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 configuration.cordappDirectories,
                 versionInfo,
                 extraCordapps = generatedCordapps,
-                signerKeyFingerprintBlacklist = blacklistedKeys
+                signerKeyFingerprintBlacklist = blacklistedKeys,
+                lowMemoryMode = configuration.lowMemoryMode
         )
     }
 
