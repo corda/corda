@@ -50,6 +50,9 @@ repositories {
     }
 }
 
+evaluationDependsOn("cordapp")
+evaluationDependsOn("web")
+
 dependencies {
     compile "commons-io:commons-io:$commons_io_version"
     compile project(":samples:irs-demo:web")
@@ -83,9 +86,6 @@ task slowIntegrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
     classpath = sourceSets.slowIntegrationTest.runtimeClasspath
 }
-
-evaluationDependsOn("cordapp")
-evaluationDependsOn("web")
 
 task systemTest(type: Test, dependsOn: ["cordapp:prepareDockerNodes", "web:generateDockerCompose"]) {
     testClassesDirs = sourceSets.systemTest.output.classesDirs
