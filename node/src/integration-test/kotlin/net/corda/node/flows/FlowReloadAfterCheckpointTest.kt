@@ -21,6 +21,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.node.services.StateMachineCleanUp
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.FlowTimeoutException
@@ -41,7 +42,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class FlowReloadAfterCheckpointTest {
+class FlowReloadAfterCheckpointTest : StateMachineCleanUp() {
 
     private companion object {
         private val DEFAULT_TIMEOUT = Duration.ofSeconds(10)
