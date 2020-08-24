@@ -249,6 +249,7 @@ abstract class StateMachineErrorHandlingTest {
     // Internal use for testing only!!
     @StartableByRPC
     class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
+        @Suspendable
         override fun call(): HospitalCounts =
             HospitalCounts(
                 serviceHub.cordaService(HospitalCounter::class.java).dischargedCounter,
