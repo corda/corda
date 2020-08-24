@@ -146,8 +146,8 @@ class FlowFrameworkTests : StateMachineCleanUp() {
         mockNet.stopNodes()
         receivedSessionMessages.clear()
 
-        SuspendingFlow.hookBeforeCheckpoint = {}
-        SuspendingFlow.hookAfterCheckpoint = {}
+        SuspendingFlow.hookBeforeCheckpoint = null
+        SuspendingFlow.hookAfterCheckpoint = null
     }
 
     @Test(timeout=300_000)
@@ -1250,14 +1250,14 @@ internal class ExceptionFlow<E : Exception>(val exception: () -> E) : FlowLogic<
 internal class SuspendingFlow : FlowLogic<Unit>() {
 
     companion object {
-        var hookBeforeCheckpoint: FlowStateMachine<*>.() -> Unit = {}
-        var hookAfterCheckpoint: FlowStateMachine<*>.() -> Unit = {}
+        var hookBeforeCheckpoint: (FlowStateMachine<*>.() -> Unit)? = null
+        var hookAfterCheckpoint: (FlowStateMachine<*>.() -> Unit)? = null
     }
 
     @Suspendable
     override fun call() {
-        stateMachine.hookBeforeCheckpoint()
+        hookBeforeCheckpoint?.invoke(stateMachine)
         stateMachine.suspend(FlowIORequest.ForceCheckpoint, maySkipCheckpoint = false) // flow checkpoints => checkpoint is in DB
-        stateMachine.hookAfterCheckpoint()
+        hookAfterCheckpoint?.invoke(stateMachine)
     }
 }
