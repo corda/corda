@@ -5,6 +5,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.Checkpoint
@@ -37,6 +38,10 @@ class TopLevelTransition(
         val event: Event
 ) : Transition {
 
+    private companion object {
+        val log = contextLogger()
+    }
+
     @Suppress("ComplexMethod", "TooGenericExceptionCaught")
     override fun transition(): TransitionResult {
         return try {
@@ -63,11 +68,11 @@ class TopLevelTransition(
                 is Event.OvernightObservation -> overnightObservationTransition()
                 is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
                 is Event.Pause -> pausedFlowTransition()
-                is Event.TerminateSessions -> terminateSessionsTransition(event)
             }
         } catch (t: Throwable) {
             // All errors coming from the transition should be sent back to the flow
             // Letting the flow re-enter standard error handling
+            log.error("Error occurred while creating transition for event: $event", t)
             builder { resumeFlowLogic(t) }
         }
     }
@@ -399,18 +404,6 @@ class TopLevelTransition(
                 )
             )
             FlowContinuation.Abort
-        }
-    }
-
-    private fun terminateSessionsTransition(event: Event.TerminateSessions): TransitionResult {
-        return builder {
-            val sessions = event.sessions
-            val newCheckpoint = currentState.checkpoint
-                .removeSessions(sessions)
-                .removeSessionsToBeClosed(sessions)
-            currentState = currentState.copy(checkpoint = newCheckpoint)
-            actions.add(Action.RemoveSessionBindings(sessions))
-            FlowContinuation.ProcessEvents
         }
     }
 }
