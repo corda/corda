@@ -480,7 +480,8 @@ class CordaRPCClient private constructor(
                 // If the client has explicitly provided a set of custom serializers, avoid performing any scanning and use these instead.
                 val discoveredCustomSerializers = customSerializers ?: createInstancesOfClassesImplementing(
                         serializationClassLoader,
-                        SerializationCustomSerializer::class.java
+                        SerializationCustomSerializer::class.java,
+                        lowMemoryMode = lowMemoryMode
                 )
 
                 val serializationWhitelists = ServiceLoader.load(

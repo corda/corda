@@ -21,8 +21,8 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
  */
 @StubOutForDJVM
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
-                                                  classVersionRange: IntRange? = null): Set<T> {
-    return getNamesOfClassesImplementing(classloader, clazz, classVersionRange)
+                                                  classVersionRange: IntRange? = null, lowMemoryMode: Boolean = false): Set<T> {
+    return getNamesOfClassesImplementing(classloader, clazz, classVersionRange, lowMemoryMode)
         .map { classloader.loadClass(it).asSubclass(clazz) }
         .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
 }
@@ -38,9 +38,10 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
  */
 @StubOutForDJVM
 fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
-                                           classVersionRange: IntRange? = null): Set<String> {
+                                           classVersionRange: IntRange? = null, lowMemoryMode: Boolean): Set<String> {
     return ClassGraph().overrideClassLoaders(classloader)
         .enableURLScheme(attachmentScheme)
+            .setMaxBufferedJarRAMSize((if (lowMemoryMode) 1 else 64) * 1024 * 1024)
         .ignoreParentClassLoaders()
         .enableClassInfo()
         .pooledScan()
