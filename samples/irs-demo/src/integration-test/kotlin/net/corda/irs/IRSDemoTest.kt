@@ -50,30 +50,50 @@ class IRSDemoTest {
     private val futureDate: LocalDate = currentDate.plusMonths(6)
     private val maxWaitTime: Duration = 150.seconds
 
-    var globalTimer:Long = 0
-    var localTimer: Long = 0
+    private class Timer(val timerName: String){
+
+        private var timerInMilliSeconds: Long = 0
+
+        fun reset(checkpointName: String = String()) {
+            timerInMilliSeconds = System.currentTimeMillis()
+            log.info("$timerName - $checkpointName - Timer reset")
+        }
+
+        fun printElapsedTime(checkpointName: String) {
+            val elapsedTimeInMilliSec = calculatedElapsedTime(timerInMilliSeconds)
+            val elapsedTimeStr = getElapsedTimeAsStandardisedString(elapsedTimeInMilliSec)
+
+            log.info("$timerName - $checkpointName - Elapsed time: $elapsedTimeStr ($elapsedTimeInMilliSec milliseconds)")
+        }
+
+        private fun calculatedElapsedTime(startTimeInMillis: Long) = System.currentTimeMillis() - startTimeInMillis
+        private fun getElapsedTimeAsStandardisedString(timeInMilliseconds: Long) = Duration.ofMillis(timeInMilliseconds).toString()
+    }
+
+    private val globalTimer = Timer("Global timer")
+    private val localTimer = Timer("Local timer")
 
     @Test(timeout=300_000)
     fun `runs IRS demo`() {
 
-        startGlobalTimer()
+        globalTimer.reset("At the top of the test")
 
-        startLocalTimer("DriverParameters")
+        localTimer.reset("DriverParameters")
         val driver = DriverParameters(
                 useTestClock = true,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = rpcUsers)),
                 cordappsForAllNodes = FINANCE_CORDAPPS + cordappWithPackages("net.corda.irs")
         )
-        stopLocalTimer("DriverParameters")
-        printGlobalTimerElapsedTime("DriverParameters")
+        localTimer.printElapsedTime("DriverParameters")
+        globalTimer.printElapsedTime("DriverParameters")
 
-        startLocalTimer("springDriver1")
+        localTimer.reset("springDriver1")
         springDriver(driver) {
-            stopLocalTimer("springDriver1")
+            localTimer.printElapsedTime("springDriver1")
 
-            printGlobalTimerElapsedTime("Entered lambda spring driver")
+            globalTimer.printElapsedTime("Entered lambda spring driver")
 
-            startLocalTimer("starting nodes")
+            localTimer.reset("starting nodes")
             val (nodeA, nodeB, controller) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = rpcUsers),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = rpcUsers),
@@ -81,118 +101,71 @@ class IRSDemoTest {
                     defaultNotaryNode
             ).map { it.getOrThrow() }
             log.info("All nodes started")
-            stopLocalTimer("starting nodes")
+            localTimer.printElapsedTime("starting nodes")
 
-            printGlobalTimerElapsedTime("all nodes started")
+            globalTimer.printElapsedTime("all nodes started")
 
-            startLocalTimer("startSpringBootWebapp")
+            localTimer.reset("startSpringBootWebapp")
             val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(controller, nodeA, nodeB).map {
                 startSpringBootWebapp(IrsDemoWebApplication::class.java, it, "/api/irs/demodate")
             }.map { it.getOrThrow().listenAddress }
             log.info("All webservers started")
-            stopLocalTimer("startSpringBootWebapp")
+            localTimer.printElapsedTime("startSpringBootWebapp")
 
-            printGlobalTimerElapsedTime("startSpringBootWebapp")
+            globalTimer.printElapsedTime("startSpringBootWebapp")
 
-            startLocalTimer("JacksonSupport.createDefaultMapper")
+            localTimer.reset("JacksonSupport.createDefaultMapper")
             val (controllerApi, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
                 val mapper = JacksonSupport.createDefaultMapper(it.first.rpc)
                 registerFinanceJSONMappers(mapper)
                 registerIRSModule(mapper)
                 HttpApi.fromHostAndPort(it.second, "api/irs", mapper = mapper)
             }
-            stopLocalTimer("JacksonSupport.createDefaultMapper")
-            printGlobalTimerElapsedTime("JacksonSupport.createDefaultMapper")
+            localTimer.printElapsedTime("JacksonSupport.createDefaultMapper")
+            globalTimer.printElapsedTime("JacksonSupport.createDefaultMapper")
 
             val nextFixingDates = getFixingDateObservable(nodeA.rpcAddress)
             val numADeals = getTradeCount(nodeAApi)
             val numBDeals = getTradeCount(nodeBApi)
-            printGlobalTimerElapsedTime("Get fixing date observable")
+            globalTimer.printElapsedTime("Get fixing date observable")
 
-            startLocalTimer("runUploadRates")
+            localTimer.reset("runUploadRates")
             runUploadRates(controllerApi)
-            stopLocalTimer("runUploadRates")
-            printGlobalTimerElapsedTime("runUploadRates")
+            localTimer.printElapsedTime("runUploadRates")
+            globalTimer.printElapsedTime("runUploadRates")
 
-            startLocalTimer("runTrade")
+            localTimer.reset("runTrade")
             runTrade(nodeAApi, controller.nodeInfo.singleIdentity())
-            stopLocalTimer("runTrade")
-            printGlobalTimerElapsedTime("runTrade")
+            localTimer.printElapsedTime("runTrade")
+            globalTimer.printElapsedTime("runTrade")
 
             assertThat(getTradeCount(nodeAApi)).isEqualTo(numADeals + 1)
             assertThat(getTradeCount(nodeBApi)).isEqualTo(numBDeals + 1)
             assertThat(getFloatingLegFixCount(nodeAApi) == 0)
 
             // Wait until the initial trade and all scheduled fixings up to the current date have finished
-            startLocalTimer("nextFixingDates 1")
+            localTimer.reset("nextFixingDates 1")
             nextFixingDates.firstWithTimeout(maxWaitTime) { it == null || it >= currentDate }
-            stopLocalTimer("nextFixingDates 1")
-            printGlobalTimerElapsedTime("nextFixingDates 1")
+            localTimer.printElapsedTime("nextFixingDates 1")
+            globalTimer.printElapsedTime("nextFixingDates 1")
 
-            startLocalTimer("runDateChange")
+            localTimer.reset("runDateChange")
             runDateChange(nodeBApi)
-            stopLocalTimer("runDateChange")
-            printGlobalTimerElapsedTime("runDateChange")
+            localTimer.printElapsedTime("runDateChange")
+            globalTimer.printElapsedTime("runDateChange")
 
-            startLocalTimer("nextFixingDates 2")
+            localTimer.reset("nextFixingDates 2")
             nextFixingDates.firstWithTimeout(maxWaitTime) { it == null || it >= futureDate }
-            stopLocalTimer("nextFixingDates 2")
-            printGlobalTimerElapsedTime("nextFixingDates 2")
+            localTimer.printElapsedTime("nextFixingDates 2")
+            globalTimer.printElapsedTime("nextFixingDates 2")
 
-            startLocalTimer("getFloatingLegFixCount")
+            localTimer.reset("getFloatingLegFixCount")
             assertThat(getFloatingLegFixCount(nodeAApi) > 0)
-            stopLocalTimer("getFloatingLegFixCount")
-            printGlobalTimerElapsedTime("getFloatingLegFixCount")
+            localTimer.printElapsedTime("getFloatingLegFixCount")
+            globalTimer.printElapsedTime("getFloatingLegFixCount")
         }
-        printGlobalTimerElapsedTime("Exited springDriver")
+        globalTimer.printElapsedTime("Exited springDriver")
     }
-
-    private fun startGlobalTimer() {
-        globalTimer = System.currentTimeMillis()
-        log.info("Global timer - Started")
-    }
-
-    private fun printGlobalTimerElapsedTime( state: String) {
-        val totalElapsedTimeInMilliSec = calculatedElapsedTime(globalTimer)
-        log.info("Global timer - $state - Elapsed time: ${getFormattedTime(totalElapsedTimeInMilliSec)} ($totalElapsedTimeInMilliSec milliseconds)")
-    }
-
-    private fun startLocalTimer(str: String) {
-        log.info("Local timer - $str - Started")
-        localTimer = System.currentTimeMillis()
-    }
-
-    private fun stopLocalTimer(str: String) {
-        val totalElapsedTimeInMilliSec = calculatedElapsedTime(localTimer)
-        log.info("Local timer - $str - Elapsed time: ${getFormattedTime(totalElapsedTimeInMilliSec)} ($totalElapsedTimeInMilliSec milliseconds)")
-    }
-
-    data class Time(val minutes:Long, val seconds: Long, val milliseconds: Long )
-
-    private fun calculatedElapsedTime(startTimeInMillis: Long) = System.currentTimeMillis() - startTimeInMillis
-
-    private fun getFormattedTime( milliseconds: Long) : String {
-
-        val time = convertToTime(milliseconds)
-
-        val hoursStr = "00"
-        val minutesStr = formatNumberWithPadding(time.minutes, 2, '0')
-        val secondsStr = formatNumberWithPadding(time.seconds, 2, '0')
-        val millisecondsStr = formatNumberWithPadding(time.milliseconds, 2, '0')
-
-        return "$hoursStr:$minutesStr:$secondsStr.$millisecondsStr"
-    }
-
-    private fun convertToTime( timeInMilliseconds: Long) : Time {
-
-        val minutes = timeInMilliseconds / 1000 / 60
-        val seconds = timeInMilliseconds / 1000 % 60
-        val milliseconds = timeInMilliseconds % 1000
-
-        return Time(minutes, seconds, milliseconds)
-    }
-
-    private fun formatNumberWithPadding( number: Long, length: Int, padChar: Char = '0' ) = number.toString().padStart(length, padChar)
 
     private fun getFloatingLegFixCount(nodeApi: HttpApi): Int {
         return getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
