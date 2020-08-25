@@ -121,7 +121,7 @@ class StartedFlowTransition(
                 actions = listOf(
                     Action.CreateTransaction,
                     Action.TrackTransaction(flowIORequest.hash, state),
-                    Action.CommitTransaction
+                    Action.CommitTransaction(state)
                 )
             )
         } else {
