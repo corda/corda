@@ -528,10 +528,14 @@ class StartedFlowTransition(
     }
 
     private fun scheduleTerminateSessionsIfRequired(transition: TransitionResult): TransitionResult {
-        // If there are sessions to be closed, close them on a following transition
+        // If there are sessions to be closed, close them on the currently executing transition
         val sessionsToBeTerminated = findSessionsToBeTerminated(transition.newState)
         return if (sessionsToBeTerminated.isNotEmpty()) {
-            transition.copy(actions = transition.actions + Action.ScheduleEvent(Event.TerminateSessions(sessionsToBeTerminated.keys)))
+            val checkpointWithSessionsRemoved = transition.newState.checkpoint.removeSessions(sessionsToBeTerminated.keys)
+            transition.copy(
+                newState = transition.newState.copy(checkpoint = checkpointWithSessionsRemoved),
+                actions = transition.actions + Action.RemoveSessionBindings(sessionsToBeTerminated.keys)
+            )
         } else {
             transition
         }

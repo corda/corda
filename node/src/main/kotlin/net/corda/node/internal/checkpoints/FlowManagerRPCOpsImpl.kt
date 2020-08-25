@@ -12,4 +12,6 @@ internal class FlowManagerRPCOpsImpl(private val checkpointDumper: CheckpointDum
     override val protocolVersion: Int = PLATFORM_VERSION
 
     override fun dumpCheckpoints() = checkpointDumper.dumpCheckpoints()
+
+    override fun debugCheckpoints() = checkpointDumper.debugCheckpoints()
 }
