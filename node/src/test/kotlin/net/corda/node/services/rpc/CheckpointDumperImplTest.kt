@@ -56,6 +56,7 @@ class CheckpointDumperImplTest {
     private val myself = TestIdentity(CordaX500Name(organisation, "London", "GB"))
     private val currentTimestamp = Instant.parse("2019-12-25T10:15:30.00Z")
     private val baseDirectory = Files.createTempDirectory("CheckpointDumperTest")
+    private val corDappDirectories = listOf(baseDirectory.resolve("cordapps"))
     private val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME /
             "checkpoints_dump-${CheckpointDumperImpl.TIME_FORMATTER.format(currentTimestamp)}.zip"
 
@@ -102,7 +103,7 @@ class CheckpointDumperImplTest {
 
     @Test(timeout=300_000)
 	fun testDumpCheckpoints() {
-        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory)
+        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory, corDappDirectories)
         dumper.update(mockAfterStartEvent)
 
         // add a checkpoint
@@ -117,7 +118,7 @@ class CheckpointDumperImplTest {
 
     @Test(timeout=300_000)
     fun `Checkpoint dumper doesn't output completed checkpoints`() {
-        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory)
+        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory, corDappDirectories)
         dumper.update(mockAfterStartEvent)
 
         // add a checkpoint
@@ -157,7 +158,7 @@ class CheckpointDumperImplTest {
     // -javaagent:tools/checkpoint-agent/build/libs/checkpoint-agent.jar
     @Test(timeout=300_000)
 	fun testDumpCheckpointsAndAgentDiagnostics() {
-        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, Paths.get("."))
+        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, Paths.get("."), Paths.get("cordapps"))
         dumper.update(mockAfterStartEvent)
 
         // add a checkpoint

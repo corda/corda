@@ -71,7 +71,11 @@ import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.repo
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
+import java.io.InputStream
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
@@ -79,14 +83,17 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.memberProperties
+import kotlin.streams.asSequence
 
 class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence,
-                           private val serviceHub: ServiceHub, val baseDirectory: Path) : NodeLifecycleObserver {
+                           private val serviceHub: ServiceHub, val baseDirectory: Path,
+                           private val cordappDirectories: Iterable<Path>) : NodeLifecycleObserver {
     companion object {
         internal val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
@@ -95,6 +102,68 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                 Checkpoint.FlowStatus.HOSPITALIZED,
                 Checkpoint.FlowStatus.PAUSED
         )
+
+        private fun writeFiber2Zip(zipOutputStream : ZipOutputStream,
+                                   context: CheckpointSerializationContext,
+                                   runId: StateMachineRunId,
+                                   flowState: FlowState.Started) {
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                flowState.frozenFiber.checkpointDeserialize(context)
+            } catch (e: Exception) {
+                log.error("Failed to deserialise checkpoint with flowId: ${runId.uuid}", e)
+                null
+            }?.let { fiber ->
+                val zipEntry = ZipEntry("fibers/${fiber.logic.javaClass.name}-${runId.uuid}.fiber").apply {
+                    //Fibers can easily be compressed, so they are stored as DEFLATED
+                    method = ZipEntry.DEFLATED
+                }
+                zipOutputStream.putNextEntry(zipEntry)
+                zipOutputStream.write(flowState.frozenFiber.bytes)
+                zipOutputStream.closeEntry()
+            }
+        }
+
+        private fun computeSizeAndCrc32(inputStream: InputStream,
+                                        buffer : ByteArray) : Pair<Long, Long> {
+            val crc32 = CRC32()
+            var sz = 0L
+            while (true) {
+                val read = inputStream.read(buffer)
+                if (read < 0) break
+                sz += read
+                crc32.update(buffer, 0, read)
+            }
+            return sz to crc32.value
+        }
+
+        private fun write2Zip(zip: ZipOutputStream,
+                              inputStream: InputStream,
+                              buffer : ByteArray) {
+            while (true) {
+                val read = inputStream.read(buffer)
+                if (read < 0) break
+                zip.write(buffer, 0, read)
+            }
+        }
+
+        private fun writeStoredEntry(zip : ZipOutputStream, source : Path, destinationFileName : String, buffer : ByteArray) {
+            val zipEntry = ZipEntry(destinationFileName).apply {
+                // A stored ZipEntry requires computing the size and CRC32 in advance
+                val (sz, crc32) = Files.newInputStream(source).use {
+                    computeSizeAndCrc32(it, buffer)
+                }
+                method = ZipEntry.STORED
+                size = sz
+                compressedSize = sz
+                crc = crc32
+            }
+            zip.putNextEntry(zipEntry)
+            Files.newInputStream(source).use {
+                write2Zip(zip, it, buffer)
+            }
+            zip.closeEntry()
+        }
     }
 
     override val priority: Int = SERVICE_PRIORITY_NORMAL
@@ -164,6 +233,57 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                 zip.putNextEntry(ZipEntry(fileName))
                                 zip.write(bytes)
                                 zip.closeEntry()
+                            }
+                        }
+                    }
+                }
+            } else {
+                log.info("Flow dump already in progress, skipping current call")
+            }
+        } finally {
+            lock.decrementAndGet()
+        }
+    }
+
+    @Suppress("ComplexMethod")
+    fun debugCheckpoints() {
+        val now = serviceHub.clock.instant()
+        val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "checkpoints_debug-${TIME_FORMATTER.format(now)}.zip"
+        try {
+            if (lock.getAndIncrement() == 0 && !file.exists()) {
+                database.transaction {
+                    checkpointStorage.getCheckpoints(DUMPABLE_CHECKPOINTS).use { stream ->
+                        ZipOutputStream(file.outputStream()).use { zip ->
+                            @Suppress("MagicNumber")
+                            val buffer = ByteArray(0x10000)
+
+                            //Dump checkpoints in "fibers" folder
+                            for((runId, serializedCheckpoint) in stream) {
+                                val flowState = serializedCheckpoint.deserialize(checkpointSerializationContext).flowState
+                                if(flowState is FlowState.Started) writeFiber2Zip(zip, checkpointSerializationContext, runId, flowState)
+                            }
+
+                            val jarFilter = { directoryEntry : Path -> directoryEntry.fileName.toString().endsWith(".jar") }
+                            //Dump cordApps jar in the "cordapp" folder
+                            for(cordappDirectory in cordappDirectories) {
+                                val corDappJars = Files.list(cordappDirectory).filter(jarFilter).asSequence()
+                                corDappJars.forEach { corDappJar ->
+                                    //Jar files are already compressed, so they are stored in the zip as they are
+                                    writeStoredEntry(zip, corDappJar, "cordapps/${corDappJar.fileName}", buffer)
+                                }
+                            }
+
+                            //Dump all jars contained in the corda.jar in the lib directory and dump all
+                            // the driver jars in the driver folder of the node to the driver folder of the dump file
+                            val pairs = listOf(
+                                "lib" to FileSystems.newFileSystem(
+                                        Paths.get(System.getProperty("capsule.jar")), null).getPath("/"),
+                                "drivers" to baseDirectory.resolve("drivers")
+                            )
+                            for((dest, source) in pairs) {
+                                Files.list(source).filter(jarFilter).forEach { jarEntry ->
+                                    writeStoredEntry(zip, jarEntry, "$dest/${jarEntry.fileName}", buffer)
+                                }
                             }
                         }
                     }

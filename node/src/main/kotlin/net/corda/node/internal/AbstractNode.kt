@@ -370,7 +370,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Volatile
     private var _started: S? = null
 
-    private val checkpointDumper = CheckpointDumperImpl(checkpointStorage, database, services, services.configuration.baseDirectory)
+    private val checkpointDumper = CheckpointDumperImpl(
+            checkpointStorage,
+            database,
+            services,
+            services.configuration.baseDirectory,
+            services.configuration.cordappDirectories)
 
     private var notaryService: NotaryService? = null
 
