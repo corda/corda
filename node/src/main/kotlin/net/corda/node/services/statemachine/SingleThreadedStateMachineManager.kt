@@ -575,10 +575,11 @@ internal class SingleThreadedStateMachineManager(
 
 
     /**
-     * Extract all the incomplete deduplication handlers as well as the [ExternalEvent] and [Event.Pause] events from this flows event queue
-     * [oldEventQueue]. Then schedule them (in the same order) for the new flow. This means that if a retried flow has a pause event
-     * scheduled then the retried flow will eventually pause. The new flow will not retry again if future retry events have been scheduled.
-     * When this method is called this flow must have been replaced by the new flow in [StateMachineInnerState.flows].
+     * Extract all the (unpersisted) incomplete deduplication handlers [currentState.pendingDeduplicationHandlers], as well as the
+     * [ExternalEvent] and [Event.Pause] events from this flows event queue [oldEventQueue]. Then schedule them (in the same order) for the
+     * new flow. This means that if a retried flow has a pause event scheduled then the retried flow will eventually pause. The new flow
+     * will not retry again if future retry events have been scheduled. When this method is called this flow must have been replaced by the
+     * new flow in [StateMachineInnerState.flows].
      *
      * This method differs from [extractAndQueueExternalEventsForPausedFlow] where (only) [externalEvents] are extracted and scheduled
      * straight away.

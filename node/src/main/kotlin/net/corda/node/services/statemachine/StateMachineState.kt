@@ -133,6 +133,7 @@ data class Checkpoint(
                         emptySet(),
                         listOf(topLevelSubFlow),
                         numberOfSuspends = 0,
+                        // We set this to 1 here to avoid an extra copy and increment in UnstartedFlowTransition.createInitialCheckpoint
                         numberOfCommits = 1
                     ),
                     flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),

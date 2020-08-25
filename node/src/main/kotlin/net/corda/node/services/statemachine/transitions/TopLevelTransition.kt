@@ -190,18 +190,15 @@ class TopLevelTransition(
     private fun suspendTransition(event: Event.Suspend): TransitionResult {
         return builder {
             val newCheckpoint = startingState.checkpoint.run {
-                val newCheckpointState = if (checkpointState.invocationContext.arguments!!.isNotEmpty()) {
-                    checkpointState.copy(
-                        invocationContext = checkpointState.invocationContext.copy(arguments = emptyList()),
-                        numberOfSuspends = checkpointState.numberOfSuspends + 1,
-                        numberOfCommits = checkpointState.numberOfCommits + 1
-                    )
-                } else {
-                    checkpointState.copy(
-                        numberOfSuspends = checkpointState.numberOfSuspends + 1,
-                        numberOfCommits = checkpointState.numberOfCommits + 1
-                    )
-                }
+                val newCheckpointState = checkpointState.copy(
+                   invocationContext = if (checkpointState.invocationContext.arguments!!.isNotEmpty()) {
+                       checkpointState.invocationContext.copy(arguments = emptyList())
+                   } else {
+                       checkpointState.invocationContext
+                   },
+                   numberOfSuspends = checkpointState.numberOfSuspends + 1,
+                   numberOfCommits = checkpointState.numberOfCommits + 1
+                )
                 copy(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
                     checkpointState = newCheckpointState,

@@ -163,7 +163,7 @@ class FlowCreator(
             fiber = flowStateMachineImpl,
             anyCheckpointPersisted = existingCheckpoint != null,
             reloadCheckpointAfterSuspendCount = if (reloadCheckpointAfterSuspend) 0 else null,
-            numberOfCommits = 0,
+            numberOfCommits = existingCheckpoint?.checkpointState?.numberOfCommits ?: 0,
             lock = Semaphore(1),
             deduplicationHandler = deduplicationHandler,
             senderUUID = senderUUID
