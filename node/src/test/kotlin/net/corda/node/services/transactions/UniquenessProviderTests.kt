@@ -14,7 +14,6 @@ import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.minutes
@@ -637,12 +636,11 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
     }
 }
 
-fun signBatch(it: Iterable<SecureHash>, notary: Party?): BatchSignature {
+fun signBatch(it: Iterable<SecureHash>): BatchSignature {
     val root = MerkleTree.getMerkleTree(it.map { it.sha256() })
-    val key = notary?.owningKey ?: pubKey
 
-    val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(key).schemeNumberID)
-    val signature = keyService.sign(SignableData(root.hash, signableMetadata), key)
+    val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)
+    val signature = keyService.sign(SignableData(root.hash, signableMetadata), pubKey)
     return BatchSignature(signature, root)
 }
 
@@ -672,7 +670,7 @@ var ourKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNA
 val keyService = MockKeyManagementService(makeTestIdentityService(), ourKeyPair)
 val pubKey = keyService.freshKey()
 
-fun signSingle(it: SecureHash, @Suppress("UNUSED_PARAMETER") notary: Party?) = keyService.sign(
+fun signSingle(it: SecureHash) = keyService.sign(
         SignableData(
                 txId = it,
                 signatureMetadata = SignatureMetadata(

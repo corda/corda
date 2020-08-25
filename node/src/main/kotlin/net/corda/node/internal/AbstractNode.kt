@@ -167,7 +167,6 @@ import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
 import java.lang.reflect.InvocationTargetException
-import java.security.PublicKey
 import java.sql.Connection
 import java.sql.Savepoint
 import java.time.Clock
@@ -605,7 +604,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(myIdentities.signingKeys.map { it.key to it.alias })
             installCordaServices()
-            notaryService = maybeStartNotaryService(myIdentities.notaryIdentity, myIdentities.oldNotaryKeys)
+            notaryService = maybeStartNotaryService(myIdentities.notaryIdentity)
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
@@ -991,10 +990,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** Loads and starts a notary service if it is configured. */
-    private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?, oldNotaryKeys: Set<PublicKey>): NotaryService? {
+    private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?): NotaryService? {
         return notaryLoader?.let { loader ->
             val service = loader.loadService(myNotaryIdentity, services, cordappLoader)
-            service.rotatedKeys = oldNotaryKeys
 
             service.run {
                 tokenize()

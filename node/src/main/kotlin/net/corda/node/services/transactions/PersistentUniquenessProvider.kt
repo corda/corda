@@ -99,9 +99,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
             val references: List<StateRef>,
-            val future: OpenFuture<UniquenessProvider.Result>,
-            val notary: Party?
-    )
+            val future: OpenFuture<UniquenessProvider.Result>)
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
@@ -190,11 +188,10 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>,
-            notary: Party?
+            references: List<StateRef>
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
-        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future, notary)
+        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)
         requestQueue.put(request)
         log.debug { "Request added to queue. TxId: $txId" }
         return future
@@ -329,7 +326,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun respondWithSuccess(request: CommitRequest) {
-        val signedTx = signTransaction(request.txId, request.notary)
+        val signedTx = signTransaction(request.txId)
         request.future.set(UniquenessProvider.Result.Success(signedTx))
     }
 }

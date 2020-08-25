@@ -216,8 +216,7 @@ class RaftUniquenessProvider(
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>,
-            notary: Party?
+            references: List<StateRef>
     ): CordaFuture<UniquenessProvider.Result> {
         log.debug { "Attempting to commit input states: ${states.joinToString()} for txId: $txId" }
         val commitCommand = CommitTransaction(
@@ -235,7 +234,7 @@ class RaftUniquenessProvider(
                 UniquenessProvider.Result.Failure(commitError)
             } else {
                 log.info("All input states of transaction $txId have been committed")
-                UniquenessProvider.Result.Success(signTransaction(txId, notary))
+                UniquenessProvider.Result.Success(signTransaction(txId))
             }
             future.set(result)
         }

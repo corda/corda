@@ -51,8 +51,7 @@ interface NetworkMapCacheBase {
     /**
      * A list of notary services available on the network.
      *
-     * Note that the identities are sorted based on legal name, and the ordering might change once new notaries are introduced,
-     * or notary identity certificates are re-issued.
+     * Note that the identities are sorted based on legal name, and the ordering might change once new notaries are introduced.
      */
     val notaryIdentities: List<Party>
     // DOCEND 1
@@ -121,7 +120,7 @@ interface NetworkMapCacheBase {
     // DOCEND 2
 
     /** Returns true if and only if the given [Party] is a notary, which is defined by the network parameters. */
-    fun isNotary(party: Party): Boolean
+    fun isNotary(party: Party): Boolean = party in notaryIdentities
 
     /**
      * Returns true if and only if the given [Party] is validating notary. For every party that is a validating notary,

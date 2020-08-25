@@ -92,7 +92,6 @@ class JPAUniquenessProvider(
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
             val references: List<StateRef>,
-            val notary: Party?,
             val future: OpenFuture<UniquenessProvider.Result>,
             val requestEntity: Request,
             val committedStatesEntities: List<CommittedState>)
@@ -162,8 +161,7 @@ class JPAUniquenessProvider(
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>,
-            notary: Party?
+            references: List<StateRef>
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
         val requestEntities = Request(consumingTxHash = txId.toString(),
@@ -177,7 +175,7 @@ class JPAUniquenessProvider(
                     txId.toString()
             )
         }
-        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, notary, future, requestEntities, stateEntities)
+        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future, requestEntities, stateEntities)
 
         requestQueue.put(request)
 
@@ -380,15 +378,14 @@ class JPAUniquenessProvider(
         val zippedResults = requests.zip(results)
         val successfulRequests = zippedResults
                 .filter { it.second is InternalResult.Success }
-                .map { it.first.txId to it.first.notary }
+                .map { it.first.txId }
                 .distinct()
-                .groupBy( { it.second }, { it.first} )
-
-        val signatures = successfulRequests.mapValues { signBatch(it.value, it.key) }
+        val signature = if (successfulRequests.isNotEmpty())
+            signBatch(successfulRequests)
+        else null
 
         var inputStateCount = 0
         for ((request, result) in zippedResults) {
-            val signature = signatures[request.notary]
             val resultToSet = when {
                 result is InternalResult.Failure -> UniquenessProvider.Result.Failure(result.error)
                 signature != null -> UniquenessProvider.Result.Success(signature.forParticipant(request.txId))
