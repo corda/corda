@@ -183,11 +183,11 @@ class IRSDemoTest {
         return "$hoursStr:$minutesStr:$secondsStr.$millisecondsStr"
     }
 
-    private fun convertToTime( milliseconds: Long) : Time {
+    private fun convertToTime( timeInMilliseconds: Long) : Time {
 
-        val minutes = milliseconds / 1000 / 60
-        val seconds = milliseconds / 1000 % 60
-        val milliseconds = milliseconds % 1000
+        val minutes = timeInMilliseconds / 1000 / 60
+        val seconds = timeInMilliseconds / 1000 % 60
+        val milliseconds = timeInMilliseconds % 1000
 
         return Time(minutes, seconds, milliseconds)
     }
