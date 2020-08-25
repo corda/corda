@@ -60,13 +60,13 @@ class IRSDemoTest {
         }
 
         fun printElapsedTime(checkpointName: String) {
-            val elapsedTimeInMilliSec = calculatedElapsedTime(timerInMilliSeconds)
+            val elapsedTimeInMilliSec = calculateElapsedTime()
             val elapsedTimeStr = getElapsedTimeAsStandardisedString(elapsedTimeInMilliSec)
 
             log.info("$timerName - $checkpointName - Elapsed time: $elapsedTimeStr ($elapsedTimeInMilliSec milliseconds)")
         }
 
-        private fun calculatedElapsedTime(startTimeInMillis: Long) = System.currentTimeMillis() - startTimeInMillis
+        private fun calculateElapsedTime() = System.currentTimeMillis() - timerInMilliSeconds
         private fun getElapsedTimeAsStandardisedString(timeInMilliseconds: Long) = Duration.ofMillis(timeInMilliseconds).toString()
     }
 
