@@ -6,7 +6,10 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
     agent { label 'linux1' }
-    options { timestamps() }
+    options {
+        timestamps()
+        timeout(time: 2, unit: 'HOURS')
+    }
 
     environment {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
