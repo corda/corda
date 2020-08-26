@@ -49,7 +49,7 @@ class ErrorFlowTransition(
                         checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessions)
                 )
                 currentState = currentState.copy(checkpoint = newCheckpoint)
-                actions.add(Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID))
+                actions += Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID)
             }
 
             // If we're errored but not propagating keep processing events.
@@ -59,32 +59,38 @@ class ErrorFlowTransition(
 
             // If we haven't been removed yet remove the flow.
             if (!currentState.isRemoved) {
-                val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+                val newCheckpoint = startingState.checkpoint.copy(
+                    status = Checkpoint.FlowStatus.FAILED,
+                    flowState = FlowState.Finished,
+                    checkpointState = startingState.checkpoint.checkpointState.copy(
+                        numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1
+                    )
+                )
+                currentState = currentState.copy(
+                    checkpoint = newCheckpoint,
+                    pendingDeduplicationHandlers = emptyList(),
+                    isRemoved = true
+                )
 
                 val removeOrPersistCheckpoint = if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
                     Action.RemoveCheckpoint(context.id)
                 } else {
-                    Action.PersistCheckpoint(context.id, newCheckpoint.copy(flowState = FlowState.Finished), isCheckpointUpdate = currentState.isAnyCheckpointPersisted)
+                    Action.PersistCheckpoint(
+                        context.id,
+                        newCheckpoint,
+                        isCheckpointUpdate = currentState.isAnyCheckpointPersisted
+                    )
                 }
 
-                actions.addAll(arrayOf(
-                        Action.CreateTransaction,
-                        removeOrPersistCheckpoint,
-                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                        Action.ReleaseSoftLocks(context.id.uuid),
-                        Action.CommitTransaction,
-                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                        Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
-                ))
+                actions += Action.CreateTransaction
+                actions += removeOrPersistCheckpoint
+                actions += Action.PersistDeduplicationFacts(startingState.pendingDeduplicationHandlers)
+                actions += Action.ReleaseSoftLocks(context.id.uuid)
+                actions += Action.CommitTransaction(currentState)
+                actions += Action.AcknowledgeMessages(startingState.pendingDeduplicationHandlers)
+                actions += Action.RemoveSessionBindings(startingState.checkpoint.checkpointState.sessions.keys)
+                actions += Action.RemoveFlow(context.id, FlowRemovalReason.ErrorFinish(allErrors), currentState)
 
-                currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        pendingDeduplicationHandlers = emptyList(),
-                        isRemoved = true
-                )
-
-                val removalReason = FlowRemovalReason.ErrorFinish(allErrors)
-                actions.add(Action.RemoveFlow(context.id, removalReason, currentState))
                 FlowContinuation.Abort
             } else {
                 // Otherwise keep processing events. This branch happens when there are some outstanding initiating

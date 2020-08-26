@@ -8,7 +8,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.flows.isQuasarAgentSpecified
 import net.corda.node.services.Permissions
-import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
@@ -16,7 +15,6 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import org.h2.jdbc.JdbcSQLNonTransientException
 import org.junit.Test
-import java.net.InetAddress
 import java.sql.DriverManager
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -43,88 +41,6 @@ class H2SecurityTests {
             DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
                 assertTrue(it.createStatement().executeQuery("SELECT 1").next())
             }
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `h2 server on the host name requires non-default database password`() {
-        driver(DriverParameters(
-                inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList(),
-                cordappsForAllNodes = emptyList()
-        )) {
-            assertFailsWith(CouldNotCreateDataSourceException::class) {
-                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostName}:${getFreePort()}")).getOrThrow()
-            }
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `h2 server on the external host IP requires non-default database password`() {
-        driver(DriverParameters(
-                inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList(),
-                cordappsForAllNodes = emptyList()
-        )) {
-            assertFailsWith(CouldNotCreateDataSourceException::class) {
-                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostAddress}:${getFreePort()}")).getOrThrow()
-            }
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `h2 server on host name requires non-blank database password`() {
-        driver(DriverParameters(
-                inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList(),
-                cordappsForAllNodes = emptyList()
-        )) {
-            assertFailsWith(CouldNotCreateDataSourceException::class) {
-                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostName}:${getFreePort()}",
-                        dbPasswordKey to " ")).getOrThrow()
-            }
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `h2 server on external host IP requires non-blank database password`() {
-        driver(DriverParameters(
-                inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList(),
-                cordappsForAllNodes = emptyList()
-        )) {
-            assertFailsWith(CouldNotCreateDataSourceException::class) {
-                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostAddress}:${getFreePort()}",
-                        dbPasswordKey to " ")).getOrThrow()
-            }
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `h2 server on localhost runs with the default database password`() {
-        driver(DriverParameters(
-                inMemoryDB = false,
-                startNodesInProcess = false,
-                notarySpecs = emptyList(),
-                cordappsForAllNodes = emptyList()
-        )) {
-            startNode(customOverrides = mapOf(h2AddressKey to "localhost:${getFreePort()}")).getOrThrow()
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `h2 server to loopback IP runs with the default database password`() {
-        driver(DriverParameters(
-                inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList(),
-                cordappsForAllNodes = emptyList()
-        )) {
-            startNode(customOverrides = mapOf(h2AddressKey to "127.0.0.1:${getFreePort()}")).getOrThrow()
         }
     }
 

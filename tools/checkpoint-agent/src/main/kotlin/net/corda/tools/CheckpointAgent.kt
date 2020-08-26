@@ -51,8 +51,14 @@ class CheckpointAgent {
             LoggerFactory.getLogger("CheckpointAgent")
         }
 
+        val running by lazy {
+            premainExecuted
+        }
+        private var premainExecuted = false
+
         @JvmStatic
         fun premain(argumentsString: String?, instrumentation: Instrumentation) {
+            premainExecuted = true
             parseArguments(argumentsString)
             instrumentation.addTransformer(CheckpointHook)
         }

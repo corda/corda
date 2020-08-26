@@ -42,7 +42,7 @@ interface StateMachineManager {
      *
      * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>, startMode: StartMode = StartMode.ExcludingPaused) : CordaFuture<Unit>
+    fun start(tokenizableServices: List<Any>, startMode: StartMode = StartMode.ExcludingPaused) : () -> Unit
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
@@ -120,6 +120,14 @@ interface StateMachineManager {
      * @return whether the mapping was removed.
      */
     fun removeClientId(clientId: String): Boolean
+
+    /**
+     * Returns all finished flows that were started with a client id.
+     *
+     * @return A [Map] containing client ids for finished flows, mapped to [true] if finished successfully,
+     * [false] if completed exceptionally.
+     */
+    fun finishedFlowsWithClientIds(): Map<String, Boolean>
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call

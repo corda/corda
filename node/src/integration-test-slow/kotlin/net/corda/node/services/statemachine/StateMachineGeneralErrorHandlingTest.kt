@@ -1,13 +1,19 @@
 package net.corda.node.services.statemachine
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaRuntimeException
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.statemachine.transitions.StartedFlowTransition
 import net.corda.node.services.statemachine.transitions.TopLevelTransition
 import net.corda.testing.core.singleIdentity
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -487,7 +493,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF createCounter("counter", $counter) 
+                IF createCounter("counter", $counter) && createCounter("counter_2", $counter) 
                 DO traceln("Counter created")
                 ENDRULE
 
@@ -503,8 +509,16 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 INTERFACE ${CheckpointStorage::class.java.name}
                 METHOD getCheckpoint
                 AT ENTRY
+                IF readCounter("counter_2") < 3
+                DO incrementCounter("counter_2"); traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                ENDRULE
+                
+                RULE Log external start flow event
+                CLASS $stateMachineManagerClassName
+                METHOD onExternalStartFlow
+                AT ENTRY
                 IF true
-                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                DO traceln("External start flow event")
                 ENDRULE
             """.trimIndent()
 
@@ -520,7 +534,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(
                 discharged = 3,
-                observation = 0
+                dischargedRetry = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
         }
@@ -550,7 +564,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF createCounter("counter", $counter) 
+                IF createCounter("counter", $counter) && createCounter("counter_2", $counter) 
                 DO traceln("Counter created")
                 ENDRULE
 
@@ -566,8 +580,8 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 INTERFACE ${CheckpointStorage::class.java.name}
                 METHOD getCheckpoint
                 AT ENTRY
-                IF true
-                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                IF readCounter("counter_2") < 3
+                DO incrementCounter("counter_2"); traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
                 ENDRULE
             """.trimIndent()
 
@@ -583,7 +597,8 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             alice.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             alice.rpc.assertHospitalCounts(
                 discharged = 3,
-                observation = 1
+                observation = 1,
+                dischargedRetry = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
         }
@@ -645,6 +660,52 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             charlie.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(0, charlie.rpc.stateMachinesSnapshot().size)
+        }
+    }
+
+    /**
+     * Throws an exception when creating a transition.
+     *
+     * The exception is thrown back to the flow, who catches it and returns a different exception, showing the exception returns to user
+     * code and can be caught if needed.
+     */
+    @Test(timeout = 300_000)
+    fun `error during creation of transition that occurs after the first suspend will throw error into flow`() {
+        startDriver {
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+
+            val rules = """
+                RULE Throw exception when creating transition
+                CLASS ${StartedFlowTransition::class.java.name}
+                METHOD sleepTransition
+                AT ENTRY
+                IF true
+                DO traceln("Throwing exception"); throw new java.lang.IllegalStateException("die dammit die")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            assertThatExceptionOfType(FlowException::class.java).isThrownBy {
+                alice.rpc.startFlow(::SleepCatchAndRethrowFlow).returnValue.getOrThrow(30.seconds)
+            }.withMessage("java.lang.IllegalStateException: die dammit die")
+
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            alice.rpc.assertHospitalCounts(propagated = 1)
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+        }
+    }
+
+    @StartableByRPC
+    class SleepCatchAndRethrowFlow : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            try {
+                sleep(5.seconds)
+            } catch (e: IllegalStateException) {
+                throw FlowException(e)
+            }
+            return "cant get here"
         }
     }
 }

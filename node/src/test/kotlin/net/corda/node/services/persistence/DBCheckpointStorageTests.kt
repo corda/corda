@@ -47,6 +47,7 @@ import java.time.Clock
 import java.util.*
 import kotlin.streams.toList
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
@@ -801,6 +802,40 @@ class DBCheckpointStorageTests {
         val finishedStatuses = resultsMetadata.map { it.second.status }
         assertTrue(Checkpoint.FlowStatus.COMPLETED in finishedStatuses)
         assertTrue(Checkpoint.FlowStatus.FAILED in finishedStatuses)
+    }
+
+    @Test(timeout = 300_000)
+    fun `'getPausedCheckpoints' fetches paused flows with and without database exceptions`() {
+        val (_, checkpoint) = newCheckpoint(1)
+        val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+        val checkpointState = checkpoint.serializeCheckpointState()
+        val hospitalizedPaused = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
+        val cleanPaused = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
+        database.transaction {
+            checkpointStorage.addCheckpoint(hospitalizedPaused.id, hospitalizedPaused.checkpoint, serializedFlowState, checkpointState)
+            checkpointStorage.addCheckpoint(cleanPaused.id, cleanPaused.checkpoint, serializedFlowState, checkpointState)
+        }
+        database.transaction {
+            checkpointStorage.updateCheckpoint(
+                    hospitalizedPaused.id,
+                    hospitalizedPaused.checkpoint.addError(IllegalStateException(), Checkpoint.FlowStatus.HOSPITALIZED),
+                    serializedFlowState,
+                    checkpointState
+            )
+        }
+        database.transaction {
+            checkpointStorage.updateStatus(hospitalizedPaused.id, Checkpoint.FlowStatus.PAUSED)
+            checkpointStorage.updateStatus(cleanPaused.id, Checkpoint.FlowStatus.PAUSED)
+        }
+        database.transaction {
+            val checkpoints = checkpointStorage.getPausedCheckpoints().toList()
+            val dbHospitalizedPaused = checkpoints.single { it.first == hospitalizedPaused.id }
+            assertEquals(hospitalizedPaused.id, dbHospitalizedPaused.first)
+            assertTrue(dbHospitalizedPaused.third)
+            val dbCleanPaused = checkpoints.single { it.first == cleanPaused.id }
+            assertEquals(cleanPaused.id, dbCleanPaused.first)
+            assertFalse(dbCleanPaused.third)
+        }
     }
 
     data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)

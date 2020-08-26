@@ -147,6 +147,8 @@ class FlowFrameworkTests {
 
         SuspendingFlow.hookBeforeCheckpoint = {}
         SuspendingFlow.hookAfterCheckpoint = {}
+        StaffedFlowHospital.onFlowResuscitated.clear()
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
     }
 
     @Test(timeout=300_000)
@@ -307,7 +309,7 @@ class FlowFrameworkTests {
             .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
             .withMessage("Nothing useful")
             .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
-            .withStackTraceContaining("Received counter-flow exception from peer")
+            .withStackTraceContaining("Received counter-flow exception from peer ${bob.name}")
         bobNode.database.transaction {
             assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
         }
@@ -630,6 +632,7 @@ class FlowFrameworkTests {
             Notification.createOnNext(ReceiveFlow.START_STEP),
             Notification.createOnError(receiveFlowException)
         )
+        assertThat(receiveFlowException).hasStackTraceContaining("Received unexpected counter-flow exception from peer ${bob.name}")
 
         assertSessionTransfers(
             aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,
@@ -688,9 +691,6 @@ class FlowFrameworkTests {
                 firstExecution = false
                 throw HospitalizeFlowException()
             } else {
-                // the below sleep should be removed once we fix : The thread's transaction executing StateMachineManager.start takes long
-                // and doesn't commit before flow starts running.
-                Thread.sleep(3000)
                 dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
                 currentDBSession().clear() // clear session as Hibernate with fails with 'org.hibernate.NonUniqueObjectException' once it tries to save a DBFlowCheckpoint upon checkpoint
                 inMemoryCheckpointStatusBeforeSuspension = flowFiber.transientState.checkpoint.status
@@ -739,9 +739,6 @@ class FlowFrameworkTests {
                 firstExecution = false
                 throw HospitalizeFlowException()
             } else {
-                // the below sleep should be removed once we fix : The thread's transaction executing StateMachineManager.start takes long
-                // and doesn't commit before flow starts running.
-                Thread.sleep(3000)
                 dbCheckpointStatus = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
                 inMemoryCheckpointStatus = flowFiber.transientState.checkpoint.status
 
@@ -856,9 +853,6 @@ class FlowFrameworkTests {
         var secondRun = false
         SuspendingFlow.hookBeforeCheckpoint = {
             if(secondRun) {
-                // the below sleep should be removed once we fix : The thread's transaction executing StateMachineManager.start takes long
-                // and doesn't commit before flow starts running.
-                Thread.sleep(3000)
                 aliceNode.database.transaction {
                     checkpointStatusAfterRestart = findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
                     dbExceptionAfterRestart = findRecordsFromDatabase()
@@ -885,7 +879,6 @@ class FlowFrameworkTests {
         waitUntilHospitalized.acquire()
         Thread.sleep(3000) // wait until flow saves overnight observation state in database
         aliceNode = mockNet.restartNode(aliceNode)
-
 
         waitUntilHospitalized.acquire()
         Thread.sleep(3000) // wait until flow saves overnight observation state in database

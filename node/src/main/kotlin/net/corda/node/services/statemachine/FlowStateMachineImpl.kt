@@ -227,6 +227,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     FlowContinuation.Abort -> abortFiber()
                 }
             }
+        } catch(t: Throwable) {
+            logUnexpectedExceptionInFlowEventLoop(isDbTransactionOpenOnExit, t)
+            throw t
         } finally {
             checkDbTransaction(isDbTransactionOpenOnExit)
             openThreadLocalWormhole()
@@ -234,12 +237,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun Throwable.fillInLocalStackTrace(): Throwable {
-        fillInStackTrace()
-        // provide useful information that can be displayed to the user
-        // reflection use to access private field
+        // Fill in the stacktrace when the exception originates from another node
         when (this) {
             is UnexpectedFlowEndException -> {
                 DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value?.let {
+                    fillInStackTrace()
                     stackTrace = arrayOf(
                         StackTraceElement(
                             "Received unexpected counter-flow exception from peer ${it.name}",
@@ -252,6 +254,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
             is FlowException -> {
                 DeclaredField<Party?>(FlowException::class.java, "peer", this).value?.let {
+                    fillInStackTrace()
                     stackTrace = arrayOf(
                         StackTraceElement(
                             "Received counter-flow exception from peer ${it.name}",
@@ -294,6 +297,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         } else {
             require(contextTransactionOrNull == null) { "Transaction is marked as not present, but is not null" }
+        }
+    }
+
+    private fun logUnexpectedExceptionInFlowEventLoop(isDbTransactionOpenOnExit: Boolean, throwable: Throwable) {
+        if (isDbTransactionOpenOnExit && contextTransactionOrNull == null) {
+            logger.error("Unexpected error thrown from flow event loop, transaction context missing", throwable)
+        } else if (!isDbTransactionOpenOnExit && contextTransactionOrNull != null) {
+            logger.error("Unexpected error thrown from flow event loop, transaction is marked as not present, but is not null", throwable)
         }
     }
 
