@@ -7,6 +7,10 @@ import org.junit.After
 
 abstract class StateMachineCleanUp {
 
+    // Empty companion object added so that this class gets included in cordapps created by [enclosedCordapp()].
+    // ([collectEnclosedClasses()] in order to add a class in the jar, that class needs to have at least one enclosed class.)
+    companion object
+
     /**
      * State Machine statics clean up. Newly introduced statics in state machine classes should be added below.
      */
