@@ -9,7 +9,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.delete
 import net.corda.core.internal.list
 import net.corda.core.internal.readAllLines
 import net.corda.core.internal.writeText
