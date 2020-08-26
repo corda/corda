@@ -49,6 +49,8 @@ import java.util.concurrent.Semaphore
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
  * @param reloadCheckpointAfterSuspendCount The number of times a flow has been reloaded (not retried). This is [null] when
  * [NodeConfiguration.reloadCheckpointAfterSuspendCount] is not enabled.
+ * @param numberOfCommits The number of times the flow's checkpoint has been successfully committed. This field is a var so that it can be
+ * updated after committing a database transaction that contained a checkpoint insert/update.
  * @param lock The flow's lock, used to prevent the flow performing a transition while being interacted with from external threads, and
  * vise-versa.
  */
@@ -67,6 +69,7 @@ data class StateMachineState(
     val isKilled: Boolean,
     val senderUUID: String?,
     val reloadCheckpointAfterSuspendCount: Int?,
+    var numberOfCommits: Int,
     val lock: Semaphore
 ) : KryoSerializable {
     override fun write(kryo: Kryo?, output: Output?) {
@@ -129,7 +132,9 @@ data class Checkpoint(
                         emptyMap(),
                         emptySet(),
                         listOf(topLevelSubFlow),
-                        numberOfSuspends = 0
+                        numberOfSuspends = 0,
+                        // We set this to 1 here to avoid an extra copy and increment in UnstartedFlowTransition.createInitialCheckpoint
+                        numberOfCommits = 1
                     ),
                     flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
                     errorState = ErrorState.Clean
@@ -229,21 +234,23 @@ data class Checkpoint(
 }
 
 /**
- * @param invocationContext the initiator of the flow.
- * @param ourIdentity the identity the flow is run as.
- * @param sessions map of source session ID to session state.
- * @param sessionsToBeClosed the sessions that have pending session end messages and need to be closed. This is available to avoid scanning all the sessions.
- * @param subFlowStack the stack of currently executing subflows.
- * @param numberOfSuspends the number of flow suspends due to IO API calls.
+ * @param invocationContext The initiator of the flow.
+ * @param ourIdentity The identity the flow is run as.
+ * @param sessions Map of source session ID to session state.
+ * @param sessionsToBeClosed The sessions that have pending session end messages and need to be closed. This is available to avoid scanning all the sessions.
+ * @param subFlowStack The stack of currently executing subflows.
+ * @param numberOfSuspends The number of flow suspends due to IO API calls.
+ * @param numberOfCommits The number of times this checkpoint has been persisted.
  */
 @CordaSerializable
 data class CheckpointState(
-        val invocationContext: InvocationContext,
-        val ourIdentity: Party,
-        val sessions: SessionMap, // This must preserve the insertion order!
-        val sessionsToBeClosed: Set<SessionId>,
-        val subFlowStack: List<SubFlow>,
-        val numberOfSuspends: Int
+    val invocationContext: InvocationContext,
+    val ourIdentity: Party,
+    val sessions: SessionMap, // This must preserve the insertion order!
+    val sessionsToBeClosed: Set<SessionId>,
+    val subFlowStack: List<SubFlow>,
+    val numberOfSuspends: Int,
+    val numberOfCommits: Int
 )
 
 /**
@@ -417,9 +424,13 @@ sealed class SubFlowVersion {
     data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }
 
-sealed class FlowWithClientIdStatus {
-    data class Active(val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>) : FlowWithClientIdStatus()
-    data class Removed(val flowId: StateMachineRunId, val succeeded: Boolean) : FlowWithClientIdStatus()
+sealed class FlowWithClientIdStatus(val flowId: StateMachineRunId) {
+    class Active(
+        flowId: StateMachineRunId,
+        val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>
+    ) : FlowWithClientIdStatus(flowId)
+
+    class Removed(flowId: StateMachineRunId, val succeeded: Boolean) : FlowWithClientIdStatus(flowId)
 }
 
 data class FlowResultMetadata(

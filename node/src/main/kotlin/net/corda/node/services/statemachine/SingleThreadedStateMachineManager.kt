@@ -22,7 +22,6 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.mapNotNull
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.deserialize
@@ -41,7 +40,6 @@ import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInter
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -153,7 +151,7 @@ internal class SingleThreadedStateMachineManager(
     override val changes: Observable<StateMachineManager.Change> = innerState.changesPublisher
 
     @Suppress("ComplexMethod")
-    override fun start(tokenizableServices: List<Any>, startMode: StateMachineManager.StartMode): CordaFuture<Unit> {
+    override fun start(tokenizableServices: List<Any>, startMode: StateMachineManager.StartMode): () -> Unit {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                 CheckpointSerializeAsTokenContextImpl(
@@ -200,13 +198,14 @@ internal class SingleThreadedStateMachineManager(
         // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
         for (flow in fibers.values) {
             flow.fiber.clientId?.let {
-                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(flow.fiber.id, doneFuture(flow.fiber))
             }
         }
 
         for (pausedFlow in pausedFlows) {
             pausedFlow.value.checkpoint.checkpointState.invocationContext.clientId?.let {
                 innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
+                    pausedFlow.key,
                     doneClientIdFuture(pausedFlow.key, pausedFlow.value.resultFuture, it)
                 )
             }
@@ -223,7 +222,7 @@ internal class SingleThreadedStateMachineManager(
             } ?: logger.error("Found finished flow $id without a client id. Something is very wrong and this flow will be ignored.")
         }
 
-        return serviceHub.networkMapCache.nodeReady.map {
+        return {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
             flowMessaging.start { _, deduplicationHandler ->
@@ -312,17 +311,20 @@ internal class SingleThreadedStateMachineManager(
                         status
                     } else {
                         newFuture = openFuture()
-                        FlowWithClientIdStatus.Active(newFuture!!)
+                        FlowWithClientIdStatus.Active(flowId, newFuture!!)
                     }
                 }
             }
 
             // Flow -started with client id- already exists, return the existing's flow future and don't start a new flow.
             existingStatus?.let {
-                val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
-                return@startFlow uncheckedCast(existingFuture)
-            }
-            onClientIDNotFound?.invoke()
+                // If the flow ID is the same as the one recorded in the client ID map,
+                // then this start flow event has been retried, and we should not de-duplicate.
+                if (flowId != it.flowId) {
+                    val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
+                    return@startFlow uncheckedCast(existingFuture)
+                }
+            } ?: onClientIDNotFound?.invoke()
         }
 
         return try {
@@ -456,12 +458,8 @@ internal class SingleThreadedStateMachineManager(
             innerState.withLock { if (id in flows) return@Checkpoints }
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.also {
                 if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                    if (checkpointStorage.removeFlowException(id)) {
-                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
-                    } else {
-                        logger.error("Unable to remove database exception for flow $id. Something is very wrong. The flow will not be loaded and run.")
-                        return@Checkpoints
-                    }
+                    checkpointStorage.removeFlowException(id)
+                    checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
                 }
             } ?: return@Checkpoints
             val flow = flowCreator.createFlowFromCheckpoint(id, checkpoint)
@@ -472,9 +470,9 @@ internal class SingleThreadedStateMachineManager(
                 flows[id] = flow
             }
         }
-        checkpointStorage.getPausedCheckpoints().forEach Checkpoints@{ (id, serializedCheckpoint) ->
+        checkpointStorage.getPausedCheckpoints().forEach Checkpoints@{ (id, serializedCheckpoint, hospitalised) ->
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@Checkpoints
-            pausedFlows[id] = NonResidentFlow(id, checkpoint)
+            pausedFlows[id] = NonResidentFlow(id, checkpoint, hospitalized = hospitalised)
         }
         return Pair(flows, pausedFlows)
     }
@@ -495,40 +493,49 @@ internal class SingleThreadedStateMachineManager(
             logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
             return
         }
-        val flow = if (currentState.isAnyCheckpointPersisted) {
-            // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
-            // we mirror exactly what happens when restarting the node.
-            val checkpoint = database.transaction {
-                val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
-                if (serializedCheckpoint == null) {
-                    logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                    return@transaction null
-                }
+        // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
+        // we mirror exactly what happens when restarting the node.
+        // Ignore [isAnyCheckpointPersisted] as the checkpoint could be committed but the flag remains un-updated
+        val checkpointLoadingStatus = database.transaction {
+            val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId) ?: return@transaction CheckpointLoadingStatus.NotFound
 
+            val checkpoint = serializedCheckpoint.let {
                 tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
                     if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                        if (checkpointStorage.removeFlowException(flowId)) {
-                            checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
-                        } else {
-                            logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not be loaded and run.")
-                            return@transaction null
-                        }
+                        checkpointStorage.removeFlowException(flowId)
+                        checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
                     }
-                } ?: return@transaction null
-            } ?: return
+                } ?: return@transaction CheckpointLoadingStatus.CouldNotDeserialize
+            }
 
-            // Resurrect flow
-            flowCreator.createFlowFromCheckpoint(
-                flowId,
-                checkpoint,
-                currentState.reloadCheckpointAfterSuspendCount,
-                currentState.lock,
-                firstRestore = false
-            ) ?: return
-        } else {
-            // Just flow initiation message
-            null
+            CheckpointLoadingStatus.Success(checkpoint)
         }
+
+        val (flow, numberOfCommitsFromCheckpoint) = when {
+            // Resurrect flow
+            checkpointLoadingStatus is CheckpointLoadingStatus.Success -> {
+                val numberOfCommitsFromCheckpoint = checkpointLoadingStatus.checkpoint.checkpointState.numberOfCommits
+                val flow = flowCreator.createFlowFromCheckpoint(
+                    flowId,
+                    checkpointLoadingStatus.checkpoint,
+                    currentState.reloadCheckpointAfterSuspendCount,
+                    currentState.lock,
+                    firstRestore = false,
+                    progressTracker = currentState.flowLogic.progressTracker
+                ) ?: return
+                flow to numberOfCommitsFromCheckpoint
+            }
+            checkpointLoadingStatus is CheckpointLoadingStatus.NotFound && currentState.isAnyCheckpointPersisted -> {
+                logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
+                return
+            }
+            checkpointLoadingStatus is CheckpointLoadingStatus.CouldNotDeserialize -> return
+            else -> {
+                // Just flow initiation message
+                null to -1
+            }
+        }
+
         innerState.withLock {
             if (stopping) {
                 return
@@ -538,10 +545,10 @@ internal class SingleThreadedStateMachineManager(
                 sessionToFlow.remove(sessionId)
             }
             if (flow != null) {
-                injectOldProgressTracker(currentState.flowLogic.progressTracker, flow.fiber.logic)
                 addAndStartFlow(flowId, flow)
             }
-            extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState)
+
+            extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState, numberOfCommitsFromCheckpoint)
         }
     }
 
@@ -567,13 +574,27 @@ internal class SingleThreadedStateMachineManager(
 
 
     /**
-     * Extract all the incomplete deduplication handlers as well as the [ExternalEvent] and [Event.Pause] events from this flows event queue
-     * [oldEventQueue]. Then schedule them (in the same order) for the new flow. This means that if a retried flow has a pause event
-     * scheduled then the retried flow will eventually pause. The new flow will not retry again if future retry events have been scheduled.
-     * When this method is called this flow must have been replaced by the new flow in [StateMachineInnerState.flows]. This method differs
-     * from [extractAndQueueExternalEventsForPausedFlow] where (only) [externalEvents] are extracted and scheduled straight away.
+     * Extract all the (unpersisted) incomplete deduplication handlers [currentState.pendingDeduplicationHandlers], as well as the
+     * [ExternalEvent] and [Event.Pause] events from this flows event queue [oldEventQueue]. Then schedule them (in the same order) for the
+     * new flow. This means that if a retried flow has a pause event scheduled then the retried flow will eventually pause. The new flow
+     * will not retry again if future retry events have been scheduled. When this method is called this flow must have been replaced by the
+     * new flow in [StateMachineInnerState.flows].
+     *
+     * This method differs from [extractAndQueueExternalEventsForPausedFlow] where (only) [externalEvents] are extracted and scheduled
+     * straight away.
+     *
+     * @param oldEventQueue The old event queue of the flow/fiber to unprocessed extract events from
+     *
+     * @param currentState The current state of the flow, used to extract processed events (held in [StateMachineState.pendingDeduplicationHandlers])
+     *
+     * @param numberOfCommitsFromCheckpoint The number of commits that the checkpoint loaded from the database has, to compare to the
+     * commits the flow has currently reached
      */
-    private fun extractAndScheduleEventsForRetry(oldEventQueue: Channel<Event>, currentState: StateMachineState) {
+    private fun extractAndScheduleEventsForRetry(
+        oldEventQueue: Channel<Event>,
+        currentState: StateMachineState,
+        numberOfCommitsFromCheckpoint: Int
+    ) {
         val flow = innerState.withLock {
             flows[currentState.flowLogic.runId]
         }
@@ -583,9 +604,13 @@ internal class SingleThreadedStateMachineManager(
             if (event is Event.Pause || event is Event.GeneratedByExternalEvent) events.add(event)
         } while (event != null)
 
-        for (externalEvent in currentState.pendingDeduplicationHandlers) {
-            deliverExternalEvent(externalEvent.externalCause)
+        // Only redeliver events if they were not persisted to the database
+        if (currentState.numberOfCommits >= numberOfCommitsFromCheckpoint) {
+            for (externalEvent in currentState.pendingDeduplicationHandlers) {
+                deliverExternalEvent(externalEvent.externalCause)
+            }
         }
+
         for (event in events) {
             if (event is Event.GeneratedByExternalEvent) {
                 deliverExternalEvent(event.deduplicationHandler.externalCause)
@@ -758,8 +783,7 @@ internal class SingleThreadedStateMachineManager(
     ): CordaFuture<FlowStateMachine<A>> {
         onCallingStartFlowInternal?.invoke()
 
-        val existingFlow = innerState.withLock { flows[flowId] }
-        val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState.isAnyCheckpointPersisted) {
+        val existingCheckpoint = if (innerState.withLock { flows[flowId] != null }) {
             // Load the flow's checkpoint
             // The checkpoint will be missing if the flow failed before persisting the original checkpoint
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
@@ -811,7 +835,13 @@ internal class SingleThreadedStateMachineManager(
                 decrementLiveFibers()
                 //Setting flowState = FlowState.Paused means we don't hold the frozen fiber in memory.
                 val checkpoint = currentState.checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED, flowState = FlowState.Paused)
-                val pausedFlow = NonResidentFlow(id, checkpoint, flow.resultFuture)
+                val pausedFlow = NonResidentFlow(
+                    id,
+                    checkpoint,
+                    flow.resultFuture,
+                    hospitalized = currentState.checkpoint.status == Checkpoint.FlowStatus.HOSPITALIZED,
+                    progressTracker = currentState.flowLogic.progressTracker
+                )
                 val eventQueue = flow.fiber.transientValues.eventQueue
                 extractAndQueueExternalEventsForPausedFlow(eventQueue, currentState.pendingDeduplicationHandlers, pausedFlow)
                 pausedFlows.put(id, pausedFlow)
@@ -1097,5 +1127,20 @@ internal class SingleThreadedStateMachineManager(
             return database.transaction { checkpointStorage.removeCheckpoint(it, mayHavePersistentResults = true) }
         }
         return false
+    }
+
+    override fun finishedFlowsWithClientIds(): Map<String, Boolean> {
+        return innerState.withLock {
+            clientIdsToFlowIds.asSequence()
+                .filter { (_, status) -> status is FlowWithClientIdStatus.Removed }
+                .map { (clientId, status) -> clientId to (status as FlowWithClientIdStatus.Removed).succeeded }
+                .toMap()
+        }
+    }
+
+    private sealed class CheckpointLoadingStatus {
+        class Success(val checkpoint: Checkpoint) : CheckpointLoadingStatus()
+        object NotFound : CheckpointLoadingStatus()
+        object CouldNotDeserialize : CheckpointLoadingStatus()
     }
 }

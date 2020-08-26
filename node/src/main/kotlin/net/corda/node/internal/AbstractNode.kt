@@ -465,13 +465,24 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             updateAppSchemasWithCheckpoints: Boolean
     ) {
         check(started == null) { "Node has already been started" }
+        check(updateCoreSchemas || updateAppSchemas) { "Neither core nor app schema scripts were specified" }
         Node.printBasicNodeInfo("Running database schema migration scripts ...")
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
+        var pendingAppChanges: Int = 0
+        var pendingCoreChanges: Int = 0
         database.startHikariPool(props, metricRegistry) { dataSource, haveCheckpoints ->
-            SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
-                    .checkOrUpdate(schemaService.internalSchemas, updateCoreSchemas, haveCheckpoints, true)
-                    .checkOrUpdate(schemaService.appSchemas, updateAppSchemas, !updateAppSchemasWithCheckpoints && haveCheckpoints, false)
+            val schemaMigration = SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+            if(updateCoreSchemas) {
+                schemaMigration.runMigration(haveCheckpoints, schemaService.internalSchemas, true)
+            } else {
+                pendingCoreChanges = schemaMigration.getPendingChangesCount(schemaService.internalSchemas, true)
+            }
+            if(updateAppSchemas) {
+                schemaMigration.runMigration(!updateAppSchemasWithCheckpoints && haveCheckpoints, schemaService.appSchemas, false)
+            } else {
+                pendingAppChanges = schemaMigration.getPendingChangesCount(schemaService.appSchemas, false)
+            }
         }
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
@@ -491,7 +502,18 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 cordappProvider.start()
             }
         }
-        Node.printBasicNodeInfo("Database migration done.")
+        val updatedSchemas = listOfNotNull(
+                ("core").takeIf { updateCoreSchemas },
+                ("app").takeIf { updateAppSchemas }
+        ).joinToString(separator = " and ");
+
+        val pendingChanges = listOfNotNull(
+                ("no outstanding").takeIf { pendingAppChanges == 0 && pendingCoreChanges == 0 },
+                ("$pendingCoreChanges outstanding core").takeIf { !updateCoreSchemas && pendingCoreChanges > 0 },
+                ("$pendingAppChanges outstanding app").takeIf { !updateAppSchemas && pendingAppChanges > 0 }
+        ).joinToString(prefix = "There are ", postfix = " database changes.");
+
+        Node.printBasicNodeInfo("Database migration scripts for $updatedSchemas schemas complete. $pendingChanges")
     }
 
     fun runSchemaSync() {
@@ -583,6 +605,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             throw e
         }
 
+        // Only execute futures/callbacks linked to [rootFuture] after the database transaction below is committed.
+        // This ensures that the node is fully ready before starting flows.
+        val rootFuture = openFuture<Void?>()
+
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (resultingNodeInfo, readyFuture) = database.transaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
@@ -604,7 +630,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-            val smmStartedFuture = smm.start(frozenTokenizableServices)
+            val callback = smm.start(frozenTokenizableServices)
+            val smmStartedFuture = rootFuture.map { callback() }
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
@@ -623,6 +650,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             }
             resultingNodeInfo to readyFuture
         }
+
+        rootFuture.captureLater(services.networkMapCache.nodeReady)
 
         readyFuture.map { ready ->
             if (ready) {

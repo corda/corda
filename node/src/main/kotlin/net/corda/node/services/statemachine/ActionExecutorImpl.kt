@@ -61,7 +61,7 @@ internal class ActionExecutorImpl(
             is Action.RemoveFlow -> executeRemoveFlow(action)
             is Action.CreateTransaction -> executeCreateTransaction()
             is Action.RollbackTransaction -> executeRollbackTransaction()
-            is Action.CommitTransaction -> executeCommitTransaction()
+            is Action.CommitTransaction -> executeCommitTransaction(action)
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
             is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
@@ -94,10 +94,7 @@ internal class ActionExecutorImpl(
         if (action.isCheckpointUpdate) {
             checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         } else {
-            if (flowState is FlowState.Finished) {
-                throw IllegalStateException("A new checkpoint cannot be created with a finished flow state.")
-            }
-            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!, serializedCheckpointState)
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         }
     }
 
@@ -222,13 +219,14 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     @Throws(SQLException::class)
-    private fun executeCommitTransaction() {
+    private fun executeCommitTransaction(action: Action.CommitTransaction) {
         try {
             contextTransaction.commit()
         } finally {
             contextTransaction.close()
             contextTransactionOrNull = null
         }
+        action.currentState.run { numberOfCommits = checkpoint.checkpointState.numberOfCommits }
     }
 
     @Suppress("TooGenericExceptionCaught")
