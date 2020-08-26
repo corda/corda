@@ -17,7 +17,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.node.services.StateMachineCleanUp
+import net.corda.node.services.StateMachineTest
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowTimeoutException
 import net.corda.node.services.statemachine.StaffedFlowHospital
@@ -45,7 +45,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class FlowRetryTest : StateMachineCleanUp() {
+class FlowRetryTest : StateMachineTest() {
 
     private companion object {
         val user = User("mark", "dadada", setOf(Permissions.all()))

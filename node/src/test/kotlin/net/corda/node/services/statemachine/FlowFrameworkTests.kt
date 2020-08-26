@@ -42,7 +42,7 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import net.corda.node.services.StateMachineCleanUp
+import net.corda.node.services.StateMachineTest
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
@@ -92,7 +92,7 @@ import kotlin.streams.toList
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class FlowFrameworkTests : StateMachineCleanUp() {
+class FlowFrameworkTests : StateMachineTest() {
     companion object {
         init {
             LogHelper.setLevel("+net.corda.flow")

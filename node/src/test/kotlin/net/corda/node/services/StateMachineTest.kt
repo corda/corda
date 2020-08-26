@@ -5,7 +5,7 @@ import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import org.junit.After
 
-abstract class StateMachineCleanUp {
+abstract class StateMachineTest {
 
     // Empty companion object added so that this class gets included in cordapps created by [enclosedCordapp()].
     // ([collectEnclosedClasses()] in order to add a class in the jar, that class needs to have at least one enclosed class.)

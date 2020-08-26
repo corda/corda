@@ -10,7 +10,7 @@ import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.StateMachineCleanUp
+import net.corda.node.services.StateMachineTest
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -39,7 +39,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class FlowClientIdTests : StateMachineCleanUp() {
+class FlowClientIdTests : StateMachineTest() {
 
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var aliceNode: TestStartedNode

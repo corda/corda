@@ -9,7 +9,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.StateMachineCleanUp
+import net.corda.node.services.StateMachineTest
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import java.util.concurrent.Semaphore
 import javax.persistence.Column
@@ -18,7 +18,7 @@ import javax.persistence.Id
 import javax.persistence.Table
 import kotlin.test.assertEquals
 
-abstract class AbstractFlowEntityManagerTest : StateMachineCleanUp() {
+abstract class AbstractFlowEntityManagerTest : StateMachineTest() {
 
     protected companion object {
 
