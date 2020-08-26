@@ -9,8 +9,10 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.delete
 import net.corda.core.internal.list
 import net.corda.core.internal.readAllLines
+import net.corda.core.internal.writeText
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.startFlow
@@ -85,6 +87,7 @@ abstract class StateMachineErrorHandlingTest {
         }
         recoverBy {
             resetCounters(bytemanNodeHandle)
+            bytemanNodeHandle.removeBytemanLogs()
         }
         return NodeWithReusableNumberOfStateMachine(bytemanNodeHandle) to port
     }
@@ -135,6 +138,8 @@ abstract class StateMachineErrorHandlingTest {
                 .transpose()
                 .getOrThrow()
                 .onEach {  recoverBy { resetCounters(it) } }
+                .onEach { recoverBy {
+                    it.removeBytemanLogs() } }
                 .map { NodeWithReusableNumberOfStateMachine(it) }
 
         recoverBy {
@@ -154,6 +159,13 @@ abstract class StateMachineErrorHandlingTest {
         return baseDirectory.list()
             .filter { "net.corda.node.Corda" in it.toString() && "stdout.log" in it.toString() }
             .flatMap { it.readAllLines() }
+    }
+
+    private fun NodeHandle.removeBytemanLogs() {
+        baseDirectory.list()
+                .filter { "net.corda.node.Corda" in it.toString() }
+                .filter { "stdout.log" in it.toString() }
+                .forEach { it.writeText("") }
     }
 
     internal fun OutOfProcessImpl.stop(timeout: Duration): Boolean {

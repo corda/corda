@@ -672,7 +672,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error during creation of transition that occurs after the first suspend will throw error into flow`() {
         startDriver {
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode()
 
             val rules = """
                 RULE Throw exception when creating transition
