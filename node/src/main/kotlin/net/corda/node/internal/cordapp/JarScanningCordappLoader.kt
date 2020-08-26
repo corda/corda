@@ -331,7 +331,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         val cordappElement = cordappJarPath.url.toString()
         logger.info("Scanning CorDapp in $cordappElement")
         val scanResult = ClassGraph()
-            .filterClasspathElements { elt -> elt == cordappElement || elt == cordappElement.removePrefix("file:") }
+            .filterClasspathElements { elt: URL -> elt == cordappJarPath.url }
             .overrideClassLoaders(appClassLoader)
             .ignoreParentClassLoaders()
             .enableAllInfo()
