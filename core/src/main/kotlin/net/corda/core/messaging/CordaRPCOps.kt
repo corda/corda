@@ -8,8 +8,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeDiagnosticInfo
@@ -27,7 +25,6 @@ import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
 import java.io.IOException
 import java.io.InputStream
-import java.security.PublicKey
 import java.time.Instant
 
 /**
@@ -99,6 +96,7 @@ data class ParametersUpdateInfo(
 data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
 
 /** RPC operations that the node exposes to clients. */
+@Suppress("TooManyFunctions")
 interface CordaRPCOps : PartyInfoRpcOps {
     /** Returns a list of currently in-progress state machine infos. */
     fun stateMachinesSnapshot(): List<StateMachineInfo>
