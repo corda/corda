@@ -12,7 +12,8 @@ import java.security.PublicKey
 @DeleteForDJVM
 abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val services: ServiceHub
-    abstract val notaryIdentityKey: PublicKey
+    abstract val notaryIdentity: Party
+    val notaryIdentityKey: PublicKey get() = notaryIdentity.owningKey
 
     /**
      * Interfaces for the request and result formats of queries supported by notary services. To

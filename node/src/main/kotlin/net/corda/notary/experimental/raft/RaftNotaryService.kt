@@ -1,18 +1,18 @@
 package net.corda.notary.experimental.raft
 
 import net.corda.core.flows.FlowSession
+import net.corda.core.identity.Party
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
-import java.security.PublicKey
 
 /** A highly available notary service using the Raft algorithm to achieve consensus. */
 class RaftNotaryService(
         override val services: ServiceHubInternal,
-        override val notaryIdentityKey: PublicKey
+        override val notaryIdentity: Party
 ) : SinglePartyNotaryService() {
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${RaftNotaryService::class.java}: notary configuration not present")

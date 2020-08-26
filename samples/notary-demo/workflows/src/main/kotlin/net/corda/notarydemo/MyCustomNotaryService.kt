@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
 import net.corda.core.flows.NotaryError
+import net.corda.core.identity.Party
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.SinglePartyNotaryService
@@ -24,7 +25,7 @@ import java.security.PublicKey
 // START 1
 class MyCustomValidatingNotaryService(
         override val services: ServiceHubInternal,
-        override val notaryIdentityKey: PublicKey)
+        override val notaryIdentity: Party)
     : SinglePartyNotaryService() {
     override val uniquenessProvider = PersistentUniquenessProvider(
             services.clock,

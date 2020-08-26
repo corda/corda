@@ -43,7 +43,6 @@ import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
-import java.security.PublicKey
 import java.time.Duration
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -267,7 +266,7 @@ class TimedFlowTests {
      * A test notary service that will just stop forever the first time you invoke its commitInputStates method and will succeed the
      * second time around.
      */
-    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
+    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentity: Party) : SinglePartyNotaryService() {
         override val uniquenessProvider = object : UniquenessProvider {
             /** A dummy commit method that immediately returns a success message. */
             override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {

@@ -37,7 +37,7 @@ import kotlin.concurrent.thread
  */
 class BFTSmartNotaryService(
         override val services: ServiceHubInternal,
-        override val notaryIdentityKey: PublicKey
+        override val notaryIdentity: Party
 ) : NotaryService() {
     companion object {
         private val log = contextLogger()

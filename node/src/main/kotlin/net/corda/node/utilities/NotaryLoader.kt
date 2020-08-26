@@ -1,5 +1,6 @@
 package net.corda.node.utilities
 
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.notary.NotaryService
@@ -14,7 +15,6 @@ import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotaryService
 import net.corda.notary.jpa.JPANotaryService
 import java.lang.reflect.InvocationTargetException
-import java.security.PublicKey
 
 class NotaryLoader(
         private val config: NotaryConfig,
@@ -57,7 +57,7 @@ class NotaryLoader(
 
     fun loadService(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal, cordappLoader: CordappLoader): NotaryService {
 
-        val notaryKey = myNotaryIdentity?.owningKey
+        val notaryParty = myNotaryIdentity?.party
                 ?: throw IllegalArgumentException("Unable to start notary service: notary identity not found")
 
         warnIfNotaryNotWhitelisted(myNotaryIdentity, services)
@@ -70,10 +70,10 @@ class NotaryLoader(
         maybeInstallSerializationFilter(serviceClass)
 
         val constructor = serviceClass
-                .getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java)
+                .getDeclaredConstructor(ServiceHubInternal::class.java, Party::class.java)
                 .apply { isAccessible = true }
         try {
-            return constructor.newInstance(services, notaryKey)
+            return constructor.newInstance(services, notaryParty)
         } catch (e: InvocationTargetException) {
             log.error("Exception occurred when starting notary service")
             throw e.cause ?: e
