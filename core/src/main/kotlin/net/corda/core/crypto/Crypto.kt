@@ -1002,7 +1002,6 @@ object Crypto {
             is BCEdDSAPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
             else -> key
         }
-
     }
 
     /**
@@ -1032,7 +1031,7 @@ object Crypto {
             is BCSphincs256PublicKey -> key
             is EdDSAPublicKey -> key
             is CompositeKey -> key
-            is BCEdDSAPublicKey -> EdDSAPublicKey(X509EncodedKeySpec(key.encoded))
+            is BCEdDSAPublicKey -> convertIfBCEdDSAPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }
     }
@@ -1053,7 +1052,7 @@ object Crypto {
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
             is EdDSAPrivateKey -> key
-            is BCEdDSAPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
+            is BCEdDSAPrivateKey -> convertIfBCEdDSAPrivateKey(key)
             else -> decodePrivateKey(key.encoded)
         }
     }
