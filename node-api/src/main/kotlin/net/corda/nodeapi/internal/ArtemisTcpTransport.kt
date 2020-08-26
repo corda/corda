@@ -117,7 +117,7 @@ class ArtemisTcpTransport {
                 options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
             }
             options[TransportConstants.HANDSHAKE_TIMEOUT] = 0 // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
-            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) 2 else 3 * Runtime.getRuntime().availableProcessors()
+            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) ArtemisConstants.LOW_MEMORY_MODE_REMOTING_THREADS_NUMBER else ArtemisConstants.DEFAULT_REMOTING_THREADS_NUMBER_MULTIPLIER * Runtime.getRuntime().availableProcessors()
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
@@ -131,7 +131,7 @@ class ArtemisTcpTransport {
                 options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
                 keyStoreProvider?.let { options.put(TransportConstants.KEYSTORE_PROVIDER_PROP_NAME, keyStoreProvider) }
             }
-            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) 2 else 3 * Runtime.getRuntime().availableProcessors()
+            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) ArtemisConstants.LOW_MEMORY_MODE_REMOTING_THREADS_NUMBER else ArtemisConstants.DEFAULT_REMOTING_THREADS_NUMBER_MULTIPLIER * Runtime.getRuntime().availableProcessors()
             return TransportConfiguration(connectorFactoryClassName, options)
         }
 
@@ -148,7 +148,7 @@ class ArtemisTcpTransport {
                 options.putAll(defaultSSLOptions)
             }
             options[TransportConstants.HANDSHAKE_TIMEOUT] = 0 // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
-            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) 2 else 3 * Runtime.getRuntime().availableProcessors()
+            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) ArtemisConstants.LOW_MEMORY_MODE_REMOTING_THREADS_NUMBER else ArtemisConstants.DEFAULT_REMOTING_THREADS_NUMBER_MULTIPLIER * Runtime.getRuntime().availableProcessors()
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
@@ -160,7 +160,7 @@ class ArtemisTcpTransport {
                 options.putAll(config.toTransportOptions())
                 options.putAll(defaultSSLOptions)
             }
-            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) 2 else 3 * Runtime.getRuntime().availableProcessors()
+            options[TransportConstants.REMOTING_THREADS_PROPNAME] = if (lowMemoryMode) ArtemisConstants.LOW_MEMORY_MODE_REMOTING_THREADS_NUMBER else ArtemisConstants.DEFAULT_REMOTING_THREADS_NUMBER_MULTIPLIER * Runtime.getRuntime().availableProcessors()
             return TransportConfiguration(connectorFactoryClassName, options)
         }
 

@@ -27,7 +27,7 @@ class ContractsJarFile(private val file: Path, private val lowMemoryMode: Boolea
     override val hash: SecureHash by lazy(LazyThreadSafetyMode.NONE, file::hash)
 
     override fun scan(): List<ContractClassName> {
-        val scanResult = ClassGraph().overrideClasspath(singleton(file)).setMaxBufferedJarRAMSize((if (lowMemoryMode) 1 else 64) * 1024 * 1024).enableClassInfo().pooledScan()
+        val scanResult = ClassGraph().overrideClasspath(singleton(file)).setMaxBufferedJarRAMSize(if (lowMemoryMode) ClassGraphConstants.LOW_MEMORY_MODE_MAX_BUFFERED_JAR_SIZE else ClassGraphConstants.DEFAULT_MAX_BUFFERED_JAR_SIZE).enableClassInfo().pooledScan()
 
         return scanResult.use { result ->
             coreContractClasses

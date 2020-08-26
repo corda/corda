@@ -334,7 +334,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         logger.info("Scanning CorDapp in $cordappElement")
         val scanResult = ClassGraph()
             .filterClasspathElements { elt -> elt == cordappElement }
-            .setMaxBufferedJarRAMSize((if (lowMemoryMode) 1 else 64) * 1024 * 1024)
+            .setMaxBufferedJarRAMSize(if (lowMemoryMode) ClassGraphConstants.LOW_MEMORY_MODE_MAX_BUFFERED_JAR_SIZE else ClassGraphConstants.DEFAULT_MAX_BUFFERED_JAR_SIZE)
             .overrideClassLoaders(appClassLoader)
             .ignoreParentClassLoaders()
             .enableAllInfo()

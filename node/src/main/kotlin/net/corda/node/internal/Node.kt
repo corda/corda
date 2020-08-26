@@ -280,6 +280,7 @@ open class Node(configuration: NodeConfiguration,
     private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
     private var rpcBroker: ArtemisBroker? = null
 
+    // The timeout set to 0 stops Artemis from allocating memory in un-managed space which decreases the overall memory usage
     protected open val journalBufferTimeout : Int? = if (configuration.lowMemoryMode) 0 else null
 
     private var shutdownHook: ShutdownHook? = null

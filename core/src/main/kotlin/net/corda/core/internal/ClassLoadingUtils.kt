@@ -5,6 +5,13 @@ import io.github.classgraph.ClassInfo
 import net.corda.core.StubOutForDJVM
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.attachmentScheme
 
+class ClassGraphConstants {
+    companion object {
+        const val DEFAULT_MAX_BUFFERED_JAR_SIZE = 64 * 1024 * 1024
+        const val LOW_MEMORY_MODE_MAX_BUFFERED_JAR_SIZE = 1024 * 1024
+    }
+}
+
 /**
  * Creates instances of all the classes in the classpath of the provided classloader, which implement the interface of the provided class.
  * @param classloader the classloader, which will be searched for the classes.
@@ -41,7 +48,7 @@ fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Clas
                                            classVersionRange: IntRange? = null, lowMemoryMode: Boolean): Set<String> {
     return ClassGraph().overrideClassLoaders(classloader)
         .enableURLScheme(attachmentScheme)
-            .setMaxBufferedJarRAMSize((if (lowMemoryMode) 1 else 64) * 1024 * 1024)
+        .setMaxBufferedJarRAMSize(if (lowMemoryMode) ClassGraphConstants.LOW_MEMORY_MODE_MAX_BUFFERED_JAR_SIZE else ClassGraphConstants.DEFAULT_MAX_BUFFERED_JAR_SIZE)
         .ignoreParentClassLoaders()
         .enableClassInfo()
         .pooledScan()
