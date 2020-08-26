@@ -107,8 +107,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     /** Check if transaction is intended to be signed by this notary. */
     @Suspendable
     private fun checkNotary(notary: Party?) {
-        require(notary?.owningKey == service.notaryIdentityKey) {
-            "The notary specified on the transaction: [$notary] does not match the notary service's identity: [${service.notaryIdentityKey}] "
+        require(notary?.name == service.notaryIdentity.name) {
+            "The notary specified on the transaction: [$notary] does not match the notary service's identity: [${service.notaryIdentity}] "
         }
     }
 

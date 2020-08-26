@@ -2,6 +2,7 @@ package net.corda.notary.jpa
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowSession
+import net.corda.core.identity.Party
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.utilities.seconds
@@ -10,12 +11,11 @@ import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.notary.common.signBatch
-import java.security.PublicKey
 
 /** Notary service backed by a relational database. */
 class JPANotaryService(
         override val services: ServiceHubInternal,
-        override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
+        override val notaryIdentity: Party) : SinglePartyNotaryService() {
 
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")

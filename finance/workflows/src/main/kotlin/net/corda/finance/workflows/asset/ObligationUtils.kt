@@ -198,9 +198,9 @@ object ObligationUtils {
         val obligationOwner = states.first().data.beneficiary
 
         requireThat {
-            "all fungible asset states use the same notary" using (assetStatesAndRefs.all { it.state.notary == notary })
+            "all fungible asset states use the same notary" using (assetStatesAndRefs.all { it.state.notary.name == notary.name })
             "all obligation states are in the normal state" using (statesAndRefs.all { it.state.data.lifecycle == Obligation.Lifecycle.NORMAL })
-            "all obligation states use the same notary" using (statesAndRefs.all { it.state.notary == notary })
+            "all obligation states use the same notary" using (statesAndRefs.all { it.state.notary.name == notary.name })
             "all obligation states have the same obligor" using (statesAndRefs.all { it.state.data.obligor == obligationIssuer })
             "all obligation states have the same beneficiary" using (statesAndRefs.all { it.state.data.beneficiary == obligationOwner })
         }

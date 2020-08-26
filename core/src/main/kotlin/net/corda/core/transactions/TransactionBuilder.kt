@@ -635,7 +635,7 @@ open class TransactionBuilder(
 
     private fun checkNotary(stateAndRef: StateAndRef<*>) {
         val notary = stateAndRef.state.notary
-        require(notary == this.notary) {
+        require(notary.name == this.notary?.name) {
             "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"."
         }
     }
@@ -648,7 +648,7 @@ open class TransactionBuilder(
         }
     }
 
-    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
+    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary.name }.toSet().size == 1
 
     /**
      * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method is used

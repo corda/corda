@@ -17,7 +17,6 @@ import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.PublicKey
 import java.util.*
 
 class CustomNotaryTest {
@@ -59,7 +58,7 @@ class CustomNotaryTest {
         future.getOrThrow()
     }
 
-    class CustomNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : NotaryService() {
+    class CustomNotaryService(override val services: ServiceHubInternal, override val notaryIdentity: Party) : NotaryService() {
 
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> =
                 object : FlowLogic<Void?>() {
