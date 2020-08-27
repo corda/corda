@@ -75,7 +75,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
                             signerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList(),
-                            lowMemoryMode: Boolean): JarScanningCordappLoader {
+                            lowMemoryMode: Boolean = false): JarScanningCordappLoader {
             logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
             val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
             return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, lowMemoryMode)
