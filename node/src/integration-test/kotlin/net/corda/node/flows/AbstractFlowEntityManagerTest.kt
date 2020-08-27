@@ -9,8 +9,8 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.StateMachineTest
 import net.corda.node.services.statemachine.StaffedFlowHospital
+import net.corda.testing.internal.StateMachineTest
 import java.util.concurrent.Semaphore
 import javax.persistence.Column
 import javax.persistence.Entity

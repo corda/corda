@@ -24,7 +24,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
-import net.corda.node.services.StateMachineTest
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.notary.jpa.JPAUniquenessProvider
 import net.corda.testing.core.ALICE_NAME
@@ -34,6 +33,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.StateMachineTest
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions

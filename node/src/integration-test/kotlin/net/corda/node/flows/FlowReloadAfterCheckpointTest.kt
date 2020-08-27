@@ -21,7 +21,6 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.node.services.StateMachineTest
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.FlowTimeoutException
@@ -31,6 +30,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.StateMachineTest
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
