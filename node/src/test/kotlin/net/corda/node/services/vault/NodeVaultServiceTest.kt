@@ -466,6 +466,8 @@ class NodeVaultServiceTest {
         }
     }
 
+    //linux one OOM issue
+    @Ignore
     @Test(timeout=300_000)
 	fun `unconsumedStatesForSpending from two issuer parties`() {
         database.transaction {
