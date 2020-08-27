@@ -23,6 +23,7 @@ import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
@@ -48,6 +49,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.ByteArrayOutputStream
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
@@ -99,9 +101,10 @@ open class MockServices private constructor(
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+            DatabaseSnapshot.copyDatabaseSnapshot(Paths.get("./build/mocknetworktestdb/${nodeName}"))
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+            props.setProperty("dataSource.url", "jdbc:h2:file:./build/mocknetworktestdb/${nodeName}/persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
             props.setProperty("dataSource.user", "sa")
             props.setProperty("dataSource.password", "")
             return props
@@ -357,7 +360,6 @@ open class MockServices private constructor(
     constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters)
             : this(cordappPackages, TestIdentity(initialIdentityName), identityService, networkParameters)
 
-
     constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters, key: KeyPair)
             : this(cordappPackages, TestIdentity(initialIdentityName, key), identityService, networkParameters)
 
@@ -428,11 +430,12 @@ open class MockServices private constructor(
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
         it.start()
     }
-    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(
-        numberOfWorkers = 2,
-        cordappProvider = mockCordappProvider,
-        attachments = attachments
-    )
+    override val transactionVerifierService: TransactionVerifierService
+        get() = InMemoryTransactionVerifierService(
+                numberOfWorkers = 2,
+                cordappProvider = mockCordappProvider,
+                attachments = attachments
+        )
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()

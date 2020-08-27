@@ -263,7 +263,7 @@ data class DriverParameters(
         @Suppress("DEPRECATION") val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
-        val inMemoryDB: Boolean = true,
+        val inMemoryDB: Boolean = false,
         val cordappsForAllNodes: Collection<TestCordapp>? = null,
         val djvmBootstrapSource: Path? = null,
         val djvmCordaSource: List<Path> = emptyList(),

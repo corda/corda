@@ -12,6 +12,12 @@ configurations {
 }
 
 sourceSets {
+    test {
+        resources {
+            srcDirs = ["src/main/resources"]
+            includes = ["**/*.db"]
+        }
+    }
     integrationTest {
         kotlin {
             compileClasspath += main.output + test.output

@@ -97,6 +97,7 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.ClusterSpec
+import net.corda.testing.node.DatabaseSnapshot
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -200,6 +201,7 @@ class DriverDSLImpl(
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
             NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
         } else {
+            DatabaseSnapshot.copyDatabaseSnapshot(corda.baseDirectory)
             this
         }
     }
