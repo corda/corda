@@ -85,6 +85,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                         logger.debug { "Examining $it" }
                         true
                     }
+                    .filter { !it.endsWith(".tmp") }
                     .filter { it.isRegularFile() }
                     .filter { file ->
                         val lastModifiedTime = file.lastModifiedTime()
