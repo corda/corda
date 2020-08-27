@@ -584,7 +584,8 @@ data class DriverParameters(
             djvmCordaSource = djvmCordaSource,
             environmentVariables = environmentVariables
     )
-
+    
+    @Suppress("LongParameterList")
     fun copy(isDebug: Boolean,
              driverDirectory: Path,
              portAllocation: PortAllocation,
