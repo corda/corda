@@ -39,14 +39,14 @@ class ArtemisRpcBroker internal constructor(
 
         fun withSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                     sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int,
-                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, lowMemoryMode: Boolean): ArtemisBroker {
+                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean, lowMemoryMode: Boolean = false): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, journalBufferTimeout,
                     jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, lowMemoryMode)
         }
 
         fun withoutSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
                        securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean,
-                       baseDirectory: Path, shouldStartLocalShell: Boolean, lowMemoryMode: Boolean): ArtemisBroker {
+                       baseDirectory: Path, shouldStartLocalShell: Boolean, lowMemoryMode: Boolean = false): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, journalBufferTimeout,
                     jmxEnabled, baseDirectory, configuration, shouldStartLocalShell, lowMemoryMode)
         }
