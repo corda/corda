@@ -50,7 +50,8 @@ class H2SecurityTests {
                 inMemoryDB = false,
                 startNodesInProcess = false,
                 notarySpecs = emptyList(),
-                cordappsForAllNodes = emptyList()
+                cordappsForAllNodes = emptyList(),
+                copyDatabaseSnapshot = false
         )) {
             val port = getFreePort()
             startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port", dbPasswordKey to "x")).getOrThrow()
@@ -71,7 +72,8 @@ class H2SecurityTests {
                 inMemoryDB = false,
                 startNodesInProcess = false,
                 notarySpecs = emptyList(),
-                cordappsForAllNodes = listOf(enclosedCordapp())
+                cordappsForAllNodes = listOf(enclosedCordapp()),
+                copyDatabaseSnapshot = false
         )) {
             val port = getFreePort()
             val nodeHandle = startNode(rpcUsers = listOf(user), customOverrides = mapOf(h2AddressKey to "localhost:$port",

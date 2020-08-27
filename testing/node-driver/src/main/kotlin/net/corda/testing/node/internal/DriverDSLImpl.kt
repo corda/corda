@@ -150,7 +150,8 @@ class DriverDSLImpl(
         val djvmBootstrapSource: Path?,
         val djvmCordaSource: List<Path>,
         val environmentVariables: Map<String, String>,
-        val allowHibernateToManageAppSchema: Boolean = true
+        val allowHibernateToManageAppSchema: Boolean = true,
+        val copyDatabaseSnapshot: Boolean = true
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -201,7 +202,9 @@ class DriverDSLImpl(
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
             NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
         } else {
-            DatabaseSnapshot.copyDatabaseSnapshot(corda.baseDirectory)
+            if (copyDatabaseSnapshot) {
+                DatabaseSnapshot.copyDatabaseSnapshot(corda.baseDirectory)
+            }
             this
         }
     }
@@ -1399,6 +1402,7 @@ fun <A> internalDriver(
         djvmCordaSource: List<Path> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         allowHibernateToManageAppSchema: Boolean = true,
+        copyDatabaseSnapshot: Boolean = true,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1422,7 +1426,8 @@ fun <A> internalDriver(
                     djvmBootstrapSource = djvmBootstrapSource,
                     djvmCordaSource = djvmCordaSource,
                     environmentVariables = environmentVariables,
-                    allowHibernateToManageAppSchema = allowHibernateToManageAppSchema
+                    allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
+                    copyDatabaseSnapshot = copyDatabaseSnapshot
             ),
             coerce = { it },
             dsl = dsl

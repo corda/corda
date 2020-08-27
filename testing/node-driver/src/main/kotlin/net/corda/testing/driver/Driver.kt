@@ -206,7 +206,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
                     djvmCordaSource = defaultParameters.djvmCordaSource,
                     environmentVariables = defaultParameters.environmentVariables,
-                    allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema
+                    allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
+                    copyDatabaseSnapshot = defaultParameters.copyDatabaseSnapshot
             ),
             coerce = { it },
             dsl = dsl
@@ -268,7 +269,8 @@ data class DriverParameters(
         val djvmBootstrapSource: Path? = null,
         val djvmCordaSource: List<Path> = emptyList(),
         val environmentVariables : Map<String, String> = emptyMap(),
-        val allowHibernateToManageAppSchema: Boolean = true
+        val allowHibernateToManageAppSchema: Boolean = true,
+        val copyDatabaseSnapshot: Boolean = true
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
