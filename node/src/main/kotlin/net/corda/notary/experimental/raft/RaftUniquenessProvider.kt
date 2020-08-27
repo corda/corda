@@ -94,6 +94,8 @@ class RaftUniquenessProvider(
         fun StateRef.encoded() = "$txhash:$index"
         fun String.parseStateRef(): StateRef {
             val idx = lastIndexOf(':')
+            // IEE: verify this doesn't break from beging algo:txhash:index rather than txhash:index but the lastIndex seems to be correct
+            // for this exact purpose
             require(idx != -1) {
                 "Encoding error for StateRef '$this'"
             }
