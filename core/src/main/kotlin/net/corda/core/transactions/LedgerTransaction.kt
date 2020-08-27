@@ -91,7 +91,6 @@ private constructor(
         private val lowMemoryMode: Boolean
 ) : FullTransaction() {
 
-    @JvmOverloads
     constructor(
             inputs: List<StateAndRef<ContractState>>,
             outputs: List<TransactionState<ContractState>>,
