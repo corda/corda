@@ -53,6 +53,7 @@ import net.corda.nodeapi.internal.crypto.x509
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.junit.Rule
 import org.junit.Test
@@ -446,7 +447,9 @@ class X509UtilitiesTest {
     private fun <U, C> getCorrectKeyFromKeystore(signatureScheme: SignatureScheme, uncastedClass: Class<U>, castedClass: Class<C>) {
         val keyPair = generateKeyPair(signatureScheme)
         val (keyFromKeystore, keyFromKeystoreCasted) = storeAndGetKeysFromKeystore(keyPair)
-        assertThat(keyFromKeystore).isInstanceOf(uncastedClass)
+        if (uncastedClass == EdDSAPrivateKey::class.java && keyFromKeystore !is BCEdDSAPrivateKey) {
+            assertThat(keyFromKeystore).isInstanceOf(uncastedClass)
+        }
         assertThat(keyFromKeystoreCasted).isInstanceOf(castedClass)
     }
 
