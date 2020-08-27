@@ -126,6 +126,35 @@ private constructor(
             lowMemoryMode = false
     )
 
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            outputs: List<TransactionState<ContractState>>,
+            commands: List<CommandWithParties<CommandData>>,
+            attachments: List<Attachment>,
+            id: SecureHash,
+            notary: Party?,
+            timeWindow: TimeWindow?,
+            privacySalt: PrivacySalt,
+            networkParameters: NetworkParameters,
+            references: List<StateAndRef<ContractState>>):
+        this(
+                inputs = inputs,
+                outputs = outputs,
+                commands = commands,
+                attachments = attachments,
+                id = id,
+                notary = notary,
+                timeWindow = timeWindow,
+                privacySalt = privacySalt,
+                networkParameters = networkParameters,
+                references = references,
+                componentGroups = null,
+                serializedInputs = null,
+                serializedReferences = null,
+                isAttachmentTrusted = { true },
+                verifierFactory = ::BasicVerifier
+    )
+
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
         checkNotaryWhitelisted()
@@ -209,12 +238,7 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references,
-                componentGroups = null,
-                serializedInputs = null,
-                serializedReferences = null,
-                isAttachmentTrusted = { true },
-                verifierFactory = ::BasicVerifier
+                references = references
             )
         }
     }
