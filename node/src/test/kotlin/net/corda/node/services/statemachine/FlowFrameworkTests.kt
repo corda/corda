@@ -82,6 +82,7 @@ import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
@@ -393,7 +394,7 @@ class FlowFrameworkTests {
         aliceNode.database.transaction {
             val metadata = session.find(DBCheckpointStorage.DBFlowMetadata::class.java, flow.id.uuid.toString())
             assertNotNull(metadata.finishInstant)
-            assertTrue(metadata.finishInstant!! >= metadata.startInstant)
+            assertTrue(metadata.finishInstant!!.truncatedTo(ChronoUnit.MILLIS) >= metadata.startInstant.truncatedTo(ChronoUnit.MILLIS))
         }
     }
 
