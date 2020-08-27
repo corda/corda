@@ -11,10 +11,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.StateMachineTest
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.DummyCommandData
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.StateMachineTest
 import net.corda.testing.internal.vault.DUMMY_DEAL_PROGRAM_ID
 import net.corda.testing.internal.vault.DummyDealContract
 import net.corda.testing.internal.vault.UNIQUE_DUMMY_LINEAR_CONTRACT_PROGRAM_ID

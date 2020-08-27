@@ -10,9 +10,9 @@ import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.StateMachineTest
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.internal.StateMachineTest
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP

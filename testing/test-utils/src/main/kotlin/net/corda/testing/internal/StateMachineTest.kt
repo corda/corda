@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.testing.internal
 
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
