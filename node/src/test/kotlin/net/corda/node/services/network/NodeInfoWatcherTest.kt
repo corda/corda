@@ -7,11 +7,11 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.size
 import net.corda.core.node.services.KeyManagementService
+import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
@@ -21,7 +21,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import rx.observers.TestSubscriber
 import rx.schedulers.TestScheduler
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -127,6 +129,31 @@ class NodeInfoWatcherTest {
             // The same folder can be reported more than once, so take unique values.
             val readNodes = testSubscriber.onNextEvents.distinct().flatten()
             assertEquals(nodeInfoAndSigned.nodeInfo, (readNodes.first() as? NodeInfoUpdate.Add)?.nodeInfo)
+        } finally {
+            subscription.unsubscribe()
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `ignore tmp files`() {
+        nodeInfoPath.createDirectories()
+
+        // Start polling with an empty folder.
+        val subscription = nodeInfoWatcher.nodeInfoUpdates().subscribe(testSubscriber)
+        try {
+            // Ensure the watch service is started.
+            advanceTime()
+
+
+            // create file
+            // boohoo, we shouldn't create real files, instead mock Path
+            val file = NodeInfoWatcher.saveToFile(nodeInfoPath, nodeInfoAndSigned)
+            Files.move(file, Paths.get("$file.tmp"))
+
+            advanceTime()
+
+            // Check no nodeInfos are read.
+            assertEquals(0, testSubscriber.onNextEvents.distinct().flatten().size)
         } finally {
             subscription.unsubscribe()
         }
