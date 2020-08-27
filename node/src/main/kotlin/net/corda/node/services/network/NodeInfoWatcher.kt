@@ -41,17 +41,20 @@ class NodeInfoWatcher(private val nodePath: Path,
         private val logger = contextLogger()
 
         // TODO This method doesn't belong in this class
-        fun saveToFile(path: Path, nodeInfoAndSigned: NodeInfoAndSigned) {
+        fun saveToFile(path: Path, nodeInfoAndSigned: NodeInfoAndSigned): Path {
             // By using the hash of the node's first name we ensure:
             // 1) node info files for the same node map to the same filename and thus avoid having duplicate files for
             //    the same node
             // 2) avoid having to deal with characters in the X.500 name which are incompatible with the local filesystem
             val fileNameHash = nodeInfoAndSigned.nodeInfo.legalIdentities[0].name.serialize().hash
+            val target = path / "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}$fileNameHash"
             nodeInfoAndSigned
                     .signed
                     .serialize()
                     .open()
-                    .copyTo(path / "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}$fileNameHash", REPLACE_EXISTING)
+                    .copyTo(target, REPLACE_EXISTING)
+
+            return target
         }
     }
 
@@ -85,7 +88,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                         logger.debug { "Examining $it" }
                         true
                     }
-                    .filter { !it.endsWith(".tmp") }
+                    .filter { !it.toString().endsWith(".tmp") }
                     .filter { it.isRegularFile() }
                     .filter { file ->
                         val lastModifiedTime = file.lastModifiedTime()
