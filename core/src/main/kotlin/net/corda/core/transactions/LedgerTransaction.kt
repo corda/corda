@@ -56,6 +56,7 @@ import java.util.function.Predicate
 @Suppress("LongParameterList")
 @KeepForDJVM
 class LedgerTransaction
+@JvmOverloads
 private constructor(
         // DOCSTART 1
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
