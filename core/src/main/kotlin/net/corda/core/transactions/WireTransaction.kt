@@ -7,6 +7,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -49,11 +50,9 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>,
-                      val privacySalt: PrivacySalt = PrivacySalt(),
-                      val hashAlgorithm: String) : TraversableTransaction(componentGroups) {
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, val hashAlgorithm: String) : TraversableTransaction(componentGroups) {
     @DeprecatedConstructorForDeserialization(1)
-    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, SecureHash.SHA2_256)
+    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, SHA2_256)
 
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
@@ -326,7 +325,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>,
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(hashAlgorithm, internalIt, privacySalt, it.groupIndex, internalIndex) } }
+        // IEE: review !! getOrElse?
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
     }
 
     /**

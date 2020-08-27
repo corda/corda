@@ -24,24 +24,12 @@ class PrivacySaltTest {
     @Test(timeout=300_000)
 	fun testTooShortPrivacySaltForSHA256() {
         val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE - 1) { 0x7f }) }
-        assertEquals("Privacy salt should be 32 bytes.", ex.message)
+        assertEquals("Privacy salt should be at least 32 bytes.", ex.message)
     }
 
     @Test(timeout=300_000)
-	fun testTooLongPrivacySaltForSHA256() {
-        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE + 1) { 0x7f }) }
-        assertEquals("Privacy salt should be 32 bytes.", ex.message)
-    }
-
-    @Test(timeout=300_000)
-    fun testTooShortPrivacySaltForSHA512() {
-        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE * 2 - 1) { 0x7f }).apply { validateFor("SHA-512", true) } }
-        assertEquals("Privacy salt should be 64 bytes for SHA-512.", ex.message)
-    }
-
-    @Test(timeout=300_000)
-    fun testTooLongPrivacySaltForSHA512() {
-        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE * 2 + 1) { 0x7f }).apply { validateFor("SHA-512", true)} }
-        assertEquals("Privacy salt should be 64 bytes for SHA-512.", ex.message)
+	fun testTooShortPrivacySaltForSHA512() {
+        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE) { 0x7f }).apply { validateFor("SHA-512") } }
+        assertEquals("Privacy salt should be at least 64 bytes for SHA-512.", ex.message)
     }
 }

@@ -340,13 +340,9 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
         require(bytes.size >= MINIMUM_SIZE) { "Privacy salt should be at least $MINIMUM_SIZE bytes." }
     }
 
-    fun validateFor(algorithm: String, strict: Boolean = false) {
+    fun validateFor(algorithm: String) {
         val digestLength = SecureHash.digestLengthFor(algorithm)
-        if(strict) {
-            require(bytes.size == digestLength) { "Privacy salt should be $digestLength bytes for $algorithm." }
-        } else {
-            require(bytes.size >= digestLength) { "Privacy salt should be at least $digestLength bytes for $algorithm." }
-        }
+        require(bytes.size >= digestLength) { "Privacy salt should be at least $digestLength bytes for $algorithm." }
     }
 
     companion object {

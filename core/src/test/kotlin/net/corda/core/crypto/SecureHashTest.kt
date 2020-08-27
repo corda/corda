@@ -6,7 +6,7 @@ import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
 import java.lang.IllegalArgumentException
-import kotlin.test.assertEquals	import kotlin.test.assertEquals
+import kotlin.test.assertEquals
 
 class SecureHashTest {
     @Test(timeout=300_000)

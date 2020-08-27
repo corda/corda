@@ -356,7 +356,7 @@ private class SHA256DigestSupplier(algorithm: String) : Supplier<MessageDigest> 
 // created an extra public class in the API definition.
 private class LocalSHA256Digest(private val algorithm: String) : FastThreadLocal<MessageDigest>() {
     override fun initialValue(): MessageDigest = try {
-        MessageDigest.getInstance("SHA-256")
+        MessageDigest.getInstance(algorithm)
     } catch (_: NoSuchAlgorithmException) {
         throw IllegalArgumentException("Unknown hash algorithm $algorithm")
     }
