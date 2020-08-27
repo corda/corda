@@ -48,6 +48,7 @@ import net.corda.testing.node.internal.*
 import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -211,6 +212,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test(timeout=300_000)
 	fun `shutdown and restore`() {
+        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
         mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP))
         val notaryNode = mockNet.defaultNotaryNode
         val notary = mockNet.defaultNotaryIdentity

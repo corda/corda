@@ -18,6 +18,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import org.junit.Assume
 import org.junit.Test
 import java.time.Duration
 import java.time.Instant
@@ -27,6 +28,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep`() {
+        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, finish) = alice.rpc.startFlow(::SleepyFlow).returnValue.getOrThrow(1.minutes)
