@@ -54,6 +54,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep and perform other suspending functions`() {
+        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
         // ensures that events received while the flow is sleeping are not processed
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
