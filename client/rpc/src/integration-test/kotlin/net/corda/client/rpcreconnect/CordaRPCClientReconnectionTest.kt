@@ -469,13 +469,13 @@ class CordaRPCClientReconnectionTest {
                 val clientId = UUID.randomUUID().toString()
                 val flowHandle = rpcOps.startFlowWithClientId(clientId, ::ThrowingFlow)
 
-                var erroredCounter = 0
+                val erroredCounter = AtomicInteger(0)
                 flowHandle.returnValue.doOnError {
-                    erroredCounter++
+                    erroredCounter.incrementAndGet()
                 }
 
                 flowHandle.returnValue.toCompletableFuture().exceptionally {
-                    erroredCounter++
+                    erroredCounter.incrementAndGet()
                 }
 
                 node.stop()
@@ -489,7 +489,7 @@ class CordaRPCClientReconnectionTest {
                 }
 
                 sleep(1000)
-                assertEquals(2, erroredCounter)
+                assertEquals(2, erroredCounter.get())
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
         }
