@@ -90,45 +90,6 @@ private constructor(
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier
 ) : FullTransaction() {
 
-    constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters?,
-            references: List<StateAndRef<ContractState>>,
-            componentGroups: List<ComponentGroup>?,
-            serializedInputs: List<SerializedStateAndRef>?,
-            serializedReferences: List<SerializedStateAndRef>?,
-            isAttachmentTrusted: (Attachment) -> Boolean,
-            verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
-            lowMemoryMode: Boolean
-    ) : this(
-            inputs = inputs,
-            outputs = outputs,
-            commands = commands,
-            attachments = attachments,
-            id = id,
-            notary = notary,
-            timeWindow = timeWindow,
-            privacySalt = privacySalt,
-            networkParameters = networkParameters,
-            references = references,
-            componentGroups = componentGroups,
-            serializedInputs = serializedInputs,
-            serializedReferences = serializedReferences,
-            isAttachmentTrusted = isAttachmentTrusted,
-            verifierFactory = verifierFactory
-    ) {
-        this.lowMemoryMode = lowMemoryMode
-    }
-
-    private var lowMemoryMode: Boolean = false
-
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
         checkNotaryWhitelisted()
@@ -278,7 +239,7 @@ private constructor(
      * Node without changing either the wire format or any public APIs.
      */
     @CordaInternal
-    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier, lowMemoryMode: Boolean): LedgerTransaction = LedgerTransaction(
+    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier): LedgerTransaction = LedgerTransaction(
         inputs = inputs,
         outputs = outputs,
         commands = commands,
@@ -293,8 +254,7 @@ private constructor(
         serializedInputs = serializedInputs,
         serializedReferences = serializedReferences,
         isAttachmentTrusted = isAttachmentTrusted,
-        verifierFactory = alternateVerifier,
-        lowMemoryMode = lowMemoryMode
+        verifierFactory = alternateVerifier
     )
 
     // Read network parameters with backwards compatibility goo.
@@ -801,8 +761,7 @@ private constructor(
                 serializedInputs = serializedInputs,
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
-                verifierFactory = verifierFactory,
-                lowMemoryMode = lowMemoryMode
+                verifierFactory = verifierFactory
         )
     }
 
@@ -832,8 +791,7 @@ private constructor(
                 serializedInputs = serializedInputs,
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
-                verifierFactory = verifierFactory,
-                lowMemoryMode = lowMemoryMode
+                verifierFactory = verifierFactory
         )
     }
 }

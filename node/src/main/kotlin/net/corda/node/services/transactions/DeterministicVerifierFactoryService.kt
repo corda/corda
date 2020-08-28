@@ -81,7 +81,7 @@ class DeterministicVerifierFactoryService(
     override fun apply(ledgerTransaction: LedgerTransaction): LedgerTransaction {
         // Specialise the LedgerTransaction here so that
         // contracts are verified inside the DJVM!
-        return ledgerTransaction.specialise(::specialise, lowMemoryMode)
+        return ledgerTransaction.specialise(::specialise)
     }
 
     private fun specialise(ltx: LedgerTransaction, classLoader: ClassLoader): Verifier {
