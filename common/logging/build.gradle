@@ -15,10 +15,16 @@ dependencies {
 
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
-    testCompile project(":test-utils")
-    testCompile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    // Need to depend on one other Corda project in order to get hold of a valid manifest for the tests
+    testCompile project(":common-validation")
+
+    // test dependencies
+    testImplementation "junit:junit:$junit_version"
+    testCompile group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
     testCompile "org.mockito:mockito-core:$mockito_version"
+    testCompile "com.natpryce:hamkrest:$hamkrest_version"
 }
+
 
 
 task generateSource(type: Copy) {
