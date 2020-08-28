@@ -408,24 +408,24 @@ class CordaRPCClientReconnectionTest {
 
                 val completedCounter = AtomicInteger(0)
                 flowHandle0.returnValue.doOnComplete {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
                 flowHandle1!!.returnValue.doOnComplete {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
 
                 flowHandle0.returnValue.thenMatch({
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }, {})
                 flowHandle1.returnValue.thenMatch({
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }, {})
 
                 flowHandle0.returnValue.toCompletableFuture().thenApply {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
                 flowHandle1.returnValue.toCompletableFuture().thenApply {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
 
                 node.stop()
@@ -471,11 +471,11 @@ class CordaRPCClientReconnectionTest {
 
                 val erroredCounter = AtomicInteger(0)
                 flowHandle.returnValue.doOnError {
-                    erroredCounter.incrementAndGet()
+                    erroredCounter.getAndIncrement()
                 }
 
                 flowHandle.returnValue.toCompletableFuture().exceptionally {
-                    erroredCounter.incrementAndGet()
+                    erroredCounter.getAndIncrement()
                 }
 
                 node.stop()
