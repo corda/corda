@@ -356,7 +356,7 @@ class CordaRPCClient private constructor(
         private val sslConfiguration: ClientRpcSslOptions? = null,
         private val classLoader: ClassLoader? = null,
         private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null,
-        private val lowMemoryMode: Boolean = false
+        private val lowMemoryMode: Boolean
 ) {
 
     @JvmOverloads
@@ -366,7 +366,8 @@ class CordaRPCClient private constructor(
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
-            configuration = configuration
+            configuration = configuration,
+            lowMemoryMode = false
     )
 
     constructor(
@@ -383,8 +384,20 @@ class CordaRPCClient private constructor(
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            lowMemoryMode = false
+    )
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            sslConfiguration: ClientRpcSslOptions? = null,
             classLoader: ClassLoader? = null,
-            lowMemoryMode: Boolean = false
+            lowMemoryMode: Boolean
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -398,8 +411,23 @@ class CordaRPCClient private constructor(
             hostAndPort: NetworkHostAndPort,
             configuration: CordaRPCClientConfiguration,
             sslConfiguration: ClientRpcSslOptions?,
+            classLoader: ClassLoader? = null
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            lowMemoryMode = false
+    )
+
+    @JvmOverloads
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration,
+            sslConfiguration: ClientRpcSslOptions?,
             classLoader: ClassLoader? = null,
-            lowMemoryMode: Boolean = false
+            lowMemoryMode: Boolean
     ) : this(
             hostAndPort = hostAndPort,
             haAddressPool = emptyList(),
@@ -420,7 +448,8 @@ class CordaRPCClient private constructor(
             haAddressPool = haAddressPool,
             configuration = configuration,
             sslConfiguration = sslConfiguration,
-            classLoader = classLoader
+            classLoader = classLoader,
+            lowMemoryMode = false
     )
 
     @JvmOverloads
@@ -436,7 +465,8 @@ class CordaRPCClient private constructor(
             configuration = configuration,
             sslConfiguration = sslConfiguration,
             classLoader = classLoader,
-            customSerializers = customSerializers
+            customSerializers = customSerializers,
+            lowMemoryMode = false
     )
 
     @JvmOverloads
@@ -452,7 +482,8 @@ class CordaRPCClient private constructor(
             configuration = configuration,
             sslConfiguration = sslConfiguration,
             classLoader = classLoader,
-            customSerializers = customSerializers
+            customSerializers = customSerializers,
+            lowMemoryMode = false
     )
 
     // Here to keep the keep ABI compatibility happy

@@ -87,8 +87,7 @@ private constructor(
         private val serializedInputs: List<SerializedStateAndRef>?,
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
-        private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
-        private val lowMemoryMode: Boolean = false
+        private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier
 ) : FullTransaction() {
 
     init {
@@ -240,7 +239,7 @@ private constructor(
      * Node without changing either the wire format or any public APIs.
      */
     @CordaInternal
-    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier, lowMemoryMode: Boolean): LedgerTransaction = LedgerTransaction(
+    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier): LedgerTransaction = LedgerTransaction(
         inputs = inputs,
         outputs = outputs,
         commands = commands,
@@ -255,8 +254,7 @@ private constructor(
         serializedInputs = serializedInputs,
         serializedReferences = serializedReferences,
         isAttachmentTrusted = isAttachmentTrusted,
-        verifierFactory = alternateVerifier,
-        lowMemoryMode = lowMemoryMode
+        verifierFactory = alternateVerifier
     )
 
     // Read network parameters with backwards compatibility goo.
