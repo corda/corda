@@ -88,72 +88,8 @@ private constructor(
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
-        private val lowMemoryMode: Boolean
+        private val lowMemoryMode: Boolean = false
 ) : FullTransaction() {
-
-    constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters?,
-            references: List<StateAndRef<ContractState>>,
-            componentGroups: List<ComponentGroup>?,
-            serializedInputs: List<SerializedStateAndRef>?,
-            serializedReferences: List<SerializedStateAndRef>?,
-            isAttachmentTrusted: (Attachment) -> Boolean,
-            verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier
-    ) : this(
-            inputs = inputs,
-            outputs = outputs,
-            commands = commands,
-            attachments = attachments,
-            id = id,
-            notary = notary,
-            timeWindow = timeWindow,
-            privacySalt = privacySalt,
-            networkParameters = networkParameters,
-            references = references,
-            componentGroups = componentGroups,
-            serializedInputs = serializedInputs,
-            serializedReferences = serializedReferences,
-            isAttachmentTrusted = isAttachmentTrusted,
-            verifierFactory = verifierFactory,
-            lowMemoryMode = false
-    )
-
-    constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters,
-            references: List<StateAndRef<ContractState>>):
-        this(
-                inputs = inputs,
-                outputs = outputs,
-                commands = commands,
-                attachments = attachments,
-                id = id,
-                notary = notary,
-                timeWindow = timeWindow,
-                privacySalt = privacySalt,
-                networkParameters = networkParameters,
-                references = references,
-                componentGroups = null,
-                serializedInputs = null,
-                serializedReferences = null,
-                isAttachmentTrusted = { true },
-                verifierFactory = ::BasicVerifier
-    )
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
@@ -238,7 +174,12 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references
+                references = references,
+                componentGroups = null,
+                serializedInputs = null,
+                serializedReferences = null,
+                isAttachmentTrusted = { true },
+                verifierFactory = ::BasicVerifier
             )
         }
     }
