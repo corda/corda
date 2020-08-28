@@ -74,6 +74,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import rx.Notification
@@ -381,6 +382,7 @@ class FlowFrameworkTests {
 
     @Test(timeout = 300_000)
     fun `Flow metadata finish time is set in database when the flow finishes`() {
+        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
         val terminationSignal = Semaphore(0)
         val clientId = UUID.randomUUID().toString()
         val flow = aliceNode.services.startFlowWithClientId(clientId, NoOpFlow(terminateUponSignal = terminationSignal))

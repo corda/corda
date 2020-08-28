@@ -33,6 +33,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.h2.util.Utils
 import org.junit.After
 import org.junit.Assert.assertTrue
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import java.sql.SQLException
@@ -129,6 +130,7 @@ class RetryFlowMockTest {
 
     @Test(timeout=300_000)
     fun `Early end session message does not hang receiving flow`() {
+        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
         val partyB = nodeB.info.legalIdentities.first()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             nodeA.startFlow(UnbalancedSendAndReceiveFlow(partyB)).getOrThrow(20.seconds)
