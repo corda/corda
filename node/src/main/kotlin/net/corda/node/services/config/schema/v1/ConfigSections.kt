@@ -279,6 +279,7 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
     private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional()
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
+    private val schema by string().optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
         if (initialiseSchema.isSpecifiedBy(configuration)){
@@ -292,7 +293,7 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
         }
         val config = configuration.withOptions(options)
 
-        return valid(DatabaseConfig(config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
+        return valid(DatabaseConfig(config[schema], config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
     }
 }
 

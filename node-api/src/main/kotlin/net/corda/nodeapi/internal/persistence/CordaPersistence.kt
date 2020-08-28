@@ -33,6 +33,7 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
+        val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
         val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
 ) {
