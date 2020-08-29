@@ -17,7 +17,7 @@ class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputR
         val className = "net.corda.testing.node.internal.SampleCordaCliWrapper"
 
         private val stackTraceRegex = "^.+Exception[^\\n]++(\\s+at .++)+[\\s\\S]*"
-        private val exceptionWithoutStackTraceRegex ="${className}(\\s+.+)"
+        private val exceptionWithoutStackTraceRegex ="(\\?\\[31m)*\\Q${className}\\E(\\?\\[0m)*(\\s+.+)"
         private val emptyStringRegex = "^$"
 
         @JvmStatic
