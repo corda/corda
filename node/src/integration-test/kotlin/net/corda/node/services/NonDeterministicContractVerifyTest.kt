@@ -62,7 +62,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageMatching("^NoSuchMethodError: .*\\Qsandbox.java.time.Instant.now()\\E.*\$")
+                  .hasMessageMatching("^NoSuchMethodError: .*[\\Qsandbox.java.time.Instant.now()\\E|\\Qsandbox.java/time/Instant/now()\\E].*\$")
         }
     }
 
@@ -101,7 +101,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageMatching("^NoSuchMethodError: .*\\Qsandbox.java.util.UUID.randomUUID()\\E.*\$")
+                .hasMessageMatching("^NoSuchMethodError: .*[\\Qsandbox.java.util.UUID.randomUUID()\\E|\\Qsandbox/java/util/UUID/randomUUID()\\E].*\$")
         }
     }
 
