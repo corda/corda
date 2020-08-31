@@ -160,14 +160,13 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
             } ?: throw IllegalArgumentException("Provided string is null")
         }
 
-        //private val sha256MessageDigest = SHA256DigestSupplier()
-        private val messageDigests: ConcurrentMap<String, SHA256DigestSupplier> = ConcurrentHashMap()
+        private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
-        private fun digestFor(algorithm: String): SHA256DigestSupplier {
+        private fun digestFor(algorithm: String): DigestSupplier {
             require(algorithm !in BANNED) {
                 "$algorithm is forbidden!"
             }
-            return messageDigests.computeIfAbsent(algorithm, ::SHA256DigestSupplier)
+            return messageDigests.computeIfAbsent(algorithm, ::DigestSupplier)
         }
 
         private fun digestAs(algorithm: String, bytes: ByteArray): ByteArray = digestFor(algorithm).get().digest(bytes)
@@ -346,7 +345,7 @@ fun OpaqueBytes.hashAs(algorithm: String): SecureHash = SecureHash.hashAs(algori
  * Hide the [FastThreadLocal] class behind a [Supplier] interface
  * so that we can remove it for core-deterministic.
  */
-private class SHA256DigestSupplier(algorithm: String) : Supplier<MessageDigest> {
+private class DigestSupplier(algorithm: String) : Supplier<MessageDigest> {
     private val threadLocalSha256MessageDigest = LocalSHA256Digest(algorithm)
     override fun get(): MessageDigest = threadLocalSha256MessageDigest.get()
     val digestLength: Int = get().digestLength

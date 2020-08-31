@@ -1,5 +1,6 @@
 package net.corda.verification.contracts
 
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
@@ -8,6 +9,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 
 @CordaSerializable
+@BelongsToContract(NotaryTestContract::class)
 data class NotaryTestState(val id: String, val issuer: AbstractParty) : ContractState {
     override val participants: List<AbstractParty>
         get() = listOf(issuer)
