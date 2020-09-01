@@ -9218,11 +9218,6 @@ public final class net.corda.client.rpc.reconnect.CouldNotStartFlowException ext
   public <init>(Throwable)
   public <init>(Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker)
 ##
-public final class net.corda.client.rpc.reconnect.CouldNotStartFlowException extends net.corda.client.rpc.RPCException
-  public <init>()
-  public <init>(Throwable)
-  public <init>(Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker)
-##
 public final class net.corda.finance.test.CashSchema extends java.lang.Object
   public static final net.corda.finance.test.CashSchema INSTANCE
 ##
