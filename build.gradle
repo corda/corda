@@ -753,19 +753,14 @@ distributedTesting {
             profile 'generalPurpose.yml'
             distribution DistributeTestsBy.METHOD
         }
-        parallelRegressionTest {
-            testGroups 'test', 'integrationTest', 'smokeTest'
-            profile 'generalPurpose.yml'
-            distribution DistributeTestsBy.METHOD
-        }
         allParallelSmokeTest {
             testGroups 'smokeTest'
-            profile 'generalPurpose.yml'
+            profile 'regression.yml'
             distribution DistributeTestsBy.METHOD
         }
         allParallelSlowIntegrationTest {
             testGroups 'slowIntegrationTest'
-            profile 'generalPurpose.yml'
+            profile 'regression.yml'
             distribution DistributeTestsBy.METHOD
         }
     }

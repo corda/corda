@@ -373,7 +373,7 @@ class DBCheckpointStorage(
     override fun addCheckpoint(
         id: StateMachineRunId,
         checkpoint: Checkpoint,
-        serializedFlowState: SerializedBytes<FlowState>,
+        serializedFlowState: SerializedBytes<FlowState>?,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
         val now = clock.instant()
@@ -555,15 +555,17 @@ class DBCheckpointStorage(
         return currentDBSession().find(DBFlowException::class.java, id.uuid.toString())
     }
 
-    override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+    override fun getPausedCheckpoints(): Stream<Triple<StateMachineRunId, Checkpoint.Serialized, Boolean>> {
         val session = currentDBSession()
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
-                checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible) from ${DBFlowCheckpoint::class.java.name}
-                checkpoint join ${DBFlowCheckpointBlob::class.java.name} blob on checkpoint.blob = blob.id where
-                checkpoint.status = ${FlowStatus.PAUSED.ordinal}""".trimIndent()
+                checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible, exception.id) 
+                from ${DBFlowCheckpoint::class.java.name} checkpoint 
+                join ${DBFlowCheckpointBlob::class.java.name} blob on checkpoint.blob = blob.id
+                left outer join ${DBFlowException::class.java.name} exception on checkpoint.exceptionDetails = exception.id
+                where checkpoint.status = ${FlowStatus.PAUSED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
         return query.resultList.stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+            Triple(StateMachineRunId(UUID.fromString(it.id)), it.toSerializedCheckpoint(), it.wasHospitalized)
         }
     }
 
@@ -722,8 +724,10 @@ class DBCheckpointStorage(
         val status: FlowStatus,
         val progressStep: String?,
         val ioRequestType: String?,
-        val compatible: Boolean
+        val compatible: Boolean,
+        exception: String?
     ) {
+        val wasHospitalized = exception != null
         fun toSerializedCheckpoint(): Checkpoint.Serialized {
             return Checkpoint.Serialized(
                 serializedCheckpointState = SerializedBytes(checkpoint),

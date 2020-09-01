@@ -35,7 +35,6 @@ import java.util.*
 import javax.persistence.Tuple
 import javax.persistence.criteria.*
 
-
 abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: BaseQueryCriteriaParser<Q, P, S>, in S: BaseSort> : BaseQueryCriteriaParser<Q, P, S> {
 
     abstract val criteriaBuilder: CriteriaBuilder
@@ -277,6 +276,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                                    val vaultStates: Root<VaultSchemaV1.VaultStates>) : AbstractQueryCriteriaParser<QueryCriteria, IQueryCriteriaParser, Sort>(), IQueryCriteriaParser {
     private companion object {
         private val log = contextLogger()
+        private val disableCorda3879 = System.getProperty("net.corda.vault.query.disable.corda3879")?.toBoolean() ?: false
     }
 
     // incrementally build list of join predicates
@@ -550,7 +550,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // ensure we re-use any existing instance of the same root entity
         val vaultLinearStatesRoot = getVaultLinearStatesRoot()
-
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"),
                 vaultLinearStatesRoot.get<PersistentStateRef>("stateRef"))
         predicateSet.add(joinPredicate)
@@ -636,6 +635,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         return predicateSet
     }
 
+    @Suppress("SpreadOperator")
     override fun parse(criteria: QueryCriteria, sorting: Sort?): Collection<Predicate> {
         val predicateSet = criteria.visit(this)
 
@@ -650,10 +650,35 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 else
                     aggregateExpressions
         criteriaQuery.multiselect(selections)
-        val combinedPredicates = commonPredicates.values.plus(predicateSet).plus(constraintPredicates).plus(joinPredicates)
-        criteriaQuery.where(*combinedPredicates.toTypedArray())
+        val combinedPredicates = commonPredicates.values.plus(predicateSet)
+                .plus(constraintPredicates)
+                .plus(joinPredicates)
+
+        val forceJoinPredicates = joinStateRefPredicate()
+
+        if(forceJoinPredicates.isEmpty() || disableCorda3879) {
+            criteriaQuery.where(*combinedPredicates.toTypedArray())
+        } else {
+            criteriaQuery.where(*combinedPredicates.toTypedArray(), criteriaBuilder.or(*forceJoinPredicates.toTypedArray()))
+        }
 
         return predicateSet
+    }
+
+    private fun joinStateRefPredicate(): Set<Predicate> {
+        val returnSet = mutableSetOf<Predicate>()
+
+        rootEntities.values.forEach {
+            if (it != vaultStates) {
+                if(IndirectStatePersistable::class.java.isAssignableFrom(it.javaType)) {
+                    returnSet.add(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), it.get<IndirectStatePersistable<*>>("compositeKey").get<PersistentStateRef>("stateRef")))
+                } else {
+                    returnSet.add(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), it.get<PersistentStateRef>("stateRef")))
+                }
+            }
+        }
+
+        return returnSet
     }
 
     override fun parseCriteria(criteria: CommonQueryCriteria): Collection<Predicate> {
@@ -852,8 +877,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                         // scenario where sorting on attributes not parsed as criteria
                         val entityRoot = criteriaQuery.from(entityStateClass)
                         rootEntities[entityStateClass] = entityRoot
-                        val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
-                        joinPredicates.add(joinPredicate)
                         entityRoot
                     }
             when (direction) {
@@ -872,7 +895,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
         if (orderCriteria.isNotEmpty()) {
             criteriaQuery.orderBy(orderCriteria)
-            criteriaQuery.where(*joinPredicates.toTypedArray())
         }
     }
 

@@ -73,6 +73,7 @@ class DatabaseTransaction(
         firstExceptionInDatabaseTransaction = null
     }
 
+    @Throws(SQLException::class)
     fun commit() {
         firstExceptionInDatabaseTransaction?.let {
             throw DatabaseTransactionException(it)

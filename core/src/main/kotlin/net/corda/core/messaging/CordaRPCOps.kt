@@ -321,6 +321,14 @@ interface CordaRPCOps : RPCOps {
      */
     fun removeClientId(clientId: String): Boolean
 
+    /**
+     * Returns all finished flows that were started with a client id.
+     *
+     * @return A [Map] containing client ids for finished flows, mapped to [true] if finished successfully,
+     * [false] if completed exceptionally.
+     */
+    fun finishedFlowsWithClientIds(): Map<String, Boolean>
+
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
 

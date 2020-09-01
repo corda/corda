@@ -494,7 +494,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF createCounter("counter", $counter) 
+                IF createCounter("counter", $counter) && createCounter("counter_2", $counter) 
                 DO traceln("Counter created")
                 ENDRULE
 
@@ -510,8 +510,16 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 INTERFACE ${CheckpointStorage::class.java.name}
                 METHOD getCheckpoint
                 AT ENTRY
+                IF readCounter("counter_2") < 3
+                DO incrementCounter("counter_2"); traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                ENDRULE
+                
+                RULE Log external start flow event
+                CLASS $stateMachineManagerClassName
+                METHOD onExternalStartFlow
+                AT ENTRY
                 IF true
-                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                DO traceln("External start flow event")
                 ENDRULE
             """.trimIndent()
 
@@ -527,7 +535,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(
                 discharged = 3,
-                observation = 0
+                dischargedRetry = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
         }
@@ -557,7 +565,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF createCounter("counter", $counter) 
+                IF createCounter("counter", $counter) && createCounter("counter_2", $counter) 
                 DO traceln("Counter created")
                 ENDRULE
 
@@ -573,8 +581,8 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 INTERFACE ${CheckpointStorage::class.java.name}
                 METHOD getCheckpoint
                 AT ENTRY
-                IF true
-                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                IF readCounter("counter_2") < 3
+                DO incrementCounter("counter_2"); traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
                 ENDRULE
             """.trimIndent()
 
@@ -590,7 +598,8 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             alice.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             alice.rpc.assertHospitalCounts(
                 discharged = 3,
-                observation = 1
+                observation = 1,
+                dischargedRetry = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
         }
