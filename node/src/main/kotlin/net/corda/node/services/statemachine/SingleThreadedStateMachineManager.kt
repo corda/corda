@@ -601,7 +601,9 @@ internal class SingleThreadedStateMachineManager(
         val events = mutableListOf<Event>()
         do {
             val event = oldEventQueue.tryReceive()
-            if (event is Event.Pause || event is Event.GeneratedByExternalEvent) events.add(event)
+            if (event is Event.Pause || event is Event.SoftShutdown || event is Event.GeneratedByExternalEvent) {
+                events.add(event)
+            }
         } while (event != null)
 
         // Only redeliver events if they were not persisted to the database
