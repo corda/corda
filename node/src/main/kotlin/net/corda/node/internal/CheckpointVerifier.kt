@@ -6,12 +6,15 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.node.services.api.CheckpointStorage
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.SubFlow
 import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 
 object CheckpointVerifier {
+
+    private val statusToVerify = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.HOSPITALIZED, Checkpoint.FlowStatus.PAUSED)
 
     /**
      * Verifies that all Checkpoints stored in the db can be safely loaded with the currently installed version.
@@ -35,7 +38,7 @@ object CheckpointVerifier {
 
         val cordappsByHash = currentCordapps.associateBy { it.jarHash }
 
-        checkpointStorage.getCheckpointsToRun().use {
+        checkpointStorage.getCheckpoints(statusToVerify).use {
             it.forEach { (_, serializedCheckpoint) ->
                 val checkpoint = try {
                     serializedCheckpoint.deserialize(checkpointSerializationContext)
