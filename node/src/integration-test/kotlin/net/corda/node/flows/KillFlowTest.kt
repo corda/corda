@@ -68,12 +68,36 @@ class KillFlowTest {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME, defaultParameters = NodeParameters(rpcAddress = rpcAddress, rpcUsers = listOf(rpcUser))).getOrThrow()
             alice.rpc.let { rpc ->
-                val handle = rpc.startFlow(::AFlowThatGetsMurderedWhenItTriesToSuspend)
-                AFlowThatGetsMurderedWhenItTriesToSuspend.lockA.acquire()
-                rpc.killFlow(handle.id)
-                AFlowThatGetsMurderedWhenItTriesToSuspend.lockB.release()
-                assertFailsWith<KilledFlowException> {
-                    handle.returnValue.getOrThrow(1.minutes)
+
+                val client = MultiRPCClient(rpcAddress, LockingRpc::class.java, rpcUser.username, rpcUser.password)
+
+                client.use {
+                    val connFuture = it.start()
+                    val proxy = connFuture.getOrThrow(20.seconds).proxy
+
+                    val handle = rpc.startFlow(::AFlowThatGetsMurderedWhenItTriesToSuspend)
+
+                    val awaitFuture1 = proxy.await(handle.id, Checkpoint.FlowStatus.RUNNABLE)
+
+                    AFlowThatGetsMurderedWhenItTriesToSuspend.lockA.acquire()
+
+                    awaitFuture1.getOrThrow(1.minutes)
+
+                    // IF I DONT RELEASE THIS THE FLOW HANGS
+                    // PROVING THAT IT WORKS!!!
+                    proxy.release(handle.id)
+
+                    val awaitFuture2 = proxy.await(handle.id, Checkpoint.FlowStatus.KILLED)
+                    rpc.killFlow(handle.id)
+                    AFlowThatGetsMurderedWhenItTriesToSuspend.lockB.release()
+//                assertFailsWith<KilledFlowException> {
+//                    handle.returnValue.getOrThrow(1.minutes)
+                    awaitFuture2.getOrThrow(1.minutes)
+                    assertFailsWith<KilledFlowException> {
+                        handle.returnValue.getOrThrow(1.minutes)
+                    }
+                    proxy.release(handle.id)
+//                }
                 }
                 assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
             }

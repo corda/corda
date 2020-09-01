@@ -40,6 +40,7 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
+import net.corda.node.services.statemachine.interceptors.LockingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
@@ -51,6 +52,7 @@ import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import java.security.SecureRandom
+import java.time.Duration
 import java.util.ArrayList
 import java.util.HashSet
 import java.util.concurrent.ConcurrentHashMap
@@ -942,6 +944,7 @@ internal class SingleThreadedStateMachineManager(
 
     private fun makeTransitionExecutor(): TransitionExecutor {
         val interceptors = ArrayList<TransitionInterceptor>()
+        interceptors.add { LockingInterceptor(awaitLocks, it) }
         interceptors.add { HospitalisingInterceptor(flowHospital, it) }
         if (serviceHub.configuration.devMode) {
             interceptors.add { DumpHistoryOnErrorInterceptor(it) }

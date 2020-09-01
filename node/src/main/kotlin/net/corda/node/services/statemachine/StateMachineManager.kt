@@ -121,6 +121,10 @@ interface StateMachineManager : LockingRpc {
      * @return whether the mapping was removed.
      */
     fun removeClientId(clientId: String): Boolean
+
+    // would go onto its interface
+//    fun await(id: StateMachineRunId, status: Checkpoint.FlowStatus): CordaFuture<Checkpoint.FlowStatus>
+//    fun release(id: StateMachineRunId): Boolean
 }
 
 interface LockingRpc : RPCOps {
