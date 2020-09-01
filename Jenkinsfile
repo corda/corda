@@ -21,9 +21,14 @@ pipeline {
 //                sh "./gradlew clean --continue test --info"
 //            }
 //        }
-        stage('Integration Tests') {
+//        stage('Integration Tests') {
+//            steps {
+//                sh "./gradlew clean --continue integrationTest --info"
+//            }
+//        }
+        stage('Smoke Tests') {
             steps {
-                sh "./gradlew clean --continue integrationTest --info"
+                sh "./gradlew clean --continue smokeTest --info"
             }
         }
     }
