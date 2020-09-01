@@ -8,7 +8,7 @@ pipeline {
     agent { label 'linux1' }
     options {
         timestamps()
-        timeout(time: 4, unit: 'HOURS')
+        timeout(time: 10, unit: 'HOURS')
     }
 
     environment {
@@ -16,21 +16,21 @@ pipeline {
     }
 
     stages {
-//        stage('Unit Tests') {
-//            steps {
-//                sh "./gradlew clean --continue test --info"
-//            }
-//        }
-//        stage('Integration Tests') {
-//            steps {
-//                sh "./gradlew clean --continue integrationTest --info"
-//            }
-//        }
-//        stage('Smoke Tests') {
-//            steps {
-//                sh "./gradlew clean --continue smokeTest --info"
-//            }
-//        }
+        stage('Unit Tests') {
+            steps {
+                sh "./gradlew clean --continue test --info"
+            }
+        }
+        stage('Integration Tests') {
+            steps {
+                sh "./gradlew clean --continue integrationTest --info"
+            }
+        }
+        stage('Smoke Tests') {
+            steps {
+                sh "./gradlew clean --continue smokeTest --info"
+            }
+        }
         stage('Slow Integration Tests') {
             steps {
                 sh "./gradlew clean --continue slowIntegrationTest --info"
