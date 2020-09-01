@@ -140,8 +140,24 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         val previousConsecutiveErrors = AtomicBoolean(false)
         return nodeInfoWatcher
                 .nodeInfoUpdates()
-                .doOnError { logFirstOccurrenceOfThisError(previousConsecutiveErrors, it) }
-                .doOnNext { logSuccessAfterConsecutiveErrors(previousConsecutiveErrors) }
+                .doOnError {
+                    // only log this error once instead on every retry
+                    if (previousConsecutiveErrors.compareAndSet(false, true)) {
+                        if (it is NoSuchFileException) {
+                            logger.warn("Folder not found while polling directory for network map updates. Create this folder or try " +
+                                    "restarting node. Retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds - $it")
+                        } else {
+                            logger.warn("Error encountered while polling directory for network map updates, " +
+                                    "retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds", it)
+                        }
+                    }
+                }
+                .doOnNext {
+                    // log this only if errors occurred
+                    if (previousConsecutiveErrors.compareAndSet(true, false)) {
+                        logger.info("File polling for network map updates succeeded after one or more retries")
+                    }
+                }
                 .retryWhen { t -> t.delay(defaultWatchNodeInfoFilesRetryIntervalSeconds, TimeUnit.SECONDS, nodeInfoWatcher.scheduler) }
                 .subscribe { processNodeInfoUpdates(it) }
     }
@@ -162,26 +178,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             // Mark the network map cache as ready on a successful poll of the node infos dir if not using
             // the HTTP network map even if there aren't any node infos
             networkMapCache.nodeReady.set(null)
-        }
-    }
-
-    private fun logSuccessAfterConsecutiveErrors(previousConsecutiveErrors: AtomicBoolean) {
-        // log this only if errors occurred
-        if (previousConsecutiveErrors.compareAndSet(true, false)) {
-            logger.info("File polling for network map updates succeeded after one or more retries")
-        }
-    }
-
-    private fun logFirstOccurrenceOfThisError(previousConsecutiveErrors: AtomicBoolean, it: Throwable?) {
-        // only log this error once instead on every retry
-        if (previousConsecutiveErrors.compareAndSet(false, true)) {
-            if (it is NoSuchFileException) {
-                logger.warn("Folder not found while polling directory for network map updates. Create this folder or try " +
-                        "restarting node. Retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds - $it")
-            } else {
-                logger.warn("Error encountered while polling directory for network map updates, " +
-                        "retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds", it)
-            }
         }
     }
 
