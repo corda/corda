@@ -74,8 +74,6 @@ open class CashPaymentFlow(
         } catch (e: InsufficientBalanceException) {
             throw CashException("Insufficient cash for spend: ${e.message}", e)
         }
-        /** Make sure that we don't use stale notary identity after key rotation. TODO: look for better solution. */
-        builder.notary = serviceHub.networkMapCache.notaryIdentities.first { it.name == builder.notary?.name }
 
         progressTracker.currentStep = SIGNING_TX
         logger.info("Signing transaction for: ${spendTX.lockId}")

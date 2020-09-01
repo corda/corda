@@ -57,9 +57,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
-    // Notary whitelist in the network parameters may contain stale entries after certificate rotation.
-    // We need to obtain active notary identities by X.500 name from network map cache.
-    override val notaryIdentities: List<Party> get() = notaries.map { getPeerCertificateByLegalName(it.identity.name)?.party ?: it.identity }
+    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -99,9 +97,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override fun isNotary(party: Party): Boolean = notaries.any { it.identity.name == party.name }
-
-    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity.name == party.name }
+    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = getNodesByLegalIdentityKey(party.owningKey)

@@ -120,7 +120,7 @@ interface NetworkMapCacheBase {
     // DOCEND 2
 
     /** Returns true if and only if the given [Party] is a notary, which is defined by the network parameters. */
-    fun isNotary(party: Party): Boolean
+    fun isNotary(party: Party): Boolean = party in notaryIdentities
 
     /**
      * Returns true if and only if the given [Party] is validating notary. For every party that is a validating notary,

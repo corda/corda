@@ -154,8 +154,8 @@ private constructor(
      */
     private fun checkNewNotaryWhitelisted() {
         networkParameters?.let { parameters ->
-            val notaryWhitelist = parameters.notaries.map { it.identity.name }
-            check(newNotary.name in notaryWhitelist) {
+            val notaryWhitelist = parameters.notaries.map { it.identity }
+            check(newNotary in notaryWhitelist) {
                 "The output notary $newNotary is not whitelisted in the attached network parameters."
             }
         }

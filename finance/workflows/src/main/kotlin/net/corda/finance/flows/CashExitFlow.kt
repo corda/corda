@@ -62,8 +62,6 @@ class CashExitFlow(private val amount: Amount<Currency>,
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }
-        /** Make sure that we don't use stale notary identity after key rotation. TODO: look for better solution. */
-        builder.notary = serviceHub.networkMapCache.notaryIdentities.first { it.name == builder.notary?.name }
 
         // Work out who the owners of the burnt states were (specify page size so we don't silently drop any if > DEFAULT_PAGE_SIZE)
         val inputStates = serviceHub.vaultService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
