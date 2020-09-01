@@ -48,6 +48,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.ByteArrayOutputStream
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.sql.Connection
@@ -100,10 +101,13 @@ open class MockServices private constructor(
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
-            DatabaseSnapshot.copyDatabaseSnapshot(Paths.get("./build/mocknetworktestdb/${nodeName}"))
+            val dbDir = Paths.get("","build", "mocknetworktestdb", nodeName)
+                    .toAbsolutePath()
+            val dbPath = dbDir.resolve("persistence")
+            DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:file:./build/mocknetworktestdb/${nodeName}/persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+            props.setProperty("dataSource.url", "jdbc:h2:file:$dbPath;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
             props.setProperty("dataSource.user", "sa")
             props.setProperty("dataSource.password", "")
             return props
