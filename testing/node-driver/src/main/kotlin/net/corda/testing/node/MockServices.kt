@@ -102,8 +102,8 @@ open class MockServices private constructor(
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
             val dbDir = Paths.get("","build", "mocknetworktestdb", nodeName)
                     .toAbsolutePath()
-            // Create a random file name so even if two nodes start on the same folder, they won't collide
-            val dbPath = DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
+            val dbPath = dbDir.resolve("persistence")
+            DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             props.setProperty("dataSource.url", "jdbc:h2:file:$dbPath;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")

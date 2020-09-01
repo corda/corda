@@ -159,7 +159,6 @@ class DriverDSLImpl(
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
     private lateinit var extraCustomCordapps: Set<CustomCordapp>
-    private var databaseFilename: Path? = null
 
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val networkVisibilityController = NetworkVisibilityController()
@@ -203,10 +202,8 @@ class DriverDSLImpl(
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
             NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
         } else {
-            databaseFilename = if (copyDatabaseSnapshot) {
+            if (copyDatabaseSnapshot) {
                 DatabaseSnapshot.copyDatabaseSnapshot(corda.baseDirectory)
-            } else {
-                null
             }
             this
         }
