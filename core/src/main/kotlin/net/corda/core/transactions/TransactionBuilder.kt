@@ -8,6 +8,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -636,7 +637,8 @@ open class TransactionBuilder(
     private fun checkNotary(stateAndRef: StateAndRef<*>) {
         val notary = stateAndRef.state.notary
         require(notary == this.notary) {
-            "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"."
+            "Input state requires notary \"$notary\" (${notary.owningKey.toStringShort()})" +
+                    " which does not match the transaction notary \"${this.notary}\" (${this.notary?.owningKey?.toStringShort()})."
         }
     }
 

@@ -38,7 +38,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
             caller: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>
+            references: List<StateRef>,
+            notary: Party?
     ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
@@ -55,7 +56,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
                         caller,
                         requestSignature,
                         timeWindow,
-                        references
+                        references,
+                        notary
                 )
         )
 
@@ -85,18 +87,20 @@ abstract class SinglePartyNotaryService : NotaryService() {
             val caller: Party,
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
-            val references: List<StateRef>
+            val references: List<StateRef>,
+            val notary: Party?
     ) : FlowExternalAsyncOperation<Result> {
 
         override fun execute(deduplicationId: String): CompletableFuture<Result> {
-            return service.uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow, references).toCompletableFuture()
+            return service.uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow, references, notary).toCompletableFuture()
         }
     }
 
     /** Sign a single transaction. */
-    fun signTransaction(txId: SecureHash): TransactionSignature {
-        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
-        return services.keyManagementService.sign(signableData, notaryIdentityKey)
+    fun signTransaction(txId: SecureHash, notary: Party?): TransactionSignature {
+        val key = notary?.owningKey ?: notaryIdentityKey
+        val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(key).schemeNumberID))
+        return services.keyManagementService.sign(signableData, key)
     }
 
 }

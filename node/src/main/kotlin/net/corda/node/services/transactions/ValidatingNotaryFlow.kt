@@ -54,6 +54,6 @@ open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePa
     }
 
     private fun checkSignatures(tx: TransactionWithSignatures) {
-        tx.verifySignaturesExcept(service.notaryIdentityKey)
+        tx.verifySignaturesExcept(service.notaryIdentityKey, *service.rotatedKeys.toTypedArray())
     }
 }
