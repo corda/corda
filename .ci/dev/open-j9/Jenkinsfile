@@ -5,7 +5,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'linux1' }
+    agent { label 'open-j9' }
     options {
         timestamps()
         timeout(time: 10, unit: 'HOURS')
