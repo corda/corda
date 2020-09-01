@@ -291,10 +291,13 @@ class NetworkMapUpdaterTest {
 
         nodeInfoDir.delete()
         assertFalse(nodeInfoDir.exists())
+
         // Observable will get a NoSuchFileException and log it
         startUpdater()
-        // Updater will resubscribe to observable with delayed retry
+        // Updater will resubscribe to observable with delayed retry. We should see one log warning message despite two retries.
         advanceTime()
+        advanceTime()
+
         // no changes will be made to networkMapCache at this point
         verify(networkMapCache, times(0)).addOrUpdateNode(any())
 

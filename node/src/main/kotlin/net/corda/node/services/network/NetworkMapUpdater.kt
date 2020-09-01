@@ -48,6 +48,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -135,10 +136,27 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun watchForNodeInfoFiles(): Subscription {
+        val previousConsecutiveErrors = AtomicBoolean(false)
         return nodeInfoWatcher
                 .nodeInfoUpdates()
-                .doOnError { logger.warn("Error encountered while polling directory for network map updates, " +
-                        "will retry in $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds - $it") }
+                .doOnError {
+                    // only log this error once instead on every retry
+                    if (previousConsecutiveErrors.compareAndSet(false, true)) {
+                        if (it is java.nio.file.NoSuchFileException) {
+                            logger.warn("Folder not found while polling directory for network map updates. Create this folder or try " +
+                                    "restarting node. Retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds - $it")
+                        } else {
+                            logger.warn("Error encountered while polling directory for network map updates, " +
+                                    "retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds", it)
+                        }
+                    }
+                }
+                .doOnNext {
+                    // log this only if errors occurred
+                    if (previousConsecutiveErrors.compareAndSet(true, false)) {
+                        logger.info("File polling for network map updates succeeded after one or more retries")
+                    }
+                }
                 .retryWhen { t -> t.delay(defaultWatchNodeInfoFilesRetryIntervalSeconds, TimeUnit.SECONDS, nodeInfoWatcher.scheduler) }
                 .subscribe {
                     for (update in it) {
