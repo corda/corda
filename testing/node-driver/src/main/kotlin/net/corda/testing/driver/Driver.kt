@@ -254,6 +254,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property cordappsForAllNodes [TestCordapp]s that will be added to each node started by the [DriverDSL].
  * @property djvmBootstrapSource Location of a JAR containing the Java APIs for the DJVM to use.
  * @property djvmCordaSource Locations of JARs of user-supplied classes to execute within the DJVM sandbox.
+ * @property premigrateH2Database Whether to use a prebuilt H2 database schema or start from an empty schema.
+ * This can save time for tests which do not need to migrate from a blank schema.
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -278,7 +280,7 @@ data class DriverParameters(
         val djvmCordaSource: List<Path> = emptyList(),
         val environmentVariables: Map<String, String> = emptyMap(),
         val allowHibernateToManageAppSchema: Boolean = true,
-        val copyDatabaseSnapshot: Boolean = true
+        val premigrateH2Database: Boolean = true
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
@@ -426,7 +428,7 @@ data class DriverParameters(
             djvmCordaSource,
             environmentVariables,
             allowHibernateToManageAppSchema,
-            copyDatabaseSnapshot = true
+            premigrateH2Database = true
     )
 
     constructor(
@@ -584,7 +586,8 @@ data class DriverParameters(
             djvmCordaSource = djvmCordaSource,
             environmentVariables = environmentVariables
     )
-    
+
+    // Legacy copy() from v4.5
     @Suppress("LongParameterList")
     fun copy(isDebug: Boolean,
              driverDirectory: Path,
@@ -625,6 +628,6 @@ data class DriverParameters(
             djvmCordaSource = djvmCordaSource,
             environmentVariables = environmentVariables,
             allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
-            copyDatabaseSnapshot = true
+            premigrateH2Database = true
     )
 }

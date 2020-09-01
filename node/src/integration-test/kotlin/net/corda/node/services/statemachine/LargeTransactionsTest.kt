@@ -83,7 +83,7 @@ class LargeTransactionsTest {
                 startNodesInProcess = true,
                 cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()),
                 networkParameters = testNetworkParameters(maxMessageSize = 15.MB.toInt(), maxTransactionSize = 13.MB.toInt()),
-                copyDatabaseSnapshot = false
+                premigrateH2Database = false
         )) {
             val rpcUser = User("admin", "admin", setOf("ALL"))
             val (alice, _) = listOf(ALICE_NAME, BOB_NAME).map { startNode(providedName = it, rpcUsers = listOf(rpcUser)) }.transpose().getOrThrow()

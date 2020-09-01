@@ -151,7 +151,7 @@ class DriverDSLImpl(
         val djvmCordaSource: List<Path>,
         val environmentVariables: Map<String, String>,
         val allowHibernateToManageAppSchema: Boolean = true,
-        val copyDatabaseSnapshot: Boolean = true
+        val premigrateH2Database: Boolean = true
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -197,14 +197,11 @@ class DriverDSLImpl(
     }
 
     private fun NodeConfig.checkAndOverrideForInMemoryDB(): NodeConfig = this.run {
-        if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
+        if (inMemoryDB && isH2Database(corda)) {
             val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter.getAndIncrement()};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
             NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
         } else {
-            if (copyDatabaseSnapshot) {
-                DatabaseSnapshot.copyDatabaseSnapshot(corda.baseDirectory)
-            }
             this
         }
     }
@@ -274,6 +271,11 @@ class DriverDSLImpl(
         val name = parameters.providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
 
         val config = createConfig(name, parameters, p2pAddress)
+        if (premigrateH2Database && isH2Database(config)) {
+            if (!inMemoryDB) {
+                DatabaseSnapshot.copyDatabaseSnapshot(config.corda.baseDirectory)
+            }
+        }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
             createSchema(config, false).flatMap { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config()) }
@@ -1037,6 +1039,12 @@ class DriverDSLImpl(
             )
         }
 
+        private fun isH2Database(config: NodeConfiguration)
+            = config.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")
+
+        private fun isH2Database(config: NodeConfig)
+                = isH2Database(config.corda)
+
         // Obvious test artifacts. This is NOT intended to be an exhaustive list!
         // It is only intended to remove those FEW jars which BLATANTLY do not
         // belong inside a Corda Node.
@@ -1402,7 +1410,7 @@ fun <A> internalDriver(
         djvmCordaSource: List<Path> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         allowHibernateToManageAppSchema: Boolean = true,
-        copyDatabaseSnapshot: Boolean = true,
+        premigrateH2Database: Boolean = true,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1427,7 +1435,7 @@ fun <A> internalDriver(
                     djvmCordaSource = djvmCordaSource,
                     environmentVariables = environmentVariables,
                     allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
-                    copyDatabaseSnapshot = copyDatabaseSnapshot
+                    premigrateH2Database = premigrateH2Database
             ),
             coerce = { it },
             dsl = dsl
