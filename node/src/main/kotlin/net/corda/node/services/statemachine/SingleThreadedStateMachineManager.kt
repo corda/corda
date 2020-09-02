@@ -415,10 +415,10 @@ internal class SingleThreadedStateMachineManager(
             if (flow != null) {
                 decrementLiveFibers()
                 totalFinishedFlows.inc()
-                return when (removalReason) {
+                when (removalReason) {
                     is FlowRemovalReason.OrderlyFinish -> removeFlowOrderly(flow, removalReason, lastState)
                     is FlowRemovalReason.ErrorFinish -> removeFlowError(flow, removalReason, lastState)
-                    FlowRemovalReason.SoftShutdown -> flow.fiber.scheduleEvent(Event.SoftShutdown)
+                    FlowRemovalReason.SoftShutdown -> { /* No further tidy up is required */ }
                 }
             } else {
                 logger.warn("Flow $flowId re-finished")
