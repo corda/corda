@@ -77,6 +77,16 @@ fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Certific
     return CertificateAndKeyPair(cert, keyPair)
 }
 
+fun createDevNetworkParametersCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {
+    val keyPair = generateKeyPair()
+    val cert = X509Utilities.createCertificate(
+            CertificateType.NETWORK_PARAMETERS,
+            rootCa.certificate,
+            rootCa.keyPair,
+            X500Principal("CN=Network Parameters,O=R3 Ltd,L=London,C=GB"),
+            keyPair.public)
+    return CertificateAndKeyPair(cert, keyPair)
+}
 /**
  * Create a dev node CA cert, as a sub-cert of the given [intermediateCa], and matching key pair using the given
  * [CordaX500Name] as the cert subject.

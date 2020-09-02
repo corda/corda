@@ -2,16 +2,23 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.node.VersionInfo
 import net.corda.node.internal.NetworkParametersReader
 import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.createDevNetworkMapCa
+import net.corda.nodeapi.internal.createDevNetworkParametersCa
+import net.corda.nodeapi.internal.createDevNodeCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -21,6 +28,7 @@ import org.junit.Test
 import java.net.URL
 import java.nio.file.FileSystem
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
@@ -83,5 +91,24 @@ class NetworkParametersReaderTest {
         val inByteArray: ByteArray = inputStream.readBytes()
         val parameters = inByteArray.deserialize<SignedNetworkParameters>()
         assertThat(parameters.verified().eventHorizon).isEqualTo(Int.MAX_VALUE.days)
+    }
+
+    @Test(timeout = 300_000)
+    fun `verifying works with NETWORK_PARAMETERS role and NETWORK_MAP role, but fails for NODE_CA role`() {
+        val netParameters = testNetworkParameters(epoch = 1)
+        val certKeyPairNetworkParameters: CertificateAndKeyPair = createDevNetworkParametersCa()
+        val netParamsForNetworkParameters= certKeyPairNetworkParameters.sign(netParameters)
+        netParamsForNetworkParameters.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+
+        val certKeyPairNetworkMap: CertificateAndKeyPair = createDevNetworkMapCa()
+        val netParamsForNetworkMap = certKeyPairNetworkMap.sign(netParameters)
+        netParamsForNetworkMap.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+
+        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+        val x = createDevNodeCa(DEV_INTERMEDIATE_CA, megaCorp.name)
+        val netParamsForNode = x.sign(netParameters)
+        assertFailsWith(IllegalArgumentException::class, "Incorrect cert role: NODE_CA") {
+            netParamsForNode.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        }
     }
 }
