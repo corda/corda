@@ -275,7 +275,7 @@ class DriverDSLImpl(
             if (!inMemoryDB) {
                 try {
                     DatabaseSnapshot.copyDatabaseSnapshot(config.corda.baseDirectory)
-                } catch (ex: FileAlreadyExistsException) {
+                } catch (ex: java.nio.file.FileAlreadyExistsException) {
                     log.warn("Database already exists on disk, not attempting to pre-migrate database.")
                 }
             }
@@ -1446,9 +1446,10 @@ fun <A> internalDriver(
     )
 }
 
-fun getTimestampAsDirectoryName(): String {
-    return DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC).format(Instant.now())
-}
+fun getUUIDAsDirectoryName() = UUID.randomUUID().toString()
+
+val DIRECTORY_TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC)
+fun getTimestampAsDirectoryName() = DIRECTORY_TIMESTAMP_FORMAT.format(Instant.now())
 
 fun writeConfig(path: Path, filename: String, config: Config) {
     val configString = config.root().render(ConfigRenderOptions.defaults())

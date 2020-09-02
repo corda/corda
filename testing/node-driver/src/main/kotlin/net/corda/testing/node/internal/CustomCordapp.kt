@@ -165,7 +165,7 @@ data class CustomCordapp(
 
         init {
             val buildDir = Paths.get("build").toAbsolutePath()
-            val timeDirName = getTimestampAsDirectoryName()
+            val timeDirName = getUUIDAsDirectoryName()
             cordappsDirectory = buildDir / "generated-custom-cordapps" / timeDirName
             defaultJarSignerDirectory = buildDir / "jar-signer" / timeDirName
         }

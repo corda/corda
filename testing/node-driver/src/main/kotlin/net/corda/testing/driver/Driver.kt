@@ -23,7 +23,7 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.genericDriver
-import net.corda.testing.node.internal.getTimestampAsDirectoryName
+import net.corda.testing.node.internal.getUUIDAsDirectoryName
 import net.corda.testing.node.internal.newContext
 import rx.Observable
 import java.io.File
@@ -260,7 +260,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
-        val driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+        val driverDirectory: Path = Paths.get("build") / "node-driver" / getUUIDAsDirectoryName(),
         val portAllocation: PortAllocation = incrementalPortAllocation(),
         val debugPortAllocation: PortAllocation = incrementalPortAllocation(),
         val systemProperties: Map<String, String> = emptyMap(),
@@ -287,7 +287,7 @@ data class DriverParameters(
     // Legacy constructor from v4.3
     constructor(
             isDebug: Boolean = false,
-            driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+            driverDirectory: Path = Paths.get("build") / "node-driver" / getUUIDAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(),
             debugPortAllocation: PortAllocation = incrementalPortAllocation(),
             systemProperties: Map<String, String> = emptyMap(),
@@ -326,7 +326,7 @@ data class DriverParameters(
 
     constructor(
             isDebug: Boolean = false,
-            driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+            driverDirectory: Path = Paths.get("build") / "node-driver" / getUUIDAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(),
             debugPortAllocation: PortAllocation = incrementalPortAllocation(),
             systemProperties: Map<String, String> = emptyMap(),
@@ -390,7 +390,7 @@ data class DriverParameters(
 
     constructor(
             isDebug: Boolean = false,
-            driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+            driverDirectory: Path = Paths.get("build") / "node-driver" / getUUIDAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(),
             debugPortAllocation: PortAllocation = incrementalPortAllocation(),
             systemProperties: Map<String, String> = emptyMap(),
