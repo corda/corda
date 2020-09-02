@@ -42,6 +42,7 @@ import net.corda.testing.core.*
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.internal.*
@@ -212,7 +213,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test(timeout=300_000)
 	fun `shutdown and restore`() {
-        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
+        Assume.assumeTrue(!IS_OPENJ9)
         mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP))
         val notaryNode = mockNet.defaultNotaryNode
         val notary = mockNet.defaultNotaryIdentity

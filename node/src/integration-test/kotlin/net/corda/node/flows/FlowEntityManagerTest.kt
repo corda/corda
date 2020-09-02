@@ -317,7 +317,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation that is caught inside an entity manager should allow a flow to continue processing as normal`() {
-        // TODO: FIX: This test is generating JDK11 contract code on JDK11
+        // This test is generating JDK11 contract code on JDK11
         Assume.assumeTrue(!SystemUtils.IS_JAVA_11)
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }

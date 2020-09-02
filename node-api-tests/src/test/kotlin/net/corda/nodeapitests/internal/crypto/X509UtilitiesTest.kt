@@ -50,8 +50,8 @@ import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
+import net.corda.testing.internal.IS_OPENJ9
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
@@ -377,7 +377,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create server cert and use in OpenSSL channel`() {
-        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
+        Assume.assumeTrue(!IS_OPENJ9)
         val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(tempFolder.root.toPath(), keyStorePassword = "serverstorepass")
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()

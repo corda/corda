@@ -54,6 +54,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.flows.registerCordappFlowFactory
+import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
@@ -382,7 +383,7 @@ class FlowFrameworkTests {
 
     @Test(timeout = 300_000)
     fun `Flow metadata finish time is set in database when the flow finishes`() {
-        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
+        Assume.assumeTrue(!IS_OPENJ9)
         val terminationSignal = Semaphore(0)
         val clientId = UUID.randomUUID().toString()
         val flow = aliceNode.services.startFlowWithClientId(clientId, NoOpFlow(terminateUponSignal = terminationSignal))

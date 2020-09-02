@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import net.corda.testing.internal.IS_OPENJ9
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.matchesPattern
 import org.junit.Assume
@@ -32,8 +33,8 @@ class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputR
 
     @Test(timeout=300_000)
     fun `Run CordaCliWrapper sample app with arguments and check error output matches regExp`() {
-        // TODO: Fix for openj9, the process error output appears sometimes to be garbled.
-        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
+        // For openj9 the process error output appears sometimes to be garbled.
+        Assume.assumeTrue(!IS_OPENJ9)
         val process = ProcessUtilities.startJavaProcess(
                 className = className,
                 arguments = arguments,

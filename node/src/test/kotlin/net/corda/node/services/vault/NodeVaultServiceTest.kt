@@ -35,6 +35,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
+import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
@@ -466,10 +467,9 @@ class NodeVaultServiceTest {
         }
     }
 
-    //linux one OOM issue
-    @Ignore
     @Test(timeout=300_000)
 	fun `unconsumedStatesForSpending from two issuer parties`() {
+        Assume.assumeTrue(!IS_OPENJ9) // openj9 OOM issue
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, 1, BOC.ref(1))

@@ -253,3 +253,5 @@ fun isLocalPortBound(port: Int): Boolean {
         true
     }
 }
+
+val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")

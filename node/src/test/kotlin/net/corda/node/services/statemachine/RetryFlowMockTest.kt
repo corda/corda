@@ -23,6 +23,7 @@ import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.MessagingServiceSpy
 import net.corda.testing.node.internal.TestStartedNode
@@ -130,7 +131,7 @@ class RetryFlowMockTest {
 
     @Test(timeout=300_000)
     fun `Early end session message does not hang receiving flow`() {
-        Assume.assumeTrue(!System.getProperty("java.vm.name").toLowerCase().contains("openj9"))
+        Assume.assumeTrue(!IS_OPENJ9)
         val partyB = nodeB.info.legalIdentities.first()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             nodeA.startFlow(UnbalancedSendAndReceiveFlow(partyB)).getOrThrow(20.seconds)
