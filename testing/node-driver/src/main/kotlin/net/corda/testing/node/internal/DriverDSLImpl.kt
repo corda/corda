@@ -273,7 +273,11 @@ class DriverDSLImpl(
         val config = createConfig(name, parameters, p2pAddress)
         if (premigrateH2Database && isH2Database(config)) {
             if (!inMemoryDB) {
-                DatabaseSnapshot.copyDatabaseSnapshot(config.corda.baseDirectory)
+                try {
+                    DatabaseSnapshot.copyDatabaseSnapshot(config.corda.baseDirectory)
+                } catch (ex: FileAlreadyExistsException) {
+                    log.warn("Database already exists on disk, not attempting to pre-migrate database.")
+                }
             }
         }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
