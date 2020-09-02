@@ -104,18 +104,17 @@ class NetworkParametersReaderTest {
         val netParameters = testNetworkParameters(epoch = 1)
         val certKeyPairNetworkParameters: CertificateAndKeyPair = createDevNetworkParametersCa()
         val netParamsForNetworkParameters= certKeyPairNetworkParameters.sign(netParameters)
-        netParamsForNetworkParameters.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        netParamsForNetworkParameters.verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
 
         val certKeyPairNetworkMap: CertificateAndKeyPair = createDevNetworkMapCa()
         val netParamsForNetworkMap = certKeyPairNetworkMap.sign(netParameters)
-        netParamsForNetworkMap.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        netParamsForNetworkMap.verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
 
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val x = createDevNodeCa(DEV_INTERMEDIATE_CA, megaCorp.name)
         val netParamsForNode = x.sign(netParameters)
         assertFailsWith(IllegalArgumentException::class, "Incorrect cert role: NODE_CA") {
-            netParamsForNode.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+            netParamsForNode.verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
         }
     }
 }
-
