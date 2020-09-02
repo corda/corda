@@ -25,15 +25,20 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.cordappsForPackages
+import org.apache.commons.lang3.SystemUtils
 import org.junit.AfterClass
+import org.junit.Assume
 import org.junit.BeforeClass
 import org.junit.Test
+import org.junit.jupiter.api.condition.DisabledOnJre
+import org.junit.jupiter.api.condition.JRE
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Index
 import javax.persistence.Table
 import kotlin.test.assertEquals
 
+@DisabledOnJre(JRE.JAVA_11)
 class VaultQueryJoinTest {
     companion object {
         private var mockNetwork: MockNetwork? = null
@@ -46,6 +51,7 @@ class VaultQueryJoinTest {
         @BeforeClass
         @JvmStatic
         fun setup() {
+            Assume.assumeTrue(!SystemUtils.IS_JAVA_11)
             mockNetwork = MockNetwork(
                     MockNetworkParameters(
                             cordappsForAllNodes = cordappsForPackages(

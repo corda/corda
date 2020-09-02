@@ -18,6 +18,8 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IS_OPENJ9
+import org.junit.Assume
 import org.junit.Test
 import java.time.Duration
 import java.time.Instant
@@ -27,6 +29,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep`() {
+        Assume.assumeTrue(!IS_OPENJ9)
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, finish) = alice.rpc.startFlow(::SleepyFlow).returnValue.getOrThrow(1.minutes)
@@ -52,6 +55,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep and perform other suspending functions`() {
+        Assume.assumeTrue(!IS_OPENJ9)
         // ensures that events received while the flow is sleeping are not processed
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
