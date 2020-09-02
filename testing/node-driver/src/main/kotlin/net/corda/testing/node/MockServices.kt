@@ -103,7 +103,11 @@ open class MockServices private constructor(
             val dbDir = Paths.get("","build", "mocknetworktestdb", nodeName)
                     .toAbsolutePath()
             val dbPath = dbDir.resolve("persistence")
-            DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
+            try {
+                DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
+            } catch (ex: java.nio.file.FileAlreadyExistsException) {
+                DriverDSLImpl.log.warn("Database already exists on disk, not attempting to pre-migrate database.")
+            }
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             props.setProperty("dataSource.url", "jdbc:h2:file:$dbPath;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
