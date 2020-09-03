@@ -140,6 +140,17 @@ class FlowWithClientIdTest {
             }.withMessage("java.lang.IllegalStateException: Bla bla bla")
         }
     }
+
+    @Test(timeout=300_000)
+    fun `finishedFlowsWithClientIds returns completed flows with client ids`() {
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode().getOrThrow()
+            nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            val finishedFlows = nodeA.rpc.finishedFlowsWithClientIds()
+            assertEquals(true, finishedFlows[clientId])
+        }
+    }
 }
 
 @StartableByRPC

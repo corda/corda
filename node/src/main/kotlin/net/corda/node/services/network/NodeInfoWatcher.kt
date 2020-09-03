@@ -35,7 +35,7 @@ sealed class NodeInfoUpdate {
  */
 // TODO: Use NIO watch service instead?
 class NodeInfoWatcher(private val nodePath: Path,
-                      private val scheduler: Scheduler,
+                      internal val scheduler: Scheduler,
                       private val pollInterval: Duration = 5.seconds) {
     companion object {
         private val logger = contextLogger()

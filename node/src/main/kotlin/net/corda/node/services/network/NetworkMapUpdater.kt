@@ -39,6 +39,7 @@ import rx.subjects.PublishSubject
 import java.lang.Integer.max
 import java.lang.Integer.min
 import java.lang.reflect.Method
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
@@ -48,6 +49,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -66,8 +68,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 ) : AutoCloseable, NetworkParameterUpdateListener {
     companion object {
         private val logger = contextLogger()
-        private val defaultRetryInterval = 1.minutes
+        private val defaultWatchHttpNetworkMapRetryInterval = 1.minutes
         private const val bulkNodeInfoFetchThreshold = 50
+        private const val defaultWatchNodeInfoFilesRetryIntervalSeconds = 10L
     }
 
     private val parametersUpdatesTrack = PublishSubject.create<ParametersUpdateInfo>()
@@ -134,26 +137,48 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun watchForNodeInfoFiles(): Subscription {
+        val previousConsecutiveErrors = AtomicBoolean(false)
         return nodeInfoWatcher
                 .nodeInfoUpdates()
-                .subscribe {
-                    for (update in it) {
-                        when (update) {
-                            is NodeInfoUpdate.Add -> networkMapCache.addOrUpdateNode(update.nodeInfo)
-                            is NodeInfoUpdate.Remove -> {
-                                if (update.hash != ourNodeInfoHash) {
-                                    val nodeInfo = networkMapCache.getNodeByHash(update.hash)
-                                    nodeInfo?.let(networkMapCache::removeNode)
-                                }
-                            }
+                .doOnError {
+                    // only log this error once instead on every retry
+                    if (previousConsecutiveErrors.compareAndSet(false, true)) {
+                        if (it is NoSuchFileException) {
+                            logger.warn("Folder not found while polling directory for network map updates. Create this folder or try " +
+                                    "restarting node. Retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds - $it")
+                        } else {
+                            logger.warn("Error encountered while polling directory for network map updates, " +
+                                    "retrying every $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds", it)
                         }
                     }
-                    if (networkMapClient == null) {
-                        // Mark the network map cache as ready on a successful poll of the node infos dir if not using
-                        // the HTTP network map even if there aren't any node infos
-                        networkMapCache.nodeReady.set(null)
+                }
+                .doOnNext {
+                    // log this only if errors occurred
+                    if (previousConsecutiveErrors.compareAndSet(true, false)) {
+                        logger.info("File polling for network map updates succeeded after one or more retries")
                     }
                 }
+                .retryWhen { t -> t.delay(defaultWatchNodeInfoFilesRetryIntervalSeconds, TimeUnit.SECONDS, nodeInfoWatcher.scheduler) }
+                .subscribe { processNodeInfoUpdates(it) }
+    }
+
+    private fun processNodeInfoUpdates(it: List<NodeInfoUpdate>) {
+        for (update in it) {
+            when (update) {
+                is NodeInfoUpdate.Add -> networkMapCache.addOrUpdateNode(update.nodeInfo)
+                is NodeInfoUpdate.Remove -> {
+                    if (update.hash != ourNodeInfoHash) {
+                        val nodeInfo = networkMapCache.getNodeByHash(update.hash)
+                        nodeInfo?.let(networkMapCache::removeNode)
+                    }
+                }
+            }
+        }
+        if (networkMapClient == null) {
+            // Mark the network map cache as ready on a successful poll of the node infos dir if not using
+            // the HTTP network map even if there aren't any node infos
+            networkMapCache.nodeReady.set(null)
+        }
     }
 
     private fun watchHttpNetworkMap() {
@@ -163,8 +188,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 val nextScheduleDelay = try {
                     updateNetworkMapCache()
                 } catch (e: Exception) {
-                    logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", e)
-                    defaultRetryInterval
+                    logger.warn("Error encountered while updating network map, will retry in $defaultWatchHttpNetworkMapRetryInterval", e)
+                    defaultWatchHttpNetworkMapRetryInterval
                 }
                 // Schedule the next update.
                 networkMapPoller.schedule(this, nextScheduleDelay.toMillis(), TimeUnit.MILLISECONDS)

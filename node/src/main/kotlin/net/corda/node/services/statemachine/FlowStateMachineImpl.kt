@@ -237,12 +237,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun Throwable.fillInLocalStackTrace(): Throwable {
-        fillInStackTrace()
-        // provide useful information that can be displayed to the user
-        // reflection use to access private field
+        // Fill in the stacktrace when the exception originates from another node
         when (this) {
             is UnexpectedFlowEndException -> {
                 DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value?.let {
+                    fillInStackTrace()
                     stackTrace = arrayOf(
                         StackTraceElement(
                             "Received unexpected counter-flow exception from peer ${it.name}",
@@ -255,6 +254,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
             is FlowException -> {
                 DeclaredField<Party?>(FlowException::class.java, "peer", this).value?.let {
+                    fillInStackTrace()
                     stackTrace = arrayOf(
                         StackTraceElement(
                             "Received counter-flow exception from peer ${it.name}",

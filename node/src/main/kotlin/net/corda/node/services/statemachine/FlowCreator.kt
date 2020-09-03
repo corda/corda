@@ -15,6 +15,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -23,6 +24,8 @@ import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.commons.lang3.reflect.FieldUtils
+import java.lang.reflect.Field
 import java.security.SecureRandom
 import java.util.concurrent.Semaphore
 
@@ -32,7 +35,9 @@ data class NonResidentFlow(
     val runId: StateMachineRunId,
     var checkpoint: Checkpoint,
     val resultFuture: OpenFuture<Any?> = openFuture(),
-    val resumable: Boolean = true
+    val resumable: Boolean = true,
+    val hospitalized: Boolean = false,
+    val progressTracker: ProgressTracker? = null
 ) {
     val events = mutableListOf<ExternalEvent>()
 
@@ -41,6 +46,7 @@ data class NonResidentFlow(
     }
 }
 
+@Suppress("TooManyFunctions")
 class FlowCreator(
     private val checkpointSerializationContext: CheckpointSerializationContext,
     private val checkpointStorage: CheckpointStorage,
@@ -70,7 +76,12 @@ class FlowCreator(
             }
             else -> nonResidentFlow.checkpoint
         }
-        return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint, resultFuture = nonResidentFlow.resultFuture)
+        return createFlowFromCheckpoint(
+            nonResidentFlow.runId,
+            checkpoint,
+            resultFuture = nonResidentFlow.resultFuture,
+            progressTracker = nonResidentFlow.progressTracker
+        )
     }
 
     @Suppress("LongParameterList")
@@ -80,7 +91,8 @@ class FlowCreator(
         reloadCheckpointAfterSuspendCount: Int? = null,
         lock: Semaphore = Semaphore(1),
         resultFuture: OpenFuture<Any?> = openFuture(),
-        firstRestore: Boolean = true
+        firstRestore: Boolean = true,
+        progressTracker: ProgressTracker? = null
     ): Flow<*>? {
         val fiber = oldCheckpoint.getFiberFromCheckpoint(runId, firstRestore)
         var checkpoint = oldCheckpoint
@@ -91,6 +103,7 @@ class FlowCreator(
             updateCompatibleInDb(runId, true)
             checkpoint = checkpoint.copy(compatible = true)
         }
+
         checkpoint = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
 
         fiber.logic.stateMachine = fiber
@@ -102,8 +115,10 @@ class FlowCreator(
             anyCheckpointPersisted = true,
             reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
                 ?: if (reloadCheckpointAfterSuspend) checkpoint.checkpointState.numberOfSuspends else null,
+            numberOfCommits = checkpoint.checkpointState.numberOfCommits,
             lock = lock
         )
+        injectOldProgressTracker(progressTracker, fiber.logic)
         return Flow(fiber, resultFuture)
     }
 
@@ -148,6 +163,7 @@ class FlowCreator(
             fiber = flowStateMachineImpl,
             anyCheckpointPersisted = existingCheckpoint != null,
             reloadCheckpointAfterSuspendCount = if (reloadCheckpointAfterSuspend) 0 else null,
+            numberOfCommits = existingCheckpoint?.checkpointState?.numberOfCommits ?: 0,
             lock = Semaphore(1),
             deduplicationHandler = deduplicationHandler,
             senderUUID = senderUUID
@@ -229,6 +245,7 @@ class FlowCreator(
         fiber: FlowStateMachineImpl<*>,
         anyCheckpointPersisted: Boolean,
         reloadCheckpointAfterSuspendCount: Int?,
+        numberOfCommits: Int,
         lock: Semaphore,
         deduplicationHandler: DeduplicationHandler? = null,
         senderUUID: String? = null
@@ -246,7 +263,66 @@ class FlowCreator(
             flowLogic = fiber.logic,
             senderUUID = senderUUID,
             reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount,
+            numberOfCommits = numberOfCommits,
             lock = lock
         )
+    }
+
+    /**
+     * The flow de-serialized from the checkpoint will contain a new instance of the progress tracker, which means that
+     * any existing flow observers would be lost. We need to replace it with the old progress tracker to ensure progress
+     * updates are correctly sent out after the flow is retried.
+     *
+     * If the new tracker contains any child trackers from sub-flows, we need to attach those to the old tracker as well.
+     */
+    private fun injectOldProgressTracker(oldTracker: ProgressTracker?, newFlowLogic: FlowLogic<*>) {
+        if (oldTracker != null) {
+            val newTracker = newFlowLogic.progressTracker
+            if (newTracker != null) {
+                attachNewChildren(oldTracker, newTracker)
+                replaceTracker(newFlowLogic, oldTracker)
+            }
+        }
+    }
+
+    private fun attachNewChildren(oldTracker: ProgressTracker, newTracker: ProgressTracker) {
+        oldTracker.currentStep = newTracker.currentStep
+        oldTracker.steps.forEachIndexed { index, step ->
+            val newStep = newTracker.steps[index]
+            val newChildTracker = newTracker.getChildProgressTracker(newStep)
+            newChildTracker?.let { child ->
+                oldTracker.setChildProgressTracker(step, child)
+            }
+        }
+        resubscribeToChildren(oldTracker)
+    }
+
+    /**
+     * Re-subscribes to child tracker observables. When a nested progress tracker is deserialized from a checkpoint,
+     * it retains the child links, but does not automatically re-subscribe to the child changes.
+     */
+    private fun resubscribeToChildren(tracker: ProgressTracker) {
+        tracker.steps.forEach {
+            val childTracker = tracker.getChildProgressTracker(it)
+            if (childTracker != null) {
+                tracker.setChildProgressTracker(it, childTracker)
+                resubscribeToChildren(childTracker)
+            }
+        }
+    }
+
+    /** Replaces the deserialized [ProgressTracker] in the [newFlowLogic] with the old one to retain old subscribers. */
+    private fun replaceTracker(newFlowLogic: FlowLogic<*>, oldProgressTracker: ProgressTracker?) {
+        val field = getProgressTrackerField(newFlowLogic)
+        field?.apply {
+            isAccessible = true
+            set(newFlowLogic, oldProgressTracker)
+        }
+    }
+
+    private fun getProgressTrackerField(newFlowLogic: FlowLogic<*>): Field? {
+        // The progress tracker field may have been overridden in an abstract superclass, so we have to traverse up
+        // the hierarchy.
+        return FieldUtils.getAllFieldsList(newFlowLogic::class.java).find { it.name == "progressTracker" }
     }
 }
