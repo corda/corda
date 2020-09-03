@@ -53,6 +53,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
+import net.corda.core.utilities.toHexString
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
@@ -97,6 +98,7 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.ClusterSpec
+import net.corda.testing.node.DatabaseSnapshot
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -149,7 +151,8 @@ class DriverDSLImpl(
         val djvmBootstrapSource: Path?,
         val djvmCordaSource: List<Path>,
         val environmentVariables: Map<String, String>,
-        val allowHibernateToManageAppSchema: Boolean = true
+        val allowHibernateToManageAppSchema: Boolean = true,
+        val premigrateH2Database: Boolean = true
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -195,7 +198,7 @@ class DriverDSLImpl(
     }
 
     private fun NodeConfig.checkAndOverrideForInMemoryDB(): NodeConfig = this.run {
-        if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
+        if (inMemoryDB && isH2Database(corda)) {
             val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter.getAndIncrement()};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
             NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
@@ -269,6 +272,15 @@ class DriverDSLImpl(
         val name = parameters.providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
 
         val config = createConfig(name, parameters, p2pAddress)
+        if (premigrateH2Database && isH2Database(config)) {
+            if (!inMemoryDB) {
+                try {
+                    DatabaseSnapshot.copyDatabaseSnapshot(config.corda.baseDirectory)
+                } catch (ex: java.nio.file.FileAlreadyExistsException) {
+                    log.warn("Database already exists on disk, not attempting to pre-migrate database.")
+                }
+            }
+        }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
             createSchema(config, false).flatMap { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config()) }
@@ -1032,6 +1044,12 @@ class DriverDSLImpl(
             )
         }
 
+        private fun isH2Database(config: NodeConfiguration)
+            = config.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")
+
+        private fun isH2Database(config: NodeConfig)
+                = isH2Database(config.corda)
+
         // Obvious test artifacts. This is NOT intended to be an exhaustive list!
         // It is only intended to remove those FEW jars which BLATANTLY do not
         // belong inside a Corda Node.
@@ -1298,7 +1316,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                         djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
                         djvmCordaSource = defaultParameters.djvmCordaSource,
                         environmentVariables = defaultParameters.environmentVariables,
-                        allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema
+                        allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
+                        premigrateH2Database = defaultParameters.premigrateH2Database
                 )
         )
         val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1397,6 +1416,7 @@ fun <A> internalDriver(
         djvmCordaSource: List<Path> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         allowHibernateToManageAppSchema: Boolean = true,
+        premigrateH2Database: Boolean = true,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1420,15 +1440,21 @@ fun <A> internalDriver(
                     djvmBootstrapSource = djvmBootstrapSource,
                     djvmCordaSource = djvmCordaSource,
                     environmentVariables = environmentVariables,
-                    allowHibernateToManageAppSchema = allowHibernateToManageAppSchema
+                    allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
+                    premigrateH2Database = premigrateH2Database
             ),
             coerce = { it },
             dsl = dsl
     )
 }
 
+val DIRECTORY_TIMESTAMP_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC)
+private val directoryRandom = Random()
 fun getTimestampAsDirectoryName(): String {
-    return DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC).format(Instant.now())
+    val base = DIRECTORY_TIMESTAMP_FORMAT.format(Instant.now())
+    // Introduce some randomness so starting two nodes in the same ms doesn't use the same path
+    val random = directoryRandom.nextLong().toBigInteger().toByteArray().toHexString()
+    return "$base-$random"
 }
 
 fun writeConfig(path: Path, filename: String, config: Config) {
