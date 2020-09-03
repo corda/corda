@@ -215,7 +215,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
                     djvmCordaSource = defaultParameters.djvmCordaSource,
                     environmentVariables = defaultParameters.environmentVariables,
-                    allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema
+                    allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
+                    premigrateH2Database = defaultParameters.premigrateH2Database
             ),
             coerce = { it },
             dsl = dsl

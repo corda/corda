@@ -1315,7 +1315,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                         djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
                         djvmCordaSource = defaultParameters.djvmCordaSource,
                         environmentVariables = defaultParameters.environmentVariables,
-                        allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema
+                        allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
+                        premigrateH2Database = defaultParameters.premigrateH2Database
                 )
         )
         val shutdownHook = addShutdownHook(driverDsl::shutdown)
