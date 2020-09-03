@@ -16,10 +16,10 @@ import net.corda.verification.contracts.CommsTestState
 class TestCommsFlowInitiator(private val x500Name: CordaX500Name? = null) : FlowLogic<List<String>>() {
 
     object SENDING : ProgressTracker.Step("SENDING")
-    object RECIEVED_ALL : ProgressTracker.Step("RECIEVED_ALL")
+    object RECEIVED_ALL : ProgressTracker.Step("RECEIVED_ALL")
     object FINALIZING : ProgressTracker.Step("FINALIZING")
 
-    override val progressTracker: ProgressTracker = ProgressTracker(SENDING, RECIEVED_ALL, FINALIZING)
+    override val progressTracker: ProgressTracker = ProgressTracker(SENDING, RECEIVED_ALL, FINALIZING)
 
     @Suspendable
     override fun call(): List<String> {
@@ -35,7 +35,7 @@ class TestCommsFlowInitiator(private val x500Name: CordaX500Name? = null) : Flow
                     val initiateFlow = initiateFlow(it)
                     initiateFlow.receive<String>().unwrap { it }
                 }.toList().also {
-                    progressTracker.currentStep = RECIEVED_ALL
+                    progressTracker.currentStep = RECEIVED_ALL
                 }
         val tx = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
         tx.addOutputState(CommsTestState(responses, serviceHub.myInfo.legalIdentities.first()), CommsTestContract::class.java.name)

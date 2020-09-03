@@ -346,14 +346,14 @@ fun OpaqueBytes.hashAs(algorithm: String): SecureHash = SecureHash.hashAs(algori
  * so that we can remove it for core-deterministic.
  */
 private class DigestSupplier(algorithm: String) : Supplier<MessageDigest> {
-    private val threadLocalSha256MessageDigest = LocalSHA256Digest(algorithm)
-    override fun get(): MessageDigest = threadLocalSha256MessageDigest.get()
+    private val threadLocalMessageDigest = LocalDigest(algorithm)
+    override fun get(): MessageDigest = threadLocalMessageDigest.get()
     val digestLength: Int = get().digestLength
 }
 
 // Declaring this as "object : FastThreadLocal<>" would have
 // created an extra public class in the API definition.
-private class LocalSHA256Digest(private val algorithm: String) : FastThreadLocal<MessageDigest>() {
+private class LocalDigest(private val algorithm: String) : FastThreadLocal<MessageDigest>() {
     override fun initialValue(): MessageDigest = try {
         MessageDigest.getInstance(algorithm)
     } catch (_: NoSuchAlgorithmException) {

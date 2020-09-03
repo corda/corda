@@ -342,6 +342,9 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
                     "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +
                     "You will need to manually install the CorDapp to whitelist it for use.")
 
+    @KeepForDJVM
+    class UnsupportedHashTypeException(txId: SecureHash) : TransactionVerificationException(txId, "The transaction Id is defined by an unsupported hash type", null);
+
     /*
     If you add a new class extending [TransactionVerificationException], please add a test in `TransactionVerificationExceptionSerializationTests`
     proving that it can actually be serialised. As a rule, exceptions intended to be serialised _must_ have a corresponding readable property

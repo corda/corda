@@ -220,3 +220,32 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
 val SignedTransaction.dependencies: Set<SecureHash>
     get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()
 
+class HashAgility {
+    companion object {
+        private var hashAgilityEnabled: Boolean? = null
+
+        fun setEnabled(value: Boolean) {
+            if (hashAgilityEnabled == null) {
+                hashAgilityEnabled = value
+            }
+        }
+
+        fun isEnabled(): Boolean {
+            return hashAgilityEnabled != null && hashAgilityEnabled == true
+        }
+
+        fun checkSupportedHashType(hash : SecureHash) {
+            // NOTE: will use TX's network parameters in place of this temporary, command line driven, static class
+            //       e.g. ltx.networkParameters.hashAgilityEnabled
+
+            val pass = HashAgility.isEnabled() || hash.algorithm == SHA2_256
+            if(!pass) {
+                throw TransactionVerificationException.UnsupportedHashTypeException(hash)
+            }
+        }
+    }
+}
+
+internal fun Verifier.checkSupportedHashType() = HashAgility.checkSupportedHashType(this.ltx.id)
+internal fun WireTransaction.checkSupportedHashType() = HashAgility.checkSupportedHashType(this.id)
+

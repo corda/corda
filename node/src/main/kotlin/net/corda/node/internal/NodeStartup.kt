@@ -175,6 +175,9 @@ open class NodeStartup : NodeStartupLogging {
         // This needs to go after initLogging(netty clashes with our logging)
         Crypto.registerProviders()
 
+        // Temp Step. Enable experimental hash agility feature using a static/global flag that will be later replaced by a networkparams' flag
+        HashAgility.setEnabled(cmdLineOptions.enableHashAgility)
+
         // Step 4. Print banner and basic node info.
         val versionInfo = getVersionInfo()
         drawBanner(versionInfo)

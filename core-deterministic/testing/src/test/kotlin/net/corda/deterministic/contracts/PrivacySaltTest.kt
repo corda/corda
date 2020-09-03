@@ -1,7 +1,6 @@
 package net.corda.deterministic.contracts
 
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.crypto.SecureHash
 import org.junit.Test
 import kotlin.test.*
 
