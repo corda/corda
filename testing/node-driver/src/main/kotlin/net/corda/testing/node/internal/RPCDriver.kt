@@ -107,7 +107,7 @@ private val globalDebugPortAllocation = incrementalPortAllocation()
 @Suppress("LongParameterList")
 fun <A> rpcDriver(
         isDebug: Boolean = false,
-        driverDirectory: Path = Paths.get("build") / "rpc-driver" /  getUUIDAsDirectoryName(),
+        driverDirectory: Path = Paths.get("build") / "rpc-driver" /  getTimestampAsDirectoryName(),
         portAllocation: PortAllocation = globalPortAllocation,
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),

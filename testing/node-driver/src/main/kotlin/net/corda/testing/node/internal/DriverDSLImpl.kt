@@ -53,6 +53,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
+import net.corda.core.utilities.toHexString
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
@@ -1447,10 +1448,14 @@ fun <A> internalDriver(
     )
 }
 
-fun getUUIDAsDirectoryName() = UUID.randomUUID().toString()
-
-val DIRECTORY_TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC)
-fun getTimestampAsDirectoryName() = DIRECTORY_TIMESTAMP_FORMAT.format(Instant.now())
+val DIRECTORY_TIMESTAMP_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(UTC)
+private val directoryRandom = Random()
+fun getTimestampAsDirectoryName(): String {
+    val base = DIRECTORY_TIMESTAMP_FORMAT.format(Instant.now())
+    // Introduce some randomness so starting two nodes in the same ms doesn't use the same path
+    val random = directoryRandom.nextLong().toBigInteger().toByteArray().toHexString()
+    return "$base-$random"
+}
 
 fun writeConfig(path: Path, filename: String, config: Config) {
     val configString = config.root().render(ConfigRenderOptions.defaults())
