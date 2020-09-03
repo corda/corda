@@ -9,15 +9,15 @@ object DatabaseSnapshot {
     private const val databaseName: String = "persistence.mv.db"
 
     private fun getDatabaseSnapshotStream(): InputStream {
-        val fileName = "/databasesnapshots/${previousCordaVersion}/$databaseName"
-        val resourceUri = this::class.java.getResource(fileName)
+        val resourceUri = this::class.java.getResource("/databasesnapshots/${previousCordaVersion}/$databaseName")
         return resourceUri.openStream()
     }
 
     fun copyDatabaseSnapshot(baseDirectory: Path) {
-        val stream = getDatabaseSnapshotStream()
-        Files.createDirectories(baseDirectory)
-        val path = baseDirectory.resolve(databaseName)
-        Files.copy(stream, path)
+        getDatabaseSnapshotStream().use { stream ->
+            Files.createDirectories(baseDirectory)
+            val path = baseDirectory.resolve(databaseName)
+            Files.copy(stream, path)
+        }
     }
 }
