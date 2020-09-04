@@ -391,7 +391,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected fun <T : AutoCloseable> T.closeOnStop(usesDatabase: Boolean = true): T {
         if (usesDatabase) {
-            contextDatabase // Will throw if no database is available, which means this would run after closing the database.
+            contextDatabase // Will throw if no database is available, since this would run after closing the database, yet claims it needs it.
             runOnStop += this::close
         } else {
             runOnStop += { withoutDatabaseAccess { this.close() } }
