@@ -38,6 +38,8 @@ public class InteractiveShellJavaTest {
     // should guarantee that FlowA will have synthetic method to access this field
     private static final String synthetic = "synth";
 
+    private static final boolean IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9");
+
     abstract static class StringFlow extends FlowLogic<String> {
         abstract String getA();
     }
@@ -183,8 +185,10 @@ public class InteractiveShellJavaTest {
     @Test
     public void flowStartSimple() throws InteractiveShell.NoApplicableConstructor {
         check("a: Hi there", "Hi there", FlowA.class);
-        check("b: 12", "12", FlowA.class);
-        check("b: 12, c: Yo", "12Yo", FlowA.class);
+        if (!IS_OPENJ9) {
+            check("b: 12", "12", FlowA.class);
+            check("b: 12, c: Yo", "12Yo", FlowA.class);
+        }
     }
 
     @Test
@@ -210,11 +214,13 @@ public class InteractiveShellJavaTest {
 
     @Test
     public void flowStartWithArrayType() throws InteractiveShell.NoApplicableConstructor {
-        check(
-            "b: [ One, Two, Three, Four ]",
-            "One+Two+Three+Four",
-            FlowA.class
-        );
+        if (!IS_OPENJ9) {
+            check(
+                    "b: [ One, Two, Three, Four ]",
+                    "One+Two+Three+Four",
+                    FlowA.class
+            );
+        }
     }
 
     @Test

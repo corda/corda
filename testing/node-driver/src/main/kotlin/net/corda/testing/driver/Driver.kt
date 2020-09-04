@@ -43,21 +43,28 @@ data class NotaryHandle(val identity: Party, val validating: Boolean, val nodeHa
 interface NodeHandle : AutoCloseable {
     /** Get the [NodeInfo] for this node */
     val nodeInfo: NodeInfo
+
     /**
      * Interface to the node's RPC system. The first RPC user will be used to login if are any, otherwise a default one
      * will be added and that will be used.
      */
     val rpc: CordaRPCOps
+
     /** Get the p2p address for this node **/
     val p2pAddress: NetworkHostAndPort
+
     /** Get the rpc address for this node **/
     val rpcAddress: NetworkHostAndPort
+
     /** Get the rpc admin address for this node **/
     val rpcAdminAddress: NetworkHostAndPort
+
     /** Get the JMX server address for this node, if JMX is enabled **/
     val jmxAddress: NetworkHostAndPort?
+
     /** Get a [List] of [User]'s for this node **/
     val rpcUsers: List<User>
+
     /** The location of the node's base directory **/
     val baseDirectory: Path
 
@@ -67,7 +74,8 @@ interface NodeHandle : AutoCloseable {
     fun stop()
 }
 
-fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }.single()
+fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }
+        .single()
 
 /** Interface which represents an out of process node and exposes its process handle. **/
 @DoNotImplement
@@ -91,7 +99,8 @@ interface InProcess : NodeHandle {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = internalServices.startFlow(logic, internalServices.newContext()).getOrThrow().resultFuture
+    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = internalServices.startFlow(logic, internalServices.newContext())
+            .getOrThrow().resultFuture
 }
 
 /**
@@ -206,7 +215,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
                     djvmCordaSource = defaultParameters.djvmCordaSource,
                     environmentVariables = defaultParameters.environmentVariables,
-                    allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema
+                    allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
+                    premigrateH2Database = defaultParameters.premigrateH2Database
             ),
             coerce = { it },
             dsl = dsl
@@ -245,6 +255,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property cordappsForAllNodes [TestCordapp]s that will be added to each node started by the [DriverDSL].
  * @property djvmBootstrapSource Location of a JAR containing the Java APIs for the DJVM to use.
  * @property djvmCordaSource Locations of JARs of user-supplied classes to execute within the DJVM sandbox.
+ * @property premigrateH2Database Whether to use a prebuilt H2 database schema or start from an empty schema.
+ * This can save time for tests which do not need to migrate from a blank schema.
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -263,12 +275,13 @@ data class DriverParameters(
         @Suppress("DEPRECATION") val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
-        val inMemoryDB: Boolean = true,
+        val inMemoryDB: Boolean = false,
         val cordappsForAllNodes: Collection<TestCordapp>? = null,
         val djvmBootstrapSource: Path? = null,
         val djvmCordaSource: List<Path> = emptyList(),
-        val environmentVariables : Map<String, String> = emptyMap(),
-        val allowHibernateToManageAppSchema: Boolean = true
+        val environmentVariables: Map<String, String> = emptyMap(),
+        val allowHibernateToManageAppSchema: Boolean = true,
+        val premigrateH2Database: Boolean = true
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
@@ -377,6 +390,49 @@ data class DriverParameters(
     )
 
     constructor(
+            isDebug: Boolean = false,
+            driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
+            portAllocation: PortAllocation = incrementalPortAllocation(),
+            debugPortAllocation: PortAllocation = incrementalPortAllocation(),
+            systemProperties: Map<String, String> = emptyMap(),
+            useTestClock: Boolean = false,
+            startNodesInProcess: Boolean = false,
+            waitForAllNodesToFinish: Boolean = false,
+            notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
+            extraCordappPackagesToScan: List<String> = emptyList(),
+            @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
+            networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
+            notaryCustomOverrides: Map<String, Any?> = emptyMap(),
+            inMemoryDB: Boolean = false,
+            cordappsForAllNodes: Collection<TestCordapp>? = null,
+            djvmBootstrapSource: Path? = null,
+            djvmCordaSource: List<Path> = emptyList(),
+            environmentVariables: Map<String, String> = emptyMap(),
+            allowHibernateToManageAppSchema: Boolean = true
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            notaryCustomOverrides,
+            inMemoryDB,
+            cordappsForAllNodes,
+            djvmBootstrapSource,
+            djvmCordaSource,
+            environmentVariables,
+            allowHibernateToManageAppSchema,
+            premigrateH2Database = true
+    )
+
+    constructor(
             isDebug: Boolean,
             driverDirectory: Path,
             portAllocation: PortAllocation,
@@ -417,6 +473,7 @@ data class DriverParameters(
     fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
     fun withWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
     fun withNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
+
     @Deprecated("extraCordappPackagesToScan does not preserve the original CorDapp's versioning and metadata, which may lead to " +
             "misleading results in tests. Use withCordappsForAllNodes instead.")
     fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
@@ -428,7 +485,7 @@ data class DriverParameters(
     fun withCordappsForAllNodes(cordappsForAllNodes: Collection<TestCordapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
     fun withDjvmBootstrapSource(djvmBootstrapSource: Path?): DriverParameters = copy(djvmBootstrapSource = djvmBootstrapSource)
     fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
-    fun withEnvironmentVariables(variables : Map<String, String>): DriverParameters = copy(environmentVariables = variables)
+    fun withEnvironmentVariables(variables: Map<String, String>): DriverParameters = copy(environmentVariables = variables)
     fun withAllowHibernateToManageAppSchema(value: Boolean): DriverParameters = copy(allowHibernateToManageAppSchema = value)
 
     fun copy(
@@ -529,5 +586,49 @@ data class DriverParameters(
             djvmBootstrapSource = djvmBootstrapSource,
             djvmCordaSource = djvmCordaSource,
             environmentVariables = environmentVariables
+    )
+
+    // Legacy copy() from v4.5
+    @Suppress("LongParameterList")
+    fun copy(isDebug: Boolean,
+             driverDirectory: Path,
+             portAllocation: PortAllocation,
+             debugPortAllocation: PortAllocation,
+             systemProperties: Map<String, String>,
+             useTestClock: Boolean,
+             startNodesInProcess: Boolean,
+             waitForAllNodesToFinish: Boolean,
+             notarySpecs: List<NotarySpec>,
+             extraCordappPackagesToScan: List<String>,
+             @Suppress("DEPRECATION") jmxPolicy: JmxPolicy,
+             networkParameters: NetworkParameters,
+             notaryCustomOverrides: Map<String, Any?>,
+             inMemoryDB: Boolean,
+             cordappsForAllNodes: Collection<TestCordapp>?,
+             djvmBootstrapSource: Path?,
+             djvmCordaSource: List<Path>,
+             environmentVariables: Map<String, String>,
+             allowHibernateToManageAppSchema: Boolean
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = notaryCustomOverrides,
+            inMemoryDB = inMemoryDB,
+            cordappsForAllNodes = cordappsForAllNodes,
+            djvmBootstrapSource = djvmBootstrapSource,
+            djvmCordaSource = djvmCordaSource,
+            environmentVariables = environmentVariables,
+            allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
+            premigrateH2Database = true
     )
 }

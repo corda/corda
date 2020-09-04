@@ -48,6 +48,7 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
@@ -118,7 +119,8 @@ class FlowMetadataRecordingTest {
                 assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(user.username, it.startedBy)
-                assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
+                assertEquals(context!!.trace.invocationId.timestamp.truncatedTo((ChronoUnit.MILLIS)),
+                             it.invocationInstant.truncatedTo(ChronoUnit.MILLIS))
                 assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
@@ -159,7 +161,8 @@ class FlowMetadataRecordingTest {
                 assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(user.username, it.startedBy)
-                assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
+                assertEquals(context!!.trace.invocationId.timestamp.truncatedTo(ChronoUnit.MILLIS),
+                             it.invocationInstant.truncatedTo(ChronoUnit.MILLIS))
                 assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
@@ -261,7 +264,8 @@ class FlowMetadataRecordingTest {
                 assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(8, it.platformVersion)
                 assertEquals(nodeAHandle.nodeInfo.singleIdentity().name.toString(), it.startedBy)
-                assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
+                assertEquals(context!!.trace.invocationId.timestamp.truncatedTo(ChronoUnit.MILLIS),
+                             it.invocationInstant.truncatedTo(ChronoUnit.MILLIS))
                 assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
@@ -309,7 +313,8 @@ class FlowMetadataRecordingTest {
                 assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(MyService::class.java.name, it.startedBy)
-                assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
+                assertEquals(context!!.trace.invocationId.timestamp.truncatedTo(ChronoUnit.MILLIS),
+                             it.invocationInstant.truncatedTo(ChronoUnit.MILLIS))
                 assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
@@ -364,7 +369,8 @@ class FlowMetadataRecordingTest {
                 assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals("Scheduler", it.startedBy)
-                assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
+                assertEquals(context!!.trace.invocationId.timestamp.truncatedTo(ChronoUnit.MILLIS),
+                             it.invocationInstant.truncatedTo(ChronoUnit.MILLIS))
                 assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }

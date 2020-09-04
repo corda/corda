@@ -463,12 +463,18 @@ fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializ
 class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>(false, true) {
 
     private companion object {
+        private val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
         private val suppressedField = Throwable::class.java.getDeclaredField("suppressedExceptions")
 
         private val sentinelValue = let {
-            val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
-            sentinelField.isAccessible = true
-            sentinelField.get(null)
+            if (!IS_OPENJ9) {
+                val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
+                sentinelField.isAccessible = true
+                sentinelField.get(null)
+            }
+            else {
+                Collections.EMPTY_LIST
+            }
         }
 
         init {
