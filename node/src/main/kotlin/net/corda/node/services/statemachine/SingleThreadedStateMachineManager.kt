@@ -415,10 +415,10 @@ internal class SingleThreadedStateMachineManager(
             if (flow != null) {
                 decrementLiveFibers()
                 totalFinishedFlows.inc()
-                return when (removalReason) {
+                when (removalReason) {
                     is FlowRemovalReason.OrderlyFinish -> removeFlowOrderly(flow, removalReason, lastState)
                     is FlowRemovalReason.ErrorFinish -> removeFlowError(flow, removalReason, lastState)
-                    FlowRemovalReason.SoftShutdown -> flow.fiber.scheduleEvent(Event.SoftShutdown)
+                    FlowRemovalReason.SoftShutdown -> { /* No further tidy up is required */ }
                 }
             } else {
                 logger.warn("Flow $flowId re-finished")
@@ -601,7 +601,9 @@ internal class SingleThreadedStateMachineManager(
         val events = mutableListOf<Event>()
         do {
             val event = oldEventQueue.tryReceive()
-            if (event is Event.Pause || event is Event.GeneratedByExternalEvent) events.add(event)
+            if (event is Event.Pause || event is Event.SoftShutdown || event is Event.GeneratedByExternalEvent) {
+                events.add(event)
+            }
         } while (event != null)
 
         // Only redeliver events if they were not persisted to the database
