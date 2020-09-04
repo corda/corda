@@ -408,24 +408,24 @@ class CordaRPCClientReconnectionTest {
 
                 val completedCounter = AtomicInteger(0)
                 flowHandle0.returnValue.doOnComplete {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
                 flowHandle1!!.returnValue.doOnComplete {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
 
                 flowHandle0.returnValue.thenMatch({
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }, {})
                 flowHandle1.returnValue.thenMatch({
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }, {})
 
                 flowHandle0.returnValue.toCompletableFuture().thenApply {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
                 flowHandle1.returnValue.toCompletableFuture().thenApply {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
 
                 node.stop()
@@ -469,13 +469,13 @@ class CordaRPCClientReconnectionTest {
                 val clientId = UUID.randomUUID().toString()
                 val flowHandle = rpcOps.startFlowWithClientId(clientId, ::ThrowingFlow)
 
-                var erroredCounter = 0
+                val erroredCounter = AtomicInteger(0)
                 flowHandle.returnValue.doOnError {
-                    erroredCounter++
+                    erroredCounter.getAndIncrement()
                 }
 
                 flowHandle.returnValue.toCompletableFuture().exceptionally {
-                    erroredCounter++
+                    erroredCounter.getAndIncrement()
                 }
 
                 node.stop()
@@ -489,7 +489,7 @@ class CordaRPCClientReconnectionTest {
                 }
 
                 sleep(1000)
-                assertEquals(2, erroredCounter)
+                assertEquals(2, erroredCounter.get())
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
         }
