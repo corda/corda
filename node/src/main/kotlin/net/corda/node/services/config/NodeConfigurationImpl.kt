@@ -84,7 +84,8 @@ data class NodeConfigurationImpl(
         override val configurationWithOptions: ConfigurationWithOptions,
         override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize,
         override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages,
-        override val reloadCheckpointAfterSuspend: Boolean = Defaults.reloadCheckpointAfterSuspend
+        override val reloadCheckpointAfterSuspend: Boolean = Defaults.reloadCheckpointAfterSuspend,
+        override val networkParametersPath: Path = baseDirectory
 
 ) : NodeConfiguration {
     internal object Defaults {
