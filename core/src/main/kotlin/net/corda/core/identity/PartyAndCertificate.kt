@@ -37,7 +37,7 @@ class PartyAndCertificate(val certPath: CertPath) {
     operator fun component1(): Party = party
     operator fun component2(): X509Certificate = certificate
 
-    override fun equals(other: Any?): Boolean = other === this || other is PartyAndCertificate && other.party == party
+    override fun equals(other: Any?): Boolean = other === this || other is PartyAndCertificate && other.party == party && other.certificate == certificate
     override fun hashCode(): Int = party.hashCode()
     override fun toString(): String = party.toString()
 
