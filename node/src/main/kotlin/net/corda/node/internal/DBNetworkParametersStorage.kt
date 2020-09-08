@@ -116,11 +116,11 @@ class DBNetworkParametersStorage(
     override fun getHistoricNotary(party: Party): NotaryInfo? {
         val currentParameters = lookup(currentHash)
                 ?: throw IllegalStateException("Unable to obtain NotaryInfo – current network parameters not set.")
-        val inCurrentParams = currentParameters.notaries.singleOrNull { it.identity.name == party.name }
+        val inCurrentParams = currentParameters.notaries.singleOrNull { it.identity == party }
         if (inCurrentParams != null) return inCurrentParams
         return hashToParameters.allPersisted.use {
             it.flatMap { (_, signedNetParams) -> signedNetParams.raw.deserialize().notaries.stream() }
-                    .filter { it.identity.name == party.name }
+                    .filter { it.identity == party }
                     .findFirst()
                     .orElse(null)
         }
