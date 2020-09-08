@@ -479,6 +479,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         certificatesDirectory.createDirectories()
         val config = mockNodeConfiguration(certificatesDirectory).also {
             doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).networkParametersPath
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys

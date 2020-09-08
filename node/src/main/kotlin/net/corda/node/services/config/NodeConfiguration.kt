@@ -87,6 +87,8 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings?
 
+    val networkParametersPath: Path
+
     val blacklistedAttachmentSigningKeys: List<String>
 
     val flowExternalOperationThreadPoolSize: Int
