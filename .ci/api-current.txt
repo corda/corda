@@ -155,8 +155,8 @@ public final class net.corda.core.context.AuthServiceId extends java.lang.Object
 public final class net.corda.core.context.InvocationContext extends java.lang.Object
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String)
-  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String, net.corda.core.internal.context.DurableStreamContext)
+  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List, String, net.corda.core.internal.context.DurableStreamContext, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final net.corda.core.context.InvocationOrigin component1()
   @NotNull
@@ -174,7 +174,7 @@ public final class net.corda.core.context.InvocationContext extends java.lang.Ob
   @NotNull
   public final net.corda.core.context.InvocationContext copy(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
   @NotNull
-  public final net.corda.core.context.InvocationContext copy(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String)
+  public final net.corda.core.context.InvocationContext copy(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String, net.corda.core.internal.context.DurableStreamContext)
   public boolean equals(Object)
   @Nullable
   public final net.corda.core.context.Actor getActor()
