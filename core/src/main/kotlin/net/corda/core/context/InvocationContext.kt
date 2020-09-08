@@ -63,6 +63,7 @@ data class InvocationContext(
         @DeleteForDJVM
         @JvmStatic
         @JvmOverloads
+        @Suppress("LongParameterList")
         fun rpc(
             actor: Actor,
             trace: Trace = Trace.newInstance(),
