@@ -2,7 +2,6 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
-import net.corda.client.rpc.RPCException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.Amount
@@ -361,7 +360,7 @@ class CordaRPCOpsImplTest {
         withPermissions(invokeRpc(CordaRPCOps::openAttachment)) {
             assertThatThrownBy {
                 rpc.openAttachment(SecureHash.zeroHash)
-            }.isInstanceOf(RPCException::class.java)
+            }.isInstanceOf(IllegalArgumentException::class.java)
                     .withFailMessage("Unable to open attachment with id: ${SecureHash.zeroHash}")
         }
     }

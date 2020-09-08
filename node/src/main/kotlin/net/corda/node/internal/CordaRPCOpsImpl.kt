@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.notUsed
 import net.corda.common.logging.CordaVersion
 import net.corda.core.CordaRuntimeException
@@ -288,7 +287,7 @@ internal class CordaRPCOpsImpl(
 
     override fun openAttachment(id: SecureHash): InputStream {
         return services.attachments.openAttachment(id)?.open() ?:
-            throw RPCException("Unable to open attachment with id: $id")
+            throw IllegalArgumentException("Unable to open attachment with id: $id")
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
