@@ -6,7 +6,6 @@ import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ErrorSessionMessage
-import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowRemovalReason

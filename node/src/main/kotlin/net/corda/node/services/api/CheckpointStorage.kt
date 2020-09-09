@@ -6,12 +6,12 @@ import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.FlowResultMetadata
 import net.corda.node.services.statemachine.FlowState
-import java.time.Instant
 import java.util.stream.Stream
 
 /**
  * Thread-safe storage of fiber checkpoints.
  */
+@Suppress("TooManyFunctions")
 interface CheckpointStorage {
     /**
      * Add a checkpoint for a new id to the store. Will throw if there is already a checkpoint for this id
