@@ -11,6 +11,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.KilledFlowException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
@@ -48,6 +49,7 @@ import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import java.security.SecureRandom
+import java.time.Instant
 import java.util.ArrayList
 import java.util.HashSet
 import java.util.concurrent.ConcurrentHashMap
@@ -355,10 +357,19 @@ internal class SingleThreadedStateMachineManager(
         val killFlowResult = if (flow != null) {
             flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
                 logger.info("Killing flow $id known to this node.")
-                // The checkpoint and soft locks are removed here instead of relying on the processing of the next event after setting
-                // the killed flag. This is to ensure a flow can be removed from the database, even if it is stuck in a infinite loop.
+                // The checkpoint and soft locks are handled here as well as in a flow's transition. This means that we do not need to rely
+                // on the processing of the next event after setting the killed flag. This is to ensure a flow can be updated/removed from
+                // the database, even if it is stuck in a infinite loop.
                 database.transaction {
-                    checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+                    if (flow.fiber.clientId != null) {
+                        val now = Instant.now(serviceHub.clock)
+                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
+                        checkpointStorage.removeFlowException(id)
+                        checkpointStorage.addFlowException(id, KilledFlowException(id))
+
+                    } else {
+                        checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+                    }
                     serviceHub.vaultService.softLockRelease(id.uuid)
                 }
 
@@ -971,12 +982,7 @@ internal class SingleThreadedStateMachineManager(
         drainFlowEventQueue(flow)
         // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
         startedFutures.remove(flow.fiber.id)?.set(Unit)
-        flow.fiber.clientId?.let {
-            if (flow.fiber.isKilled) {
-                clientIdsToFlowIds.remove(it)
-            } else {
-                setClientIdAsFailed(it, flow.fiber.id) }
-            }
+        flow.fiber.clientId?.let { setClientIdAsFailed(it, flow.fiber.id) }
         val flowError = removalReason.flowErrors[0] // TODO what to do with several?
         val exception = flowError.exception
         (exception as? FlowException)?.originalErrorId = flowError.errorId

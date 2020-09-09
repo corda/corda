@@ -600,14 +600,30 @@ class DBCheckpointStorage(
         return serializedFlowException?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
     }
 
+    override fun addFlowException(id: StateMachineRunId, exception: Throwable) {
+        currentDBSession().save(
+            DBFlowException(
+                flow_id = id.uuid.toString(),
+                type = exception::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
+                message = exception.message?.truncate(MAX_EXC_MSG_LENGTH, false),
+                stackTrace = exception.stackTraceToString(),
+                value = exception.storageSerialize().bytes,
+                persistedInstant = Instant.now(clock)
+            )
+        )
+    }
+
     override fun removeFlowException(id: StateMachineRunId): Boolean {
-        val flowId = id.uuid.toString()
-        return deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId) == 1
+        return deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, id.uuid.toString()) == 1
     }
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
-        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
-        currentDBSession().createNativeQuery(update).executeUpdate()
+        currentDBSession()
+            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :status, timestamp = :timestamp where flow_id = :id")
+            .setParameter("status", flowStatus.ordinal)
+            .setParameter("timestamp", Instant.now(clock))
+            .setParameter("id", runId.uuid.toString())
+            .executeUpdate()
     }
 
     override fun updateCompatible(runId: StateMachineRunId, compatible: Boolean) {

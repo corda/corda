@@ -69,6 +69,8 @@ internal class ActionExecutorImpl(
             is Action.CancelFlowTimeout -> cancelFlowTimeout(action)
             is Action.MoveFlowToPaused -> executeMoveFlowToPaused(action)
             is Action.UpdateFlowStatus -> executeUpdateFlowStatus(action)
+            is Action.RemoveFlowException -> executeRemoveFlowException(action)
+            is Action.AddFlowException -> executeAddFlowException(action)
         }
     }
     private fun executeReleaseSoftLocks(action: Action.ReleaseSoftLocks) {
@@ -251,5 +253,13 @@ internal class ActionExecutorImpl(
 
     private fun scheduleFlowTimeout(action: Action.ScheduleFlowTimeout) {
         stateMachineManager.scheduleFlowTimeout(action.flowId)
+    }
+
+    private fun executeRemoveFlowException(action: Action.RemoveFlowException) {
+        checkpointStorage.removeFlowException(action.id)
+    }
+
+    private fun executeAddFlowException(action: Action.AddFlowException) {
+        checkpointStorage.addFlowException(action.id, action.exception)
     }
 }

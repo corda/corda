@@ -6,6 +6,7 @@ import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.FlowResultMetadata
 import net.corda.node.services.statemachine.FlowState
+import java.time.Instant
 import java.util.stream.Stream
 
 /**
@@ -99,6 +100,8 @@ interface CheckpointStorage {
      * if the flow exception is missing in the database.
      */
     fun getFlowException(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
+
+    fun addFlowException(id: StateMachineRunId, exception: Throwable)
 
     fun removeFlowException(id: StateMachineRunId): Boolean
 }
