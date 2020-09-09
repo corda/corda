@@ -23,7 +23,6 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.startFlowWithClientId
-import net.corda.testing.node.transaction
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Assert
@@ -41,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -304,6 +302,32 @@ class FlowClientIdTests {
         }
 
         assertEquals(flowHandle0!!.id, flowHandle1.id)
+        assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
+        assertTrue(aliceNode.hasException(flowHandle0!!.id))
+    }
+
+    @Test(timeout = 300_000)
+    fun `killing a flow twice does nothing`() {
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Unit>? = null
+        assertFailsWith<KilledFlowException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
+            aliceNode.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
+            aliceNode.internals.smm.killFlow(flowHandle0!!.id)
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        val flowHandle1: FlowStateMachineHandle<Int> = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        assertFailsWith<KilledFlowException> {
+            flowHandle1.resultFuture.getOrThrow()
+        }
+
+        assertEquals(flowHandle0!!.id, flowHandle1.id)
+        assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
+        assertTrue(aliceNode.hasException(flowHandle0!!.id))
+
+        aliceNode.internals.smm.killFlow(flowHandle0!!.id)
         assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
         assertTrue(aliceNode.hasException(flowHandle0!!.id))
     }

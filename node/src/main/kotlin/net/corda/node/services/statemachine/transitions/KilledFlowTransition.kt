@@ -53,7 +53,7 @@ class KilledFlowTransition(
             // The checkpoint is updated/removed and soft locks are removed directly in [StateMachineManager.killFlow] as well
             if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
                 actions += Action.RemoveCheckpoint(context.id, mayHavePersistentResults = true)
-            } else {
+            } else if (startingState.isAnyCheckpointPersisted) {
                 actions += Action.UpdateFlowStatus(context.id, Checkpoint.FlowStatus.KILLED)
                 actions += Action.RemoveFlowException(context.id)
                 actions += Action.AddFlowException(context.id, killedFlowError.exception)

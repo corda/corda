@@ -80,8 +80,6 @@ internal class SingleThreadedStateMachineManager(
 
         private val VALID_KILL_FLOW_STATUSES = setOf(
             Checkpoint.FlowStatus.RUNNABLE,
-            Checkpoint.FlowStatus.FAILED,
-            Checkpoint.FlowStatus.COMPLETED,
             Checkpoint.FlowStatus.HOSPITALIZED,
             Checkpoint.FlowStatus.PAUSED
         )
@@ -356,31 +354,53 @@ internal class SingleThreadedStateMachineManager(
         val flow = innerState.withLock { flows[id] }
         val killFlowResult = if (flow != null) {
             flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
-                logger.info("Killing flow $id known to this node.")
-                // The checkpoint and soft locks are handled here as well as in a flow's transition. This means that we do not need to rely
-                // on the processing of the next event after setting the killed flag. This is to ensure a flow can be updated/removed from
-                // the database, even if it is stuck in a infinite loop.
-                database.transaction {
-                    if (flow.fiber.clientId != null) {
-                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
-                        checkpointStorage.removeFlowException(id)
-                        checkpointStorage.addFlowException(id, KilledFlowException(id))
-
-                    } else {
-                        checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+                if(!flow.fiber.transientState.isKilled) {
+                    flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
+                    logger.info("Killing flow $id known to this node.")
+                    // The checkpoint and soft locks are handled here as well as in a flow's transition. This means that we do not need to rely
+                    // on the processing of the next event after setting the killed flag. This is to ensure a flow can be updated/removed from
+                    // the database, even if it is stuck in a infinite loop.
+                    if (flow.fiber.transientState.isAnyCheckpointPersisted) {
+                        database.transaction {
+                            if (flow.fiber.clientId != null) {
+                                checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
+                                checkpointStorage.removeFlowException(id)
+                                checkpointStorage.addFlowException(id, KilledFlowException(id))
+                            } else {
+                                checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+                            }
+                            serviceHub.vaultService.softLockRelease(id.uuid)
+                        }
                     }
-                    serviceHub.vaultService.softLockRelease(id.uuid)
+
+                    unfinishedFibers.countDown()
+                    scheduleEvent(Event.DoRemainingWork)
+                    true
+                } else {
+                    logger.info("A repeated request to kill flow $id has been made, ignoring")
+                    false
                 }
-
-                unfinishedFibers.countDown()
-
-                flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
-                scheduleEvent(Event.DoRemainingWork)
-                true
             }
         } else {
-            // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
-            database.transaction { checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true) }
+            database.transaction {
+                val checkpoint = checkpointStorage.getCheckpoint(id)
+                when {
+                    checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.COMPLETED -> {
+                        logger.info("Attempt to kill flow $id which has already completed, ignoring...")
+                        false
+                    }
+                    checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.FAILED -> {
+                        logger.info("Attempt to kill flow $id which has already failed, ignoring...")
+                        false
+                    }
+                    checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.KILLED -> {
+                        logger.info("Attempt to kill flow $id which has already been killed, ignoring...")
+                        false
+                    }
+                    // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
+                    else -> checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+                }
+            }
         }
 
         return killFlowResult || flowHospital.dropSessionInit(id)
@@ -979,9 +999,16 @@ internal class SingleThreadedStateMachineManager(
             lastState: StateMachineState
     ) {
         drainFlowEventQueue(flow)
+        flow.fiber.clientId?.let {
+            // If the flow was killed before fully initialising and persisting its initial checkpoint,
+            // then remove it from the client id map (removing the final proof of its existence from the node)
+            if (flow.fiber.isKilled && !flow.fiber.transientState.isAnyCheckpointPersisted) {
+                clientIdsToFlowIds.remove(it)
+            } else {
+                setClientIdAsFailed(it, flow.fiber.id) }
+        }
         // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
         startedFutures.remove(flow.fiber.id)?.set(Unit)
-        flow.fiber.clientId?.let { setClientIdAsFailed(it, flow.fiber.id) }
         val flowError = removalReason.flowErrors[0] // TODO what to do with several?
         val exception = flowError.exception
         (exception as? FlowException)?.originalErrorId = flowError.errorId
