@@ -80,6 +80,16 @@ pipeline {
     }
 
     stages {
+        stage('Compile') {
+            steps {
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'clean',
+                        'jar'
+                ].join(' ')
+            }
+        }
         /*
         * Temporarily disable Sonatype checks for regression builds
         */
@@ -88,12 +98,6 @@ pipeline {
                 expression { isReleaseTag }
             }
             steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'clean',
-                        'jar'
-                ].join(' ')
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
                     /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
