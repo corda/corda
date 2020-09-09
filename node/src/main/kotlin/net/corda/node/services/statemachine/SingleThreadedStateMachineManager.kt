@@ -362,7 +362,6 @@ internal class SingleThreadedStateMachineManager(
                 // the database, even if it is stuck in a infinite loop.
                 database.transaction {
                     if (flow.fiber.clientId != null) {
-                        val now = Instant.now(serviceHub.clock)
                         checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
                         checkpointStorage.removeFlowException(id)
                         checkpointStorage.addFlowException(id, KilledFlowException(id))
