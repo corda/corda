@@ -38,6 +38,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.exceptions.MissingAttachmentException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -353,7 +354,7 @@ class ReconnectingCordaRPCOps private constructor(
                         is PermissionException -> {
                             throw RPCException("User does not have permission to perform operation ${method.name}.", e)
                         }
-                        is IllegalArgumentException -> {
+                        is MissingAttachmentException -> {
                             log.warn("Failed to perform operation ${method.name}.", e)
                             break@loop
                         }
