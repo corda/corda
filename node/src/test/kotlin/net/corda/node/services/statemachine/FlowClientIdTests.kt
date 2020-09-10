@@ -296,7 +296,7 @@ class FlowClientIdTests {
             flowHandle0!!.resultFuture.getOrThrow()
         }
 
-        val flowHandle1: FlowStateMachineHandle<Int> = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        val flowHandle1: FlowStateMachineHandle<Unit> = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
         assertFailsWith<KilledFlowException> {
             flowHandle1.resultFuture.getOrThrow()
         }
@@ -318,7 +318,7 @@ class FlowClientIdTests {
             flowHandle0!!.resultFuture.getOrThrow()
         }
 
-        val flowHandle1: FlowStateMachineHandle<Int> = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        val flowHandle1: FlowStateMachineHandle<Unit> = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
         assertFailsWith<KilledFlowException> {
             flowHandle1.resultFuture.getOrThrow()
         }
@@ -861,6 +861,7 @@ class FlowClientIdTests {
                             rs.getLong(1)
                         }
                     }.toInt() == 1
+                Thread.sleep(1.seconds.toMillis())
             }
         }
         if (!exists) {

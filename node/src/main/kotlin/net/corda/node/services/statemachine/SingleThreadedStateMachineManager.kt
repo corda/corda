@@ -352,58 +352,62 @@ internal class SingleThreadedStateMachineManager(
 
     override fun killFlow(id: StateMachineRunId): Boolean {
         val flow = innerState.withLock { flows[id] }
-        val killFlowResult = if (flow != null) {
-            flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
-                if(!flow.fiber.transientState.isKilled) {
-                    flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
-                    logger.info("Killing flow $id known to this node.")
-                    // The checkpoint and soft locks are handled here as well as in a flow's transition. This means that we do not need to rely
-                    // on the processing of the next event after setting the killed flag. This is to ensure a flow can be updated/removed from
-                    // the database, even if it is stuck in a infinite loop.
-                    if (flow.fiber.transientState.isAnyCheckpointPersisted) {
-                        database.transaction {
-                            if (flow.fiber.clientId != null) {
-                                checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
-                                checkpointStorage.removeFlowException(id)
-                                checkpointStorage.addFlowException(id, KilledFlowException(id))
-                            } else {
-                                checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
-                            }
-                            serviceHub.vaultService.softLockRelease(id.uuid)
-                        }
-                    }
+        val killFlowResult = flow?.let { killInMemoryFlow(it) } ?: killOutOfMemoryFlow(id)
+        return killFlowResult || flowHospital.dropSessionInit(id)
+    }
 
-                    unfinishedFibers.countDown()
-                    scheduleEvent(Event.DoRemainingWork)
-                    true
-                } else {
-                    logger.info("A repeated request to kill flow $id has been made, ignoring")
-                    false
+    private fun killInMemoryFlow(flow: Flow<*>): Boolean {
+        val id = flow.fiber.id
+        return flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
+            if (!flow.fiber.transientState.isKilled) {
+                flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
+                logger.info("Killing flow $id known to this node.")
+                // The checkpoint and soft locks are handled here as well as in a flow's transition. This means that we do not need to rely
+                // on the processing of the next event after setting the killed flag. This is to ensure a flow can be updated/removed from
+                // the database, even if it is stuck in a infinite loop.
+                if (flow.fiber.transientState.isAnyCheckpointPersisted) {
+                    database.transaction {
+                        if (flow.fiber.clientId != null) {
+                            checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
+                            checkpointStorage.removeFlowException(id)
+                            checkpointStorage.addFlowException(id, KilledFlowException(id))
+                        } else {
+                            checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+                        }
+                        serviceHub.vaultService.softLockRelease(id.uuid)
+                    }
                 }
-            }
-        } else {
-            database.transaction {
-                val checkpoint = checkpointStorage.getCheckpoint(id)
-                when {
-                    checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.COMPLETED -> {
-                        logger.info("Attempt to kill flow $id which has already completed, ignoring...")
-                        false
-                    }
-                    checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.FAILED -> {
-                        logger.info("Attempt to kill flow $id which has already failed, ignoring...")
-                        false
-                    }
-                    checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.KILLED -> {
-                        logger.info("Attempt to kill flow $id which has already been killed, ignoring...")
-                        false
-                    }
-                    // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
-                    else -> checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
-                }
+
+                unfinishedFibers.countDown()
+                scheduleEvent(Event.DoRemainingWork)
+                true
+            } else {
+                logger.info("A repeated request to kill flow $id has been made, ignoring...")
+                false
             }
         }
+    }
 
-        return killFlowResult || flowHospital.dropSessionInit(id)
+    private fun killOutOfMemoryFlow(id: StateMachineRunId): Boolean {
+        return database.transaction {
+            val checkpoint = checkpointStorage.getCheckpoint(id)
+            when {
+                checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.COMPLETED -> {
+                    logger.info("Attempt to kill flow $id which has already completed, ignoring...")
+                    false
+                }
+                checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.FAILED -> {
+                    logger.info("Attempt to kill flow $id which has already failed, ignoring...")
+                    false
+                }
+                checkpoint != null && checkpoint.status == Checkpoint.FlowStatus.KILLED -> {
+                    logger.info("Attempt to kill flow $id which has already been killed, ignoring...")
+                    false
+                }
+                // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
+                else -> checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+            }
+        }
     }
 
     private fun markAllFlowsAsPaused() {
