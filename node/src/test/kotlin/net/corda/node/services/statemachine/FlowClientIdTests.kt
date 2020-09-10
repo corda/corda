@@ -744,7 +744,7 @@ class FlowClientIdTests {
     @Test(timeout = 300_000)
     fun `reattachFlowWithClientId can retrieve exception from killed flow`() {
         val clientId = UUID.randomUUID().toString()
-        var flowHandle0: FlowStateMachineHandle<Unit>? = null
+        var flowHandle0: FlowStateMachineHandle<Unit>
         assertFailsWith<KilledFlowException> {
             flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
             aliceNode.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
@@ -802,7 +802,7 @@ class FlowClientIdTests {
     @Test(timeout = 300_000)
     fun `finishedFlowsWithClientIds returns exception for killed flows`() {
         val clientId = UUID.randomUUID().toString()
-        var flowHandle0: FlowStateMachineHandle<Unit>? = null
+        var flowHandle0: FlowStateMachineHandle<Unit>
         assertFailsWith<KilledFlowException> {
             flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
             aliceNode.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
