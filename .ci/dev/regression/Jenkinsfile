@@ -59,7 +59,7 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'standard' }
+    agent { label 'INFRA-683' }
     options {
         timestamps()
         disableConcurrentBuilds()
@@ -288,8 +288,8 @@ pipeline {
                 }
             }
         }
-        cleanup {
-            deleteDir() /* clean up our workspace */
-        }
+//        cleanup {
+//            deleteDir() /* clean up our workspace */
+//        }
     }
 }
