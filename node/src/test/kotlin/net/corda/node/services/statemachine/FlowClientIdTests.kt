@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -327,7 +328,7 @@ class FlowClientIdTests {
         assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
         assertTrue(aliceNode.hasException(flowHandle0!!.id))
 
-        aliceNode.internals.smm.killFlow(flowHandle0!!.id)
+        assertFalse(aliceNode.internals.smm.killFlow(flowHandle0!!.id))
         assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
         assertTrue(aliceNode.hasException(flowHandle0!!.id))
     }

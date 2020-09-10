@@ -392,7 +392,7 @@ class DBCheckpointStorage(
 
         val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
             val errored = checkpoint.errorState as? ErrorState.Errored
-            errored?.let { createDBFlowException(flowId, it, now) }
+            errored?.run { createDBFlowException(flowId, errors.last().exception, now) }
                 ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
         } else {
             null
@@ -460,7 +460,7 @@ class DBCheckpointStorage(
 
         val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
             val errored = checkpoint.errorState as? ErrorState.Errored
-            errored?.let { createDBFlowException(flowId, it, now) }
+            errored?.run { createDBFlowException(flowId, errors.last().exception, now) }
                     ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
         } else {
             null
@@ -603,16 +603,7 @@ class DBCheckpointStorage(
     }
 
     override fun addFlowException(id: StateMachineRunId, exception: Throwable) {
-        currentDBSession().save(
-            DBFlowException(
-                flow_id = id.uuid.toString(),
-                type = exception::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
-                message = exception.message?.truncate(MAX_EXC_MSG_LENGTH, false),
-                stackTrace = exception.stackTraceToString(),
-                value = exception.storageSerialize().bytes,
-                persistedInstant = Instant.now(clock)
-            )
-        )
+        currentDBSession().save(createDBFlowException(id.uuid.toString(), exception, clock.instant()))
     }
 
     override fun removeFlowException(id: StateMachineRunId): Boolean {
@@ -623,7 +614,7 @@ class DBCheckpointStorage(
         currentDBSession()
             .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :status, timestamp = :timestamp where flow_id = :id")
             .setParameter("status", flowStatus.ordinal)
-            .setParameter("timestamp", Instant.now(clock))
+            .setParameter("timestamp", clock.instant())
             .setParameter("id", runId.uuid.toString())
             .executeUpdate()
     }
@@ -677,17 +668,15 @@ class DBCheckpointStorage(
         )
     }
 
-    private fun createDBFlowException(flowId: String, errorState: ErrorState.Errored, now: Instant): DBFlowException {
-        return errorState.errors.last().exception.let {
-            DBFlowException(
-                flow_id = flowId,
-                type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
-                message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
-                stackTrace = it.stackTraceToString(),
-                value = it.storageSerialize().bytes,
-                persistedInstant = now
-            )
-        }
+    private fun createDBFlowException(flowId: String, exception: Throwable, now: Instant): DBFlowException {
+        return DBFlowException(
+            flow_id = flowId,
+            type = exception::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
+            message = exception.message?.truncate(MAX_EXC_MSG_LENGTH, false),
+            stackTrace = exception.stackTraceToString(),
+            value = exception.storageSerialize().bytes,
+            persistedInstant = now
+        )
     }
 
     private fun setDBFlowMetadataFinishTime(flowId: String, now: Instant) {
