@@ -3,20 +3,32 @@ package net.corda.node.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.HospitalizeFlowException
+import net.corda.core.flows.KilledFlowException
 import net.corda.core.flows.ResultSerializationException
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.messaging.FlowHandleWithClientId
+import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.statemachine.Checkpoint
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.TimeoutException
+import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -151,35 +163,130 @@ class FlowWithClientIdTest {
             assertEquals(true, finishedFlows[clientId])
         }
     }
+
+    @Test(timeout = 300_000)
+    fun `a killed flow's exception can be retrieved after restarting the node`() {
+        val clientId = UUID.randomUUID().toString()
+
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet(), inMemoryDB = false)) {
+            val nodeA = startNode(providedName = ALICE_NAME).getOrThrow()
+            var flowHandle0: FlowHandleWithClientId<Unit>? = null
+            assertFailsWith<KilledFlowException> {
+                flowHandle0 = nodeA.rpc.startFlowWithClientId(clientId, ::HospitalizeFlow)
+                nodeA.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
+                nodeA.rpc.killFlow(flowHandle0!!.id)
+                flowHandle0!!.returnValue.getOrThrow(20.seconds)
+            }
+
+            val flowHandle1: FlowHandleWithClientId<Unit> = nodeA.rpc.startFlowWithClientId(clientId, ::HospitalizeFlow)
+            assertFailsWith<KilledFlowException> {
+                flowHandle1.returnValue.getOrThrow(20.seconds)
+            }
+
+            assertEquals(flowHandle0!!.id, flowHandle1.id)
+            assertTrue(nodeA.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
+            assertTrue(nodeA.hasException(flowHandle0!!.id, KilledFlowException::class))
+
+            nodeA.stop()
+            val nodeARestarted = startNode(providedName = ALICE_NAME).getOrThrow()
+
+            assertFailsWith<KilledFlowException> {
+                nodeARestarted.rpc.reattachFlowWithClientId<Unit>(clientId)!!.returnValue.getOrThrow(20.seconds)
+            }
+        }
+    }
+
+    private fun NodeHandle.hasStatus(id: StateMachineRunId, status: Checkpoint.FlowStatus): Boolean {
+        return rpc.startFlow(::IsFlowInStatus, id, status.ordinal).returnValue.getOrThrow(20.seconds)
+    }
+
+    private fun <T: Exception> NodeHandle.hasException(id: StateMachineRunId, type: KClass<T>): Boolean {
+        return rpc.startFlow(::GetExceptionType, id).returnValue.getOrThrow(20.seconds) == type.qualifiedName
+    }
+
+    private fun NodeHandle.waitForOvernightObservation(id: StateMachineRunId, timeout: Duration) {
+        val timeoutTime = Instant.now().plusSeconds(timeout.seconds)
+        var exists = false
+        while (Instant.now().isBefore(timeoutTime) && !exists) {
+            exists = rpc.startFlow(::IsFlowInStatus, id, Checkpoint.FlowStatus.HOSPITALIZED.ordinal).returnValue.getOrThrow(timeout)
+            Thread.sleep(1.seconds.toMillis())
+        }
+        if (!exists) {
+            throw TimeoutException("Flow was not kept for observation during timeout duration")
+        }
+    }
+
+    @StartableByRPC
+    internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
+        companion object {
+            var hook: (() -> Unit)? = null
+            var suspendableHook: FlowLogic<Unit>? = null
+        }
+
+        @Suspendable
+        override fun call(): A {
+            hook?.invoke()
+            suspendableHook?.let { subFlow(it) }
+            return result
+        }
+    }
+
+    @StartableByRPC
+    internal class UnserializableResultFlow: FlowLogic<OpenFuture<Observable<Unit>>>() {
+        companion object {
+            val UNSERIALIZABLE_OBJECT = openFuture<Observable<Unit>>().also { it.set(Observable.empty<Unit>())}
+        }
+
+        @Suspendable
+        override fun call(): OpenFuture<Observable<Unit>> {
+            return UNSERIALIZABLE_OBJECT
+        }
+    }
+
+    @StartableByRPC
+    internal class HospitalizeFlow: FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            throw HospitalizeFlowException("time to go to the doctors")
+        }
+    }
+
+    @StartableByRPC
+    internal class IsFlowInStatus(private val id: StateMachineRunId, private val ordinal: Int): FlowLogic<Boolean>() {
+        @Suspendable
+        override fun call(): Boolean {
+            return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints where status = ? and flow_id = ?")
+                .apply {
+                    setInt(1, ordinal)
+                    setString(2, id.uuid.toString())
+                }
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getLong(1)
+                    }
+                }.toInt() == 1
+        }
+    }
+
+    @StartableByRPC
+    internal class GetExceptionType(private val id: StateMachineRunId): FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            return serviceHub.jdbcSession().prepareStatement("select type from node_flow_exceptions where flow_id = ?")
+                .apply { setString(1, id.uuid.toString()) }
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getString(1)
+                    }
+
+                }
+        }
+    }
+
+    internal class UnserializableException(
+        val unserializableObject: BrokenMap<Unit, Unit> = BrokenMap()
+    ): CordaRuntimeException("123")
 }
-
-@StartableByRPC
-internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
-    companion object {
-        var hook: (() -> Unit)? = null
-        var suspendableHook: FlowLogic<Unit>? = null
-    }
-
-    @Suspendable
-    override fun call(): A {
-        hook?.invoke()
-        suspendableHook?.let { subFlow(it) }
-        return result
-    }
-}
-
-@StartableByRPC
-internal class UnserializableResultFlow: FlowLogic<OpenFuture<Observable<Unit>>>() {
-    companion object {
-        val UNSERIALIZABLE_OBJECT = openFuture<Observable<Unit>>().also { it.set(Observable.empty<Unit>())}
-    }
-
-    @Suspendable
-    override fun call(): OpenFuture<Observable<Unit>> {
-        return UNSERIALIZABLE_OBJECT
-    }
-}
-
-internal class UnserializableException(
-    val unserializableObject: BrokenMap<Unit, Unit> = BrokenMap()
-): CordaRuntimeException("123")

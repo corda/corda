@@ -3,11 +3,13 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.KilledFlowException
 import net.corda.node.services.statemachine.Action
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ErrorSessionMessage
 import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowRemovalReason
+import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
@@ -29,24 +31,34 @@ class KilledFlowTransition(
                 startingState.checkpoint.checkpointState.sessions,
                 errorMessages
             )
+
+            val newCheckpoint = startingState.checkpoint.copy(
+                status = Checkpoint.FlowStatus.KILLED,
+                flowState = FlowState.Finished,
+                checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessions)
+            )
+
             currentState = currentState.copy(
-                checkpoint = startingState.checkpoint.setSessions(sessions = newSessions),
+                checkpoint = newCheckpoint,
                 pendingDeduplicationHandlers = emptyList(),
                 isRemoved = true
             )
-            actions += Action.PropagateErrors(
-                errorMessages,
-                initiatedSessions,
-                startingState.senderUUID
-            )
+
+            actions += Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID)
 
             if (!startingState.isFlowResumed) {
                 actions += Action.CreateTransaction
             }
-            // The checkpoint and soft locks are also removed directly in [StateMachineManager.killFlow]
-            if (startingState.isAnyCheckpointPersisted) {
+
+            // The checkpoint is updated/removed and soft locks are removed directly in [StateMachineManager.killFlow] as well
+            if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
                 actions += Action.RemoveCheckpoint(context.id, mayHavePersistentResults = true)
+            } else if (startingState.isAnyCheckpointPersisted) {
+                actions += Action.UpdateFlowStatus(context.id, Checkpoint.FlowStatus.KILLED)
+                actions += Action.RemoveFlowException(context.id)
+                actions += Action.AddFlowException(context.id, killedFlowError.exception)
             }
+
             actions += Action.PersistDeduplicationFacts(startingState.pendingDeduplicationHandlers)
             actions += Action.ReleaseSoftLocks(context.id.uuid)
             actions += Action.CommitTransaction(currentState)

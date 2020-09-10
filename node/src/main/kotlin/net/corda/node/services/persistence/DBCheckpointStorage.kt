@@ -392,7 +392,7 @@ class DBCheckpointStorage(
 
         val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
             val errored = checkpoint.errorState as? ErrorState.Errored
-            errored?.let { createDBFlowException(flowId, it, now) }
+            errored?.run { createDBFlowException(flowId, errors.last().exception, now) }
                 ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
         } else {
             null
@@ -460,7 +460,7 @@ class DBCheckpointStorage(
 
         val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
             val errored = checkpoint.errorState as? ErrorState.Errored
-            errored?.let { createDBFlowException(flowId, it, now) }
+            errored?.run { createDBFlowException(flowId, errors.last().exception, now) }
                     ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
         } else {
             null
@@ -575,7 +575,9 @@ class DBCheckpointStorage(
             """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
                 join ${DBFlowMetadata::class.java.name} metadata on metadata.id = checkpoint.flowMetadata  
-                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal} or checkpoint.status = ${FlowStatus.FAILED.ordinal}""".trimIndent()
+                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}
+                or checkpoint.status = ${FlowStatus.FAILED.ordinal}
+                or checkpoint.status = ${FlowStatus.KILLED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId)
@@ -600,14 +602,21 @@ class DBCheckpointStorage(
         return serializedFlowException?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
     }
 
+    override fun addFlowException(id: StateMachineRunId, exception: Throwable) {
+        currentDBSession().save(createDBFlowException(id.uuid.toString(), exception, clock.instant()))
+    }
+
     override fun removeFlowException(id: StateMachineRunId): Boolean {
-        val flowId = id.uuid.toString()
-        return deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId) == 1
+        return deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, id.uuid.toString()) == 1
     }
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
-        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
-        currentDBSession().createNativeQuery(update).executeUpdate()
+        currentDBSession()
+            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :status, timestamp = :timestamp where flow_id = :id")
+            .setParameter("status", flowStatus.ordinal)
+            .setParameter("timestamp", clock.instant())
+            .setParameter("id", runId.uuid.toString())
+            .executeUpdate()
     }
 
     override fun updateCompatible(runId: StateMachineRunId, compatible: Boolean) {
@@ -659,17 +668,15 @@ class DBCheckpointStorage(
         )
     }
 
-    private fun createDBFlowException(flowId: String, errorState: ErrorState.Errored, now: Instant): DBFlowException {
-        return errorState.errors.last().exception.let {
-            DBFlowException(
-                flow_id = flowId,
-                type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
-                message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
-                stackTrace = it.stackTraceToString(),
-                value = it.storageSerialize().bytes,
-                persistedInstant = now
-            )
-        }
+    private fun createDBFlowException(flowId: String, exception: Throwable, now: Instant): DBFlowException {
+        return DBFlowException(
+            flow_id = flowId,
+            type = exception::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
+            message = exception.message?.truncate(MAX_EXC_MSG_LENGTH, false),
+            stackTrace = exception.stackTraceToString(),
+            value = exception.storageSerialize().bytes,
+            persistedInstant = now
+        )
     }
 
     private fun setDBFlowMetadataFinishTime(flowId: String, now: Instant) {

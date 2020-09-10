@@ -4,11 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.KilledFlowException
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
@@ -27,14 +30,17 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.sql.SQLTransientConnectionException
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -242,9 +248,8 @@ class FlowClientIdTests {
     }
 
     @Test(timeout = 300_000)
-    fun `killing a flow, removes the flow from the client id mapping`() {
+    fun `killing a flow, sets the flow status to killed and adds an exception to the database`() {
         var counter = 0
-        val flowIsRunning = Semaphore(0)
         val waitUntilFlowIsRunning = Semaphore(0)
         ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
             var firstRun = true
@@ -255,7 +260,7 @@ class FlowClientIdTests {
                 if (firstRun) {
                     firstRun = false
                     waitUntilFlowIsRunning.release()
-                    flowIsRunning.acquire()
+                    sleep(1.minutes)
                 }
             }
         }
@@ -266,16 +271,66 @@ class FlowClientIdTests {
             flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
             waitUntilFlowIsRunning.acquire()
             aliceNode.internals.smm.killFlow(flowHandle0!!.id)
-            flowIsRunning.release()
             flowHandle0!!.resultFuture.getOrThrow()
         }
 
-        // a new flow will start since the client id mapping was removed when flow got killed
         val flowHandle1: FlowStateMachineHandle<Int> = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
-        flowHandle1.resultFuture.getOrThrow()
+        assertFailsWith<KilledFlowException> {
+            flowHandle1.resultFuture.getOrThrow()
+        }
 
-        assertNotEquals(flowHandle0!!.id, flowHandle1.id)
-        assertEquals(2, counter)
+        assertEquals(flowHandle0!!.id, flowHandle1.id)
+        assertEquals(1, counter)
+        assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
+        assertTrue(aliceNode.hasException(flowHandle0!!.id))
+    }
+
+    @Test(timeout = 300_000)
+    fun `killing a hospitalized flow, sets the flow status to killed and adds an exception to the database`() {
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Unit>? = null
+        assertFailsWith<KilledFlowException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
+            aliceNode.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
+            aliceNode.internals.smm.killFlow(flowHandle0!!.id)
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        val flowHandle1: FlowStateMachineHandle<Unit> = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
+        assertFailsWith<KilledFlowException> {
+            flowHandle1.resultFuture.getOrThrow()
+        }
+
+        assertEquals(flowHandle0!!.id, flowHandle1.id)
+        assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
+        assertTrue(aliceNode.hasException(flowHandle0!!.id))
+    }
+
+    @Test(timeout = 300_000)
+    fun `killing a flow twice does nothing`() {
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Unit>? = null
+        assertFailsWith<KilledFlowException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
+            aliceNode.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
+            aliceNode.internals.smm.killFlow(flowHandle0!!.id)
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        val flowHandle1: FlowStateMachineHandle<Unit> = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
+        assertFailsWith<KilledFlowException> {
+            flowHandle1.resultFuture.getOrThrow()
+        }
+
+        assertEquals(flowHandle0!!.id, flowHandle1.id)
+        assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
+        assertTrue(aliceNode.hasException(flowHandle0!!.id))
+
+        assertFalse(aliceNode.internals.smm.killFlow(flowHandle0!!.id))
+        assertTrue(aliceNode.hasStatus(flowHandle0!!.id, Checkpoint.FlowStatus.KILLED))
+        assertTrue(aliceNode.hasException(flowHandle0!!.id))
     }
 
     @Test(timeout = 300_000)
@@ -687,6 +742,22 @@ class FlowClientIdTests {
     }
 
     @Test(timeout = 300_000)
+    fun `reattachFlowWithClientId can retrieve exception from killed flow`() {
+        val clientId = UUID.randomUUID().toString()
+        var flowHandle0: FlowStateMachineHandle<Unit>
+        assertFailsWith<KilledFlowException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
+            aliceNode.waitForOvernightObservation(flowHandle0.id, 20.seconds)
+            aliceNode.internals.smm.killFlow(flowHandle0.id)
+            flowHandle0.resultFuture.getOrThrow()
+        }
+
+        assertFailsWith<KilledFlowException> {
+            aliceNode.smm.reattachFlowWithClientId<Int>(clientId)?.resultFuture?.getOrThrow()
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `finishedFlowsWithClientIds returns completed flows with client ids`() {
         val clientIds = listOf("a", "b", "c", "d", "e")
         val lock = CountDownLatch(1)
@@ -727,35 +798,114 @@ class FlowClientIdTests {
             finishedFlows.filterValues { !it }.map { aliceNode.smm.reattachFlowWithClientId<Int>(it.key)?.resultFuture?.getOrThrow() }
         }
     }
-}
 
-internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
-    companion object {
-        var hook: ((String?) -> Unit)? = null
-        var suspendableHook: FlowLogic<Unit>? = null
+    @Test(timeout = 300_000)
+    fun `finishedFlowsWithClientIds returns exception for killed flows`() {
+        val clientId = UUID.randomUUID().toString()
+        var flowHandle0: FlowStateMachineHandle<Unit>
+        assertFailsWith<KilledFlowException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
+            aliceNode.waitForOvernightObservation(flowHandle0.id, 20.seconds)
+            aliceNode.internals.smm.killFlow(flowHandle0.id)
+            flowHandle0.resultFuture.getOrThrow()
+        }
+
+        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds()
+
+        assertFailsWith<KilledFlowException> {
+            finishedFlows.keys.single().let { aliceNode.smm.reattachFlowWithClientId<Int>(it)?.resultFuture?.getOrThrow() }
+        }
     }
 
-    @Suspendable
-    override fun call(): A {
-        hook?.invoke(stateMachine.clientId)
-        suspendableHook?.let { subFlow(it) }
-        return result
+    private fun TestStartedNode.hasStatus(id: StateMachineRunId, status: Checkpoint.FlowStatus): Boolean {
+        return services.database.transaction {
+            services.jdbcSession().prepareStatement("select count(*) from node_checkpoints where status = ? and flow_id = ?")
+                .apply {
+                    setInt(1, status.ordinal)
+                    setString(2, id.uuid.toString())
+                }
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getLong(1)
+                    }
+                }.toInt() == 1
+        }
     }
-}
 
-internal class UnSerializableResultFlow: FlowLogic<Any>() {
-    companion object {
-        var firstRun = true
+    private fun TestStartedNode.hasException(id: StateMachineRunId): Boolean {
+        return services.database.transaction {
+            services.jdbcSession().prepareStatement("select count(*) from node_flow_exceptions where flow_id = ?")
+                .apply { setString(1, id.uuid.toString()) }
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getLong(1)
+                    }
+                }.toInt() == 1
+        }
     }
 
-    @Suspendable
-    override fun call(): Any {
-        stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
-        return if (firstRun) {
-            firstRun = false
-            Observable.empty<Any>()
-        } else {
-            5 // serializable result
+    private fun TestStartedNode.waitForOvernightObservation(id: StateMachineRunId, timeout: Duration) {
+        val timeoutTime = Instant.now().plusSeconds(timeout.seconds)
+        var exists = false
+        while (Instant.now().isBefore(timeoutTime) && !exists) {
+            services.database.transaction {
+                exists = services.jdbcSession().prepareStatement("select count(*) from node_checkpoints where status = ? and flow_id = ?")
+                    .apply {
+                        setInt(1, Checkpoint.FlowStatus.HOSPITALIZED.ordinal)
+                        setString(2, id.uuid.toString())
+                    }
+                    .use { ps ->
+                        ps.executeQuery().use { rs ->
+                            rs.next()
+                            rs.getLong(1)
+                        }
+                    }.toInt() == 1
+                Thread.sleep(1.seconds.toMillis())
+            }
+        }
+        if (!exists) {
+            throw TimeoutException("Flow was not kept for observation during timeout duration")
+        }
+    }
+
+    internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
+        companion object {
+            var hook: ((String?) -> Unit)? = null
+            var suspendableHook: FlowLogic<Unit>? = null
+        }
+
+        @Suspendable
+        override fun call(): A {
+            hook?.invoke(stateMachine.clientId)
+            suspendableHook?.let { subFlow(it) }
+            return result
+        }
+    }
+
+    internal class UnSerializableResultFlow: FlowLogic<Any>() {
+        companion object {
+            var firstRun = true
+        }
+
+        @Suspendable
+        override fun call(): Any {
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            return if (firstRun) {
+                firstRun = false
+                Observable.empty<Any>()
+            } else {
+                5 // serializable result
+            }
+        }
+    }
+
+    internal class HospitalizeFlow: FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            throw HospitalizeFlowException("time to go to the doctors")
         }
     }
 }
