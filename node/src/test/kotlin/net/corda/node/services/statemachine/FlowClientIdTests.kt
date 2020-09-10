@@ -747,9 +747,9 @@ class FlowClientIdTests {
         var flowHandle0: FlowStateMachineHandle<Unit>
         assertFailsWith<KilledFlowException> {
             flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
-            aliceNode.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
-            aliceNode.internals.smm.killFlow(flowHandle0!!.id)
-            flowHandle0!!.resultFuture.getOrThrow()
+            aliceNode.waitForOvernightObservation(flowHandle0.id, 20.seconds)
+            aliceNode.internals.smm.killFlow(flowHandle0.id)
+            flowHandle0.resultFuture.getOrThrow()
         }
 
         assertFailsWith<KilledFlowException> {
@@ -805,9 +805,9 @@ class FlowClientIdTests {
         var flowHandle0: FlowStateMachineHandle<Unit>
         assertFailsWith<KilledFlowException> {
             flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, HospitalizeFlow())
-            aliceNode.waitForOvernightObservation(flowHandle0!!.id, 20.seconds)
-            aliceNode.internals.smm.killFlow(flowHandle0!!.id)
-            flowHandle0!!.resultFuture.getOrThrow()
+            aliceNode.waitForOvernightObservation(flowHandle0.id, 20.seconds)
+            aliceNode.internals.smm.killFlow(flowHandle0.id)
+            flowHandle0.resultFuture.getOrThrow()
         }
 
         val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds()
