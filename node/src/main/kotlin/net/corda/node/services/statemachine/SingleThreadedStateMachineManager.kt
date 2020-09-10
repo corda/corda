@@ -49,7 +49,6 @@ import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import java.security.SecureRandom
-import java.time.Instant
 import java.util.ArrayList
 import java.util.HashSet
 import java.util.concurrent.ConcurrentHashMap
