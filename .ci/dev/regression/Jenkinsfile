@@ -9,10 +9,10 @@
  * unfinished builds are not required.
  * This feature doesn't play well with disableConcurrentBuilds() option
  */
-@Library('corda-shared-build-pipeline-steps')
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-
-killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+//@Library('corda-shared-build-pipeline-steps')
+//import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+//
+//killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 /**
  * Sense environment
@@ -59,10 +59,10 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'INFRA-683' }
+    agent { label 'standard' }
     options {
         timestamps()
-        disableConcurrentBuilds()
+//        disableConcurrentBuilds()
         timeout(time: 6, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
@@ -254,7 +254,7 @@ pipeline {
 
             script
             {
-                if (!isReleaseTag && false) {
+                if (!isReleaseTag && false) { // FIXME - do not forget to remove `false` from here!!!
                     // We want to send a summary email, but want to limit to once per day.
                     // Comparing the dates of the previous and current builds achieves this,
                     // i.e. we will only send an email for the first build on a given day.
@@ -270,6 +270,8 @@ pipeline {
                                 statusSymbol = '\u2705'
                                 break;
                             case 'UNSTABLE':
+                                statusSymbol = '\u26A0'
+                                break;
                             case 'FAILURE':
                                 statusSymbol = '\u274c'
                                 break;
@@ -288,6 +290,7 @@ pipeline {
                 }
             }
         }
+        // FIXME do not forget to uncomment this section
 //        cleanup {
 //            deleteDir() /* clean up our workspace */
 //        }
