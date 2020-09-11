@@ -26,7 +26,7 @@ class DbSchemaInitialisationTest {
     }
 
     @Test(timeout = 300_000)
-    fun `app migration resource is only mandatory in dev mode`() {
+    fun `app migration resource is only mandatory when not in dev mode`() {
         driver(DriverParameters(startNodesInProcess = true,
                 cordappsForAllNodes = emptyList(),
                 allowHibernateToManageAppSchema = false)) {
