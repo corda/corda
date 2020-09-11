@@ -13,7 +13,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.flows.FinalityFlow
@@ -147,15 +146,7 @@ import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NotaryLoader
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
-import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
-import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
-import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
-import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
@@ -178,8 +169,6 @@ import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
 import java.lang.reflect.InvocationTargetException
-import java.security.KeyPair
-import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.sql.Savepoint
 import java.time.Clock
@@ -390,6 +379,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
 
+    protected val keyStoreHandler = KeyStoreHandler(configuration, cryptoService)
+
     private fun <T : Any> T.tokenize(): T {
         tokenizableServices?.add(this as? SerializeAsToken ?:
             throw IllegalStateException("${this::class.java} is expected to be extending from SerializeAsToken"))
@@ -434,17 +425,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    protected open fun initKeyStores() = keyStoreHandler.init()
+
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        val trustRoot = configuration.initKeyStores(cryptoService)
+        val trustRoot = initKeyStores()
         startDatabase()
-        val (identity, identityKeyPair) = obtainIdentity()
-        val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), pkToIdCache = pkToIdCache)
+        identityService.start(trustRoot, keyStoreHandler.nodeIdentity, pkToIdCache = pkToIdCache)
         return database.use {
             it.transaction {
-                val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPair, publish = false)
+                val nodeInfoAndSigned = updateNodeInfo(publish = false)
                 nodeInfoAndSigned.nodeInfo
             }
         }
@@ -488,7 +479,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         logVendorString(database, log)
         if (allowHibernateToManageAppSchema) {
             Node.printBasicNodeInfo("Initialising CorDapps to get schemas created by hibernate")
-            val trustRoot = configuration.initKeyStores(cryptoService)
+            val trustRoot = initKeyStores()
             networkMapClient?.start(trustRoot)
             val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.networkParametersPath).read()
             log.info("Loaded network parameters: $netParams")
@@ -538,7 +529,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
-        val trustRoot = configuration.initKeyStores(cryptoService)
+        val trustRoot = initKeyStores()
         initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -563,14 +554,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
-        val (identity, identityKeyPair) = obtainIdentity()
-        X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
-        val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
+        identityService.start(trustRoot, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
 
-        val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
-            updateNodeInfo(identity, identityKeyPair, publish = true)
+        val nodeInfoAndSigned = database.transaction {
+            updateNodeInfo(publish = true)
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
@@ -598,7 +586,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 networkParametersHotloader)
 
         try {
-            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+            startMessagingService(rpcOps, nodeInfo, keyStoreHandler.notaryIdentity, netParams)
         } catch (e: Exception) {
             // Try to stop any started messaging services.
             stop()
@@ -619,9 +607,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
-            keyManagementService.start(keyPairs)
+            keyManagementService.start(keyStoreHandler.signingKeys.map { it.key to it.alias })
             installCordaServices()
-            notaryService = maybeStartNotaryService(myNotaryIdentity)
+            notaryService = maybeStartNotaryService(keyStoreHandler.notaryIdentity)
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
@@ -696,41 +684,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    private fun updateNodeInfo(identity: PartyAndCertificate,
-                               identityKeyPair: KeyPair,
-                               publish: Boolean): Triple<MutableSet<KeyPair>, NodeInfoAndSigned, PartyAndCertificate?> {
-        val keyPairs = mutableSetOf(identityKeyPair)
-
-        val myNotaryIdentity = configuration.notary?.let {
-            if (it.serviceLegalName != null) {
-                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryServiceIdentity(it.serviceLegalName)
-                keyPairs += notaryIdentityKeyPair
-                notaryIdentity
-            } else {
-                // The only case where the myNotaryIdentity will be the node's legal identity is for existing single notary services running
-                // an older version. Current single notary services (V4.6+) sign requests using a separate notary service identity so the
-                // notary identity will be different from the node's legal identity.
-
-                // This check is here to ensure that a user does not accidentally/intentionally remove the serviceLegalName configuration
-                // parameter after a notary has been registered. If that was possible then notary would start and sign incoming requests
-                // with the node's legal identity key, corrupting the data.
-                check (!cryptoService.containsKey(DISTRIBUTED_NOTARY_KEY_ALIAS)) {
-                    "The notary service key exists in the key store but no notary service legal name has been configured. " +
-                    "Either include the relevant 'notary.serviceLegalName' configuration or validate this key is not necessary " +
-                    "and remove from the key store."
-                }
-                identity
-            }
-        }
-
+    private fun updateNodeInfo(publish: Boolean): NodeInfoAndSigned {
         val potentialNodeInfo = NodeInfo(
                 myAddresses(),
-                setOf(identity, myNotaryIdentity).filterNotNull(),
+                setOf(keyStoreHandler.nodeIdentity, keyStoreHandler.notaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
                 serial = 0
         )
 
-        val nodeInfoFromDb = getPreviousNodeInfoIfPresent(identity)
+        val nodeInfoFromDb = getPreviousNodeInfoIfPresent(keyStoreHandler.nodeIdentity)
 
         val nodeInfo = if (potentialNodeInfo == nodeInfoFromDb?.copy(serial = 0)) {
             // The node info hasn't changed. We use the one from the database to preserve the serial.
@@ -745,8 +707,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val nodeInfoAndSigned = NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
-            val privateKey = keyPairs.single { it.public == publicKey }.private
-            DigitalSignature(cryptoService.sign((privateKey as AliasPrivateKey).alias, serialised.bytes))
+            val alias = keyStoreHandler.signingKeys.single { it.key == publicKey }.alias
+            DigitalSignature(cryptoService.sign(alias, serialised.bytes))
         }
 
         // Write the node-info file even if nothing's changed, just in case the file has been deleted.
@@ -758,7 +720,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tryPublishNodeInfoAsync(nodeInfoAndSigned.signed, networkMapClient)
         }
 
-        return Triple(keyPairs, nodeInfoAndSigned, myNotaryIdentity)
+        return nodeInfoAndSigned
     }
 
     private fun getPreviousNodeInfoIfPresent(identity: PartyAndCertificate): NodeInfo? {
@@ -1083,127 +1045,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
-
-    /**
-     * Loads or generates the node's legal identity and key-pair.
-     * Note that obtainIdentity returns a KeyPair with an [AliasPrivateKey].
-     */
-    private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
-        val legalIdentityPrivateKeyAlias = "$NODE_IDENTITY_KEY_ALIAS"
-
-        var signingCertificateStore = configuration.signingCertificateStore.get()
-        if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
-            // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
-            database.transaction {
-                val x500Map = PersistentIdentityService.createX500ToKeyMap(cacheFactory)
-                require(configuration.myLegalName !in x500Map) {
-                    // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
-                    // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
-                    "Private key for the node legal identity not found (alias $legalIdentityPrivateKeyAlias) but the corresponding public key" +
-                            " for it exists in the database. This suggests the identity for this node has been lost. Shutting down to prevent network map issues."
-                }
-            }
-            log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")
-            createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
-            signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
-        } else {
-            checkAliasMismatch(legalIdentityPrivateKeyAlias, signingCertificateStore)
-        }
-        val x509Cert = signingCertificateStore.query { getCertificate(legalIdentityPrivateKeyAlias) }
-
-        // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val certificates: List<X509Certificate> = signingCertificateStore.query { getCertificateChain(legalIdentityPrivateKeyAlias) }
-        check(certificates.first() == x509Cert) {
-            "Certificates from key store do not line up!"
-        }
-
-        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
-        val legalName = configuration.myLegalName
-        if (subject != legalName) {
-            throw ConfigurationException("The configured legalName '$legalName' doesn't match what's in the key store: $subject")
-        }
-
-        return getPartyAndCertificatePlusAliasKeyPair(certificates, legalIdentityPrivateKeyAlias)
-    }
-
-    // Check if a key alias exists only in one of the cryptoService and certSigningStore.
-    private fun checkAliasMismatch(alias: String, certificateStore: CertificateStore) {
-        if (cryptoService.containsKey(alias) != certificateStore.contains(alias)) {
-            val keyExistsIn: String = if (cryptoService.containsKey(alias)) "CryptoService" else "signingCertificateStore"
-            throw IllegalStateException("CryptoService and signingCertificateStore are not aligned, the entry for key-alias: $alias is only found in $keyExistsIn")
-        }
-    }
-
-    /**
-     * Loads notary service identity. In the case of the experimental RAFT and BFT notary clusters, this loads the pre-generated
-     * cluster identity that all worker nodes share. In the case of a simple single notary, this loads the notary service identity
-     * that is generated during initial registration and is used to sign notarisation requests.
-     * */
-    private fun loadNotaryServiceIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
-        val privateKeyAlias = "$DISTRIBUTED_NOTARY_KEY_ALIAS"
-        val compositeKeyAlias = "$DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS"
-
-        val signingCertificateStore = configuration.signingCertificateStore.get()
-        val privateKeyAliasCertChain = try {
-            signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
-        } catch (e: Exception) {
-            throw IllegalStateException("Certificate-chain for $privateKeyAlias cannot be found", e)
-        }
-        // A composite key is only required for BFT notaries.
-        val certificates = if (cryptoService.containsKey(compositeKeyAlias) && signingCertificateStore.contains(compositeKeyAlias)) {
-            val certificate = signingCertificateStore[compositeKeyAlias]
-            // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
-            // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
-            // the tail of the private key certificates, as they are both signed by the same certificate chain.
-            listOf(certificate) + privateKeyAliasCertChain.drop(1)
-        } else {
-            checkAliasMismatch(compositeKeyAlias, signingCertificateStore)
-            // If [compositeKeyAlias] does not exist, we assume the notary is CFT, and each cluster member shares the same notary key pair.
-            privateKeyAliasCertChain
-        }
-
-        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
-        if (subject != serviceLegalName) {
-            throw ConfigurationException("The name of the notary service '$serviceLegalName' doesn't " +
-                    "match what's in the key store: $subject. You might need to adjust the configuration of `notary.serviceLegalName`.")
-        }
-        return getPartyAndCertificatePlusAliasKeyPair(certificates, privateKeyAlias)
-    }
-
-    // Method to create a Pair<PartyAndCertificate, KeyPair>, where KeyPair uses an AliasPrivateKey.
-    private fun getPartyAndCertificatePlusAliasKeyPair(certificates: List<X509Certificate>, privateKeyAlias: String): Pair<PartyAndCertificate, KeyPair> {
-        val certPath = X509Utilities.buildCertPath(certificates)
-        val keyPair = KeyPair(cryptoService.getPublicKey(privateKeyAlias), AliasPrivateKey(privateKeyAlias))
-        return Pair(PartyAndCertificate(certPath), keyPair)
-    }
-
-    private fun createAndStoreLegalIdentity(alias: String): PartyAndCertificate {
-        val legalIdentityPublicKey = generateKeyPair(alias)
-        val signingCertificateStore = configuration.signingCertificateStore.get()
-
-        val nodeCaCertPath = signingCertificateStore.value.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-        val nodeCaCert = nodeCaCertPath[0] // This should be the same with signingCertificateStore[alias].
-
-        val identityCert = X509Utilities.createCertificate(
-                CertificateType.LEGAL_IDENTITY,
-                nodeCaCert.subjectX500Principal,
-                nodeCaCert.publicKey,
-                cryptoService.getSigner(X509Utilities.CORDA_CLIENT_CA),
-                nodeCaCert.subjectX500Principal,
-                legalIdentityPublicKey,
-                // TODO this might be smaller than DEFAULT_VALIDITY_WINDOW, shall we strictly apply DEFAULT_VALIDITY_WINDOW?
-                X509Utilities.getCertificateValidityWindow(
-                        DEFAULT_VALIDITY_WINDOW.first,
-                        DEFAULT_VALIDITY_WINDOW.second,
-                        nodeCaCert)
-        )
-
-        val identityCertPath = listOf(identityCert) + nodeCaCertPath
-        signingCertificateStore.setCertPathOnly(alias, identityCertPath)
-        return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
-    }
-
-    protected open fun generateKeyPair(alias: String) = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,

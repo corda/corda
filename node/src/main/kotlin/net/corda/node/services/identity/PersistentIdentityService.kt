@@ -215,13 +215,15 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     fun start(
             trustRoot: X509Certificate,
-            caCertificates: List<X509Certificate> = emptyList(),
+            ourIdentity: PartyAndCertificate,
             notaryIdentities: List<Party> = emptyList(),
             pkToIdCache: WritablePublicKeyToOwningIdentityCache
     ) {
         _trustRoot = trustRoot
         _trustAnchor = TrustAnchor(trustRoot, null)
-        _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificates.toSet() + trustRoot))
+        // Extract Node CA certificate from node identity certificate path
+        val certificates = setOf(ourIdentity.certificate, ourIdentity.certPath.certificates[1], trustRoot)
+        _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(certificates))
         _pkToIdCache = pkToIdCache
         notaryIdentityCache.addAll(notaryIdentities)
     }
