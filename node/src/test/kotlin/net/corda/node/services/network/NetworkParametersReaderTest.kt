@@ -17,7 +17,6 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import java.net.URL
@@ -28,15 +27,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 class NetworkParametersReaderTest {
-    companion object {
-        @BeforeClass
-        fun setUpOnce() {
-            // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
-            // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
-            Crypto.registerProviders()
-        }
-    }
-
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -49,6 +39,9 @@ class NetworkParametersReaderTest {
 
     @Before
     fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
 
         fs = Jimfs.newFileSystem(Configuration.unix())
         server = NetworkMapServer(cacheTimeout)

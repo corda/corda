@@ -35,7 +35,6 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import java.nio.file.FileSystem
 import java.security.PublicKey
@@ -47,15 +46,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NetworkRegistrationHelperTest {
-    companion object {
-        @BeforeClass
-        fun setUpOnce() {
-            // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
-            // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
-            Crypto.registerProviders()
-        }
-    }
-
     private lateinit var fs: FileSystem
     private val nodeLegalName = ALICE_NAME
 
@@ -65,6 +55,10 @@ class NetworkRegistrationHelperTest {
 
     @Before
     fun init() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
         fs = Jimfs.newFileSystem(unix())
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
 

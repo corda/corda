@@ -25,6 +25,7 @@ import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
@@ -42,7 +43,6 @@ import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -57,14 +57,6 @@ import kotlin.streams.toList
 import kotlin.test.*
 
 class NodeAttachmentServiceTest {
-    companion object {
-        @BeforeClass
-        fun setUpOnce() {
-            // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
-            // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
-            Crypto.registerProviders()
-        }
-    }
 
     // Use an in memory file system for testing attachment storage.
     private lateinit var fs: FileSystem
@@ -77,6 +69,10 @@ class NodeAttachmentServiceTest {
 
     @Before
     fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         val dataSourceProperties = makeTestDataSourceProperties()

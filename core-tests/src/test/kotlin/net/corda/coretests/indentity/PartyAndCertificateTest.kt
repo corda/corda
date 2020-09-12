@@ -15,25 +15,23 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.DEV_ROOT_CA
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.BeforeClass
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertFailsWith
 
 class PartyAndCertificateTest {
-    companion object {
-        @BeforeClass
-        fun setUpOnce() {
-            // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
-            // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
-            Crypto.registerProviders()
-        }
-    }
-
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
+    @Before
+    fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+    }
 
     @Test
     fun `reject a path with no roles`() {

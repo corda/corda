@@ -18,7 +18,6 @@ import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -30,15 +29,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest {
-    companion object {
-        @BeforeClass
-        fun setUpOnce() {
-            // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
-            // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
-            Crypto.registerProviders()
-        }
-    }
-
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -59,6 +49,10 @@ class NodeInfoWatcherTest {
 
     @Before
     fun start() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
         nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
         val identityService = makeTestIdentityService()
         keyManagementService = MockKeyManagementService(identityService)
