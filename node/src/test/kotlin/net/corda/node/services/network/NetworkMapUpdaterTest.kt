@@ -76,6 +76,10 @@ class NetworkMapUpdaterTest {
 
     @Before
     fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
         ourKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         ourNodeInfo = createNodeInfoAndSigned("Our info", ourKeyPair).signed
         server = NetworkMapServer(cacheExpiryMs.millis)
