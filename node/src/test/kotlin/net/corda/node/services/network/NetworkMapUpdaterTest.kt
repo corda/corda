@@ -33,7 +33,6 @@ import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
@@ -54,6 +53,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NetworkMapUpdaterTest {
+    companion object {
+        @BeforeClass
+        fun setUpOnce() {
+            // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+            // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+            Crypto.registerProviders()
+        }
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -76,10 +84,6 @@ class NetworkMapUpdaterTest {
 
     @Before
     fun setUp() {
-        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
-        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
-        Crypto.registerProviders()
-
         ourKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         ourNodeInfo = createNodeInfoAndSigned("Our info", ourKeyPair).signed
         server = NetworkMapServer(cacheExpiryMs.millis)

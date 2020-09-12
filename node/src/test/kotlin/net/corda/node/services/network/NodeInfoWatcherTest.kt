@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import net.corda.core.crypto.Crypto
 import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -17,6 +18,7 @@ import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -28,6 +30,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NodeInfoWatcherTest {
+    companion object {
+        @BeforeClass
+        fun setUpOnce() {
+            // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+            // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+            Crypto.registerProviders()
+        }
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
