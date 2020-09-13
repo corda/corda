@@ -80,12 +80,6 @@ pipeline {
     }
 
     stages {
-        stage("Check Environment") {
-            steps {
-                sh 'java -version'
-            }
-        }
-
         stage('Compile') {
             steps {
                 sh script: [
