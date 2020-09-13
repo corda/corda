@@ -4,17 +4,6 @@
  */
 
 /**
- * Kill already started job.
- * Assume new commit takes precendence and results from previous
- * unfinished builds are not required.
- * This feature doesn't play well with disableConcurrentBuilds() option
- */
-//@Library('corda-shared-build-pipeline-steps')
-//import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-//
-//killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
-
-/**
  * Sense environment
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
@@ -285,9 +274,8 @@ pipeline {
                 }
             }
         }
-        // FIXME do not forget to uncomment this section
-//        cleanup {
-//            deleteDir() /* clean up our workspace */
-//        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
     }
 }
