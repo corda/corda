@@ -3,9 +3,11 @@ package net.corda.finance.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.confidential.IdentitySyncFlow
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.getHashAgilityEnabled
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -222,6 +224,11 @@ object TwoPartyTradeFlow {
         @Suspendable
         private fun assembleSharedTX(assetForSale: StateAndRef<OwnableState>, tradeRequest: SellerTradeInfo, buyerAnonymousIdentity: PartyAndCertificate): SharedTx {
             val ptx = TransactionBuilder(notary)
+            if(this.serviceHub.networkParameters.getHashAgilityEnabled()) {
+                ptx.setHashAlgorithm(SecureHash.SHA3_256)
+            } else {
+                ptx.setHashAlgorithm(SecureHash.SHA2_256)
+            }
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
             val (tx, cashSigningPubKeys) = CashUtils.generateSpend(serviceHub, ptx, tradeRequest.price, ourIdentityAndCert, tradeRequest.payToIdentity.party)

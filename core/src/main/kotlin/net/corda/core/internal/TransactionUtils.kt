@@ -8,6 +8,7 @@ import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.hashAs
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
@@ -222,30 +223,29 @@ val SignedTransaction.dependencies: Set<SecureHash>
 
 class HashAgility {
     companion object {
-        private var hashAgilityEnabled: Boolean? = null
+        private var frozen: Boolean = false
+        private var hashAgilityEnabled: Boolean = false
 
-        fun setEnabled(value: Boolean) {
-            if (hashAgilityEnabled == null) {
-                hashAgilityEnabled = value
-            }
-        }
-
-        fun isEnabled(): Boolean {
-            return hashAgilityEnabled != null && hashAgilityEnabled == true
-        }
-
-        fun checkSupportedHashType(hash : SecureHash) {
-            // NOTE: will use TX's network parameters in place of this temporary, command line driven, static class
-            //       e.g. ltx.networkParameters.hashAgilityEnabled
-
-            val pass = HashAgility.isEnabled() || hash.algorithm == SHA2_256
-            if(!pass) {
-                throw TransactionVerificationException.UnsupportedHashTypeException(hash)
+        fun isEnabled() : Boolean = hashAgilityEnabled
+        fun setEnabled(enabled : Boolean, freeze: Boolean = false) {
+            if(!frozen) {
+                frozen = freeze
+                hashAgilityEnabled = enabled
             }
         }
     }
 }
 
-internal fun Verifier.checkSupportedHashType() = HashAgility.checkSupportedHashType(this.ltx.id)
-internal fun WireTransaction.checkSupportedHashType() = HashAgility.checkSupportedHashType(this.id)
+// NOTE: NetworkParameters' hashAgilityEnable get/set methods will be replaced by a field that is set by the network and hash verified
+fun NetworkParameters.getHashAgilityEnabled() = HashAgility.isEnabled()
+fun NetworkParameters.setHashAgilityEnabled(enabled: Boolean) = HashAgility.setEnabled(enabled)
 
+fun NetworkParameters.checkSupportedHashType(hash : SecureHash) : Unit {
+    val pass = this.getHashAgilityEnabled() || hash.algorithm == SHA2_256
+    if(!pass) {
+        throw TransactionVerificationException.UnsupportedHashTypeException(hash)
+    }
+}
+
+internal fun Verifier.checkSupportedHashType(networkParameters : NetworkParameters?) = networkParameters?.checkSupportedHashType(this.ltx.id)
+internal fun WireTransaction.checkSupportedHashType(networkParameters : NetworkParameters?) = networkParameters?.checkSupportedHashType(this.id)

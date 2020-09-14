@@ -1,5 +1,6 @@
 package net.corda.coretests.transactions
 
+import co.paralleluniverse.strands.Strand
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
@@ -9,7 +10,11 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.getHashAgilityEnabled
+import net.corda.core.internal.setHashAgilityEnabled
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
@@ -21,6 +26,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.rigorousMock
+import net.corda.nodeapi.internal.persistence.MissingMigrationException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
@@ -246,5 +252,51 @@ class TransactionBuilderTest {
         assertThat(builder.outputStates()).hasSize(1)
         assertThat(builder.commands()).hasSize(1)
         assertThat(builder.referenceStates()).hasSize(1)
+    }
+
+    @Test(timeout=300_000, expected = TransactionVerificationException.UnsupportedHashTypeException::class)
+    fun `throws with nonstandard hash algorithm`() {
+        val oldValue = services.networkParameters.getHashAgilityEnabled()
+        services.networkParameters.setHashAgilityEnabled(false)
+        try {
+            val outputState = TransactionState(
+                    data = DummyState(),
+                    contract = DummyContract.PROGRAM_ID,
+                    notary = notary,
+                    constraint = HashAttachmentConstraint(contractAttachmentId)
+            )
+            val builder = TransactionBuilder()
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, notary.owningKey)
+                    .setHashAlgorithm(SecureHash.SHA3_256)
+                    .resalt()
+
+            builder.toWireTransaction(services)
+        } finally {
+            services.networkParameters.setHashAgilityEnabled(oldValue)
+        }
+    }
+
+    @Test(timeout=300_000, expected = Test.None::class)
+    fun `allows nonstandard hash algorithm`() {
+        val oldValue = services.networkParameters.getHashAgilityEnabled()
+        services.networkParameters.setHashAgilityEnabled(true)
+        try {
+            val outputState = TransactionState(
+                    data = DummyState(),
+                    contract = DummyContract.PROGRAM_ID,
+                    notary = notary,
+                    constraint = HashAttachmentConstraint(contractAttachmentId)
+            )
+            val builder = TransactionBuilder()
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, notary.owningKey)
+                    .setHashAlgorithm(SecureHash.SHA3_256)
+                    .resalt()
+
+            builder.toWireTransaction(services)
+        } finally {
+            services.networkParameters.setHashAgilityEnabled(oldValue)
+        }
     }
 }

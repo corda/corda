@@ -2,8 +2,11 @@ package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.getHashAgilityEnabled
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
@@ -30,17 +33,24 @@ import java.util.*
 class CashIssueFlow(private val amount: Amount<Currency>,
                     private val issuerBankPartyRef: OpaqueBytes,
                     private val notary: Party,
+                    private val hashAlgorithm: String,
                     progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+
     constructor(amount: Amount<Currency>,
                 issuerBankPartyRef: OpaqueBytes,
-                notary: Party) : this(amount, issuerBankPartyRef, notary, tracker())
+                notary: Party,
+                hashAlgorithm: String) : this(amount, issuerBankPartyRef, notary, hashAlgorithm, tracker())
 
-    constructor(request: IssueRequest) : this(request.amount, request.issueRef, request.notary, tracker())
+    constructor(amount: Amount<Currency>,
+                issuerBankPartyRef: OpaqueBytes,
+                notary: Party) : this(amount, issuerBankPartyRef, notary, SHA2_256, tracker())
+
+    constructor(request: IssueRequest) : this(request.amount, request.issueRef, request.notary, request.hashAlgorithm, tracker())
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary)
+        val builder = TransactionBuilder(notary).setHashAlgorithm(hashAlgorithm)
         val issuer = ourIdentity.ref(issuerBankPartyRef)
         val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
         progressTracker.currentStep = SIGNING_TX
@@ -52,5 +62,10 @@ class CashIssueFlow(private val amount: Amount<Currency>,
     }
 
     @CordaSerializable
-    class IssueRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes, val notary: Party) : AbstractRequest(amount)
+    class IssueRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes, val notary: Party, val hashAlgorithm: String) : AbstractRequest(amount) {
+
+        constructor(amount: Amount<Currency>,
+                    issueRef: OpaqueBytes,
+                    notary: Party) : this(amount, issueRef, notary, SHA2_256)
+    }
 }

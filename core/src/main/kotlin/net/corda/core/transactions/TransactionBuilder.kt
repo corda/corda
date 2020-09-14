@@ -145,7 +145,7 @@ open class TransactionBuilder(
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
-            .apply { this.checkSupportedHashType() }
+            .apply { this.checkSupportedHashType(services.networkParameters) }
 
     @CordaInternal
     internal fun toWireTransactionWithContext(
