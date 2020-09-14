@@ -7,6 +7,7 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
@@ -24,7 +25,6 @@ import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
@@ -68,6 +68,10 @@ class NodeAttachmentServiceTest {
 
     @Before
     fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         val dataSourceProperties = makeTestDataSourceProperties()
@@ -91,6 +95,7 @@ class NodeAttachmentServiceTest {
     @After
     fun tearDown() {
         database.close()
+        fs.close()
     }
 
     @Test(timeout=300_000)
