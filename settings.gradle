@@ -101,6 +101,7 @@ include 'serialization-djvm:deserializers'
 include 'serialization-tests'
 include 'testing:cordapps:dbfailure:dbfcontracts'
 include 'testing:cordapps:dbfailure:dbfworkflows'
+include 'testing:cordapps:missingmigration'
 
 // Common libraries - start
 include 'common-validation'

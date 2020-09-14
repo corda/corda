@@ -469,9 +469,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 pendingCoreChanges = schemaMigration.getPendingChangesCount(schemaService.internalSchemas, true)
             }
             if(updateAppSchemas) {
-                schemaMigration.runMigration(!updateAppSchemasWithCheckpoints && haveCheckpoints, schemaService.appSchemas, false)
+                schemaMigration.runMigration(!updateAppSchemasWithCheckpoints && haveCheckpoints, schemaService.appSchemas, !configuration.devMode)
             } else {
-                pendingAppChanges = schemaMigration.getPendingChangesCount(schemaService.appSchemas, false)
+                pendingAppChanges = schemaMigration.getPendingChangesCount(schemaService.appSchemas, !configuration.devMode)
             }
         }
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
@@ -1023,7 +1023,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             database.startHikariPool(configuration.dataSourceProperties, metricRegistry) { dataSource, haveCheckpoints ->
         SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
                 .checkOrUpdate(schemaService.internalSchemas, runMigrationScripts, haveCheckpoints, true)
-                .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints && !allowAppSchemaUpgradeWithCheckpoints, false)
+                .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints && !allowAppSchemaUpgradeWithCheckpoints, !configuration.devMode)
     }
 
     /** Loads and starts a notary service if it is configured. */
