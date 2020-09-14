@@ -44,6 +44,11 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
 
     private lateinit var nodeKeyStore: CertificateStore
 
+    /**
+     * Initialize key-stores and load identities.
+     * @param devModeKeyEntropy entropy for legal identity key derivation
+     * @return trust root certificate
+     */
     fun init(devModeKeyEntropy: BigInteger? = null): X509Certificate {
         if (configuration.devMode) {
             configuration.configureWithDevSSLCertificate(cryptoService, devModeKeyEntropy)
@@ -53,81 +58,86 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
                 cryptoService.resyncKeystore()
             }
         }
-        configuration.validateKeyStores()
-        configuration.loadIdentities()
+        val certStores = getCertificateStores()
+        trustRoot = validateKeyStores(certStores)
+        nodeKeyStore = certStores.nodeKeyStore
+        loadIdentities()
         return trustRoot
     }
 
-    private fun NodeConfiguration.validateKeyStores(): X509Certificate {
-        // Step 1. Check trustStore, sslKeyStore and nodeKeyStore exist.
-        val (trustStore, sslKeyStore) = getCertificateStores()
+    private data class AllCertificateStores(val trustStore: CertificateStore,
+                                            val sslKeyStore: CertificateStore,
+                                            val nodeKeyStore: CertificateStore)
 
-        // Step 2. Check that trustStore contains the correct key-alias entry.
-        require(X509Utilities.CORDA_ROOT_CA in trustStore) {
-            "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
-        }
-        trustRoot = trustStore[X509Utilities.CORDA_ROOT_CA]
-
-        val tlsKeyAlias = CORDA_CLIENT_TLS
-
-        // Step 3. Check that TLS keyStore contains the correct key-alias entry.
-        require(tlsKeyAlias in sslKeyStore) {
-            "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
-        }
-
-        // Step 4. Check TLS certificate validity and print warning for expiry within next 30 days.
-        sslKeyStore[tlsKeyAlias].checkValidity({
-            "TLS certificate for alias '$tlsKeyAlias' is expired."
-        }, {
-            log.warn("TLS certificate for alias '$tlsKeyAlias' will expire in $it day(s).")
-        })
-
-        // Step 5. Check TLS cert path chains to the trusted root.
-        val sslCertChainRoot = sslKeyStore.query { getCertificateChain(tlsKeyAlias) }.last()
-        require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
-
-        return trustRoot
-    }
-
-    private fun NodeConfiguration.getCertificateStores(): Pair<CertificateStore, CertificateStore> {
-        return try {
-            // The following will throw NoSuchFileException if keystore file not found or IOException with GeneralSecurityException
-            // cause if keystore password is incorrect.
-            val sslKeyStore: CertificateStore = p2pSslOptions.keyStore.get()
-            nodeKeyStore = signingCertificateStore.get()
-            val trustStore = p2pSslOptions.trustStore.get()
-            trustStore to sslKeyStore
-        } catch (e: NoSuchFileException) {
-            throw IllegalArgumentException("One or more keyStores (identity or TLS) or trustStore not found. " +
-                    "Please either copy your existing keys and certificates from another node, " +
-                    "or if you don't have one yet, fill out the config file and run corda.jar initial-registration.", e)
+    private fun getCertificateStores(): AllCertificateStores {
+        try {
+            val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
+            val nodeKeyStore = configuration.signingCertificateStore.get()
+            val trustStore = configuration.p2pSslOptions.trustStore.get()
+            return AllCertificateStores(trustStore, sslKeyStore, nodeKeyStore)
         } catch (e: IOException) {
-            if (e.cause is GeneralSecurityException) {
-                throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.", e)
-            } else {
-                throw e
+            when {
+                e is NoSuchFileException -> throw IllegalArgumentException(
+                        "One or more keyStores (identity or TLS) or trustStore not found. " +
+                                "Please either copy your existing keys and certificates from another node, " +
+                                "or if you don't have one yet, fill out the config file and run corda.jar initial-registration.", e)
+                e.cause is GeneralSecurityException -> throw IllegalArgumentException(
+                        "At least one of the keystores or truststore passwords does not match configuration.", e)
+                else -> throw e
             }
         }
+    }
+
+    private fun validateKeyStores(certStores: AllCertificateStores): X509Certificate {
+        // Check that trustStore contains the correct key-alias entry.
+        require(X509Utilities.CORDA_ROOT_CA in certStores.trustStore) {
+            "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
+        }
+        val trustRoot = certStores.trustStore[X509Utilities.CORDA_ROOT_CA]
+
+        certStores.sslKeyStore.let {
+            val tlsKeyAlias = CORDA_CLIENT_TLS
+
+            // Check that TLS keyStore contains the correct key-alias entry.
+            require(tlsKeyAlias in it) {
+                "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
+            }
+
+            // Check TLS certificate validity and print warning for expiry within next 30 days.
+            it[tlsKeyAlias].checkValidity({
+                "TLS certificate for alias '$tlsKeyAlias' is expired."
+            }, { daysToExpiry ->
+                log.warn("TLS certificate for alias '$tlsKeyAlias' will expire in $daysToExpiry day(s).")
+            })
+
+            // Check TLS cert path chains to the trusted root.
+            val sslCertChainRoot = it.query { getCertificateChain(tlsKeyAlias) }.last()
+            require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
+        }
+
+        return trustRoot
     }
 
     /**
      * Loads node legal identity and notary service identity.
      */
-    private fun NodeConfiguration.loadIdentities() {
-        _nodeIdentity = loadIdentity(NODE_IDENTITY_KEY_ALIAS, myLegalName)
-        _notaryIdentity = notary?.let {
-            loadNotaryIdentity(it.serviceLegalName)
+    private fun loadIdentities() {
+        val identityKeyAlias = NODE_IDENTITY_KEY_ALIAS
+
+        _nodeIdentity = loadIdentity(identityKeyAlias, configuration.myLegalName)
+        _notaryIdentity = configuration.notary?.let {
+            loadNotaryIdentity(it.serviceLegalName, _nodeIdentity)
         }
     }
 
     /**
      * Load key from CryptoService, so it can be used by KeyManagementService.
      */
-    private fun CryptoService.loadKey(alias: String) {
-        check(containsKey(alias)) {
+    private fun loadKeyFromCryptoService(alias: String) {
+        check(cryptoService.containsKey(alias)) {
             "Key for node identity alias '$alias' not found in CryptoService."
         }
-        val key = getPublicKey(alias)!!
+        val key = cryptoService.getPublicKey(alias)!!
         log.info("Loaded node identity key: ${key.toStringShort()}, alias: $alias")
         _signingKeys.add(KeyAndAlias(key, alias))
     }
@@ -142,7 +152,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         require(alias in nodeKeyStore) {
             "Alias '$alias' for node identity key is not in the keyStore file."
         }
-        cryptoService.loadKey(alias)
+        loadKeyFromCryptoService(alias)
 
         val certificate = nodeKeyStore.query { getCertificate(alias) }
         val certificates = nodeKeyStore.query { getCertificateChain(alias) }
@@ -168,7 +178,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
      * cluster identity that all worker nodes share. In the case of a simple single notary, this loads the notary service identity
      * that is generated during initial registration and is used to sign notarisation requests.
      **/
-    private fun loadNotaryIdentity(serviceLegalName: CordaX500Name?): PartyAndCertificate {
+    private fun loadNotaryIdentity(serviceLegalName: CordaX500Name?, nodeIdentity: PartyAndCertificate): PartyAndCertificate {
         val notaryKeyAlias = DISTRIBUTED_NOTARY_KEY_ALIAS
         val notaryCompositeKeyAlias = DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
 
@@ -185,7 +195,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
                         "Either include the relevant 'notary.serviceLegalName' configuration or validate this key is not necessary " +
                         "and remove from the key store."
             }
-            return _nodeIdentity
+            return nodeIdentity
         }
 
         // First load notary service identity that is generated during initial registration, then lookup for a composite identity.

@@ -334,8 +334,10 @@ class KeyStoreHandlerTest {
         assertThat(keyStoreHandler.nodeIdentity.certificate).isEqualTo(nodeCert)
         assertThat(keyStoreHandler.notaryIdentity).isNotNull
         assertThat(keyStoreHandler.notaryIdentity!!.certificate).isEqualTo(notaryCert)
-        assertThat(keyStoreHandler.signingKeys.map { it.key }).containsExactly(nodeCert.publicKey, notaryCert.publicKey)
-        assertThat(keyStoreHandler.signingKeys.map { it.alias }).containsExactly(NODE_IDENTITY_KEY_ALIAS, DISTRIBUTED_NOTARY_KEY_ALIAS)
+        assertThat(keyStoreHandler.signingKeys).containsExactly(
+                KeyAndAlias(nodeCert.publicKey, NODE_IDENTITY_KEY_ALIAS),
+                KeyAndAlias(notaryCert.publicKey, DISTRIBUTED_NOTARY_KEY_ALIAS)
+        )
     }
 
     @Test(timeout = 300_000)
@@ -367,8 +369,10 @@ class KeyStoreHandlerTest {
         assertThat(keyStoreHandler.nodeIdentity.certificate).isEqualTo(nodeCert)
         assertThat(keyStoreHandler.notaryIdentity).isNotNull
         assertThat(keyStoreHandler.notaryIdentity!!.certificate).isEqualTo(keyStore[DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS])
-        assertThat(keyStoreHandler.signingKeys.map { it.key }).containsExactly(nodeCert.publicKey, notaryKey)
-        assertThat(keyStoreHandler.signingKeys.map { it.alias }).containsExactly(NODE_IDENTITY_KEY_ALIAS, DISTRIBUTED_NOTARY_KEY_ALIAS)
+        assertThat(keyStoreHandler.signingKeys).containsExactly(
+                KeyAndAlias(nodeCert.publicKey, NODE_IDENTITY_KEY_ALIAS),
+                KeyAndAlias(notaryKey, DISTRIBUTED_NOTARY_KEY_ALIAS)
+        )
     }
 
     @Test(timeout = 300_000)
