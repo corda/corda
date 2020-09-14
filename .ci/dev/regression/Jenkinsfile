@@ -51,7 +51,7 @@ pipeline {
     agent { label 'standard' }
     options {
         timestamps()
-        timeout(time: 3, unit: 'HOURS')
+        timeout(time: 6, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
