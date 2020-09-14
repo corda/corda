@@ -6,6 +6,7 @@ import co.paralleluniverse.fibers.instrument.JavaAgent
 import co.paralleluniverse.strands.channels.Channel
 import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.client.rpc.PermissionException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowException
@@ -48,6 +49,7 @@ import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
+import java.security.Principal
 import java.security.SecureRandom
 import java.util.ArrayList
 import java.util.HashSet
@@ -179,7 +181,7 @@ internal class SingleThreadedStateMachineManager(
             flowTimeoutScheduler::resetCustomTimeout
         )
 
-        val (fibers, pausedFlows) = restoreFlowsFromCheckpoints()
+        val (flows, pausedFlows) = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { innerState.flows.size })
 
         setFlowDefaultUncaughtExceptionHandler()
@@ -195,35 +197,40 @@ internal class SingleThreadedStateMachineManager(
         }
 
         // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
-        for (flow in fibers.values) {
+        for ((id, flow) in flows) {
             flow.fiber.clientId?.let {
-                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(flow.fiber.id, doneFuture(flow.fiber))
-            }
-        }
-
-        for (pausedFlow in pausedFlows) {
-            pausedFlow.value.checkpoint.checkpointState.invocationContext.clientId?.let {
                 innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
-                    pausedFlow.key,
-                    doneClientIdFuture(pausedFlow.key, pausedFlow.value.resultFuture, it)
+                    flowId = id,
+                    user = flow.fiber.transientState.checkpoint.checkpointState.invocationContext.principal(),
+                    flowStateMachineFuture = doneFuture(flow.fiber)
                 )
             }
         }
 
-        val finishedFlowsResults = checkpointStorage.getFinishedFlowsResultsMetadata().toList()
-        for ((id, finishedFlowResult) in finishedFlowsResults) {
-            finishedFlowResult.clientId?.let {
-                if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
-                    innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, true)
-                } else {
-                    innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, false)
-                }
+        for ((id, pausedFlow) in pausedFlows) {
+            pausedFlow.checkpoint.checkpointState.invocationContext.clientId?.let { clientId ->
+                innerState.clientIdsToFlowIds[clientId] = FlowWithClientIdStatus.Active(
+                    flowId = id,
+                    user = pausedFlow.checkpoint.checkpointState.invocationContext.principal(),
+                    flowStateMachineFuture = doneClientIdFuture(id, pausedFlow.resultFuture, clientId)
+                )
+            }
+        }
+
+        val finishedFlows = checkpointStorage.getFinishedFlowsResultsMetadata().toList()
+        for ((id, finishedFlow) in finishedFlows) {
+            finishedFlow.clientId?.let {
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(
+                    flowId = id,
+                    user = finishedFlow.user,
+                    succeeded = finishedFlow.status == Checkpoint.FlowStatus.COMPLETED
+                )
             } ?: logger.error("Found finished flow $id without a client id. Something is very wrong and this flow will be ignored.")
         }
 
         return {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
-            resumeRestoredFlows(fibers)
+            resumeRestoredFlows(flows)
             flowMessaging.start { _, deduplicationHandler ->
                 executor.execute {
                     deliverExternalEvent(deduplicationHandler.externalCause)
@@ -310,7 +317,7 @@ internal class SingleThreadedStateMachineManager(
                         status
                     } else {
                         newFuture = openFuture()
-                        FlowWithClientIdStatus.Active(flowId, newFuture!!)
+                        FlowWithClientIdStatus.Active(flowId, context.principal(), newFuture!!)
                     }
                 }
             }
@@ -320,6 +327,13 @@ internal class SingleThreadedStateMachineManager(
                 // If the flow ID is the same as the one recorded in the client ID map,
                 // then this start flow event has been retried, and we should not de-duplicate.
                 if (flowId != it.flowId) {
+                    // If the user that started the original flow is not the same as the user making the current request,
+                    // return an exception as they are not permitted to see the result of the flow
+                    if (!it.isPermitted(context.principal())) {
+                        return@startFlow openFuture<FlowStateMachineHandle<A>>().apply {
+                            setException(PermissionException("User not authorized to start flow with client id [$clientId]"))
+                        }
+                    }
                     val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
                     return@startFlow uncheckedCast(existingFuture)
                 }
@@ -1067,8 +1081,9 @@ internal class SingleThreadedStateMachineManager(
         succeeded: Boolean
     ) {
         clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
-            require(existingStatus != null && existingStatus is FlowWithClientIdStatus.Active)
-            FlowWithClientIdStatus.Removed(id, succeeded)
+            val status = requireNotNull(existingStatus)
+            require(existingStatus is FlowWithClientIdStatus.Active)
+            FlowWithClientIdStatus.Removed(flowId = id, user = status.user, succeeded = succeeded)
         }
     }
 
@@ -1106,11 +1121,15 @@ internal class SingleThreadedStateMachineManager(
         }
         )
 
-    override fun <T> reattachFlowWithClientId(clientId: String): FlowStateMachineHandle<T>? {
+    override fun <T> reattachFlowWithClientId(clientId: String, user: Principal): FlowStateMachineHandle<T>? {
         return innerState.withLock {
             clientIdsToFlowIds[clientId]?.let {
-                val existingFuture = activeOrRemovedClientIdFutureForReattach(it, clientId)
-                existingFuture?.let { uncheckedCast(existingFuture.get()) }
+                if (!it.isPermitted(user)) {
+                    null
+                } else {
+                    val existingFuture = activeOrRemovedClientIdFutureForReattach(it, clientId)
+                    uncheckedCast(existingFuture?.let {existingFuture.get() })
+                }
             }
         }
     }
@@ -1147,11 +1166,11 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    override fun removeClientId(clientId: String): Boolean {
+    override fun removeClientId(clientId: String, user: Principal): Boolean {
         var removedFlowId: StateMachineRunId? = null
         innerState.withLock {
             clientIdsToFlowIds.computeIfPresent(clientId) { _, existingStatus ->
-                if (existingStatus is FlowWithClientIdStatus.Removed) {
+                if (existingStatus is FlowWithClientIdStatus.Removed && user == existingStatus.user) {
                     removedFlowId = existingStatus.flowId
                     null
                 } else {
@@ -1166,9 +1185,10 @@ internal class SingleThreadedStateMachineManager(
         return false
     }
 
-    override fun finishedFlowsWithClientIds(): Map<String, Boolean> {
+    override fun finishedFlowsWithClientIds(user: Principal): Map<String, Boolean> {
         return innerState.withLock {
             clientIdsToFlowIds.asSequence()
+                .filter { (_, status) -> status.isPermitted(user) }
                 .filter { (_, status) -> status is FlowWithClientIdStatus.Removed }
                 .map { (clientId, status) -> clientId to (status as FlowWithClientIdStatus.Removed).succeeded }
                 .toMap()

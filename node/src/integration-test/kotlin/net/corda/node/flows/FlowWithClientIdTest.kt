@@ -1,6 +1,8 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.PermissionException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.HospitalizeFlowException
@@ -15,12 +17,14 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 import org.assertj.core.api.Assertions
 import org.junit.Before
 import org.junit.Test
@@ -33,6 +37,7 @@ import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FlowWithClientIdTest {
@@ -42,7 +47,7 @@ class FlowWithClientIdTest {
         ResultFlow.hook = null
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `start flow with client id`() {
         val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
@@ -54,7 +59,7 @@ class FlowWithClientIdTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `remove client id`() {
         val clientId = UUID.randomUUID().toString()
         var counter = 0
@@ -77,7 +82,7 @@ class FlowWithClientIdTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `on flow unserializable result a 'CordaRuntimeException' is thrown containing in its message the unserializable type`() {
         val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
@@ -92,7 +97,7 @@ class FlowWithClientIdTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `If flow has an unserializable exception result then it gets converted into a 'CordaRuntimeException'`() {
         ResultFlow.hook = {
             throw UnserializableException()
@@ -120,7 +125,7 @@ class FlowWithClientIdTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `reattachFlowWithClientId can retrieve results from existing flow future`() {
         val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
@@ -154,7 +159,7 @@ class FlowWithClientIdTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `finishedFlowsWithClientIds returns completed flows with client ids`() {
         val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
@@ -228,7 +233,7 @@ class FlowWithClientIdTest {
         return rpc.startFlow(::IsFlowInStatus, id, status.ordinal).returnValue.getOrThrow(20.seconds)
     }
 
-    private fun <T: Exception> NodeHandle.hasException(id: StateMachineRunId, type: KClass<T>): Boolean {
+    private fun <T : Exception> NodeHandle.hasException(id: StateMachineRunId, type: KClass<T>): Boolean {
         return rpc.startFlow(::GetExceptionType, id).returnValue.getOrThrow(20.seconds) == type.qualifiedName
     }
 
@@ -244,8 +249,78 @@ class FlowWithClientIdTest {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `reattaching to existing flow using startFlowWithClientId for flow started by another user throws a permission exception`() {
+        val user = User("Tony Stark", "I AM IRONMAN", setOf(Permissions.all()))
+        val spy = User("spy", "l33t h4ck4r", setOf(Permissions.all()))
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
+            val reattachedByStarter = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
+
+            assertFailsWith<PermissionException> {
+                CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                    it.proxy.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+                }
+            }
+
+            assertEquals(5, flowHandle.returnValue.getOrThrow(20.seconds))
+            assertEquals(5, reattachedByStarter.returnValue.getOrThrow(20.seconds))
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `reattaching to existing flow using reattachFlowWithClientId for flow started by another user returns null`() {
+        val user = User("dan", "this is my password", setOf(Permissions.all()))
+        val spy = User("spy", "l33t h4ck4r", setOf(Permissions.all()))
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
+            val reattachedByStarter = nodeA.rpc.reattachFlowWithClientId<Int>(clientId)?.returnValue?.getOrThrow(20.seconds)
+
+            val reattachedBySpy = CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                it.proxy.reattachFlowWithClientId<Int>(clientId)?.returnValue?.getOrThrow(20.seconds)
+            }
+
+            assertEquals(5, flowHandle.returnValue.getOrThrow(20.seconds))
+            assertEquals(5, reattachedByStarter)
+            assertNull(reattachedBySpy)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `finishedFlowsWithClientIds does not return flows started by other users`() {
+        val user = User("Captain America", "That really is America's ass", setOf(Permissions.all()))
+        val spy = User("nsa", "EternalBlue", setOf(Permissions.all()))
+        val clientIdForUser = UUID.randomUUID().toString()
+        val clientIdForSpy = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            val flowHandleStartedByUser = nodeA.rpc.startFlowWithClientId(clientIdForUser, ::ResultFlow, 5)
+
+            CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                val flowHandleStartedBySpy = it.proxy.startFlowWithClientId(clientIdForSpy, ::ResultFlow, 10)
+
+                flowHandleStartedByUser.returnValue.getOrThrow(20.seconds)
+                flowHandleStartedBySpy.returnValue.getOrThrow(20.seconds)
+
+                val userFinishedFlows = nodeA.rpc.finishedFlowsWithClientIds()
+                val spyFinishedFlows = it.proxy.finishedFlowsWithClientIds()
+
+                assertEquals(1, userFinishedFlows.size)
+                assertEquals(clientIdForUser, userFinishedFlows.keys.single())
+                assertEquals(5, nodeA.rpc.reattachFlowWithClientId<Int>(userFinishedFlows.keys.single())!!.returnValue.getOrThrow())
+                assertEquals(1, spyFinishedFlows.size)
+                assertEquals(clientIdForSpy, spyFinishedFlows.keys.single())
+                assertEquals(10, it.proxy.reattachFlowWithClientId<Int>(spyFinishedFlows.keys.single())!!.returnValue.getOrThrow())
+            }
+        }
+    }
+
     @StartableByRPC
-    internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
+    internal class ResultFlow<A>(private val result: A) : FlowLogic<A>() {
         companion object {
             var hook: (() -> Unit)? = null
             var suspendableHook: FlowLogic<Unit>? = null
@@ -260,9 +335,9 @@ class FlowWithClientIdTest {
     }
 
     @StartableByRPC
-    internal class UnserializableResultFlow: FlowLogic<OpenFuture<Observable<Unit>>>() {
+    internal class UnserializableResultFlow : FlowLogic<OpenFuture<Observable<Unit>>>() {
         companion object {
-            val UNSERIALIZABLE_OBJECT = openFuture<Observable<Unit>>().also { it.set(Observable.empty<Unit>())}
+            val UNSERIALIZABLE_OBJECT = openFuture<Observable<Unit>>().also { it.set(Observable.empty<Unit>()) }
         }
 
         @Suspendable
@@ -272,7 +347,7 @@ class FlowWithClientIdTest {
     }
 
     @StartableByRPC
-    internal class HospitalizeFlow: FlowLogic<Unit>() {
+    internal class HospitalizeFlow : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
@@ -281,7 +356,7 @@ class FlowWithClientIdTest {
     }
 
     @StartableByRPC
-    internal class IsFlowInStatus(private val id: StateMachineRunId, private val ordinal: Int): FlowLogic<Boolean>() {
+    internal class IsFlowInStatus(private val id: StateMachineRunId, private val ordinal: Int) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
             return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints where status = ? and flow_id = ?")
@@ -299,7 +374,7 @@ class FlowWithClientIdTest {
     }
 
     @StartableByRPC
-    internal class GetExceptionType(private val id: StateMachineRunId): FlowLogic<String>() {
+    internal class GetExceptionType(private val id: StateMachineRunId) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
             return serviceHub.jdbcSession().prepareStatement("select type from node_flow_exceptions where flow_id = ?")
@@ -316,5 +391,5 @@ class FlowWithClientIdTest {
 
     internal class UnserializableException(
         val unserializableObject: BrokenMap<Unit, Unit> = BrokenMap()
-    ): CordaRuntimeException("123")
+    ) : CordaRuntimeException("123")
 }

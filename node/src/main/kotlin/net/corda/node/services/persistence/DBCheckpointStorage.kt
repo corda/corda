@@ -26,6 +26,7 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.hibernate.annotations.Type
+import java.security.Principal
 import java.sql.Connection
 import java.sql.SQLException
 import java.time.Clock
@@ -572,7 +573,12 @@ class DBCheckpointStorage(
     override fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>> {
         val session = currentDBSession()
         val jpqlQuery =
-            """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
+            """select new ${DBFlowResultMetadataFields::class.java.name}(
+                    checkpoint.id, 
+                    checkpoint.status, 
+                    metadata.userSuppliedIdentifier, 
+                    metadata.startedBy
+                ) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
                 join ${DBFlowMetadata::class.java.name} metadata on metadata.id = checkpoint.flowMetadata  
                 where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}
@@ -580,7 +586,7 @@ class DBCheckpointStorage(
                 or checkpoint.status = ${FlowStatus.KILLED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
         return query.resultList.stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId)
+            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId, Principal { it.startedBy })
         }
     }
 
@@ -753,7 +759,8 @@ class DBCheckpointStorage(
     private class DBFlowResultMetadataFields(
         val id: String,
         val status: FlowStatus,
-        val clientId: String?
+        val clientId: String?,
+        val startedBy: String
     )
 
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {

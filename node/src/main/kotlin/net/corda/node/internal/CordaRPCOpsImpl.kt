@@ -173,14 +173,14 @@ internal class CordaRPCOpsImpl(
     override fun killFlow(id: StateMachineRunId): Boolean = smm.killFlow(id)
 
     override fun <T> reattachFlowWithClientId(clientId: String): FlowHandleWithClientId<T>? {
-        return smm.reattachFlowWithClientId<T>(clientId)?.run {
+        return smm.reattachFlowWithClientId<T>(clientId, context().principal())?.run {
             FlowHandleWithClientIdImpl(id = id, returnValue = resultFuture, clientId = clientId)
         }
     }
 
-    override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId)
+    override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId, context().principal())
 
-    override fun finishedFlowsWithClientIds(): Map<String, Boolean> = smm.finishedFlowsWithClientIds()
+    override fun finishedFlowsWithClientIds(): Map<String, Boolean> = smm.finishedFlowsWithClientIds(context().principal())
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
 

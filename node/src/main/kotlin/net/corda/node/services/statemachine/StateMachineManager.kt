@@ -12,6 +12,7 @@ import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
+import java.security.Principal
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -112,14 +113,14 @@ interface StateMachineManager {
      *
      * @param clientId The client id relating to an existing flow
      */
-    fun <T> reattachFlowWithClientId(clientId: String): FlowStateMachineHandle<T>?
+    fun <T> reattachFlowWithClientId(clientId: String, user: Principal): FlowStateMachineHandle<T>?
 
     /**
      * Removes a flow's [clientId] to result/ exception mapping.
      *
      * @return whether the mapping was removed.
      */
-    fun removeClientId(clientId: String): Boolean
+    fun removeClientId(clientId: String, user: Principal): Boolean
 
     /**
      * Returns all finished flows that were started with a client id.
@@ -127,7 +128,7 @@ interface StateMachineManager {
      * @return A [Map] containing client ids for finished flows, mapped to [true] if finished successfully,
      * [false] if completed exceptionally.
      */
-    fun finishedFlowsWithClientIds(): Map<String, Boolean>
+    fun finishedFlowsWithClientIds(user: Principal): Map<String, Boolean>
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call

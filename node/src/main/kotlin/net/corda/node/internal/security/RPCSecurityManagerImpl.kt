@@ -144,31 +144,35 @@ private object RPCPermissionResolver : PermissionResolver {
     private const val ACTION_INVOKE_RPC = "invokerpc"
     private const val ACTION_ALL = "all"
     private val FLOW_RPC_CALLS = setOf(
-            "startFlowDynamic",
-            "startTrackedFlowDynamic",
-            "startFlow",
-            "startTrackedFlow")
+        "startFlowDynamic",
+        "startTrackedFlowDynamic",
+        "startFlowDynamicWithClientId",
+        "startFlow",
+        "startTrackedFlow",
+        "startFlowWithClientId"
+    )
+
+    private val FLOW_RPC_PERMITTED_START_FLOW_CALLS = setOf("startFlow", "startFlowDynamic")
+    private val FLOW_RPC_PERMITTED_TRACKED_START_FLOW_CALLS = setOf("startTrackedFlow", "startTrackedFlowDynamic")
+    private val FLOW_RPC_PERMITTED_START_FLOW_WITH_CLIENT_ID_CALLS = setOf("startFlowWithClientId", "startFlowDynamicWithClientId")
 
     override fun resolvePermission(representation: String): Permission {
-    	val action = representation.substringBefore(SEPARATOR).toLowerCase()
+        val action = representation.substringBefore(SEPARATOR).toLowerCase()
         when (action) {
             ACTION_INVOKE_RPC -> {
                 val rpcCall = representation.substringAfter(SEPARATOR, "")
-                require(representation.count { it == SEPARATOR } == 1 && !rpcCall.isEmpty()) {
-                    "Malformed permission string"
-                }
-                val permitted = when(rpcCall) {
-                    "startFlow" -> setOf("startFlowDynamic", rpcCall)
-                    "startTrackedFlow" -> setOf("startTrackedFlowDynamic", rpcCall)
+                require(representation.count { it == SEPARATOR } == 1 && rpcCall.isNotEmpty()) { "Malformed permission string" }
+                val permitted = when (rpcCall) {
+                    "startFlow" -> FLOW_RPC_PERMITTED_START_FLOW_CALLS
+                    "startTrackedFlow" -> FLOW_RPC_PERMITTED_TRACKED_START_FLOW_CALLS
+                    "startFlowWithClientId" -> FLOW_RPC_PERMITTED_START_FLOW_WITH_CLIENT_ID_CALLS
                     else -> setOf(rpcCall)
                 }
                 return RPCPermission(permitted)
             }
             ACTION_START_FLOW -> {
                 val targetFlow = representation.substringAfter(SEPARATOR, "")
-                require(targetFlow.isNotEmpty()) {
-                    "Missing target flow after StartFlow"
-                }
+                require(targetFlow.isNotEmpty()) { "Missing target flow after StartFlow" }
                 return RPCPermission(FLOW_RPC_CALLS, targetFlow)
             }
             ACTION_ALL -> {

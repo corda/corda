@@ -21,6 +21,7 @@ import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.newContext
 import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.startFlowWithClientId
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -340,7 +341,7 @@ class FlowClientIdTests {
         ResultFlow.hook = { counter++ }
         val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         flowHandle0.resultFuture.getOrThrow(20.seconds)
-        val removed = aliceNode.smm.removeClientId(clientId)
+        val removed = aliceNode.smm.removeClientId(clientId, aliceNode.user)
         // On new request with clientId, after the same clientId was removed, a brand new flow will start with that clientId
         val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         flowHandle1.resultFuture.getOrThrow(20.seconds)
@@ -363,7 +364,7 @@ class FlowClientIdTests {
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
         }
 
-        aliceNode.smm.removeClientId(clientId)
+        aliceNode.smm.removeClientId(clientId, aliceNode.user)
 
         // assert database status after remove
         aliceNode.services.database.transaction {
@@ -374,7 +375,7 @@ class FlowClientIdTests {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `removing a client id exception clears resources properly`() {
         val clientId = UUID.randomUUID().toString()
         ResultFlow.hook = { throw IllegalStateException() }
@@ -389,7 +390,7 @@ class FlowClientIdTests {
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
         }
 
-        aliceNode.smm.removeClientId(clientId)
+        aliceNode.smm.removeClientId(clientId, aliceNode.user)
 
         // assert database status after remove
         aliceNode.services.database.transaction {
@@ -400,7 +401,7 @@ class FlowClientIdTests {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `flow's client id mapping can only get removed once the flow gets removed`() {
         val clientId = UUID.randomUUID().toString()
         var tries = 0
@@ -417,7 +418,7 @@ class FlowClientIdTests {
 
         var removed = false
         while (!removed) {
-            removed = aliceNode.smm.removeClientId(clientId)
+            removed = aliceNode.smm.removeClientId(clientId, aliceNode.user)
             if (!removed) ++failedRemovals
             ++tries
             if (tries >= maxTries) {
@@ -636,7 +637,7 @@ class FlowClientIdTests {
         assertEquals("Flow's ${flowHandle0!!.id} exception was not found in the database. Something is very wrong.", e.message)
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `completed flow started with a client id nulls its flow state in database after its lifetime`() {
         val clientId = UUID.randomUUID().toString()
         val flowHandle = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
@@ -648,7 +649,7 @@ class FlowClientIdTests {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `failed flow started with a client id nulls its flow state in database after its lifetime`() {
         val clientId = UUID.randomUUID().toString()
         ResultFlow.hook = { throw IllegalStateException() }
@@ -664,11 +665,12 @@ class FlowClientIdTests {
             assertNull(dbFlowCheckpoint!!.blob!!.flowStack)
         }
     }
+
     @Test(timeout = 300_000)
     fun `reattachFlowWithClientId can retrieve existing flow future`() {
         val clientId = UUID.randomUUID().toString()
         val flowHandle = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(10))
-        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId)
+        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId, aliceNode.user)
 
         assertEquals(10, flowHandle.resultFuture.getOrThrow(20.seconds))
         assertEquals(clientId, flowHandle.clientId)
@@ -680,7 +682,7 @@ class FlowClientIdTests {
     fun `reattachFlowWithClientId can retrieve a null result from a flow future`() {
         val clientId = UUID.randomUUID().toString()
         val flowHandle = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(null))
-        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId)
+        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId, aliceNode.user)
 
         assertEquals(null, flowHandle.resultFuture.getOrThrow(20.seconds))
         assertEquals(clientId, flowHandle.clientId)
@@ -696,7 +698,7 @@ class FlowClientIdTests {
         assertEquals(10, flowHandle.resultFuture.getOrThrow(20.seconds))
         assertEquals(clientId, flowHandle.clientId)
 
-        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId)
+        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId, aliceNode.user)
 
         assertEquals(flowHandle.id, reattachedFlowHandle?.id)
         assertEquals(flowHandle.resultFuture.get(), reattachedFlowHandle?.resultFuture?.get())
@@ -704,7 +706,7 @@ class FlowClientIdTests {
 
     @Test(timeout = 300_000)
     fun `reattachFlowWithClientId returns null if no flow matches the client id`() {
-        assertEquals(null, aliceNode.smm.reattachFlowWithClientId<Int>(UUID.randomUUID().toString()))
+        assertEquals(null, aliceNode.smm.reattachFlowWithClientId<Int>(UUID.randomUUID().toString(), aliceNode.user))
     }
 
     @Test(timeout = 300_000)
@@ -712,7 +714,7 @@ class FlowClientIdTests {
         ResultFlow.hook = { throw IllegalStateException("Bla bla bla") }
         val clientId = UUID.randomUUID().toString()
         val flowHandle = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(10))
-        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId)
+        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId, aliceNode.user)
 
         assertThatExceptionOfType(IllegalStateException::class.java).isThrownBy {
             flowHandle.resultFuture.getOrThrow(20.seconds)
@@ -733,7 +735,7 @@ class FlowClientIdTests {
             flowHandle.resultFuture.getOrThrow(20.seconds)
         }.withMessage("Bla bla bla")
 
-        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId)
+        val reattachedFlowHandle = aliceNode.smm.reattachFlowWithClientId<Int>(clientId, aliceNode.user)
 
         // [CordaRunTimeException] returned because [IllegalStateException] is not serializable
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
@@ -753,7 +755,7 @@ class FlowClientIdTests {
         }
 
         assertFailsWith<KilledFlowException> {
-            aliceNode.smm.reattachFlowWithClientId<Int>(clientId)?.resultFuture?.getOrThrow()
+            aliceNode.smm.reattachFlowWithClientId<Int>(clientId, aliceNode.user)?.resultFuture?.getOrThrow()
         }
     }
 
@@ -779,7 +781,7 @@ class FlowClientIdTests {
         flows.map { it.resultFuture }.transpose().getOrThrow(30.seconds)
         assertFailsWith<java.lang.IllegalStateException> { failedFlow.resultFuture.getOrThrow(20.seconds) }
 
-        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds()
+        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds(aliceNode.user)
 
         lock.countDown()
 
@@ -791,11 +793,13 @@ class FlowClientIdTests {
 
         assertEquals(
             listOf(10, 10, 10),
-            finishedFlows.filterValues { it }.map { aliceNode.smm.reattachFlowWithClientId<Int>(it.key)?.resultFuture?.get() }
+            finishedFlows.filterValues { it }
+                .map { aliceNode.smm.reattachFlowWithClientId<Int>(it.key, aliceNode.user)?.resultFuture?.get() }
         )
         // [CordaRunTimeException] returned because [IllegalStateException] is not serializable
         assertFailsWith<CordaRuntimeException> {
-            finishedFlows.filterValues { !it }.map { aliceNode.smm.reattachFlowWithClientId<Int>(it.key)?.resultFuture?.getOrThrow() }
+            finishedFlows.filterValues { !it }
+                .map { aliceNode.smm.reattachFlowWithClientId<Int>(it.key, aliceNode.user)?.resultFuture?.getOrThrow() }
         }
     }
 
@@ -810,12 +814,14 @@ class FlowClientIdTests {
             flowHandle0.resultFuture.getOrThrow()
         }
 
-        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds()
+        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds(aliceNode.user)
 
         assertFailsWith<KilledFlowException> {
-            finishedFlows.keys.single().let { aliceNode.smm.reattachFlowWithClientId<Int>(it)?.resultFuture?.getOrThrow() }
+            finishedFlows.keys.single().let { aliceNode.smm.reattachFlowWithClientId<Int>(it, aliceNode.user)?.resultFuture?.getOrThrow() }
         }
     }
+
+    private val TestStartedNode.user get() = services.newContext().principal()
 
     private fun TestStartedNode.hasStatus(id: StateMachineRunId, status: Checkpoint.FlowStatus): Boolean {
         return services.database.transaction {
@@ -870,7 +876,7 @@ class FlowClientIdTests {
         }
     }
 
-    internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
+    internal class ResultFlow<A>(private val result: A) : FlowLogic<A>() {
         companion object {
             var hook: ((String?) -> Unit)? = null
             var suspendableHook: FlowLogic<Unit>? = null
@@ -884,7 +890,7 @@ class FlowClientIdTests {
         }
     }
 
-    internal class UnSerializableResultFlow: FlowLogic<Any>() {
+    internal class UnSerializableResultFlow : FlowLogic<Any>() {
         companion object {
             var firstRun = true
         }
@@ -901,7 +907,7 @@ class FlowClientIdTests {
         }
     }
 
-    internal class HospitalizeFlow: FlowLogic<Unit>() {
+    internal class HospitalizeFlow : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
