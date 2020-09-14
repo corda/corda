@@ -16,6 +16,7 @@ import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
@@ -161,6 +162,33 @@ class FlowWithClientIdTest {
             nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
             val finishedFlows = nodeA.rpc.finishedFlowsWithClientIds()
             assertEquals(true, finishedFlows[clientId])
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `a client id flow can be re-attached when flows draining mode is on`() {
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode().getOrThrow()
+            val result0 = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            assertEquals(5, result0)
+
+            nodeA.rpc.setFlowsDrainingModeEnabled(true)
+            val result1 = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            assertEquals(5, result1)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `if client id flow does not exist and flows draining mode is on, a RejectedCommandException gets thrown`() {
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode().getOrThrow()
+
+            nodeA.rpc.setFlowsDrainingModeEnabled(true)
+            assertFailsWith<RejectedCommandException>("Node is draining before shutdown. Cannot start new flows through RPC.") {
+                nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            }
         }
     }
 

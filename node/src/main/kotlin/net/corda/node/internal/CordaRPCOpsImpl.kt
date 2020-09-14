@@ -277,6 +277,10 @@ internal class CordaRPCOpsImpl(
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, context: InvocationContext, args: Array<out Any?>): FlowStateMachineHandle<T> {
         if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
         if (isFlowsDrainingModeEnabled()) {
+            if (context.clientId != null) {
+                return smm.reattachFlowWithClientId(context.clientId!!)
+                    ?: throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
+            }
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
         return flowStarter.invokeFlowAsync(logicType, context, *args).getOrThrow()
