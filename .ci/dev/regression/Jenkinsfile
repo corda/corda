@@ -1,6 +1,7 @@
 #!groovy
 /**
- * Jenkins pipeline to build Corda OS release branches and tags
+ * Jenkins pipeline to build Corda OS release branches and tags.
+ * PLEASE NOTE: we DO want to run a build for each commit!!!
  */
 
 /**
@@ -51,7 +52,6 @@ pipeline {
     agent { label 'standard' }
     options {
         timestamps()
-//        disableConcurrentBuilds()
         timeout(time: 6, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
@@ -238,7 +238,7 @@ pipeline {
 
             script
             {
-                if (!isReleaseTag && false) { // FIXME - do not forget to remove `false` from here!!!
+                if (!isReleaseTag) {
                     // We want to send a summary email, but want to limit to once per day.
                     // Comparing the dates of the previous and current builds achieves this,
                     // i.e. we will only send an email for the first build on a given day.
