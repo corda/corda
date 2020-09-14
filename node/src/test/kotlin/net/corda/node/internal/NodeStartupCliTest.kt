@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions
 import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 import picocli.CommandLine
@@ -32,6 +33,7 @@ class NodeStartupCliTest {
         }
     }
 
+    @Ignore
     @Test(timeout=300_000)
 	fun `no command line arguments`() {
         CommandLine.populateCommand(startup)
@@ -50,6 +52,7 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
+    @Ignore
     @Test(timeout=300_000)
 	fun `--base-directory`() {
         CommandLine.populateCommand(startup, CommonCliConstants.BASE_DIR, (workingDirectory / "another-base-dir").toString())
@@ -58,12 +61,14 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
+    @Ignore
     @Test(timeout=300_000)
     fun `--nodeconf using relative path will be changed to absolute path`() {
         CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, customNodeConf)
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / customNodeConf)
     }
 
+    @Ignore
     @Test(timeout=300_000)
     fun `--nodeconf using absolute path will not be changed`() {
         CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, (rootDirectory / customNodeConf).toString())
@@ -83,4 +88,39 @@ class NodeStartupCliTest {
         assertTrue(dir.resolve("logs").exists())
         assertFalse(Paths.get("./logs").exists())
     }
+
+    @Test(timeout = 300_000)
+    fun `assert that logging options are parsed are set correctly when are placed before a command`() {
+
+        val temporaryFolder = TemporaryFolder()
+        temporaryFolder.create()
+        val baseDir = temporaryFolder.newFolder("baseDir")
+
+        CommandLine.populateCommand(startup,
+                "--log-to-console", "--logging-level=DEBUG",
+                "--base-directory", baseDir.absolutePath,
+                "initial-registration", "--network-root-truststore-password=password")
+
+        Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.DEBUG)
+        Assertions.assertThat(startup.verbose).isEqualTo(true)
+        Assertions.assertThat(startup.cmdLineOptions.baseDirectory.toString()).isEqualTo(baseDir.absolutePath)
+    }
+
+    @Test(timeout = 300_000)
+    fun `assert that logging options are parsed are set correctly when are placed after a command`() {
+
+        val temporaryFolder = TemporaryFolder()
+        temporaryFolder.create()
+        val baseDir = temporaryFolder.newFolder("baseDir")
+
+        CommandLine.populateCommand(startup,
+                "--base-directory", baseDir.absolutePath,
+                "initial-registration", "--network-root-truststore-password=password",
+                "--log-to-console", "--logging-level=DEBUG")
+
+        Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.DEBUG)
+        Assertions.assertThat(startup.verbose).isEqualTo(true)
+        Assertions.assertThat(startup.cmdLineOptions.baseDirectory.toString()).isEqualTo(baseDir.absolutePath)
+    }
+
 }
