@@ -187,7 +187,7 @@ class FlowWithClientIdTest {
 
             nodeA.rpc.setFlowsDrainingModeEnabled(true)
             assertFailsWith<RejectedCommandException>("Node is draining before shutdown. Cannot start new flows through RPC.") {
-                nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+                nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
             }
         }
     }
