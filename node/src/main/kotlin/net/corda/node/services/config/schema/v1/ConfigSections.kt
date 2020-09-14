@@ -281,18 +281,22 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
-        if (initialiseSchema.isSpecifiedBy(configuration)){
-            throw ConfigurationException("Unsupported configuration database/initialiseSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
-        }
-        if (initialiseAppSchema.isSpecifiedBy(configuration)){
-            throw ConfigurationException("Unsupported configuration database/initialiseAppSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
-        }
-        if (transactionIsolationLevel.isSpecifiedBy(configuration)){
-            throw ConfigurationException("Unsupported configuration database/transactionIsolationLevel - this option has been removed and cannot be changed")
-        }
-        val config = configuration.withOptions(options)
+        try {
+            if (initialiseSchema.isSpecifiedBy(configuration)) {
+                throw ConfigurationException("Unsupported configuration database/initialiseSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
+            }
+            if (initialiseAppSchema.isSpecifiedBy(configuration)) {
+                throw ConfigurationException("Unsupported configuration database/initialiseAppSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
+            }
+            if (transactionIsolationLevel.isSpecifiedBy(configuration)) {
+                throw ConfigurationException("Unsupported configuration database/transactionIsolationLevel - this option has been removed and cannot be changed")
+            }
+            val config = configuration.withOptions(options)
 
-        return valid(DatabaseConfig(config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
+            return valid(DatabaseConfig(config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
+        } catch (e: ConfigurationException) {
+            return invalid<DatabaseConfig, Configuration.Validation.Error>(Configuration.Validation.Error.BadPath.of(e.message!!))
+        }
     }
 }
 
