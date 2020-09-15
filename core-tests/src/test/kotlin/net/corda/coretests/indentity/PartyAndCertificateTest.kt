@@ -2,6 +2,7 @@ package net.corda.coretests.indentity
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -14,6 +15,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
@@ -23,6 +25,13 @@ class PartyAndCertificateTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
+    @Before
+    fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+    }
 
     @Test(timeout=300_000)
 	fun `reject a path with no roles`() {

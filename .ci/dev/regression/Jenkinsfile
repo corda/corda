@@ -1,29 +1,21 @@
 #!groovy
 /**
- * Jenkins pipeline to build Corda OS release branches and tags
+ * Jenkins pipeline to build Corda OS release branches and tags.
+ * PLEASE NOTE: we DO want to run a build for each commit!!!
  */
-
-/**
- * Kill already started job.
- * Assume new commit takes precendence and results from previous
- * unfinished builds are not required.
- * This feature doesn't play well with disableConcurrentBuilds() option
- */
-@Library('corda-shared-build-pipeline-steps')
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-
-killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 /**
  * Sense environment
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
+boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
+
 /*
 ** calculate the stage for NexusIQ evaluation
 **  * build for snapshots
 **  * stage-release:  for release candidates and for health checks
-**  * operate: for final release
+**  * release: for GA release
 */
 def nexusDefaultIqStage = "build"
 if (isReleaseTag) {
@@ -47,11 +39,22 @@ def nexusIqStageChoices = [nexusDefaultIqStage].plus(
                         'operate'
                 ].minus([nexusDefaultIqStage]))
 
+/**
+ * Common Gradle arguments for all Gradle executions
+ */
+String COMMON_GRADLE_PARAMS = [
+        '--no-daemon',
+        '--stacktrace',
+        '--info',
+        '-Pcompilation.warningsAsErrors=false',
+        '-Ptests.failFast=true',
+].join(' ')
+
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'standard' }
     options {
         timestamps()
-        timeout(time: 3, unit: 'HOURS')
+        timeout(time: 6, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
@@ -59,21 +62,31 @@ pipeline {
         choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
 
+    /*
+     * List environment variables in alphabetical order
+     */
     environment {
-        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
-        DOCKER_URL = "https://index.docker.io/v1/"
-        EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
-        BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
+        ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish Release to Artifactory :: ${env.BRANCH_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
-        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", "::")
-        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        DOCKER_URL = "https://index.docker.io/v1/"
     }
 
     stages {
+        stage('Compile') {
+            steps {
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'clean',
+                        'jar'
+                ].join(' ')
+            }
+        }
+
         stage('Sonatype Check') {
             steps {
-                sh "./gradlew --no-daemon clean jar"
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
                     /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
@@ -91,56 +104,53 @@ pipeline {
             }
         }
 
-        stage('Deploy Nodes') {
+        stage('Unit Test') {
             steps {
-                sh "./gradlew --no-daemon jar deployNodes"
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'test'
+                ].join(' ')
             }
         }
 
-        stage('Generate Build Image') {
+        stage('Integration Test') {
             steps {
-                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew " +
-                            "-Dkubenetize=true " +
-                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_USERNAME=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
-                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_PASSWORD=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
-                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest pushBuildImage --stacktrace"
-                }
-                sh "kubectl auth can-i get pods"
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'integrationTest'
+                ].join(' ')
             }
         }
 
-        stage('Testing phase') {
-            parallel {
-                stage('Regression Test') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
-                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
-                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
-                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
-                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
-                                " parallelRegressionTest --stacktrace"
-                    }
-                }
-                stage('Slow Integration Test') {
-                    steps {
-                        sh "./gradlew " +
-                                "-DbuildId=\"\${BUILD_ID}\" " +
-                                "-Dkubenetize=true " +
-                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
-                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
-                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
-                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
-                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
-                                " allParallelSlowIntegrationTest --stacktrace"
-                    }
-                }
+        stage('Smoke Test') {
+            steps {
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'smokeTest'
+                ].join(' ')
+            }
+        }
+
+        stage('Slow Integration Test') {
+            steps {
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'slowIntegrationTest'
+                ].join(' ')
+            }
+        }
+
+        stage('Deploy Node') {
+            steps {
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'deployNode'
+                ].join(' ')
             }
         }
 
@@ -176,14 +186,19 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { !isInternalRelease && isReleaseTag }
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
             }
             steps {
                 withCredentials([
                         usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
                                 usernameVariable: 'DOCKER_USERNAME',
-                                passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh "./gradlew pushOfficialImages"
+                                passwordVariable: 'DOCKER_PASSWORD')
+                ]) {
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'pushOfficialImages'
+                            ].join(' ')
                 }
             }
         }
@@ -191,8 +206,9 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
+            archiveArtifacts artifacts: '**/*.log', fingerprint: false
+            archiveArtifacts artifacts: '**/build/reports/tests/**', fingerprint: false
+            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
 
             script {
                 try {
@@ -214,8 +230,8 @@ pipeline {
                             sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
                             targetNameExpression: '$1-$2')])
                     allure includeProperties: false,
-                           jdk: '',
-                           results: [[path: '**/allure-input']]
+                            jdk: '',
+                            results: [[path: '**/allure-input']]
                 } catch (err) {
                     echo("Allure report generation failed: $err")
 
@@ -243,6 +259,8 @@ pipeline {
                                 statusSymbol = '\u2705'
                                 break;
                             case 'UNSTABLE':
+                                statusSymbol = '\u26A0'
+                                break;
                             case 'FAILURE':
                                 statusSymbol = '\u274c'
                                 break;
