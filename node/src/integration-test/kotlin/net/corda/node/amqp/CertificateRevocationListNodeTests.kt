@@ -54,7 +54,6 @@ import java.math.BigInteger
 import java.net.InetSocketAddress
 import java.security.KeyPair
 import java.security.PrivateKey
-import java.security.Security
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
@@ -113,7 +112,8 @@ class CertificateRevocationListNodeTests {
 
     @Before
     fun setUp() {
-        Security.addProvider(BouncyCastleProvider())
+        // Do not use Security.addProvider(BouncyCastleProvider()) to avoid EdDSA signature disruption in other tests.
+        Crypto.findProvider(BouncyCastleProvider.PROVIDER_NAME)
         revokedNodeCerts.clear()
         server = CrlServer(NetworkHostAndPort("localhost", 0))
         server.start()
