@@ -292,11 +292,10 @@ class StartedFlowTransition(
             }
             val shardId = generateShardId(context.id.toString())
             val counterpartySessionId = sourceSessionId.calculateInitiatedSessionId()
-            val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, sessionState.additionalEntropy, null)
+            val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, null)
             val newSessionState = SessionState.Initiating(
                     bufferedMessages = emptyList(),
                     rejectionError = null,
-                    deduplicationSeed = sessionState.deduplicationSeed,
                     nextSendingSeqNumber = 1,
                     shardId = shardId,
                     receivedMessages = emptyMap(),
@@ -342,7 +341,6 @@ class StartedFlowTransition(
                         receivedMessages = emptyMap(),
                         otherSideErrored = false,
                         peerSinkSessionId = sessionState.hasBeenAcknowledged.second.initiatedSessionId,
-                        deduplicationSeed = sessionState.deduplicationSeed,
                         nextSendingSeqNumber = 1,
                         lastProcessedSeqNumber = 0,
                         shardId = shardId,
@@ -354,14 +352,13 @@ class StartedFlowTransition(
                 newSessions[sourceSessionId] = SessionState.Initiating(
                         bufferedMessages = emptyList(),
                         rejectionError = null,
-                        deduplicationSeed = sessionState.deduplicationSeed,
                         nextSendingSeqNumber = 1,
                         shardId = shardId,
                         receivedMessages = emptyMap(),
                         lastSenderUUID = null,
                         lastSenderSeqNo = null
                 )
-                val initialMessage = createInitialSessionMessage(uninitiatedSessionState.initiatingSubFlow, sourceSessionId, uninitiatedSessionState.additionalEntropy, message)
+                val initialMessage = createInitialSessionMessage(uninitiatedSessionState.initiatingSubFlow, sourceSessionId, message)
                 val messageType = MessageType.inferFromMessage(initialMessage)
                 val messageIdentifier = MessageIdentifier(messageType, shardId, sourceSessionId.calculateInitiatedSessionId(), 0, checkpoint.checkpointState.suspensionTime)
                 Action.SendInitial(uninitiatedSessionState.destination, initialMessage, SenderDeduplicationInfo(messageIdentifier, startingState.senderUUID))
@@ -527,13 +524,10 @@ class StartedFlowTransition(
     private fun createInitialSessionMessage(
             initiatingSubFlow: SubFlow.Initiating,
             sourceSessionId: SessionId,
-            additionalEntropy: Long,
             payload: SerializedBytes<Any>?
     ): InitialSessionMessage {
         return InitialSessionMessage(
                 initiatorSessionId = sourceSessionId,
-                // We add additional entropy to add to the initiated side's deduplication seed.
-                initiationEntropy = additionalEntropy,
                 initiatorFlowClassName = initiatingSubFlow.classToInitiateWith.name,
                 flowVersion = initiatingSubFlow.flowInfo.flowVersion,
                 appName = initiatingSubFlow.flowInfo.appName,

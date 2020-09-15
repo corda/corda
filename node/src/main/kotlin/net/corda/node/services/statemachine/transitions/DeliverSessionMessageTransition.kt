@@ -90,7 +90,6 @@ class DeliverSessionMessageTransition(
                         peerFlowInfo = message.initiatedFlowInfo,
                         receivedMessages = emptyMap(),
                         peerSinkSessionId = message.initiatedSessionId,
-                        deduplicationSeed = sessionState.deduplicationSeed,
                         otherSideErrored = false,
                         nextSendingSeqNumber = sessionState.nextSendingSeqNumber,
                         lastProcessedSeqNumber = 0,

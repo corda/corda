@@ -52,7 +52,6 @@ data class SessionId(val value: BigInteger) {
  *
  * @param initiatorSessionId the session ID of the initiator. On the sending side this is the *source* ID, on the
  *   receiving side this is the *sink* ID.
- * @param initiationEntropy additional randomness to seed the initiated flow's deduplication ID.
  * @param initiatorFlowClassName the class name to be used to determine the initiating-initiated mapping on the receiver
  *   side.
  * @param flowVersion the version of the initiating flow.
@@ -61,7 +60,6 @@ data class SessionId(val value: BigInteger) {
  */
 data class InitialSessionMessage(
         val initiatorSessionId: SessionId,
-        val initiationEntropy: Long,
         val initiatorFlowClassName: String,
         val flowVersion: Int,
         val appName: String,
@@ -69,7 +67,6 @@ data class InitialSessionMessage(
 ) : SessionMessage() {
     override fun toString() = "InitialSessionMessage(" +
             "initiatorSessionId=$initiatorSessionId, " +
-            "initiationEntropy=$initiationEntropy, " +
             "initiatorFlowClassName=$initiatorFlowClassName, " +
             "appName=$appName, " +
             "firstPayload=${firstPayload?.javaClass}" +

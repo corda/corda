@@ -574,7 +574,7 @@ class FlowFrameworkTests {
 
     @Test(timeout=300_000)
 	fun `session init with unknown class is sent to the flow hospital, from where we then drop it`() {
-        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId.createRandom(SecureRandom()), 0, "not.a.real.Class", 1, "", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId.createRandom(SecureRandom()), "not.a.real.Class", 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(1) // Only the session-init is expected as the session-reject is blocked by the flow hospital
         val medicalRecords = bobNode.smm.flowHospital.track().apply { updates.notUsed() }.snapshot
@@ -590,7 +590,7 @@ class FlowFrameworkTests {
 
     @Test(timeout=300_000)
 	fun `non-flow class in session init`() {
-        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId.createRandom(SecureRandom()), 0, String::class.java.name, 1, "", null), bob)
+        aliceNode.sendSessionMessage(InitialSessionMessage(SessionId.createRandom(SecureRandom()), String::class.java.name, 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
         val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
@@ -1049,7 +1049,7 @@ internal inline fun <reified P : FlowLogic<*>> TestStartedNode.getSingleFlow(): 
 }
 
 private fun sanitise(message: SessionMessage) = when (message) {
-    is InitialSessionMessage -> message.copy(initiatorSessionId = SessionId(BigInteger.valueOf(0)), initiationEntropy = 0, appName = "")
+    is InitialSessionMessage -> message.copy(initiatorSessionId = SessionId(BigInteger.valueOf(0)), appName = "")
     is ExistingSessionMessage -> {
         val payload = message.payload
         message.copy(
@@ -1107,7 +1107,7 @@ internal data class SessionTransfer(val from: Int, val message: SessionMessage, 
 }
 
 internal fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
-    return InitialSessionMessage(SessionId(BigInteger.valueOf(0)), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
+    return InitialSessionMessage(SessionId(BigInteger.valueOf(0)), clientFlowClass.java.name, flowVersion, "", payload?.serialize())
 }
 
 internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(BigInteger.valueOf(0)), DataSessionMessage(payload.serialize()))

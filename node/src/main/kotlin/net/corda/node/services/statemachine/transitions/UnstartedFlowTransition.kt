@@ -55,7 +55,6 @@ class UnstartedFlowTransition(
                 } else {
                     mapOf(0 to DataSessionMessage(initiatingMessage.firstPayload))
                 },
-                deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.value}-${initiatingMessage.initiationEntropy}",
                 otherSideErrored = false,
                 nextSendingSeqNumber = 1,
                 lastProcessedSeqNumber = if (initiatingMessage.firstPayload == null) {
