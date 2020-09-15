@@ -12,4 +12,6 @@ open class SessionRejectException(message: String) : CordaException(message) {
     class NotAFlow(val initiatorClass: Class<*>) : SessionRejectException("${initiatorClass.name} is not a flow")
 
     class NotRegistered(val initiatorFlowClass: Class<out FlowLogic<*>>) : SessionRejectException("${initiatorFlowClass.name} is not registered")
+
+    class IncompatibleVersions(counterpartyPlatformVersion: Int, minRequiredVersion: Int) : SessionRejectException("The minimum platform version this node can communicate with ($minRequiredVersion) is larger than the platform version of your node ($counterpartyPlatformVersion)")
 }

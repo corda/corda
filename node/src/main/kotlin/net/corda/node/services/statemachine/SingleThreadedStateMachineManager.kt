@@ -17,6 +17,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.PlatformVersionSwitches.NEW_MESSAGE_ID_STRUCTURE
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
@@ -756,6 +757,12 @@ internal class SingleThreadedStateMachineManager(
     }
 
     private fun onSessionInit(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent) {
+        if (event.receivedMessage.platformVersion < NEW_MESSAGE_ID_STRUCTURE) {
+            val error = SessionRejectException.IncompatibleVersions(event.receivedMessage.platformVersion, NEW_MESSAGE_ID_STRUCTURE)
+            flowHospital.sessionInitErrored(sessionMessage, sender, event, error)
+            return
+        }
+
         try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
             val initiatedSessionId = event.receivedMessage.uniqueMessageId.sessionIdentifier

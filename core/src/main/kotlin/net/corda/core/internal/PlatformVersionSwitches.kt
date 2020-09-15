@@ -17,4 +17,5 @@ object PlatformVersionSwitches {
     const val BATCH_DOWNLOAD_COUNTERPARTY_BACKCHAIN = 6
     const val ENABLE_P2P_COMPRESSION = 7
     const val CERTIFICATE_ROTATION = 9
+    const val NEW_MESSAGE_ID_STRUCTURE = 9
 }
