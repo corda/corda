@@ -1,11 +1,11 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.toStringShort
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.serialization.serialize
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
@@ -108,13 +108,81 @@ class NetworkMapCacheTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `add two nodes the same name different keys`() {
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val aliceCache = aliceNode.services.networkMapCache
-        val alicePartyAndCert2 = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public)
-        aliceCache.addOrUpdateNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(alicePartyAndCert2)))
-        // This is correct behaviour as we may have distributed service nodes.
-        assertEquals(2, aliceCache.getNodesByLegalName(ALICE_NAME).size)
+    @Test(timeout = 300_000)
+    fun `replace node with the same key but different certificate`() {
+        val bobCache = mockNet.createPartyNode(BOB_NAME).services.networkMapCache
+
+        // Add node info with original key and certificate
+        val aliceInfo = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, entropyRoot = BigInteger.valueOf(70))).info
+        val aliceKey = aliceInfo.legalIdentities.single().owningKey
+        val aliceCertificate = aliceInfo.legalIdentitiesAndCerts.single()
+        bobCache.addOrUpdateNode(aliceInfo)
+
+        // Check database
+        assertThat(bobCache.getNodeByLegalName(ALICE_NAME)).isEqualTo(aliceInfo)
+        assertThat(bobCache.getNodesByOwningKeyIndex(aliceKey.toStringShort())).containsOnly(aliceInfo)
+        // Check cache
+        assertThat(bobCache.getNodeByHash(aliceInfo.serialize().hash)).isEqualTo(aliceInfo)
+        assertThat(bobCache.getPeerCertificateByLegalName(ALICE_NAME)).isEqualTo(aliceCertificate)
+        assertThat(bobCache.getNodesByLegalIdentityKey(aliceKey)).containsOnly(aliceInfo)
+
+        // Update node info with new key and certificate
+        val aliceInfo2 = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, entropyRoot = BigInteger.valueOf(70))).info
+        val aliceKey2 = aliceInfo2.legalIdentities.single().owningKey
+        val aliceCertificate2 = aliceInfo2.legalIdentitiesAndCerts.single()
+        bobCache.addOrUpdateNode(aliceInfo2)
+
+        // Check that keys and certificates are different
+        assertThat(aliceKey).isEqualTo(aliceKey2)
+        assertThat(aliceCertificate.certificate).isNotEqualTo(aliceCertificate2.certificate)
+
+        // Check new entry
+        assertThat(bobCache.getNodeByLegalName(ALICE_NAME)).isEqualTo(aliceInfo2)
+        assertThat(bobCache.getNodesByOwningKeyIndex(aliceKey2.toStringShort())).containsOnly(aliceInfo2)
+        assertThat(bobCache.getNodeByHash(aliceInfo2.serialize().hash)).isEqualTo(aliceInfo2)
+        assertThat(bobCache.getPeerCertificateByLegalName(ALICE_NAME)).isEqualTo(aliceCertificate2)
+        assertThat(bobCache.getNodesByLegalIdentityKey(aliceKey2)).containsOnly(aliceInfo2)
+        // Check old entry
+        assertThat(bobCache.getNodeByHash(aliceInfo.serialize().hash)).isNull()
+    }
+
+    @Test(timeout = 300_000)
+    fun `replace node with the same name but different key and certificate`() {
+        val bobCache = mockNet.createPartyNode(BOB_NAME).services.networkMapCache
+
+        // Add node info with original key and certificate
+        val aliceInfo = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, entropyRoot = BigInteger.valueOf(70))).info
+        val aliceKey = aliceInfo.legalIdentities.single().owningKey
+        val aliceCertificate = aliceInfo.legalIdentitiesAndCerts.single()
+        bobCache.addOrUpdateNode(aliceInfo)
+
+        // Check database
+        assertThat(bobCache.getNodeByLegalName(ALICE_NAME)).isEqualTo(aliceInfo)
+        assertThat(bobCache.getNodesByOwningKeyIndex(aliceKey.toStringShort())).containsOnly(aliceInfo)
+        // Check cache
+        assertThat(bobCache.getNodeByHash(aliceInfo.serialize().hash)).isEqualTo(aliceInfo)
+        assertThat(bobCache.getPeerCertificateByLegalName(ALICE_NAME)).isEqualTo(aliceCertificate)
+        assertThat(bobCache.getNodesByLegalIdentityKey(aliceKey)).containsOnly(aliceInfo)
+
+        // Update node info with new key and certificate
+        val aliceInfo2 = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, entropyRoot = BigInteger.valueOf(71))).info
+        val aliceKey2 = aliceInfo2.legalIdentities.single().owningKey
+        val aliceCertificate2 = aliceInfo2.legalIdentitiesAndCerts.single()
+        bobCache.addOrUpdateNode(aliceInfo2)
+
+        // Check that keys and certificates are different
+        assertThat(aliceKey).isNotEqualTo(aliceKey2)
+        assertThat(aliceCertificate.certificate).isNotEqualTo(aliceCertificate2.certificate)
+
+        // Check new entry
+        assertThat(bobCache.getNodeByLegalName(ALICE_NAME)).isEqualTo(aliceInfo2)
+        assertThat(bobCache.getNodesByOwningKeyIndex(aliceKey2.toStringShort())).containsOnly(aliceInfo2)
+        assertThat(bobCache.getNodeByHash(aliceInfo2.serialize().hash)).isEqualTo(aliceInfo2)
+        assertThat(bobCache.getPeerCertificateByLegalName(ALICE_NAME)).isEqualTo(aliceCertificate2)
+        assertThat(bobCache.getNodesByLegalIdentityKey(aliceKey2)).containsOnly(aliceInfo2)
+        // Check old entry
+        assertThat(bobCache.getNodesByOwningKeyIndex(aliceKey.toStringShort())).isEmpty()
+        assertThat(bobCache.getNodeByHash(aliceInfo.serialize().hash)).isNull()
+        assertThat(bobCache.getNodesByLegalIdentityKey(aliceKey)).isEmpty()
     }
 }
