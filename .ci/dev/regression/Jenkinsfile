@@ -62,12 +62,15 @@ pipeline {
         choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
 
+    /*
+     * List environment variables in alphabetical order
+     */
     environment {
-        DOCKER_URL = "https://index.docker.io/v1/"
+        ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish Release to Artifactory :: ${env.BRANCH_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
-        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", "::")
-        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        DOCKER_URL = "https://index.docker.io/v1/"
     }
 
     stages {
