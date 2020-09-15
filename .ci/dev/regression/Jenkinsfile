@@ -9,11 +9,13 @@
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
+boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
+
 /*
 ** calculate the stage for NexusIQ evaluation
 **  * build for snapshots
 **  * stage-release:  for release candidates and for health checks
-**  * operate: for final release
+**  * release: for GA release
 */
 def nexusDefaultIqStage = "build"
 if (isReleaseTag) {
@@ -60,12 +62,15 @@ pipeline {
         choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
 
+    /*
+     * List environment variables in alphabetical order
+     */
     environment {
-        DOCKER_URL = "https://index.docker.io/v1/"
+        ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish Release to Artifactory :: ${env.BRANCH_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
-        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", "::")
-        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        DOCKER_URL = "https://index.docker.io/v1/"
     }
 
     stages {
@@ -79,13 +84,8 @@ pipeline {
                 ].join(' ')
             }
         }
-        /*
-        * Temporarily disable Sonatype checks for regression builds
-        */
+
         stage('Sonatype Check') {
-            when {
-                expression { isReleaseTag }
-            }
             steps {
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
@@ -186,14 +186,19 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { !isInternalRelease && isReleaseTag }
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
             }
             steps {
                 withCredentials([
                         usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
                                 usernameVariable: 'DOCKER_USERNAME',
-                                passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh "./gradlew pushOfficialImages"
+                                passwordVariable: 'DOCKER_PASSWORD')
+                ]) {
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'pushOfficialImages'
+                            ].join(' ')
                 }
             }
         }
@@ -225,8 +230,8 @@ pipeline {
                             sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
                             targetNameExpression: '$1-$2')])
                     allure includeProperties: false,
-                           jdk: '',
-                           results: [[path: '**/allure-input']]
+                            jdk: '',
+                            results: [[path: '**/allure-input']]
                 } catch (err) {
                     echo("Allure report generation failed: $err")
 
