@@ -75,6 +75,7 @@ import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.toConfig
@@ -152,7 +153,8 @@ class DriverDSLImpl(
         val djvmCordaSource: List<Path>,
         val environmentVariables: Map<String, String>,
         val allowHibernateToManageAppSchema: Boolean = true,
-        val premigrateH2Database: Boolean = true
+        val premigrateH2Database: Boolean = true,
+        val autoShutdownNodes: Boolean = true
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -160,6 +162,7 @@ class DriverDSLImpl(
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
     private lateinit var extraCustomCordapps: Set<CustomCordapp>
+    private var shutdownHook: ShutdownHook? = null
 
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val networkVisibilityController = NetworkVisibilityController()
@@ -221,6 +224,13 @@ class DriverDSLImpl(
         }
     }
 
+    override fun handleAutoShutdown(hook: ShutdownHook) {
+        shutdownHook = hook
+        if (autoShutdownNodes) {
+            shutdown()
+        }
+    }
+
     override fun shutdown() {
         cordappsClassLoader.use { _ ->
             if (waitForAllNodesToFinish) {
@@ -231,6 +241,7 @@ class DriverDSLImpl(
             _shutdownManager?.shutdown()
             _executorService?.shutdownNow()
         }
+        shutdownHook?.cancel()
     }
 
     /**
@@ -1275,8 +1286,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
             DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
             throw exception
         } finally {
-            driverDsl.shutdown()
-            shutdownHook.cancel()
+            driverDsl.handleAutoShutdown(shutdownHook)
         }
     }
 }
@@ -1317,7 +1327,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                         djvmCordaSource = defaultParameters.djvmCordaSource,
                         environmentVariables = defaultParameters.environmentVariables,
                         allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
-                        premigrateH2Database = defaultParameters.premigrateH2Database
+                        premigrateH2Database = defaultParameters.premigrateH2Database,
+                        autoShutdownNodes = defaultParameters.autoShutdownNodes
                 )
         )
         val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1328,10 +1339,9 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
             DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
             throw exception
         } finally {
-            driverDsl.shutdown()
-            shutdownHook.cancel()
+            driverDsl.handleAutoShutdown(shutdownHook)
         }
-    }
+}
 }
 
 /**
