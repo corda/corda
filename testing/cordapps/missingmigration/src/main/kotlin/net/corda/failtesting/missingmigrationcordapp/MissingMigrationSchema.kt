@@ -1,4 +1,4 @@
-package net.corda.testing.missingmigrationcordapp
+package net.corda.failtesting.missingmigrationcordapp
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState

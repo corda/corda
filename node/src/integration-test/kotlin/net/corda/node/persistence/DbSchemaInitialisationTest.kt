@@ -32,7 +32,7 @@ class DbSchemaInitialisationTest {
             // in dev mode, it fails because the schema of our test CorDapp is missing
             assertThatExceptionOfType(HibernateSchemaChangeException::class.java)
                     .isThrownBy {
-                        startNode(NodeParameters(additionalCordapps = listOf(TestCordapp.findCordapp("net.corda.testing.missingmigrationcordapp")))).getOrThrow()
+                        startNode(NodeParameters(additionalCordapps = listOf(TestCordapp.findCordapp("net.corda.failtesting.missingmigrationcordapp")))).getOrThrow()
                     }
                     .withMessage("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: Schema-validation: missing table [test_table]")
 
@@ -42,9 +42,9 @@ class DbSchemaInitialisationTest {
                         startNode(
                                 ALICE_NAME,
                                 false,
-                                NodeParameters(additionalCordapps = listOf(TestCordapp.findCordapp("net.corda.testing.missingmigrationcordapp")))).getOrThrow()
+                                NodeParameters(additionalCordapps = listOf(TestCordapp.findCordapp("net.corda.failtesting.missingmigrationcordapp")))).getOrThrow()
                     }
-                    .withMessage("Could not create the DataSource: No migration defined for schema: net.corda.testing.missingmigrationcordapp.MissingMigrationSchema v1")
+                    .withMessage("Could not create the DataSource: No migration defined for schema: net.corda.failtesting.missingmigrationcordapp.MissingMigrationSchema v1")
         }
     }
 }

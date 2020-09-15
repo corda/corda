@@ -1,4 +1,4 @@
-package net.corda.testing.missingmigrationcordapp
+package net.corda.failtesting.missingmigrationcordapp
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
