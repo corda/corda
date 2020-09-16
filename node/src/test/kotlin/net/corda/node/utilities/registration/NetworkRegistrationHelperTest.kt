@@ -38,6 +38,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Files
+import java.nio.file.FileSystem
 import java.security.PublicKey
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
@@ -47,7 +48,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NetworkRegistrationHelperTest {
-    private val fs = Jimfs.newFileSystem(unix())
+    private lateinit var fs: FileSystem
     private val nodeLegalName = ALICE_NAME
 
     private lateinit var config: NodeConfiguration
@@ -56,6 +57,11 @@ class NetworkRegistrationHelperTest {
 
     @Before
     fun init() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
+        fs = Jimfs.newFileSystem(unix())
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
 
         abstract class AbstractNodeConfiguration : NodeConfiguration
