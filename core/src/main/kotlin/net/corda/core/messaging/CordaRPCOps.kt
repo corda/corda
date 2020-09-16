@@ -324,7 +324,7 @@ interface CordaRPCOps : RPCOps {
 
     /**
      * Removes a flow's [clientId] to result/ exception mapping. If the mapping is of a running flow, then the mapping will not get removed.
-     * This version can be called for all client ids, ignoring which user originally started a flow using the input [clientId].
+     * This version can be called for all client ids, ignoring which user originally started a flow with [clientId].
      *
      * See [startFlowDynamicWithClientId] for more information.
      *
@@ -333,8 +333,8 @@ interface CordaRPCOps : RPCOps {
     fun removeClientIdAsAdmin(clientId: String): Boolean
 
     /**
-     * Returns all finished flows that were started with a client id. This version only returns the client ids for flows started by the same
-     * user currently calling [finishedFlowsWithClientIds].
+     * Returns all finished flows that were started with a client ID for which the client ID mapping has not been removed. This version only
+     * returns the client ids for flows started by the same user currently calling [finishedFlowsWithClientIds].
      *
      * @return A [Map] containing client ids for finished flows started by the user calling [finishedFlowsWithClientIds], mapped to [true]
      * if finished successfully, [false] if completed exceptionally.
@@ -342,8 +342,7 @@ interface CordaRPCOps : RPCOps {
     fun finishedFlowsWithClientIds(): Map<String, Boolean>
 
     /**
-     * Returns all finished flows that were started with a client id. This version does not filter the returned values by the user that
-     * started the finished flows.
+     * Returns all finished flows that were started with a client id by all RPC users for which the client ID mapping has not been removed.
      *
      * @return A [Map] containing all client ids for finished flows, mapped to [true] if finished successfully,
      * [false] if completed exceptionally.
