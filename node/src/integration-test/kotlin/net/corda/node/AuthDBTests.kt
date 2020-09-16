@@ -215,6 +215,7 @@ class AuthDBTests : NodeBasedTest() {
 
     @After
     fun tearDown() {
+        node.node.stop()
         db.close()
     }
 
