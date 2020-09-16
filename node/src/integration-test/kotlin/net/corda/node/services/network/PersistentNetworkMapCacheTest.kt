@@ -5,9 +5,15 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -157,6 +163,14 @@ class PersistentNetworkMapCacheTest {
         assertThat(charlieNetMapCache.allNodes).hasSize(2)
         assertThat(charlieNetMapCache.getNodeByLegalName(ALICE_NAME)).isNotNull
         assertThat(charlieNetMapCache.getNodeByLegalName(BOB_NAME)).isNotNull
+    }
+
+    @Test(timeout=300_000)
+    fun `negative test - invalid trust root leads to no node added`() {
+        val (_, badCert) = createKeyPairAndSelfSignedTLSCertificate(DEV_ROOT_CA.certificate.issuerX500Principal)
+        val netMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = badCert))
+        netMapCache.addOrUpdateNode(createNodeInfo(listOf(ALICE)))
+        assertThat(netMapCache.allNodes).hasSize(0)
     }
 
     private fun createNodeInfo(identities: List<TestIdentity>,
