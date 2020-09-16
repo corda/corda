@@ -32,6 +32,7 @@ import rx.Observable
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeoutException
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
@@ -251,23 +252,66 @@ class FlowWithClientIdTest {
     }
 
     @Test(timeout = 300_000)
-    fun `reattaching to existing flow using startFlowWithClientId for flow started by another user throws a permission exception`() {
-        val user = User("Tony Stark", "I AM IRONMAN", setOf(Permissions.all()))
+    fun `reattaching to existing running flow using startFlowWithClientId for flow started by another user throws a permission exception`() {
+        val user = User("TonyStark", "I AM IRONMAN", setOf(Permissions.all()))
         val spy = User("spy", "l33t h4ck4r", setOf(Permissions.all()))
         val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            val latch = CountDownLatch(1)
+            ResultFlow.hook = {
+                latch.await()
+            }
             val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
             val reattachedByStarter = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
 
             assertFailsWith<PermissionException> {
                 CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
-                    it.proxy.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+                    it.proxy.startFlowWithClientId(clientId, ::ResultFlow, 5)
                 }
             }
 
+            latch.countDown()
+
             assertEquals(5, flowHandle.returnValue.getOrThrow(20.seconds))
             assertEquals(5, reattachedByStarter.returnValue.getOrThrow(20.seconds))
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `reattaching to existing completed flow using startFlowWithClientId for flow started by another user throws a permission exception`() {
+        val user = User("TonyStark", "I AM IRONMAN", setOf(Permissions.all()))
+        val spy = User("spy", "l33t h4ck4r", setOf(Permissions.all()))
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+
+            assertFailsWith<PermissionException> {
+                CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                    it.proxy.startFlowWithClientId(clientId, ::ResultFlow, 5)
+                }
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `reattaching to existing completed flow using startFlowWithClientId for flow started by another user throws a permission exception (after node restart)`() {
+        val user = User("TonyStark", "I AM IRONMAN", setOf(Permissions.all()))
+        val spy = User("spy", "l33t h4ck4r", setOf(Permissions.all()))
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet(), inMemoryDB = false)) {
+            var nodeA = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user, spy)).getOrThrow()
+            nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+
+            nodeA.stop()
+            nodeA = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user, spy)).getOrThrow(20.seconds)
+
+            assertFailsWith<PermissionException> {
+                CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                    it.proxy.startFlowWithClientId(clientId, ::ResultFlow, 5)
+                }
+            }
         }
     }
 
