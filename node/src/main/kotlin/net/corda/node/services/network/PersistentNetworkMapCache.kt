@@ -167,7 +167,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         synchronized(_changed) {
             val newNodes = mutableListOf<NodeInfo>()
             val updatedNodes = mutableListOf<Pair<NodeInfo, NodeInfo>>()
-            nodes.map { it to getPreviousNodeInfo(it.legalIdentities.first()) }
+            nodes.map { it to getNodeInfo(it.legalIdentities.first()) }
                     .forEach { (node, previousNode) ->
                         logger.info("Adding node with info: ${node.printWithKey()}")
                         when {
@@ -202,16 +202,16 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         logger.debug { "Done adding nodes with info: $nodes" }
     }
 
-    // Previous entry may have different key when node certificate is rotated
-    private fun getPreviousNodeInfo(party: Party): NodeInfo? {
+    // Obtain node info by its legal identity key or, if the key was rotated, by name.
+    private fun getNodeInfo(party: Party): NodeInfo? {
         val infoByKey = getNodesByLegalIdentityKey(party.owningKey).firstOrNull()
         return infoByKey ?: getPeerCertificateByLegalName(party.name)?.let {
             getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
         }
     }
 
-    // Previous entry may have different key when node certificate is rotated
-    private fun getPreviousNodeInfo(session: Session, party: Party): NodeInfoSchemaV1.PersistentNodeInfo? {
+    // Obtain node info by its legal identity key or, if the key was rotated, by name.
+    private fun getPersistentNodeInfo(session: Session, party: Party): NodeInfoSchemaV1.PersistentNodeInfo? {
         val infoByKey = findByIdentityKey(session, party.owningKey).firstOrNull()
         return infoByKey ?: queryIdentityByLegalName(session, party.name)?.let {
             findByIdentityKey(session, it.owningKey).firstOrNull()
@@ -298,8 +298,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     private fun updateInfoDB(nodeInfo: NodeInfo, session: Session, change: MapChange) {
-        // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
-        val info = getPreviousNodeInfo(session, nodeInfo.legalIdentitiesAndCerts.first().party)
+        val info = getPersistentNodeInfo(session, nodeInfo.legalIdentitiesAndCerts.first().party)
         val nodeInfoEntry = generateMappedObject(nodeInfo)
         if (info != null) {
             nodeInfoEntry.id = info.id

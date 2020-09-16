@@ -132,7 +132,7 @@ class NetworkMapCacheTest {
         val aliceCertificate2 = aliceInfo2.legalIdentitiesAndCerts.single()
         bobCache.addOrUpdateNode(aliceInfo2)
 
-        // Check that keys and certificates are different
+        // Check that keys are the same and certificates are different
         assertThat(aliceKey).isEqualTo(aliceKey2)
         assertThat(aliceCertificate.certificate).isNotEqualTo(aliceCertificate2.certificate)
 
