@@ -295,7 +295,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    @Suppress("ComplexMethod")
+    @Suppress("ComplexMethod", "NestedBlockDepth")
     private fun <A> startFlow(
             flowId: StateMachineRunId,
             flowLogic: FlowLogic<A>,
@@ -331,7 +331,7 @@ internal class SingleThreadedStateMachineManager(
                     // return an exception as they are not permitted to see the result of the flow
                     if (!it.isPermitted(context.principal())) {
                         return@startFlow openFuture<FlowStateMachineHandle<A>>().apply {
-                            setException(PermissionException("User not authorized to start flow with client id [$clientId]"))
+                            setException(PermissionException("A flow using this client id [$clientId] has already been started by another user"))
                         }
                     }
                     val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
