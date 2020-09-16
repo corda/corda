@@ -586,7 +586,8 @@ class DBCheckpointStorage(
                 or checkpoint.status = ${FlowStatus.KILLED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
         return query.resultList.stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId, Principal { it.startedBy })
+            val startedBy = it.startedBy
+            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId, Principal { startedBy })
         }
     }
 
