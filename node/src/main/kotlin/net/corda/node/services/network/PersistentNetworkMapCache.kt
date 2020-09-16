@@ -19,7 +19,6 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
@@ -32,6 +31,7 @@ import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.security.cert.CertPathValidatorException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.PersistenceException
@@ -235,12 +235,15 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     private fun verifyIdentities(node: NodeInfo): Boolean {
-        val failures = node.legalIdentitiesAndCerts.mapNotNull { Try.on { it.verify(identityService.trustAnchor) } as? Try.Failure }
-        if (failures.isNotEmpty()) {
-            logger.warn("$node has ${failures.size} invalid identities:")
-            failures.forEach { logger.warn("", it) }
+        for (identity in node.legalIdentitiesAndCerts) {
+            try {
+                identity.verify(identityService.trustAnchor)
+            } catch (e: CertPathValidatorException) {
+                logger.warn("$node has invalid identity:\nError:$e\nIdentity:${identity.certPath}")
+                return false
+            }
         }
-        return failures.isEmpty()
+        return true
     }
 
     private fun verifyAndRegisterIdentities(node: NodeInfo): Boolean {
