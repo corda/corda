@@ -341,7 +341,7 @@ class FlowClientIdTests {
         ResultFlow.hook = { counter++ }
         val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         flowHandle0.resultFuture.getOrThrow(20.seconds)
-        val removed = aliceNode.smm.removeClientId(clientId, aliceNode.user)
+        val removed = aliceNode.smm.removeClientId(clientId, aliceNode.user, false)
         // On new request with clientId, after the same clientId was removed, a brand new flow will start with that clientId
         val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         flowHandle1.resultFuture.getOrThrow(20.seconds)
@@ -364,7 +364,7 @@ class FlowClientIdTests {
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
         }
 
-        aliceNode.smm.removeClientId(clientId, aliceNode.user)
+        aliceNode.smm.removeClientId(clientId, aliceNode.user, false)
 
         // assert database status after remove
         aliceNode.services.database.transaction {
@@ -390,7 +390,7 @@ class FlowClientIdTests {
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
         }
 
-        aliceNode.smm.removeClientId(clientId, aliceNode.user)
+        aliceNode.smm.removeClientId(clientId, aliceNode.user, false)
 
         // assert database status after remove
         aliceNode.services.database.transaction {
@@ -418,7 +418,7 @@ class FlowClientIdTests {
 
         var removed = false
         while (!removed) {
-            removed = aliceNode.smm.removeClientId(clientId, aliceNode.user)
+            removed = aliceNode.smm.removeClientId(clientId, aliceNode.user, false)
             if (!removed) ++failedRemovals
             ++tries
             if (tries >= maxTries) {
@@ -781,7 +781,7 @@ class FlowClientIdTests {
         flows.map { it.resultFuture }.transpose().getOrThrow(30.seconds)
         assertFailsWith<java.lang.IllegalStateException> { failedFlow.resultFuture.getOrThrow(20.seconds) }
 
-        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds(aliceNode.user)
+        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds(aliceNode.user, false)
 
         lock.countDown()
 
@@ -814,10 +814,11 @@ class FlowClientIdTests {
             flowHandle0.resultFuture.getOrThrow()
         }
 
-        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds(aliceNode.user)
+        val finishedFlows = aliceNode.smm.finishedFlowsWithClientIds(aliceNode.user, false)
 
         assertFailsWith<KilledFlowException> {
-            finishedFlows.keys.single().let { aliceNode.smm.reattachFlowWithClientId<Int>(it, aliceNode.user)?.resultFuture?.getOrThrow() }
+            finishedFlows.keys.single()
+                .let { aliceNode.smm.reattachFlowWithClientId<Int>(it, aliceNode.user)?.resultFuture?.getOrThrow() }
         }
     }
 

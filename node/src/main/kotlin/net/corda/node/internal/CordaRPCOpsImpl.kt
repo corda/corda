@@ -178,9 +178,13 @@ internal class CordaRPCOpsImpl(
         }
     }
 
-    override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId, context().principal())
+    override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId, context().principal(), false)
 
-    override fun finishedFlowsWithClientIds(): Map<String, Boolean> = smm.finishedFlowsWithClientIds(context().principal())
+    override fun removeClientIdAsAdmin(clientId: String): Boolean = smm.removeClientId(clientId, context().principal(), true)
+
+    override fun finishedFlowsWithClientIds(): Map<String, Boolean> = smm.finishedFlowsWithClientIds(context().principal(), false)
+
+    override fun finishedFlowsWithClientIdsAsAdmin(): Map<String, Boolean> = smm.finishedFlowsWithClientIds(context().principal(), true)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
 

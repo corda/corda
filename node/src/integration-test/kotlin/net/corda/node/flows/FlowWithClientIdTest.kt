@@ -36,6 +36,7 @@ import java.util.concurrent.TimeoutException
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -291,8 +292,56 @@ class FlowWithClientIdTest {
     }
 
     @Test(timeout = 300_000)
+    fun `removeClientId does not remove mapping for flows started by another user`() {
+        val user = User("dan", "this is my password", setOf(Permissions.all()))
+        val spy = User("spy", "l33t h4ck4r", setOf(Permissions.all()))
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
+
+            flowHandle.returnValue.getOrThrow(20.seconds)
+
+            val removedBySpy = CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                it.proxy.removeClientId(clientId)
+            }
+
+            val reattachedByStarter = nodeA.rpc.reattachFlowWithClientId<Int>(clientId)?.returnValue?.getOrThrow(20.seconds)
+            val removedByStarter = nodeA.rpc.removeClientId(clientId)
+
+            assertEquals(5, reattachedByStarter)
+            assertTrue(removedByStarter)
+            assertFalse(removedBySpy)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `removeClientIdAsAdmin does remove mapping for flows started by another user`() {
+        val user = User("dan", "this is my password", setOf(Permissions.all()))
+        val spy = User("spy", "l33t h4ck4r", setOf(Permissions.all()))
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
+
+            flowHandle.returnValue.getOrThrow(20.seconds)
+
+            val removedBySpy = CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                it.proxy.removeClientIdAsAdmin(clientId)
+            }
+
+            val reattachedByStarter = nodeA.rpc.reattachFlowWithClientId<Int>(clientId)?.returnValue?.getOrThrow(20.seconds)
+            val removedByStarter = nodeA.rpc.removeClientIdAsAdmin(clientId)
+
+            assertNull(reattachedByStarter)
+            assertFalse(removedByStarter)
+            assertTrue(removedBySpy)
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `finishedFlowsWithClientIds does not return flows started by other users`() {
-        val user = User("Captain America", "That really is America's ass", setOf(Permissions.all()))
+        val user = User("CaptainAmerica", "That really is America's ass", setOf(Permissions.all()))
         val spy = User("nsa", "EternalBlue", setOf(Permissions.all()))
         val clientIdForUser = UUID.randomUUID().toString()
         val clientIdForSpy = UUID.randomUUID().toString()
@@ -315,6 +364,32 @@ class FlowWithClientIdTest {
                 assertEquals(1, spyFinishedFlows.size)
                 assertEquals(clientIdForSpy, spyFinishedFlows.keys.single())
                 assertEquals(10, it.proxy.reattachFlowWithClientId<Int>(spyFinishedFlows.keys.single())!!.returnValue.getOrThrow())
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `finishedFlowsWithClientIdsAsAdmin does return flows started by other users`() {
+        val user = User("CaptainAmerica", "That really is America's ass", setOf(Permissions.all()))
+        val spy = User("nsa", "EternalBlue", setOf(Permissions.all()))
+        val clientIdForUser = UUID.randomUUID().toString()
+        val clientIdForSpy = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user, spy)).getOrThrow()
+            val flowHandleStartedByUser = nodeA.rpc.startFlowWithClientId(clientIdForUser, ::ResultFlow, 5)
+
+            CordaRPCClient(nodeA.rpcAddress).start(spy.username, spy.password).use {
+                val flowHandleStartedBySpy = it.proxy.startFlowWithClientId(clientIdForSpy, ::ResultFlow, 10)
+
+                flowHandleStartedByUser.returnValue.getOrThrow(20.seconds)
+                flowHandleStartedBySpy.returnValue.getOrThrow(20.seconds)
+
+                val userFinishedFlows = nodeA.rpc.finishedFlowsWithClientIdsAsAdmin()
+                val spyFinishedFlows = it.proxy.finishedFlowsWithClientIdsAsAdmin()
+
+                assertEquals(2, userFinishedFlows.size)
+                assertEquals(2, spyFinishedFlows.size)
+                assertEquals(userFinishedFlows, spyFinishedFlows)
             }
         }
     }

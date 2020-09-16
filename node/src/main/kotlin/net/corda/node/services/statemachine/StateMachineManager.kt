@@ -120,7 +120,7 @@ interface StateMachineManager {
      *
      * @return whether the mapping was removed.
      */
-    fun removeClientId(clientId: String, user: Principal): Boolean
+    fun removeClientId(clientId: String, user: Principal, isAdmin: Boolean): Boolean
 
     /**
      * Returns all finished flows that were started with a client id.
@@ -128,7 +128,7 @@ interface StateMachineManager {
      * @return A [Map] containing client ids for finished flows, mapped to [true] if finished successfully,
      * [false] if completed exceptionally.
      */
-    fun finishedFlowsWithClientIds(user: Principal): Map<String, Boolean>
+    fun finishedFlowsWithClientIds(user: Principal, isAdmin: Boolean): Map<String, Boolean>
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call

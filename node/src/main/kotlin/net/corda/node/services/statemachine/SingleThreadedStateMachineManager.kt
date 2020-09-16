@@ -1166,11 +1166,11 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    override fun removeClientId(clientId: String, user: Principal): Boolean {
+    override fun removeClientId(clientId: String, user: Principal, isAdmin: Boolean): Boolean {
         var removedFlowId: StateMachineRunId? = null
         innerState.withLock {
             clientIdsToFlowIds.computeIfPresent(clientId) { _, existingStatus ->
-                if (existingStatus is FlowWithClientIdStatus.Removed && user == existingStatus.user) {
+                if (existingStatus is FlowWithClientIdStatus.Removed && (existingStatus.isPermitted(user) || isAdmin)) {
                     removedFlowId = existingStatus.flowId
                     null
                 } else {
@@ -1185,10 +1185,10 @@ internal class SingleThreadedStateMachineManager(
         return false
     }
 
-    override fun finishedFlowsWithClientIds(user: Principal): Map<String, Boolean> {
+    override fun finishedFlowsWithClientIds(user: Principal, isAdmin: Boolean): Map<String, Boolean> {
         return innerState.withLock {
             clientIdsToFlowIds.asSequence()
-                .filter { (_, status) -> status.isPermitted(user) }
+                .filter { (_, status) -> status.isPermitted(user) || isAdmin }
                 .filter { (_, status) -> status is FlowWithClientIdStatus.Removed }
                 .map { (clientId, status) -> clientId to (status as FlowWithClientIdStatus.Removed).succeeded }
                 .toMap()
