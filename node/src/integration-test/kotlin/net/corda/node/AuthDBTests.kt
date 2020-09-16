@@ -34,7 +34,7 @@ import kotlin.test.assertFailsWith
  */
 @RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest() {
-    private lateinit var node: NodeWithInfo
+    private var node: NodeWithInfo? = null
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB
 
@@ -94,8 +94,9 @@ class AuthDBTests : NodeBasedTest() {
                 )
         )
 
-        node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
-        client = CordaRPCClient(node.node.configuration.rpcOptions.address)
+        node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig).also { node ->
+            client = CordaRPCClient(node.node.configuration.rpcOptions.address)
+        }
     }
 
     @Test
@@ -216,7 +217,7 @@ class AuthDBTests : NodeBasedTest() {
 
     @After
     fun tearDown() {
-        node.node.stop()
+        node?.node?.stop()
         db.close()
     }
 
@@ -271,28 +272,26 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
         }
     }
 
-    private val dataSource: DataSource
-    private var connection: Connection? = null
+    private val connection: Connection
     private inline fun session(statement: (Statement) -> Unit) {
-        connection?.apply {
-            createStatement().use(statement)
-            commit()
-        }
+        connection.createStatement().use(statement)
+        connection.commit()
     }
 
     init {
-        dataSource = DataSourceFactory.createDataSource(Properties().apply {
+        require(users.map { it.username }.toSet().size == users.size) {
+            "Duplicate username in input"
+        }
+        connection = DataSourceFactory.createDataSource(Properties().apply {
             put("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             put("dataSource.url", jdbcUrl)
         }, false)
-        connection = dataSource.connection.apply {
-            autoCommit = false
-        }
+                .connection
+                .apply {
+                    autoCommit = false
+                }
         session {
             it.execute(DB_CREATE_SCHEMA)
-        }
-        require(users.map { it.username }.toSet().size == users.size) {
-            "Duplicate username in input"
         }
         users.forEach { insert(it) }
         roleAndPermissions.forEach { insert(it) }
@@ -300,7 +299,7 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
 
     override fun close() {
         // Close the connection, at which point the database will shut down
-        connection?.close()
+        connection.close()
     }
 }
 
