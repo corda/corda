@@ -54,6 +54,9 @@ class RPCPermissionsTests : AbstractRPCTest() {
             assertNotAllowed {
                 proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
             }
+            assertNotAllowed {
+                proxy.validatePermission("startFlow", "net.corda.flows.DummyFlow")
+            }
         }
     }
 
@@ -64,6 +67,10 @@ class RPCPermissionsTests : AbstractRPCTest() {
             val proxy = testProxyFor(adminUser)
             proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
             proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startFlowDynamicWithClientId", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startFlow", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlow", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startFlowWithClientId", "net.corda.flows.DummyFlow")
         }
     }
 
@@ -74,6 +81,10 @@ class RPCPermissionsTests : AbstractRPCTest() {
             val proxy = testProxyFor(joeUser)
             proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
             proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startFlowDynamicWithClientId", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startFlow", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlow", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startFlowWithClientId", "net.corda.flows.DummyFlow")
         }
     }
 
@@ -87,6 +98,18 @@ class RPCPermissionsTests : AbstractRPCTest() {
             }
             assertNotAllowed {
                 proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
+            }
+            assertNotAllowed {
+                proxy.validatePermission("startFlowDynamicWithClientId", "net.corda.flows.OtherFlow")
+            }
+            assertNotAllowed {
+                proxy.validatePermission("startFlow", "net.corda.flows.OtherFlow")
+            }
+            assertNotAllowed {
+                proxy.validatePermission("startTrackedFlow", "net.corda.flows.OtherFlow")
+            }
+            assertNotAllowed {
+                proxy.validatePermission("startFlowWithClientId", "net.corda.flows.OtherFlow")
             }
         }
     }
@@ -118,6 +141,16 @@ class RPCPermissionsTests : AbstractRPCTest() {
             proxy.validatePermission("startFlowDynamic", "net.corda.flows.DummyFlow")
             proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.DummyFlow")
             proxy.validatePermission("startTrackedFlowDynamic", "net.corda.flows.OtherFlow")
+            proxy.validatePermission("startFlowDynamicWithClientId", "net.corda.flows.OtherFlow")
+            proxy.validatePermission("startFlowDynamicWithClientId", "net.corda.flows.DummyFlow")
+
+            proxy.validatePermission("startFlow", "net.corda.flows.OtherFlow")
+            proxy.validatePermission("startFlow", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlow", "net.corda.flows.DummyFlow")
+            proxy.validatePermission("startTrackedFlow", "net.corda.flows.OtherFlow")
+            proxy.validatePermission("startFlowWithClientId", "net.corda.flows.OtherFlow")
+            proxy.validatePermission("startFlowWithClientId", "net.corda.flows.DummyFlow")
+
             assertNotAllowed {
                 proxy.validatePermission("startTrackedFlowDynamic", "net.banned.flows.OtherFlow")
             }
