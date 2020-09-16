@@ -22,6 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.sql.Connection
 import java.sql.Statement
 import java.util.*
 import javax.sql.DataSource
@@ -229,7 +230,7 @@ private data class RoleAndPermissions(val role: String, val permissions: List<St
  * Manage in-memory DB mocking a users database with the schema expected by Node's security manager
  */
 private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), roleAndPermissions: List<RoleAndPermissions> = emptyList()) : AutoCloseable {
-    val jdbcUrl = "jdbc:h2:mem:$name;DB_CLOSE_DELAY=-1"
+    val jdbcUrl = "jdbc:h2:mem:$name"
 
     companion object {
         const val DB_CREATE_SCHEMA = """
@@ -271,11 +272,11 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
     }
 
     private val dataSource: DataSource
+    private var connection: Connection? = null
     private inline fun session(statement: (Statement) -> Unit) {
-        dataSource.connection.use {
-            it.autoCommit = false
-            it.createStatement().use(statement)
-            it.commit()
+        connection?.apply {
+            createStatement().use(statement)
+            commit()
         }
     }
 
@@ -284,6 +285,9 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
             put("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             put("dataSource.url", jdbcUrl)
         }, false)
+        connection = dataSource.connection.apply {
+            autoCommit = false
+        }
         session {
             it.execute(DB_CREATE_SCHEMA)
         }
@@ -295,11 +299,8 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
     }
 
     override fun close() {
-        dataSource.connection.use {
-            it.createStatement().use {
-                it.execute("DROP ALL OBJECTS")
-            }
-        }
+        // Close the connection, at which point the database will shut down
+        connection?.close()
     }
 }
 
