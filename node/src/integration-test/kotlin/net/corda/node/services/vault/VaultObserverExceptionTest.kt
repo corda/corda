@@ -29,7 +29,7 @@ import kotlin.test.assertFailsWith
 
 class VaultObserverExceptionTest {
     companion object {
-
+        val waitForFlowDuration = 45.seconds
         val log = contextLogger()
 
         private fun testCordapps() = listOf(
@@ -49,7 +49,7 @@ class VaultObserverExceptionTest {
      * Causing an SqlException via a syntax error in a vault observer causes the flow to hit the
      * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation
      */
-    @Test
+    @Test(timeout=300_000)
     fun unhandledSqlExceptionFromVaultObserverGetsHospitatlised() {
         val testControlFuture = openFuture<Boolean>().toCompletableFuture()
 
@@ -73,7 +73,7 @@ class VaultObserverExceptionTest {
                     "Syntax Error in Custom SQL",
                     CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
             ).returnValue.then { testControlFuture.complete(false) }
-            val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
+            val foundExpectedException = testControlFuture.getOrThrow(waitForFlowDuration)
 
             Assert.assertTrue(foundExpectedException)
         }
@@ -83,7 +83,7 @@ class VaultObserverExceptionTest {
      * Throwing a random (non-SQL releated) exception from a vault observer causes the flow to be
      * aborted when unhandled in user code
      */
-    @Test
+    @Test(timeout=300_000)
     fun otherExceptionsFromVaultObserverBringFlowDown() {
         driver(DriverParameters(
                 startNodesInProcess = true,
@@ -95,7 +95,7 @@ class VaultObserverExceptionTest {
                         ::Initiator,
                         "InvalidParameterException",
                         CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter)
-                ).returnValue.getOrThrow(30.seconds)
+                ).returnValue.getOrThrow(waitForFlowDuration)
             }
         }
     }
@@ -104,7 +104,7 @@ class VaultObserverExceptionTest {
      * A random exception from a VaultObserver will bring the Rx Observer down, but can be handled in the flow
      * triggering the observer, and the flow will continue successfully (for some values of success)
      */
-    @Test
+    @Test(timeout=300_000)
     fun otherExceptionsFromVaultObserverCanBeSuppressedInFlow() {
         driver(DriverParameters(
                 startNodesInProcess = true,
@@ -114,7 +114,7 @@ class VaultObserverExceptionTest {
             aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
-                    .returnValue.getOrThrow(30.seconds)
+                    .returnValue.getOrThrow(waitForFlowDuration)
 
         }
     }
@@ -123,7 +123,7 @@ class VaultObserverExceptionTest {
      * If the state we are trying to persist triggers a persistence exception, the flow hospital will retry the flow
      * and keep it in for observation if errors persist.
      */
-    @Test
+    @Test(timeout=300_000)
     fun persistenceExceptionOnCommitGetsRetriedAndThenGetsKeptForObservation() {
         var admitted = 0
         var observation = 0
@@ -152,7 +152,7 @@ class VaultObserverExceptionTest {
      * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
      * the vault observer will trigger a flush that throws. This will be kept in for observation.
      */
-    @Test
+    @Test(timeout=300_000)
     fun persistenceExceptionOnFlushGetsRetriedAndThenGetsKeptForObservation() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
@@ -179,7 +179,7 @@ class VaultObserverExceptionTest {
                 aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(
                         CreateStateFlow.ErrorTarget.ServiceValidUpdate,
                         CreateStateFlow.ErrorTarget.TxInvalidState))
-                        .returnValue.getOrThrow(30.seconds)
+                        .returnValue.getOrThrow(waitForFlowDuration)
             }
         }
         Assert.assertTrue("Flow has not been to hospital", counter > 0)
@@ -193,7 +193,7 @@ class VaultObserverExceptionTest {
      * does not change the outcome - the first exception in the service will bring the service down and will
      * be caught by the flow, but the state machine will error the flow anyway as Corda code threw.
      */
-    @Test
+    @Test(timeout=300_000)
     fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInFlow() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
@@ -220,7 +220,7 @@ class VaultObserverExceptionTest {
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(waitForFlowDuration) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
@@ -231,7 +231,7 @@ class VaultObserverExceptionTest {
      * Trying to catch and suppress that exception inside the service does protect the service, but the new
      * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
      */
-    @Test
+    @Test(timeout=300_000)
     fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInService() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
@@ -257,7 +257,7 @@ class VaultObserverExceptionTest {
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(waitForFlowDuration) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
@@ -267,7 +267,7 @@ class VaultObserverExceptionTest {
      * therefore handling it in flow code is no good, and the error will be passed to the flow hospital via the
      * interceptor.
      */
-    @Test
+    @Test(timeout=300_000)
     fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
         val testControlFuture = openFuture<Boolean>()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
@@ -288,7 +288,7 @@ class VaultObserverExceptionTest {
                 log.info("Flow has finished")
                 testControlFuture.set(false)
             }
-            Assert.assertTrue("Flow has not been kept in hospital", testControlFuture.getOrThrow(30.seconds))
+            Assert.assertTrue("Flow has not been kept in hospital", testControlFuture.getOrThrow(waitForFlowDuration))
         }
     }
 
@@ -296,7 +296,7 @@ class VaultObserverExceptionTest {
      * User code throwing a syntax error and catching suppressing that within the observer code is fine
      * and should not have any impact on the rest of the flow
      */
-    @Test
+    @Test(timeout=300_000)
     fun syntaxErrorInUserCodeInServiceCanBeSuppressedInService() {
         driver(DriverParameters(
                 startNodesInProcess = true,
@@ -307,7 +307,7 @@ class VaultObserverExceptionTest {
                     CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError,
                     CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
-            flowResult.getOrThrow(30.seconds)
+            flowResult.getOrThrow(waitForFlowDuration)
         }
     }
 }

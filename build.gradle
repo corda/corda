@@ -67,8 +67,8 @@ buildscript {
     ext.jersey_version = '2.25'
     ext.servlet_version = '4.0.1'
     ext.assertj_version = '3.12.2'
-    ext.slf4j_version = '1.7.30'
-    ext.log4j_version = '2.12.1'
+    ext.slf4j_version = '1.7.26'
+    ext.log4j_version = '2.11.2'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
@@ -309,7 +309,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        forkEvery = 20
+        forkEvery = 15
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
