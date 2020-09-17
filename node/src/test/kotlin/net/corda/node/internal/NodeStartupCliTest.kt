@@ -96,10 +96,13 @@ class NodeStartupCliTest {
         temporaryFolder.create()
         val baseDir = temporaryFolder.newFolder("baseDir")
 
-        CommandLine.populateCommand(startup,
-                "--log-to-console", "--logging-level=DEBUG",
+        startup.args = arrayOf()
+
+        startup.cmd.parseArgs(
+                "--logging-level=DEBUG", "--log-to-console",
                 "--base-directory", baseDir.absolutePath,
-                "initial-registration", "--network-root-truststore-password=password")
+                "initial-registration", "--network-root-truststore-password=password"
+                )
 
         Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.DEBUG)
         Assertions.assertThat(startup.verbose).isEqualTo(true)
@@ -113,10 +116,13 @@ class NodeStartupCliTest {
         temporaryFolder.create()
         val baseDir = temporaryFolder.newFolder("baseDir")
 
-        CommandLine.populateCommand(startup,
+        startup.args = arrayOf()
+
+        startup.cmd.parseArgs(
                 "--base-directory", baseDir.absolutePath,
                 "initial-registration", "--network-root-truststore-password=password",
-                "--log-to-console", "--logging-level=DEBUG")
+                "--logging-level=DEBUG", "--log-to-console"
+        )
 
         Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.DEBUG)
         Assertions.assertThat(startup.verbose).isEqualTo(true)

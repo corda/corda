@@ -180,6 +180,11 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
 @Command(helpCommand = true)
 class InstallShellExtensionsParser(private val cliWrapper: CordaCliWrapper) : CliWrapperBase("install-shell-extensions", "Install alias and autocompletion for bash and zsh") {
     private val generator = ShellExtensionsGenerator(cliWrapper)
+
+    override fun initLogging(): Boolean {
+        return cliWrapper.initLogging()
+    }
+
     override fun runProgram(): Int {
         return generator.installShellExtensions()
     }

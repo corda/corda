@@ -78,7 +78,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
             override fun handleExecutionException(ex: ExecutionException, parseResult: ParseResult?): List<Any> {
 
                 val throwable = ex.cause ?: ex
-                if (this@start.verbose || this@start.subCommands.any { it.verbose }) {
+                if (this@start.verbose || this@start.subCommands.any { verbose }) {
                     throwable.printStackTrace()
                 }
                 printError(throwable.rootMessage ?: "Use --verbose for more details")
@@ -101,7 +101,6 @@ fun CordaCliWrapper.start(args: Array<String>) {
 
         // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
         exitProcess(ExitCodes.SUCCESS)
-
 }
 
 @Command(mixinStandardHelpOptions = true,
@@ -122,39 +121,16 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
     // needs to be parameterless for autocomplete to work.
     lateinit var args: Array<String>
 
-    @Option(names = ["-v", "--verbose", "--log-to-console"], description = ["If set, prints logging to the console as well as to a file."])
-    var verbose: Boolean = false
-
-    @Option(names = ["--logging-level"],
-            completionCandidates = LoggingLevelConverter.LoggingLevels::class,
-            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
-            converter = [LoggingLevelConverter::class]
-    )
-    var loggingLevel: Level = Level.INFO
-
-    // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
-    // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
-    open fun initLogging(): Boolean {
-        System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
-        if (verbose) {
-            System.setProperty("consoleLogLevel", specifiedLogLevel)
-        }
-        System.setProperty("log-path", Paths.get(".").toString())
-        return true
-    }
+    abstract fun initLogging(): Boolean
 
     // Override this function with the actual method to be run once all the arguments have been parsed. The return number
     // is the exit code to be returned
     abstract fun runProgram(): Int
 
     override fun call(): Int {
-        initLogging()
+        //initLogging()
         logger.info("Application Args: ${args.joinToString(" ")}")
         return runProgram()
-    }
-
-    val specifiedLogLevel: String by lazy {
-        System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
     }
 }
 
@@ -169,6 +145,36 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
     }
 
     private val installShellExtensionsParser = InstallShellExtensionsParser(this)
+
+    private val specifiedLogLevel: String by lazy {
+        System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    }
+
+    // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
+    // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
+    override fun initLogging(): Boolean {
+        System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
+        if (verbose) {
+            System.setProperty("consoleLogLevel", specifiedLogLevel)
+        }
+        System.setProperty("log-path", Paths.get(".").toString())
+        return true
+    }
+
+    @Option(
+            names = ["-v", "--verbose", "--log-to-console"],
+            description = ["If set, prints logging to the console as well as to a file."],
+            scope = ScopeType.INHERIT
+    )
+    var verbose: Boolean = false
+
+    @Option(names = ["--logging-level"],
+            completionCandidates = LoggingLevelConverter.LoggingLevels::class,
+            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
+            converter = [LoggingLevelConverter::class],
+            scope = ScopeType.INHERIT
+    )
+    var loggingLevel: Level = Level.INFO
 
     protected open fun additionalSubCommands(): Set<CliWrapperBase> = emptySet()
 
