@@ -59,7 +59,7 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
         const val LOGS_DIRECTORY_NAME = "logs"
     }
 
-    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
+    //override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     @Mixin
     val cmdLineOptions = SharedNodeCmdLineOptions()
@@ -512,14 +512,14 @@ interface NodeStartupLogging {
     }
 }
 
-fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
-    //System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
+fun initLogging(baseDirectory: Path, specifiedLogLevel: String = "INFO", verbose: Boolean = false): Boolean {
+    System.setProperty("defaultLogLevel",  specifiedLogLevel) // These properties are referenced from the XML config file.
     System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
-//    if (verbose) {
-//        System.setProperty("consoleLoggingEnabled", "true")
-//        System.setProperty("consoleLogLevel", specifiedLogLevel)
-//        Node.renderBasicInfoToConsole = false
-//    }
+    if (verbose) {
+        System.setProperty("consoleLoggingEnabled", "true")
+        System.setProperty("consoleLogLevel", specifiedLogLevel)
+        Node.renderBasicInfoToConsole = false
+    }
 
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME

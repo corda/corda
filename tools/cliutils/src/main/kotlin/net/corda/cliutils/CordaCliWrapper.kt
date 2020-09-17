@@ -121,8 +121,6 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
     // needs to be parameterless for autocomplete to work.
     lateinit var args: Array<String>
 
-    abstract fun initLogging(): Boolean
-
     // Override this function with the actual method to be run once all the arguments have been parsed. The return number
     // is the exit code to be returned
     abstract fun runProgram(): Int
@@ -152,7 +150,7 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
-    override fun initLogging(): Boolean {
+    open fun initLogging(): Boolean {
         System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
         if (verbose) {
             System.setProperty("consoleLogLevel", specifiedLogLevel)
