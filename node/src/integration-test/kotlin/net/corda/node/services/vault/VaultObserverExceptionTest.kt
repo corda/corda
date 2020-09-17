@@ -29,7 +29,7 @@ import kotlin.test.assertFailsWith
 
 class VaultObserverExceptionTest {
     companion object {
-
+        val waitForFlowDuration = 45.seconds
         val log = contextLogger()
 
         private fun testCordapps() = listOf(
@@ -73,7 +73,7 @@ class VaultObserverExceptionTest {
                     "Syntax Error in Custom SQL",
                     CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
             ).returnValue.then { testControlFuture.complete(false) }
-            val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
+            val foundExpectedException = testControlFuture.getOrThrow(waitForFlowDuration)
 
             Assert.assertTrue(foundExpectedException)
         }
@@ -95,7 +95,7 @@ class VaultObserverExceptionTest {
                         ::Initiator,
                         "InvalidParameterException",
                         CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter)
-                ).returnValue.getOrThrow(30.seconds)
+                ).returnValue.getOrThrow(waitForFlowDuration)
             }
         }
     }
@@ -114,7 +114,7 @@ class VaultObserverExceptionTest {
             aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
-                    .returnValue.getOrThrow(30.seconds)
+                    .returnValue.getOrThrow(waitForFlowDuration)
 
         }
     }
@@ -179,7 +179,7 @@ class VaultObserverExceptionTest {
                 aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(
                         CreateStateFlow.ErrorTarget.ServiceValidUpdate,
                         CreateStateFlow.ErrorTarget.TxInvalidState))
-                        .returnValue.getOrThrow(30.seconds)
+                        .returnValue.getOrThrow(waitForFlowDuration)
             }
         }
         Assert.assertTrue("Flow has not been to hospital", counter > 0)
@@ -220,7 +220,7 @@ class VaultObserverExceptionTest {
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(waitForFlowDuration) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
@@ -257,7 +257,7 @@ class VaultObserverExceptionTest {
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(waitForFlowDuration) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
@@ -288,7 +288,7 @@ class VaultObserverExceptionTest {
                 log.info("Flow has finished")
                 testControlFuture.set(false)
             }
-            Assert.assertTrue("Flow has not been kept in hospital", testControlFuture.getOrThrow(30.seconds))
+            Assert.assertTrue("Flow has not been kept in hospital", testControlFuture.getOrThrow(waitForFlowDuration))
         }
     }
 
@@ -307,7 +307,7 @@ class VaultObserverExceptionTest {
                     CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError,
                     CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
-            flowResult.getOrThrow(30.seconds)
+            flowResult.getOrThrow(waitForFlowDuration)
         }
     }
 }
