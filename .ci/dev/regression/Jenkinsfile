@@ -128,6 +128,24 @@ pipeline {
                             archiveArtifacts artifacts: '**/*.log', fingerprint: false
                             archiveArtifacts artifacts: '**/build/reports/tests/**', fingerprint: false
                             junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            /*
+                             * Copy all JUnit results files into a single top level directory.
+                             * This is necessary to stop the allure plugin from hitting out
+                             * of memory errors due to being passed many directories with
+                             * long paths.
+                             *
+                             * File names are pre-pended with a prefix when
+                             * copied to avoid collisions between files where the same test
+                             * classes have run on multiple agents.
+                             */
+                            fileOperations([fileCopyOperation(
+                                    includes: '**/build/test-results/**/*.xml',
+                                    targetLocation: 'allure-input',
+                                    flattenFiles: true,
+                                    renameFiles: true,
+                                    sourceCaptureExpression: '.*/([^/]+)$',
+                                    targetNameExpression: 'other-agent-$1')])
+                            stash name: 'allure-input', includes: 'allure-input/**', useDefaultExcludes: false
                         }
                         cleanup {
                             deleteDir() /* clean up our workspace */
@@ -258,6 +276,7 @@ pipeline {
             archiveArtifacts artifacts: '**/*.log', fingerprint: false
             archiveArtifacts artifacts: '**/build/reports/tests/**', fingerprint: false
             junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+            unstash 'allure-input'
 
             script {
                 try {
@@ -267,17 +286,17 @@ pipeline {
                      * of memory errors due to being passed many directories with
                      * long paths.
                      *
-                     * File names are pre-pended with the pod number when
+                     * File names are pre-pended with a prefix when
                      * copied to avoid collisions between files where the same test
-                     * classes have run on multiple pods.
+                     * classes have run on multiple agents.
                      */
                     fileOperations([fileCopyOperation(
-                            includes: '**/test-results-xml/**/test-runs/test-reports/**',
+                            includes: '**/build/test-results/**/*.xml',
                             targetLocation: 'allure-input',
                             flattenFiles: true,
                             renameFiles: true,
-                            sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
-                            targetNameExpression: '$1-$2')])
+                            sourceCaptureExpression: '.*/([^/]+)$',
+                            targetNameExpression: 'same-agent-$1')])
                     allure includeProperties: false,
                             jdk: '',
                             results: [[path: '**/allure-input']]
