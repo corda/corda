@@ -52,10 +52,15 @@ String COMMON_GRADLE_PARAMS = [
 
 pipeline {
     agent { label 'standard' }
+
+    /*
+     * List options in alphabetical order
+     */
     options {
-        timestamps()
-        timeout(time: 6, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        parallelsAlwaysFailFast()
+        timeout(time: 6, unit: 'HOURS')
+        timestamps()
     }
 
     parameters {
@@ -85,6 +90,11 @@ pipeline {
             }
         }
 
+        stage('Stash') {
+            steps {
+                stash name: 'compiled', useDefaultExcludes: false
+            }
+        }
         stage('Sonatype Check') {
             steps {
                 script {
@@ -104,53 +114,92 @@ pipeline {
             }
         }
 
-        stage('Unit Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'test'
-                ].join(' ')
-            }
-        }
+        stage('All Tests') {
+            parallel {
+                stage('Another agent') {
+                    agent {
+                        label 'standard'
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                            archiveArtifacts artifacts: '**/build/reports/tests/**', fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'jar'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Unit Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'test'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Smoke Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'smokeTest'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Slow Integration Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'slowIntegrationTest'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Same agent') {
+                    stages {
+                        stage('Integration Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'integrationTest'
+                                ].join(' ')
+                            }
+                        }
 
-        stage('Integration Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'integrationTest'
-                ].join(' ')
-            }
-        }
-
-        stage('Smoke Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'smokeTest'
-                ].join(' ')
-            }
-        }
-
-        stage('Slow Integration Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'slowIntegrationTest'
-                ].join(' ')
-            }
-        }
-
-        stage('Deploy Node') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'deployNode'
-                ].join(' ')
+                        stage('Deploy Node') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'deployNode'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
             }
         }
 
