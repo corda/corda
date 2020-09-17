@@ -1,0 +1,14 @@
+apply plugin: 'kotlin'
+
+dependencies {
+    compile project(":core")
+}
+
+jar {
+    baseName "testing-sleeping-cordapp"
+    manifest {
+        // This JAR is part of Corda's testing framework.
+        // Driver will not include it as part of an out-of-process node.
+        attributes('Corda-Testing': true)
+    }
+}
