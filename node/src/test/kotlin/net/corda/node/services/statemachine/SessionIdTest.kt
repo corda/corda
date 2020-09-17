@@ -21,7 +21,7 @@ class SessionIdTest {
                 .isInstanceOf(IllegalArgumentException::class.java)
                 .hasMessageContaining("The size of a session identifier cannot exceed 128 bits, but it was")
 
-        val correctSessionId = SessionId(LARGEST_SESSION_ID_VALUE)
+        SessionId(LARGEST_SESSION_ID_VALUE)
     }
 
     @Test(timeout=300_000)

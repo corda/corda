@@ -39,7 +39,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessageIdentifier
-import net.corda.node.services.messaging.SenderDeduplicationInfo
 import net.corda.node.services.messaging.SenderSequenceNumber
 import net.corda.node.services.messaging.SenderUUID
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine

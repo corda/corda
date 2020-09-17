@@ -688,7 +688,8 @@
     <ID>LongParameterList:ServiceHubInternal.kt$ServiceHubInternal.Companion$(statesToRecord: StatesToRecord, txs: Collection&lt;SignedTransaction&gt;, validatedTransactions: WritableTransactionStorage, stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage, vaultService: VaultServiceInternal, database: CordaPersistence)</ID>
     <ID>LongParameterList:SignatureConstraintVersioningTests.kt$SignatureConstraintVersioningTests$( cordapp: CustomCordapp, newCordapp: CustomCordapp, whiteListedCordapps: Map&lt;ContractClassName, List&lt;CustomCordapp&gt;&gt;, systemProperties: Map&lt;String, String&gt;, startNodesInProcess: Boolean, minimumPlatformVersion: Int = 4, specifyExistingConstraint: Boolean = false, addAnotherAutomaticConstraintState: Boolean = false )</ID>
     <ID>LongParameterList:SinglePartyNotaryService.kt$SinglePartyNotaryService$( inputs: List&lt;StateRef&gt;, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List&lt;StateRef&gt; )</ID>
-    <ID>LongParameterList:StateMachineState.kt$Checkpoint.Companion$( invocationContext: InvocationContext, flowStart: FlowStart, flowLogicClass: Class&lt;FlowLogic&lt;*&gt;&gt;, frozenFlowLogic: SerializedBytes&lt;FlowLogic&lt;*&gt;&gt;, ourIdentity: Party, subFlowVersion: SubFlowVersion, isEnabledTimedFlow: Boolean )</ID>
+    <ID>LongParameterList:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$( sessionMessage: ExistingSessionMessage, sender: Party, externalEvent: ExternalEvent.ExternalMessageEvent, messageIdentifier: MessageIdentifier, senderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber? )</ID>
+    <ID>LongParameterList:StateMachineState.kt$Checkpoint.Companion$( invocationContext: InvocationContext, flowStart: FlowStart, flowLogicClass: Class&lt;FlowLogic&lt;*&gt;&gt;, frozenFlowLogic: SerializedBytes&lt;FlowLogic&lt;*&gt;&gt;, ourIdentity: Party, subFlowVersion: SubFlowVersion, isEnabledTimedFlow: Boolean, timestamp: Instant )</ID>
     <ID>LongParameterList:TLSAuthenticationTests.kt$TLSAuthenticationTests$( rootCAScheme: SignatureScheme, intermediateCAScheme: SignatureScheme, client1CAScheme: SignatureScheme, client1TLSScheme: SignatureScheme, client2CAScheme: SignatureScheme, client2TLSScheme: SignatureScheme )</ID>
     <ID>LongParameterList:TLSAuthenticationTests.kt$TLSAuthenticationTests$( serverSocketFactory: SSLServerSocketFactory, clientSocketFactory: SSLSocketFactory, serverPort: Int = 0, // Use 0 to get first free socket. clientPort: Int = 0, // Use 0 to get first free socket. cipherSuitesServer: Array&lt;String&gt; = CORDA_TLS_CIPHER_SUITES, cipherSuitesClient: Array&lt;String&gt; = CORDA_TLS_CIPHER_SUITES )</ID>
     <ID>LongParameterList:TransactionDSLInterpreter.kt$TransactionDSLInterpreter$(contractClassName: ContractClassName, label: String?, notary: Party, encumbrance: Int?, attachmentConstraint: AttachmentConstraint, contractState: ContractState)</ID>
@@ -894,6 +895,13 @@
     <ID>MagicNumber:MainView.kt$MainView$150</ID>
     <ID>MagicNumber:MainView.kt$MainView$30</ID>
     <ID>MagicNumber:MainView.kt$MainView$5.0</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$19</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$20</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$28</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$29</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$3</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$61</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$62</ID>
     <ID>MagicNumber:MessageSizeChecksInterceptor.kt$ArtemisMessageSizeChecksInterceptor$4</ID>
     <ID>MagicNumber:MigrationNamedCacheFactory.kt$MigrationNamedCacheFactory$1024L</ID>
     <ID>MagicNumber:MockContractAttachment.kt$113</ID>
@@ -2322,6 +2330,7 @@
     <ID>WildcardImport:ServiceHub.kt$import net.corda.core.node.services.*</ID>
     <ID>WildcardImport:ServiceHubInternal.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:ServicesForResolutionImpl.kt$import net.corda.core.contracts.*</ID>
+    <ID>WildcardImport:SessionIdTest.kt$import org.assertj.core.api.Assertions.*</ID>
     <ID>WildcardImport:SettingsModel.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:SettingsModel.kt$import tornadofx.*</ID>
     <ID>WildcardImport:SharedContexts.kt$import net.corda.core.serialization.*</ID>

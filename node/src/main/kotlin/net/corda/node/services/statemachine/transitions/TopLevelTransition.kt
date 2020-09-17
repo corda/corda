@@ -295,7 +295,7 @@ class TopLevelTransition(
     }
 
     private fun TransitionBuilder.sendEndMessages() {
-        val sendEndMessageActions = startingState.checkpoint.checkpointState.sessions.map { (sessionId, state) ->
+        val sendEndMessageActions = startingState.checkpoint.checkpointState.sessions.map { (_, state) ->
             if (state is SessionState.Initiated) {
                 val message = ExistingSessionMessage(state.peerSinkSessionId, EndSessionMessage)
                 val messageType = MessageType.inferFromMessage(message)

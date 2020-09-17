@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import net.corda.core.crypto.SecureHash
+import net.corda.node.services.messaging.MessageIdentifier.Companion.SHARD_SIZE_IN_CHARS
 import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
 import java.lang.IllegalStateException
@@ -27,20 +28,22 @@ data class MessageIdentifier(
         val timestamp: Instant
 ) {
     init {
-        require(shardIdentifier.length == 8) { "Shard identifier needs to be 8 characters long, but it was $shardIdentifier" }
+        require(shardIdentifier.length == SHARD_SIZE_IN_CHARS) { "Shard identifier needs to be $SHARD_SIZE_IN_CHARS characters long, but it was $shardIdentifier" }
     }
 
     companion object {
+        const val SHARD_SIZE_IN_CHARS = 8
         const val LONG_SIZE_IN_HEX = 16 // 64 / 4
         const val SESSION_ID_SIZE_IN_HEX = SessionId.MAX_BIT_SIZE / 4
+        const val HEX_RADIX = 16
 
         fun parse(id: String): MessageIdentifier {
             val prefix = id.substring(0, 2)
             val messageType = prefixToMessageType(prefix)
-            val timestamp = java.lang.Long.parseUnsignedLong(id.substring(3, 19), 16)
+            val timestamp = java.lang.Long.parseUnsignedLong(id.substring(3, 19), HEX_RADIX)
             val shardIdentifier = id.substring(20, 28)
-            val sessionId = BigInteger(id.substring(29, 61), 16)
-            val sessionSequenceNumber = Integer.parseInt(id.substring(62), 16)
+            val sessionId = BigInteger(id.substring(29, 61), HEX_RADIX)
+            val sessionSequenceNumber = Integer.parseInt(id.substring(62), HEX_RADIX)
             return MessageIdentifier(messageType, shardIdentifier, SessionId(sessionId), sessionSequenceNumber, Instant.ofEpochMilli(timestamp))
         }
 
@@ -79,7 +82,7 @@ data class MessageIdentifier(
 }
 
 fun generateShardId(flowIdentifier: String): String {
-    return SecureHash.sha256(flowIdentifier).prefixChars(8)
+    return SecureHash.sha256(flowIdentifier).prefixChars(SHARD_SIZE_IN_CHARS)
 }
 
 /**
