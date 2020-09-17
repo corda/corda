@@ -79,7 +79,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val runMigrationScriptsCli by lazy { RunMigrationScriptsCli(startup) }
     private val synchroniseAppSchemasCli by lazy { SynchroniseSchemasCli(startup) }
 
-    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
+    //override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun additionalSubCommands() = setOf(networkCacheCli,
             justGenerateNodeInfoCli,
@@ -144,6 +144,38 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
                 override fun run(node: Node) = startup.startNode(node, startupTime)
             }, requireCertificates = true)
         }
+    }
+
+    override fun initLogging(): Boolean {
+        val baseDirectory = cmdLineOptions.baseDirectory
+
+        System.setProperty("defaultLogLevel",  specifiedLogLevel) // These properties are referenced from the XML config file.
+        System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
+        if (verbose) {
+            System.setProperty("consoleLoggingEnabled", "true")
+            System.setProperty("consoleLogLevel", specifiedLogLevel)
+            Node.renderBasicInfoToConsole = false
+        }
+
+        //Test for access to the logging path and shutdown if we are unable to reach it.
+        val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
+        try {
+            logPath.safeSymbolicRead().createDirectories()
+        } catch (e: IOException) {
+            printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
+            return false
+        } catch (e: SecurityException) {
+            printError("Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+            return false
+        }
+        if (!logPath.isDirectory()) {
+            printError("Unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+            return false
+        }
+
+        SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
+        SLF4JBridgeHandler.install()
+        return true
     }
 }
 
@@ -510,34 +542,4 @@ interface NodeStartupLogging {
             else -> error.logAsUnexpected("Exception during node startup")
         }
     }
-}
-
-fun initLogging(baseDirectory: Path, specifiedLogLevel: String = "INFO", verbose: Boolean = false): Boolean {
-    System.setProperty("defaultLogLevel",  specifiedLogLevel) // These properties are referenced from the XML config file.
-    System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
-    if (verbose) {
-        System.setProperty("consoleLoggingEnabled", "true")
-        System.setProperty("consoleLogLevel", specifiedLogLevel)
-        Node.renderBasicInfoToConsole = false
-    }
-
-    //Test for access to the logging path and shutdown if we are unable to reach it.
-    val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
-    try {
-        logPath.safeSymbolicRead().createDirectories()
-    } catch (e: IOException) {
-        printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
-        return false
-    } catch (e: SecurityException) {
-        printError("Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
-        return false
-    }
-    if (!logPath.isDirectory()) {
-        printError("Unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
-        return false
-    }
-
-    SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
-    SLF4JBridgeHandler.install()
-    return true
 }

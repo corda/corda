@@ -63,44 +63,33 @@ fun CordaCliWrapper.start(args: Array<String>) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
-        val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
-            Help.Ansi.ON
-        } else {
-            Help.Ansi.AUTO
+    val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
+        Help.Ansi.ON
+    } else {
+        Help.Ansi.AUTO
+    }
+
+    // only print stacktraces if verbose requested by users
+    val executionExceptionHandler = IExecutionExceptionHandler { ex: Exception, _: CommandLine, _: ParseResult ->
+        val throwable = ex.cause ?: ex
+        if (verbose) {
+            throwable.printStackTrace()
         }
 
-        val exceptionHandler = object : DefaultExceptionHandler<List<Any>>() {
+        ExitCodes.FAILURE
+    }
 
-            override fun handleParseException(ex: ParameterException?, args: Array<out String>?): List<Any> {
-                super.handleParseException(ex, args)
-                return listOf(ExitCodes.FAILURE)
-            }
-            override fun handleExecutionException(ex: ExecutionException, parseResult: ParseResult?): List<Any> {
+    // init logging before invoking the business logic
+    val executionStrategy = IExecutionStrategy { parseResult: ParseResult ->
+        initLogging()
+        RunLast().useErr(System.err).useOut(System.out).useAnsi(defaultAnsiMode).execute(parseResult)
+    }
 
-                val throwable = ex.cause ?: ex
-                if (this@start.verbose || this@start.subCommands.any { verbose }) {
-                    throwable.printStackTrace()
-                }
-                printError(throwable.rootMessage ?: "Use --verbose for more details")
-                return listOf(ExitCodes.FAILURE)
-            }
-        }
-        @Suppress("SpreadOperator")
-        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
-                exceptionHandler.useErr(System.err).useAnsi(defaultAnsiMode), *args)
+    cmd.executionExceptionHandler = executionExceptionHandler // only print stacktraces if verbose requested by users
+    cmd.executionStrategy = executionStrategy // init logging before invoking the business logic
 
-
-        // If an error code has been returned, use this and exit
-        results?.firstOrNull()?.let {
-            if (it is Int) {
-                exitProcess(it)
-            } else {
-                exitProcess(ExitCodes.FAILURE)
-            }
-        }
-
-        // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
-        exitProcess(ExitCodes.SUCCESS)
+    @Suppress("SpreadOperator")
+    exitProcess(cmd.execute(*args))
 }
 
 @Command(mixinStandardHelpOptions = true,
@@ -144,7 +133,7 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 
     private val installShellExtensionsParser = InstallShellExtensionsParser(this)
 
-    private val specifiedLogLevel: String by lazy {
+    val specifiedLogLevel: String by lazy {
         System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
     }
 
