@@ -340,9 +340,9 @@ allprojects {
             attributes('Corda-Docs-Link': corda_docs_link)
         }
     }
-
+    
     tasks.withType(Test).configureEach {
-        forkEvery = 10
+        forkEvery = 20
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 

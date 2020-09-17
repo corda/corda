@@ -3,6 +3,7 @@ package net.corda.node.services.network
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.days
@@ -37,7 +38,7 @@ class NetworkParametersReaderTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private val fs: FileSystem = Jimfs.newFileSystem(Configuration.unix())
+    private lateinit var fs: FileSystem
     private val cacheTimeout = 100000.seconds
 
     private lateinit var server: NetworkMapServer
@@ -45,6 +46,11 @@ class NetworkParametersReaderTest {
 
     @Before
     fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
+        fs = Jimfs.newFileSystem(Configuration.unix())
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"), VersionInfo(1, "TEST", "TEST", "TEST"))
@@ -112,3 +118,4 @@ class NetworkParametersReaderTest {
         }
     }
 }
+

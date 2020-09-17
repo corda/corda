@@ -64,6 +64,8 @@ import org.junit.Test
 import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
+import java.nio.file.FileSystem
+import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -80,11 +82,12 @@ class NetworkMapUpdaterTest {
     val testSerialization = SerializationEnvironmentRule(true)
     private val cacheExpiryMs = 1000
     private val privateNetUUID = UUID.randomUUID()
-    private val fs = Jimfs.newFileSystem(unix())
-    private val baseDir = fs.getPath("/node")
-    private val nodeInfoDir = baseDir / NODE_INFO_DIRECTORY
+    private lateinit var fs: FileSystem
+    private lateinit var baseDir: Path
+    private val nodeInfoDir
+            get() = baseDir / NODE_INFO_DIRECTORY
     private val scheduler = TestScheduler()
-    private val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
+    private lateinit var fileWatcher: NodeInfoWatcher
     private val nodeReadyFuture = openFuture<Void?>()
     private val networkMapCache = createMockNetworkMapCache()
     private lateinit var ourKeyPair: KeyPair
@@ -96,6 +99,14 @@ class NetworkMapUpdaterTest {
 
     @Before
     fun setUp() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
+        fs = Jimfs.newFileSystem(unix())
+        baseDir = fs.getPath("/node")
+        fileWatcher = NodeInfoWatcher(baseDir, scheduler)
+
         ourKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         ourNodeInfo = createNodeInfoAndSigned("Our info", ourKeyPair).signed
         server = NetworkMapServer(cacheExpiryMs.millis)
