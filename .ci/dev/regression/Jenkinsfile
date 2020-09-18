@@ -52,10 +52,15 @@ String COMMON_GRADLE_PARAMS = [
 
 pipeline {
     agent { label 'standard' }
+
+    /*
+     * List options in alphabetical order
+     */
     options {
-        timestamps()
-        timeout(time: 6, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        parallelsAlwaysFailFast()
+        timeout(time: 6, unit: 'HOURS')
+        timestamps()
     }
 
     parameters {
@@ -85,6 +90,11 @@ pipeline {
             }
         }
 
+        stage('Stash') {
+            steps {
+                stash name: 'compiled', useDefaultExcludes: false
+            }
+        }
         stage('Sonatype Check') {
             steps {
                 script {
@@ -104,53 +114,132 @@ pipeline {
             }
         }
 
-        stage('Unit Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'test'
-                ].join(' ')
-            }
-        }
+        stage('All Tests') {
+            parallel {
+                stage('Another agent') {
+                    agent {
+                        label 'standard'
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            /*
+                             * Copy all JUnit results files into a single top level directory.
+                             * This is necessary to stop the allure plugin from hitting out
+                             * of memory errors due to being passed many directories with
+                             * long paths.
+                             *
+                             * File names are pre-pended with a prefix when
+                             * copied to avoid collisions between files where the same test
+                             * classes have run on multiple agents.
+                             */
+                            fileOperations([fileCopyOperation(
+                                    includes: '**/build/test-results/**/*.xml',
+                                    targetLocation: 'allure-input',
+                                    flattenFiles: true,
+                                    renameFiles: true,
+                                    sourceCaptureExpression: '.*/([^/]+)$',
+                                    targetNameExpression: 'other-agent-$1')])
+                            stash name: 'allure-input', includes: 'allure-input/**', useDefaultExcludes: false
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                    stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'jar'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Unit Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'test'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Smoke Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'smokeTest'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Slow Integration Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'slowIntegrationTest'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
+                stage('Same agent') {
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            /*
+                             * Copy all JUnit results files into a single top level directory.
+                             * This is necessary to stop the allure plugin from hitting out
+                             * of memory errors due to being passed many directories with
+                             * long paths.
+                             *
+                             * File names are pre-pended with a prefix when
+                             * copied to avoid collisions between files where the same test
+                             * classes have run on multiple agents.
+                             */
+                            fileOperations([fileCopyOperation(
+                                    includes: '**/build/test-results/**/*.xml',
+                                    targetLocation: 'allure-input',
+                                    flattenFiles: true,
+                                    renameFiles: true,
+                                    sourceCaptureExpression: '.*/([^/]+)$',
+                                    targetNameExpression: 'same-agent-$1')])
+                        }
+                    }
+                    stages {
+                        stage('Integration Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'integrationTest'
+                                ].join(' ')
+                            }
+                        }
 
-        stage('Integration Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'integrationTest'
-                ].join(' ')
-            }
-        }
-
-        stage('Smoke Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'smokeTest'
-                ].join(' ')
-            }
-        }
-
-        stage('Slow Integration Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'slowIntegrationTest'
-                ].join(' ')
-            }
-        }
-
-        stage('Deploy Node') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'deployNode'
-                ].join(' ')
+                        stage('Deploy Node') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'deployNode'
+                                ].join(' ')
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -206,29 +295,9 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-            archiveArtifacts artifacts: '**/build/reports/tests/**', fingerprint: false
-            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-
             script {
                 try {
-                    /*
-                     * Copy all JUnit results files into a single top level directory.
-                     * This is necessary to stop the allure plugin from hitting out
-                     * of memory errors due to being passed many directories with
-                     * long paths.
-                     *
-                     * File names are pre-pended with the pod number when
-                     * copied to avoid collisions between files where the same test
-                     * classes have run on multiple pods.
-                     */
-                    fileOperations([fileCopyOperation(
-                            includes: '**/test-results-xml/**/test-runs/test-reports/**',
-                            targetLocation: 'allure-input',
-                            flattenFiles: true,
-                            renameFiles: true,
-                            sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
-                            targetNameExpression: '$1-$2')])
+                    unstash 'allure-input'
                     allure includeProperties: false,
                             jdk: '',
                             results: [[path: '**/allure-input']]
