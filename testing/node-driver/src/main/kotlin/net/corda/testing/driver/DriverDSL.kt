@@ -54,6 +54,8 @@ interface DriverDSL {
             }
         }
 
+    var autoShutdownNodes: Boolean
+
     /**
      * Start a node using the default values of [NodeParameters].
      *
@@ -179,5 +181,5 @@ interface DriverDSL {
      */
     fun nextPort() = PortAllocation.defaultAllocator.nextPort()
 
-    fun handleAutoShutdown(hook: ShutdownHook)
+    fun handleAutoShutdown(hook: ShutdownHook, closeable: AutoCloseable?)
 }
