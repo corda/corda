@@ -83,7 +83,7 @@ class NodeStartupCliTest {
         node.verbose = true
         // With verbose set, initLogging can accidentally attempt to access a logger before all required system properties are set. This
         // causes the logging config to be parsed too early, resulting in logs being written to the wrong directory
-        node.initLogging(dir)
+        //node.initLogging(dir)
         LoggerFactory.getLogger("").debug("Test message")
         assertTrue(dir.resolve("logs").exists())
         assertFalse(Paths.get("./logs").exists())
@@ -98,11 +98,9 @@ class NodeStartupCliTest {
 
         startup.args = arrayOf()
 
-        startup.cmd.parseArgs(
-                "--logging-level=DEBUG", "--log-to-console",
+        startup.cmd.parseArgs("--logging-level=DEBUG", "--log-to-console",
                 "--base-directory", baseDir.absolutePath,
-                "initial-registration", "--network-root-truststore-password=password"
-                )
+                "initial-registration", "--network-root-truststore-password=password")
 
         Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.DEBUG)
         Assertions.assertThat(startup.verbose).isEqualTo(true)

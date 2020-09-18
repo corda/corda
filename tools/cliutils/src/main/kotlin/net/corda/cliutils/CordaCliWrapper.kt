@@ -85,8 +85,8 @@ fun CordaCliWrapper.start(args: Array<String>) {
         RunLast().useErr(System.err).useOut(System.out).useAnsi(defaultAnsiMode).execute(parseResult)
     }
 
-    cmd.executionExceptionHandler = executionExceptionHandler // only print stacktraces if verbose requested by users
-    cmd.executionStrategy = executionStrategy // init logging before invoking the business logic
+    cmd.executionExceptionHandler = executionExceptionHandler
+    cmd.executionStrategy = executionStrategy
 
     @Suppress("SpreadOperator")
     exitProcess(cmd.execute(*args))
@@ -115,7 +115,6 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
     abstract fun runProgram(): Int
 
     override fun call(): Int {
-        //initLogging()
         logger.info("Application Args: ${args.joinToString(" ")}")
         return runProgram()
     }
@@ -148,19 +147,14 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
         return true
     }
 
-    @Option(
-            names = ["-v", "--verbose", "--log-to-console"],
-            description = ["If set, prints logging to the console as well as to a file."],
-            scope = ScopeType.INHERIT
-    )
+    @Option(names = ["-v", "--verbose", "--log-to-console"], scope = ScopeType.INHERIT,
+            description = ["If set, prints logging to the console as well as to a file."])
     var verbose: Boolean = false
 
-    @Option(names = ["--logging-level"],
+    @Option(names = ["--logging-level"], scope = ScopeType.INHERIT,
             completionCandidates = LoggingLevelConverter.LoggingLevels::class,
             description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
-            converter = [LoggingLevelConverter::class],
-            scope = ScopeType.INHERIT
-    )
+            converter = [LoggingLevelConverter::class])
     var loggingLevel: Level = Level.INFO
 
     protected open fun additionalSubCommands(): Set<CliWrapperBase> = emptySet()

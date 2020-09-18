@@ -29,12 +29,9 @@ class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-
     var skipSchemaCreation: Boolean = false
 
     override fun runProgram() : Int {
-        //initLogging(cmdLineOptions.baseDirectory)
         val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter ?: cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks"
         return startup.initialiseAndRun(cmdLineOptions, InitialRegistration(cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, skipSchemaCreation, startup))
     }
-
-    //override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     @Mixin
     val cmdLineOptions = InitialRegistrationCmdLineOptions()

@@ -59,8 +59,6 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
         const val LOGS_DIRECTORY_NAME = "logs"
     }
 
-    //override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
-
     @Mixin
     val cmdLineOptions = SharedNodeCmdLineOptions()
 }
@@ -78,8 +76,6 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
     private val runMigrationScriptsCli by lazy { RunMigrationScriptsCli(startup) }
     private val synchroniseAppSchemasCli by lazy { SynchroniseSchemasCli(startup) }
-
-    //override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun additionalSubCommands() = setOf(networkCacheCli,
             justGenerateNodeInfoCli,
@@ -147,10 +143,8 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     override fun initLogging(): Boolean {
-        val baseDirectory = cmdLineOptions.baseDirectory
-
         System.setProperty("defaultLogLevel",  specifiedLogLevel) // These properties are referenced from the XML config file.
-        System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
+        System.setProperty("log-path", (cmdLineOptions.baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
         if (verbose) {
             System.setProperty("consoleLoggingEnabled", "true")
             System.setProperty("consoleLogLevel", specifiedLogLevel)
@@ -158,7 +152,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
         }
 
         //Test for access to the logging path and shutdown if we are unable to reach it.
-        val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
+        val logPath = cmdLineOptions.baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
         try {
             logPath.safeSymbolicRead().createDirectories()
         } catch (e: IOException) {
