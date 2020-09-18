@@ -116,7 +116,8 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     private fun checkNoNotaryChange() {
         if (ltx.notary != null && (ltx.inputs.isNotEmpty() || ltx.references.isNotEmpty())) {
             ltx.outputs.forEach {
-                if (it.notary != ltx.notary) {
+                // Transaction can combine different identities of the same notary after key rotation.
+                if (it.notary.name != ltx.notary.name) {
                     throw TransactionVerificationException.NotaryChangeInWrongTransactionType(ltx.id, ltx.notary, it.notary)
                 }
             }
@@ -227,7 +228,8 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     private tailrec fun checkNotary(index: Int, indicesAlreadyChecked: HashSet<Int>) {
         if (indicesAlreadyChecked.add(index)) {
             val encumbranceIndex = ltx.outputs[index].encumbrance!!
-            if (ltx.outputs[index].notary != ltx.outputs[encumbranceIndex].notary) {
+            // Transaction can combine different identities of the same notary after key rotation.
+            if (ltx.outputs[index].notary.name != ltx.outputs[encumbranceIndex].notary.name) {
                 throw TransactionVerificationException.TransactionNotaryMismatchEncumbranceException(
                         ltx.id,
                         index,

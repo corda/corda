@@ -91,7 +91,8 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
         val notaryWhitelist = networkParameters.notaries.map { it.identity }
 
         check(notary in notaryWhitelist) {
-            "Notary specified by the transaction ($notary) is not on the network parameter whitelist: ${notaryWhitelist.joinToString()}"
+            "Notary [${notary.description()}] specified by the transaction is not on the network parameter whitelist: " +
+                    " [${notaryWhitelist.joinToString { party -> party.description() }}]"
         }
     }
 

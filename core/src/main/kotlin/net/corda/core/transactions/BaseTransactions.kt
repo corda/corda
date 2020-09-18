@@ -42,9 +42,10 @@ abstract class FullTransaction : BaseTransaction() {
 
     private fun checkInputsAndReferencesHaveSameNotary() {
         if (inputs.isEmpty() && references.isEmpty()) return
-        val notaries = (inputs + references).map { it.state.notary }.toHashSet()
+        // Transaction can combine different identities of the same notary after key rotation.
+        val notaries = (inputs + references).map { it.state.notary.name }.toHashSet()
         check(notaries.size == 1) { "All inputs and reference inputs must point to the same notary" }
-        check(notaries.single() == notary) { "The specified notary must be the one specified by all inputs and input references" }
+        check(notaries.single() == notary?.name) { "The specified notary must be the one specified by all inputs and input references" }
     }
 
     /** Make sure the assigned notary is part of the network parameter whitelist. */
@@ -53,8 +54,13 @@ abstract class FullTransaction : BaseTransaction() {
             // Network parameters will never be null if the transaction is resolved from a CoreTransaction rather than constructed directly.
             networkParameters?.let { parameters ->
                 val notaryWhitelist = parameters.notaries.map { it.identity }
-                check(notaryParty in notaryWhitelist) {
-                    "Notary ($notaryParty) specified by the transaction is not on the network parameter whitelist: [${notaryWhitelist.joinToString()}]"
+                // Transaction can combine different identities of the same notary after key rotation.
+                val notaries = setOf(notaryParty) + (inputs + references).map { it.state.notary }
+                notaries.forEach {
+                    check(it in notaryWhitelist) {
+                        "Notary [${it.description()}] specified by the transaction is not on the network parameter whitelist: " +
+                                " [${notaryWhitelist.joinToString { party -> party.description() }}]"
+                    }
                 }
             }
         }

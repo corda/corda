@@ -40,7 +40,9 @@ fun NotarisationRequest.verifySignature(requestSignature: NotarisationRequestSig
  */
 fun NotarisationResponse.validateSignatures(txId: SecureHash, notary: Party) {
     val signingKeys = signatures.map { it.by }
-    require(notary.owningKey.isFulfilledBy(signingKeys)) { "Insufficient signatures to fulfill the notary signing requirement for $notary" }
+    require(notary.owningKey.isFulfilledBy(signingKeys)) {
+        "Insufficient signatures to fulfill the notary signing requirement for ${notary.description()}"
+    }
     signatures.forEach { it.verify(txId) }
 }
 

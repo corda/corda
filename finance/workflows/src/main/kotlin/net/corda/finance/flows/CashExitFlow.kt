@@ -62,6 +62,8 @@ class CashExitFlow(private val amount: Amount<Currency>,
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }
+        // Override notary if its identity key was rotated.
+        builder.notary = serviceHub.networkMapCache.notaryIdentities.last { it.name == builder.notary?.name }
 
         // Work out who the owners of the burnt states were (specify page size so we don't silently drop any if > DEFAULT_PAGE_SIZE)
         val inputStates = serviceHub.vaultService.queryBy<Cash.State>(VaultQueryCriteria(stateRefs = builder.inputStates()),
