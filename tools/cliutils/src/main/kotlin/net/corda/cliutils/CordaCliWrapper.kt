@@ -6,6 +6,7 @@ import org.fusesource.jansi.AnsiConsole
 import org.slf4j.event.Level
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.io.PrintWriter
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -82,8 +83,12 @@ fun CordaCliWrapper.start(args: Array<String>) {
     // init logging before invoking the business logic
     cmd.executionStrategy = IExecutionStrategy { parseResult: ParseResult ->
         initLogging()
-        RunLast().useErr(System.err).useOut(System.out).useAnsi(defaultAnsiMode).execute(parseResult)
+        RunLast().execute(parseResult)
     }
+
+    cmd.err = PrintWriter(System.err)
+    cmd.out = PrintWriter(System.out)
+    cmd.colorScheme = Help.defaultColorScheme(defaultAnsiMode)
 
     @Suppress("SpreadOperator")
     cmd.execute(*args).let {
