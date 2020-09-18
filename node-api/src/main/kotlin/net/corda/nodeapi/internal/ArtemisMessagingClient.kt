@@ -30,7 +30,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
         const val CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME = "net.corda.nodeapi.artemismessagingclient.CallTimeout"
-        const val CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT = 5000L
+        const val CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT = 6000L
     }
 
     class Started(val serverLocator: ServerLocator, val sessionFactory: ClientSessionFactory, val session: ClientSession, val producer: ClientProducer)
