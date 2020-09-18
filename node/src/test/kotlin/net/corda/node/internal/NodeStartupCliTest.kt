@@ -33,7 +33,6 @@ class NodeStartupCliTest {
         }
     }
 
-    @Ignore
     @Test(timeout=300_000)
 	fun `no command line arguments`() {
         CommandLine.populateCommand(startup)
@@ -52,7 +51,6 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
-    @Ignore
     @Test(timeout=300_000)
 	fun `--base-directory`() {
         CommandLine.populateCommand(startup, CommonCliConstants.BASE_DIR, (workingDirectory / "another-base-dir").toString())
@@ -61,14 +59,12 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
-    @Ignore
     @Test(timeout=300_000)
     fun `--nodeconf using relative path will be changed to absolute path`() {
         CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, customNodeConf)
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / customNodeConf)
     }
 
-    @Ignore
     @Test(timeout=300_000)
     fun `--nodeconf using absolute path will not be changed`() {
         CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, (rootDirectory / customNodeConf).toString())

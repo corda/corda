@@ -1,6 +1,5 @@
 package net.corda.cliutils
 
-import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.event.Level
