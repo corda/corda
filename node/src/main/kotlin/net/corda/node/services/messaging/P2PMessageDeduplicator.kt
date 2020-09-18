@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -72,7 +73,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
      * @return true if we have seen this message before.
      */
     fun isDuplicateSessionInit(msg: ReceivedMessage): Boolean {
-        require(msg.isSessionInit) { "Message ${msg.uniqueMessageId} was not a session-init message." }
+        require(msg.uniqueMessageId.messageType == MessageType.SESSION_INIT) { "Message ${msg.uniqueMessageId} was not a session-init message." }
 
         if (beingProcessedMessages.containsKey(msg.uniqueMessageId)) {
             return true

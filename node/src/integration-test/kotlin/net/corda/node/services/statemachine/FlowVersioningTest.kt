@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.NodeFlowManager
@@ -20,13 +21,15 @@ class FlowVersioningTest : NodeBasedTest() {
     @Test(timeout=300_000)
 	fun `getFlowContext returns the platform version for core flows`() {
         val bobFlowManager = NodeFlowManager()
-        val alice = startNode(ALICE_NAME, platformVersion = 2)
-        val bob = startNode(BOB_NAME, platformVersion = 3, flowManager = bobFlowManager)
+        val alicePlatformVersion = PLATFORM_VERSION
+        val bobPlatformVersion = PLATFORM_VERSION + 1
+        val alice = startNode(ALICE_NAME, platformVersion = alicePlatformVersion)
+        val bob = startNode(BOB_NAME, platformVersion = bobPlatformVersion, flowManager = bobFlowManager)
         bobFlowManager.registerInitiatedCoreFlowFactory(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
         val (alicePlatformVersionAccordingToBob, bobPlatformVersionAccordingToAlice) = alice.services.startFlow(
                 PretendInitiatingCoreFlow(bob.info.singleIdentity())).resultFuture.getOrThrow()
-        assertThat(alicePlatformVersionAccordingToBob).isEqualTo(2)
-        assertThat(bobPlatformVersionAccordingToAlice).isEqualTo(3)
+        assertThat(alicePlatformVersionAccordingToBob).isEqualTo(alicePlatformVersion)
+        assertThat(bobPlatformVersionAccordingToAlice).isEqualTo(bobPlatformVersion)
     }
 
     @InitiatingFlow
