@@ -22,6 +22,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.enclosedCordapp
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -29,6 +30,7 @@ import kotlin.test.assertEquals
  * Check that we can add lots of large attachments to a transaction and that it works OK, e.g. does not hit the
  * transaction size limit (which should only consider the hashes).
  */
+@Ignore("ENT-5679: Disable due to OOM issues")
 class LargeTransactionsTest {
     private companion object {
         val BOB = TestIdentity(BOB_NAME, 80).party
