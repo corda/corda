@@ -1,5 +1,6 @@
 package net.corda.cliutils
 
+import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.event.Level
@@ -69,26 +70,28 @@ fun CordaCliWrapper.start(args: Array<String>) {
     }
 
     // only print stacktraces if verbose requested by users
-    val executionExceptionHandler = IExecutionExceptionHandler { ex: Exception, _: CommandLine, _: ParseResult ->
+    cmd.executionExceptionHandler = IExecutionExceptionHandler { ex: Exception, _: CommandLine, _: ParseResult ->
         val throwable = ex.cause ?: ex
-        if (verbose) {
+        if (this@start.verbose) {
             throwable.printStackTrace()
         }
-
+        printError(throwable.rootMessage ?: "Use --verbose for more details")
         ExitCodes.FAILURE
     }
 
     // init logging before invoking the business logic
-    val executionStrategy = IExecutionStrategy { parseResult: ParseResult ->
+    cmd.executionStrategy = IExecutionStrategy { parseResult: ParseResult ->
         initLogging()
         RunLast().useErr(System.err).useOut(System.out).useAnsi(defaultAnsiMode).execute(parseResult)
     }
 
-    cmd.executionExceptionHandler = executionExceptionHandler
-    cmd.executionStrategy = executionStrategy
-
-    @Suppress("SpreadOperator")
-    exitProcess(cmd.execute(*args))
+    cmd.execute(*args).let {
+        if (it == ExitCode.OK) {
+            exitProcess(ExitCodes.SUCCESS)
+        } else {
+            exitProcess(ExitCodes.FAILURE)
+        }
+    }
 }
 
 @Command(mixinStandardHelpOptions = true,
