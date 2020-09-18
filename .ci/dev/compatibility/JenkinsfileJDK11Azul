@@ -108,7 +108,9 @@ pipeline {
                             "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_USERNAME=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
                             "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_PASSWORD=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                             "-Ddocker.dockerfile=DockerfileJDK11Azul" +
-                            " clean pushBuildImage preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest --stacktrace"
+                            " clean preAllocateForAllParallelUnitTest preAllocateForAllParallelIntegrationTest " +
+                            " preAllocateForAllParallelSlowIntegrationTest preAllocateForAllParallelSmokeTest " +
+                            " pushBuildImage --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -116,7 +118,7 @@ pipeline {
 
         stage('Testing phase') {
             parallel {
-                stage('Regression Test') {
+                stage('Unit Test') {
                     steps {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
@@ -126,7 +128,33 @@ pipeline {
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
                                 "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
-                                " parallelRegressionTest --stacktrace"
+                                " allParallelUnitTest --stacktrace"
+                    }
+                }
+                stage('Integration Test') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " allParallelIntegrationTest --stacktrace"
+                    }
+                }
+                stage('Smoke Test') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " allParallelSmokeTest --stacktrace"
                     }
                 }
                 stage('Slow Integration Test') {
