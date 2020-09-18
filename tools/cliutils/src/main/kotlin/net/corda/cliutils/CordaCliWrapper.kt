@@ -85,6 +85,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
         RunLast().useErr(System.err).useOut(System.out).useAnsi(defaultAnsiMode).execute(parseResult)
     }
 
+    @Suppress("SpreadOperator")
     cmd.execute(*args).let {
         if (it == ExitCode.OK) {
             exitProcess(ExitCodes.SUCCESS)
