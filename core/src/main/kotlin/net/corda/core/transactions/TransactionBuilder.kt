@@ -8,7 +8,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -636,9 +635,9 @@ open class TransactionBuilder(
 
     private fun checkNotary(stateAndRef: StateAndRef<*>) {
         val notary = stateAndRef.state.notary
-        require(notary == this.notary) {
-            "Input state requires notary \"$notary\" (${notary.owningKey.toStringShort()})" +
-                    " which does not match the transaction notary \"${this.notary}\" (${this.notary?.owningKey?.toStringShort()})."
+        // Transaction can combine different identities of the same notary after key rotation.
+        require(notary.name == this.notary?.name) {
+            "Input state requires notary \"${notary.description()}\" which does not match the transaction notary \"${this.notary?.description()}\"."
         }
     }
 
@@ -650,7 +649,8 @@ open class TransactionBuilder(
         }
     }
 
-    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
+    // Transaction can combine different identities of the same notary after key rotation.
+    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary.name }.toSet().size == 1
 
     /**
      * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method is used

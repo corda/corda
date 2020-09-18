@@ -2,7 +2,6 @@ package net.corda.node.services.transactions
 
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
 import net.corda.core.flows.NotaryError
@@ -92,7 +91,8 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
         val notaryWhitelist = networkParameters.notaries.map { it.identity }
 
         check(notary in notaryWhitelist) {
-            "Notary specified by the transaction ($notary:${notary.owningKey.toStringShort()}) is not on the network parameter whitelist: ${notaryWhitelist.joinToString()}"
+            "Notary [${notary.description()}] specified by the transaction is not on the network parameter whitelist: " +
+                    " [${notaryWhitelist.joinToString { party -> party.description() }}]"
         }
     }
 

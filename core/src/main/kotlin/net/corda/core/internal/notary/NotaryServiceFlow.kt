@@ -111,8 +111,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     private fun checkNotary(notary: Party?) {
         val notaryIdentities = listOf(service.notaryIdentityKey) + service.rotatedKeys
         require(notary?.owningKey in notaryIdentities) {
-            "The notary specified on the transaction: [$notary][${notary?.owningKey?.toStringShort()}]" +
-                    " does not match the notary service's identity: [${notaryIdentities.map { it.toStringShort() }}]"
+            "The notary specified on the transaction: [${notary?.description()}]" +
+                    " does not match the notary service's identity: [${notaryIdentities.joinToString { it.toStringShort() }}]"
         }
     }
 
