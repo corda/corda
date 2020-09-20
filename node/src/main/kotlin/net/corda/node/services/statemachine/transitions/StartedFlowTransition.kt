@@ -479,7 +479,11 @@ class StartedFlowTransition(
                 Pair(startingState, errors)
             }
             is FlowIORequest.ExecuteAsyncOperation<*> -> {
-                Pair(startingState, emptyList())
+                if (flowIORequest.operation.collectErrorsFromSessions) {
+                    collectErroredSessionErrors(startingState, startingState.checkpoint.checkpointState.sessions.keys)
+                } else {
+                    Pair(startingState, emptyList())
+                }
             }
             FlowIORequest.ForceCheckpoint -> {
                 Pair(startingState, emptyList())

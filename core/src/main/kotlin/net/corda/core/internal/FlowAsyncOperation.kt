@@ -13,6 +13,10 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 interface FlowAsyncOperation<R : Any> {
+
+    val collectErrorsFromSessions: Boolean
+        get() = false
+
     /**
      * Performs the operation in a non-blocking fashion.
      * @param deduplicationId  If the flow restarts from a checkpoint (due to node restart, or via a visit to the flow
