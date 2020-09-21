@@ -10,7 +10,7 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
 import java.time.Duration
 
-typealias SigningFunction = (SecureHash, Party?) -> TransactionSignature
+typealias SigningFunction = (SecureHash) -> TransactionSignature
 
 /**
  * A service that records input states of the given transaction and provides conflict information
@@ -24,8 +24,7 @@ interface UniquenessProvider {
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow? = null,
-            references: List<StateRef> = emptyList(),
-            notary: Party? = null
+            references: List<StateRef> = emptyList()
     ): CordaFuture<Result>
 
     /**

@@ -13,7 +13,6 @@ import java.security.PublicKey
 abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val services: ServiceHub
     abstract val notaryIdentityKey: PublicKey
-    lateinit var rotatedKeys: Set<PublicKey>
 
     /**
      * Interfaces for the request and result formats of queries supported by notary services. To

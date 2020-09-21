@@ -69,8 +69,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
                     otherSideSession.counterparty,
                     requestPayload.requestSignature,
                     tx.timeWindow,
-                    tx.references,
-                    tx.notary)
+                    tx.references)
         } catch (e: NotaryInternalException) {
             logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
@@ -109,10 +108,9 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     /** Check if transaction is intended to be signed by this notary. */
     @Suspendable
     private fun checkNotary(notary: Party?) {
-        val notaryIdentities = listOf(service.notaryIdentityKey) + service.rotatedKeys
-        require(notary?.owningKey in notaryIdentities) {
-            "The notary specified on the transaction: [${notary?.description()}]" +
-                    " does not match the notary service's identity: [${notaryIdentities.joinToString { it.toStringShort() }}]"
+        require(notary?.owningKey == service.notaryIdentityKey) {
+            "The notary specified on the transaction: [${notary?.description()}] does not match the notary service's identity:" +
+                    " [${service.notaryIdentityKey.toStringShort()}] "
         }
     }
 
