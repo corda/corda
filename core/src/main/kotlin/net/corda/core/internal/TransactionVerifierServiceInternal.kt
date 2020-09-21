@@ -115,10 +115,14 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      */
     private fun checkNoNotaryChange() {
         if (ltx.notary != null && (ltx.inputs.isNotEmpty() || ltx.references.isNotEmpty())) {
-            ltx.outputs.forEach {
+            ltx.outputs.forEach { output ->
                 // Transaction can combine different identities of the same notary after key rotation.
-                if (it.notary.name != ltx.notary.name) {
-                    throw TransactionVerificationException.NotaryChangeInWrongTransactionType(ltx.id, ltx.notary, it.notary)
+                // In this case output notary should match either the transaction itself of one of its inputs.
+                // Notary constraints (whitelist, name) for inputs are verified separately inside FullTransaction.
+                if (output.notary != ltx.notary
+                        && ltx.inputs.none { it.state.notary == output.notary }
+                        && ltx.references.none { it.state.notary == output.notary }) {
+                    throw TransactionVerificationException.NotaryChangeInWrongTransactionType(ltx.id, ltx.notary, output.notary)
                 }
             }
         }
