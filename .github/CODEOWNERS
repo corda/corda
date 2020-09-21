@@ -60,3 +60,32 @@ core/src/main/kotlin/net/corda/core/internal/CertRole.kt        @rekalov
 core/src/main/kotlin/net/corda/core/node/services/AttachmentStorage.kt  @adelel1
 core/src/main/kotlin/net/corda/core/node/services/IdentityService.kt    @rekalov
 core/src/main/kotlin/net/corda/core/node/services/NetworkMapCache.kt    @rekalov
+
+# Block 4.6 build changes post-RC - DO NOT copy to 4.7
+constants.properies							@corda/repo-admin
+build.gradle							@corda/repo-admin
+client/jackson/build.gradle							@corda/repo-admin
+client/jfx/build.gradle							@corda/repo-admin
+client/mock/build.gradle							@corda/repo-admin
+client/rpc/build.gradle							@corda/repo-admin
+common/configuration-parsing/build.gradle							@corda/repo-admin
+common/logging/build.gradle							@corda/repo-admin
+common/validation/build.gradle							@corda/repo-admin
+confidential-identities/build.gradle							@corda/repo-admin
+core-deterministic/build.gradle							@corda/repo-admin
+core-deterministic/testing/build.gradle							@corda/repo-admin
+core-tests/build.gradle							@corda/repo-admin
+core/build.gradle							@corda/repo-admin
+detekt-plugins/build.gradle							@corda/repo-admin
+docker/build.gradle							@corda/repo-admin
+finance/contracts/build.gradle							@corda/repo-admin
+finance/workflows/build.gradle							@corda/repo-admin
+jdk8u-deterministic/build.gradle							@corda/repo-admin
+node-api/build.gradle							@corda/repo-admin
+node/build.gradle							@corda/repo-admin
+node/capsule/build.gradle							@corda/repo-admin
+node/djvm/build.gradle							@corda/repo-admin
+serialization-deterministic/build.gradle							@corda/repo-admin
+serialization-djvm/build.gradle							@corda/repo-admin
+serialization-djvm/deserializers/build.gradle							@corda/repo-admin
+serialization/build.gradle							@corda/repo-admin
