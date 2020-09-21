@@ -74,8 +74,6 @@ open class CashPaymentFlow(
         } catch (e: InsufficientBalanceException) {
             throw CashException("Insufficient cash for spend: ${e.message}", e)
         }
-        // Override notary if its identity key was rotated.
-        builder.notary = serviceHub.networkMapCache.notaryIdentities.last { it.name == builder.notary?.name }
 
         progressTracker.currentStep = SIGNING_TX
         logger.info("Signing transaction for: ${spendTX.lockId}")

@@ -115,14 +115,9 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      */
     private fun checkNoNotaryChange() {
         if (ltx.notary != null && (ltx.inputs.isNotEmpty() || ltx.references.isNotEmpty())) {
-            ltx.outputs.forEach { output ->
-                // Transaction can combine different identities of the same notary after key rotation.
-                // In this case output notary should match either the transaction itself of one of its inputs.
-                // Notary constraints (whitelist, name) for inputs are verified separately inside FullTransaction.
-                if (output.notary != ltx.notary
-                        && ltx.inputs.none { it.state.notary == output.notary }
-                        && ltx.references.none { it.state.notary == output.notary }) {
-                    throw TransactionVerificationException.NotaryChangeInWrongTransactionType(ltx.id, ltx.notary, output.notary)
+            ltx.outputs.forEach {
+                if (it.notary != ltx.notary) {
+                    throw TransactionVerificationException.NotaryChangeInWrongTransactionType(ltx.id, ltx.notary, it.notary)
                 }
             }
         }
@@ -232,8 +227,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     private tailrec fun checkNotary(index: Int, indicesAlreadyChecked: HashSet<Int>) {
         if (indicesAlreadyChecked.add(index)) {
             val encumbranceIndex = ltx.outputs[index].encumbrance!!
-            // Transaction can combine different identities of the same notary after key rotation.
-            if (ltx.outputs[index].notary.name != ltx.outputs[encumbranceIndex].notary.name) {
+            if (ltx.outputs[index].notary != ltx.outputs[encumbranceIndex].notary) {
                 throw TransactionVerificationException.TransactionNotaryMismatchEncumbranceException(
                         ltx.id,
                         index,
