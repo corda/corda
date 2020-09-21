@@ -55,6 +55,7 @@ abstract class FullTransaction : BaseTransaction() {
             networkParameters?.let { parameters ->
                 val notaryWhitelist = parameters.notaries.map { it.identity }
                 // Transaction can combine different identities of the same notary after key rotation.
+                // Each of these identities should be whitelisted.
                 val notaries = setOf(notaryParty) + (inputs + references).map { it.state.notary }
                 notaries.forEach {
                     check(it in notaryWhitelist) {
