@@ -141,10 +141,11 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 
     private val installShellExtensionsParser = InstallShellExtensionsParser(this)
 
-    @Option(names = ["-v", "--verbose", "--log-to-console"], description = ["If set, prints logging to the console as well as to a file."])
+    @Option(names = ["-v", "--verbose", "--log-to-console"], scope = ScopeType.INHERIT,
+            description = ["If set, prints logging to the console as well as to a file."])
     var verbose: Boolean = false
 
-    @Option(names = ["--logging-level"],
+    @Option(names = ["--logging-level"], scope = ScopeType.INHERIT,
             completionCandidates = LoggingLevelConverter.LoggingLevels::class,
             description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
             converter = [LoggingLevelConverter::class]
