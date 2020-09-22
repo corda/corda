@@ -16,10 +16,8 @@ import org.apache.shiro.authc.*
 import org.apache.shiro.authc.credential.PasswordMatcher
 import org.apache.shiro.authc.credential.SimpleCredentialsMatcher
 import org.apache.shiro.authz.AuthorizationInfo
-import org.apache.shiro.authz.Permission
 import org.apache.shiro.authz.SimpleAuthorizationInfo
 import org.apache.shiro.authz.permission.DomainPermission
-import org.apache.shiro.authz.permission.PermissionResolver
 import org.apache.shiro.cache.CacheManager
 import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.realm.AuthorizingRealm
