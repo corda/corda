@@ -564,7 +564,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // The following services need to be closed before the database, so need to be registered after it is started.
         networkMapUpdater.closeOnStop()
         schedulerService.closeOnStop()
-        val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
+        val rpcOps = makeRPCOps(cordappLoader)
 
         val (identity, identityKeyPair) = obtainIdentity()
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
