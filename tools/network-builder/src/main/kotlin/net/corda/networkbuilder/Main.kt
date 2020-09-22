@@ -35,7 +35,7 @@ fun main(args: Array<String>) {
     val argParser: CliParser = when (baseArgs.backendType) {
         AZURE -> {
             val azureArgs = AzureParser()
-            CommandLine(azureArgs).parse(*args)
+            CommandLine(azureArgs).parseArgs(*args)
             azureArgs
         }
         Backend.BackendType.LOCAL_DOCKER -> baseArgs
