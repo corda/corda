@@ -64,6 +64,7 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.node.H2DatabaseTools
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
@@ -606,7 +607,10 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         cordappClassLoader.use { _ ->
             // Serialization env must be unset even if other parts of this method fail.
             serializationEnv.use {
-                nodes.forEach { it.started?.dispose() }
+                nodes.forEach { node ->
+                    node.started?.dispose()
+                    H2DatabaseTools.deleteDatabase(node.configuration)
+                }
             }
             messagingNetwork.stop()
         }
