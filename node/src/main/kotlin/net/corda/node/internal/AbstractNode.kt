@@ -566,9 +566,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         schedulerService.closeOnStop()
         val rpcOps = makeRPCOps(cordappLoader)
 
-        val (identity, identityKeyPair) = obtainIdentity()
-        X509Utilities.validateCertPath(trustRoot, identity.certPath)
-
         identityService.start(trustRoot, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
 
         val nodeInfoAndSigned = database.transaction {
