@@ -19,7 +19,7 @@ val baseArgs = CliParser()
 
 fun main(args: Array<String>) {
     SerializationEngine.init()
-    CommandLine(baseArgs).parse(*args)
+    CommandLine(baseArgs).parseArgs(*args)
     testDockerConnectivity()
 
     if (baseArgs.usageHelpRequested) {
