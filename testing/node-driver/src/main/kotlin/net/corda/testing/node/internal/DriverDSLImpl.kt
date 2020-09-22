@@ -113,7 +113,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.cert.X509Certificate
-import java.sql.Connection
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
