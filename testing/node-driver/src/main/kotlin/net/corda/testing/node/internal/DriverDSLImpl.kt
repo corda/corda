@@ -36,6 +36,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.MIN_PLATFORM_VERSIO
 import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
@@ -57,6 +58,7 @@ import net.corda.core.utilities.toHexString
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
+import net.corda.node.internal.DataSourceFactory
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
@@ -98,7 +100,7 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.ClusterSpec
-import net.corda.testing.node.H2DatabaseTools
+import net.corda.testing.node.DatabaseSnapshot
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -275,13 +277,13 @@ class DriverDSLImpl(
         if (isH2Database(config) && !inMemoryDB) {
             if (premigrateH2Database) {
                 try {
-                    H2DatabaseTools.copyDatabaseSnapshot(config.corda.baseDirectory)
+                    DatabaseSnapshot.copyDatabaseSnapshot(config.corda.baseDirectory)
                 } catch (ex: java.nio.file.FileAlreadyExistsException) {
                     log.warn("Database already exists on disk, not attempting to pre-migrate database.")
                 }
             }
             shutdownManager.registerShutdown {
-                H2DatabaseTools.shutdownAndDeleteDatabase(config.corda)
+                shutdownAndDeleteDatabase(config.corda)
             }
         }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
@@ -1144,6 +1146,17 @@ class DriverDSLImpl(
          */
         private fun Map<String, Any>.removeResolvedClasspath(): Map<String, Any> {
             return filterNot { it.key == "java.class.path" }
+        }
+
+        private fun shutdownAndDeleteDatabase(config: NodeConfiguration) {
+            DataSourceFactory.createDataSource(config.dataSourceProperties).also { dataSource ->
+                dataSource.connection.use { connection ->
+                    connection.createStatement().use { statement ->
+                        statement.execute("SHUTDOWN")
+                    }
+                }
+            }
+            DatabaseSnapshot.databaseFilename(config.baseDirectory).deleteIfExists()
         }
     }
 }

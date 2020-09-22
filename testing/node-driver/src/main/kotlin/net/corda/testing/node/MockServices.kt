@@ -104,7 +104,7 @@ open class MockServices private constructor(
                     .toAbsolutePath()
             val dbPath = dbDir.resolve("persistence")
             try {
-                H2DatabaseTools.copyDatabaseSnapshot(dbDir)
+                DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
             } catch (ex: java.nio.file.FileAlreadyExistsException) {
                 DriverDSLImpl.log.warn("Database already exists on disk, not attempting to pre-migrate database.")
             }

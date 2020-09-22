@@ -17,6 +17,7 @@ import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.uncheckedCast
@@ -64,7 +65,7 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.node.H2DatabaseTools
+import net.corda.testing.node.DatabaseSnapshot
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
@@ -609,7 +610,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             serializationEnv.use {
                 nodes.forEach { node ->
                     node.started?.dispose()
-                    H2DatabaseTools.deleteDatabase(node.configuration)
+                    DatabaseSnapshot.databaseFilename(node.configuration.baseDirectory).deleteIfExists()
                 }
             }
             messagingNetwork.stop()
