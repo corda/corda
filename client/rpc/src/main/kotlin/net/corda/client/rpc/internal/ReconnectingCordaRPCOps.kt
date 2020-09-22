@@ -319,7 +319,7 @@ class ReconnectingCordaRPCOps private constructor(
             checkIfClosed()
             var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
-            while (remainingAttempts != 0 && !reconnectingRPCConnection.isClosed()) {
+            loop@ while (remainingAttempts != 0 && !reconnectingRPCConnection.isClosed()) {
                 try {
                     log.debug { "Invoking RPC $method..." }
                     return method.invoke(reconnectingRPCConnection.proxy, *(args ?: emptyArray())).also {

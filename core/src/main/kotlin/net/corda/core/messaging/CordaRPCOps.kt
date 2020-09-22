@@ -314,6 +314,7 @@ interface CordaRPCOps : RPCOps {
 
     /**
      * Removes a flow's [clientId] to result/ exception mapping. If the mapping is of a running flow, then the mapping will not get removed.
+     * This version will only remove flow's that were started by the same user currently calling [removeClientId].
      *
      * See [startFlowDynamicWithClientId] for more information.
      *
@@ -322,12 +323,31 @@ interface CordaRPCOps : RPCOps {
     fun removeClientId(clientId: String): Boolean
 
     /**
-     * Returns all finished flows that were started with a client id.
+     * Removes a flow's [clientId] to result/ exception mapping. If the mapping is of a running flow, then the mapping will not get removed.
+     * This version can be called for all client ids, ignoring which user originally started a flow with [clientId].
      *
-     * @return A [Map] containing client ids for finished flows, mapped to [true] if finished successfully,
-     * [false] if completed exceptionally.
+     * See [startFlowDynamicWithClientId] for more information.
+     *
+     * @return whether the mapping was removed.
+     */
+    fun removeClientIdAsAdmin(clientId: String): Boolean
+
+    /**
+     * Returns all finished flows that were started with a client ID for which the client ID mapping has not been removed. This version only
+     * returns the client ids for flows started by the same user currently calling [finishedFlowsWithClientIds].
+     *
+     * @return A [Map] containing client ids for finished flows started by the user calling [finishedFlowsWithClientIds], mapped to [true]
+     * if finished successfully, [false] if completed exceptionally.
      */
     fun finishedFlowsWithClientIds(): Map<String, Boolean>
+
+    /**
+     * Returns all finished flows that were started with a client id by all RPC users for which the client ID mapping has not been removed.
+     *
+     * @return A [Map] containing all client ids for finished flows, mapped to [true] if finished successfully,
+     * [false] if completed exceptionally.
+     */
+    fun finishedFlowsWithClientIdsAsAdmin(): Map<String, Boolean>
 
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo

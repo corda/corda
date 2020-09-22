@@ -16,8 +16,10 @@ import org.apache.shiro.authc.*
 import org.apache.shiro.authc.credential.PasswordMatcher
 import org.apache.shiro.authc.credential.SimpleCredentialsMatcher
 import org.apache.shiro.authz.AuthorizationInfo
+import org.apache.shiro.authz.Permission
 import org.apache.shiro.authz.SimpleAuthorizationInfo
 import org.apache.shiro.authz.permission.DomainPermission
+import org.apache.shiro.authz.permission.PermissionResolver
 import org.apache.shiro.cache.CacheManager
 import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.realm.AuthorizingRealm
@@ -119,6 +121,67 @@ internal class RPCPermission : DomainPermission {
      * Default constructor instantiate an "ALL" permission
      */
     constructor() : super()
+}
+
+/*
+ * A [org.apache.shiro.authz.permission.PermissionResolver] implementation for RPC permissions.
+ * Provides a method to construct an [RPCPermission] instance from its string representation
+ * in the form used by a Node admin.
+ *
+ * Currently valid permission strings have the forms:
+ *
+ *   - `ALL`: allowing all type of RPC calls
+ *
+ *   - `InvokeRpc.$RPCMethodName`: allowing to call a given RPC method without restrictions on its arguments.
+ *
+ *   - `StartFlow.$FlowClassName`: allowing to call a `startFlow*` RPC method targeting a Flow instance
+ *     of a given class
+ */
+private object RPCPermissionResolver : PermissionResolver {
+
+    private const val SEPARATOR = '.'
+    private const val ACTION_START_FLOW = "startflow"
+    private const val ACTION_INVOKE_RPC = "invokerpc"
+    private const val ACTION_ALL = "all"
+    private val FLOW_RPC_CALLS = setOf(
+        "startFlowDynamic",
+        "startTrackedFlowDynamic",
+        "startFlowDynamicWithClientId",
+        "startFlow",
+        "startTrackedFlow",
+        "startFlowWithClientId"
+    )
+
+    private val FLOW_RPC_PERMITTED_START_FLOW_CALLS = setOf("startFlow", "startFlowDynamic")
+    private val FLOW_RPC_PERMITTED_TRACKED_START_FLOW_CALLS = setOf("startTrackedFlow", "startTrackedFlowDynamic")
+    private val FLOW_RPC_PERMITTED_START_FLOW_WITH_CLIENT_ID_CALLS = setOf("startFlowWithClientId", "startFlowDynamicWithClientId")
+
+    override fun resolvePermission(representation: String): Permission {
+        val action = representation.substringBefore(SEPARATOR).toLowerCase()
+        when (action) {
+            ACTION_INVOKE_RPC -> {
+                val rpcCall = representation.substringAfter(SEPARATOR, "")
+                require(representation.count { it == SEPARATOR } == 1 && rpcCall.isNotEmpty()) { "Malformed permission string" }
+                val permitted = when (rpcCall) {
+                    "startFlow" -> FLOW_RPC_PERMITTED_START_FLOW_CALLS
+                    "startTrackedFlow" -> FLOW_RPC_PERMITTED_TRACKED_START_FLOW_CALLS
+                    "startFlowWithClientId" -> FLOW_RPC_PERMITTED_START_FLOW_WITH_CLIENT_ID_CALLS
+                    else -> setOf(rpcCall)
+                }
+                return RPCPermission(permitted)
+            }
+            ACTION_START_FLOW -> {
+                val targetFlow = representation.substringAfter(SEPARATOR, "")
+                require(targetFlow.isNotEmpty()) { "Missing target flow after StartFlow" }
+                return RPCPermission(FLOW_RPC_CALLS, targetFlow)
+            }
+            ACTION_ALL -> {
+                // Leaving empty set of targets and actions to match everything
+                return RPCPermission()
+            }
+            else -> throw IllegalArgumentException("Unknown permission action specifier: $action")
+        }
+    }
 }
 
 class ShiroAuthorizingSubject(

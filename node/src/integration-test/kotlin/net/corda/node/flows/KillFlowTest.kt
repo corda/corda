@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowExternalOperation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.KilledFlowException
@@ -196,6 +197,26 @@ class KillFlowTest {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatGetsMurderedTryingToAwaitAFuture)
+                Thread.sleep(5000)
+                val time = measureTimeMillis {
+                    rpc.killFlow(handle.id)
+                    assertFailsWith<KilledFlowException> {
+                        handle.returnValue.getOrThrow(1.minutes)
+                    }
+                }
+                assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
+                assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
+                assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `killing a hospitalized flow ends the flow immediately`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            alice.rpc.let { rpc ->
+                val handle = rpc.startFlow(::AFlowThatGetsMurderedWhileInTheHospital)
                 Thread.sleep(5000)
                 val time = measureTimeMillis {
                     rpc.killFlow(handle.id)
@@ -479,6 +500,15 @@ class KillFlowTest {
             override fun execute(deduplicationId: String) {
                 Thread.sleep(3.minutes.toMillis())
             }
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class AFlowThatGetsMurderedWhileInTheHospital : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            throw HospitalizeFlowException("time to go to the doctors")
         }
     }
 

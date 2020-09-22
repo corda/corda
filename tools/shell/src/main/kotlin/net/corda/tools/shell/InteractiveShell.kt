@@ -631,7 +631,9 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps) {
+    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps): Int {
+
+        var result = 0 // assume it all went well
 
         fun display(statements: RenderPrintWriter.() -> Unit) {
             statements.invoke(userSessionOut)
@@ -676,13 +678,16 @@ object InteractiveShell {
                 // Cancelled whilst draining flows.  So let's carry on from here
                 cordaRPCOps.setFlowsDrainingModeEnabled(false)
                 display { println("...cancelled clean shutdown.") }
+                result = 1
             }
         } catch (e: Exception) {
             display { println("RPC failed: ${e.rootCause}", Decoration.bold, Color.red) }
+            result = 1
         } finally {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
         }
+        return result;
     }
 
     private fun printAndFollowRPCResponse(
