@@ -549,7 +549,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val rpcOps = makeRPCOps(cordappLoader)
         startShell()
         networkMapClient?.start(trustRoot)
 
