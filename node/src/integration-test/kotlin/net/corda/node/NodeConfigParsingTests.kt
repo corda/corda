@@ -1,17 +1,21 @@
 package net.corda.node
 
+import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.logging.logFile
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.junit.Assert.assertTrue
-
+import java.io.File
 
 class NodeConfigParsingTests {
+    companion object {
+       fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }.single()
+    }
 
     @Test(timeout=300_000)
 	fun `config is overriden by underscore variable`() {
