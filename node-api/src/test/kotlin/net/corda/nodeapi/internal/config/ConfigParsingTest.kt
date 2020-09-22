@@ -8,9 +8,12 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import org.assertj.core.api.Assertions.*
-import org.hibernate.exception.DataException
+import net.corda.testing.driver.NodeHandle
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.io.File
 import java.net.URL
 import java.nio.file.Path
 import java.time.Instant
@@ -20,6 +23,10 @@ import javax.security.auth.x500.X500Principal
 import kotlin.reflect.full.primaryConstructor
 
 class ConfigParsingTest {
+    companion object {
+        fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }.single()
+    }
+
     @Test(timeout=300_000)
 	fun String() {
         testPropertyType<StringData, StringListData, String>("hello world!", "bye")
