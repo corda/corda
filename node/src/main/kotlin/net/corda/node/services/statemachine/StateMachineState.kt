@@ -244,7 +244,6 @@ data class Checkpoint(
 }
 
 /**
-<<<<<<< HEAD
  * @param invocationContext The initiator of the flow.
  * @param ourIdentity The identity the flow is run as.
  * @param sessions Map of source session ID to session state.

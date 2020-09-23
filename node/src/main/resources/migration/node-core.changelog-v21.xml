@@ -23,6 +23,8 @@
             </column>
         </createTable>
         <addPrimaryKey columnNames="session_id" constraintName="node_session_data_pk" tableName="node_session_data"/>
+
+        <dropTable tableName="node_message_ids"/>
     </changeSet>
 
 </databaseChangeLog>

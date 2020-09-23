@@ -707,7 +707,8 @@ internal class SingleThreadedStateMachineManager(
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event, event.receivedMessage.uniqueMessageId, event.receivedMessage.senderUUID, event.receivedMessage.senderSeqNo)
+                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event,
+                        event.receivedMessage.uniqueMessageId, event.receivedMessage.senderUUID, event.receivedMessage.senderSeqNo)
                 is InitialSessionMessage -> onSessionInit(sessionMessage, sender, event)
             }
         } else {
