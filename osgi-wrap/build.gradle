@@ -1,0 +1,14 @@
+plugins {
+    // id 'org.jetbrains.kotlin.jvm' version '1.4.10'
+}
+
+group 'net.corda'
+version '4.7-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+}
