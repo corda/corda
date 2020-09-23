@@ -162,6 +162,8 @@ import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesExceptio
 import net.corda.nodeapi.internal.persistence.RestrictedConnection
 import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.persistence.contextDatabase
+import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
@@ -245,7 +247,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val notaryLoader = configuration.notary?.let {
         NotaryLoader(it, versionInfo)
     }
-    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop()
+    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop(false)
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
@@ -388,8 +390,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return this
     }
 
-    protected fun <T : AutoCloseable> T.closeOnStop(): T {
-        runOnStop += this::close
+    protected fun <T : AutoCloseable> T.closeOnStop(usesDatabase: Boolean = true): T {
+        if (usesDatabase) {
+            contextDatabase // Will throw if no database is available, since this would run after closing the database, yet claims it needs it.
+            runOnStop += this::close
+        } else {
+            runOnStop += { withoutDatabaseAccess { this.close() } }
+        }
         return this
     }
 
@@ -470,9 +477,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 pendingCoreChanges = schemaMigration.getPendingChangesCount(schemaService.internalSchemas, true)
             }
             if(updateAppSchemas) {
-                schemaMigration.runMigration(!updateAppSchemasWithCheckpoints && haveCheckpoints, schemaService.appSchemas, false)
+                schemaMigration.runMigration(!updateAppSchemasWithCheckpoints && haveCheckpoints, schemaService.appSchemas, !configuration.devMode)
             } else {
-                pendingAppChanges = schemaMigration.getPendingChangesCount(schemaService.appSchemas, false)
+                pendingAppChanges = schemaMigration.getPendingChangesCount(schemaService.appSchemas, !configuration.devMode)
             }
         }
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
@@ -541,7 +548,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val rpcOps = makeRPCOps(cordappLoader)
         startShell()
         networkMapClient?.start(trustRoot)
 
@@ -554,6 +560,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
+        // The following services need to be closed before the database, so need to be registered after it is started.
+        networkMapUpdater.closeOnStop()
+        schedulerService.closeOnStop()
+        val rpcOps = makeRPCOps(cordappLoader)
 
         identityService.start(trustRoot, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
 
@@ -794,7 +804,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.baseDirectory,
             configuration.extraNetworkMapKeys,
             networkParametersStorage
-    ).closeOnStop()
+    )
 
     protected open fun makeNodeSchedulerService() = NodeSchedulerService(
             platformClock,
@@ -805,7 +815,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             nodeProperties,
             configuration.drainingModePollPeriod,
             unfinishedSchedules = busyNodeLatch
-    ).tokenize().closeOnStop()
+    ).tokenize()
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
         val generatedCordapps = mutableListOf(VirtualCordapp.generateCore(versionInfo))
@@ -991,7 +1001,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             database.startHikariPool(configuration.dataSourceProperties, metricRegistry) { dataSource, haveCheckpoints ->
         SchemaMigration(dataSource, cordappLoader, configuration.networkParametersPath, configuration.myLegalName)
                 .checkOrUpdate(schemaService.internalSchemas, runMigrationScripts, haveCheckpoints, true)
-                .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints && !allowAppSchemaUpgradeWithCheckpoints, false)
+                .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints && !allowAppSchemaUpgradeWithCheckpoints, !configuration.devMode)
     }
 
     /** Loads and starts a notary service if it is configured. */

@@ -52,7 +52,7 @@ class StartedFlowTransition(
             is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
             is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
             FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
-        }.let { scheduleTerminateSessionsIfRequired(it) }
+        }.let { terminateSessionsIfRequired(it) }
     }
 
     private fun waitForSessionConfirmationsTransition(): TransitionResult {
@@ -426,7 +426,7 @@ class StartedFlowTransition(
 
     private fun collectEndedSessionErrors(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
         return sessionIds.filter { sessionId ->
-            !checkpoint.checkpointState.sessions.containsKey(sessionId)
+            sessionId !in checkpoint.checkpointState.sessions
         }.map {sessionId ->
             UnexpectedFlowEndException(
                     "Tried to access ended session $sessionId",
@@ -525,7 +525,7 @@ class StartedFlowTransition(
         return builder { resumeFlowLogic(Unit) }
     }
 
-    private fun scheduleTerminateSessionsIfRequired(transition: TransitionResult): TransitionResult {
+    private fun terminateSessionsIfRequired(transition: TransitionResult): TransitionResult {
         // If there are sessions to be closed, close them on the currently executing transition
         val sessionsToBeTerminated = findSessionsToBeTerminated(transition.newState)
         return if (sessionsToBeTerminated.isNotEmpty()) {

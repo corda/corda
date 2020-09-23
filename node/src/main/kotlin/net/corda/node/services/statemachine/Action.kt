@@ -70,6 +70,21 @@ sealed class Action {
     data class RemoveCheckpoint(val id: StateMachineRunId, val mayHavePersistentResults: Boolean = false) : Action()
 
     /**
+     * Remove a flow's exception from the database.
+     *
+     * @param id The id of the flow
+     */
+    data class RemoveFlowException(val id: StateMachineRunId) : Action()
+
+    /**
+     * Persist an exception to the database for the related flow.
+     *
+     * @param id The id of the flow
+     * @param exception The exception to persist
+     */
+    data class AddFlowException(val id: StateMachineRunId, val exception: Throwable) : Action()
+
+    /**
      * Persist the deduplication facts of [deduplicationHandlers].
      */
     data class PersistDeduplicationFacts(val deduplicationHandlers: List<DeduplicationHandler>) : Action()

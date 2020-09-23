@@ -11,6 +11,7 @@ import java.util.stream.Stream
 /**
  * Thread-safe storage of fiber checkpoints.
  */
+@Suppress("TooManyFunctions")
 interface CheckpointStorage {
     /**
      * Add a checkpoint for a new id to the store. Will throw if there is already a checkpoint for this id
@@ -99,6 +100,8 @@ interface CheckpointStorage {
      * if the flow exception is missing in the database.
      */
     fun getFlowException(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
+
+    fun addFlowException(id: StateMachineRunId, exception: Throwable)
 
     fun removeFlowException(id: StateMachineRunId): Boolean
 }

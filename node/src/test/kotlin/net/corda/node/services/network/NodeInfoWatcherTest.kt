@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import net.corda.core.crypto.Crypto
 import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -49,6 +50,10 @@ class NodeInfoWatcherTest {
 
     @Before
     fun start() {
+        // Register providers before creating Jimfs filesystem. JimFs creates an SSHD instance which
+        // register BouncyCastle and EdDSA provider separately, which wrecks havoc.
+        Crypto.registerProviders()
+
         nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
         val identityService = makeTestIdentityService()
         keyManagementService = MockKeyManagementService(identityService)
