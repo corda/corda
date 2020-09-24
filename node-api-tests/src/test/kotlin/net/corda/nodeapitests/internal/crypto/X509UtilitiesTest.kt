@@ -568,9 +568,9 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
     fun `check certificate serial number length`() {
-        // This test does sanity check that we don't generate 64 bit certificate serial numbers anymore, otherwise it will be timed out.
+        // This test does sanity check that we don't generate 63 bit certificate serial numbers anymore, otherwise it will be timed out.
         // Since serial number assignment is random, there is no deterministic way to check its length.
-        // So there is still theoretical chance for timeout with currently used 128 bit numbers but with extremely low probability (~2^-80).
+        // So there is still theoretical chance for timeout with currently used 127 bit numbers but with extremely low probability (~2^-80).
         val keyPair = generateKeyPair()
         val subject = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
         while (true) {
