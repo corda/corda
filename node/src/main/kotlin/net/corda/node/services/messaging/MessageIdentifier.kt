@@ -1,10 +1,7 @@
 package net.corda.node.services.messaging
 
-import net.corda.core.crypto.SecureHash
-import net.corda.node.services.messaging.MessageIdentifier.Companion.SHARD_SIZE_IN_CHARS
 import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
-import java.lang.IllegalStateException
 import java.math.BigInteger
 import java.time.Instant
 
@@ -39,50 +36,23 @@ data class MessageIdentifier(
 
         fun parse(id: String): MessageIdentifier {
             val prefix = id.substring(0, 2)
-            val messageType = prefixToMessageType(prefix)
+            val messageType = MessageType.fromPrefix(prefix)
             val timestamp = java.lang.Long.parseUnsignedLong(id.substring(3, 19), HEX_RADIX)
             val shardIdentifier = id.substring(20, 28)
             val sessionId = BigInteger(id.substring(29, 61), HEX_RADIX)
             val sessionSequenceNumber = Integer.parseInt(id.substring(62), HEX_RADIX)
             return MessageIdentifier(messageType, shardIdentifier, SessionId(sessionId), sessionSequenceNumber, Instant.ofEpochMilli(timestamp))
         }
-
-        private fun messageTypeToPrefix(messageType: MessageType): String {
-            return when(messageType) {
-                MessageType.SESSION_INIT -> "XI"
-                MessageType.SESSION_CONFIRM -> "XC"
-                MessageType.SESSION_REJECT -> "XR"
-                MessageType.DATA_MESSAGE -> "XD"
-                MessageType.SESSION_END -> "XE"
-                MessageType.SESSION_ERROR -> "XX"
-            }
-        }
-
-        private fun prefixToMessageType(prefix: String): MessageType {
-            return when(prefix) {
-                "XI" -> MessageType.SESSION_INIT
-                "XC" -> MessageType.SESSION_CONFIRM
-                "XR" -> MessageType.SESSION_REJECT
-                "XD" -> MessageType.DATA_MESSAGE
-                "XE" -> MessageType.SESSION_END
-                "XX" -> MessageType.SESSION_ERROR
-                else -> throw IllegalStateException("Invalid prefix: $prefix")
-            }
-        }
     }
 
     override fun toString(): String {
-        val prefix = messageTypeToPrefix(messageType)
+        val prefix = messageType.prefix
         val encodedSessionIdentifier = String.format("%1$0${SESSION_ID_SIZE_IN_HEX}X", sessionIdentifier.value)
         val encodedSequenceNumber = Integer.toHexString(sessionSequenceNumber).toUpperCase()
         val encodedTimestamp = String.format("%1$0${LONG_SIZE_IN_HEX}X", timestamp.toEpochMilli())
         return "$prefix-$encodedTimestamp-$shardIdentifier-$encodedSessionIdentifier-$encodedSequenceNumber"
     }
 
-}
-
-fun generateShardId(flowIdentifier: String): String {
-    return SecureHash.sha256(flowIdentifier).prefixChars(SHARD_SIZE_IN_CHARS)
 }
 
 /**

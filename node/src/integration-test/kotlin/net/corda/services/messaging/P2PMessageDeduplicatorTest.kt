@@ -5,9 +5,9 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.node.services.messaging.MessageIdentifier
 import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.messaging.ReceivedMessage
-import net.corda.node.services.messaging.generateShardId
 import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.sharding.ShardIdGenerator
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -29,7 +29,7 @@ class P2PMessageDeduplicatorTest {
     companion object {
         private const val TOPIC = "whatever"
         private val DATA = ByteSequence.of("blah blah blah".toByteArray())
-        private val SHARD_ID = generateShardId("some-flow-id")
+        private val SHARD_ID = ShardIdGenerator.generateShardId("some-flow-id")
         private val SESSION_ID = SessionId(BigInteger.ONE)
         private val TIMESTAMP = Instant.now()
         private val SENDER = CordaX500Name("CordaWorld", "The Sea Devil", "NeverLand", "NL")

@@ -169,7 +169,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     }
 
     @Suspendable
-    override fun sessionEnded(sessionId: SessionId, senderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?) {
+    override fun sessionEnded(sessionId: SessionId, theirSenderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?) {
         // nothing to do here.
     }
 

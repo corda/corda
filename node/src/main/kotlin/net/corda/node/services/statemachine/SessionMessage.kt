@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import java.lang.IllegalStateException
 import java.math.BigInteger
 import java.security.SecureRandom
 
@@ -136,15 +137,21 @@ data class RejectSessionMessage(val message: String, val errorId: Long) : Existi
  */
 object EndSessionMessage : ExistingSessionMessagePayload()
 
-enum class MessageType {
-    SESSION_INIT,
-    SESSION_CONFIRM,
-    SESSION_REJECT,
-    DATA_MESSAGE,
-    SESSION_END,
-    SESSION_ERROR;
+enum class MessageType(val prefix: String) {
+    SESSION_INIT("XI"),
+    SESSION_CONFIRM("XC"),
+    SESSION_REJECT("XR"),
+    DATA_MESSAGE("XD"),
+    SESSION_END("XE"),
+    SESSION_ERROR("XX");
 
     companion object {
+        private val reverseMap = values().associateBy(MessageType::prefix)
+
+        fun fromPrefix(prefix: String): MessageType {
+            return reverseMap[prefix] ?: throw IllegalStateException("Invalid prefix: $prefix")
+        }
+
         fun inferFromMessage(message: SessionMessage): MessageType {
             return when (message) {
                 is InitialSessionMessage -> SESSION_INIT

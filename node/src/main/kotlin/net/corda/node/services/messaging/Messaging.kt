@@ -94,11 +94,11 @@ interface MessagingService : ServiceLifecycleSupport {
      * Signal that a session has ended to the messaging layer, so that any necessary cleanup is performed.
      *
      * @param sessionId the identifier of the session that ended.
-     * @param senderUUID the sender UUID of the last message seen in the session or null if there was no sender UUID in that message.
-     * @param senderSequenceNumber the sender sequence number of the last message seen in the session or null if there was no sender sequence number in that message.
+     * @param theirSenderUUID the sender UUID last seen from the other side in this session or null if there was no sender UUID seen at all.
+     * @param senderSequenceNumber the last sender sequence number seen from the other side in the session or null if there was no sender sequence number  seen at all.
      */
     @Suspendable
-    fun sessionEnded(sessionId: SessionId, senderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?)
+    fun sessionEnded(sessionId: SessionId, theirSenderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?)
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.

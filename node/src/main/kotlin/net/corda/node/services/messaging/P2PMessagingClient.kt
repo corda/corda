@@ -551,8 +551,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     @Suspendable
-    override fun sessionEnded(sessionId: SessionId, senderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?) {
-        deduplicator.signalSessionEnd(sessionId, senderUUID, senderSequenceNumber)
+    override fun sessionEnded(sessionId: SessionId, theirSenderUUID: SenderUUID?, senderSequenceNumber: SenderSequenceNumber?) {
+        deduplicator.signalSessionEnd(sessionId, theirSenderUUID, senderSequenceNumber)
     }
 
     override fun resolveTargetToArtemisQueue(address: MessageRecipients): String {
