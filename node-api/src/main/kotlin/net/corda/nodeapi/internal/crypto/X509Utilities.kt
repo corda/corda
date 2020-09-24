@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -58,6 +58,7 @@ object X509Utilities {
     const val TLS_CERTIFICATE_DAYS_TO_EXPIRY_WARNING_THRESHOLD = 30
     private const val KEY_ALIAS_REGEX = "[a-z0-9-]+"
     private const val KEY_ALIAS_MAX_LENGTH = 100
+    private const val SERIAL_NUMBER_BYTES_LENGTH = 16
 
     /**
      * Checks if the provided key alias does not exceed maximum length and
@@ -184,7 +185,7 @@ object X509Utilities {
                                  nameConstraints: NameConstraints? = null,
                                  crlDistPoint: String? = null,
                                  crlIssuer: X500Name? = null): X509v3CertificateBuilder {
-        val serial = BigInteger.valueOf(random63BitValue())
+        val serial = randomBigInteger(SERIAL_NUMBER_BYTES_LENGTH)
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
         val role = certificateType.role
@@ -363,6 +364,12 @@ object X509Utilities {
             val distPoint = DistributionPoint(distPointName, null, crlIssuerGeneralNames)
             builder.addExtension(Extension.cRLDistributionPoints, false, CRLDistPoint(arrayOf(distPoint)))
         }
+    }
+
+    fun randomBigInteger(sizeInBytes : Int): BigInteger {
+        val bytes = ByteArray(sizeInBytes)
+        newSecureRandom().nextBytes(bytes)
+        return BigInteger(bytes).abs()
     }
 }
 
