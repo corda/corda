@@ -153,6 +153,11 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 val nextScheduleDelay = try {
                     updateNetworkMapCache()
                 } catch (e: Exception) {
+                    // Check to see if networkmap was reachable before and cached information exists
+                    if (networkMapCache.allNodeHashes.size > 1) {
+                        logger.debug("Networkmap Service unreachable but more than one nodeInfo entries found in the cache. Allowing node start-up to proceed.")
+                        networkMapCache.nodeReady.set(null)
+                    }
                     logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", e)
                     defaultRetryInterval
                 }
