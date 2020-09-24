@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.div
+import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.FlowTimeoutConfiguration
@@ -26,6 +27,7 @@ import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
+import net.corda.testing.common.internal.eventually
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
@@ -40,6 +42,8 @@ import rx.subjects.PublishSubject
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -52,6 +56,7 @@ class ArtemisMessagingTest {
     companion object {
         const val TOPIC = "platform.self"
         private val MESSAGE_IDENTIFIER = MessageIdentifier(MessageType.DATA_MESSAGE, "XXXXXXXX", SessionId(BigInteger.valueOf(14)), 0, Clock.systemUTC().instant())
+        private val EVENT_HORIZON = Duration.ofDays(5)
     }
 
     @Rule
@@ -192,6 +197,23 @@ class ArtemisMessagingTest {
     }
 
     @Test(timeout=300_000)
+    fun `server should reject messages older than the event horizon`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
+        val regularMessage = messagingClient.createMessage(TOPIC, ByteArray(50_000), SenderDeduplicationInfo(MESSAGE_IDENTIFIER.copy(timestamp = Instant.now()), null), emptyMap())
+        val tooOldMessage = messagingClient.createMessage(TOPIC, ByteArray(50_000), SenderDeduplicationInfo(MESSAGE_IDENTIFIER.copy(timestamp = Instant.now().minus(EVENT_HORIZON)), null), emptyMap())
+
+        listOf(tooOldMessage, regularMessage).forEach { messagingClient.send(it, messagingClient.myAddress) }
+
+        val regularMsgReceived = receivedMessages.take()
+        assertThat(regularMsgReceived.uniqueMessageId).isEqualTo(regularMessage.uniqueMessageId)
+
+        eventually {
+            assertThat(messagingServer!!.totalMessagesAcknowledged()).isEqualTo(2)
+        }
+        assertThat(receivedMessages).isEmpty()
+    }
+
+    @Test(timeout=300_000)
 	fun `platform version is included in the message`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
         val message = messagingClient.createMessage(TOPIC, "first msg".toByteArray(), SenderDeduplicationInfo(MESSAGE_IDENTIFIER, null), emptyMap())
@@ -202,7 +224,8 @@ class ArtemisMessagingTest {
     }
 
     private fun startNodeMessagingClient(maxMessageSize: Int = MAX_MESSAGE_SIZE) {
-        messagingClient!!.start(identity.public, null, maxMessageSize)
+        val networkParams = NetworkParameters(3, emptyList(), maxMessageSize, 1_000, Instant.now(), 5, emptyMap(), EVENT_HORIZON)
+        messagingClient!!.start(identity.public, null, networkParams)
     }
 
     private fun createAndStartClientAndServer(platformVersion: Int = 1, serverMaxMessageSize: Int = MAX_MESSAGE_SIZE, clientMaxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {

@@ -409,7 +409,7 @@ open class Node(configuration: NodeConfiguration,
                 myIdentity = nodeInfo.legalIdentities[0].owningKey,
                 serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
                 advertisedAddress = nodeInfo.addresses[0],
-                maxMessageSize = networkParameters.maxMessageSize
+                networkParams = networkParameters
         )
     }
 

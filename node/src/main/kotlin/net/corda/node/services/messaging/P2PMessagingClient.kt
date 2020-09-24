@@ -10,6 +10,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.PartyInfo
@@ -55,6 +56,7 @@ import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -133,6 +135,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private var serviceIdentity: PublicKey? = null
     private lateinit var advertisedAddress: NetworkHostAndPort
     private var maxMessageSize: Int = -1
+    private lateinit var eventHorizon: Duration
 
     override val myAddress: SingleMessageRecipient get() = NodeAddress(myIdentity)
     override val ourSenderUUID = UUID.randomUUID().toString()
@@ -153,13 +156,14 @@ class P2PMessagingClient(val config: NodeConfiguration,
      * @param serviceIdentity An optional second identity if the node is also part of a group address, for example a notary.
      * @param advertisedAddress The externally advertised version of the Artemis broker address used to construct myAddress and included
      * in the network map data.
-     * @param maxMessageSize A bound applied to the message size.
+     * @param networkParams the network parameters when the service is started.
      */
-    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress) {
+    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, networkParams: NetworkParameters, advertisedAddress: NetworkHostAndPort = serverAddress) {
         this.myIdentity = myIdentity
         this.serviceIdentity = serviceIdentity
         this.advertisedAddress = advertisedAddress
-        this.maxMessageSize = maxMessageSize
+        this.maxMessageSize = networkParams.maxMessageSize
+        this.eventHorizon = networkParams.eventHorizon
         state.locked {
             started = true
             log.info("Connecting to message broker: $serverAddress")
@@ -405,6 +409,15 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     internal fun deliver(artemisMessage: ClientMessage) {
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
+            if (isTooOld(cordaMessage)) {
+                log.info("Discarding old message message with identifier: ${cordaMessage.uniqueMessageId}, " +
+                                                            "senderUUID: ${cordaMessage.senderUUID}, " +
+                                                            "senderSeqNo: ${cordaMessage.senderSeqNo}, " +
+                                                            "timestamp: ${cordaMessage.uniqueMessageId.timestamp}")
+                messagingExecutor!!.acknowledge(artemisMessage)
+                return
+            }
+
             if (cordaMessage.uniqueMessageId.messageType == MessageType.SESSION_INIT) {
                 if (!deduplicator.isDuplicateSessionInit(cordaMessage)) {
                     deduplicator.signalMessageProcessStart(cordaMessage)
@@ -418,6 +431,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 deliver(cordaMessage, artemisMessage)
             }
         }
+    }
+
+    private fun isTooOld(msg: ReceivedMessage): Boolean {
+        return msg.uniqueMessageId.timestamp.isBefore(Instant.now().minus(eventHorizon))
     }
 
     private fun deliver(msg: ReceivedMessage, artemisMessage: ClientMessage) {

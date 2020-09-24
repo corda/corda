@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -88,6 +89,11 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
     override val started: Boolean
         get() = activeMQServer.isStarted
+
+    @VisibleForTesting
+    fun totalMessagesAcknowledged(): Long {
+        return activeMQServer.totalMessagesAcknowledged
+    }
 
     // TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from
     // Artemis IO errors
