@@ -156,7 +156,6 @@ def determinise = tasks.register('determinise', ProGuardTask) {
     dontnote
     printseeds
     verbose
-    dontwarn
 
     keep '@interface net.corda.core.CordaInternal { *; }'
     keep '@interface net.corda.core.DoNotImplement { *; }'
