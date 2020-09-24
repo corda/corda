@@ -44,6 +44,7 @@ import net.corda.coretesting.internal.NettyTestServer
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.checkValidity
 import net.corda.nodeapi.internal.crypto.getSupportedKey
@@ -51,6 +52,7 @@ import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
@@ -566,18 +568,17 @@ class X509UtilitiesTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `check certificate serial number length`() {
-        // This test does sanity check that we don't generate 63 bit certificate serial numbers anymore, otherwise it will be timed out.
-        // Since serial number assignment is random, there is no deterministic way to check its length.
-        // So there is still theoretical chance for timeout with currently used 127 bit numbers but with extremely low probability (~2^-80).
+        // Sanity check that we don't generate 63 bit certificate serial numbers anymore.
+        // There is no deterministic way to check certificate serial number length, however the probability of failure on 20-bytes
+        // numbers is rather theoretical (~2^-96).
         val keyPair = generateKeyPair()
         val subject = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
-        while (true) {
-            val cert = X509Utilities.createSelfSignedCACertificate(subject, keyPair)
-            if (cert.serialNumber.bitLength() > 64) {
-                return
-            }
-        }
+        val cert = X509Utilities.createSelfSignedCACertificate(subject, keyPair)
+        assertTrue(cert.serialNumber.bitLength() > 64)
+        val serialized = X509Utilities.buildCertPath(cert).encoded
+        val deserialized = X509CertificateFactory().delegate.generateCertPath(serialized.inputStream()).x509Certificates.first()
+        assertEquals(cert.serialNumber, deserialized.serialNumber)
     }
 }

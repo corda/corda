@@ -58,7 +58,7 @@ object X509Utilities {
     const val TLS_CERTIFICATE_DAYS_TO_EXPIRY_WARNING_THRESHOLD = 30
     private const val KEY_ALIAS_REGEX = "[a-z0-9-]+"
     private const val KEY_ALIAS_MAX_LENGTH = 100
-    private const val SERIAL_NUMBER_BYTES_LENGTH = 16
+    private const val SERIAL_NUMBER_BYTES_LENGTH = 20
 
     /**
      * Checks if the provided key alias does not exceed maximum length and
