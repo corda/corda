@@ -44,7 +44,6 @@ internal class ActionExecutorImpl(
     override fun executeAction(fiber: FlowFiber, action: Action) {
         log.trace { "Flow ${fiber.id} executing $action" }
         return when (action) {
-            is Action.TrackTransaction -> {}
             is Action.PersistCheckpoint -> executePersistCheckpoint(action)
             is Action.PersistDeduplicationFacts -> executePersistDeduplicationIds(action)
             is Action.AcknowledgeMessages -> executeAcknowledgeMessages(action)

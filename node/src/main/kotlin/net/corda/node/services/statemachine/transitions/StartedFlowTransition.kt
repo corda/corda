@@ -46,7 +46,7 @@ class StartedFlowTransition(
             is FlowIORequest.Receive -> receiveTransition(flowIORequest)
             is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
             is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
-            is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
+            is FlowIORequest.WaitForLedgerCommit -> { TransitionResult(startingState) }
             is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
             is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
             is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
@@ -106,24 +106,6 @@ class StartedFlowTransition(
                 actions.add(Action.SleepUntil(currentState, flowIORequest.wakeUpAfter))
                 FlowContinuation.ProcessEvents
             }
-        } else {
-            TransitionResult(startingState)
-        }
-    }
-
-    private fun waitForLedgerCommitTransition(flowIORequest: FlowIORequest.WaitForLedgerCommit): TransitionResult {
-        // This ensures that the [WaitForLedgerCommit] request is not executed multiple times if extra
-        // [DoRemainingWork] events are pushed onto the fiber's event queue before the flow has really woken up
-        return if (!startingState.isWaitingForFuture) {
-            val state = startingState.copy(isWaitingForFuture = true)
-            TransitionResult(
-                newState = state,
-                actions = listOf(
-                    Action.CreateTransaction,
-                    Action.TrackTransaction(flowIORequest.hash, state),
-                    Action.CommitTransaction(state)
-                )
-            )
         } else {
             TransitionResult(startingState)
         }
