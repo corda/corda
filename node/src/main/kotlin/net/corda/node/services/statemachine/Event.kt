@@ -44,13 +44,6 @@ sealed class Event {
     data class Error(val exception: Throwable, val rollback: Boolean = true) : Event()
 
     /**
-     * Signal that a ledger transaction has committed. This is an event completing a [FlowIORequest.WaitForLedgerCommit]
-     * suspension.
-     * @param transaction the transaction that was committed.
-     */
-    data class TransactionCommitted(val transaction: SignedTransaction) : Event()
-
-    /**
      * Trigger a soft shutdown, removing the flow as soon as possible. This causes the flow to be removed as soon as
      * this event is processed. Note that on restart the flow will resume as normal.
      */

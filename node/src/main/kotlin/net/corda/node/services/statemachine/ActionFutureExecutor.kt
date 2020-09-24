@@ -59,25 +59,6 @@ internal class ActionFutureExecutor(
         action.currentState.future = future
     }
 
-    /**
-     * Suspend a flow until the transaction specified in [action] is committed.
-     *
-     * @param fiber The [FlowFiber] to resume after the committing the specified transaction
-     * @param action [Action.TrackTransaction] contains the transaction hash to wait for
-     */
-    @Suspendable
-    fun awaitTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
-        cancelFutureIfRunning(fiber, action.currentState)
-        val instance = fiber.instanceId
-        log.debug { "Suspending flow ${instance.runId} until transaction ${action.hash} is committed" }
-        val future = services.validatedTransactions.trackTransactionWithNoWarning(action.hash)
-        future.thenMatch(
-            success = { transaction -> scheduleWakeUpEvent(instance, Event.TransactionCommitted(transaction)) },
-            failure = { exception -> scheduleWakeUpEvent(instance, Event.Error(exception)) }
-        )
-        action.currentState.future = future
-    }
-
     private fun cancelFutureIfRunning(fiber: FlowFiber, currentState: StateMachineState) {
         // No other future should be running, cancel it if there is
         currentState.future?.run {
