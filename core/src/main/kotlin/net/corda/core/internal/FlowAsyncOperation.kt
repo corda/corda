@@ -39,7 +39,7 @@ fun <T, R : Any> FlowLogic<T>.executeAsync(operation: FlowAsyncOperation<R>, may
 }
 
 /**
- * Returns a name of the external operation implementation considering that it can wrapped
+ * Returns the name of the external operation implementation considering that it can be wrapped
  * by WrappedFlowExternalAsyncOperation<T> or WrappedFlowExternalOperation<T>
  */
 val FlowAsyncOperation<*>.externalOperationImplName: String
