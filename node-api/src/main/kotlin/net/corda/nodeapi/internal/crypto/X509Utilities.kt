@@ -58,7 +58,8 @@ object X509Utilities {
     const val TLS_CERTIFICATE_DAYS_TO_EXPIRY_WARNING_THRESHOLD = 30
     private const val KEY_ALIAS_REGEX = "[a-z0-9-]+"
     private const val KEY_ALIAS_MAX_LENGTH = 100
-    private const val SERIAL_NUMBER_BYTES_LENGTH = 20
+    private const val SERIAL_NUMBER_MAX_LENGTH = 16
+    private const val SERIAL_NUMBER_MIN_LENGTH = 8
 
     /**
      * Checks if the provided key alias does not exceed maximum length and
@@ -185,7 +186,7 @@ object X509Utilities {
                                  nameConstraints: NameConstraints? = null,
                                  crlDistPoint: String? = null,
                                  crlIssuer: X500Name? = null): X509v3CertificateBuilder {
-        val serial = randomBigInteger(SERIAL_NUMBER_BYTES_LENGTH)
+        val serial = generateCertificateSerialNumber()
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
         val role = certificateType.role
@@ -366,10 +367,17 @@ object X509Utilities {
         }
     }
 
-    fun randomBigInteger(sizeInBytes : Int): BigInteger {
-        val bytes = ByteArray(sizeInBytes)
-        newSecureRandom().nextBytes(bytes)
-        return BigInteger(bytes).abs()
+    @Suppress("MagicNumber")
+    private fun generateCertificateSerialNumber(): BigInteger {
+        while (true) {
+            val bytes = ByteArray(SERIAL_NUMBER_MAX_LENGTH)
+            newSecureRandom().nextBytes(bytes)
+            val candidate = BigInteger(bytes).abs()
+            val bitLength = candidate.bitLength()
+            if (bitLength > 8 * SERIAL_NUMBER_MIN_LENGTH) {
+                return candidate
+            }
+        }
     }
 }
 

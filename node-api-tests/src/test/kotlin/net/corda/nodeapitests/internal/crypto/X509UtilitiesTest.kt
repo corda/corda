@@ -569,10 +569,7 @@ class X509UtilitiesTest {
     }
 
     @Test(timeout = 300_000)
-    fun `check certificate serial number length`() {
-        // Sanity check that we don't generate 63 bit certificate serial numbers anymore.
-        // There is no deterministic way to check certificate serial number length, however the probability of failure on 20-bytes
-        // numbers is rather theoretical (~2^-96).
+    fun `check certificate serial number`() {
         val keyPair = generateKeyPair()
         val subject = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
         val cert = X509Utilities.createSelfSignedCACertificate(subject, keyPair)
