@@ -16,6 +16,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.*
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.messaging.SenderDeduplicationInfo
+import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
@@ -298,7 +299,10 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         }
 
         override fun insideDatabaseTransaction() {
-            processedMessages += transfer.message.uniqueMessageId
+            // replicating the real behaviour, where only session-init messages are deduplicated at the messaging layer.
+            if (transfer.message.uniqueMessageId.messageType == MessageType.SESSION_INIT) {
+                processedMessages += transfer.message.uniqueMessageId
+            }
         }
     }
 
