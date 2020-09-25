@@ -25,7 +25,6 @@ import org.junit.runners.Parameterized
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
-import javax.sql.DataSource
 import kotlin.test.assertFailsWith
 
 /*
