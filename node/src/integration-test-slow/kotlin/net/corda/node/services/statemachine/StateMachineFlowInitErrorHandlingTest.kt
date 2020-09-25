@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine
 
+import com.zaxxer.hikari.pool.ProxyConnection
 import net.corda.core.CordaRuntimeException
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startFlowWithClientId
@@ -12,7 +13,6 @@ import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import org.junit.Test
-import java.sql.Connection
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
@@ -163,7 +163,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception when rolling back transaction in transition executor
-                INTERFACE ${Connection::class.java.name}
+                CLASS ${ProxyConnection::class.java.name}
                 METHOD rollback
                 AT ENTRY
                 IF readCounter("counter") == 1
@@ -178,6 +178,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.assertBytemanOutput("Throwing exception in transition executor", 1)
             alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
@@ -215,7 +216,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception when rolling back transaction in transition executor
-                INTERFACE ${Connection::class.java.name}
+                CLASS ${ProxyConnection::class.java.name}
                 METHOD close
                 AT ENTRY
                 IF readCounter("counter") == 1
@@ -230,6 +231,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.assertBytemanOutput("Throwing exception in transition executor", 1)
             alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
