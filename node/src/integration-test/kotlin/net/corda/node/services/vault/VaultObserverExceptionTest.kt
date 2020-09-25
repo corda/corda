@@ -51,6 +51,7 @@ import kotlin.test.assertTrue
 class VaultObserverExceptionTest {
     companion object {
 
+        val waitForFlowDuration = 45.seconds
         val log = contextLogger()
 
         private fun testCordapps() = listOf(
@@ -98,7 +99,7 @@ class VaultObserverExceptionTest {
                 "Syntax Error in Custom SQL",
                 CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
             ).returnValue.then { testControlFuture.complete(false) }
-            val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
+            val foundExpectedException = testControlFuture.getOrThrow(waitForFlowDuration)
 
             Assert.assertTrue(foundExpectedException)
         }
@@ -132,7 +133,7 @@ class VaultObserverExceptionTest {
                 "Syntax Error in Custom SQL",
                 CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
             ).returnValue.then { testControlFuture.complete(false) }
-            val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
+            val foundExpectedException = testControlFuture.getOrThrow(waitForFlowDuration)
 
             Assert.assertTrue(foundExpectedException)
         }
@@ -223,7 +224,7 @@ class VaultObserverExceptionTest {
             assertFailsWith<TimeoutException>("PersistenceException") {
                 aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "EntityManager", errorTargetsToNum(
                         CreateStateFlow.ErrorTarget.TxInvalidState))
-                        .returnValue.getOrThrow(30.seconds)
+                        .returnValue.getOrThrow(waitForFlowDuration)
             }
         }
         Assert.assertTrue("Flow has not been to hospital", counter > 0)
@@ -259,7 +260,7 @@ class VaultObserverExceptionTest {
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(waitForFlowDuration) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
@@ -290,7 +291,7 @@ class VaultObserverExceptionTest {
                 log.info("Flow has finished")
                 testControlFuture.set(false)
             }
-            Assert.assertTrue("Flow has not been kept in hospital", testControlFuture.getOrThrow(30.seconds))
+            Assert.assertTrue("Flow has not been kept in hospital", testControlFuture.getOrThrow(waitForFlowDuration))
         }
     }
 
@@ -309,7 +310,7 @@ class VaultObserverExceptionTest {
                     CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError,
                     CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
-            flowResult.getOrThrow(30.seconds)
+            flowResult.getOrThrow(waitForFlowDuration)
         }
     }
 
@@ -410,7 +411,7 @@ class VaultObserverExceptionTest {
                     testControlFuture.complete(true)
                 }
                 startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = true).getOrThrow()
-                assert(testControlFuture.getOrThrow(30.seconds))
+                assert(testControlFuture.getOrThrow(waitForFlowDuration))
             } else {
                 throw IllegalStateException("Out of process node is still up and running!")
             }
@@ -460,7 +461,7 @@ class VaultObserverExceptionTest {
                     CreateStateFlow::Initiator,
                     "AllGood",
                     errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxErrorOnConsumed)
-                ).returnValue.getOrThrow(30.seconds)
+                ).returnValue.getOrThrow(waitForFlowDuration)
 
                 println("Created new state")
 
@@ -551,7 +552,7 @@ class VaultObserverExceptionTest {
                     "AllGood",
                     // should be a hospital exception
                     errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxErrorOnConsumed)
-                ).returnValue.getOrThrow(30.seconds)
+                ).returnValue.getOrThrow(waitForFlowDuration)
 
                 val flowHandle = aliceNode.rpc.startFlow(
                     SendStateFlow::PassErroneousOwnableState,
@@ -632,7 +633,7 @@ class VaultObserverExceptionTest {
                     CreateStateFlow::Initiator,
                     "AllGood",
                     errorTargetsToNum(CreateStateFlow.ErrorTarget.NoError)
-                ).returnValue.getOrThrow(30.seconds)
+                ).returnValue.getOrThrow(waitForFlowDuration)
 
                 aliceNode.rpc.startFlow(
                     SendStateFlow::PassErroneousOwnableState,
@@ -709,7 +710,7 @@ class VaultObserverExceptionTest {
                     CreateStateFlow::Initiator,
                     "AllGood",
                     errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxErrorOnConsumed)
-                ).returnValue.getOrThrow(30.seconds)
+                ).returnValue.getOrThrow(waitForFlowDuration)
 
                 val flowHandle = aliceNode.rpc.startFlow(
                     SendStateFlow::PassErroneousOwnableState,
@@ -764,7 +765,7 @@ class VaultObserverExceptionTest {
                 "Flow ${SubscribingRawUpdatesFlow::class.java.name} tried to access VaultService.rawUpdates " +
                         "- Rx.Observables should only be accessed outside the context of a flow "
             ) {
-                flowHandle.returnValue.getOrThrow(30.seconds)
+                flowHandle.returnValue.getOrThrow(waitForFlowDuration)
             }
         }
     }
