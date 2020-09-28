@@ -11,7 +11,7 @@ import net.corda.core.transactions.SignedTransaction
  * Track a transaction hash and notify the state machine once the corresponding transaction has committed.
  */
 @DeleteForDJVM
-class WaitForLedgerCommit(private val hash: SecureHash, private val services: ServiceHub): FlowAsyncOperation<SignedTransaction> {
+class WaitForLedgerCommit(val hash: SecureHash, private val services: ServiceHub): FlowAsyncOperation<SignedTransaction> {
 
     override val collectErrorsFromSessions: Boolean
         get() = true
