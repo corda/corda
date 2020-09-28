@@ -164,7 +164,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     private lateinit var ourParty: Party
 
-    /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
+    /** Stores notary identities obtained from the network parameters. */
     @Volatile
     private var notaryIdentityCache = HashSet<Party>()
 
@@ -296,11 +296,13 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
                     keyToParty[party.owningKey]?.let { candidate }
                 } else {
                     // Party is a well-known party or well-known party doesn't exist: skip checks.
-                    candidate
+                    // If the notary is not in the network map cache, try getting it from the network parameters
+                    // to prevent database conversion issues with vault updates (CORDA-2745).
+                    candidate ?: party.takeIf { it in notaryIdentityCache }
                 }
             } else {
                 keyToParty[party.owningKey]?.let {
-                    // Rotated (inactive) well-known party should be converted to the actual well-known party.
+                    // Resolved party can be stale due to key rotation: always convert it to the actual well-known party.
                     wellKnownPartyFromX500Name(it.name)
                 }
             }

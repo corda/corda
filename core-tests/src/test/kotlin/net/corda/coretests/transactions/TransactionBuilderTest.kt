@@ -13,6 +13,7 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
@@ -51,6 +52,7 @@ class TransactionBuilderTest {
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         doReturn(networkParameters).whenever(services).networkParameters
+        doReturn(mock<IdentityService>()).whenever(services).identityService
 
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments

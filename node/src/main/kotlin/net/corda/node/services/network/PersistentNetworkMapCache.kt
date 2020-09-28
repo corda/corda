@@ -57,10 +57,13 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
-    // Notary whitelist in the network parameters may contain stale entries after certificate rotation.
-    // We need to obtain active notary identities by X.500 name from the network map cache.
-    override val notaryIdentities: List<Party>
-        get() = notaries.map { getPeerCertificateByLegalName(it.identity.name)?.party ?: it.identity }
+    @Volatile
+    private lateinit var rotatedNotaries: Set<CordaX500Name>
+
+    // Notary whitelist may contain multiple identities with the same X.500 name after certificate rotation.
+    // Exclude duplicated entries, which are not present in the network map.
+    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
+            .filterNot { it.name in rotatedNotaries && it != getPeerCertificateByLegalName(it.name)?.party }
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -76,7 +79,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
 
     fun start(notaries: List<NotaryInfo>) {
-        this.notaries = notaries
+        onNewNotaryList(notaries)
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
@@ -100,9 +103,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override fun isNotary(party: Party): Boolean = notaries.any { it.identity.name == party.name }
+    override fun isNotary(party: Party): Boolean = notaries.any { it.identity == party }
 
-    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity.name == party.name }
+    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = getNodesByLegalIdentityKey(party.owningKey)
@@ -421,5 +424,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override fun onNewNotaryList(notaries: List<NotaryInfo>) {
         this.notaries = notaries
+        this.rotatedNotaries = notaries.groupBy { it.identity.name }.filter { it.value.size > 1 }.keys
     }
 }

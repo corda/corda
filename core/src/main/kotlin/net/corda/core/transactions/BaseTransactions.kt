@@ -45,7 +45,9 @@ abstract class FullTransaction : BaseTransaction() {
         // Transaction can combine different identities of the same notary after key rotation.
         val notaries = (inputs + references).map { it.state.notary.name }.toHashSet()
         check(notaries.size == 1) { "All inputs and reference inputs must point to the same notary" }
-        check(notaries.single() == notary?.name) { "The specified notary must be the one specified by all inputs and input references" }
+        check(notaries.single() == notary?.name) {
+            "The specified transaction notary must be the one specified by all inputs and input references"
+        }
     }
 
     /** Make sure the assigned notary is part of the network parameter whitelist. */

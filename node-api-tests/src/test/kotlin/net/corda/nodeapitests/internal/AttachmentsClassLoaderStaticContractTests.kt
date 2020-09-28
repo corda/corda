@@ -11,6 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -91,6 +92,7 @@ class AttachmentsClassLoaderStaticContractTests {
         val contractAttachmentId = SecureHash.randomSHA256()
         doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage)
                 .getLatestContractAttachments(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)
+        doReturn(mock<IdentityService>()).whenever(it).identityService
     }
 
     @Test(timeout=300_000)
