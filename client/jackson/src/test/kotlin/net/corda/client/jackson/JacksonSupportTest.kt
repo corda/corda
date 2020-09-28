@@ -26,6 +26,7 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
@@ -242,6 +243,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
         doReturn(mock<TransactionStorage>()).whenever(services).validatedTransactions
+        doReturn(mock<IdentityService>()).whenever(services).identityService
         val attachment = rigorousMock<ContractAttachment>()
         doReturn(attachment).whenever(attachmentStorage).openAttachment(attachmentId)
         doReturn(attachmentId).whenever(attachment).id

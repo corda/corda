@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.createMockCordaService
@@ -50,7 +49,7 @@ class NodeInterestRatesTest {
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
     private val dummyCashIssuer = TestIdentity(CordaX500Name("Cash issuer", "London", "GB"))
-    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
+    private val services = MockServices(listOf("net.corda.finance.contracts.asset"), dummyCashIssuer, moreKeys = MEGA_CORP_KEY)
     // This is safe because MockServices only ever have a single identity
     private val identity = services.myInfo.singleIdentity()
 
