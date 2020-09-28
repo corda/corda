@@ -58,7 +58,13 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
+    @Volatile
+    private lateinit var rotatedNotaries: Set<CordaX500Name>
+
+    // Notary whitelist may contain multiple identities with the same X.500 name after certificate rotation.
+    // Exclude duplicated entries, which are not present in the network map.
     override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
+            .filterNot { it.name in rotatedNotaries && it != getPeerCertificateByLegalName(it.name)?.party }
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -74,7 +80,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
 
     fun start(notaries: List<NotaryInfo>) {
-        this.notaries = notaries
+        onNewNotaryList(notaries)
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
@@ -97,6 +103,8 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             session.createQuery(query).resultList.singleOrNull()?.toNodeInfo()
         }
     }
+
+    override fun isNotary(party: Party): Boolean = notaries.any { it.identity == party }
 
     override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 
@@ -426,5 +434,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override fun onNewNotaryList(notaries: List<NotaryInfo>) {
         this.notaries = notaries
+        this.rotatedNotaries = notaries.groupBy { it.identity.name }.filter { it.value.size > 1 }.keys
     }
 }

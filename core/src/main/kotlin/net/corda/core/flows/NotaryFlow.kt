@@ -86,7 +86,9 @@ class NotaryFlow {
             notaries.forEach {
                 check(serviceHub.networkMapCache.isNotary(it)) { "${it.description()} is not a notary on the network" }
                 // Transaction can combine different identities of the same notary after key rotation.
-                check(it.name == notaryParty.name) { "Input states and reference input states must have the same Notary" }
+                check(it.name == notaryParty.name) {
+                    "Input states and reference input states must have the same Notary as the transaction Notary"
+                }
             }
 
             if (!skipVerification) {

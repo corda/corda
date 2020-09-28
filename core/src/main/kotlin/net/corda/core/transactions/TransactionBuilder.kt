@@ -154,6 +154,7 @@ open class TransactionBuilder(
         if (referenceStates.isNotEmpty()) {
             services.ensureMinimumPlatformVersion(4, "Reference states")
         }
+        resolveNotary(services)
 
         val (allContractAttachments: Collection<AttachmentId>, resolvedOutputs: List<TransactionState<ContractState>>)
                 = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
@@ -652,6 +653,23 @@ open class TransactionBuilder(
 
     // Transaction can combine different identities of the same notary after key rotation.
     private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary.name }.toSet().size == 1
+
+    // Automatically correct notary after its key rotation
+    private fun resolveNotary(services: ServicesForResolution) {
+        notary?.let {
+            val activeNotary = services.identityService.wellKnownPartyFromX500Name(it.name)
+            if (activeNotary != null && activeNotary != it) {
+                log.warn("Replacing notary on the transaction '${it.description()}' with '${activeNotary.description()}'.")
+                notary = activeNotary
+            }
+            outputs.forEachIndexed { index, transactionState ->
+                if (activeNotary != null && activeNotary != transactionState.notary) {
+                    log.warn("Replacing notary on the transaction output '${it.description()}' with '${activeNotary.description()}'.")
+                    outputs[index] = transactionState.copy(notary = activeNotary)
+                }
+            }
+        }
+    }
 
     /**
      * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method is used

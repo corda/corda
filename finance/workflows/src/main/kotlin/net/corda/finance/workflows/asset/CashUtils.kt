@@ -143,7 +143,7 @@ object CashUtils {
                       onlyFromParties: Set<AbstractParty> = emptySet(),
                       anonymous: Boolean = true): Pair<TransactionBuilder, List<PublicKey>> {
         fun deriveState(txState: TransactionState<Cash.State>, amt: Amount<Issued<Currency>>, owner: AbstractParty): TransactionState<Cash.State> {
-            return txState.copy(data = txState.data.copy(amount = amt, owner = owner), notary = tx.notary!!)
+            return txState.copy(data = txState.data.copy(amount = amt, owner = owner))
         }
 
         // Retrieve unspent and unlocked cash states that meet our spending criteria.

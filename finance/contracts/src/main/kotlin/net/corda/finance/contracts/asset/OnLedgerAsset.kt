@@ -120,6 +120,9 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
 
             // TODO: Check that re-running this on the same transaction multiple times does the right thing.
 
+            // The notary may be associated with a locked state only.
+            tx.notary = acceptableStates.firstOrNull()?.state?.notary
+
             // Calculate the total amount we're sending (they must be all of a compatible token).
             val totalSendAmount = payments.map { it.amount }.sumOrThrow()
             // Select a subset of the available states we were given that sums up to >= totalSendAmount.
