@@ -573,7 +573,8 @@ class X509UtilitiesTest {
         val keyPair = generateKeyPair()
         val subject = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
         val cert = X509Utilities.createSelfSignedCACertificate(subject, keyPair)
-        assertTrue(cert.serialNumber.bitLength() > 64)
+        assertTrue(cert.serialNumber.signum() > 0)
+        assertEquals(127, cert.serialNumber.bitLength())
         val serialized = X509Utilities.buildCertPath(cert).encoded
         val deserialized = X509CertificateFactory().delegate.generateCertPath(serialized.inputStream()).x509Certificates.first()
         assertEquals(cert.serialNumber, deserialized.serialNumber)
