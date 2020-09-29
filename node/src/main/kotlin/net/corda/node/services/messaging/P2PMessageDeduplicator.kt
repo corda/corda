@@ -41,15 +41,15 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
      */
     private val sessionData = createSessionDataMap(cacheFactory)
 
-    private fun createSessionDataMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SessionId, MessageMeta, SessionData, BigInteger> {
+    private fun createSessionDataMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SessionId, MessageMeta, SessionData, String> {
         return AppendOnlyPersistentMap(
                 cacheFactory = cacheFactory,
                 name = "P2PMessageDeduplicator_sessionData",
-                toPersistentEntityKey = { it.value },
-                fromPersistentEntity = { Pair(SessionId(it.sessionId), MessageMeta(it.generationTime, it.senderHash, it.firstSenderSeqNo, it.lastSenderSeqNo)) },
+                toPersistentEntityKey = { it.toHex() },
+                fromPersistentEntity = { Pair(SessionId.fromHex(it.sessionId), MessageMeta(it.generationTime, it.senderHash, it.firstSenderSeqNo, it.lastSenderSeqNo)) },
                 toPersistentEntity = { key: SessionId, value: MessageMeta ->
                     SessionData().apply {
-                        sessionId = key.value
+                        sessionId = key.toHex()
                         generationTime = value.generationTime
                         senderHash = value.senderHash
                         firstSenderSeqNo = value.firstSenderSeqNo
@@ -132,7 +132,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(SessionData::class.java)
         val queryRoot = criteriaUpdate.from(SessionData::class.java)
         criteriaUpdate.set(SessionData::lastSenderSeqNo.name, value.lastSenderSeqNo)
-        criteriaUpdate.where(criteriaBuilder.equal(queryRoot.get<BigInteger>(SessionData::sessionId.name), key.value))
+        criteriaUpdate.where(criteriaBuilder.equal(queryRoot.get<BigInteger>(SessionData::sessionId.name), key.toHex()))
         val update = session.createQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
         return rowsUpdated != 0
@@ -142,9 +142,12 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     @Suppress("MagicNumber") // database column width
     @Table(name = "${NODE_DATABASE_PREFIX}session_data")
     class SessionData (
+            /**
+             * The session identifier in hexadecimal form.
+             */
             @Id
             @Column(name = "session_id", nullable = false)
-            var sessionId: BigInteger = BigInteger.ZERO,
+            var sessionId: String = "",
 
             /**
              * The time the corresponding session-init message was originally generated on the sender side.

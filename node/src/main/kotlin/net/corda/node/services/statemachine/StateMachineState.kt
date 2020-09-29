@@ -354,7 +354,7 @@ sealed class SessionState {
          * Returns the new form of the state
          */
         fun bufferMessage(messageIdentifier: MessageIdentifier, messagePayload: ExistingSessionMessagePayload): SessionState {
-            return this.copy(bufferedMessages = bufferedMessages + Pair(messageIdentifier, messagePayload), nextSendingSeqNumber = nextSendingSeqNumber + 1)
+            return bufferMessages(listOf(messageIdentifier to messagePayload))
         }
 
         /**

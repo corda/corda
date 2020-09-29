@@ -245,7 +245,7 @@ class TopLevelTransition(
                             checkpointState = checkpoint.checkpointState.copy(
                                 numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1,
                                 numberOfCommits = checkpoint.checkpointState.numberOfCommits + 1,
-                                    suspensionTime = context.time
+                                suspensionTime = context.time
                             ),
                             flowState = FlowState.Finished,
                             result = event.returnValue,

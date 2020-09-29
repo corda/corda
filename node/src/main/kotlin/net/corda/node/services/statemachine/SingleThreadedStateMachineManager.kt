@@ -38,9 +38,6 @@ import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
-import net.corda.node.services.messaging.MessageIdentifier
-import net.corda.node.services.messaging.SenderSequenceNumber
-import net.corda.node.services.messaging.SenderUUID
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
@@ -707,8 +704,7 @@ internal class SingleThreadedStateMachineManager(
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event,
-                        event.receivedMessage.uniqueMessageId, event.receivedMessage.senderUUID, event.receivedMessage.senderSeqNo)
+                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event)
                 is InitialSessionMessage -> onSessionInit(sessionMessage, sender, event)
             }
         } else {
@@ -721,10 +717,7 @@ internal class SingleThreadedStateMachineManager(
     private fun onExistingSessionMessage(
         sessionMessage: ExistingSessionMessage,
         sender: Party,
-        externalEvent: ExternalEvent.ExternalMessageEvent,
-        messageIdentifier: MessageIdentifier,
-        senderUUID: SenderUUID?,
-        senderSequenceNumber: SenderSequenceNumber?
+        externalEvent: ExternalEvent.ExternalMessageEvent
     ) {
         try {
             val deduplicationHandler = externalEvent.deduplicationHandler
@@ -742,7 +735,8 @@ internal class SingleThreadedStateMachineManager(
                     logger.info("Cannot find flow corresponding to session ID - $recipientId.")
                 }
             } else {
-                val event = Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender, messageIdentifier, senderUUID, senderSequenceNumber)
+                val event = Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender,
+                        externalEvent.receivedMessage.uniqueMessageId, externalEvent.receivedMessage.senderUUID, externalEvent.receivedMessage.senderSeqNo)
                 innerState.withLock {
                     flows[flowId]?.run { fiber.scheduleEvent(event) }
                         // If flow is not running add it to the list of external events to be processed if/when the flow resumes.

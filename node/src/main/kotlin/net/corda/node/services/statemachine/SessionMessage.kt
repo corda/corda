@@ -40,11 +40,23 @@ data class SessionId(val value: BigInteger) {
             SessionId(this.value.plus(BigInteger.ONE))
     }
 
+    fun toHex(): String {
+        return String.format("%1$0${SESSION_ID_SIZE_IN_HEX}X", value)
+    }
+
     companion object {
         const val MAX_BIT_SIZE = 128
+        const val SESSION_ID_SIZE_IN_HEX = MAX_BIT_SIZE / 4
         val LARGEST_SESSION_ID = BigInteger.valueOf(2).pow(MAX_BIT_SIZE).minus(BigInteger.ONE)
 
         fun createRandom(secureRandom: SecureRandom) = SessionId(BigInteger(MAX_BIT_SIZE, secureRandom))
+
+        @Suppress("MagicNumber")
+        fun fromHex(hexValue: String): SessionId {
+            require(hexValue.length == SESSION_ID_SIZE_IN_HEX) { "A session identifier in hex form must be $SESSION_ID_SIZE_IN_HEX characters long" }
+            val value = BigInteger(hexValue, 16)
+            return SessionId(value)
+        }
     }
 }
 

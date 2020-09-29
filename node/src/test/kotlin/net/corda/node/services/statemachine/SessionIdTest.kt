@@ -39,4 +39,16 @@ class SessionIdTest {
         assertThat(initiatedSessionId.value.toLong()).isEqualTo(0)
     }
 
+    @Test(timeout=300_000)
+    fun `conversion from and to hex form works properly`() {
+        val sessionId = SessionId(BigInteger.valueOf(42))
+        val sessionIdHexForm = "0000000000000000000000000000002A"
+
+        assertThat(sessionId.toHex()).isEqualTo(sessionIdHexForm)
+        assertThat(SessionId.fromHex(sessionIdHexForm)).isEqualTo(sessionId)
+        assertThatThrownBy { SessionId.fromHex("2A") }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("A session identifier in hex form must be 32 characters long")
+    }
+
 }

@@ -89,7 +89,7 @@ class P2PMessageDeduplicatorTest {
         processMessage(sessionInitMessage)
 
         val sessionDataAfterSessionInit = database.transaction {
-            entityManager.find(P2PMessageDeduplicator.SessionData::class.java, SESSION_ID.value)
+            entityManager.find(P2PMessageDeduplicator.SessionData::class.java, SESSION_ID.toHex())
         }
         assertThat(sessionDataAfterSessionInit.firstSenderSeqNo).isEqualTo(FIRST_SENDER_SEQ_NO)
         assertThat(sessionDataAfterSessionInit.lastSenderSeqNo).isNull()
@@ -100,7 +100,7 @@ class P2PMessageDeduplicatorTest {
         }
 
         val sessionDataAfterSessionEnd = database.transaction {
-            entityManager.find(P2PMessageDeduplicator.SessionData::class.java, SESSION_ID.value)
+            entityManager.find(P2PMessageDeduplicator.SessionData::class.java, SESSION_ID.toHex())
         }
         assertThat(sessionDataAfterSessionEnd.firstSenderSeqNo).isEqualTo(FIRST_SENDER_SEQ_NO)
         assertThat(sessionDataAfterSessionEnd.lastSenderSeqNo).isEqualTo(LAST_SENDER_SEQ_NO)

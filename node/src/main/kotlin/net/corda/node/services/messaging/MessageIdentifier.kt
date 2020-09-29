@@ -2,7 +2,6 @@ package net.corda.node.services.messaging
 
 import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
-import java.math.BigInteger
 import java.time.Instant
 
 /**
@@ -31,23 +30,22 @@ data class MessageIdentifier(
     companion object {
         const val SHARD_SIZE_IN_CHARS = 8
         const val LONG_SIZE_IN_HEX = 16 // 64 / 4
-        const val SESSION_ID_SIZE_IN_HEX = SessionId.MAX_BIT_SIZE / 4
-        const val HEX_RADIX = 16
+        private const val HEX_RADIX = 16
 
         fun parse(id: String): MessageIdentifier {
             val prefix = id.substring(0, 2)
             val messageType = MessageType.fromPrefix(prefix)
             val timestamp = java.lang.Long.parseUnsignedLong(id.substring(3, 19), HEX_RADIX)
             val shardIdentifier = id.substring(20, 28)
-            val sessionId = BigInteger(id.substring(29, 61), HEX_RADIX)
+            val sessionId = SessionId.fromHex(id.substring(29, 61))
             val sessionSequenceNumber = Integer.parseInt(id.substring(62), HEX_RADIX)
-            return MessageIdentifier(messageType, shardIdentifier, SessionId(sessionId), sessionSequenceNumber, Instant.ofEpochMilli(timestamp))
+            return MessageIdentifier(messageType, shardIdentifier, sessionId, sessionSequenceNumber, Instant.ofEpochMilli(timestamp))
         }
     }
 
     override fun toString(): String {
         val prefix = messageType.prefix
-        val encodedSessionIdentifier = String.format("%1$0${SESSION_ID_SIZE_IN_HEX}X", sessionIdentifier.value)
+        val encodedSessionIdentifier = sessionIdentifier.toHex()
         val encodedSequenceNumber = Integer.toHexString(sessionSequenceNumber).toUpperCase()
         val encodedTimestamp = String.format("%1$0${LONG_SIZE_IN_HEX}X", timestamp.toEpochMilli())
         return "$prefix-$encodedTimestamp-$shardIdentifier-$encodedSessionIdentifier-$encodedSequenceNumber"
