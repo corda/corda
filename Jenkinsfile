@@ -83,24 +83,6 @@ pipeline {
                 ].join(' ')
             }
         }
-        stage('Slow Integration Test') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'slowIntegrationTest'
-                ].join(' ')
-            }
-        }
-        stage('Deploy Node') {
-            steps {
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'deployNode'
-                ].join(' ')
-            }
-        }
         stage('Publish to Artifactory') {
             when {
                 expression { isReleaseTag }
