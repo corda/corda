@@ -1,7 +1,6 @@
 package net.corda.node.services.identity
 
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -28,7 +27,6 @@ import kotlin.collections.LinkedHashSet
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
 @ThreadSafe
-@Suppress("TooManyFunctions")
 class InMemoryIdentityService(
         identities: List<PartyAndCertificate> = emptyList(),
         override val trustRoot: X509Certificate
@@ -115,22 +113,6 @@ class InMemoryIdentityService(
             keyToPartyAndCerts[key]?.party
         } else
             null
-    }
-
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
-        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
-        // into a party, and from there figure out the well known party.
-        log.debug("Attempting to find wellKnownParty for: ${party.owningKey.toStringShort()}")
-        val candidate = partyFromKey(party.owningKey)
-        return if (candidate != null) {
-            require(party.nameOrNull() == null || party.nameOrNull() == candidate.name) {
-                "Candidate party $candidate does not match expected $party"
-            }
-            wellKnownPartyFromX500Name(candidate.name)
-        } else {
-            null
-        }
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
