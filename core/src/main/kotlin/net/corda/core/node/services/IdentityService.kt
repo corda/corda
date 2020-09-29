@@ -6,8 +6,6 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
-import net.corda.core.internal.hash
-import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -27,10 +25,6 @@ interface IdentityService {
     val trustRoot: X509Certificate
     val trustAnchor: TrustAnchor
     val caCertStore: CertStore
-
-    companion object {
-        private val log = contextLogger()
-    }
 
     /**
      * Verify and then store an identity.
@@ -99,22 +93,7 @@ interface IdentityService {
      * @param party identity to determine well known identity for.
      * @return well known identity, if found.
      */
-    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
-        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
-        // into a party, and from there figure out the well known party.
-        log.debug("Attempting to find wellKnownParty for: ${party.owningKey.hash}")
-        val candidate = partyFromKey(party.owningKey)
-        // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-        return if (candidate != null) {
-            require(party.nameOrNull() == null || party.nameOrNull() == candidate.name) {
-                "Candidate party $candidate does not match expected $party"
-            }
-            wellKnownPartyFromX500Name(candidate.name)
-        } else {
-            null
-        }
-    }
+    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
 
     /**
      * Resolves a (optionally) confidential identity to the corresponding well known identity [Party].

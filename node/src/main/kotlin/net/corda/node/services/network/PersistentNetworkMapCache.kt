@@ -182,8 +182,8 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                             }
                             previousNode != node -> {
                                 logger.info("Previous node was found for ${node.legalIdentities.first().name} as: ${previousNode.printWithKey()}")
-                                // TODO We should be adding any new identities as well
-                                if (verifyIdentities(node)) {
+                                // Register new identities for rotated certificates
+                                if (verifyAndRegisterIdentities(node)) {
                                     updatedNodes.add(node to previousNode)
                                 }
                             }
@@ -277,7 +277,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun removeNode(node: NodeInfo) {
-        logger.info("Removing node with info: $node")
+        logger.info("Removing node with info: ${node.printWithKey()}")
         synchronized(_changed) {
             database.transaction {
                 removeInfoDB(session, node)

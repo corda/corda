@@ -11,26 +11,27 @@ import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
-import net.corda.core.internal.toSet
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.network.NotaryUpdateListener
 import net.corda.node.services.persistence.PublicKeyHashToExternalId
 import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang3.ArrayUtils
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import org.hibernate.Session
 import org.hibernate.annotations.Type
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
@@ -47,7 +48,6 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import kotlin.collections.HashSet
 import kotlin.streams.toList
 
 /**
@@ -61,15 +61,13 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     companion object {
         private val log = contextLogger()
 
-        const val HASH_TO_IDENTITY_TABLE_NAME = "${NODE_DATABASE_PREFIX}identities"
-        const val NAME_TO_HASH_TABLE_NAME = "${NODE_DATABASE_PREFIX}named_identities"
-        const val KEY_TO_NAME_TABLE_NAME = "${NODE_DATABASE_PREFIX}identities_no_cert"
-        const val HASH_TO_KEY_TABLE_NAME = "${NODE_DATABASE_PREFIX}hash_to_key"
-        const val PK_HASH_COLUMN_NAME = "pk_hash"
-        const val IDENTITY_COLUMN_NAME = "identity_value"
-        const val NAME_COLUMN_NAME = "name"
+        private const val HASH_TO_IDENTITY_TABLE_NAME = "${NODE_DATABASE_PREFIX}identities"
+        private const val KEY_TO_NAME_TABLE_NAME = "${NODE_DATABASE_PREFIX}identities_no_cert"
+        private const val PK_HASH_COLUMN_NAME = "pk_hash"
+        private const val IDENTITY_COLUMN_NAME = "identity_value"
+        private const val NAME_COLUMN_NAME = "name"
 
-        fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, PartyAndCertificate,
+        private fun createKeyToPartyAndCertMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, PartyAndCertificate,
                 PersistentPublicKeyHashToCertificate, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
@@ -88,56 +86,33 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             )
         }
 
-        fun createX500ToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, String,
-                PersistentPartyToPublicKeyHash, String> {
-            return AppendOnlyPersistentMap(
-                    cacheFactory = cacheFactory,
-                    name = "PersistentIdentityService_nameToKey",
-                    toPersistentEntityKey = { it.toString() },
-                    fromPersistentEntity = {
-                        Pair(CordaX500Name.parse(it.name), it.publicKeyHash)
-                    },
-                    toPersistentEntity = { key: CordaX500Name, value: String ->
-                        PersistentPartyToPublicKeyHash(key.toString(), value)
-                    },
-                    persistentEntityClass = PersistentPartyToPublicKeyHash::class.java
-            )
-        }
-
-        fun createKeyToX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, CordaX500Name,
+        private fun createKeyToPartyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<PublicKey, Party,
                 PersistentPublicKeyHashToParty, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
-                    name = "PersistentIdentityService_keyToName",
-                    toPersistentEntityKey = { it },
+                    name = "PersistentIdentityService_keyToParty",
+                    toPersistentEntityKey = { it.toStringShort() },
                     fromPersistentEntity = {
                         Pair(
-                                it.publicKeyHash,
-                                CordaX500Name.parse(it.name)
+                                Crypto.decodePublicKey(it.publicKey),
+                                Party(CordaX500Name.parse(it.name), Crypto.decodePublicKey(it.partyPublicKey))
                         )
                     },
-                    toPersistentEntity = { key: String, value: CordaX500Name ->
-                        PersistentPublicKeyHashToParty(key, value.toString())
+                    toPersistentEntity = { key: PublicKey, value: Party ->
+                        PersistentPublicKeyHashToParty(key.toStringShort(), value.toString(), key.encoded, value.owningKey.encoded)
                     },
                     persistentEntityClass = PersistentPublicKeyHashToParty::class.java)
         }
 
-        fun createHashToKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<String, PublicKey, PersistentHashToPublicKey,
-                String> {
-            return AppendOnlyPersistentMap(
+        private fun createNameToPartyMap(cacheFactory: NamedCacheFactory): NonInvalidatingCache<CordaX500Name, Optional<Party>> {
+            return NonInvalidatingCache(
                     cacheFactory = cacheFactory,
-                    name = "PersistentIdentityService_hashToKey",
-                    toPersistentEntityKey = { it },
-                    fromPersistentEntity = {
-                        Pair(
-                                it.publicKeyHash,
-                                Crypto.decodePublicKey(it.publicKey)
-                        )
-                    },
-                    toPersistentEntity = { key: String, value: PublicKey ->
-                        PersistentHashToPublicKey(key, value.encoded)
-                    },
-                    persistentEntityClass = PersistentHashToPublicKey::class.java)
+                    name = "PersistentIdentityService_nameToParty",
+                    loadFunction = {
+                        val result = currentDBSession().find(NodeInfoSchemaV1.DBPartyAndCertificate::class.java, it.toString())
+                        Optional.ofNullable(result?.toLegalIdentityAndCert()?.party)
+                    }
+            )
         }
 
         private fun mapToKey(party: PartyAndCertificate) = party.owningKey.toStringShort()
@@ -156,38 +131,23 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     )
 
     @Entity
-    @javax.persistence.Table(name = NAME_TO_HASH_TABLE_NAME)
-    class PersistentPartyToPublicKeyHash(
+    @javax.persistence.Table(name = KEY_TO_NAME_TABLE_NAME)
+    class PersistentPublicKeyHashToParty(
+            @Suppress("Unused")
             @Id
-            @Suppress("MagicNumber") // database column width
+            @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
+            var publicKeyHash: String = "",
+
             @Column(name = NAME_COLUMN_NAME, length = 128, nullable = false)
             var name: String = "",
 
-            @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
-            var publicKeyHash: String = ""
-    )
-
-    @Entity
-    @javax.persistence.Table(name = KEY_TO_NAME_TABLE_NAME)
-    class PersistentPublicKeyHashToParty(
-            @Id
-            @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
-            var publicKeyHash: String = "",
-
-            @Column(name = NAME_COLUMN_NAME, length = 128, nullable = false)
-            var name: String = ""
-    )
-
-    @Entity
-    @javax.persistence.Table(name = HASH_TO_KEY_TABLE_NAME)
-    class PersistentHashToPublicKey(
-            @Id
-            @Column(name = PK_HASH_COLUMN_NAME, length = MAX_HASH_HEX_SIZE, nullable = false)
-            var publicKeyHash: String = "",
-
             @Type(type = "corda-blob")
             @Column(name = "public_key", nullable = false)
-            var publicKey: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
+            var publicKey: ByteArray = EMPTY_BYTE_ARRAY,
+
+            @Type(type = "corda-blob")
+            @Column(name = "party_public_key", nullable = false)
+            var partyPublicKey: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     private lateinit var _caCertStore: CertStore
@@ -199,6 +159,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private lateinit var _trustAnchor: TrustAnchor
     override val trustAnchor: TrustAnchor get() = _trustAnchor
 
+    private lateinit var ourParty: Party
+
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
     @Volatile
     private var notaryIdentityCache = HashSet<Party>()
@@ -209,9 +171,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private lateinit var _pkToIdCache: WritablePublicKeyToOwningIdentityCache
 
     private val keyToPartyAndCert = createKeyToPartyAndCertMap(cacheFactory)
-    private val nameToKey = createX500ToKeyMap(cacheFactory)
-    private val keyToName = createKeyToX500Map(cacheFactory)
-    private val hashToKey = createHashToKeyMap(cacheFactory)
+    private val keyToParty = createKeyToPartyMap(cacheFactory)
+    private val nameToParty = createNameToPartyMap(cacheFactory)
 
     fun start(
             trustRoot: X509Certificate,
@@ -226,50 +187,38 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(certificates))
         _pkToIdCache = pkToIdCache
         notaryIdentityCache.addAll(notaryIdentities)
+        ourParty = ourIdentity.party
     }
 
-    fun loadIdentities(identities: Collection<PartyAndCertificate> = emptySet(), confidentialIdentities: Collection<PartyAndCertificate> =
-            emptySet()) {
+    fun loadIdentities(identities: Collection<PartyAndCertificate>) {
         identities.forEach {
             val key = mapToKey(it)
             keyToPartyAndCert.addWithDuplicatesAllowed(key, it, false)
-            nameToKey.addWithDuplicatesAllowed(it.name, key, false)
-            keyToName.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
-        }
-        confidentialIdentities.forEach {
-            keyToName.addWithDuplicatesAllowed(mapToKey(it), it.name, false)
+            keyToParty.addWithDuplicatesAllowed(it.owningKey, it.party, false)
+            nameToParty.asMap()[it.name] = Optional.of(it.party)
         }
         log.debug("Identities loaded")
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-        return verifyAndRegisterIdentity(identity, false)
+        return verifyAndRegisterIdentity(trustAnchor, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
-        return database.transaction {
-            verifyAndRegisterIdentity(trustAnchor, identity, isNewRandomIdentity)
-        }
+    override fun verifyAndRegisterNewRandomIdentity(identity: PartyAndCertificate) {
+        verifyAndRegisterIdentity(trustAnchor, identity, true)
     }
 
-    /**
-     * Verifies that an identity is valid. If it is valid, it gets registered in the database and the [PartyAndCertificate] is returned.
-     *
-     * @param trustAnchor The trust anchor that will verify the identity's validity
-     * @param identity The identity to verify
-     * @param isNewRandomIdentity true if identity will not have been registered before (e.g. because it is randomly generated by us)
-     */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false):
             PartyAndCertificate? {
-            // Validate the chain first, before we do anything clever with it
+        // Validate the chain first, before we do anything clever with it
         val identityCertChain = identity.certPath.x509Certificates
         try {
             identity.verify(trustAnchor)
         } catch (e: CertPathValidatorException) {
-        log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
+            log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
             log.warn("Certificate path :")
             identityCertChain.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
@@ -284,27 +233,28 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
             verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
         }
-        return registerIdentity(identity, isNewRandomIdentity)
+        return registerIdentity(identity, isNewRandomIdentity, wellKnownCert == identity.certificate)
     }
 
-    private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
+    private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean, isWellKnown: Boolean): PartyAndCertificate? {
         log.debug { "Registering identity $identity" }
         val identityCertChain = identity.certPath.x509Certificates
         val key = mapToKey(identity)
 
-        if (isNewRandomIdentity) {
-            // Because this is supposed to be new and random, there's no way we have it in the database already, so skip the this check
-            keyToPartyAndCert[key] = identity
-            val parentId = identityCertChain[1].publicKey.toStringShort()
-            return keyToPartyAndCert[parentId]
-        } else {
-            return database.transaction {
+        return database.transaction {
+            if (isNewRandomIdentity) {
+                // Because this is supposed to be new and random, there's no way we have it in the database already, so skip the this check
+                keyToPartyAndCert[key] = identity
+                // keyToParty is already registered via KMS freshKeyInternal()
+            } else {
                 keyToPartyAndCert.addWithDuplicatesAllowed(key, identity, false)
-                nameToKey.addWithDuplicatesAllowed(identity.name, key, false)
-                keyToName.addWithDuplicatesAllowed(key, identity.name, false)
-                val parentId = identityCertChain[1].publicKey.toStringShort()
-                keyToPartyAndCert[parentId]
+                keyToParty.addWithDuplicatesAllowed(identity.owningKey, identity.party, false)
+                if (isWellKnown) {
+                    nameToParty.invalidate(identity.name)
+                }
             }
+            val parentId = identityCertChain[1].publicKey.toStringShort()
+            keyToPartyAndCert[parentId]
         }
     }
 
@@ -312,19 +262,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         keyToPartyAndCert[owningKey.toStringShort()]
     }
 
-    override fun partyFromKey(key: PublicKey): Party? {
-        return certificateFromKey(key)?.party ?: database.transaction {
-            keyToName[key.toStringShort()]
-        }?.let { wellKnownPartyFromX500Name(it) }
-    }
-
-    private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
-        return database.transaction {
-            val partyId = nameToKey[name]
-            if (partyId != null) {
-                keyToPartyAndCert[partyId]
-            } else null
-        }
+    override fun partyFromKey(key: PublicKey): Party? = database.transaction {
+        keyToParty[key]
     }
 
     // We give the caller a copy of the data set to avoid any locking problems
@@ -333,45 +272,47 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             keyToPartyAndCert.allPersisted.use { it.map { it.second }.toList() }
         }
     }
+
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = database.transaction {
-        certificateFromCordaX500Name(name)?.party
+        nameToParty[name]?.orElse(null)
     }
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // Skip database lookup if the party is a notary identity.
-        // This also prevents an issue where the notary identity can't be resolved if it's not in the network map cache. The node obtains
-        // a trusted list of notary identities from the network parameters automatically.
-        return if (party is Party && party in notaryIdentityCache) {
-            party
-        } else {
-            database.transaction {
-                // Try and resolve the party from the table to public keys to party and certificates
-                // If we cannot find it then we perform a lookup on the public key to X500 name table
-                val legalIdentity = super.wellKnownPartyFromAnonymous(party)
-                if (legalIdentity == null) {
-                    // If there is no entry in the legal keyToPartyAndCert table then the party must be a confidential identity so we
-                    // perform a lookup in the keyToName table. If an entry for that public key exists, then we attempt look up the
-                    // associated node's PartyAndCertificate.
-                    val name = keyToName[party.owningKey.toStringShort()]
-                    if (name != null) {
-                        // This should never return null as this node would not be able to communicate with the node providing a
-                        // confidential identity unless its NodeInfo/PartyAndCertificate were available.
-                        wellKnownPartyFromX500Name(name)
-                    } else {
-                        null
-                    }
+        return database.transaction {
+            log.debug("Attempting to find wellKnownParty for: ${party.owningKey.toStringShort()}")
+            if (party is Party) {
+                val candidate = wellKnownPartyFromX500Name(party.name)
+                if (candidate != null && candidate != party) {
+                    // Party doesn't match existing well-known party: check that the key is registered, otherwise return null.
+                    require(party.name == candidate.name) { "Candidate party $candidate does not match expected $party" }
+                    keyToParty[party.owningKey]?.let { candidate }
                 } else {
-                    legalIdentity
+                    // Party is a well-known party or well-known party doesn't exist: skip checks.
+                    // If the notary is not in the network map cache, try getting it from the network parameters
+                    // to prevent database conversion issues with vault updates (CORDA-2745).
+                    candidate ?: party.takeIf { it in notaryIdentityCache }
+                }
+            } else {
+                keyToParty[party.owningKey]?.let {
+                    // Resolved party can be stale due to key rotation: always convert it to the actual well-known party.
+                    wellKnownPartyFromX500Name(it.name)
                 }
             }
         }
     }
 
+    private fun getAllCertificates(session: Session): List<NodeInfoSchemaV1.DBPartyAndCertificate> {
+        val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
+        criteria.select(criteria.from(NodeInfoSchemaV1.DBPartyAndCertificate::class.java))
+        return session.createQuery(criteria).resultList
+    }
+
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
-            nameToKey.allPersisted.use {
-                it.filter { x500Matches(query, exactMatch, it.first) }.map { keyToPartyAndCert[it.second]!!.party }.toSet()
-            }
+            getAllCertificates(session)
+                    .map { it.toLegalIdentityAndCert() }
+                    .filter { x500Matches(query, exactMatch, it.name) }
+                    .map { it.party }.toSet()
         }
     }
 
@@ -379,34 +320,24 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = database.transaction { super.assertOwnership(party,
             anonymousParty) }
 
-    lateinit var ourNames: Set<CordaX500Name>
-
-    // Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity
-    // activity. Concentrating activity on the identity cache works better than spreading checking across identity and key management,
-    // because we cache misses too.
-    fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
-        return keys.filter { (@Suppress("DEPRECATION") certificateFromKey(it))?.name in ourNames }
-    }
-
     override fun registerKey(publicKey: PublicKey, party: Party, externalId: UUID?) {
         return database.transaction {
-            val publicKeyHash = publicKey.toStringShort()
             // EVERY key should be mapped to a Party in the "keyToName" table. Therefore if there is already a record in that table for the
             // specified key then it's either our key which has been stored prior or another node's key which we have previously mapped.
-            val existingEntryForKey = keyToName[publicKeyHash]
+            val existingEntryForKey = keyToParty[publicKey]
             if (existingEntryForKey == null) {
                 // Update the three tables as necessary. We definitely store the public key and map it to a party and we optionally update
                 // the public key to external ID mapping table. This block will only ever be reached when registering keys generated on
                 // other because when a node generates its own keys "registerKeyToParty" is automatically called by
                 // KeyManagementService.freshKey.
                 registerKeyToParty(publicKey, party)
-                hashToKey[publicKeyHash] = publicKey
                 if (externalId != null) {
                     registerKeyToExternalId(publicKey, externalId)
                 }
             } else {
+                val publicKeyHash = publicKey.toStringShort()
                 log.info("An existing entry for $publicKeyHash already exists.")
-                if (party.name != existingEntryForKey) {
+                if (party.name != existingEntryForKey.name) {
                     throw IllegalStateException("The public publicKey $publicKeyHash is already assigned to a different party than the " +
                             "supplied party.")
                 }
@@ -415,11 +346,11 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     // Internal function used by the KMS to register a public key to a Corda Party.
-    fun registerKeyToParty(publicKey: PublicKey, party: Party) {
+    fun registerKeyToParty(publicKey: PublicKey, party: Party = ourParty) {
         return database.transaction {
             log.info("Linking: ${publicKey.hash} to ${party.name}")
-            keyToName[publicKey.toStringShort()] = party.name
-            if (party == wellKnownPartyFromX500Name(ourNames.first())) {
+            keyToParty[publicKey] = party
+            if (party == ourParty) {
                 _pkToIdCache[publicKey] = KeyOwningIdentity.UnmappedIdentity
             }
         }
@@ -434,12 +365,12 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return _pkToIdCache[publicKey].uuid
     }
 
-    private fun publicKeysForExternalId(externalId: UUID, table: Class<*>): List<PublicKey> {
+    override fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey> {
         return database.transaction {
             val query = session.createQuery(
                     """
                         select a.publicKey
-                        from ${table.name} a, ${PublicKeyHashToExternalId::class.java.name} b
+                        from ${PersistentPublicKeyHashToParty::class.java.name} a, ${PublicKeyHashToExternalId::class.java.name} b
                         where b.externalId = :uuid
                         and b.publicKeyHash = a.publicKeyHash
                     """,
@@ -447,16 +378,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             )
             query.setParameter("uuid", externalId)
             query.resultList.map { Crypto.decodePublicKey(it) }
-        }
-    }
-
-    override fun publicKeysForExternalId(externalId: UUID): Iterable<PublicKey> {
-        // If the externalId was created by this node then we'll find the keys in the KMS, otherwise they'll be in the IdentityService.
-        val keys = publicKeysForExternalId(externalId, BasicHSMKeyManagementService.PersistentKey::class.java)
-        return if (keys.isEmpty()) {
-            publicKeysForExternalId(externalId, PersistentHashToPublicKey::class.java)
-        } else {
-            keys
         }
     }
 

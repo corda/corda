@@ -572,7 +572,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
-        identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
         services.start(nodeInfo, netParams)
 
         val networkParametersHotloader = if (networkMapClient == null) {
