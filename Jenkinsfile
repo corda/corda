@@ -173,7 +173,6 @@ pipeline {
                     targetNameExpression: 'other-agent-$1')])
             script {
                 try {
-                    unstash 'allure-input'
                     allure includeProperties: false,
                             jdk: '',
                             results: [[path: '**/allure-input']]
