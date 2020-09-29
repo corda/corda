@@ -78,7 +78,6 @@ internal class FlowMonitor(
                 is FlowIORequest.Receive -> "to receive messages from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.SendAndReceive -> "to send and receive messages from parties ${request.sessionToMessage.keys.partiesInvolved()}"
                 is FlowIORequest.CloseSessions -> "to close sessions: ${request.sessions}"
-                is FlowIORequest.WaitForLedgerCommit -> "for the ledger to commit transaction with hash ${request.hash}" // TO BE DELETED
                 is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
                 is FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"

@@ -480,7 +480,6 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             is FlowIORequest.Receive -> SuspendedOn(receive = sessions)
             is FlowIORequest.SendAndReceive -> SuspendedOn(sendAndReceive = sessionToMessage.toJson())
             is FlowIORequest.CloseSessions -> SuspendedOn(closeSessions = sessions)
-            is FlowIORequest.WaitForLedgerCommit -> SuspendedOn(waitForLedgerCommit = hash) // TO BE DELETED
             is FlowIORequest.GetFlowInfo -> SuspendedOn(getFlowInfo = sessions)
             is FlowIORequest.Sleep -> SuspendedOn(sleepTill = wakeUpAfter)
             is FlowIORequest.WaitForSessionConfirmations -> SuspendedOn(waitForSessionConfirmations = this)

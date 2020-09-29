@@ -63,14 +63,6 @@ sealed class FlowIORequest<out R : Any> {
     data class CloseSessions(val sessions: NonEmptySet<FlowSession>): FlowIORequest<Unit>()
 
     /**
-     * Wait for a transaction to be committed to the database.
-     *
-     * @property hash the hash of the transaction.
-     * @return the committed transaction.
-     */
-    data class WaitForLedgerCommit(val hash: SecureHash) : FlowIORequest<SignedTransaction>()
-
-    /**
      * Get the FlowInfo of the specified sessions.
      *
      * @property sessions the sessions to get the FlowInfo of.

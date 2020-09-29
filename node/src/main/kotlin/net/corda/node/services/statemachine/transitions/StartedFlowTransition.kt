@@ -46,7 +46,6 @@ class StartedFlowTransition(
             is FlowIORequest.Receive -> receiveTransition(flowIORequest)
             is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
             is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
-            is FlowIORequest.WaitForLedgerCommit -> { TransitionResult(startingState) }
             is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
             is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
             is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
@@ -437,9 +436,6 @@ class StartedFlowTransition(
                 val (newState, erroredSessionErrors) = collectErroredSessionErrors(startingState, sessionIds)
                 val endedSessionErrors = collectEndedSessionErrors(sessionIds, startingState.checkpoint)
                 Pair(newState, erroredSessionErrors + endedSessionErrors)
-            }
-            is FlowIORequest.WaitForLedgerCommit -> {
-                return collectErroredSessionErrors(startingState, startingState.checkpoint.checkpointState.sessions.keys)
             }
             is FlowIORequest.GetFlowInfo -> {
                 val sessionIds = flowIORequest.sessions.map(this::sessionToSessionId)
