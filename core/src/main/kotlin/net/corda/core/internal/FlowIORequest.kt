@@ -1,11 +1,9 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
-import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowSession
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import java.time.Instant
 
