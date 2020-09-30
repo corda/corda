@@ -15,6 +15,8 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.WaitForStateConsumption
 import net.corda.core.internal.WaitForLedgerCommit
+import net.corda.core.internal.WrappedFlowExternalAsyncOperation
+import net.corda.core.internal.WrappedFlowExternalOperation
 import net.corda.core.internal.abbreviate
 import net.corda.core.internal.checkPayloadIs
 import net.corda.core.internal.uncheckedCast
