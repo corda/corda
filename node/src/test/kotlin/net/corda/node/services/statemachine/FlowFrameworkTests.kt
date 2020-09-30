@@ -12,6 +12,8 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowExternalAsyncOperation
+import net.corda.core.flows.FlowExternalOperation
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -86,6 +88,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.concurrent.thread
@@ -292,6 +295,31 @@ class FlowFrameworkTests {
             .contains(("Flow with id ${flowHandle.id.uuid} has been waiting for [0-9]{1} seconds for asynchronous operation of type class net\\.corda\\.core\\.internal\\.WaitForLedgerCommit" +
                     " \\(Wait for the ledger to commit transaction with hash $txHash\\) to complete\\.").toRegex()))
         flowMonitorService.stop()
+        // must restore the old logger
+    }
+
+    @Test(timeout=300_000)
+    fun `If flow is waiting on a external operations, FlowMonitor will log their wrapped operation`() {
+        val outContent = LogHelper.captureLogs("net.corda.node.services.statemachine.FlowMonitor")
+        val flowHandle01 = aliceNode.services.startFlow(ExternalOperationFlow(async = false))
+        val flowHandle02 = aliceNode.services.startFlow(ExternalOperationFlow(async = true))
+
+        val flowMonitorService = FlowMonitor(
+            FlowOperator(aliceNode.smm, Clock.systemUTC()),
+            Duration.ofSeconds(1),
+            Duration.ofSeconds(1)
+        )
+        flowMonitorService.start()
+
+        Thread.sleep(5000)
+        assertTrue(outContent.toString()
+            .contains(("Flow with id ${flowHandle01.id.uuid} has been waiting for [0-9]{1} seconds for asynchronous operation of type ${ExternalOperation::class.java}" +
+                    " \\(external operation\\) to complete\\.").toRegex()))
+        assertTrue(outContent.toString()
+            .contains(("Flow with id ${flowHandle02.id.uuid} has been waiting for [0-9]{1} seconds for asynchronous operation of type ${ExternalAsyncOperation::class.java}" +
+                    " \\(external async operation\\) to complete\\.").toRegex()))
+        flowMonitorService.stop()
+        // must restore the old logger
     }
 
     @Test(timeout = 300_000)
@@ -1290,5 +1318,32 @@ internal class SuspendingFlow : FlowLogic<Unit>() {
         stateMachine.hookBeforeCheckpoint()
         stateMachine.suspend(FlowIORequest.ForceCheckpoint, maySkipCheckpoint = false) // flow checkpoints => checkpoint is in DB
         stateMachine.hookAfterCheckpoint()
+    }
+}
+
+internal class ExternalOperation: FlowExternalOperation<Unit> {
+    override fun execute(deduplicationId: String) {
+        Thread.sleep(10000)
+    }
+    override fun toString() = "external operation"
+}
+
+internal class ExternalAsyncOperation: FlowExternalAsyncOperation<Unit> {
+    override fun execute(deduplicationId: String): CompletableFuture<Unit> {
+        Thread.sleep(10000)
+        return openFuture<Unit>().toCompletableFuture()
+    }
+    override fun toString() = "external async operation"
+}
+
+internal class ExternalOperationFlow(val async: Boolean) : FlowLogic<Unit>() {
+
+    @Suspendable
+    override fun call() {
+        if (async) {
+            await(ExternalAsyncOperation())
+        } else {
+            await(ExternalOperation())
+        }
     }
 }

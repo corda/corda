@@ -74,7 +74,7 @@ interface FlowExternalOperation<R : Any> {
  * [WrappedFlowExternalAsyncOperation] is added to allow jackson to properly reference the data stored within the wrapped
  * [FlowExternalAsyncOperation].
  */
-internal class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExternalAsyncOperation<R>) : FlowAsyncOperation<R> {
+class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExternalAsyncOperation<R>) : FlowAsyncOperation<R> {
     override fun execute(deduplicationId: String): CordaFuture<R> {
         return operation.execute(deduplicationId).asCordaFuture()
     }
@@ -88,7 +88,7 @@ internal class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExt
  * [FlowExternalOperation] can be run from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a
  * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
  */
-internal class WrappedFlowExternalOperation<R : Any>(
+class WrappedFlowExternalOperation<R : Any>(
         val serviceHub: ServiceHubCoreInternal,
         val operation: FlowExternalOperation<R>
 ) : FlowAsyncOperation<R> {

@@ -1,6 +1,8 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.WrappedFlowExternalAsyncOperation
+import net.corda.core.flows.WrappedFlowExternalOperation
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
@@ -80,7 +82,18 @@ internal class FlowMonitor(
                 is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
                 is FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
-                is FlowIORequest.ExecuteAsyncOperation -> "for asynchronous operation of type ${request.operation::class.java} (${request.operation}) to complete"
+                is FlowIORequest.ExecuteAsyncOperation -> {
+                    val (clazz, operation) = when (request.operation) {
+                        is WrappedFlowExternalOperation<*> ->
+                            (request.operation as WrappedFlowExternalOperation<*>).operation::class.java to
+                                    (request.operation as WrappedFlowExternalOperation<*>).operation
+                        is WrappedFlowExternalAsyncOperation<*> ->
+                            (request.operation as WrappedFlowExternalAsyncOperation<*>).operation::class.java to
+                                    (request.operation as WrappedFlowExternalAsyncOperation<*>).operation
+                        else -> request.operation::class.java to request.operation
+                    }
+                    "for asynchronous operation of type $clazz ($operation) to complete"
+                }
                 FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
             }
         )
