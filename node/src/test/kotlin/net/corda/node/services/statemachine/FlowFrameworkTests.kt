@@ -289,8 +289,8 @@ class FlowFrameworkTests {
 
         Thread.sleep(5000)
         assertTrue(outContent.toString()
-            .contains(("Flow with id ${flowHandle.id.uuid} has been waiting for 1 seconds for asynchronous operation of type class net.corda.core.internal.WaitForLedgerCommit" +
-                    " (Wait for the ledger to commit transaction with hash $txHash) to complete.")))
+            .contains(("Flow with id ${flowHandle.id.uuid} has been waiting for [0-9]{1} seconds for asynchronous operation of type class net\\.corda\\.core\\.internal\\.WaitForLedgerCommit" +
+                    " \\(Wait for the ledger to commit transaction with hash $txHash\\) to complete\\.").toRegex()))
         flowMonitorService.stop()
     }
 
