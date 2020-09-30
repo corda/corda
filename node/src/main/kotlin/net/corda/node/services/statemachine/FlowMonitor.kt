@@ -4,7 +4,6 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.WaitForLedgerCommit
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.LifecycleSupport
 import java.time.Duration
