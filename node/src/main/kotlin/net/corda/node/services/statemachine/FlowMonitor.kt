@@ -83,16 +83,14 @@ internal class FlowMonitor(
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
                 is FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
                 is FlowIORequest.ExecuteAsyncOperation -> {
-                    val (clazz, operation) = when (request.operation) {
+                    val operation: Any = when (request.operation) {
                         is WrappedFlowExternalOperation<*> ->
-                            (request.operation as WrappedFlowExternalOperation<*>).operation::class.java to
-                                    (request.operation as WrappedFlowExternalOperation<*>).operation
+                            (request.operation as WrappedFlowExternalOperation<*>).operation
                         is WrappedFlowExternalAsyncOperation<*> ->
-                            (request.operation as WrappedFlowExternalAsyncOperation<*>).operation::class.java to
-                                    (request.operation as WrappedFlowExternalAsyncOperation<*>).operation
-                        else -> request.operation::class.java to request.operation
+                            (request.operation as WrappedFlowExternalAsyncOperation<*>).operation
+                        else -> request.operation
                     }
-                    "for asynchronous operation of type $clazz ($operation) to complete"
+                    "for asynchronous operation of type ${operation::class.java} ($operation) to complete"
                 }
                 FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
             }
