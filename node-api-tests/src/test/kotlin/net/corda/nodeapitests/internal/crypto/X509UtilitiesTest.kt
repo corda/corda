@@ -44,6 +44,7 @@ import net.corda.coretesting.internal.NettyTestServer
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.checkValidity
 import net.corda.nodeapi.internal.crypto.getSupportedKey
@@ -51,6 +52,7 @@ import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
@@ -564,5 +566,17 @@ class X509UtilitiesTest {
         assertFailsWith(IllegalArgumentException::class, "Error text") {
             cert.checkValidity({ "Error text" }, { }, Date.from(today.toInstant() + 51.days))
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `check certificate serial number`() {
+        val keyPair = generateKeyPair()
+        val subject = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+        val cert = X509Utilities.createSelfSignedCACertificate(subject, keyPair)
+        assertTrue(cert.serialNumber.signum() > 0)
+        assertEquals(127, cert.serialNumber.bitLength())
+        val serialized = X509Utilities.buildCertPath(cert).encoded
+        val deserialized = X509CertificateFactory().delegate.generateCertPath(serialized.inputStream()).x509Certificates.first()
+        assertEquals(cert.serialNumber, deserialized.serialNumber)
     }
 }
