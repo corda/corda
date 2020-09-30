@@ -3,9 +3,13 @@ package net.corda.testing.internal
 import net.corda.core.internal.packageName
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.Appender
 import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.appender.WriterAppender
 import org.apache.logging.log4j.core.config.Configurator
 import org.apache.logging.log4j.core.config.LoggerConfig
+import java.io.CharArrayWriter
+import java.io.Writer
 import kotlin.reflect.KClass
 
 /** A configuration helper that allows modifying the log level for specific loggers */
@@ -47,6 +51,25 @@ object LogHelper {
         config.removeLogger(name)
         config.addLogger(name, loggerConfig)
         loggerContext.updateLoggers(config)
+    }
+
+    /** Adds in memory log capturing for the specified logger, for asserting logs purposes.
+     * Please note that the previous logger will be replaced, meaning that the respective output will stop getting logged
+     * where it used to (e.g. to the console for unit tests). */
+    fun captureLogs(name: String): Writer {
+        val outContent = CharArrayWriter()
+        val appender: Appender = WriterAppender
+            .createAppender(null, null, outContent, "WriteAppender", false, true)
+        appender.start()
+
+        val loggerContext = LogManager.getContext(false) as LoggerContext
+        val config = loggerContext.configuration
+        val loggerConfig = LoggerConfig(name, LogManager.getLogger(name).level, false)
+        loggerConfig.addAppender(appender, null, null)
+        config.removeLogger(name)
+        config.addLogger(name, loggerConfig)
+        loggerContext.updateLoggers(config)
+        return outContent
     }
 
     /**
