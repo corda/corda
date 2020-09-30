@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.KilledFlowException
-import net.corda.node.services.messaging.MessageIdentifier
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.ErrorSessionMessage
@@ -10,9 +9,6 @@ import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowRemovalReason
 import net.corda.node.services.statemachine.FlowState
-import net.corda.node.services.statemachine.MessageType
-import net.corda.node.services.statemachine.SessionId
-import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
 
 class KilledFlowTransition(
@@ -28,27 +24,12 @@ class KilledFlowTransition(
             val killedFlowErrorMessage = createErrorMessageFromError(killedFlowError)
             val errorMessages = listOf(killedFlowErrorMessage)
 
-            val (initiatedSessions, newSessionStates) = bufferErrorMessagesInInitiatingSessions(
-                startingState.checkpoint.checkpointState.sessions,
-                errorMessages
-            )
-
-            val sessionsWithAdvancedSeqNumbers = mutableMapOf<SessionId, SessionState>()
-            val errorsPerSession = initiatedSessions.map { (sessionId, sessionState) ->
-                var currentSeqNumber = sessionState.nextSendingSeqNumber
-                val errorsWithId = errorMessages.map { errorMsg ->
-                    val messageIdentifier = MessageIdentifier(MessageType.SESSION_ERROR, sessionState.shardId, sessionState.peerSinkSessionId, currentSeqNumber, startingState.checkpoint.checkpointState.suspensionTime)
-                    currentSeqNumber++
-                    Pair(messageIdentifier, errorMsg)
-                }.toList()
-                sessionsWithAdvancedSeqNumbers[sessionId] = sessionState.copy(nextSendingSeqNumber = currentSeqNumber)
-                Pair(sessionState, errorsWithId)
-            }.toMap()
+            val (propagateErrorsAction, newSessionStates) = ErrorFlowTransition.sendAndBufferErrorMessages(startingState, errorMessages)
 
             val newCheckpoint = startingState.checkpoint.copy(
                     status = Checkpoint.FlowStatus.KILLED,
                     flowState = FlowState.Finished,
-                    checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessionStates + sessionsWithAdvancedSeqNumbers)
+                    checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessionStates)
             )
 
             currentState = currentState.copy(
@@ -58,7 +39,7 @@ class KilledFlowTransition(
                     isRemoved = true
             )
 
-            actions += Action.PropagateErrors(errorsPerSession, startingState.senderUUID)
+            actions += propagateErrorsAction
 
             if (!startingState.isFlowResumed) {
                 actions += Action.CreateTransaction
@@ -108,40 +89,6 @@ class KilledFlowTransition(
         } else {
             ErrorSessionMessage(flowException = null, errorId = error.errorId)
         }
-    }
-
-    /**
-     * Buffers errors message for initiating states and filters the initiated states.
-     * Returns a pair that consists of:
-     * - a map containing the initiated states as filtered from the ones provided as input.
-     * - a map containing the new state of all the sessions.
-     */
-    private fun bufferErrorMessagesInInitiatingSessions(
-        sessions: Map<SessionId, SessionState>,
-        errorMessages: List<ErrorSessionMessage>
-    ): Pair<Map<SessionId, SessionState.Initiated>, Map<SessionId, SessionState>> {
-        val newSessions = sessions.mapValues { (sourceSessionId, sessionState) ->
-            if (sessionState is SessionState.Initiating && sessionState.rejectionError == null) {
-                var currentSequenceNumber = sessionState.nextSendingSeqNumber
-                val errorMessagesWithDeduplication = errorMessages.map { errorMessage ->
-                    val messageIdentifier = MessageIdentifier(MessageType.SESSION_ERROR, sessionState.shardId, sourceSessionId.calculateInitiatedSessionId(), currentSequenceNumber, startingState.checkpoint.checkpointState.suspensionTime)
-                    currentSequenceNumber++
-                    messageIdentifier to errorMessage
-                }
-                sessionState.bufferMessages(errorMessagesWithDeduplication)
-            } else {
-                sessionState
-            }
-        }
-        // if we have already received error message from the other side, we don't include that session in the list to avoid propagating errors.
-        val initiatedSessions = sessions.mapNotNull { (sessionId, sessionState) ->
-            if (sessionState is SessionState.Initiated && !sessionState.otherSideErrored) {
-                sessionId to sessionState
-            } else {
-                null
-            }
-        }.toMap()
-        return Pair(initiatedSessions, newSessions)
     }
 
     private fun createKilledRemovalReason(error: FlowError): FlowRemovalReason.ErrorFinish {
