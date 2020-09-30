@@ -272,7 +272,7 @@ class FlowFrameworkTests {
         )
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `FlowMonitor logs flow waiting on a 'WaitForLedgerCommit'`() {
         val outContent = LogHelper.captureLogs("net.corda.node.services.statemachine.FlowMonitor")
         val txHash = SecureHash.randomSHA256()
