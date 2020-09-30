@@ -81,12 +81,7 @@ internal class FlowMonitor(
                 is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
                 is FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
-                is FlowIORequest.ExecuteAsyncOperation -> {
-                    when (request.operation) {
-                        is WaitForLedgerCommit -> "for the ledger to commit transaction with hash ${(request.operation as WaitForLedgerCommit).hash}"
-                        else -> "for asynchronous operation of type ${request.operation::javaClass} to complete"
-                    }
-                }
+                is FlowIORequest.ExecuteAsyncOperation -> "for asynchronous operation of type ${request.operation::class.java} (${request.operation}) to complete"
                 FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
             }
         )

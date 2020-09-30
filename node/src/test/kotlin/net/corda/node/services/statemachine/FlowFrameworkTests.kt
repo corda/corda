@@ -272,6 +272,28 @@ class FlowFrameworkTests {
         )
     }
 
+    @Test
+    fun `FlowMonitor logs flow waiting on a 'WaitForLedgerCommit'`() {
+        val outContent = LogHelper.captureLogs("net.corda.node.services.statemachine.FlowMonitor")
+        val txHash = SecureHash.randomSHA256()
+        val flowHandle = aliceNode.services.startFlow(WaitForLedgerCommitFlow(txHash))
+
+        // just start a duplicate service but with faster logging intervals,
+        // so that test thread won't wait for 1 minute of normal FlowMonitor service before it logs waiting flows
+        val flowMonitorService = FlowMonitor(
+            FlowOperator(aliceNode.smm, Clock.systemUTC()),
+            Duration.ofSeconds(1),
+            Duration.ofSeconds(1)
+        )
+        flowMonitorService.start()
+
+        Thread.sleep(5000)
+        assertTrue(outContent.toString()
+            .contains(("Flow with id ${flowHandle.id.uuid} has been waiting for 1 seconds for asynchronous operation of type class net.corda.core.internal.WaitForLedgerCommit" +
+                    " (Wait for the ledger to commit transaction with hash $txHash) to complete.")))
+        flowMonitorService.stop()
+    }
+
     @Test(timeout = 300_000)
     fun `flow status is updated in database when flow suspends on ioRequest`() {
         val terminationSignal = Semaphore(0)
