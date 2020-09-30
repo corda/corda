@@ -1,5 +1,6 @@
 package net.corda.core.internal.notary
 
+import co.paralleluniverse.common.util.Debug
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -165,4 +166,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 }
 
 /** Exception internal to the notary service. Does not get exposed to CorDapps and flows calling [NotaryFlow.Client]. */
-class NotaryInternalException(val error: NotaryError) : FlowException("Unable to notarise: $error")
+class NotaryInternalException(val error: NotaryError) : FlowException("Unable to notarise: $error") {
+    init {
+        println("here")
+    }
+}

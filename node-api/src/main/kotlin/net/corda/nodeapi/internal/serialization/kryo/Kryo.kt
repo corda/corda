@@ -10,6 +10,7 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.internal.LazyMappedList
@@ -214,14 +215,14 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
     override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
         kryo.writeClassAndObject(output, obj.componentGroups)
         kryo.writeClassAndObject(output, obj.privacySalt)
-        kryo.writeClassAndObject(output, obj.hashAlgorithm)
+        kryo.writeClassAndObject(output, obj.digestService)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
         val componentGroups: List<ComponentGroup> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
-        val hashAlgorithm = kryo.readClassAndObject(input) as String
-        return WireTransaction(componentGroups, privacySalt, hashAlgorithm)
+        val digestService = kryo.readClassAndObject(input) as DigestService
+        return WireTransaction(componentGroups, privacySalt, digestService)
     }
 }
 
@@ -229,12 +230,12 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
 object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransaction>() {
     override fun write(kryo: Kryo, output: Output, obj: NotaryChangeWireTransaction) {
         kryo.writeClassAndObject(output, obj.serializedComponents)
-        kryo.writeClassAndObject(output, obj.hashAlgorithm)
+        kryo.writeClassAndObject(output, obj.digestService)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
         val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
-        val hashAlgorithm = kryo.readClassAndObject(input) as String
+        val hashAlgorithm = kryo.readClassAndObject(input) as DigestService
         return NotaryChangeWireTransaction(components, hashAlgorithm)
     }
 }
@@ -244,14 +245,14 @@ object ContractUpgradeWireTransactionSerializer : Serializer<ContractUpgradeWire
     override fun write(kryo: Kryo, output: Output, obj: ContractUpgradeWireTransaction) {
         kryo.writeClassAndObject(output, obj.serializedComponents)
         kryo.writeClassAndObject(output, obj.privacySalt)
-        kryo.writeClassAndObject(output, obj.hashAlgorithm)
+        kryo.writeClassAndObject(output, obj.digestService)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<ContractUpgradeWireTransaction>): ContractUpgradeWireTransaction {
         val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
-        val hashAlgorithm = kryo.readClassAndObject(input) as String
-        return ContractUpgradeWireTransaction(components, privacySalt, hashAlgorithm)
+        val digestService = kryo.readClassAndObject(input) as DigestService
+        return ContractUpgradeWireTransaction(components, privacySalt, digestService)
     }
 }
 

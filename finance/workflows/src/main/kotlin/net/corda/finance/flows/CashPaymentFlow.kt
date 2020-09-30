@@ -4,12 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.getHashAgilityEnabled
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -39,8 +36,7 @@ open class CashPaymentFlow(
         val anonymous: Boolean,
         progressTracker: ProgressTracker,
         val issuerConstraint: Set<Party> = emptySet(),
-        val notary: Party? = null,
-        val hashAlgorithm: String = SHA2_256
+        val notary: Party? = null
 ) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
@@ -50,9 +46,7 @@ open class CashPaymentFlow(
 
     constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean, notary: Party) : this(amount, recipient, anonymous, tracker(), notary = notary)
 
-    constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean, notary: Party, hashAlgorithm: String) : this(amount, recipient, anonymous, tracker(), notary = notary, hashAlgorithm = hashAlgorithm)
-
-    constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint, request.notary, request.hashAlgorithm)
+    constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint, request.notary)
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
@@ -65,7 +59,7 @@ open class CashPaymentFlow(
             recipient
         }
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first()).setHashAlgorithm(hashAlgorithm)
+        val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first())
         logger.info("Generating spend for: ${builder.lockId}")
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
@@ -98,15 +92,7 @@ open class CashPaymentFlow(
                          val recipient: Party,
                          val anonymous: Boolean,
                          val issuerConstraint: Set<Party> = emptySet(),
-                         val notary: Party? = null,
-                         val hashAlgorithm: String) : AbstractRequest(amount) {
-
-        constructor(amount: Amount<Currency>,
-                    recipient: Party,
-                    anonymous: Boolean,
-                    issuerConstraint: Set<Party> = emptySet(),
-                    notary: Party? = null) : this(amount, recipient, anonymous, issuerConstraint, notary, SHA2_256)
-    }
+                         val notary: Party? = null) : AbstractRequest(amount)
 }
 
 @InitiatedBy(CashPaymentFlow::class)

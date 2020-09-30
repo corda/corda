@@ -6,6 +6,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -54,7 +55,8 @@ open class TransactionBuilder(
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf(),
-        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub,
+        protected val digestService: DigestService = DigestService()
 ) {
     constructor(notary: Party? = null,
                 lockId: UUID = defaultLockId(),
@@ -85,10 +87,10 @@ open class TransactionBuilder(
         )
     }
 
-    protected var hashAlgorithm = SHA2_256
-        set(value) {
-            field = value.toUpperCase()
-        }
+//    protected var hashAlgorithm = SHA2_256
+//        set(value) {
+//            field = value.toUpperCase()
+//        }
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -107,9 +109,10 @@ open class TransactionBuilder(
                 window = window,
                 privacySalt = privacySalt,
                 references = ArrayList(references),
-                serviceHub = serviceHub
+                serviceHub = serviceHub,
+                digestService = digestService
         )
-        t.hashAlgorithm = hashAlgorithm
+        //t.hashAlgorithm = hashAlgorithm
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
         return t
@@ -184,7 +187,7 @@ open class TransactionBuilder(
                             referenceStates,
                             services.networkParametersService.currentHash),
                     privacySalt,
-                    hashAlgorithm
+                    digestService
             )
         }
 
@@ -825,13 +828,13 @@ open class TransactionBuilder(
         this.privacySalt = privacySalt
     }
 
-    fun setHashAlgorithm(hashAlgorithm: String) = apply {
-        this.hashAlgorithm = hashAlgorithm
-    }
-
-    fun resalt() = apply {
-        privacySalt = PrivacySalt.createFor(hashAlgorithm)
-    }
+//    fun setHashAlgorithm(hashAlgorithm: String) = apply {
+//        this.hashAlgorithm = hashAlgorithm
+//    }
+//
+//    fun resalt() = apply {
+//        privacySalt = PrivacySalt.createFor(hashAlgorithm)
+//    }
 
     /** Returns an immutable list of input [StateRef]s. */
     fun inputStates(): List<StateRef> = ArrayList(inputs)

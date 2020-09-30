@@ -2,8 +2,10 @@ package net.corda.core.internal
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
+import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.hashAs
 import net.corda.core.flows.FlowLogic
@@ -20,20 +22,12 @@ import kotlin.reflect.KClass
 class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
                                      val notary: Party,
                                      val newNotary: Party,
-                                     val networkParametersHash: SecureHash) {
-    var hashAlgorithm = SHA2_256
-        set(value) {
-            field = value.toUpperCase()
-        }
-
-    fun setHashAlgorithm(hashAlgorithm: String): NotaryChangeTransactionBuilder {
-        this.hashAlgorithm = hashAlgorithm
-        return this
-    }
+                                     val networkParametersHash: SecureHash,
+                                     val digestService: DigestService = DigestService()) {
 
     fun build(): NotaryChangeWireTransaction {
         val components = listOf(inputs, notary, newNotary, networkParametersHash).map { it.serialize() }
-        return NotaryChangeWireTransaction(components, hashAlgorithm)
+        return NotaryChangeWireTransaction(components, digestService)
     }
 }
 
@@ -45,28 +39,19 @@ class ContractUpgradeTransactionBuilder(
         val upgradedContractClassName: ContractClassName,
         val upgradedContractAttachmentId: SecureHash,
         privacySalt: PrivacySalt = PrivacySalt(),
-        val networkParametersHash: SecureHash) {
+        val networkParametersHash: SecureHash,
+        val digestService: DigestService = DigestService()) {
     var privacySalt: PrivacySalt = privacySalt
         private set
 
-    var hashAlgorithm = SHA2_256
-        set(value) {
-            field = value.toUpperCase()
-        }
-
-    fun setHashAlgorithm(hashAlgorithm: String): ContractUpgradeTransactionBuilder {
-        this.hashAlgorithm = hashAlgorithm
-        return this
-    }
-
-    fun resalt(): ContractUpgradeTransactionBuilder {
-        privacySalt = PrivacySalt.createFor(hashAlgorithm)
-        return this
-    }
+//    fun resalt(): ContractUpgradeTransactionBuilder {
+//        privacySalt = PrivacySalt.createFor(hashAlgorithm)
+//        return this
+//    }
 
     fun build(): ContractUpgradeWireTransaction {
         val components = listOf(inputs, notary, legacyContractAttachmentId, upgradedContractClassName, upgradedContractAttachmentId, networkParametersHash).map { it.serialize() }
-        return ContractUpgradeWireTransaction(components, privacySalt, hashAlgorithm)
+        return ContractUpgradeWireTransaction(components, privacySalt, digestService)
     }
 }
 
@@ -224,7 +209,7 @@ val SignedTransaction.dependencies: Set<SecureHash>
 class HashAgility {
     companion object {
         private var frozen: Boolean = false
-        private var hashAgilityEnabled: Boolean = false
+        private var hashAgilityEnabled: Boolean = true
 
         fun isEnabled() : Boolean = hashAgilityEnabled
         fun setEnabled(enabled : Boolean, freeze: Boolean = false) {
@@ -239,9 +224,10 @@ class HashAgility {
 // NOTE: NetworkParameters' hashAgilityEnable get/set methods will be replaced by a field that is set by the network and hash verified
 fun NetworkParameters.getHashAgilityEnabled() = HashAgility.isEnabled()
 fun NetworkParameters.setHashAgilityEnabled(enabled: Boolean) = HashAgility.setEnabled(enabled)
+fun NetworkParameters.getDefaultHashAlgorithm() = SHA3_256
 
 fun NetworkParameters.checkSupportedHashType(hash : SecureHash) : Unit {
-    val pass = this.getHashAgilityEnabled() || hash.algorithm == SHA2_256
+    val pass = this.getHashAgilityEnabled() || hash.algorithm == SHA3_256
     if(!pass) {
         throw TransactionVerificationException.UnsupportedHashTypeException(hash)
     }

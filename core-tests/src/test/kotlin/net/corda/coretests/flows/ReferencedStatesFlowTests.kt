@@ -54,6 +54,7 @@ class ReferencedStatesFlowTests {
         nodes[0].services.startFlow(Initiator(newRefState)).resultFuture.getOrThrow()
 
         // 3. Update the reference state but don't share the update.
+
         val updatedRefTx = nodes[0].services.startFlow(UpdateRefState(newRefState)).resultFuture.getOrThrow()
         val updatedRefState = updatedRefTx.tx.outRefsOfType<RefState.State>().single()
 

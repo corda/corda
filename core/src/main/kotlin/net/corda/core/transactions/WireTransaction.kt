@@ -50,9 +50,9 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, val hashAlgorithm: String) : TraversableTransaction(componentGroups) {
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, val digestService: DigestService) : TraversableTransaction(componentGroups) {
     @DeprecatedConstructorForDeserialization(1)
-    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, SHA2_256)
+    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DigestService())
 
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
@@ -68,8 +68,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             commands: List<Command<*>>,
             notary: Party?,
             timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt)
+            privacySalt: PrivacySalt = PrivacySalt(),
+            digestService: DigestService = DigestService()
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, digestService)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }
@@ -78,7 +79,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         check(inputs.isNotEmpty() || outputs.isNotEmpty()) { "A transaction must contain at least one input or output state" }
         check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
-        privacySalt.validateFor(hashAlgorithm)
+        // IEE: review salt validation
+        privacySalt.validateFor(digestService.hashAlgorithm)
     }
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
@@ -286,7 +288,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val listOfLeaves = mutableListOf<SecureHash>()
         // Even if empty and not used, we should at least send oneHashes for each known
         // or received but unknown (thus, bigger than known ordinal) component groups.
-        val allOnesHash = SecureHash.allOnesHashFor(hashAlgorithm)
+        val allOnesHash = digestService.allOnesHash
         for (i in 0..componentGroups.map { it.groupIndex }.max()!!) {
             val root = groupsMerkleRoots[i] ?: allOnesHash
             listOfLeaves.add(root)
@@ -316,7 +318,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(hashAlgorithm, internalIt, privacySalt, it.groupIndex, internalIndex) } }
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(digestService.hashAlgorithm, internalIt, privacySalt, it.groupIndex, internalIndex) } }
     }
 
     /**

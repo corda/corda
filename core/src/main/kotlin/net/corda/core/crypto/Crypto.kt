@@ -1049,7 +1049,8 @@ object Crypto {
         return if (partialMerkleTree != null) {
             val usedHashes = mutableListOf<SecureHash>()
             val root = PartialMerkleTree.rootAndUsedHashes(partialMerkleTree.root, usedHashes)
-            require(txId.sha256() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
+            //require(txId.sha256() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
+            require(DigestService().hash(txId.bytes) in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
             root
         } else {
             txId

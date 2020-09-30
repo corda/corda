@@ -7,6 +7,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SHA3256DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
@@ -265,11 +266,9 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder()
+            val builder = TransactionBuilder(digestService = SHA3256DigestService())
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
-                    .setHashAlgorithm(SecureHash.SHA3_256)
-                    .resalt()
 
             builder.toWireTransaction(services)
         } finally {
@@ -288,11 +287,9 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder()
+            val builder = TransactionBuilder(digestService = SHA3256DigestService())
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
-                    .setHashAlgorithm(SecureHash.SHA3_256)
-                    .resalt()
 
             builder.toWireTransaction(services)
         } finally {

@@ -21,11 +21,15 @@ sealed class MerkleTree {
     companion object {
         private fun isPow2(num: Int): Boolean = num and (num - 1) == 0
 
+        @Throws(MerkleTreeException::class)
+        fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree =
+                getMerkleTree(allLeavesHashes, SHA2256DigestService())
+
         /**
          * Merkle tree building using hashes, with zero hash padding to full power of 2.
          */
         @Throws(MerkleTreeException::class)
-        fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
+        fun getMerkleTree(allLeavesHashes: List<SecureHash>, nodeDigestService: DigestService): MerkleTree {
             if (allLeavesHashes.isEmpty())
                 throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
             val algorithms = allLeavesHashes.mapTo(HashSet(), SecureHash::algorithm)
@@ -33,7 +37,7 @@ sealed class MerkleTree {
                 "Cannot build Merkle tree with multiple hash algorithms: $algorithms"
             }
             val leaves = padWithZeros(allLeavesHashes).map { Leaf(it) }
-            return buildMerkleTree(leaves)
+            return buildMerkleTree(leaves, nodeDigestService)
         }
 
         // If number of leaves in the tree is not a power of 2, we need to pad it with zero hashes.
@@ -53,7 +57,7 @@ sealed class MerkleTree {
          * @param lastNodesList MerkleTree nodes from previous level.
          * @return Tree root.
          */
-        private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
+        private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>, nodeDigestService: DigestService): MerkleTree {
             return if (lastNodesList.size == 1) {
                 lastNodesList[0] // Root reached.
             } else {
@@ -63,11 +67,10 @@ sealed class MerkleTree {
                 for (i in 0..n - 2 step 2) {
                     val left = lastNodesList[i]
                     val right = lastNodesList[i + 1]
-                    val newHash = left.hash.concatenate(right.hash)
-                    val combined = Node(newHash, left, right)
-                    newLevelHashes.add(combined)
+                    val node = Node(nodeDigestService.hash(left.hash.bytes + right.hash.bytes), left, right)
+                    newLevelHashes.add(node)
                 }
-                buildMerkleTree(newLevelHashes)
+                buildMerkleTree(newLevelHashes, nodeDigestService)
             }
         }
     }

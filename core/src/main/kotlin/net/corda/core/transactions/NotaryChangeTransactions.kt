@@ -4,6 +4,8 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.SHA2256DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.TransactionSignature
@@ -36,13 +38,13 @@ data class NotaryChangeWireTransaction(
          * may result in a different byte sequence depending on the serialization context.
          */
         val serializedComponents: List<OpaqueBytes>,
-        val hashAlgorithm: String
+        val digestService: DigestService
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
-    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, SHA2_256)
+    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, SHA2256DigestService())
 
     fun copy(serializedComponents: List<OpaqueBytes>): NotaryChangeWireTransaction {
-        return NotaryChangeWireTransaction(serializedComponents, hashAlgorithm)
+        return NotaryChangeWireTransaction(serializedComponents, digestService)
     }
 
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
@@ -78,7 +80,7 @@ data class NotaryChangeWireTransaction(
      */
     override val id: SecureHash by lazy {
         serializedComponents.map { component ->
-            component.bytes.hashAs(hashAlgorithm)
+            component.bytes.hashAs(digestService.hashAlgorithm)
         }.reduce { combinedHash, componentHash ->
             combinedHash.concatenate(componentHash)
         }

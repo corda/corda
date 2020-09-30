@@ -3,10 +3,7 @@ package net.corda.finance.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.flows.*
-import net.corda.core.internal.getHashAgilityEnabled
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
@@ -34,10 +31,9 @@ import java.util.*
 @StartableByRPC
 class CashExitFlow(private val amount: Amount<Currency>,
                    private val issuerRef: OpaqueBytes,
-                   private val hashAlgorithm: String,
                    progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
-    constructor(amount: Amount<Currency>, issuerRef: OpaqueBytes) : this(amount, issuerRef, SHA2_256, tracker())
-    constructor(request: ExitRequest) : this(request.amount, request.issuerRef, request.hashAlgorithm, tracker())
+    constructor(amount: Amount<Currency>, issuerRef: OpaqueBytes) : this(amount, issuerRef, tracker())
+    constructor(request: ExitRequest) : this(request.amount, request.issuerRef, tracker())
 
     companion object {
         fun tracker() = ProgressTracker(GENERATING_TX, SIGNING_TX, FINALISING_TX)
@@ -51,7 +47,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
     @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = null).setHashAlgorithm(hashAlgorithm)
+        val builder = TransactionBuilder(notary = null)
         val issuer = ourIdentity.ref(issuerRef)
         val exitStates = AbstractCashSelection
                 .getInstance { serviceHub.jdbcSession().metaData }
@@ -89,9 +85,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
     }
 
     @CordaSerializable
-    class ExitRequest(amount: Amount<Currency>, val issuerRef: OpaqueBytes, val hashAlgorithm: String) : AbstractRequest(amount) {
-        constructor(amount: Amount<Currency>, issuerRef: OpaqueBytes) : this(amount, issuerRef, SHA2_256)
-    }
+    class ExitRequest(amount: Amount<Currency>, val issuerRef: OpaqueBytes) : AbstractRequest(amount)
 }
 
 @InitiatedBy(CashExitFlow::class)

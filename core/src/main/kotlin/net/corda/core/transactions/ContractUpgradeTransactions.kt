@@ -3,6 +3,8 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.SHA2256DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.TransactionSignature
@@ -45,11 +47,11 @@ data class ContractUpgradeWireTransaction(
         val serializedComponents: List<OpaqueBytes>,
         /** Required for hiding components in [ContractUpgradeFilteredTransaction]. */
         val privacySalt: PrivacySalt,
-        val hashAlgorithm: String
+        val digestService: DigestService
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
     constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
-            : this(serializedComponents, privacySalt, SHA2_256)
+            : this(serializedComponents, privacySalt, SHA2256DigestService())
 
     companion object {
         /**
@@ -90,14 +92,14 @@ data class ContractUpgradeWireTransaction(
     init {
         check(inputs.isNotEmpty()) { "A contract upgrade transaction must have inputs" }
         checkBaseInvariants()
-        privacySalt.validateFor(hashAlgorithm)
+        privacySalt.validateFor(digestService.hashAlgorithm)
     }
 
     /**
      * Old version of [ContractUpgradeWireTransaction.copy] for sake of ABI compatibility.
      */
     fun copy(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt): ContractUpgradeWireTransaction {
-        return ContractUpgradeWireTransaction(serializedComponents, privacySalt, hashAlgorithm)
+        return ContractUpgradeWireTransaction(serializedComponents, privacySalt, digestService)
     }
 
     /**
@@ -121,7 +123,7 @@ data class ContractUpgradeWireTransaction(
 
     /** Required for filtering transaction components. */
     private val nonces = serializedComponents.indices.map {
-        computeNonce(hashAlgorithm, privacySalt, it, 0)
+        computeNonce(digestService.hashAlgorithm, privacySalt, it, 0)
     }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */

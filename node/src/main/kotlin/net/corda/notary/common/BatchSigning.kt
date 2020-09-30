@@ -1,6 +1,7 @@
 package net.corda.notary.common
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
@@ -20,7 +21,8 @@ fun signBatch(
         notaryIdentityKey: PublicKey,
         services: ServiceHub
 ): BatchSignature {
-    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.sha256() })
+                                                            // IEE: review - use getMerkleTree(txIds) instead?
+    val merkleTree = MerkleTree.getMerkleTree(txIds.map { /*it.sha256()*/DigestService().hash(it.bytes) })
     val merkleTreeRoot = merkleTree.hash
     val signableData = SignableData(
             merkleTreeRoot,
@@ -48,7 +50,8 @@ data class BatchSignature(
                 rootSignature.bytes,
                 rootSignature.by,
                 rootSignature.signatureMetadata,
-                PartialMerkleTree.build(fullMerkleTree, listOf(txId.sha256()))
+                                                                // IEE: review
+                PartialMerkleTree.build(fullMerkleTree, listOf(DigestService().hash(txId.bytes)/*txId.sha256()*/))
         )
     }
 }

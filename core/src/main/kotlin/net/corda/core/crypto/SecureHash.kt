@@ -176,6 +176,7 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
          * @return The length in bytes of this [MessageDigest].
          */
         fun digestLengthFor(algorithm: String): Int {
+            // IEE: should throw if algorithm can have multiple digest length or digest length should be specified in hash algorithm
             return digestFor(algorithm.toUpperCase()).digestLength
         }
 

@@ -7,7 +7,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import java.util.*
 
 /**
@@ -29,23 +28,14 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
                               val recipient: Party,
                               val anonymous: Boolean,
                               val notary: Party,
-                              private val hashAlgorithm: String,
                               progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
-
     constructor(amount: Amount<Currency>,
                 issueRef: OpaqueBytes,
                 recipient: Party,
                 anonymous: Boolean,
-                notary: Party,
-                hashAlgorithm: String) : this(amount, issueRef, recipient, anonymous, notary, hashAlgorithm, tracker())
+                notary: Party) : this(amount, issueRef, recipient, anonymous, notary, tracker())
 
-    constructor(amount: Amount<Currency>,
-                issueRef: OpaqueBytes,
-                recipient: Party,
-                anonymous: Boolean,
-                notary: Party) : this(amount, issueRef, recipient, anonymous, notary, SHA2_256, tracker())
-
-    constructor(request: IssueAndPaymentRequest) : this(request.amount, request.issueRef, request.recipient, request.anonymous, request.notary, request.hashAlgorithm, tracker())
+    constructor(request: IssueAndPaymentRequest) : this(request.amount, request.issueRef, request.recipient, request.anonymous, request.notary, tracker())
 
     companion object {
         val ISSUING_CASH = ProgressTracker.Step("Issuing cash")
@@ -57,9 +47,9 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
     @Suspendable
     override fun call(): Result {
         progressTracker.currentStep = ISSUING_CASH
-        subFlow(CashIssueFlow(amount, issueRef, notary, hashAlgorithm))
+        subFlow(CashIssueFlow(amount, issueRef, notary))
         progressTracker.currentStep = PAYING_RECIPIENT
-        return subFlow(CashPaymentFlow(amount, recipient, anonymous, notary, hashAlgorithm))
+        return subFlow(CashPaymentFlow(amount, recipient, anonymous, notary))
     }
 
     @CordaSerializable
@@ -67,13 +57,5 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
                                  val issueRef: OpaqueBytes,
                                  val recipient: Party,
                                  val notary: Party,
-                                 val anonymous: Boolean,
-                                 val hashAlgorithm: String) : AbstractRequest(amount) {
-
-        constructor(amount: Amount<Currency>,
-                    issueRef: OpaqueBytes,
-                    recipient: Party,
-                    notary: Party,
-                    anonymous: Boolean) : this(amount, issueRef, recipient, notary, anonymous, SHA2_256)
-    }
+                                 val anonymous: Boolean) : AbstractRequest(amount)
 }
