@@ -184,7 +184,7 @@ class StartedFlowTransition(
                     val sinkSessionId = (sessionState as SessionState.Initiated).peerSinkSessionId
                     val message = ExistingSessionMessage(sinkSessionId, EndSessionMessage)
                     val messageType = MessageType.inferFromMessage(message)
-                    val messageIdentifier = MessageIdentifier(messageType, ShardIdGenerator.generate(context.id.toString()), sinkSessionId, sessionState.nextSendingSeqNumber, currentState.checkpoint.checkpointState.suspensionTime)
+                    val messageIdentifier = MessageIdentifier(messageType, ShardIdGenerator.generate(context.id.toString()), sinkSessionId, sessionState.nextSendingSeqNumber, currentState.checkpoint.lastModificationTime)
                     Action.SendExisting(sessionState.peerParty, message, SenderDeduplicationInfo(messageIdentifier, currentState.senderUUID))
                 }
                 val signalSessionsEndMap = existingSessionsToRemove.map { (sessionId, _) ->
@@ -303,7 +303,7 @@ class StartedFlowTransition(
                     lastSenderSeqNo = null
             )
             val messageType = MessageType.inferFromMessage(initialMessage)
-            val messageIdentifier = MessageIdentifier(messageType, shardId, counterpartySessionId, 0, checkpoint.checkpointState.suspensionTime)
+            val messageIdentifier = MessageIdentifier(messageType, shardId, counterpartySessionId, 0, checkpoint.lastModificationTime)
             actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationInfo(messageIdentifier, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
@@ -360,14 +360,14 @@ class StartedFlowTransition(
                 )
                 val initialMessage = createInitialSessionMessage(uninitiatedSessionState.initiatingSubFlow, sourceSessionId, message)
                 val messageType = MessageType.inferFromMessage(initialMessage)
-                val messageIdentifier = MessageIdentifier(messageType, shardId, sourceSessionId.calculateInitiatedSessionId(), 0, checkpoint.checkpointState.suspensionTime)
+                val messageIdentifier = MessageIdentifier(messageType, shardId, sourceSessionId.calculateInitiatedSessionId(), 0, checkpoint.lastModificationTime)
                 Action.SendInitial(uninitiatedSessionState.destination, initialMessage, SenderDeduplicationInfo(messageIdentifier, startingState.senderUUID))
             }
         } ?: emptyList()
         messagesByType[SessionState.Initiating::class]?.forEach { (sourceSessionId, sessionState, message) ->
             val initiatingSessionState = sessionState as SessionState.Initiating
             val sessionMessage = DataSessionMessage(message)
-            val messageIdentifier = MessageIdentifier(MessageType.DATA_MESSAGE, sessionState.shardId, sourceSessionId.calculateInitiatedSessionId(), sessionState.nextSendingSeqNumber, checkpoint.checkpointState.suspensionTime)
+            val messageIdentifier = MessageIdentifier(MessageType.DATA_MESSAGE, sessionState.shardId, sourceSessionId.calculateInitiatedSessionId(), sessionState.nextSendingSeqNumber, checkpoint.lastModificationTime)
             newSessions[sourceSessionId] = initiatingSessionState.bufferMessage(messageIdentifier, sessionMessage)
         }
         val sendExistingActions = messagesByType[SessionState.Initiated::class]?.map {(sourceSessionId, sessionState, message) ->
@@ -376,7 +376,7 @@ class StartedFlowTransition(
             val sinkSessionId = initiatedSessionState.peerSinkSessionId
             val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
             val messageType = MessageType.inferFromMessage(existingMessage)
-            val messageIdentifier = MessageIdentifier(messageType, sessionState.shardId, sessionState.peerSinkSessionId, sessionState.nextSendingSeqNumber, checkpoint.checkpointState.suspensionTime)
+            val messageIdentifier = MessageIdentifier(messageType, sessionState.shardId, sessionState.peerSinkSessionId, sessionState.nextSendingSeqNumber, checkpoint.lastModificationTime)
             newSessions[sourceSessionId] = initiatedSessionState.copy(nextSendingSeqNumber = initiatedSessionState.nextSendingSeqNumber + 1)
             Action.SendExisting(initiatedSessionState.peerParty, existingMessage, SenderDeduplicationInfo(messageIdentifier, startingState.senderUUID))
         } ?: emptyList()

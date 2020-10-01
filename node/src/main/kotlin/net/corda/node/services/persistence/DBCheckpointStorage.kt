@@ -377,7 +377,6 @@ class DBCheckpointStorage(
         serializedFlowState: SerializedBytes<FlowState>?,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
-        val now = clock.instant()
         val flowId = id.uuid.toString()
 
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
@@ -386,14 +385,14 @@ class DBCheckpointStorage(
             flowId,
             serializedCheckpointState,
             serializedFlowState,
-            now
+            checkpoint.lastModificationTime
         )
 
-        val metadata = createDBFlowMetadata(flowId, checkpoint, now)
+        val metadata = createDBFlowMetadata(flowId, checkpoint, checkpoint.lastModificationTime)
 
         val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
             val errored = checkpoint.errorState as? ErrorState.Errored
-            errored?.run { createDBFlowException(flowId, errors.last().exception, now) }
+            errored?.run { createDBFlowException(flowId, errors.last().exception, checkpoint.lastModificationTime) }
                 ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
         } else {
             null
@@ -410,7 +409,7 @@ class DBCheckpointStorage(
             compatible = checkpoint.compatible,
             progressStep = null,
             ioRequestType = null,
-            checkpointInstant = now
+            checkpointInstant = checkpoint.lastModificationTime
         )
 
         currentDBSession().save(dbFlowCheckpoint)
@@ -426,7 +425,6 @@ class DBCheckpointStorage(
         serializedFlowState: SerializedBytes<FlowState>?,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
-        val now = clock.instant()
         val flowId = id.uuid.toString()
 
         val blob = if (checkpoint.status == FlowStatus.HOSPITALIZED) {
@@ -445,13 +443,13 @@ class DBCheckpointStorage(
                 flowId,
                 serializedCheckpointState,
                 serializedFlowState,
-                now
+                checkpoint.lastModificationTime
             )
         }
 
         val dbFlowResult = if (checkpoint.status == FlowStatus.COMPLETED) {
             try {
-                createDBFlowResult(flowId, checkpoint.result, now)
+                createDBFlowResult(flowId, checkpoint.result, checkpoint.lastModificationTime)
             } catch (e: MissingSerializerException) {
                 throw ResultSerializationException(e)
             }
@@ -461,7 +459,7 @@ class DBCheckpointStorage(
 
         val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
             val errored = checkpoint.errorState as? ErrorState.Errored
-            errored?.run { createDBFlowException(flowId, errors.last().exception, now) }
+            errored?.run { createDBFlowException(flowId, errors.last().exception, checkpoint.lastModificationTime) }
                     ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
         } else {
             null
@@ -478,7 +476,7 @@ class DBCheckpointStorage(
             compatible = checkpoint.compatible,
             progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
             ioRequestType = checkpoint.flowIoRequest,
-            checkpointInstant = now
+            checkpointInstant = checkpoint.lastModificationTime
         )
 
         currentDBSession().update(dbFlowCheckpoint)
@@ -486,7 +484,7 @@ class DBCheckpointStorage(
         dbFlowResult?.let { currentDBSession().save(it) }
         dbFlowException?.let { currentDBSession().save(it) }
         if (checkpoint.isFinished()) {
-            setDBFlowMetadataFinishTime(flowId, now)
+            setDBFlowMetadataFinishTime(flowId, checkpoint.lastModificationTime)
         }
     }
 
@@ -559,7 +557,7 @@ class DBCheckpointStorage(
     override fun getPausedCheckpoints(): Stream<Triple<StateMachineRunId, Checkpoint.Serialized, Boolean>> {
         val session = currentDBSession()
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
-                checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible, exception.id) 
+                checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible, exception.id, checkpoint.checkpointInstant) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
                 join ${DBFlowCheckpointBlob::class.java.name} blob on checkpoint.blob = blob.id
                 left outer join ${DBFlowException::class.java.name} exception on checkpoint.exceptionDetails = exception.id
@@ -728,7 +726,8 @@ class DBCheckpointStorage(
             status = status,
             progressStep = progressStep,
             flowIoRequest = ioRequestType,
-            compatible = compatible
+            compatible = compatible,
+            lastModificationTime = blob!!.persistedInstant
         )
     }
 
@@ -739,7 +738,8 @@ class DBCheckpointStorage(
         val progressStep: String?,
         val ioRequestType: String?,
         val compatible: Boolean,
-        exception: String?
+        exception: String?,
+        val persistedInstant: Instant
     ) {
         val wasHospitalized = exception != null
         fun toSerializedCheckpoint(): Checkpoint.Serialized {
@@ -752,7 +752,8 @@ class DBCheckpointStorage(
                 status = status,
                 progressStep = progressStep,
                 flowIoRequest = ioRequestType,
-                compatible = compatible
+                compatible = compatible,
+                lastModificationTime = persistedInstant
             )
         }
     }

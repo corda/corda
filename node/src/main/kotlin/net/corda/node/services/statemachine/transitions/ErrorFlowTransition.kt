@@ -138,7 +138,7 @@ class ErrorFlowTransition(
                 if (sessionState is SessionState.Initiating && sessionState.rejectionError == null) {
                     val errorsWithId = errorMessages.mapIndexed { idx, errorMsg ->
                         val messageId = MessageIdentifier(MessageType.SESSION_ERROR, sessionState.shardId, sourceSessionId.calculateInitiatedSessionId(),
-                                sessionState.nextSendingSeqNumber+idx, currentState.checkpoint.checkpointState.suspensionTime)
+                                sessionState.nextSendingSeqNumber+idx, currentState.checkpoint.lastModificationTime)
                         messageId to errorMsg
                     }
 
@@ -148,7 +148,7 @@ class ErrorFlowTransition(
                 else if (sessionState is SessionState.Initiated && !sessionState.otherSideErrored) {
                     val errorsWithId = errorMessages.mapIndexed { idx, errorMsg ->
                         val messageId = MessageIdentifier(MessageType.SESSION_ERROR, sessionState.shardId, sessionState.peerSinkSessionId,
-                                sessionState.nextSendingSeqNumber+idx, currentState.checkpoint.checkpointState.suspensionTime)
+                                sessionState.nextSendingSeqNumber+idx, currentState.checkpoint.lastModificationTime)
                         messageId to errorMsg
                     }.toList()
 

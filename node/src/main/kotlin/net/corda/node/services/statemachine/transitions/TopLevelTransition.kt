@@ -198,14 +198,14 @@ class TopLevelTransition(
                        checkpointState.invocationContext
                    },
                    numberOfSuspends = checkpointState.numberOfSuspends + 1,
-                   numberOfCommits = checkpointState.numberOfCommits + 1,
-                   suspensionTime = context.time
+                   numberOfCommits = checkpointState.numberOfCommits + 1
                 )
                 copy(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
                     checkpointState = newCheckpointState,
                     flowIoRequest = event.ioRequest::class.java.simpleName,
-                    progressStep = event.progressStep?.label
+                    progressStep = event.progressStep?.label,
+                    lastModificationTime = context.time
                 )
             }
             if (event.maySkipCheckpoint) {
@@ -244,12 +244,12 @@ class TopLevelTransition(
                         checkpoint = checkpoint.copy(
                             checkpointState = checkpoint.checkpointState.copy(
                                 numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1,
-                                numberOfCommits = checkpoint.checkpointState.numberOfCommits + 1,
-                                suspensionTime = context.time
+                                numberOfCommits = checkpoint.checkpointState.numberOfCommits + 1
                             ),
                             flowState = FlowState.Finished,
                             result = event.returnValue,
-                            status = Checkpoint.FlowStatus.COMPLETED
+                            status = Checkpoint.FlowStatus.COMPLETED,
+                            lastModificationTime = context.time
                         ).removeSessions(checkpoint.checkpointState.sessions.keys),
                         closedSessionsPendingToBeSignalled = emptyMap(),
                         pendingDeduplicationHandlers = emptyList(),
@@ -299,7 +299,7 @@ class TopLevelTransition(
             if (state is SessionState.Initiated) {
                 val message = ExistingSessionMessage(state.peerSinkSessionId, EndSessionMessage)
                 val messageType = MessageType.inferFromMessage(message)
-                val messageIdentifier = MessageIdentifier(messageType, state.shardId, state.peerSinkSessionId, state.nextSendingSeqNumber, startingState.checkpoint.checkpointState.suspensionTime)
+                val messageIdentifier = MessageIdentifier(messageType, state.shardId, state.peerSinkSessionId, state.nextSendingSeqNumber, startingState.checkpoint.lastModificationTime)
                 Action.SendExisting(state.peerParty, message, SenderDeduplicationInfo(messageIdentifier, startingState.senderUUID))
             } else {
                 null

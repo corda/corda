@@ -94,6 +94,7 @@ data class StateMachineState(
  * @param checkpointState the state of the checkpoint
  * @param flowState the state of the flow itself, including the frozen fiber/FlowLogic.
  * @param errorState the "dirtiness" state including the involved errors and their propagation status.
+ * @param lastModificationTime the time this checkpoint was last modified, which also corresponds conceptually to the last suspension point.
  */
 data class Checkpoint(
         val checkpointState: CheckpointState,
@@ -103,7 +104,8 @@ data class Checkpoint(
         val status: FlowStatus = FlowStatus.RUNNABLE,
         val progressStep: String? = null,
         val flowIoRequest: String? = null,
-        val compatible: Boolean = true
+        val compatible: Boolean = true,
+        val lastModificationTime: Instant
 ) {
     @CordaSerializable
     enum class FlowStatus {
@@ -144,11 +146,11 @@ data class Checkpoint(
                         listOf(topLevelSubFlow),
                         numberOfSuspends = 0,
                         // We set this to 1 here to avoid an extra copy and increment in UnstartedFlowTransition.createInitialCheckpoint
-                        numberOfCommits = 1,
-                        suspensionTime = timestamp
+                        numberOfCommits = 1
                     ),
                     flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
-                    errorState = ErrorState.Clean
+                    errorState = ErrorState.Clean,
+                    lastModificationTime = timestamp
                 )
             }
         }
@@ -217,7 +219,8 @@ data class Checkpoint(
         val status: FlowStatus,
         val progressStep: String?,
         val flowIoRequest: String?,
-        val compatible: Boolean
+        val compatible: Boolean,
+        val lastModificationTime: Instant
     ) {
         /**
          * Deserializes the serialized fields contained in [Checkpoint.Serialized].
@@ -238,7 +241,8 @@ data class Checkpoint(
                 status = status,
                 progressStep = progressStep,
                 flowIoRequest = flowIoRequest,
-                compatible = compatible
+                compatible = compatible,
+                lastModificationTime = lastModificationTime
             )
         }
     }
@@ -252,7 +256,6 @@ data class Checkpoint(
  * @param subFlowStack The stack of currently executing subflows.
  * @param numberOfSuspends The number of flow suspends due to IO API calls.
  * @param numberOfCommits The number of times this checkpoint has been persisted.
- * @param suspensionTime the time of the last suspension. This is supposed to be used as a stable timestamp in case of replays.
  */
 @CordaSerializable
 data class CheckpointState(
@@ -262,8 +265,7 @@ data class CheckpointState(
     val sessionsToBeClosed: Set<SessionId>,
     val subFlowStack: List<SubFlow>,
     val numberOfSuspends: Int,
-    val numberOfCommits: Int,
-    val suspensionTime: Instant
+    val numberOfCommits: Int
 )
 
 /**
