@@ -59,11 +59,13 @@ class PartialMerkleTreeTest {
     private lateinit var testLedger: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     private lateinit var txs: List<WireTransaction>
     private lateinit var testTx: WireTransaction
+    private lateinit var digestService: DigestService
 
     @Before
     fun init() {
-        hashed = nodes.map { DigestService().hash(it.serialize().bytes) }
-        expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(DigestService().zeroHash, DigestService().zeroHash)).hash
+        digestService = DigestService()
+        hashed = nodes.map { digestService.hash(it.serialize().bytes) }
+        expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(digestService.zeroHash, digestService.zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)
 
         testLedger = MockServices(
@@ -121,7 +123,7 @@ class PartialMerkleTreeTest {
 	fun `building Merkle tree odd number of nodes`() {
         val odd = hashed.subList(0, 3)
         val h1 = hashed[0].concatenate(hashed[1])
-        val h2 = hashed[2].concatenate(DigestService().zeroHash)
+        val h2 = hashed[2].concatenate(digestService.zeroHash)
         val expected = h1.concatenate(h2)
         val mt = MerkleTree.getMerkleTree(odd)
         assertEquals(mt.hash, expected)
@@ -296,47 +298,47 @@ class PartialMerkleTreeTest {
     @Test(timeout=300_000)
 	fun `Find leaf index`() {
         // A Merkle tree with 20 leaves.
-        val sampleLeaves = IntStream.rangeClosed(0, 19).toList().map { DigestService().hash(it.toString()) }
+        val sampleLeaves = IntStream.rangeClosed(0, 19).toList().map { digestService.hash(it.toString()) }
         val merkleTree = MerkleTree.getMerkleTree(sampleLeaves)
 
         // Provided hashes are not in the tree.
-        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf<SecureHash>(DigestService().hash("20"))) }
+        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("20"))) }
         // One of the provided hashes is not in the tree.
-        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf<SecureHash>(DigestService().hash("20"), DigestService().hash("1"), DigestService().hash("5"))) }
+        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("20"), digestService.hash("1"), digestService.hash("5"))) }
 
-        val pmt = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(DigestService().hash("1"), DigestService().hash("5"), DigestService().hash("0"), DigestService().hash("19")))
+        val pmt = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("1"), digestService.hash("5"), digestService.hash("0"), digestService.hash("19")))
         // First leaf.
-        assertEquals(0, pmt.leafIndex(DigestService().hash("0")))
+        assertEquals(0, pmt.leafIndex(digestService.hash("0")))
         // Second leaf.
-        assertEquals(1, pmt.leafIndex(DigestService().hash("1")))
+        assertEquals(1, pmt.leafIndex(digestService.hash("1")))
         // A random leaf.
-        assertEquals(5, pmt.leafIndex(DigestService().hash("5")))
+        assertEquals(5, pmt.leafIndex(digestService.hash("5")))
         // The last leaf.
-        assertEquals(19, pmt.leafIndex(DigestService().hash("19")))
+        assertEquals(19, pmt.leafIndex(digestService.hash("19")))
         // The provided hash is not in the tree.
-        assertFailsWith<MerkleTreeException> { pmt.leafIndex(DigestService().hash("10")) }
+        assertFailsWith<MerkleTreeException> { pmt.leafIndex(digestService.hash("10")) }
         // The provided hash is not in the tree (using a leaf that didn't exist in the original Merkle tree).
-        assertFailsWith<MerkleTreeException> { pmt.leafIndex(DigestService().hash("30")) }
+        assertFailsWith<MerkleTreeException> { pmt.leafIndex(digestService.hash("30")) }
 
-        val pmtFirstElementOnly = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(DigestService().hash("0")))
-        assertEquals(0, pmtFirstElementOnly.leafIndex(DigestService().hash("0")))
+        val pmtFirstElementOnly = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("0")))
+        assertEquals(0, pmtFirstElementOnly.leafIndex(digestService.hash("0")))
         // The provided hash is not in the tree.
-        assertFailsWith<MerkleTreeException> { pmtFirstElementOnly.leafIndex(DigestService().hash("10")) }
+        assertFailsWith<MerkleTreeException> { pmtFirstElementOnly.leafIndex(digestService.hash("10")) }
 
-        val pmtLastElementOnly = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(DigestService().hash("19")))
-        assertEquals(19, pmtLastElementOnly.leafIndex(DigestService().hash("19")))
+        val pmtLastElementOnly = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("19")))
+        assertEquals(19, pmtLastElementOnly.leafIndex(digestService.hash("19")))
         // The provided hash is not in the tree.
-        assertFailsWith<MerkleTreeException> { pmtLastElementOnly.leafIndex(DigestService().hash("10")) }
+        assertFailsWith<MerkleTreeException> { pmtLastElementOnly.leafIndex(digestService.hash("10")) }
 
-        val pmtOneElement = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(DigestService().hash("5")))
-        assertEquals(5, pmtOneElement.leafIndex(DigestService().hash("5")))
+        val pmtOneElement = PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("5")))
+        assertEquals(5, pmtOneElement.leafIndex(digestService.hash("5")))
         // The provided hash is not in the tree.
-        assertFailsWith<MerkleTreeException> { pmtOneElement.leafIndex(DigestService().hash("10")) }
+        assertFailsWith<MerkleTreeException> { pmtOneElement.leafIndex(digestService.hash("10")) }
 
         val pmtAllIncluded = PartialMerkleTree.build(merkleTree, sampleLeaves)
-        for (i in 0..19) assertEquals(i, pmtAllIncluded.leafIndex(DigestService().hash(i.toString())))
+        for (i in 0..19) assertEquals(i, pmtAllIncluded.leafIndex(digestService.hash(i.toString())))
         // The provided hash is not in the tree (using a leaf that didn't exist in the original Merkle tree).
-        assertFailsWith<MerkleTreeException> { pmtAllIncluded.leafIndex(DigestService().hash("30")) }
+        assertFailsWith<MerkleTreeException> { pmtAllIncluded.leafIndex(digestService.hash("30")) }
     }
 
     @Test(timeout=300_000)

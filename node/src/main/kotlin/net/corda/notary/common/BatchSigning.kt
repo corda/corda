@@ -21,8 +21,15 @@ fun signBatch(
         notaryIdentityKey: PublicKey,
         services: ServiceHub
 ): BatchSignature {
-                                                            // IEE: review - use getMerkleTree(txIds) instead?
-    val merkleTree = MerkleTree.getMerkleTree(txIds.map { /*it.sha256()*/DigestService().hash(it.bytes) })
+    val algorithms = txIds.mapTo(HashSet(), SecureHash::algorithm)
+    require(algorithms.size > 0) {
+        "Cannot sign an empty batch"
+    }
+    require(algorithms.size == 1) {
+        "Cannot sign a batch with multiple hash algorithms: $algorithms"
+    }
+    val digestService = DigestService(algorithms.first())
+    val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, digestService)
     val merkleTreeRoot = merkleTree.hash
     val signableData = SignableData(
             merkleTreeRoot,
@@ -46,12 +53,15 @@ data class BatchSignature(
         val fullMerkleTree: MerkleTree) {
     /** Extracts a signature with a partial Merkle tree for the specified leaf in the batch signature. */
     fun forParticipant(txId: SecureHash): TransactionSignature {
+        require(fullMerkleTree.hash.algorithm == txId.algorithm) {
+            "The leaf hash algorithm does not match the Merkle tree hash algorithm"
+        }
+        val digestService = DigestService(txId.algorithm)
         return TransactionSignature(
                 rootSignature.bytes,
                 rootSignature.by,
                 rootSignature.signatureMetadata,
-                                                                // IEE: review
-                PartialMerkleTree.build(fullMerkleTree, listOf(DigestService().hash(txId.bytes)/*txId.sha256()*/))
+                PartialMerkleTree.build(fullMerkleTree, listOf(digestService.hash(txId.bytes)))
         )
     }
 }

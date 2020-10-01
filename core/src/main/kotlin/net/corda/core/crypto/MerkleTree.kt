@@ -23,7 +23,7 @@ sealed class MerkleTree {
 
         @Throws(MerkleTreeException::class)
         fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree =
-                getMerkleTree(allLeavesHashes, SHA2256DigestService())
+                getMerkleTree(allLeavesHashes, DigestService())
 
         /**
          * Merkle tree building using hashes, with zero hash padding to full power of 2.

@@ -2,8 +2,10 @@ package net.corda.coretests.crypto
 
 import net.corda.core.crypto.*
 import net.corda.testing.core.SerializationEnvironmentRule
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.postgresql.shaded.com.ongres.scram.common.bouncycastle.pbkdf2.Digest
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.SignatureException
@@ -19,6 +21,13 @@ class TransactionSignatureTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val testBytes = "12345678901234567890123456789012".toByteArray()
+    private lateinit var digestService: DigestService
+
+
+    @Before
+    fun init() {
+        digestService = DigestService()
+    }
 
     /** Valid sign and verify. */
     @Test(timeout=300_000)
@@ -49,7 +58,6 @@ class TransactionSignatureTest {
 
     @Test(timeout=300_000)
 	fun `Verify multi-tx signature`() {
-        val digestService = DigestService()
         val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(1234567890L))
 
         // Deterministically create 5 txIds.

@@ -220,12 +220,12 @@ class JPAUniquenessProvider(
         return committedStates.map {
             val stateRef = StateRef(txhash = SecureHash.create(it.id.txId), index = it.id.index)
             val consumingTxId = SecureHash.create(it.consumingTxHash)
+            // IEE: review - verify whether id.txId and consumingTxHash should, by design, have the same hash algorithm
+            val digestService = DigestService(stateRef.txhash.algorithm)
             if (stateRef in references) {
-                // IEE: hardcoded to SHA2-256
-                stateRef to StateConsumptionDetails(DigestService().hash(consumingTxId.bytes)/*consumingTxId.sha256()*/, type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+                stateRef to StateConsumptionDetails(digestService.hash(consumingTxId.bytes), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
             } else {
-                // IEE: hardcoded to SHA2-256
-                stateRef to StateConsumptionDetails(DigestService().hash(consumingTxId.bytes)/*consumingTxId.sha256()*/)
+                stateRef to StateConsumptionDetails(digestService.hash(consumingTxId.bytes))
             }
         }.toMap()
     }
@@ -288,9 +288,9 @@ class JPAUniquenessProvider(
             stateConflicts: Map<StateRef, StateConsumptionDetails>,
             session: Session
     ): InternalResult {
+        val digestService = DigestService(request.txId.algorithm)
         return when {
-            // IEE: hardcoded to SHA2-256
-            isConsumedByTheSameTx(DigestService().hash(request.txId.bytes)/*request.txId.sha256()*/, stateConflicts) -> {
+            isConsumedByTheSameTx(digestService.hash(request.txId.bytes), stateConflicts) -> {
                 InternalResult.Success
             }
             request.states.isEmpty() && isPreviouslyNotarised(session, request.txId) -> {
@@ -329,9 +329,9 @@ class JPAUniquenessProvider(
                     InternalResult.Failure(outsideTimeWindowError)
                 } else {
                     // Mark states as consumed to capture conflicting transactions in the same batch
+                    val digestService = DigestService(request.txId.algorithm)
                     request.states.forEach {
-                        // IEE: hardcoded to SHA2-256
-                        consumedStates[it] = StateConsumptionDetails(DigestService().hash(request.txId.bytes)/*request.txId.sha256()*/)
+                        consumedStates[it] = StateConsumptionDetails(digestService.hash(request.txId.bytes))
                     }
                     toCommit.add(request)
                     InternalResult.Success
