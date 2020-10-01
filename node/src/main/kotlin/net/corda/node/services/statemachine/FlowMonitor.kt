@@ -90,7 +90,7 @@ internal class FlowMonitor(
                             (request.operation as WrappedFlowExternalAsyncOperation<*>).operation
                         else -> request.operation
                     }
-                    "for asynchronous operation of type ${operation::class.java} ($operation) to complete"
+                    "for asynchronous operation of type ($operation) to complete"
                 }
                 FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
             }
