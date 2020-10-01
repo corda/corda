@@ -29,7 +29,7 @@ class P2PMessageDeduplicatorTest {
     companion object {
         private const val TOPIC = "whatever"
         private val DATA = ByteSequence.of("blah blah blah".toByteArray())
-        private val SHARD_ID = ShardIdGenerator.generateShardId("some-flow-id")
+        private val SHARD_ID = ShardIdGenerator.generate("some-flow-id")
         private val SESSION_ID = SessionId(BigInteger.ONE)
         private val TIMESTAMP = Instant.now()
         private val SENDER = CordaX500Name("CordaWorld", "The Sea Devil", "NeverLand", "NL")

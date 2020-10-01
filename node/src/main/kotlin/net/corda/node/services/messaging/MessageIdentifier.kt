@@ -2,6 +2,7 @@ package net.corda.node.services.messaging
 
 import net.corda.node.services.statemachine.MessageType
 import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.sharding.ShardId
 import java.time.Instant
 
 /**
@@ -9,8 +10,7 @@ import java.time.Instant
  * It's composed of multiple segments.
  *
  * @property messageType the type of the message.
- * @property shardIdentifier an identifier that can be used to partition messages into groups for sharding purposes.
- *  This is supposed to have the same value for messages that correspond to the same business-level flow. It is
+ * @property shardIdentifier the shard identifier of the message.
  * @property sessionIdentifier the identifier of the session this message belongs to. This corresponds to the identifier of the session on the receiving side.
  * @property sessionSequenceNumber the sequence number of the message inside the session. This can be used to handle out-of-order delivery.
  * @property timestamp the time when the message was requested to be sent.
@@ -18,7 +18,7 @@ import java.time.Instant
  */
 data class MessageIdentifier(
         val messageType: MessageType,
-        val shardIdentifier: String,
+        val shardIdentifier: ShardId,
         val sessionIdentifier: SessionId,
         val sessionSequenceNumber: Int,
         val timestamp: Instant

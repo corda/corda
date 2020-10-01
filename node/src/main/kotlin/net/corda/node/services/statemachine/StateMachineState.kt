@@ -25,6 +25,7 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessageIdentifier
 import net.corda.node.services.messaging.SenderSequenceNumber
 import net.corda.node.services.messaging.SenderUUID
+import net.corda.node.services.statemachine.sharding.ShardId
 import java.lang.IllegalArgumentException
 import java.lang.IllegalStateException
 import java.security.Principal
@@ -343,7 +344,7 @@ sealed class SessionState {
             val bufferedMessages: List<Pair<MessageIdentifier, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
             val nextSendingSeqNumber: Int,
-            val shardId: String,
+            val shardId: ShardId,
             override val receivedMessages: Map<Int, ExistingSessionMessagePayload>,
             override val lastSenderUUID: String?,
             override val lastSenderSeqNo: Long?
@@ -379,7 +380,7 @@ sealed class SessionState {
             val peerSinkSessionId: SessionId,
             val nextSendingSeqNumber: Int,
             val lastProcessedSeqNumber: Int,
-            val shardId: String,
+            val shardId: ShardId,
             override val receivedMessages: Map<Int, ExistingSessionMessagePayload>,
             override val lastSenderUUID: String?,
             override val lastSenderSeqNo: Long?
@@ -444,7 +445,7 @@ sealed class FlowStart {
             val initiatingMessage: InitialSessionMessage,
             val senderCoreFlowVersion: Int?,
             val initiatedFlowInfo: FlowInfo,
-            val shardIdentifier: String,
+            val shardIdentifier: ShardId,
             val senderUUID: String?,
             val senderSequenceNumber: Long?
     ) : FlowStart() { override fun toString() = "Initiated" }

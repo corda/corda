@@ -184,7 +184,7 @@ class StartedFlowTransition(
                     val sinkSessionId = (sessionState as SessionState.Initiated).peerSinkSessionId
                     val message = ExistingSessionMessage(sinkSessionId, EndSessionMessage)
                     val messageType = MessageType.inferFromMessage(message)
-                    val messageIdentifier = MessageIdentifier(messageType, ShardIdGenerator.generateShardId(context.id.toString()), sinkSessionId, sessionState.nextSendingSeqNumber, currentState.checkpoint.checkpointState.suspensionTime)
+                    val messageIdentifier = MessageIdentifier(messageType, ShardIdGenerator.generate(context.id.toString()), sinkSessionId, sessionState.nextSendingSeqNumber, currentState.checkpoint.checkpointState.suspensionTime)
                     Action.SendExisting(sessionState.peerParty, message, SenderDeduplicationInfo(messageIdentifier, currentState.senderUUID))
                 }
                 val signalSessionsEndMap = existingSessionsToRemove.map { (sessionId, _) ->
@@ -290,7 +290,7 @@ class StartedFlowTransition(
             if (sessionState !is SessionState.Uninitiated) {
                 continue
             }
-            val shardId = ShardIdGenerator.generateShardId(context.id.toString())
+            val shardId = ShardIdGenerator.generate(context.id.toString())
             val counterpartySessionId = sourceSessionId.calculateInitiatedSessionId()
             val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, null)
             val newSessionState = SessionState.Initiating(
@@ -333,7 +333,7 @@ class StartedFlowTransition(
 
         val sendInitialActions = messagesByType[SessionState.Uninitiated::class]?.mapNotNull { (sourceSessionId, sessionState, message) ->
             val uninitiatedSessionState = sessionState as SessionState.Uninitiated
-            val shardId = ShardIdGenerator.generateShardId(context.id.toString())
+            val shardId = ShardIdGenerator.generate(context.id.toString())
             if (sessionState.hasBeenAcknowledged != null) {
                 newSessions[sourceSessionId] = SessionState.Initiated(
                         peerParty = sessionState.hasBeenAcknowledged.first,
