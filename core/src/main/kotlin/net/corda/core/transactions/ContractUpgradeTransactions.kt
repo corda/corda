@@ -51,7 +51,7 @@ data class ContractUpgradeWireTransaction(
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
     constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
-            : this(serializedComponents, privacySalt, SHA2256DigestService())
+            : this(serializedComponents, privacySalt, DigestService())
 
     companion object {
         /**

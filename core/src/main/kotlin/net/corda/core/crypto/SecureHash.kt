@@ -310,9 +310,7 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         }
     }
 
-    fun reHash() : SecureHash {
-        return generate(this.bytes)
-    }
+    fun reHash() : SecureHash = hashAs(algorithm, bytes)
 
     // In future, maybe SHA3, truncated hashes etc.
 }

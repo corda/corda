@@ -220,12 +220,10 @@ class JPAUniquenessProvider(
         return committedStates.map {
             val stateRef = StateRef(txhash = SecureHash.create(it.id.txId), index = it.id.index)
             val consumingTxId = SecureHash.create(it.consumingTxHash)
-            // IEE: review - verify whether id.txId and consumingTxHash should, by design, have the same hash algorithm
-            val digestService = DigestService(stateRef.txhash.algorithm)
             if (stateRef in references) {
-                stateRef to StateConsumptionDetails(digestService.hash(consumingTxId.bytes), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+                stateRef to StateConsumptionDetails(consumingTxId.reHash(), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
             } else {
-                stateRef to StateConsumptionDetails(digestService.hash(consumingTxId.bytes))
+                stateRef to StateConsumptionDetails(consumingTxId.reHash())
             }
         }.toMap()
     }
@@ -329,9 +327,8 @@ class JPAUniquenessProvider(
                     InternalResult.Failure(outsideTimeWindowError)
                 } else {
                     // Mark states as consumed to capture conflicting transactions in the same batch
-                    val digestService = DigestService(request.txId.algorithm)
                     request.states.forEach {
-                        consumedStates[it] = StateConsumptionDetails(digestService.hash(request.txId.bytes))
+                        consumedStates[it] = StateConsumptionDetails(request.txId.reHash())
                     }
                     toCommit.add(request)
                     InternalResult.Success

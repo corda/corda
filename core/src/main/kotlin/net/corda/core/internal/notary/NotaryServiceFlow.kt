@@ -166,8 +166,4 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 }
 
 /** Exception internal to the notary service. Does not get exposed to CorDapps and flows calling [NotaryFlow.Client]. */
-class NotaryInternalException(val error: NotaryError) : FlowException("Unable to notarise: $error") {
-    init {
-        println("here")
-    }
-}
+class NotaryInternalException(val error: NotaryError) : FlowException("Unable to notarise: $error")

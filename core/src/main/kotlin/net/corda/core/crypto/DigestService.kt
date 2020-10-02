@@ -12,8 +12,6 @@ import net.corda.core.serialization.CordaSerializable
 @KeepForDJVM
  open class DigestService(val digestLength: Int, val hashAlgorithm: String) {
 
-    // TODO: implement private constructors and factory method to reduce allocations
-
     constructor(hashAlgorithm: String) : this(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm)
 
     constructor() : this((Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub?.networkParameters?.getDefaultHashAlgorithm()

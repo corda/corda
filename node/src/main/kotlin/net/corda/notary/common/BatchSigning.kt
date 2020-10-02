@@ -8,7 +8,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.node.ServiceHub
 import java.security.PublicKey
@@ -29,7 +28,7 @@ fun signBatch(
         "Cannot sign a batch with multiple hash algorithms: $algorithms"
     }
     val digestService = DigestService(algorithms.first())
-    val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, digestService)
+    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, digestService)
     val merkleTreeRoot = merkleTree.hash
     val signableData = SignableData(
             merkleTreeRoot,
@@ -56,12 +55,11 @@ data class BatchSignature(
         require(fullMerkleTree.hash.algorithm == txId.algorithm) {
             "The leaf hash algorithm does not match the Merkle tree hash algorithm"
         }
-        val digestService = DigestService(txId.algorithm)
         return TransactionSignature(
                 rootSignature.bytes,
                 rootSignature.by,
                 rootSignature.signatureMetadata,
-                PartialMerkleTree.build(fullMerkleTree, listOf(digestService.hash(txId.bytes)))
+                PartialMerkleTree.build(fullMerkleTree, listOf(txId.reHash()))
         )
     }
 }

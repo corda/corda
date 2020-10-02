@@ -87,11 +87,6 @@ open class TransactionBuilder(
         )
     }
 
-//    protected var hashAlgorithm = SHA2_256
-//        set(value) {
-//            field = value.toUpperCase()
-//        }
-
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val excludedAttachments = arrayListOf<AttachmentId>()

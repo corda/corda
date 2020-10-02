@@ -16,6 +16,7 @@ class TransactionSignatureTest {
 
         private val keyStoreProvider = KeyStoreProvider("keystore/txsignature.pfx", KEYSTORE_PASSWORD)
         private lateinit var keyPair: KeyPair
+        private lateinit var digestService: DigestService
 
         @ClassRule
         @JvmField
@@ -26,6 +27,7 @@ class TransactionSignatureTest {
         @JvmStatic
         fun setupClass() {
             keyPair = keyStoreProvider.getKeyPair("tx")
+            digestService = DigestService()
         }
     }
 
@@ -60,12 +62,12 @@ class TransactionSignatureTest {
     @Test(timeout=300_000)
 	fun `Verify multi-tx signature`() {
         // Deterministically create 5 txIds.
-        val txIds: List<SecureHash> = IntRange(0, 4).map { DigestService().hash(byteArrayOf(it.toByte())) }
+        val txIds: List<SecureHash> = IntRange(0, 4).map { digestService.hash(byteArrayOf(it.toByte())) }
         // Multi-tx signature.
         val txSignature = signMultipleTx(txIds, keyPair)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { DigestService().hash(it.bytes) })
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) })
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)
@@ -73,7 +75,7 @@ class TransactionSignatureTest {
         assertFailsWith<SignatureException> { Crypto.doVerify(txIds[3], txSignature) }
 
         // Create a partial tree for one tx.
-        val pmt = PartialMerkleTree.build(merkleTree, listOf(DigestService().hash(txIds[0].bytes)))
+        val pmt = PartialMerkleTree.build(merkleTree, listOf(digestService.hash(txIds[0].bytes)))
         // Add the partial Merkle tree to the tx signature.
         val txSignatureWithTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmt)
 
@@ -93,7 +95,7 @@ class TransactionSignatureTest {
 
         // What if we send the Full tree. This could be used if notaries didn't want to create a per tx partial tree.
         // Create a partial tree for all txs, thus all leaves are included.
-        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { DigestService().hash(it.bytes) })
+        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { digestService.hash(it.bytes) })
         // Add the partial Merkle tree to the tx.
         val txSignatureWithFullTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmtFull)
 

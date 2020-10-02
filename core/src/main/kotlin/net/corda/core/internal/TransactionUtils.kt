@@ -44,11 +44,6 @@ class ContractUpgradeTransactionBuilder(
     var privacySalt: PrivacySalt = privacySalt
         private set
 
-//    fun resalt(): ContractUpgradeTransactionBuilder {
-//        privacySalt = PrivacySalt.createFor(hashAlgorithm)
-//        return this
-//    }
-
     fun build(): ContractUpgradeWireTransaction {
         val components = listOf(inputs, notary, legacyContractAttachmentId, upgradedContractClassName, upgradedContractAttachmentId, networkParametersHash).map { it.serialize() }
         return ContractUpgradeWireTransaction(components, privacySalt, digestService)
