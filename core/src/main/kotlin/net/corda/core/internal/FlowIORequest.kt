@@ -91,7 +91,21 @@ sealed class FlowIORequest<out R : Any> {
     /**
      * Execute the specified [operation], suspend the flow until completion.
      */
-    data class ExecuteAsyncOperation<T : Any>(val operation: FlowAsyncOperation<T>) : FlowIORequest<T>()
+    data class ExecuteAsyncOperation<T : Any>(val operation: FlowAsyncOperation<T>) : FlowIORequest<T>() {
+
+        companion object {
+            fun unwrapOperation(executeAsyncOperation: ExecuteAsyncOperation<*>): Any {
+                val flowAsyncOperation = executeAsyncOperation.operation
+                return when (flowAsyncOperation) {
+                    is WrappedFlowExternalOperation<*> ->
+                        flowAsyncOperation.operation
+                    is WrappedFlowExternalAsyncOperation<*> ->
+                        flowAsyncOperation.operation
+                    else -> flowAsyncOperation
+                }
+            }
+        }
+    }
 
     /**
      * Indicates that no actual IO request occurred, and the flow should be resumed immediately.

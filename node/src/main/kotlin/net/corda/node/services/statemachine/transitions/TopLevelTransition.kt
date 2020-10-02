@@ -2,8 +2,6 @@ package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
-import net.corda.core.internal.WrappedFlowExternalAsyncOperation
-import net.corda.core.internal.WrappedFlowExternalOperation
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -177,13 +175,7 @@ class TopLevelTransition(
                     checkpointState = newCheckpointState,
                     flowIoRequest = event.ioRequest::class.java.simpleName +
                             if (event.ioRequest is FlowIORequest.ExecuteAsyncOperation) {
-                                val operation: Any = when (event.ioRequest.operation) {
-                                    is WrappedFlowExternalOperation<*> ->
-                                        (event.ioRequest.operation as WrappedFlowExternalOperation<*>).operation
-                                    is WrappedFlowExternalAsyncOperation<*> ->
-                                        (event.ioRequest.operation as WrappedFlowExternalAsyncOperation<*>).operation
-                                    else -> event.ioRequest.operation
-                                }
+                                val operation = FlowIORequest.ExecuteAsyncOperation.unwrapOperation(event.ioRequest)
                                 "($operation)"
                             } else {
                                 ""
