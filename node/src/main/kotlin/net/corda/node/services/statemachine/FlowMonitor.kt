@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.unwrap
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.LifecycleSupport
 import java.time.Duration
@@ -81,7 +82,7 @@ internal class FlowMonitor(
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
                 is FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
                 is FlowIORequest.ExecuteAsyncOperation -> {
-                    val operation = FlowIORequest.ExecuteAsyncOperation.unwrapOperation(request)
+                    val operation = request.operation.unwrap()
                     "for asynchronous operation of type ($operation) to complete"
                 }
                 FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"

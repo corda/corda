@@ -79,8 +79,11 @@ class WrappedFlowExternalOperation<R : Any>(
  * by [WrappedFlowExternalAsyncOperation] or [WrappedFlowExternalOperation].
  */
 val FlowAsyncOperation<*>.externalOperationImplName: String
-    get() = when (this) {
-        is WrappedFlowExternalAsyncOperation<*> -> operation.javaClass.canonicalName
-        is WrappedFlowExternalOperation<*> -> operation.javaClass.canonicalName
-        else -> javaClass.canonicalName
-    }
+    get() = unwrap().javaClass.canonicalName
+
+fun FlowAsyncOperation<*>.unwrap(): Any =
+    when (this) {
+        is WrappedFlowExternalAsyncOperation<*> -> operation
+        is WrappedFlowExternalOperation<*> -> operation
+        else -> this
+}
