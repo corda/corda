@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.getTestPartyAndCertificate
@@ -40,6 +41,7 @@ class PersistentIdentityServiceTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bob = TestIdentity(BOB_NAME, 80)
+        val notary = TestIdentity(DUMMY_NOTARY_NAME, 90)
         val ALICE get() = alice.party
         val ALICE_IDENTITY get() = alice.identity
         val ALICE_PUBKEY get() = alice.publicKey
@@ -67,10 +69,12 @@ class PersistentIdentityServiceTests {
                 identityService::wellKnownPartyFromAnonymous
         )
         identityService.database = database
-        identityService.start(DEV_ROOT_CA.certificate, alice.identity, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(
-                database,
-                cacheFactory
-        ))
+        identityService.start(
+                DEV_ROOT_CA.certificate,
+                alice.identity,
+                listOf(notary.party),
+                PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
+        )
         networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService)
     }
 
@@ -317,5 +321,33 @@ class PersistentIdentityServiceTests {
         networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
         val actual = identityService.wellKnownPartyFromAnonymous(notAlice)
         assertNull(actual)
+    }
+
+    @Test(timeout = 300_000)
+    fun `rotate identity`() {
+        val anonymousParty = AnonymousParty(generateKeyPair().public)
+        identityService.registerKeyToParty(anonymousParty.owningKey)
+        assertEquals(ALICE, identityService.partyFromKey(anonymousParty.owningKey))
+
+        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(anonymousParty))
+        assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(ALICE))
+        assertEquals(ALICE, identityService.wellKnownPartyFromX500Name(ALICE.name))
+
+        // Make sure that registration of CI with certificate doesn't disrupt well-known party resolution.
+        val (_, anonymousIdentityWithCert) = createConfidentialIdentity(ALICE.name)
+        identityService.verifyAndRegisterIdentity(anonymousIdentityWithCert)
+        assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(anonymousParty))
+        assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(ALICE))
+        assertEquals(ALICE, identityService.wellKnownPartyFromX500Name(ALICE.name))
+
+        val alice2 = getTestPartyAndCertificate(ALICE.name, generateKeyPair().public)
+        networkMapCache.verifyAndRegisterIdentity(alice2)
+        assertEquals(alice2.party, identityService.wellKnownPartyFromAnonymous(anonymousParty))
+        assertEquals(alice2.party, identityService.wellKnownPartyFromAnonymous(ALICE))
+        assertEquals(alice2.party, identityService.wellKnownPartyFromX500Name(ALICE.name))
+        assertEquals(alice2.party, identityService.wellKnownPartyFromAnonymous(alice2.party))
+
+        assertEquals(setOf(alice2.party), identityService.partiesFromName("Alice Corp", true))
     }
 }
