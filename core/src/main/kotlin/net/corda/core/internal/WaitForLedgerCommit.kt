@@ -20,5 +20,5 @@ class WaitForLedgerCommit(val hash: SecureHash, private val services: ServiceHub
         return services.validatedTransactions.trackTransaction(hash).toCompletableFuture().asCordaFuture()
     }
 
-    override fun toString() = "Wait for the ledger to commit transaction with hash $hash"
+    override fun toString() = "WaitForLedgerCommit(hash=$hash)"
 }

@@ -898,6 +898,26 @@ class FlowFrameworkTests {
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusAfterRestart)
         assertEquals(0, dbExceptionAfterRestart!!.size)
     }
+
+    @Test
+    fun `flows waiting on ExecuteAsyncOperation persist flow async operations additional info`() {
+        val txHash = SecureHash.randomSHA256()
+        val flowHandle1 = aliceNode.services.startFlow(WaitForLedgerCommitFlow(txHash))
+        val flowHandle2 = aliceNode.services.startFlow(ExternalOperationFlow(async = false))
+        val flowHandle3 = aliceNode.services.startFlow(ExternalOperationFlow(async = true))
+
+        aliceNode.database.transaction {
+            val checkpoint1 = aliceNode.internals.checkpointStorage.getCheckpoint(flowHandle1.id)
+            val checkpoint2 = aliceNode.internals.checkpointStorage.getCheckpoint(flowHandle2.id)
+            val checkpoint3 = aliceNode.internals.checkpointStorage.getCheckpoint(flowHandle3.id)
+            assertEquals(
+                "ExecuteAsyncOperation(WaitForLedgerCommit(hash=$txHash))",
+                checkpoint1!!.flowIoRequest
+            )
+            assertEquals("ExecuteAsyncOperation(external operation)", checkpoint2!!.flowIoRequest)
+            assertEquals("ExecuteAsyncOperation(external async operation)", checkpoint3!!.flowIoRequest)
+        }
+    }
         //region Helpers
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
@@ -1289,7 +1309,7 @@ internal class ExternalAsyncOperation: FlowExternalAsyncOperation<Unit> {
     override fun toString() = "external async operation"
 }
 
-internal class ExternalOperationFlow(val async: Boolean) : FlowLogic<Unit>() {
+internal class ExternalOperationFlow(private val async: Boolean) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
