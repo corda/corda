@@ -906,6 +906,8 @@ class FlowFrameworkTests {
         val flowHandle2 = aliceNode.services.startFlow(ExternalOperationFlow(async = false))
         val flowHandle3 = aliceNode.services.startFlow(ExternalOperationFlow(async = true))
 
+        Thread.sleep(2000) // wait until all flows have suspended on their [FlowIORequest.ExecuteAsyncOperation]s
+
         aliceNode.database.transaction {
             val checkpoint1 = aliceNode.internals.checkpointStorage.getCheckpoint(flowHandle1.id)
             val checkpoint2 = aliceNode.internals.checkpointStorage.getCheckpoint(flowHandle2.id)
