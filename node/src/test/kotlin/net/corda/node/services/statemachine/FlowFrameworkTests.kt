@@ -899,7 +899,7 @@ class FlowFrameworkTests {
         assertEquals(0, dbExceptionAfterRestart!!.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flows waiting on ExecuteAsyncOperation persist flow async operations additional info`() {
         val txHash = SecureHash.randomSHA256()
         val flowHandle1 = aliceNode.services.startFlow(WaitForLedgerCommitFlow(txHash))
