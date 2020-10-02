@@ -5,7 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.externalOperationImplName
+import net.corda.core.internal.unwrap
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -189,7 +189,7 @@ private fun FlowStateMachineImpl<*>.waitingFlowInfo(): WaitingFlowInfo? {
             is FlowIORequest.ExecuteAsyncOperation -> flowInfoOf(
                     WaitingSource.EXTERNAL_OPERATION,
                     listOf(),
-                    request.operation.externalOperationImplName
+                    request.operation.unwrap().javaClass.canonicalName
             )
             else -> null
         }

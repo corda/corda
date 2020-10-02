@@ -75,12 +75,9 @@ class WrappedFlowExternalOperation<R : Any>(
 }
 
 /**
- * Returns the name of the external operation implementation considering that it can be wrapped
- * by [WrappedFlowExternalAsyncOperation] or [WrappedFlowExternalOperation].
+ * Unwraps an external operation implementation that can be wrapped by [WrappedFlowExternalAsyncOperation] or
+ * [WrappedFlowExternalOperation].
  */
-val FlowAsyncOperation<*>.externalOperationImplName: String
-    get() = unwrap().javaClass.canonicalName
-
 fun FlowAsyncOperation<*>.unwrap(): Any =
     when (this) {
         is WrappedFlowExternalAsyncOperation<*> -> operation
