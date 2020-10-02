@@ -277,7 +277,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * If any of the groups is an empty list or a null object, then [SecureHash.allOnesHash] is used as its hash.
      * Also, [privacySalt] is not a Merkle tree leaf, because it is already "inherently" included via the component nonces.
      */
-    val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(groupHashes) }
+    val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(groupHashes, digestService) }
 
     /**
      * The leaves (group hashes) of the top level Merkle tree.
@@ -305,7 +305,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val groupsMerkleRoots: Map<Int, SecureHash> by lazy {
-        availableComponentHashes.entries.associate { it.key to MerkleTree.getMerkleTree(it.value).hash }
+        availableComponentHashes.entries.associate { it.key to MerkleTree.getMerkleTree(it.value, digestService).hash }
     }
 
     /**

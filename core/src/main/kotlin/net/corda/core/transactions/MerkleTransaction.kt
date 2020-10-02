@@ -87,7 +87,8 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
 class FilteredTransaction internal constructor(
         override val id: SecureHash,
         val filteredComponentGroups: List<FilteredComponentGroup>,
-        val groupHashes: List<SecureHash>
+        val groupHashes: List<SecureHash>,
+        val digestService: DigestService
 ) : TraversableTransaction(filteredComponentGroups) {
 
     companion object {
@@ -99,7 +100,7 @@ class FilteredTransaction internal constructor(
         @JvmStatic
         fun buildFilteredTransaction(wtx: WireTransaction, filtering: Predicate<Any>): FilteredTransaction {
             val filteredComponentGroups = filterWithFun(wtx, filtering)
-            return FilteredTransaction(wtx.id, filteredComponentGroups, wtx.groupHashes)
+            return FilteredTransaction(wtx.id, filteredComponentGroups, wtx.groupHashes, wtx.digestService)
         }
 
         /**
@@ -176,7 +177,7 @@ class FilteredTransaction internal constructor(
 
             fun createPartialMerkleTree(componentGroupIndex: Int): PartialMerkleTree {
                 return PartialMerkleTree.build(
-                        MerkleTree.getMerkleTree(wtx.availableComponentHashes[componentGroupIndex]!!),
+                        MerkleTree.getMerkleTree(wtx.availableComponentHashes[componentGroupIndex]!!, wtx.digestService),
                         filteredComponentHashes[componentGroupIndex]!!
                 )
             }
@@ -206,7 +207,7 @@ class FilteredTransaction internal constructor(
         verificationCheck(groupHashes.isNotEmpty()) { "At least one component group hash is required" }
         // Verify the top level Merkle tree (group hashes are its leaves, including allOnesHash for empty list or null
         // components in WireTransaction).
-        verificationCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {
+        verificationCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {
             "Top level Merkle tree cannot be verified against transaction's id"
         }
 
@@ -266,10 +267,10 @@ class FilteredTransaction internal constructor(
         } else {
             visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
-            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }).hash
+            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }, digestService).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
-            visibilityCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {
+            visibilityCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {
                 "Transaction is malformed. Top level Merkle tree cannot be verified against transaction's id"
             }
         }
