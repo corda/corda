@@ -15,7 +15,7 @@ import net.corda.core.serialization.CordaSerializable
     constructor(hashAlgorithm: String) : this(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm)
 
     constructor() : this((Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub?.networkParameters?.getDefaultHashAlgorithm()
-            ?: SHA3_256)
+            ?: SHA2_256)
 
     init {
         require(hashAlgorithm.isNotEmpty()) { "Hash algorithm name unavailable or not specified" }
@@ -66,7 +66,9 @@ import net.corda.core.serialization.CordaSerializable
 }
 
 @CordaSerializable
-class SHA2256DigestService : DigestService(32, SecureHash.SHA2_256)
+@KeepForDJVM
+class SHA2256DigestService : DigestService(32, SHA2_256)
 
 @CordaSerializable
-class SHA3256DigestService : DigestService(32, SecureHash.SHA3_256)
+@KeepForDJVM
+class SHA3256DigestService : DigestService(32, SHA3_256)

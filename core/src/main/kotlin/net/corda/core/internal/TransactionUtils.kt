@@ -5,7 +5,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
-import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.hashAs
 import net.corda.core.flows.FlowLogic
@@ -219,10 +218,10 @@ class HashAgility {
 // NOTE: NetworkParameters' hashAgilityEnable get/set methods will be replaced by a field that is set by the network and hash verified
 fun NetworkParameters.getHashAgilityEnabled() = HashAgility.isEnabled()
 fun NetworkParameters.setHashAgilityEnabled(enabled: Boolean) = HashAgility.setEnabled(enabled)
-fun NetworkParameters.getDefaultHashAlgorithm() = SHA3_256
+fun NetworkParameters.getDefaultHashAlgorithm() = SHA2_256
 
 fun NetworkParameters.checkSupportedHashType(hash : SecureHash) : Unit {
-    val pass = this.getHashAgilityEnabled() || hash.algorithm == SHA3_256
+    val pass = this.getHashAgilityEnabled() || hash.algorithm == SHA2_256
     if(!pass) {
         throw TransactionVerificationException.UnsupportedHashTypeException(hash)
     }
