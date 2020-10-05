@@ -56,7 +56,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
 
         private fun findRootPaths(scanPackage: String): Set<Path> {
             return packageToRootPaths.computeIfAbsent(scanPackage) {
-                val classGraph = ClassGraph().whitelistPaths(scanPackage.replace('.', '/'))
+                val classGraph = ClassGraph().acceptPaths(scanPackage.replace('.', '/'))
                 classGraph.pooledScan().use { scanResult ->
                     scanResult.allResources
                         .asSequence()

@@ -35,6 +35,8 @@ import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.crypto.CryptoServicesRegistrar
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
@@ -308,11 +310,11 @@ object Crypto {
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
         if (keyInfo.privateKeyAlgorithm.algorithm == ASN1ObjectIdentifier(CordaOID.ALIAS_PRIVATE_KEY)) {
-            return decodeAliasPrivateKey(keyInfo)
+            return convertIfBCEdDSAPrivateKey(decodeAliasPrivateKey(keyInfo))
         }
         val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
         val keyFactory = keyFactory(signatureScheme)
-        return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+        return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
     }
 
     @DeleteForDJVM
@@ -354,7 +356,7 @@ object Crypto {
         }
         try {
             val keyFactory = keyFactory(signatureScheme)
-            return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+            return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that " +
                     "it corresponds to the input scheme's code name.", ikse)
@@ -373,7 +375,7 @@ object Crypto {
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
         val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
         val keyFactory = keyFactory(signatureScheme)
-        return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
+        return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
     }
 
     /**
@@ -408,7 +410,7 @@ object Crypto {
         }
         try {
             val keyFactory = keyFactory(signatureScheme)
-            return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
+            return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and " +
                     "that it corresponds to the input scheme's code name.", ikse)
@@ -988,6 +990,20 @@ object Crypto {
         }
     }
 
+    private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
+        return when (key) {
+            is BCEdDSAPublicKey -> EdDSAPublicKey(X509EncodedKeySpec(key.encoded))
+            else -> key
+        }
+    }
+
+    private fun convertIfBCEdDSAPrivateKey(key: PrivateKey): PrivateKey {
+        return when (key) {
+            is BCEdDSAPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
+            else -> key
+        }
+    }
+
     /**
      * Convert a public key to a supported implementation.
      * @param key a public key.
@@ -1015,6 +1031,7 @@ object Crypto {
             is BCSphincs256PublicKey -> key
             is EdDSAPublicKey -> key
             is CompositeKey -> key
+            is BCEdDSAPublicKey -> convertIfBCEdDSAPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }
     }
@@ -1035,6 +1052,7 @@ object Crypto {
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
             is EdDSAPrivateKey -> key
+            is BCEdDSAPrivateKey -> convertIfBCEdDSAPrivateKey(key)
             else -> decodePrivateKey(key.encoded)
         }
     }

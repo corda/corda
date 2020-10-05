@@ -14,7 +14,6 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.node.internal.ConfigurationException
 import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.CertChainPolicyType
@@ -281,17 +280,26 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
-        if (initialiseSchema.isSpecifiedBy(configuration)){
-            throw ConfigurationException("Unsupported configuration database/initialiseSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
+        if (initialiseSchema.isSpecifiedBy(configuration)) {
+            return invalid(Configuration.Validation.Error.BadPath.of(
+                    "Unsupported configuration database/initialiseSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas",
+                    "initialiseSchema",
+                    "Boolean"))
         }
-        if (initialiseAppSchema.isSpecifiedBy(configuration)){
-            throw ConfigurationException("Unsupported configuration database/initialiseAppSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
+        if (initialiseAppSchema.isSpecifiedBy(configuration)) {
+            return invalid(Configuration.Validation.Error.BadPath.of(
+                    "Unsupported configuration database/initialiseAppSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas",
+                    "initialiseAppSchema",
+                    SchemaInitializationType::class.qualifiedName!!))
         }
-        if (transactionIsolationLevel.isSpecifiedBy(configuration)){
-            throw ConfigurationException("Unsupported configuration database/transactionIsolationLevel - this option has been removed and cannot be changed")
+        if (transactionIsolationLevel.isSpecifiedBy(configuration)) {
+            return invalid(Configuration.Validation.Error.BadPath.of(
+                    "Unsupported configuration database/transactionIsolationLevel - this option has been removed and cannot be changed",
+                    "transactionIsolationLevel",
+                    TransactionIsolationLevel::class.qualifiedName!!))
         }
-        val config = configuration.withOptions(options)
 
+        val config = configuration.withOptions(options)
         return valid(DatabaseConfig(config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
     }
 }

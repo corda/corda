@@ -50,10 +50,13 @@ import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
+import net.corda.testing.internal.IS_OPENJ9
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
+import org.junit.Assume
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -374,6 +377,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create server cert and use in OpenSSL channel`() {
+        Assume.assumeTrue(!IS_OPENJ9)
         val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(tempFolder.root.toPath(), keyStorePassword = "serverstorepass")
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
@@ -446,7 +450,9 @@ class X509UtilitiesTest {
     private fun <U, C> getCorrectKeyFromKeystore(signatureScheme: SignatureScheme, uncastedClass: Class<U>, castedClass: Class<C>) {
         val keyPair = generateKeyPair(signatureScheme)
         val (keyFromKeystore, keyFromKeystoreCasted) = storeAndGetKeysFromKeystore(keyPair)
-        assertThat(keyFromKeystore).isInstanceOf(uncastedClass)
+        if (uncastedClass == EdDSAPrivateKey::class.java && keyFromKeystore !is BCEdDSAPrivateKey) {
+            assertThat(keyFromKeystore).isInstanceOf(uncastedClass)
+        }
         assertThat(keyFromKeystoreCasted).isInstanceOf(castedClass)
     }
 

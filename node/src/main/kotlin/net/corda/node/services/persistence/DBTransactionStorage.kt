@@ -247,7 +247,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             txStorage.locked {
                 val existingTransaction = getTransaction(id)
                 if (existingTransaction == null) {
-                    updates.filter { it.id == id }.toFuture()
                     updateFuture
                 } else {
                     updateFuture.cancel(false)

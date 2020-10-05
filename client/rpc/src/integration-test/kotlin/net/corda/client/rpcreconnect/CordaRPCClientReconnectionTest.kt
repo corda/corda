@@ -408,24 +408,24 @@ class CordaRPCClientReconnectionTest {
 
                 val completedCounter = AtomicInteger(0)
                 flowHandle0.returnValue.doOnComplete {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
                 flowHandle1!!.returnValue.doOnComplete {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
 
                 flowHandle0.returnValue.thenMatch({
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }, {})
                 flowHandle1.returnValue.thenMatch({
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }, {})
 
                 flowHandle0.returnValue.toCompletableFuture().thenApply {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
                 flowHandle1.returnValue.toCompletableFuture().thenApply {
-                    completedCounter.incrementAndGet()
+                    completedCounter.getAndIncrement()
                 }
 
                 node.stop()
@@ -469,13 +469,13 @@ class CordaRPCClientReconnectionTest {
                 val clientId = UUID.randomUUID().toString()
                 val flowHandle = rpcOps.startFlowWithClientId(clientId, ::ThrowingFlow)
 
-                var erroredCounter = 0
+                val erroredCounter = AtomicInteger(0)
                 flowHandle.returnValue.doOnError {
-                    erroredCounter++
+                    erroredCounter.getAndIncrement()
                 }
 
                 flowHandle.returnValue.toCompletableFuture().exceptionally {
-                    erroredCounter++
+                    erroredCounter.getAndIncrement()
                 }
 
                 node.stop()
@@ -489,7 +489,7 @@ class CordaRPCClientReconnectionTest {
                 }
 
                 sleep(1000)
-                assertEquals(2, erroredCounter)
+                assertEquals(2, erroredCounter.get())
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
         }
@@ -556,6 +556,40 @@ class CordaRPCClientReconnectionTest {
                 val removed = rpcOps.removeClientId(clientId)
 
                 assertTrue(removed)
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `rpc re-attaches to client id flow on node restart with flows draining mode on`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(additionalCustomOverrides: Map<String, Any?> = emptyMap()): NodeHandle {
+                return startNode(
+                    providedName = CHARLIE_NAME,
+                    rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                    customOverrides = mapOf("rpcSettings.address" to address.toString()) + additionalCustomOverrides
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val clientId = UUID.randomUUID().toString()
+                val flowHandle0 = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
+
+                node.rpc.setFlowsDrainingModeEnabled(true)
+                node.stop()
+
+                thread {
+                    sleep(1000)
+                    startNode()
+                }
+
+                val result0 = flowHandle0.returnValue.getOrThrow()
+                assertEquals(5, result0)
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
         }

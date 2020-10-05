@@ -76,10 +76,12 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
                 HTTPNetworkRegistrationService(
                         requireNotNull(conf.networkServices),
                         versionInfo),
-                nodeRegistration).generateKeysAndRegister()
+                nodeRegistration).apply {
+            generateKeysAndRegister()
+            generateNodeIdentity()
+        }
 
         // Minimal changes to make registration tool create node identity.
-        // TODO: Move node identity generation logic from node to registration helper.
         val node = startup.createNode(conf, versionInfo)
         if(!skipSchemaMigration) {
             node.runDatabaseMigrationScripts(updateCoreSchemas = true, updateAppSchemas = true, updateAppSchemasWithCheckpoints = false)

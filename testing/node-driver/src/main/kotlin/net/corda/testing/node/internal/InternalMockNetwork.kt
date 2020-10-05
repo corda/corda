@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.DoNotImplement
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
@@ -12,8 +11,14 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -26,6 +31,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
@@ -33,7 +41,11 @@ import net.corda.node.internal.NodeFlowManager
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.*
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
@@ -46,16 +58,16 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
-import net.corda.coretesting.internal.testThreadFactory
-import net.corda.testing.node.*
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.TestClock
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.Observable
@@ -65,10 +77,10 @@ import java.math.BigInteger
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -334,8 +346,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
         }
 
-        private val entropyRoot = args.entropyRoot
-        var counter = entropyRoot
+        private val entropyCounter = AtomicReference(args.entropyRoot)
         override val log get() = staticLog
         override val transactionVerifierWorkerCount: Int get() = 1
 
@@ -380,7 +391,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         override fun makeMessagingService(): MockNodeMessagingService {
-            return MockNodeMessagingService(configuration, serverThread).closeOnStop()
+            return MockNodeMessagingService(configuration, serverThread).closeOnStop(usesDatabase = false)
         }
 
         override fun startMessagingService(rpcOps: List<RPCOps>,
@@ -403,15 +414,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             //No mock shell
         }
 
-        // This is not thread safe, but node construction is done on a single thread, so that should always be fine
-        override fun generateKeyPair(alias: String): PublicKey {
-            require(cryptoService is BCCryptoService) { "MockNode supports BCCryptoService only, but it is ${cryptoService.javaClass.name}" }
-            counter = counter.add(BigInteger.ONE)
-            // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
-            val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
-            (cryptoService as BCCryptoService).importKey(alias, keyPair)
-            return keyPair.public
-        }
+        override fun initKeyStores() = keyStoreHandler.init(entropyCounter.updateAndGet { it.add(BigInteger.ONE) })
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
         // The non-empty addresses check is important to have and so we tolerate the ugliness here.
@@ -479,6 +482,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         certificatesDirectory.createDirectories()
         val config = mockNodeConfiguration(certificatesDirectory).also {
             doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).networkParametersPath
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys

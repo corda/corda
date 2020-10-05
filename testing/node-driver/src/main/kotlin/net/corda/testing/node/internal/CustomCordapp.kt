@@ -50,12 +50,12 @@ data class CustomCordapp(
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
         val classGraph = ClassGraph()
-        if(packages.isNotEmpty()){
-            classGraph.whitelistPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
+        if (packages.isNotEmpty()) {
+            classGraph.acceptPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
         }
         if (classes.isNotEmpty()) {
             classes.forEach { classGraph.addClassLoader(it.classLoader) }
-            classGraph.whitelistClasses(*classes.map { it.name }.toTypedArray())
+            classGraph.acceptClasses(*classes.map { it.name }.toTypedArray())
         }
 
         classGraph.enableClassInfo().pooledScan().use { scanResult ->
