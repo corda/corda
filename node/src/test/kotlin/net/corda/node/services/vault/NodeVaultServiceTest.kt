@@ -210,6 +210,22 @@ class NodeVaultServiceTest {
     }
 
     @Test(timeout=300_000)
+	fun `query by JPQL gets states`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
+        }
+        database.transaction {
+            var states = vaultService.queryByHql<Cash.State>(
+                    """select new ${Pair::class.java.name}(v.stateRef.txId, v.stateRef.index)
+                    from ${VaultSchemaV1.VaultStates::class.java.name} v""".trimIndent()).states
+            assertThat(states).hasSize(3)
+
+            var count = vaultService.queryByHql<Cash.State>("select count(v) from ${VaultSchemaV1.VaultStates::class.java.name} v")
+            assertThat(count.otherResults[0]).isEqualTo(3L)
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `states for refs`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)

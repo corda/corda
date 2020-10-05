@@ -84,6 +84,34 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         private class UnexpectedStatusValueException(status: String) : Exception("Found unexpected status value $status in transaction store")
     }
 
+
+    @Suppress("MagicNumber") // database column width
+    @Entity
+    @Table(name = "transaction_component_group")
+    class DBTransactionComponentGroup(
+            @Id
+            @Column(name = "tx_id", length = 64, nullable = false)
+            val txId: String,
+
+            @Column(name = "merkle_tree_index", length = 64, nullable = false)
+            val merkleTreeIndex: String,
+
+            @Column(name = "state_machine_run_id", length = 36, nullable = true)
+            val stateMachineRunId: String?,
+
+            @Lob
+            @Column(name = "transaction_value", nullable = false)
+            val transaction: ByteArray,
+
+            @Column(name = "status", nullable = false, length = 1)
+            @Convert(converter = TransactionStatusConverter::class)
+            val status: TransactionStatus,
+
+            @Column(name = "timestamp", nullable = false)
+            val timestamp: Instant
+    )
+
+
     @Converter
     class TransactionStatusConverter : AttributeConverter<TransactionStatus, String> {
         override fun convertToDatabaseColumn(attribute: TransactionStatus): String {

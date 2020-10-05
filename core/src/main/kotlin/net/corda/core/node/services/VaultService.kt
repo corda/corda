@@ -378,6 +378,17 @@ interface VaultService {
                                                                 amount: Amount<*>,
                                                                 contractStateType: Class<out T>): List<StateAndRef<T>>
 
+    // todo conal new
+    // todo conal - must be simple way to do this overload - named parameter with default
+    @Throws(VaultQueryException::class)
+    fun <T : ContractState> _queryByHql(contractStateType: Class<out T>, hql: String): Vault.Page<T>
+    @Throws(VaultQueryException::class)
+    fun <T : ContractState> _queryByHql(contractStateType: Class<out T>, hql: String, paging_: PageSpecification): Vault.Page<T>
+    @Throws(VaultQueryException::class)
+    fun <T : ContractState> _queryBySql(contractStateType: Class<out T>, sql: String): String
+    @Throws(VaultQueryException::class)
+    fun <T : ContractState> _queryBySql(contractStateType: Class<out T>, sql: String, paging_: PageSpecification): String
+
     // DOCSTART VaultQueryAPI
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
@@ -499,6 +510,10 @@ inline fun <reified T : ContractState> VaultService.queryBy(criteria: QueryCrite
 
 inline fun <reified T : ContractState> VaultService.queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
     return _queryBy(criteria, paging, sorting, T::class.java)
+}
+
+inline fun <reified T : ContractState> VaultService.queryByHql(hql: String): Vault.Page<T> {
+    return _queryByHql(T::class.java, hql)
 }
 
 inline fun <reified T : ContractState> VaultService.trackBy(): DataFeed<Vault.Page<T>, Vault.Update<T>> {

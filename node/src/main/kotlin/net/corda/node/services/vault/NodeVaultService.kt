@@ -3,31 +3,74 @@ package net.corda.node.services.vault
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.FungibleState
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.OwnableState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.HospitalizeFlowException
-import net.corda.core.internal.*
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TransactionDeserialisationException
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.tee
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.*
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
+import net.corda.core.node.services.vault.MAX_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.node.services.vault.builder
 import net.corda.core.observable.internal.OnResilientSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.transactions.*
-import net.corda.core.utilities.*
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.FullTransaction
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.toHexString
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.trace
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
+import org.hibernate.engine.internal.StatefulPersistenceContext
+import org.hibernate.engine.spi.EntityKey
+import org.hibernate.engine.spi.SessionImplementor
 import rx.Observable
 import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.PublishSubject
+import java.lang.reflect.Field
 import java.security.PublicKey
 import java.sql.SQLException
 import java.time.Clock
@@ -644,6 +687,115 @@ class NodeVaultService(
             throw e
         } catch (e: Exception) {
             throw VaultQueryException("An error occurred while attempting to query the vault: ${e.message}", e)
+        }
+    }
+
+    // todo conal - remove - not for production
+    private fun dumpHibernateSession(s: Session) {
+        try {
+            val sessionImpl = s as SessionImplementor
+            val persistenceContext: org.hibernate.engine.spi.PersistenceContext = sessionImpl.persistenceContext
+            val entitiesMapField: Field = StatefulPersistenceContext::class.java.getDeclaredField("entitiesByKey")
+            entitiesMapField.isAccessible = true
+            val map: Map<EntityKey, Any> = entitiesMapField.get(persistenceContext) as Map<EntityKey, Any>
+            println(map)
+        } catch (e: java.lang.Exception) {
+            println(e)
+        }
+    }
+
+    @Throws(VaultQueryException::class)
+    override fun <T : ContractState> _queryBySql(contractStateType: Class<out T>,
+                                                 sql: String): String {
+        return _queryBySql(contractStateType, sql, PageSpecification())
+    }
+
+    @Throws(VaultQueryException::class)
+    override fun <T : ContractState> _queryBySql(contractStateType: Class<out T>,
+                                                 sql: String,
+                                                 paging_: PageSpecification): String {
+        log.info("Vault Query for contract type $contractStateType and SQL string: $sql")
+
+        // todo conal - allow this to be configurable?
+        //  "only skip pagination checks for total results count query" - comment suggests no
+
+        return database.transaction {
+            // todo conal - a pile of validations on the sql?
+
+            var query = entityManager.createNativeQuery(sql)
+//            dumpHibernateSession(session)
+//            dumpHibernateSession(entityManager)
+
+            val results = query.resultList
+            println("results size: ${results.size}")
+            println("results: $results")
+            results.toString()
+
+        }
+    }
+
+    @Throws(VaultQueryException::class)
+    override fun <T : ContractState> _queryByHql(contractStateType: Class<out T>,
+                                                 hql: String): Vault.Page<T> {
+        return _queryByHql(contractStateType, hql, PageSpecification())
+    }
+/*
+select new net.corda.core.contracts.StateRef(v.stateRef.txId, v.stateRef.index)
+from net.corda.node.services.vault.VaultSchemaV1$VaultStates v
+ */
+
+    @Throws(VaultQueryException::class)
+    override fun <T : ContractState> _queryByHql(contractStateType: Class<out T>,
+                                                 hql: String,
+                                                 paging_: PageSpecification): Vault.Page<T> {
+        log.info("Vault Query for contract type $contractStateType and HQL string: $hql")
+        return database.transaction {
+
+            var query = entityManager.createQuery(hql)
+            val results = query.resultList
+            println("results size: ${results.size}")
+            println("results: $results")
+
+            if (results[0] is Pair<*, *>) {
+                val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
+                val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
+                val otherResults: MutableList<Any> = mutableListOf()
+                val stateRefs = mutableSetOf<StateRef>()
+
+                results.asSequence()
+                        .forEachIndexed { index, result ->
+                            result as Pair<String, Int>
+                            val stateRef = StateRef(SecureHash.parse(result.first as String), result.second as Int)
+                            stateRefs.add(stateRef)
+                            /*statesMeta.add(Vault.StateMetadata(stateRef,
+                                    vaultState.contractStateClassName,
+                                    vaultState.recordedTime,
+                                    vaultState.consumedTime,
+                                    vaultState.stateStatus,
+                                    vaultState.notary,
+                                    vaultState.lockId,
+                                    vaultState.lockUpdateTime,
+                                    vaultState.relevancyStatus,
+                                    constraintInfo(vaultState.constraintType, vaultState.constraintData)*/
+
+                        } /*else {
+                            // TODO: improve typing of returned other results
+                            log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
+                            otherResults.addAll(result.toArray().asList())
+                        }*/
+                if (stateRefs.isNotEmpty())
+                    statesAndRefs.addAll(uncheckedCast(servicesForResolution.loadStates(stateRefs)))
+
+                Vault.Page(states = statesAndRefs, statesMetadata = listOf(), stateTypes = Vault.StateStatus.ALL,
+                        totalStatesAvailable = 0, otherResults = listOf())
+            } else if (results[0] is Int || results[0] is Long) {
+                Vault.Page(states = listOf(), statesMetadata = listOf(), stateTypes = Vault.StateStatus.ALL,
+                        totalStatesAvailable = 0, otherResults = listOf(results[0]) as List<Any>)
+            } else {
+                Vault.Page(states = listOf(), statesMetadata = listOf(), stateTypes = Vault.StateStatus.ALL,
+                        totalStatesAvailable = 0, otherResults = listOf())
+            }
+
         }
     }
 

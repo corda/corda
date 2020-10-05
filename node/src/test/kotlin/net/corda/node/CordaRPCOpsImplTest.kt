@@ -65,6 +65,7 @@ import rx.Observable
 import java.io.ByteArrayOutputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -171,6 +172,134 @@ class CordaRPCOpsImplTest {
             }
         }
     }
+/*
+
+    @Test(timeout=300_000)
+	fun `query by hql`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
+        withPermissions(
+                invokeRpc("vaultTrackBy"),
+                invokeRpc("vaultQueryBy"),
+                invokeRpc("vaultQueryByHql"),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                startFlow<CashIssueFlow>()
+        ) {
+            aliceNode.database.transaction {
+                stateMachineUpdates = rpc.stateMachinesFeed().updates
+                vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
+            }
+
+            val quantity = 1000L
+            val ref = OpaqueBytes(ByteArray(1) { 1 })
+
+            // Check the monitoring service wallet is empty
+            aliceNode.database.transaction {
+                assertFalse(aliceNode.services.vaultService.queryBy<ContractState>().totalStatesAvailable > 0)
+            }
+
+            // Tell the monitoring service node to issue some cash
+            val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notary)
+            mockNet.runNetwork()
+
+            var issueSmId: StateMachineRunId? = null
+            stateMachineUpdates.expectEvents {
+                sequence(
+                        // ISSUE
+                        expect { add: StateMachineUpdate.Added ->
+                            issueSmId = add.id
+                        },
+                        expect { remove: StateMachineUpdate.Removed ->
+                            require(remove.id == issueSmId)
+                        }
+                )
+            }
+
+            val anonymisedRecipient = result.returnValue.getOrThrow().recipient!!
+            val expectedState = Cash.State(Amount(quantity,
+                    Issued(alice.ref(ref), GBP)),
+                    anonymisedRecipient)
+
+            // Query vault via RPC using HQL
+//            val cash = rpc.vaultQueryByHql<Cash.State>(Cash.State::class.java, "Select v from net.corda.node.services.vault.VaultSchemaV1.VaultStates v")
+
+//            val cash = rpc.vaultQueryByHql<Cash.State>(Cash.State::class.java,
+//                    """Select tx
+//                            from ${VaultSchemaV1.VaultStates::class.java.name} v
+//                            join ${DBTransactionStorage.DBTransaction::class.java.name} tx on v.stateRef.txId = tx.txId""".trimIndent())
+
+            val cash = rpc.vaultQueryByHql<Long>(Long::class.java, "Select count(v) from net.corda.node.services.vault.VaultSchemaV1.VaultStates v")
+
+            println(cash)
+            assertNotNull(cash)
+
+            vaultTrackCash.expectEvents {
+                expect { update ->
+                    val actual = update.produced.single().state.data
+                    assertEquals(expectedState, actual)
+                }
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+	fun `query by sql`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
+        withPermissions(
+                invokeRpc("vaultTrackBy"),
+                invokeRpc("vaultQueryBy"),
+                invokeRpc("vaultQueryBySql"),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                startFlow<CashIssueFlow>()
+        ) {
+            aliceNode.database.transaction {
+                stateMachineUpdates = rpc.stateMachinesFeed().updates
+                vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
+            }
+
+            val quantity = 1000L
+            val ref = OpaqueBytes(ByteArray(1) { 1 })
+
+            // Check the monitoring service wallet is empty
+            aliceNode.database.transaction {
+                assertFalse(aliceNode.services.vaultService.queryBy<ContractState>().totalStatesAvailable > 0)
+            }
+
+            // Tell the monitoring service node to issue some cash
+            val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, notary)
+            mockNet.runNetwork()
+
+            var issueSmId: StateMachineRunId? = null
+            stateMachineUpdates.expectEvents {
+                sequence(
+                        // ISSUE
+                        expect { add: StateMachineUpdate.Added ->
+                            issueSmId = add.id
+                        },
+                        expect { remove: StateMachineUpdate.Removed ->
+                            require(remove.id == issueSmId)
+                        }
+                )
+            }
+
+            val anonymisedRecipient = result.returnValue.getOrThrow().recipient!!
+            val expectedState = Cash.State(Amount(quantity,
+                    Issued(alice.ref(ref), GBP)),
+                    anonymisedRecipient)
+
+            // Query vault via RPC using HQL
+            val cash = rpc.vaultQueryBySql<Cash.State>(Cash.State::class.java, "Select * from vault_states")
+            println(cash)
+            assertNotNull(cash)
+
+            vaultTrackCash.expectEvents {
+                expect { update ->
+                    val actual = update.produced.single().state.data
+                    assertEquals(expectedState, actual)
+                }
+            }
+        }
+    }
+*/
 
     @Test(timeout=300_000)
     @Suppress("DEPRECATION")

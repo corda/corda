@@ -145,6 +145,10 @@ interface CordaRPCOps : RPCOps {
     // DOCSTART VaultQueryAPIHelpers
     fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T>
 
+    fun <T : ContractState> vaultQueryByHql(contractStateType: Class<out T>, hql: String): Vault.Page<T>
+
+    fun <T : ContractState> vaultQueryBySql(contractStateType: Class<out T>, sql: String): String
+
     fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T>
 
     fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T>

@@ -121,6 +121,18 @@ internal class CordaRPCOpsImpl(
         return services.networkMapCache.track()
     }
 
+    override fun <T : ContractState> vaultQueryByHql(contractStateType: Class<out T>, hql: String): Vault.Page<T> {
+
+        logger.info("Conal - query by hql starting")
+        return services.vaultService._queryByHql(contractStateType, hql)
+    }
+
+    override fun <T : ContractState> vaultQueryBySql(contractStateType: Class<out T>, sql: String): String {
+
+        logger.info("Conal - query by sql starting")
+        return services.vaultService._queryBySql(contractStateType, sql)
+    }
+
     override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
