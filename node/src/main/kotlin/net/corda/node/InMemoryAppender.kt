@@ -11,7 +11,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute
 import org.apache.logging.log4j.core.config.plugins.PluginElement
 import org.apache.logging.log4j.core.config.plugins.PluginFactory
 import java.io.RandomAccessFile
-import java.nio.ByteBuffer
+import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.time.Instant
@@ -60,28 +60,30 @@ class CircularOverwritingBuffer(val slots: Int,
     }
 
     private val tempFile = Files.createTempFile("rotating-buffer", ".bin").also {
-        if (deleteBackingFileOnExit){
+        if (deleteBackingFileOnExit) {
             it.toFile().deleteOnExit()
         }
     }
     private val randomAccessFile = RandomAccessFile(tempFile.toFile(), "rw")
     private val slotSize = maxItemSize + 8
     private val sizeInBytes: Long = (slotSize * this.slots).toLong()
-    private val writeBuffer: ByteBuffer = randomAccessFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, sizeInBytes).also {
+    private val writeBuffer: MappedByteBuffer = randomAccessFile.channel.map(FileChannel.MapMode.READ_WRITE, 0, sizeInBytes).also {
         it.position(0)
     }
 
     private val nextSlot = AtomicInteger(0)
 
     fun add(item: String) {
-        val ourSlot = nextSlot.getAndUpdate {
-            (it + 1) % slots
+        synchronized(this) {
+            val ourSlot = nextSlot.getAndUpdate {
+                (it + 1) % slots
+            }
+            writeBuffer.position(ourSlot * slotSize)
+            val toByteArray = item.toByteArray(Charsets.UTF_8)
+            val sizeOfBytesToWrite = toByteArray.size.coerceAtMost(maxItemSize)
+            writeBuffer.putInt(ourSlot * slotSize, sizeOfBytesToWrite)
+            writeBuffer.put(toByteArray, 0, sizeOfBytesToWrite)
         }
-        writeBuffer.position(ourSlot * slotSize)
-        val toByteArray = item.toByteArray(Charsets.UTF_8)
-        val sizeOfBytesToWrite = toByteArray.size.coerceAtMost(maxItemSize)
-        writeBuffer.putInt(sizeOfBytesToWrite)
-        writeBuffer.put(toByteArray, 0, sizeOfBytesToWrite)
     }
 
     fun nextSlot(): Int {
