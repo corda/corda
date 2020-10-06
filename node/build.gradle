@@ -242,6 +242,8 @@ dependencies {
     slowIntegrationTestRuntime configurations.runtime
     slowIntegrationTestRuntime configurations.testRuntime
 
+    integrationTestCompile(project(":testing:cordapps:missingmigration"))
+
     testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
 }
 

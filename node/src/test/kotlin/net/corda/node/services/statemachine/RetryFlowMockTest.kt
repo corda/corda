@@ -134,8 +134,8 @@ class RetryFlowMockTest {
         Assume.assumeTrue(!IS_OPENJ9)
         val partyB = nodeB.info.legalIdentities.first()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
-            nodeA.startFlow(UnbalancedSendAndReceiveFlow(partyB)).getOrThrow(20.seconds)
-        }.withMessage("Received session end message instead of a data session message. Mismatched send and receive?")
+            nodeA.startFlow(UnbalancedSendAndReceiveFlow(partyB)).getOrThrow(60.seconds)
+        }
     }
 
     @Test(timeout=300_000)

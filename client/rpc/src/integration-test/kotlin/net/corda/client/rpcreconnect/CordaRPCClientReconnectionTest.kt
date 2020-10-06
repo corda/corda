@@ -561,6 +561,40 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `rpc re-attaches to client id flow on node restart with flows draining mode on`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(additionalCustomOverrides: Map<String, Any?> = emptyMap()): NodeHandle {
+                return startNode(
+                    providedName = CHARLIE_NAME,
+                    rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                    customOverrides = mapOf("rpcSettings.address" to address.toString()) + additionalCustomOverrides
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val clientId = UUID.randomUUID().toString()
+                val flowHandle0 = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
+
+                node.rpc.setFlowsDrainingModeEnabled(true)
+                node.stop()
+
+                thread {
+                    sleep(1000)
+                    startNode()
+                }
+
+                val result0 = flowHandle0.returnValue.getOrThrow()
+                assertEquals(5, result0)
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
+
     @StartableByRPC
     class SimpleFlow : FlowLogic<Int>() {
 

@@ -126,7 +126,7 @@ abstract class StateMachineErrorHandlingTest {
     }
 
     internal fun NodeHandle.assertBytemanOutput(string: String, count: Int) {
-        assertEquals(count, getBytemanOutput().filter { string in it }.size)
+        assertEquals(count, getBytemanOutput().filter { string in it }.size, "Expected message \"$string\" to be in byteman output")
     }
 
     @Suppress("LongParameterList")

@@ -23,6 +23,7 @@ import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.lang.IllegalStateException
+import java.security.Principal
 import java.time.Instant
 import java.util.concurrent.Future
 import java.util.concurrent.Semaphore
@@ -424,16 +425,21 @@ sealed class SubFlowVersion {
     data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }
 
-sealed class FlowWithClientIdStatus(val flowId: StateMachineRunId) {
+sealed class FlowWithClientIdStatus(val flowId: StateMachineRunId, val user: Principal) {
+
+    fun isPermitted(user: Principal): Boolean = user.name == this.user.name
+
     class Active(
         flowId: StateMachineRunId,
+        user: Principal,
         val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>
-    ) : FlowWithClientIdStatus(flowId)
+    ) : FlowWithClientIdStatus(flowId, user)
 
-    class Removed(flowId: StateMachineRunId, val succeeded: Boolean) : FlowWithClientIdStatus(flowId)
+    class Removed(flowId: StateMachineRunId, user: Principal, val succeeded: Boolean) : FlowWithClientIdStatus(flowId, user)
 }
 
 data class FlowResultMetadata(
     val status: Checkpoint.FlowStatus,
-    val clientId: String?
+    val clientId: String?,
+    val user: Principal
 )

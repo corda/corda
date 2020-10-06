@@ -6,7 +6,6 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
@@ -188,7 +187,7 @@ open class MockServices private constructor(
             identityService.apply {
                 ourNames = setOf(initialIdentity.name)
                 database = persistence
-                start(DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
+                start(DEV_ROOT_CA.certificate, initialIdentity.identity, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
             }
 
@@ -199,11 +198,11 @@ open class MockServices private constructor(
             val aliasedMoreKeys = moreKeys.mapIndexed { index, keyPair ->
                 val alias = "Extra key $index"
                 aliasKeyMap[alias] = keyPair
-                KeyPair(keyPair.public, AliasPrivateKey(alias))
-            }.toSet()
+                keyPair.public to alias
+            }
             val identityAlias = "${initialIdentity.name} private key"
             aliasKeyMap[identityAlias] = initialIdentity.keyPair
-            val aliasedIdentityKey = KeyPair(initialIdentity.publicKey, AliasPrivateKey(identityAlias))
+            val aliasedIdentityKey = initialIdentity.publicKey to identityAlias
             val keyManagementService = BasicHSMKeyManagementService(
                     TestingNamedCacheFactory(),
                     identityService,

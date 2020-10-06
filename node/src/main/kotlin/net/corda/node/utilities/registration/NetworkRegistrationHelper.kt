@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
+import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import org.bouncycastle.asn1.x500.X500Name
@@ -153,6 +154,50 @@ open class NetworkRegistrationHelper(
         // The request id store is reused for the next step - registering the node identity.
         // Therefore we can remove this to enable it to be reused.
         requestIdStore.deleteIfExists()
+    }
+
+    fun generateNodeIdentity() {
+        certificatesDirectory.safeSymbolicRead().createDirectories()
+        // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
+        // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
+        val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+
+        if (!certStore.contains(nodeCaKeyAlias)) {
+            logProgress("Node CA key doesn't exist, program will now terminate...")
+            throw IllegalStateException("Node CA not found")
+        }
+
+        val nodeIdentityAlias = X509Utilities.NODE_IDENTITY_KEY_ALIAS
+        if (certStore.contains(nodeIdentityAlias)) {
+            logProgress("Node identity already exists, Corda node will now terminate...")
+            return
+        }
+
+        certStore.update {
+            logProgress("Generating node identity certificate.")
+            val nodeIdentityPublicKey = cryptoService.generateKeyPair(nodeIdentityAlias, cryptoService.defaultIdentitySignatureScheme())
+            val nodeCaCertChain = getCertificateChain(nodeCaKeyAlias)
+            val nodeCaCertificate = nodeCaCertChain.first()
+            val validityWindow = X509Utilities.getCertificateValidityWindow(DEFAULT_VALIDITY_WINDOW.first, DEFAULT_VALIDITY_WINDOW.second, nodeCaCertificate)
+
+            val nodeIdentityCert = X509Utilities.createCertificate(
+                    CertificateType.LEGAL_IDENTITY,
+                    nodeCaCertificate.subjectX500Principal,
+                    nodeCaCertificate.x509.publicKey,
+                    cryptoService.getSigner(nodeCaKeyAlias),
+                    nodeCaCertificate.subjectX500Principal,
+                    nodeIdentityPublicKey,
+                    validityWindow,
+                    crlDistPoint = null,
+                    crlIssuer = null)
+
+            logger.info("Generated Node Identity certificate: $nodeIdentityCert")
+
+            val nodeIdentityCertificateChain: List<X509Certificate> = listOf(nodeIdentityCert) + nodeCaCertChain
+            X509Utilities.validateCertificateChain(rootCert, nodeIdentityCertificateChain)
+            certStore.setCertPathOnly(nodeIdentityAlias, nodeIdentityCertificateChain)
+        }
+        logProgress("Node identity private key and certificate chain stored in $nodeIdentityAlias.")
     }
 
     private fun loadOrGenerateKeyPair(keyAlias: String): PublicKey {
