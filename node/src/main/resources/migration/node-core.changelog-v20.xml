@@ -4,7 +4,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="add_public_key_to_node_identities_no_cert">
+    <changeSet author="R3.Corda" id="identity_service_key_rotation">
         <addColumn tableName="node_identities_no_cert">
             <column name="public_key" type="blob">
                 <constraints nullable="true"/>
@@ -13,7 +13,7 @@
                 <constraints nullable="true"/>
             </column>
         </addColumn>
-        <!-- TODO: implement conversion for existing data and make new columns non-nullable -->
+        <customChange class="net.corda.node.migration.NodeIdentitiesNoCertMigration"/>
         <dropTable tableName="node_hash_to_key"/>
         <dropTable tableName="node_named_identities"/>
     </changeSet>
