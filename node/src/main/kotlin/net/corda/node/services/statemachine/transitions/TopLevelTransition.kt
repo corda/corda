@@ -302,7 +302,11 @@ class TopLevelTransition(
 
     private fun asyncOperationCompletionTransition(event: Event.AsyncOperationCompletion): TransitionResult {
         return builder {
-            resumeFlowLogic(event.returnValue)
+            if (isErrored()) {
+                FlowContinuation.ProcessEvents
+            } else {
+                resumeFlowLogic(event.returnValue)
+            }
         }
     }
 
