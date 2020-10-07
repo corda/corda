@@ -931,7 +931,7 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand(alice.owningKey))
         val stx = aliceNode.services.signInitialTransaction(ptx)
 
-        val fiberFuture = openFuture<FlowStateMachineImpl<*>>().toCompletableFuture()
+        val fiberFuture = CompletableFuture<FlowStateMachineImpl<*>>()
         WaitForLedgerCommitFlow.preWaitForLedgerCommitHook = {
             fiberFuture.complete(it)
         }
