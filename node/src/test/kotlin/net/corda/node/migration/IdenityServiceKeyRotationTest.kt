@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import liquibase.Contexts
 import liquibase.Liquibase
+import liquibase.database.Database
 import liquibase.database.core.H2Database
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -33,7 +34,7 @@ import java.security.PublicKey
 import kotlin.test.assertEquals
 
 class IdenityServiceKeyRotationTest {
-    private lateinit var liquibaseDB: H2Database
+    private lateinit var liquibaseDB: Database
     private lateinit var cordaDB: CordaPersistence
 
     @Before

@@ -44,7 +44,7 @@ class NodeIdentitiesNoCertMigration : CustomTaskChange {
             val name = resultSet.getString(2)
 
             val key = nodeKeysByHash[hash]
-                    ?: connection.query("SELECT public_key FROM node_our_key_pairs WHERE public_key_hash = ?", hash)
+                    ?: connection.query("SELECT public_key FROM v_our_key_pairs WHERE public_key_hash = ?", hash)
                     ?: connection.query("SELECT public_key FROM node_hash_to_key WHERE pk_hash = ?", hash)
                     ?: ArrayUtils.EMPTY_BYTE_ARRAY.also { logger.warn("Unable to find key for [$name] [$hash]") }
 

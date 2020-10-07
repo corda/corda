@@ -13,11 +13,15 @@
                 <constraints nullable="true"/>
             </column>
         </addColumn>
+        <createView viewName="v_our_key_pairs">
+            select public_key_hash, public_key from node_our_key_pairs
+        </createView>
         <customChange class="net.corda.node.migration.NodeIdentitiesNoCertMigration"/>
         <addNotNullConstraint tableName="node_identities_no_cert" columnName="public_key" columnDataType="blob"/>
         <addNotNullConstraint tableName="node_identities_no_cert" columnName="party_public_key" columnDataType="blob"/>
         <dropTable tableName="node_hash_to_key"/>
         <dropTable tableName="node_named_identities"/>
+        <dropView viewName="v_our_key_pairs"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="identity_service_key_rotation-postgres" dbms="postgresql">
@@ -29,11 +33,15 @@
                 <constraints nullable="true"/>
             </column>
         </addColumn>
+        <createView viewName="v_our_key_pairs">
+            select public_key_hash, lo_get(public_key) public_key from node_our_key_pairs
+        </createView>
         <customChange class="net.corda.node.migration.NodeIdentitiesNoCertMigration"/>
         <addNotNullConstraint tableName="node_identities_no_cert" columnName="public_key" columnDataType="varbinary(64000)"/>
         <addNotNullConstraint tableName="node_identities_no_cert" columnName="party_public_key" columnDataType="varbinary(64000)"/>
         <dropTable tableName="node_hash_to_key"/>
         <dropTable tableName="node_named_identities"/>
+        <dropView viewName="v_our_key_pairs"/>
     </changeSet>
 
 </databaseChangeLog>
