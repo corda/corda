@@ -238,7 +238,7 @@ class TimedFlowTests {
                     exceptionThrown = true
                 }
                 assertTrue(exceptionThrown)
-                val notarySignatures = resultFuture.get(10, TimeUnit.SECONDS)
+                val notarySignatures = resultFuture.get(15, TimeUnit.SECONDS)
                 (issueTx + notarySignatures).verifyRequiredSignatures()
                 progressTrackerDone.get()
             }
