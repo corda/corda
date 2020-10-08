@@ -208,7 +208,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
-
     /**
      * Request treatment for the [flowFiber].
      */
@@ -348,26 +347,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         hospitalJobTimer.cancel()
     }
 
-    class FlowMedicalHistory {
-        internal val records: MutableList<MedicalRecord.Flow> = mutableListOf()
-
-        fun notDischargedForTheSameThingMoreThan(max: Int, by: Staff, currentState: StateMachineState): Boolean {
-            return timesDischargedForTheSameThing(by, currentState) <= max
-        }
-
-        fun timesDischargedForTheSameThing(by: Staff, currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
-            return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
-        }
-
-        fun timesResuscitated(currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
-            return records.count { ResuscitationSpecialist in it.by && it.suspendCount == lastAdmittanceSuspendCount }
-        }
-
-        override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
-    }
-
     private data class InternalSessionInitRecord(val sessionMessage: InitialSessionMessage,
                                                  val event: ExternalEvent.ExternalMessageEvent,
                                                  val publicRecord: MedicalRecord.SessionInit)
@@ -403,32 +382,52 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         OVERNIGHT_OBSERVATION(Event.OvernightObservation),
         UNTREATABLE(Event.StartErrorPropagation)
     }
-
-    /** The order of the enum values are in priority order. */
-    enum class Diagnosis {
-        /** Retry the last outcome/diagnosis **/
-        RESUSCITATE,
-        /** The flow should not see other staff members */
-        TERMINAL,
-        /** Retry from last safe point. */
-        DISCHARGE,
-        /** Park and await intervention. */
-        OVERNIGHT_OBSERVATION,
-        /** Please try another member of staff. */
-        NOT_MY_SPECIALTY
-    }
-
-    interface Staff {
-        fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis
-    }
-
-    /**
-     * The [Chronic] interface relates to [Staff] that return diagnoses that can be constantly be diagnosed if the flow keeps returning to
-     * the hospital. [Chronic] diagnoses apply a backoff before scheduling a new [Event], this prevents a flow from constantly retrying
-     * without a chance for the underlying issue to resolve itself.
-     */
-    interface Chronic
 }
+
+class FlowMedicalHistory {
+    internal val records: MutableList<StaffedFlowHospital.MedicalRecord.Flow> = mutableListOf()
+
+    fun notDischargedForTheSameThingMoreThan(max: Int, by: Staff, currentState: StateMachineState): Boolean {
+        return timesDischargedForTheSameThing(by, currentState) <= max
+    }
+
+    fun timesDischargedForTheSameThing(by: Staff, currentState: StateMachineState): Int {
+        val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
+        return records.count { it.outcome == StaffedFlowHospital.Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
+    }
+
+    fun timesResuscitated(currentState: StateMachineState): Int {
+        val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
+        return records.count { ResuscitationSpecialist in it.by && it.suspendCount == lastAdmittanceSuspendCount }
+    }
+
+    override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
+}
+
+/** The order of the enum values are in priority order. */
+enum class Diagnosis {
+    /** Retry the last outcome/diagnosis **/
+    RESUSCITATE,
+    /** The flow should not see other staff members */
+    TERMINAL,
+    /** Retry from last safe point. */
+    DISCHARGE,
+    /** Park and await intervention. */
+    OVERNIGHT_OBSERVATION,
+    /** Please try another member of staff. */
+    NOT_MY_SPECIALTY
+}
+
+interface Staff {
+    fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis
+}
+
+/**
+ * The [Chronic] interface relates to [Staff] that return diagnoses that can be constantly be diagnosed if the flow keeps returning to
+ * the hospital. [Chronic] diagnoses apply a backoff before scheduling a new [Event], this prevents a flow from constantly retrying
+ * without a chance for the underlying issue to resolve itself.
+ */
+interface Chronic
 
 fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
     if (this == null) {

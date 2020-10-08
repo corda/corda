@@ -1,7 +1,10 @@
 package net.corda.node.services.statemachine.hospital
 
+import net.corda.node.services.statemachine.Chronic
+import net.corda.node.services.statemachine.Diagnosis
 import net.corda.node.services.statemachine.FlowFiber
-import net.corda.node.services.statemachine.StaffedFlowHospital
+import net.corda.node.services.statemachine.FlowMedicalHistory
+import net.corda.node.services.statemachine.Staff
 import net.corda.node.services.statemachine.StateMachineState
 import net.corda.node.services.statemachine.mentionsThrowable
 import java.sql.SQLException
@@ -9,12 +12,12 @@ import java.sql.SQLException
 /**
  * SQL Deadlock detection.
  */
-object DeadlockNurse : StaffedFlowHospital.Staff, StaffedFlowHospital.Chronic {
-    override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: StaffedFlowHospital.FlowMedicalHistory): StaffedFlowHospital.Diagnosis {
+object DeadlockNurse : Staff, Chronic {
+    override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
         return if (mentionsDeadlock(newError)) {
-            StaffedFlowHospital.Diagnosis.DISCHARGE
+            Diagnosis.DISCHARGE
         } else {
-            StaffedFlowHospital.Diagnosis.NOT_MY_SPECIALTY
+            Diagnosis.NOT_MY_SPECIALTY
         }
     }
 

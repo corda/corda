@@ -2,8 +2,11 @@ package net.corda.node.services.statemachine.hospital.external
 
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
+import net.corda.node.services.statemachine.Chronic
+import net.corda.node.services.statemachine.Diagnosis
 import net.corda.node.services.statemachine.FlowFiber
-import net.corda.node.services.statemachine.StaffedFlowHospital
+import net.corda.node.services.statemachine.FlowMedicalHistory
+import net.corda.node.services.statemachine.Staff
 import net.corda.node.services.statemachine.StateMachineState
 
 // [NotaryDoctor] should be included in notary nodes only.
@@ -12,14 +15,14 @@ import net.corda.node.services.statemachine.StateMachineState
  * Retry notarisation if the flow errors with a [NotaryError.General]. Notary flows are idempotent and only success or conflict
  * responses should be returned to the client.
  */
-object NotaryDoctor : StaffedFlowHospital.Staff, StaffedFlowHospital.Chronic {
+object NotaryDoctor : Staff, Chronic {
     override fun consult(flowFiber: FlowFiber,
                          currentState: StateMachineState,
                          newError: Throwable,
-                         history: StaffedFlowHospital.FlowMedicalHistory): StaffedFlowHospital.Diagnosis {
+                         history: FlowMedicalHistory): Diagnosis {
         if (newError is NotaryException && newError.error is NotaryError.General) {
-            return StaffedFlowHospital.Diagnosis.DISCHARGE
+            return Diagnosis.DISCHARGE
         }
-        return StaffedFlowHospital.Diagnosis.NOT_MY_SPECIALTY
+        return Diagnosis.NOT_MY_SPECIALTY
     }
 }
