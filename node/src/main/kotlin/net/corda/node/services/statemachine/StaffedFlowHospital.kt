@@ -10,16 +10,8 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.node.services.statemachine.hospital.DatabaseEndocrinologist
-import net.corda.node.services.statemachine.hospital.DeadlockNurse
-import net.corda.node.services.statemachine.hospital.external.DoctorTimeout
-import net.corda.node.services.statemachine.hospital.DuplicateInsertSpecialist
 import net.corda.node.services.statemachine.hospital.ResuscitationSpecialist
-import net.corda.node.services.statemachine.hospital.SedationNurse
-import net.corda.node.services.statemachine.hospital.TransientConnectionCardiologist
 import net.corda.node.services.statemachine.hospital.TransitionErrorGeneralPractitioner
-import net.corda.node.services.statemachine.hospital.external.FinalityDoctor
-import net.corda.node.services.statemachine.hospital.external.NotaryDoctor
 import rx.subjects.PublishSubject
 import java.io.Closeable
 import java.time.Clock
@@ -40,18 +32,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                           private val ourSenderUUID: String) : Closeable {
     companion object {
         val log = contextLogger()
-        private val staff = listOf(
-            DeadlockNurse,
-            DuplicateInsertSpecialist,
-            DoctorTimeout,
-            FinalityDoctor,
-            TransientConnectionCardiologist,
-            DatabaseEndocrinologist,
-            TransitionErrorGeneralPractitioner,
-            SedationNurse,
-            NotaryDoctor,
-            ResuscitationSpecialist
-        )
 
         private const val MAX_BACKOFF_TIME = 110.0 // Totals to 2 minutes when calculating the backoff time
 
@@ -70,6 +50,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         @VisibleForTesting
         val onFlowAdmitted = mutableListOf<(id: StateMachineRunId) -> Unit>()
     }
+
+    private var _staff: List<Staff>? = null
+    var staff: List<Staff>
+        get() = _staff ?: throw IllegalStateException("Staff members not injected yet.")
+        set(value) { _staff = value }
 
     private val hospitalJobTimer = Timer("FlowHospitalJobTimer", true)
 
