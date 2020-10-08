@@ -27,7 +27,9 @@ internal class FlowTimeoutScheduler(
      */
     fun timeout(flowId: StateMachineRunId) {
         timeout(flowId) { flow, retryCount ->
-            val scheduledFuture = scheduleTimeoutException(flow, calculateDefaultTimeoutSeconds(retryCount))
+            val defaultTimeout = calculateDefaultTimeoutSeconds(retryCount)
+            val scheduledFuture = scheduleTimeoutException(flow, defaultTimeout)
+            log.debug("Setting default time-out on timed flow $flowId to $defaultTimeout seconds (retry #$retryCount).")
             ScheduledTimeout(scheduledFuture, retryCount + 1)
         }
     }
@@ -89,9 +91,13 @@ internal class FlowTimeoutScheduler(
 
     private fun calculateDefaultTimeoutSeconds(retryCount: Int): Long {
         return serviceHub.configuration.flowTimeout.run {
-            val timeoutDelaySeconds =
-                timeout.seconds * Math.pow(backoffBase, Integer.min(retryCount, maxRestartCount).toDouble()).toLong()
-            maxOf(1L, ((1.0 + Math.random()) * timeoutDelaySeconds / 2).toLong())
+            val timeoutDelaySeconds = (timeout.seconds *
+                    Math.pow(backoffBase, Integer.min(retryCount, maxRestartCount).toDouble())).toLong()
+
+            // Introduce a variable delay to ensure that if a large spike of transactions are
+            // received, we do not trigger retries of them all at the same time. This results
+            // in an effective timeout between 100-150% of the calculated timeout.
+            maxOf(1L, (timeoutDelaySeconds * (1 + (Math.random() * 0.5))).toLong())
         }
     }
 
