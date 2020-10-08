@@ -21,6 +21,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.statemachine.hospital.DatabaseEndocrinologist
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.IS_OPENJ9
@@ -63,8 +64,8 @@ class RetryFlowMockTest {
         RetryFlow.count = 0
         SendAndRetryFlow.count = 0
         RetryInsertFlow.count = 0
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { t -> t is LimitedRetryCausingError }
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { t -> t is RetryCausingError }
+        DatabaseEndocrinologist.customConditions.add { t -> t is LimitedRetryCausingError }
+        DatabaseEndocrinologist.customConditions.add { t -> t is RetryCausingError }
     }
 
     private fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
@@ -74,7 +75,7 @@ class RetryFlowMockTest {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
+        DatabaseEndocrinologist.customConditions.clear()
     }
 
     @Test(timeout=300_000)
