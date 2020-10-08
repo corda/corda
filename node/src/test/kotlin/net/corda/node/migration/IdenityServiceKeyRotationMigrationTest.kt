@@ -32,7 +32,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class IdenityServiceKeyRotationTest {
+class IdenityServiceKeyRotationMigrationTest {
     private lateinit var liquibaseDB: Database
     private lateinit var cordaDB: CordaPersistence
 

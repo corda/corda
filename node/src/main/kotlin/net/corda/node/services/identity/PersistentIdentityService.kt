@@ -235,10 +235,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
             verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
         }
-        return registerIdentity(identity, isNewRandomIdentity, wellKnownCert == identity.certificate)
+        return registerIdentity(identity, isNewRandomIdentity)
     }
 
-    private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean, isWellKnown: Boolean): PartyAndCertificate? {
+    private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         log.debug { "Registering identity $identity" }
         val identityCertChain = identity.certPath.x509Certificates
         val key = mapToKey(identity)
@@ -251,13 +251,14 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             } else {
                 keyToPartyAndCert.addWithDuplicatesAllowed(key, identity, false)
                 keyToParty.addWithDuplicatesAllowed(identity.owningKey.toStringShort(), KeyToParty(identity.party), false)
-                if (isWellKnown) {
-                    nameToParty.invalidate(identity.name)
-                }
             }
             val parentId = identityCertChain[1].publicKey.toStringShort()
             keyToPartyAndCert[parentId]
         }
+    }
+
+    override fun invalidateCaches(name: CordaX500Name) {
+        nameToParty.invalidate(name)
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = database.transaction {

@@ -22,6 +22,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -41,7 +42,8 @@ import javax.persistence.PersistenceException
 @Suppress("TooManyFunctions")
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
+                                     private val identityService: IdentityServiceInternal
+) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -396,6 +398,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private fun invalidateCaches(nodeInfo: NodeInfo) {
         nodesByKeyCache.invalidateAll(nodeInfo.legalIdentities.map { it.owningKey })
         identityByLegalNameCache.invalidateAll(nodeInfo.legalIdentities.map { it.name })
+        nodeInfo.legalIdentities.forEach { identityService.invalidateCaches(it.name) }
     }
 
     private fun invalidateCaches() {
