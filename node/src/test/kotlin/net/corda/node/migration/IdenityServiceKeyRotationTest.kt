@@ -30,7 +30,6 @@ import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.PublicKey
 import kotlin.test.assertEquals
 
 class IdenityServiceKeyRotationTest {
@@ -124,35 +123,33 @@ class IdenityServiceKeyRotationTest {
         }, liquibaseDB).update(Contexts().toString())
 
         val dummyKey = Crypto.generateKeyPair().public
-        val result = mutableMapOf<String, Pair<PublicKey, Party>>()
+        val results = mutableMapOf<String, List<*>>()
 
         cordaDB.transaction {
-            connection.prepareStatement("SELECT pk_hash, name, public_key, party_public_key FROM node_identities_no_cert").use { ps ->
+            connection.prepareStatement("SELECT pk_hash, name, party_pk_hash, public_key FROM node_identities_no_cert").use { ps ->
                 ps.executeQuery().use { rs ->
                     while (rs.next()) {
-                        val key = if (rs.getBytes(3).isNotEmpty()) Crypto.decodePublicKey(rs.getBytes(3)) else dummyKey
-                        val partyKey = if (rs.getBytes(4).isNotEmpty()) Crypto.decodePublicKey(rs.getBytes(4)) else dummyKey
-                        result[rs.getString(1)] = key to Party(CordaX500Name.parse(rs.getString(2)), partyKey)
+                        val partyKeyHash = rs.getString(3).takeIf { it.isNotEmpty() } ?: dummyKey.toStringShort()
+                        val key = if (rs.getBytes(4).isNotEmpty()) Crypto.decodePublicKey(rs.getBytes(4)) else dummyKey
+                        results[rs.getString(1)] = listOf(key, CordaX500Name.parse(rs.getString(2)), partyKeyHash)
                     }
                 }
             }
         }
 
-        assertEquals(11, result.size)
+        assertEquals(11, results.size)
 
-        assertEquals(result[alice.publicKey.toStringShort()], alice.publicKey to alice.party)
-        assertEquals(result[bob.publicKey.toStringShort()], bob.publicKey to bob.party)
-        assertEquals(result[charlie.publicKey.toStringShort()], charlie.publicKey to charlie.party)
+        listOf(alice.identity, bob.identity, charlie.identity, aliceCiWithCert, charlieCiWithCert).forEach {
+            assertEquals(results[it.owningKey.toStringShort()], listOf(it.owningKey, it.party.name, it.owningKey.toStringShort()))
+        }
 
-        assertEquals(result[alice2.publicKey.toStringShort()], alice2.publicKey to alice.party)
-        assertEquals(result[alice3.publicKey.toStringShort()], dummyKey to alice.party)
-        assertEquals(result[aliceCiWithCert.owningKey.toStringShort()], aliceCiWithCert.owningKey to aliceCiWithCert.party)
+        assertEquals(results[alice2.publicKey.toStringShort()], listOf(alice2.publicKey, ALICE_NAME, alice.publicKey.toStringShort()))
+        assertEquals(results[alice3.publicKey.toStringShort()], listOf(dummyKey, ALICE_NAME, alice.publicKey.toStringShort()))
 
-        assertEquals(result[bob2.publicKey.toStringShort()], bob2.publicKey to bob.party)
-        assertEquals(result[bob3.publicKey.toStringShort()], dummyKey to bob.party)
+        assertEquals(results[bob2.publicKey.toStringShort()], listOf(bob2.publicKey, BOB_NAME, bob.publicKey.toStringShort()))
+        assertEquals(results[bob3.publicKey.toStringShort()], listOf(dummyKey, BOB_NAME, bob.publicKey.toStringShort()))
 
-        assertEquals(result[charlie2.publicKey.toStringShort()], charlie2.publicKey to Party(CHARLIE_NAME, dummyKey))
-        assertEquals(result[charlie3.publicKey.toStringShort()], dummyKey to Party(CHARLIE_NAME, dummyKey))
-        assertEquals(result[charlieCiWithCert.owningKey.toStringShort()], charlieCiWithCert.owningKey to charlieCiWithCert.party)
+        assertEquals(results[charlie2.publicKey.toStringShort()], listOf(charlie2.publicKey, CHARLIE_NAME, dummyKey.toStringShort()))
+        assertEquals(results[charlie3.publicKey.toStringShort()], listOf(dummyKey, CHARLIE_NAME, dummyKey.toStringShort()))
     }
 }

@@ -29,11 +29,11 @@ class NodeIdentitiesNoCertMigration : CustomTaskChange {
             nodeKeysByHash[hash] = certificateBytes.toKeyBytes()
         }
 
-        val nodeKeysByName = mutableMapOf<String, ByteArray>()
+        val nodeKeyHashesByName = mutableMapOf<String, String>()
         connection.queryAll("SELECT name, pk_hash FROM node_named_identities") { resultSet ->
             val name = resultSet.getString(1)
             val hash = resultSet.getString(2)
-            nodeKeysByHash[hash]?.let { nodeKeysByName[name] = it }
+            nodeKeyHashesByName[name] = hash
         }
 
         logger.info("Starting to migrate node_identities_no_cert.")
@@ -43,18 +43,18 @@ class NodeIdentitiesNoCertMigration : CustomTaskChange {
             val hash = resultSet.getString(1)
             val name = resultSet.getString(2)
 
+            val partyKeyHash = nodeKeysByHash[hash]?.let { hash }
+                    ?: nodeKeyHashesByName[name]
+                    ?: "".also { logger.warn("Unable to find party key hash for [$name] [$hash]") }
+
             val key = nodeKeysByHash[hash]
                     ?: connection.query("SELECT public_key FROM v_our_key_pairs WHERE public_key_hash = ?", hash)
                     ?: connection.query("SELECT public_key FROM node_hash_to_key WHERE pk_hash = ?", hash)
                     ?: ArrayUtils.EMPTY_BYTE_ARRAY.also { logger.warn("Unable to find key for [$name] [$hash]") }
 
-            val partyKey = nodeKeysByHash[hash]
-                    ?: nodeKeysByName[name]
-                    ?: ArrayUtils.EMPTY_BYTE_ARRAY.also { logger.warn("Unable to find party key for [$name] [$hash]") }
-
-            connection.prepareStatement("UPDATE node_identities_no_cert SET public_key = ?, party_public_key = ? WHERE pk_hash = ?").use {
-                it.setBytes(1, key)
-                it.setBytes(2, partyKey)
+            connection.prepareStatement("UPDATE node_identities_no_cert SET party_pk_hash = ?, public_key = ? WHERE pk_hash = ?").use {
+                it.setString(1, partyKeyHash)
+                it.setBytes(2, key)
                 it.setString(3, hash)
                 it.executeUpdate()
             }

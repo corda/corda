@@ -325,11 +325,11 @@ class PersistentIdentityServiceTests {
 
     @Test(timeout = 300_000)
     fun `rotate identity`() {
+        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
         val anonymousParty = AnonymousParty(generateKeyPair().public)
         identityService.registerKeyToParty(anonymousParty.owningKey)
         assertEquals(ALICE, identityService.partyFromKey(anonymousParty.owningKey))
 
-        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
         assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(anonymousParty))
         assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(ALICE))
         assertEquals(ALICE, identityService.wellKnownPartyFromX500Name(ALICE.name))
