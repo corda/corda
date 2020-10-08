@@ -1000,7 +1000,7 @@ internal class SingleThreadedStateMachineManager(
     private fun makeFlowHospital() : StaffedFlowHospital {
         // If the node is running as a notary service, we don't retain errored session initiation requests in case of missing Cordapps
         // to avoid memory leaks if the notary is under heavy load.
-        // Based on staff members found on classpath(?) instantiate a list of them. For now creating a static one...
+        // Based on staff members found on classpath(?) instantiate a list of them. For now creating a list including all staff members.
         val staff = listOf(
                 DeadlockNurse,
                 DuplicateInsertSpecialist,
