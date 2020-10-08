@@ -1,37 +1,32 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.HospitalizeFlowException
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.ReceiveFinalityFlow
-import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
-import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.node.services.FinalityHandler
-import org.hibernate.exception.ConstraintViolationException
+import net.corda.node.services.statemachine.hospital.DatabaseEndocrinologist
+import net.corda.node.services.statemachine.hospital.DeadlockNurse
+import net.corda.node.services.statemachine.hospital.external.DoctorTimeout
+import net.corda.node.services.statemachine.hospital.DuplicateInsertSpecialist
+import net.corda.node.services.statemachine.hospital.ResuscitationSpecialist
+import net.corda.node.services.statemachine.hospital.SedationNurse
+import net.corda.node.services.statemachine.hospital.TransientConnectionCardiologist
+import net.corda.node.services.statemachine.hospital.TransitionErrorGeneralPractitioner
+import net.corda.node.services.statemachine.hospital.external.FinalityDoctor
+import net.corda.node.services.statemachine.hospital.external.NotaryDoctor
 import rx.subjects.PublishSubject
 import java.io.Closeable
-import java.sql.SQLException
-import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import javax.persistence.PersistenceException
 import kotlin.collections.HashMap
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
@@ -44,7 +39,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                           private val clock: Clock,
                           private val ourSenderUUID: String) : Closeable {
     companion object {
-        private val log = contextLogger()
+        val log = contextLogger()
         private val staff = listOf(
             DeadlockNurse,
             DuplicateInsertSpecialist,
@@ -433,252 +428,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      * without a chance for the underlying issue to resolve itself.
      */
     interface Chronic
-
-    /**
-     * SQL Deadlock detection.
-     */
-    object DeadlockNurse : Staff, Chronic {
-        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (mentionsDeadlock(newError)) {
-                Diagnosis.DISCHARGE
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-
-        private fun mentionsDeadlock(exception: Throwable?): Boolean {
-            return exception.mentionsThrowable(SQLException::class.java, "deadlock")
-        }
-    }
-
-    /**
-     * Primary key violation detection for duplicate inserts.  Will detect other constraint violations too.
-     */
-    object DuplicateInsertSpecialist : Staff {
-        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (newError.mentionsThrowable(ConstraintViolationException::class.java)
-                && history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
-                Diagnosis.DISCHARGE
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-    }
-
-    /**
-     * Restarts [TimedFlow], keeping track of the number of retries and making sure it does not
-     * exceed the limit specified by the [FlowTimeoutException].
-     */
-    object DoctorTimeout : Staff {
-        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            if (newError is FlowTimeoutException) {
-                return Diagnosis.DISCHARGE
-            }
-            return Diagnosis.NOT_MY_SPECIALTY
-        }
-    }
-
-    object FinalityDoctor : Staff {
-        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (currentState.flowLogic is FinalityHandler) {
-                log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                        "the flow by re-starting the node. State machine state: $currentState", newError)
-                Diagnosis.OVERNIGHT_OBSERVATION
-            } else if (isFromReceiveFinalityFlow(newError)) {
-                if (isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveFinality(newError)) {
-                    // no need to keep around the flow, since notarisation has already failed at the counterparty.
-                    Diagnosis.NOT_MY_SPECIALTY
-                } else {
-                    log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                            "the flow by re-starting the node. State machine state: $currentState", newError)
-                    Diagnosis.OVERNIGHT_OBSERVATION
-                }
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-
-        private fun isFromReceiveFinalityFlow(throwable: Throwable): Boolean {
-            return throwable.stackTrace.any { it.className == ReceiveFinalityFlow::class.java.name }
-        }
-
-        private fun isErrorPropagatedFromCounterparty(error: Throwable): Boolean {
-            return when (error) {
-                is UnexpectedFlowEndException -> {
-                    val peer = DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", error).value
-                    peer != null
-                }
-                is FlowException -> {
-                    val peer = DeclaredField<Party?>(FlowException::class.java, "peer", error).value
-                    peer != null
-                }
-                else -> false
-            }
-        }
-
-        /**
-         * This method will return true if [ReceiveTransactionFlow] is at the top of the stack during the error.
-         * As a result, if the failure happened during a sub-flow invoked from [ReceiveTransactionFlow], the method will return false.
-         *
-         * This is because in the latter case, the transaction might have already been finalised and deleting the flow
-         * would introduce risk for inconsistency between nodes.
-         */
-        private fun isErrorThrownDuringReceiveFinality(error: Throwable): Boolean {
-            val strippedStacktrace = error.stackTrace
-                    .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
-                    .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
-            return strippedStacktrace.isNotEmpty()
-                    && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!!)
-        }
-    }
-
-    /**
-     * [SQLTransientConnectionException] detection that arise from failing to connect the underlying database/datasource
-     */
-    object TransientConnectionCardiologist : Staff {
-        override fun consult(
-                flowFiber: FlowFiber,
-                currentState: StateMachineState,
-                newError: Throwable,
-                history: FlowMedicalHistory
-        ): Diagnosis {
-            return if (mentionsTransientConnection(newError)) {
-                if (history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
-                    Diagnosis.DISCHARGE
-                } else {
-                    Diagnosis.OVERNIGHT_OBSERVATION
-                }
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-
-        private fun mentionsTransientConnection(exception: Throwable?): Boolean {
-            return exception.mentionsThrowable(SQLTransientConnectionException::class.java, "connection is not available")
-        }
-    }
-
-    /**
-     * Hospitalise any database (SQL and Persistence) exception that wasn't handled otherwise, unless on the configurable whitelist
-     * Note that retry decisions from other specialists will not be affected as retries take precedence over hospitalisation.
-     */
-    object DatabaseEndocrinologist : Staff {
-        override fun consult(
-                flowFiber: FlowFiber,
-                currentState: StateMachineState,
-                newError: Throwable,
-                history: FlowMedicalHistory
-        ): Diagnosis {
-            return if ((newError is SQLException || newError is PersistenceException) && !customConditions.any { it(newError) }) {
-                Diagnosis.OVERNIGHT_OBSERVATION
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-
-        @VisibleForTesting
-        val customConditions = mutableSetOf<(t: Throwable) -> Boolean>()
-    }
-
-    /**
-     * Handles exceptions from internal state transitions that are not dealt with by the rest of the staff.
-     *
-     * [InterruptedException]s are diagnosed as [Diagnosis.TERMINAL] so they are never retried
-     * (can occur when a flow is killed - `killFlow`).
-     * [AsyncOperationTransitionException]s ares ignored as the error is likely to have originated in user async code rather than inside
-     * of a transition.
-     * All other exceptions are retried a maximum of 3 times before being kept in for observation.
-     */
-    object TransitionErrorGeneralPractitioner : Staff {
-        override fun consult(
-            flowFiber: FlowFiber,
-            currentState: StateMachineState,
-            newError: Throwable,
-            history: FlowMedicalHistory
-        ): Diagnosis {
-            return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
-                when {
-                    newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
-                    newError.mentionsThrowable(ReloadFlowFromCheckpointException::class.java) -> Diagnosis.OVERNIGHT_OBSERVATION
-                    newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
-                    history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
-                    else -> Diagnosis.OVERNIGHT_OBSERVATION
-                }.also { logDiagnosis(it, newError, flowFiber, history) }
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-
-        private fun logDiagnosis(diagnosis: Diagnosis, newError: Throwable, flowFiber: FlowFiber, history: FlowMedicalHistory) {
-            if (diagnosis != Diagnosis.NOT_MY_SPECIALTY) {
-                log.debug {
-                    """
-                        Flow ${flowFiber.id} given $diagnosis diagnosis due to a transition error
-                        - Exception: ${newError.message}
-                        - History: $history
-                        ${(newError as? StateTransitionException)?.transitionAction?.let { "- Action: $it" }}
-                        ${(newError as? StateTransitionException)?.transitionEvent?.let { "- Event: $it" }}
-                        """.trimIndent()
-                }
-            }
-        }
-    }
-
-    /**
-     * Keeps the flow in for overnight observation if [HospitalizeFlowException] is received.
-     */
-    object SedationNurse : Staff {
-        override fun consult(
-            flowFiber: FlowFiber,
-            currentState: StateMachineState,
-            newError: Throwable,
-            history: FlowMedicalHistory
-        ): Diagnosis {
-            return if (newError.mentionsThrowable(HospitalizeFlowException::class.java)) {
-                Diagnosis.OVERNIGHT_OBSERVATION
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-    }
-
-    /**
-     * Retry notarisation if the flow errors with a [NotaryError.General]. Notary flows are idempotent and only success or conflict
-     * responses should be returned to the client.
-     */
-    object NotaryDoctor : Staff, Chronic {
-        override fun consult(flowFiber: FlowFiber,
-                             currentState: StateMachineState,
-                             newError: Throwable,
-                             history: FlowMedicalHistory): Diagnosis {
-            if (newError is NotaryException && newError.error is NotaryError.General) {
-                return Diagnosis.DISCHARGE
-            }
-            return Diagnosis.NOT_MY_SPECIALTY
-        }
-    }
-
-    /**
-     * Handles errors coming from the processing of errors events ([Event.StartErrorPropagation] and [Event.RetryFlowFromSafePoint]),
-     * returning a [Diagnosis.RESUSCITATE] diagnosis
-     */
-    object ResuscitationSpecialist : Staff {
-        override fun consult(
-            flowFiber: FlowFiber,
-            currentState: StateMachineState,
-            newError: Throwable,
-            history: FlowMedicalHistory
-        ): Diagnosis {
-            return if (newError is ErrorStateTransitionException) {
-                Diagnosis.RESUSCITATE
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-    }
 }
 
-private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
+fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
     if (this == null) {
         return false
     }
@@ -689,4 +441,3 @@ private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>
     }
     return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(exceptionType, errorMessage)
 }
-
