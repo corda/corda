@@ -81,10 +81,7 @@ internal class FlowMonitor(
                 is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
                 is FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
-                is FlowIORequest.ExecuteAsyncOperation -> {
-                    val operation = request.operation.unwrap()
-                    "for asynchronous operation of type ($operation) to complete"
-                }
+                is FlowIORequest.ExecuteAsyncOperation -> "for asynchronous operation of type (${request.operation.unwrap()}) to complete"
                 FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
             }
         )
