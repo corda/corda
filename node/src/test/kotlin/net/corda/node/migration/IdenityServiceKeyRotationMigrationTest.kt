@@ -14,6 +14,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.coretesting.internal.rigorousMock
+import net.corda.node.migration.NodeIdentitiesNoCertMigration.Companion.UNRESOLVED
 import net.corda.node.services.api.SchemaService
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -129,8 +130,12 @@ class IdenityServiceKeyRotationMigrationTest {
             connection.prepareStatement("SELECT pk_hash, name, party_pk_hash, public_key FROM node_identities_no_cert").use { ps ->
                 ps.executeQuery().use { rs ->
                     while (rs.next()) {
-                        val partyKeyHash = rs.getString(3).takeIf { it.isNotEmpty() } ?: dummyKey.toStringShort()
-                        val key = if (rs.getBytes(4).isNotEmpty()) Crypto.decodePublicKey(rs.getBytes(4)) else dummyKey
+                        val partyKeyHash = rs.getString(3).takeUnless { it == UNRESOLVED } ?: dummyKey.toStringShort()
+                        val key = if (UNRESOLVED.toByteArray().contentEquals(rs.getBytes(4))) {
+                            dummyKey
+                        } else {
+                            Crypto.decodePublicKey(rs.getBytes(4))
+                        }
                         results[rs.getString(1)] = listOf(key, CordaX500Name.parse(rs.getString(2)), partyKeyHash)
                     }
                 }

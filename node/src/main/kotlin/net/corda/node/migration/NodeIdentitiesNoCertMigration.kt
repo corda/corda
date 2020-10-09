@@ -8,12 +8,13 @@ import liquibase.resource.ResourceAccessor
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import org.apache.commons.lang3.ArrayUtils
 import java.sql.ResultSet
 
 class NodeIdentitiesNoCertMigration : CustomTaskChange {
     companion object {
         private val logger = contextLogger()
+
+        const val UNRESOLVED = "Unresolved"
     }
 
     @Suppress("MagicNumber")
@@ -45,12 +46,12 @@ class NodeIdentitiesNoCertMigration : CustomTaskChange {
 
             val partyKeyHash = nodeKeysByHash[hash]?.let { hash }
                     ?: nodeKeyHashesByName[name]
-                    ?: "".also { logger.warn("Unable to find party key hash for [$name] [$hash]") }
+                    ?: UNRESOLVED.also { logger.warn("Unable to find party key hash for [$name] [$hash]") }
 
             val key = nodeKeysByHash[hash]
                     ?: connection.query("SELECT public_key FROM v_our_key_pairs WHERE public_key_hash = ?", hash)
                     ?: connection.query("SELECT public_key FROM node_hash_to_key WHERE pk_hash = ?", hash)
-                    ?: ArrayUtils.EMPTY_BYTE_ARRAY.also { logger.warn("Unable to find key for [$name] [$hash]") }
+                    ?: UNRESOLVED.toByteArray().also { logger.warn("Unable to find key for [$name] [$hash]") }
 
             connection.prepareStatement("UPDATE node_identities_no_cert SET party_pk_hash = ?, public_key = ? WHERE pk_hash = ?").use {
                 it.setString(1, partyKeyHash)
