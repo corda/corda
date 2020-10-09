@@ -247,6 +247,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                 changePublisher.onNext(change)
             }
         }
+        // Invalidate caches outside database transaction to prevent reloading of uncommitted values.
+        nodeUpdates.forEach { (nodeInfo, _) ->
+            invalidateIdentityServiceCaches(nodeInfo)
+        }
     }
 
     override fun addOrUpdateNode(node: NodeInfo) {
@@ -285,6 +289,8 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                 changePublisher.onNext(MapChange.Removed(node))
             }
         }
+        // Invalidate caches outside database transaction to prevent reloading of uncommitted values.
+        invalidateIdentityServiceCaches(node)
         logger.debug { "Done removing node with info: $node" }
     }
 
@@ -397,6 +403,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private fun invalidateCaches(nodeInfo: NodeInfo) {
         nodesByKeyCache.invalidateAll(nodeInfo.legalIdentities.map { it.owningKey })
         identityByLegalNameCache.invalidateAll(nodeInfo.legalIdentities.map { it.name })
+    }
+
+    private fun invalidateIdentityServiceCaches(nodeInfo: NodeInfo) {
         nodeInfo.legalIdentities.forEach { identityService.invalidateCaches(it.name) }
     }
 
