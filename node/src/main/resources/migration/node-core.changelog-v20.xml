@@ -4,7 +4,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="identity_service_key_rotation" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="identity_service_key_rotation-start" dbms="!postgresql">
         <addColumn tableName="node_identities_no_cert">
             <column name="party_pk_hash" type="NVARCHAR(130)">
                 <constraints nullable="true"/>
@@ -16,15 +16,9 @@
         <createView viewName="v_our_key_pairs">
             select public_key_hash, public_key from node_our_key_pairs
         </createView>
-        <customChange class="net.corda.node.migration.NodeIdentitiesNoCertMigration"/>
-        <addNotNullConstraint tableName="node_identities_no_cert" columnName="party_pk_hash" columnDataType="NVARCHAR(130)"/>
-        <addNotNullConstraint tableName="node_identities_no_cert" columnName="public_key" columnDataType="blob"/>
-        <dropTable tableName="node_hash_to_key"/>
-        <dropTable tableName="node_named_identities"/>
-        <dropView viewName="v_our_key_pairs"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="identity_service_key_rotation-postgres" dbms="postgresql">
+    <changeSet author="R3.Corda" id="identity_service_key_rotation-start-postgres" dbms="postgresql">
         <addColumn tableName="node_identities_no_cert">
             <column name="party_pk_hash" type="NVARCHAR(130)">
                 <constraints nullable="true"/>
@@ -36,12 +30,25 @@
         <createView viewName="v_our_key_pairs">
             select public_key_hash, lo_get(public_key) public_key from node_our_key_pairs
         </createView>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="identity_service_key_rotation-custom">
         <customChange class="net.corda.node.migration.NodeIdentitiesNoCertMigration"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="identity_service_key_rotation-end" dbms="!postgresql">
+        <addNotNullConstraint tableName="node_identities_no_cert" columnName="party_pk_hash" columnDataType="NVARCHAR(130)"/>
+        <addNotNullConstraint tableName="node_identities_no_cert" columnName="public_key" columnDataType="blob"/>
+        <dropTable tableName="node_hash_to_key"/>
+        <dropTable tableName="node_named_identities"/>
+        <dropView viewName="v_our_key_pairs"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="identity_service_key_rotation-end-postgres" dbms="postgresql">
         <addNotNullConstraint tableName="node_identities_no_cert" columnName="party_pk_hash" columnDataType="NVARCHAR(130)"/>
         <addNotNullConstraint tableName="node_identities_no_cert" columnName="public_key" columnDataType="varbinary(64000)"/>
         <dropTable tableName="node_hash_to_key"/>
         <dropTable tableName="node_named_identities"/>
         <dropView viewName="v_our_key_pairs"/>
     </changeSet>
-
 </databaseChangeLog>
