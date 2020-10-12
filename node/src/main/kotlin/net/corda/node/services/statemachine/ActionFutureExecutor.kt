@@ -6,6 +6,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.ServiceHubInternal
 import java.time.Duration
+import java.util.concurrent.CancellationException
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -54,7 +55,11 @@ internal class ActionFutureExecutor(
         val future = action.operation.execute(action.deduplicationId)
         future.thenMatch(
             success = { result -> scheduleWakeUpEvent(instance, Event.AsyncOperationCompletion(result)) },
-            failure = { exception -> scheduleWakeUpEvent(instance, Event.AsyncOperationThrows(exception)) }
+            failure = { exception ->
+                if (exception !is CancellationException || FlowStateMachineImpl.currentStateMachine() == null) {
+                    scheduleWakeUpEvent(instance, Event.AsyncOperationThrows(exception))
+                }
+            }
         )
         action.currentState.future = future
     }
