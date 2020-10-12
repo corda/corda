@@ -38,7 +38,7 @@ class StartedFlowTransition(
 
             startingState.cancelFutureIfRunning()
             return TransitionResult(
-                    newState = newState.copy(isFlowResumed = true),
+                    newState = newState.copy(isFlowResumed = true, isWaitingForFuture = false),
                     // throw the first exception. TODO should this aggregate all of them somehow?
                     actions = listOf(Action.CreateTransaction),
                     continuation = FlowContinuation.Throw(errorsToThrow[0])
