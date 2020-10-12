@@ -14,8 +14,8 @@ import net.corda.core.serialization.CordaSerializable
 
     constructor(hashAlgorithm: String) : this(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm)
 
-    constructor() : this((Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub?.networkParameters?.getDefaultHashAlgorithm()
-            ?: SHA2_256)
+    // IEE TODO: shall be parametrized to retrieve the default system hash algorithm from the network
+    constructor() : this(SHA2_256)
 
     init {
         require(hashAlgorithm.isNotEmpty()) { "Hash algorithm name unavailable or not specified" }

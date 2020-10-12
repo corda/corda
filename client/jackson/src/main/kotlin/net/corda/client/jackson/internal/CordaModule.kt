@@ -340,7 +340,7 @@ private class PartialTreeSerializer : JsonSerializer<PartialTree>() {
         return when (tree) {
             is PartialTree.IncludedLeaf -> PartialTreeJson(includedLeaf = tree.hash)
             is PartialTree.Leaf -> PartialTreeJson(leaf = tree.hash)
-            is PartialTree.Node -> PartialTreeJson(left = convert(tree.left), right = convert(tree.right))
+            is PartialTree.Node -> PartialTreeJson(left = convert(tree.left), right = convert(tree.right), nodeHashAlgorithm = tree.hashAlgorithm)
             else -> throw IllegalArgumentException("Don't know how to serialize $tree")
         }
     }
@@ -356,7 +356,7 @@ private class PartialTreeDeserializer : JsonDeserializer<PartialTree>() {
             when {
                 includedLeaf != null -> PartialTree.IncludedLeaf(includedLeaf)
                 leaf != null -> PartialTree.Leaf(leaf)
-                else -> PartialTree.Node(convert(left!!), convert(right!!))
+                else -> PartialTree.Node(convert(left!!), convert(right!!), nodeHashAlgorithm ?: SHA2_256)
             }
         }
     }
@@ -366,14 +366,17 @@ private class PartialTreeDeserializer : JsonDeserializer<PartialTree>() {
 private class PartialTreeJson(val includedLeaf: SecureHash? = null,
                               val leaf: SecureHash? = null,
                               val left: PartialTreeJson? = null,
-                              val right: PartialTreeJson? = null) {
+                              val right: PartialTreeJson? = null,
+                              // IEE REVIEW: should this be the first parameter for serialization/deserialization forward compatibility?
+                              // IEE NOTE: isn't there a kryo serializer/deserializer equivalent to do?
+                              val nodeHashAlgorithm: String? = null) {
     init {
         if (includedLeaf != null) {
             require(leaf == null && left == null && right == null) { "Invalid JSON structure" }
         } else if (leaf != null) {
             require(left == null && right == null) { "Invalid JSON structure" }
         } else {
-            require(left != null && right != null) { "Invalid JSON structure" }
+            require(left != null && right != null && nodeHashAlgorithm != null) { "Invalid JSON structure" }
         }
     }
 }

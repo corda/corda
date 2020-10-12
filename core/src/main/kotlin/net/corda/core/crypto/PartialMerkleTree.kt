@@ -58,7 +58,7 @@ class PartialMerkleTree(val root: PartialTree) {
     sealed class PartialTree {
         @KeepForDJVM data class IncludedLeaf(val hash: SecureHash) : PartialTree()
         @KeepForDJVM data class Leaf(val hash: SecureHash) : PartialTree()
-        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
+        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree, val hashAlgorithm: String?) : PartialTree()
     }
 
     companion object {
@@ -116,7 +116,7 @@ class PartialMerkleTree(val root: PartialTree) {
                     val rightNode = buildPartialTree(root.right, includeHashes, usedHashes)
                     if (leftNode.first or rightNode.first) {
                         // This node is on a path to some included leaves. Don't store hash.
-                        val newTree = PartialTree.Node(leftNode.second, rightNode.second)
+                        val newTree = PartialTree.Node(leftNode.second, rightNode.second, root.hash.algorithm)
                         Pair(true, newTree)
                     } else {
                         // This node has no included leaves below. Cut the tree here and store a hash as a Leaf.
@@ -144,7 +144,7 @@ class PartialMerkleTree(val root: PartialTree) {
                 is PartialTree.Node -> {
                     val leftHash = rootAndUsedHashes(node.left, usedHashes)
                     val rightHash = rootAndUsedHashes(node.right, usedHashes)
-                    leftHash.concatenate(rightHash)
+                    leftHash.concatenateAs(node.hashAlgorithm!!, rightHash)
                 }
             }
         }

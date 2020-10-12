@@ -12,7 +12,9 @@ import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SHA2256DigestService
+import net.corda.core.crypto.SHA3256DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.crypto.SecureHash.Companion.hashAs
 import net.corda.core.crypto.hashAs
@@ -147,9 +149,9 @@ class PartialMerkleTreeWithNamedHashMultiAlgTreeTest {
     @Test(timeout=300_000)
     fun `building Merkle tree odd number of nodes`() {
         val odd = hashed.subList(0, 3)
-        val h1 = hashed[0].concatenate(hashed[1])
-        val h2 = hashed[2].concatenate(SecureHash.zeroHashFor(SHA3_256))
-        val expected = h1.concatenate(h2)
+        val h1 = hashed[0].concatenateAs(SHA2_256, hashed[1])
+        val h2 = hashed[2].concatenateAs(SHA2_256, SecureHash.zeroHashFor(SHA3_256))
+        val expected = h1.concatenateAs(SHA2_256, h2)
         val mt = MerkleTree.getMerkleTree(odd, SHA2256DigestService())
         assertEquals(mt.hash, expected)
     }

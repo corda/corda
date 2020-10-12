@@ -98,6 +98,23 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         return generate(this.bytes + other.bytes)
     }
 
+    /**
+     * Append a second hash value to this hash value, and then compute the hash of the result using the specified algorithm.
+     * @param other The hash to append to this one.
+     * @param concatAlgorithm The hash algorithm to use for the resulting hash.
+     */
+    fun concatenateAs(concatAlgorithm: String, other: SecureHash): SecureHash {
+        require(algorithm == other.algorithm) {
+            "Cannot concatenate $algorithm with ${other.algorithm}"
+        }
+        val concatBytes = this.bytes + other.bytes
+        return if(concatAlgorithm == SHA2_256) {
+            concatBytes.sha256()
+        } else {
+            HASH(concatAlgorithm, digestAs(concatAlgorithm, concatBytes))
+        }
+    }
+
     protected open fun generate(data: ByteArray): SecureHash {
         throw UnsupportedOperationException("Not implemented for $algorithm")
     }
