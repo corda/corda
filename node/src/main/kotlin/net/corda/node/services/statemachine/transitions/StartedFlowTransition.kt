@@ -9,6 +9,7 @@ import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.node.services.statemachine.*
 import org.slf4j.Logger
@@ -34,6 +35,8 @@ class StartedFlowTransition(
         val flowIORequest = started.flowIORequest
         val (newState, errorsToThrow) = collectRelevantErrorsToThrow(startingState, flowIORequest)
         if (errorsToThrow.isNotEmpty()) {
+
+            startingState.cancelFutureIfRunning()
             return TransitionResult(
                     newState = newState.copy(isFlowResumed = true),
                     // throw the first exception. TODO should this aggregate all of them somehow?
@@ -530,5 +533,13 @@ class StartedFlowTransition(
                 null
             }
         }.toMap()
+    }
+
+    private fun StateMachineState.cancelFutureIfRunning() {
+        future?.run {
+            logger.debug { "Cancelling future for flow ${flowLogic.runId}" }
+            if (!isDone) cancel(true)
+            future = null
+        }
     }
 }
