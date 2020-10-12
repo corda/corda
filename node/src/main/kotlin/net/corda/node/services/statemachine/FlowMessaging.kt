@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowException
-import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -68,19 +68,18 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     private fun createMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId): MessagingService.AddressedMessage {
-        val party = if (destination is Party) {
-            log.trace { "Sending message $deduplicationId $message to $destination" }
-            destination
+        // We assume that the destination type has already been checked by initiateFlow.
+        // Destination may point to a stale well-known identity due to key rotation, so always resolve actual identity via IdentityService.
+        val party = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty)) {
+            "We do not know who $destination belongs to"
+        }
+        if (destination == party) {
+            log.trace { "Sending message $deduplicationId $message to $party" }
         } else {
-            // We assume that the destination type has already been checked by initiateFlow
-            val wellKnown = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AnonymousParty)) {
-                "We do not know who $destination belongs to"
-            }
-            log.trace { "Sending message $deduplicationId $message to $wellKnown on behalf of $destination" }
-            wellKnown
+            log.trace { "Sending message $deduplicationId $message to $party on behalf of $destination" }
         }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
-        val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) { "Don't know about $party" }
+        val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) { "Don't know about ${party.description()}" }
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val sequenceKey = when (message) {
             is InitialSessionMessage -> message.initiatorSessionId

@@ -59,8 +59,8 @@ class InMemoryIdentityService(
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
-        return verifyAndRegisterIdentity(trustAnchor, identity)
+    override fun verifyAndRegisterNewRandomIdentity(identity: PartyAndCertificate) {
+        verifyAndRegisterIdentity(trustAnchor, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
@@ -133,9 +133,6 @@ class InMemoryIdentityService(
             hashToKey[publicKeyHash] = publicKey
             if (externalId != null) {
                 registerKeyToExternalId(publicKey, externalId)
-            }
-        } else {
-            if (party.name != existingEntry) {
             }
         }
     }

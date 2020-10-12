@@ -13,7 +13,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -22,6 +21,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -41,7 +41,8 @@ import javax.persistence.PersistenceException
 @Suppress("TooManyFunctions")
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
+                                     private val identityService: IdentityServiceInternal
+) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -182,8 +183,8 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                             }
                             previousNode != node -> {
                                 logger.info("Previous node was found for ${node.legalIdentities.first().name} as: ${previousNode.printWithKey()}")
-                                // TODO We should be adding any new identities as well
-                                if (verifyIdentities(node)) {
+                                // Register new identities for rotated certificates
+                                if (verifyAndRegisterIdentities(node)) {
                                     updatedNodes.add(node to previousNode)
                                 }
                             }
@@ -246,6 +247,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                 changePublisher.onNext(change)
             }
         }
+        // Invalidate caches outside database transaction to prevent reloading of uncommitted values.
+        nodeUpdates.forEach { (nodeInfo, _) ->
+            invalidateIdentityServiceCaches(nodeInfo)
+        }
     }
 
     override fun addOrUpdateNode(node: NodeInfo) {
@@ -277,13 +282,15 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun removeNode(node: NodeInfo) {
-        logger.info("Removing node with info: $node")
+        logger.info("Removing node with info: ${node.printWithKey()}")
         synchronized(_changed) {
             database.transaction {
                 removeInfoDB(session, node)
                 changePublisher.onNext(MapChange.Removed(node))
             }
         }
+        // Invalidate caches outside database transaction to prevent reloading of uncommitted values.
+        invalidateIdentityServiceCaches(node)
         logger.debug { "Done removing node with info: $node" }
     }
 
@@ -396,6 +403,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private fun invalidateCaches(nodeInfo: NodeInfo) {
         nodesByKeyCache.invalidateAll(nodeInfo.legalIdentities.map { it.owningKey })
         identityByLegalNameCache.invalidateAll(nodeInfo.legalIdentities.map { it.name })
+    }
+
+    private fun invalidateIdentityServiceCaches(nodeInfo: NodeInfo) {
+        nodeInfo.legalIdentities.forEach { identityService.invalidateCaches(it.name) }
     }
 
     private fun invalidateCaches() {

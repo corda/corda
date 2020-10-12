@@ -11,6 +11,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -41,6 +42,7 @@ import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -185,10 +187,13 @@ open class MockServices private constructor(
 
             // Create a persistent identity service and add all the supplied identities.
             identityService.apply {
-                ourNames = setOf(initialIdentity.name)
                 database = persistence
                 start(DEV_ROOT_CA.certificate, initialIdentity.identity, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
+            }
+            val networkMapCache = PersistentNetworkMapCache(cacheFactory, persistence, identityService)
+            (moreIdentities + initialIdentity.identity).forEach {
+                networkMapCache.addOrUpdateNode(NodeInfo(listOf(NetworkHostAndPort("localhost", 0)), listOf(it), PLATFORM_VERSION, 0))
             }
 
             // Create a persistent key management service and add the key pair which was created for the TestIdentity.

@@ -3,6 +3,7 @@ package net.corda.node.migration
 import liquibase.database.Database
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
@@ -10,6 +11,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -18,6 +20,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
@@ -74,13 +77,14 @@ class VaultStateMigration : CordaMigration() {
             logger.error("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
             throw VaultStateMigrationException("Cannot migrate vault states as liquibase failed to provide a suitable database connection")
         }
-        initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
+        initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1, NodeInfoSchemaV1))
         var statesSkipped = 0
         val persistentStates = VaultStateIterator(cordaDB)
         if (persistentStates.numStates > 0) {
             logger.warn("Found ${persistentStates.numStates} states to update from a previous version. This may take a while for large "
             + "volumes of data.")
         }
+        val ourName = CordaX500Name.parse(System.getProperty(SchemaMigration.NODE_X500_NAME))
         VaultStateIterator.withSerializationEnv {
             persistentStates.forEach {
                 val session = currentDBSession()
@@ -91,9 +95,8 @@ class VaultStateMigration : CordaMigration() {
 
                     // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
                     // state parties.
-                    val myKeys = identityService.stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
-                        participant.owningKey
-                    }).toSet()
+                    val myKeys = stateAndRef.state.data.participants.map { participant -> participant.owningKey}
+                            .filter { key -> identityService.certificateFromKey(key)?.name == ourName }.toSet()
                     if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
                         it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
                     }
@@ -127,7 +130,6 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
                 PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
-                PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
                 PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,

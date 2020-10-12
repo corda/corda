@@ -37,6 +37,7 @@ class BasicHSMKeyManagementService(
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
+            @Suppress("Unused")
             @Id
             @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String,
@@ -101,10 +102,8 @@ class BasicHSMKeyManagementService(
         database.transaction {
             keysMap[keyPair.public] = keyPair.private
             // Register the key to our identity.
-            val ourIdentity = identityService.wellKnownPartyFromX500Name(identityService.ourNames.first())
-                    ?: throw IllegalStateException("Could not lookup node Identity.")
             // No checks performed here as entries for the new key couldn't have existed before in the maps.
-            identityService.registerKeyToParty(keyPair.public, ourIdentity)
+            identityService.registerKeyToParty(keyPair.public)
             if (externalId != null) {
                 identityService.registerKeyToExternalId(keyPair.public, externalId)
             }

@@ -9,11 +9,13 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
 import java.util.*
@@ -21,6 +23,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class PublicKeyToOwningIdentityCacheImplTest {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     private lateinit var database: CordaPersistence
     private lateinit var testCache: PublicKeyToOwningIdentityCacheImpl

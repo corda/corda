@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowLogic
 import net.corda.core.utilities.OpaqueBytes
@@ -43,4 +44,5 @@ class Party(val name: CordaX500Name, owningKey: PublicKey) : Destination, Abstra
     fun anonymise(): AnonymousParty = AnonymousParty(owningKey)
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = name.toString()
+    fun description() = "$name (owningKey = ${owningKey.toStringShort()})"
 }
