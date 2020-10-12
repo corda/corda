@@ -56,6 +56,9 @@ internal class ActionFutureExecutor(
         future.thenMatch(
             success = { result -> scheduleWakeUpEvent(instance, Event.AsyncOperationCompletion(result)) },
             failure = { exception ->
+                // If canceling the future happens from within the state machine (i.e. on a fiber), then there is no reason signaling the fiber
+                // with a [Event.AsyncOperationThrows] as we are already aware of when we cancel it. In addition it gets the statemachine
+                // into an erroneous state as it will throw an extra exception (CancellationException).
                 if (exception !is CancellationException || FlowStateMachineImpl.currentStateMachine() == null) {
                     scheduleWakeUpEvent(instance, Event.AsyncOperationThrows(exception))
                 }
