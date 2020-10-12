@@ -194,7 +194,7 @@ data class RPCDriverDSL(
     private companion object {
         const val notificationAddress = "notifications"
 
-        private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
+        private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Int) {
             name = "RPCDriver"
             managementNotificationAddress = SimpleString(notificationAddress)
             isPopulateValidatedUser = true
@@ -222,14 +222,14 @@ data class RPCDriverDSL(
             )
             addressesSettings = mapOf(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
-                        maxSizeBytes = maxBufferedBytesPerClient
+                        maxSizeBytes = maxBufferedBytesPerClient.toLong()
                         addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
-                        pageSizeBytes = maxSizeBytes / 10
+                        pageSizeBytes = maxBufferedBytesPerClient / 10
                     }
             )
         }
 
-        fun createInVmRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long): Configuration {
+        fun createInVmRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Int): Configuration {
             return ConfigurationImpl().apply {
                 acceptorConfigurations = setOf(TransportConfiguration(InVMAcceptorFactory::class.java.name))
                 isPersistenceEnabled = false
@@ -237,7 +237,7 @@ data class RPCDriverDSL(
             }
         }
 
-        fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration {
+        fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Int, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration {
             return ConfigurationImpl().apply {
                 val artemisDir = "$baseDirectory/artemis"
                 bindingsDirectory = "$artemisDir/bindings"
@@ -267,7 +267,7 @@ data class RPCDriverDSL(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Int = 10 * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             ops: I,
             queueDrainTimeout: Duration = 5.seconds
@@ -327,7 +327,7 @@ data class RPCDriverDSL(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 5L * MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Int = 5 * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             customPort: NetworkHostAndPort? = null,
             ops: I
@@ -347,7 +347,7 @@ data class RPCDriverDSL(
             rpcUser: User = rpcTestUser,
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 5L * MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Int = 5 * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             customPort: NetworkHostAndPort? = null,
             listOps: List<I>
@@ -504,7 +504,7 @@ data class RPCDriverDSL(
             serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
+            maxBufferedBytesPerClient: Int = 10 * MAX_MESSAGE_SIZE,
             customPort: NetworkHostAndPort? = null
     ): CordaFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
@@ -529,7 +529,7 @@ data class RPCDriverDSL(
     private fun startInVmRpcBroker(
             rpcUser: User = rpcTestUser,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE
+            maxBufferedBytesPerClient: Int = 10 * MAX_MESSAGE_SIZE
     ): CordaFuture<RpcBrokerHandle> {
         return driverDSL.executorService.fork {
             val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
