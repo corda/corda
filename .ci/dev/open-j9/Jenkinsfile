@@ -18,11 +18,9 @@ pipeline {
     stages {
         stage('Unit Tests') {
             steps {
-//                sh "./gradlew clean --continue test --info"
-                sh './gradlew clean --continue :core-tests:test --tests "AttachmentSerializationTest.*" --info'
+                sh "./gradlew clean --continue test --info"
             }
         }
-/*
         stage('Integration Tests') {
             steps {
                 sh "./gradlew clean --continue integrationTest --info"
@@ -38,7 +36,6 @@ pipeline {
                 sh "./gradlew clean --continue slowIntegrationTest --info"
             }
         }
-*/
     }
 
     post {
