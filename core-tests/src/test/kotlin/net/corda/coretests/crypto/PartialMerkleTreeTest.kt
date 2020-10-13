@@ -63,7 +63,7 @@ class PartialMerkleTreeTest {
 
     @Before
     fun init() {
-        digestService = DigestService()
+        digestService = DefaultDigest.instance
         hashed = nodes.map { digestService.hash(it.serialize().bytes) }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(digestService.zeroHash, digestService.zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)

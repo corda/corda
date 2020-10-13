@@ -146,7 +146,8 @@ class TransactionTests {
                 testNetworkParameters(),
                 emptyList(),
                 isAttachmentTrusted = { true },
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = DefaultDigest.instance
         )
 
         transaction.verify()
@@ -201,7 +202,8 @@ class TransactionTests {
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
                 emptyList(),
                 isAttachmentTrusted = { true },
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = DefaultDigest.instance
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }

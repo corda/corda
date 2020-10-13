@@ -119,6 +119,8 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         throw UnsupportedOperationException("Not implemented for $algorithm")
     }
 
+    fun reHash() : SecureHash = hashAs(algorithm, bytes)
+
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
         const val SHA2_256 = "SHA-256"
@@ -326,8 +328,6 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
             return getConstantsFor(algorithm).allOnes
         }
     }
-
-    fun reHash() : SecureHash = hashAs(algorithm, bytes)
 
     // In future, maybe SHA3, truncated hashes etc.
 }

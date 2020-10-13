@@ -46,6 +46,7 @@ import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.coretesting.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -215,10 +216,12 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun TransactionSignature() {
+        val digestService = DefaultDigest.instance
         val signatureMetadata = SignatureMetadata(1, 1)
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256())
+                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
+                hashAlgorithm = digestService.hashAlgorithm
         ))
         val transactionSignature = TransactionSignature(secureRandomBytes(128), BOB_PUBKEY, signatureMetadata, partialMerkleTree)
         val json = mapper.valueToTree<ObjectNode>(transactionSignature)
@@ -276,8 +279,11 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[7].childrenAs<StateRef>(mapper)).isEqualTo(wtx.references)
         assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
         assertThat(wtxFields[10].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
-        assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
-        assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
+        val actualWtx = mapper.convertValue<WireTransaction>(wtxJson)
+        val actualStx = mapper.convertValue<SignedTransaction>(json)
+        val actualJson = mapper.valueToTree<ObjectNode>(actualStx)
+        assertThat(actualWtx).isEqualTo(wtx)
+        assertThat(actualStx).isEqualTo(stx)
     }
 
     @Test(timeout=300_000)
@@ -373,13 +379,16 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `simple PartialTree Node`() {
+        val digestService = DefaultDigest.instance
         val node = PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256())
+                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
+                hashAlgorithm = digestService.hashAlgorithm
         )
         val json = mapper.valueToTree<ObjectNode>(node)
-        println(mapper.writeValueAsString(json))
-        val (leftJson, rightJson) = json.assertHasOnlyFields("left", "right")
+        // IEE REVIEW: is assertHasOnlyFields("left", "right") a hard requirement or can handle the addition of hashAlgorithm?
+        //val (leftJson, rightJson) = json.assertHasOnlyFields("left", "right")
+        val (leftJson, rightJson, ignored) = json.assertHasOnlyFields("left", "right", "nodeHashAlgorithm")
         assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
         assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
         assertThat(mapper.convertValue<PartialTree.Node>(json)).isEqualTo(node)
@@ -387,12 +396,15 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `complex PartialTree Node`() {
+        val digestService = DefaultDigest.instance
         val node = PartialTree.Node(
                 left = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
                 right = PartialTree.Node(
                         left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                        right = PartialTree.Leaf(SecureHash.randomSHA256())
-                )
+                        right = PartialTree.Leaf(SecureHash.randomSHA256()),
+                        hashAlgorithm = digestService.hashAlgorithm
+                ),
+                hashAlgorithm = digestService.hashAlgorithm
         )
         val json = mapper.valueToTree<ObjectNode>(node)
         println(mapper.writeValueAsString(json))
@@ -691,9 +703,11 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     private fun sign(ctx: CoreTransaction): SignedTransaction {
+        val digestService = DefaultDigest.instance
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256())
+                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
+                hashAlgorithm = digestService.hashAlgorithm
         ))
         val signatures = listOf(
                 TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID), partialMerkleTree),

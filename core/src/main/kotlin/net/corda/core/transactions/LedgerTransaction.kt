@@ -14,6 +14,8 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.DefaultDigest
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -89,7 +91,8 @@ private constructor(
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
-        private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
+        private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
+        val digestService: DigestService = DefaultDigest.instance
 ) : FullTransaction() {
 
     init {
@@ -127,7 +130,8 @@ private constructor(
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 isAttachmentTrusted: (Attachment) -> Boolean,
-                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
+                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
+                digestService: DigestService
         ): LedgerTransaction {
             return LedgerTransaction(
                 inputs = inputs,
@@ -145,7 +149,8 @@ private constructor(
                 serializedReferences = protect(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = ::BasicVerifier,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = digestService
             )
         }
 
@@ -164,7 +169,8 @@ private constructor(
                 timeWindow: TimeWindow?,
                 privacySalt: PrivacySalt,
                 networkParameters: NetworkParameters,
-                references: List<StateAndRef<ContractState>>): LedgerTransaction {
+                references: List<StateAndRef<ContractState>>,
+                digestService: DigestService): LedgerTransaction {
             return LedgerTransaction(
                 inputs = inputs,
                 outputs = outputs,
@@ -181,7 +187,8 @@ private constructor(
                 serializedReferences = null,
                 isAttachmentTrusted = { true },
                 verifierFactory = ::BasicVerifier,
-                attachmentsClassLoaderCache = null
+                attachmentsClassLoaderCache = null,
+                digestService = digestService
             )
         }
     }
@@ -261,7 +268,8 @@ private constructor(
         serializedReferences = serializedReferences,
         isAttachmentTrusted = isAttachmentTrusted,
         verifierFactory = alternateVerifier,
-        attachmentsClassLoaderCache = attachmentsClassLoaderCache
+        attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+        digestService = digestService
     )
 
     // Read network parameters with backwards compatibility goo.
@@ -305,7 +313,7 @@ private constructor(
             val deserializedInputs = serializedInputs.map { it.toStateAndRef() }
             val deserializedReferences = serializedReferences.map { it.toStateAndRef() }
             val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
-            val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true)
+            val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = digestService)
             val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
                 @Suppress("DEPRECATION")   // Deprecated feature.
                 val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
@@ -328,7 +336,8 @@ private constructor(
                     serializedReferences = serializedReferences,
                     isAttachmentTrusted = isAttachmentTrusted,
                     verifierFactory = verifierFactory,
-                    attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                    attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                    digestService = digestService
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -772,7 +781,8 @@ private constructor(
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = verifierFactory,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = digestService
         )
     }
 
@@ -803,7 +813,8 @@ private constructor(
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = verifierFactory,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = digestService
         )
     }
 }

@@ -265,26 +265,18 @@ fun random63BitValue(): Long {
  * calculated using the SHA256d algorithm, thus SHA256(SHA256(nonce || serializedComponent)), where nonce is computed
  * from [computeNonce].
  */
-fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
-        componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
+//fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
+//        componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
 
-/**
-fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)	 * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
- * calculated using the SHA256d algorithm, thus SHA256(SHA256(nonce || serializedComponent)), where nonce is computed
- * from [computeNonce].
- */
-fun componentHash(algorithm: String, opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
-        componentHash(computeNonce(algorithm, privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
-
-/** Return the HASH(HASH(nonce || serializedComponent)). */
-fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.hashTwiceAs(nonce.algorithm, nonce.bytes + opaqueBytes.bytes)
+/** Return the SHA256(SHA256(nonce || serializedComponent)). */
+//fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
 
 /**
  * Serialise the object and return the hash of the serialized bytes. Note that the resulting hash may not be deterministic
  * across platform versions: serialization can produce different values if any of the types being serialized have changed,
  * or if the version of serialization specified by the context changes.
  */
-fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
+//fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
 
 /**
  * Method to compute a nonce based on privacySalt, component group index and component internal index.
@@ -294,15 +286,4 @@ fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = Serializa
  * @param internalIndex the internal index of this object in its corresponding components list.
  * @return SHA256(SHA256(privacySalt || groupIndex || internalIndex))
  */
-fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
-
-/**
- * Method to compute a nonce based on privacySalt, component group index and component internal index.
- * Double [algorithm] is used to prevent length extension attacks.
- * @param algorithm The [java.security.MessageDigest] algorithm to use.
- * @param privacySalt a [PrivacySalt].
- * @param groupIndex the fixed index (ordinal) of this component group.
- * @param internalIndex the internal index of this object in its corresponding components list.
- * @return SHA256(SHA256(privacySalt || groupIndex || internalIndex))
- */
-fun computeNonce(algorithm: String, privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.hashTwiceAs(algorithm, privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
+//fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())

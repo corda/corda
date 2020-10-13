@@ -10,6 +10,8 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.DefaultDigest
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
@@ -26,6 +28,7 @@ private const val TX_TIME_WINDOW = 6
 private const val TX_PRIVACY_SALT = 7
 private const val TX_NETWORK_PARAMETERS = 8
 private const val TX_REFERENCES = 9
+private const val TX_DIGEST_SERVICE = 10
 
 class LtxFactory : Function<Array<out Any?>, LedgerTransaction> {
 
@@ -41,7 +44,10 @@ class LtxFactory : Function<Array<out Any?>, LedgerTransaction> {
             timeWindow = txArgs[TX_TIME_WINDOW] as? TimeWindow,
             privacySalt = txArgs[TX_PRIVACY_SALT] as PrivacySalt,
             networkParameters = txArgs[TX_NETWORK_PARAMETERS] as NetworkParameters,
-            references = (txArgs[TX_REFERENCES] as Array<Array<out Any?>>).map { it.toStateAndRef() }
+            references = (txArgs[TX_REFERENCES] as Array<Array<out Any?>>).map { it.toStateAndRef() },
+            // IEE REVIEW: both solutions work, first looks hacky while second requires extra TX_ array indexing to serialized/deserialized object
+            //digestService = DigestService((txArgs[TX_ID] as SecureHash).algorithm)
+            digestService = txArgs[TX_DIGEST_SERVICE] as DigestService
         )
     }
 

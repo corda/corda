@@ -21,7 +21,7 @@ import java.util.function.Predicate
  * may be missing in the case of this representing a "torn" transaction. Please see the user guide section
  * "Transaction tear-offs" to learn more about this feature.
  */
-abstract class TraversableTransaction(open val componentGroups: List<ComponentGroup>) : CoreTransaction() {
+abstract class TraversableTransaction(open val componentGroups: List<ComponentGroup>, val digestService: DigestService) : CoreTransaction() {
     /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
     val attachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_GROUP)
 
@@ -34,7 +34,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(componentGroups, TransactionState::class, OUTPUTS_GROUP)
 
     /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
-    val commands: List<Command<*>> = deserialiseCommands(componentGroups)
+    val commands: List<Command<*>> = deserialiseCommands(componentGroups, digestService = digestService)
 
     override val notary: Party? = let {
         val notaries: List<Party> = deserialiseComponentGroup(componentGroups, Party::class, NOTARY_GROUP)
@@ -88,8 +88,8 @@ class FilteredTransaction internal constructor(
         override val id: SecureHash,
         val filteredComponentGroups: List<FilteredComponentGroup>,
         val groupHashes: List<SecureHash>,
-        val digestService: DigestService
-) : TraversableTransaction(filteredComponentGroups) {
+        digestService: DigestService
+) : TraversableTransaction(filteredComponentGroups, digestService) {
 
     companion object {
         /**
@@ -221,7 +221,7 @@ class FilteredTransaction internal constructor(
             verificationCheck(groupMerkleRoot == PartialMerkleTree.rootAndUsedHashes(groupPartialTree.root, mutableListOf())) {
                 "Partial Merkle tree root and advertised full Merkle tree root for component group $groupIndex do not match"
             }
-            verificationCheck(groupPartialTree.verify(groupMerkleRoot, components.mapIndexed { index, component -> componentHash(nonces[index], component) })) {
+            verificationCheck(groupPartialTree.verify(groupMerkleRoot, components.mapIndexed { index, component -> digestService.componentHash(nonces[index], component) })) {
                 "Visible components in group $groupIndex cannot be verified against their partial Merkle tree"
             }
         }
@@ -267,7 +267,7 @@ class FilteredTransaction internal constructor(
         } else {
             visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
-            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }, digestService).hash
+            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }, digestService).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
             visibilityCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {

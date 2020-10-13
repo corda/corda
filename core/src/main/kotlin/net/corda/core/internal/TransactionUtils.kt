@@ -2,10 +2,10 @@ package net.corda.core.internal
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DefaultDigest
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
-import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.hashAs
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -22,7 +22,7 @@ class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
                                      val notary: Party,
                                      val newNotary: Party,
                                      val networkParametersHash: SecureHash,
-                                     val digestService: DigestService = DigestService()) {
+                                     val digestService: DigestService = DefaultDigest.instance) {
 
     fun build(): NotaryChangeWireTransaction {
         val components = listOf(inputs, notary, newNotary, networkParametersHash).map { it.serialize() }
@@ -39,7 +39,7 @@ class ContractUpgradeTransactionBuilder(
         val upgradedContractAttachmentId: SecureHash,
         privacySalt: PrivacySalt = PrivacySalt(),
         val networkParametersHash: SecureHash,
-        val digestService: DigestService = DigestService()) {
+        val digestService: DigestService = DefaultDigest.instance) {
     var privacySalt: PrivacySalt = privacySalt
         private set
 
@@ -115,7 +115,8 @@ fun deserialiseCommands(
         componentGroups: List<ComponentGroup>,
         forceDeserialize: Boolean = false,
         factory: SerializationFactory = SerializationFactory.defaultFactory,
-        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext
+        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext,
+        digestService: DigestService = DefaultDigest.instance
 ): List<Command<*>> {
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed
@@ -127,7 +128,7 @@ fun deserialiseCommands(
         check(commandDataList.size <= signersList.size) {
             "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
         }
-        val componentHashes = group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }
+        val componentHashes = group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }
         val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
         if (leafIndices.isNotEmpty())
             check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }

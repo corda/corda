@@ -51,7 +51,7 @@ public class HashLookupShellCommand extends CordaRpcOpsShellCommand {
 
         SecureHash txIdHashParsed;
         try {
-            txIdHashParsed = SecureHash.parse(txIdHash);
+            txIdHashParsed = SecureHash.create(txIdHash);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("The provided string is not a valid hexadecimal SHA-256 hash value");
         }

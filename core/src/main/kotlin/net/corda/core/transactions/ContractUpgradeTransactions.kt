@@ -3,13 +3,10 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DefaultDigest
 import net.corda.core.crypto.DigestService
-import net.corda.core.crypto.SHA2256DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.componentHash
-import net.corda.core.crypto.computeNonce
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.ServiceHubCoreInternal
@@ -51,7 +48,7 @@ data class ContractUpgradeWireTransaction(
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
     constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
-            : this(serializedComponents, privacySalt, DigestService())
+            : this(serializedComponents, privacySalt, DefaultDigest.instance)
 
     companion object {
         /**
@@ -116,14 +113,14 @@ data class ContractUpgradeWireTransaction(
 
     override val id: SecureHash by lazy {
         val componentHashes = serializedComponents.mapIndexed { index, component ->
-            componentHash(nonces[index], component)
+            digestService.componentHash(nonces[index], component)
         }
         combinedHash(componentHashes)
     }
 
     /** Required for filtering transaction components. */
     private val nonces = serializedComponents.indices.map {
-        computeNonce(digestService.hashAlgorithm, privacySalt, it, 0)
+        digestService.computeNonce(privacySalt, it, 0)
     }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
@@ -188,7 +185,7 @@ data class ContractUpgradeWireTransaction(
                 PARAMETERS_HASH.ordinal to FilteredComponent(serializedComponents[PARAMETERS_HASH.ordinal], nonces[PARAMETERS_HASH.ordinal])
         )
         val hiddenComponents = (totalComponents - visibleComponents.keys).map { index ->
-            val hash = componentHash(nonces[index], serializedComponents[index])
+            val hash = digestService.componentHash(nonces[index], serializedComponents[index])
             index to hash
         }.toMap()
 
@@ -214,7 +211,8 @@ data class ContractUpgradeFilteredTransaction(
          * Hashes of the transaction components that are not revealed in this transaction.
          * Required for computing the transaction id.
          */
-        val hiddenComponents: Map<Int, SecureHash>
+        val hiddenComponents: Map<Int, SecureHash>,
+        val digestService: DigestService = DefaultDigest.instance
 ) : CoreTransaction() {
     override val inputs: List<StateRef> by lazy {
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
@@ -232,7 +230,7 @@ data class ContractUpgradeFilteredTransaction(
         val hashList = (0 until totalComponents).map { i ->
             when {
                 visibleComponents.containsKey(i) -> {
-                    componentHash(visibleComponents[i]!!.nonce, visibleComponents[i]!!.component)
+                    digestService.componentHash(visibleComponents[i]!!.nonce, visibleComponents[i]!!.component)
                 }
                 hiddenComponents.containsKey(i) -> hiddenComponents[i]!!
                 else -> throw IllegalStateException("Missing component hashes")

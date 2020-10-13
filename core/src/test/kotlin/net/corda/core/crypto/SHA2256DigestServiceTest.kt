@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.serialization.serialize
 import org.junit.Assert
 import org.junit.Test
 

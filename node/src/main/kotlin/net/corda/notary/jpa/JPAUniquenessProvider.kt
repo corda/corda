@@ -146,7 +146,7 @@ class JPAUniquenessProvider(
         }
 
         fun decodeStateRef(s: PersistentStateRef): StateRef {
-            return StateRef(txhash = SecureHash.parse(s.txId), index = s.index)
+            return StateRef(txhash = SecureHash.create(s.txId), index = s.index)
         }
     }
 

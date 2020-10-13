@@ -10,7 +10,7 @@ class SecureHashTest {
     @Test(timeout=300_000)
 	fun testSHA256() {
         val hash = SecureHash.sha256(byteArrayOf(0x64, -0x13, 0x42, 0x3a))
-        assertEquals(SecureHash.parse("6D1687C143DF792A011A1E80670A4E4E0C25D0D87A39514409B1ABFC2043581F"), hash)
+        assertEquals(SecureHash.create("6D1687C143DF792A011A1E80670A4E4E0C25D0D87A39514409B1ABFC2043581F"), hash)
         assertEquals("6D1687C143DF792A011A1E80670A4E4E0C25D0D87A39514409B1ABFC2043581F", hash.toString())
     }
 

@@ -4,6 +4,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DefaultDigest
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SHA2256DigestService
 import net.corda.core.crypto.SecureHash
@@ -41,7 +42,7 @@ data class NotaryChangeWireTransaction(
         val digestService: DigestService
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
-    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DigestService())
+    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DefaultDigest.instance)
 
     fun copy(serializedComponents: List<OpaqueBytes>): NotaryChangeWireTransaction {
         return NotaryChangeWireTransaction(serializedComponents, digestService)

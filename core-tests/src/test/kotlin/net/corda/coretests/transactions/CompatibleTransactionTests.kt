@@ -533,7 +533,7 @@ class CompatibleTransactionTests {
         // Modify last signer (we have a pointer from commandData).
         // Update partial Merkle tree for signers.
         val alterSignerComponents = signerComponents.subList(0, 2) + signerComponents[1] // Third one is removed and the 2nd command is added twice.
-        val alterSignersHashes = wtx.accessAvailableComponentHashes()[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!.subList(0, 2) + componentHash(key1CommandsFtx.filteredComponentGroups[1].nonces[2], alterSignerComponents[2])
+        val alterSignersHashes = wtx.accessAvailableComponentHashes()[ComponentGroupEnum.SIGNERS_GROUP.ordinal]!!.subList(0, 2) + wtx.digestService.componentHash(key1CommandsFtx.filteredComponentGroups[1].nonces[2], alterSignerComponents[2])
         val alterMTree = MerkleTree.getMerkleTree(alterSignersHashes, wtx.digestService)
         val alterSignerPMTK = PartialMerkleTree.build(
                 alterMTree,

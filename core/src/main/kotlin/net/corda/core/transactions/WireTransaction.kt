@@ -50,9 +50,9 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, val digestService: DigestService) : TraversableTransaction(componentGroups) {
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
     @DeprecatedConstructorForDeserialization(1)
-    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DigestService())
+    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DefaultDigest.instance)
 
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
@@ -69,7 +69,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt = PrivacySalt(),
-            digestService: DigestService = DigestService()
+            digestService: DigestService = DefaultDigest.instance
     ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, digestService)
 
     init {
@@ -221,7 +221,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 serializedResolvedInputs,
                 serializedResolvedReferences,
                 isAttachmentTrusted,
-                attachmentsClassLoaderCache
+                attachmentsClassLoaderCache,
+                digestService
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -318,7 +319,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(digestService.hashAlgorithm, internalIt, privacySalt, it.groupIndex, internalIndex) } }
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
     }
 
     /**
@@ -327,7 +328,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
     }
 
     /**
