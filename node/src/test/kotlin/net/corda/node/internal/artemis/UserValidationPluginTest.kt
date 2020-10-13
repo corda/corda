@@ -29,19 +29,19 @@ class UserValidationPluginTest {
 
     @Test(timeout = 300_000)
     fun `accept AMQP message without user`() {
-        plugin.beforeSend(session, rigorousMock(), toAMQPMessage(coreMessage), direct = false, noAutoCreateQueue = false)
+        plugin.beforeSend(session, rigorousMock(), coreMessage.toAMQPMessage(), direct = false, noAutoCreateQueue = false)
     }
 
     @Test(timeout = 300_000)
     fun `accept AMQP message with user`() {
-        val amqpMsg = toAMQPMessage(coreMessage)
+        val amqpMsg = coreMessage.toAMQPMessage()
         amqpMsg.putStringProperty("_AMQ_VALIDATED_USER", ALICE_NAME.toString())
         plugin.beforeSend(session, rigorousMock(), amqpMsg, direct = false, noAutoCreateQueue = false)
     }
 
     @Test(timeout = 300_000)
     fun `reject AMQP message with different user`() {
-        val amqpMsg = toAMQPMessage(coreMessage)
+        val amqpMsg = coreMessage.toAMQPMessage()
         amqpMsg.putStringProperty("_AMQ_VALIDATED_USER", BOB_NAME.toString())
         Assertions.assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             plugin.beforeSend(session, rigorousMock(), amqpMsg, direct = false, noAutoCreateQueue = false)
@@ -54,7 +54,7 @@ class UserValidationPluginTest {
             doReturn(ArtemisMessagingComponent.NODE_P2P_USER).whenever(it).username
             doReturn(ALICE_NAME.toString()).whenever(it).validatedUser
         }
-        val msg = toAMQPMessage(coreMessage)
+        val msg = coreMessage.toAMQPMessage()
         msg.putStringProperty("_AMQ_VALIDATED_USER", BOB_NAME.toString())
         plugin.beforeSend(internalSession, rigorousMock(), msg, direct = false, noAutoCreateQueue = false)
     }
@@ -76,5 +76,5 @@ class UserValidationPluginTest {
         }.withMessageContaining("Message validation failed")
     }
 
-    private fun toAMQPMessage(message: ClientMessageImpl): AMQPMessage = AMQPConverter.getInstance().fromCore(message, NullStorageManager())
+    private fun ClientMessageImpl.toAMQPMessage(): AMQPMessage = AMQPConverter.getInstance().fromCore(this, NullStorageManager())
 }
