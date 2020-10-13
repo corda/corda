@@ -282,6 +282,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         val actualWtx = mapper.convertValue<WireTransaction>(wtxJson)
         val actualStx = mapper.convertValue<SignedTransaction>(json)
         val actualJson = mapper.valueToTree<ObjectNode>(actualStx)
+        // IEE TODO: FIX actualStx.txBits is shorter than the original stx.txBits and the test is failing
         assertThat(actualWtx).isEqualTo(wtx)
         assertThat(actualStx).isEqualTo(stx)
     }
