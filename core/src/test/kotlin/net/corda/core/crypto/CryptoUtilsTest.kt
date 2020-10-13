@@ -27,6 +27,7 @@ import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
+import org.junit.Assume
 import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPairGenerator
@@ -934,6 +935,7 @@ class CryptoUtilsTest {
 
     @Test(timeout=300_000)
 	fun `test default SecureRandom uses platformSecureRandom`() {
+        Assume.assumeTrue(!IS_OPENJ9) // See CORDA-4055
         // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
 
         // Remove [CordaSecurityProvider] in case it is already registered.
@@ -953,4 +955,5 @@ class CryptoUtilsTest {
         val secureRandomRegisteredFirstCordaProvider = SecureRandom()
         assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
+    private val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
 }
