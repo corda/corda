@@ -7,6 +7,7 @@ import org.hibernate.annotations.Type
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
+import javax.persistence.Lob
 import javax.persistence.Table
 
 object MigrationTestSchema
@@ -74,5 +75,29 @@ object IdentityTestSchemaV1 : MappedSchema(
             @Type(type = "corda-blob")
             @Column(name = "public_key", nullable = false)
             var publicKey: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
+    )
+}
+
+object KMSTestSchemaV1 : MappedSchema(
+        schemaFamily = MigrationTestSchema::class.java,
+        version = 1,
+        mappedTypes = listOf(
+                PersistentKey::class.java
+        )
+) {
+    @Entity
+    @Table(name = "node_our_key_pairs")
+    class PersistentKey(
+            @Id
+            @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
+            var publicKeyHash: String,
+
+            @Lob
+            @Column(name = "public_key", nullable = false)
+            var publicKey: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY,
+
+            @Lob
+            @Column(name = "private_key", nullable = false)
+            var privateKey: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
     )
 }
