@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProtonWrapperTests {
@@ -291,7 +292,8 @@ class ProtonWrapperTests {
 	fun `Send a message larger then maxMessageSize from AMQP to Artemis inbox`() {
         val maxMessageSize = 100_000
         val (server, artemisClient) = createArtemisServerAndClient(maxMessageSize)
-        val amqpClient = createClient(maxMessageSize)
+        // intentionally creating a client with larger limit in order to be able to craft an invalid message
+        val amqpClient = createClient(maxMessageSize+1)
         val clientConnected = amqpClient.onConnection.toFuture()
         amqpClient.start()
         assertEquals(true, clientConnected.get().connected)
@@ -315,10 +317,10 @@ class ProtonWrapperTests {
 
         // Send message larger then max message size.
         val largeData = ByteArray(maxMessageSize + 1)
-        // Create message will fail.
-        assertThatThrownBy {
-            amqpClient.createMessage(largeData, sendAddress, CHARLIE_NAME.toString(), testProperty)
-        }.hasMessageContaining("Message exceeds maxMessageSize network parameter")
+        val largeMessage = amqpClient.createMessage(largeData, sendAddress, CHARLIE_NAME.toString(), testProperty)
+        amqpClient.write(largeMessage)
+        assertEquals(MessageStatus.Rejected, largeMessage.onComplete.get())
+        assertNull(consumer.receiveImmediate())
 
         // Send normal message again to confirm the large message didn't reach the server and client is not killed by the message.
         val message2 = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
@@ -331,6 +333,18 @@ class ProtonWrapperTests {
         amqpClient.stop()
         artemisClient.stop()
         server.stop()
+    }
+
+    @Test(timeout=300_000)
+    fun `client prevents creation of messages larger than the limit`() {
+        val maxMessageSize = 100_000
+        val amqpClient = createClient(maxMessageSize)
+
+        val sendAddress = P2P_PREFIX + "Test"
+        val largeData = ByteArray(maxMessageSize + 1)
+        assertThatThrownBy {
+            amqpClient.createMessage(largeData, sendAddress, CHARLIE_NAME.toString(), emptyMap())
+        }.hasMessageContaining("Message exceeds maxMessageSize network parameter")
     }
 
     @Test(timeout=300_000)
