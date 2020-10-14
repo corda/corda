@@ -252,7 +252,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
-
         val wtx = TransactionBuilder(
                 notary = DUMMY_NOTARY,
                 inputs = mutableListOf(StateRef(SecureHash.randomSHA256(), 1)),
@@ -280,12 +279,9 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[7].childrenAs<StateRef>(mapper)).isEqualTo(wtx.references)
         assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
         assertThat(wtxFields[10].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
-        val actualWtx = mapper.convertValue<WireTransaction>(wtxJson)
-        val actualStx = mapper.convertValue<SignedTransaction>(json)
-        val actualJson = mapper.valueToTree<ObjectNode>(actualStx)
-        // IEE TODO: FIX actualStx.txBits is shorter than the original stx.txBits and the test is failing
-        assertThat(actualWtx).isEqualTo(wtx)
-        assertThat(actualStx).isEqualTo(stx)
+        // IEE TODO: FIX actualStx.txBits which ends up being different after converting back into signed transaction
+        assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
+        assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
     }
 
     @Test(timeout=300_000)
