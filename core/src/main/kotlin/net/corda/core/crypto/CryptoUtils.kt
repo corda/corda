@@ -265,18 +265,21 @@ fun random63BitValue(): Long {
  * calculated using the SHA256d algorithm, thus SHA256(SHA256(nonce || serializedComponent)), where nonce is computed
  * from [computeNonce].
  */
-//fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
-//        componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
+@Deprecated("This has been moved to DigestService")
+fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
+        componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
 
 /** Return the SHA256(SHA256(nonce || serializedComponent)). */
-//fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
+@Deprecated("This has been moved to DigestService")
+fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash = SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
 
 /**
  * Serialise the object and return the hash of the serialized bytes. Note that the resulting hash may not be deterministic
  * across platform versions: serialization can produce different values if any of the types being serialized have changed,
  * or if the version of serialization specified by the context changes.
  */
-//fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
+@Deprecated("This has been moved to DigestService")
+fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = SerializationDefaults.P2P_CONTEXT.withoutReferences()).bytes.sha256()
 
 /**
  * Method to compute a nonce based on privacySalt, component group index and component internal index.
@@ -286,4 +289,5 @@ fun random63BitValue(): Long {
  * @param internalIndex the internal index of this object in its corresponding components list.
  * @return SHA256(SHA256(privacySalt || groupIndex || internalIndex))
  */
-//fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
+@Deprecated("This has been moved to DigestService")
+fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())

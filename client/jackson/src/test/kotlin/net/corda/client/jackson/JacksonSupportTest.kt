@@ -62,7 +62,6 @@ import java.time.Instant
 import java.util.*
 import javax.security.auth.x500.X500Principal
 import kotlin.collections.ArrayList
-import kotlin.math.max
 
 @RunWith(Parameterized::class)
 class JacksonSupportTest(@Suppress("unused") private val name: String, factory: JsonFactory) {
@@ -87,6 +86,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     private lateinit var services: ServiceHub
     private lateinit var cordappProvider: CordappProvider
+    private lateinit var digestService: DigestService
 
     @Before
     fun setup() {
@@ -99,6 +99,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         }
         services = rigorousMock()
         cordappProvider = rigorousMock()
+        digestService = DefaultDigest.instance
         val networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         val networkParametersService = rigorousMock<NetworkParametersService>().also {
             doReturn(networkParameters.serialize().hash).whenever(it).currentHash
@@ -217,7 +218,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun TransactionSignature() {
-        val digestService = DefaultDigest.instance
         val signatureMetadata = SignatureMetadata(1, 1)
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
@@ -283,9 +283,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         val actualWtx = mapper.convertValue<WireTransaction>(wtxJson)
         val actualStx = mapper.convertValue<SignedTransaction>(json)
         val actualJson = mapper.valueToTree<ObjectNode>(actualStx)
-        //val length = max(actualStx.txBits.size, stx.txBits.size) - 1
-        val ctx = stx.txBits.deserialize() as WireTransaction
-        val actualCtx = actualStx.txBits.deserialize() as WireTransaction
         // IEE TODO: FIX actualStx.txBits is shorter than the original stx.txBits and the test is failing
         assertThat(actualWtx).isEqualTo(wtx)
         assertThat(actualStx).isEqualTo(stx)
@@ -393,7 +390,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         val json = mapper.valueToTree<ObjectNode>(node)
         // IEE REVIEW: is assertHasOnlyFields("left", "right") a hard requirement or can handle the addition of hashAlgorithm?
         //val (leftJson, rightJson) = json.assertHasOnlyFields("left", "right")
-        val (leftJson, rightJson, ignored) = json.assertHasOnlyFields("left", "right", "nodeHashAlgorithm")
+        val (leftJson, rightJson, ignored) = json.assertHasOnlyFields("left", "right", "hashAlgorithm")
         assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
         assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
         assertThat(mapper.convertValue<PartialTree.Node>(json)).isEqualTo(node)
@@ -708,11 +705,9 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     private fun sign(ctx: CoreTransaction): SignedTransaction {
-        val digestService = DefaultDigest.instance
-        // IEE REVIEW: should this use randomHash for the given hash algorithm, or hardcoded to SHA256 because related to signatures?
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
-                left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
+                left = PartialTree.Leaf(SecureHash.random(digestService.hashAlgorithm)),
+                right = PartialTree.IncludedLeaf(SecureHash.random(digestService.hashAlgorithm)),
                 hashAlgorithm = digestService.hashAlgorithm
         ))
         val signatures = listOf(

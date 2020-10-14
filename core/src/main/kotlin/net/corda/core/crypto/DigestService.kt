@@ -115,9 +115,9 @@ class SHA2256DigestService : DigestService(32, SHA2_256)
 @KeepForDJVM
 class SHA3256DigestService : DigestService(32, SHA3_256)
 
+@KeepForDJVM
 object DefaultDigest {
     // IEE TODO: shall be initialized with network parameters to determine the default network hash algorithm
-    val instance by lazy { SHA2256DigestService() }
-    // SHA2-256 is used for Public Keys
-    val sha256 by lazy { SHA2256DigestService() }
+    val instance : DigestService by lazy { SHA2256DigestService() }
+    val sha256 : DigestService = SHA2256DigestService()
 }
