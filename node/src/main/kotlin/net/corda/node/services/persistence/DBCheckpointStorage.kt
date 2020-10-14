@@ -435,9 +435,10 @@ class DBCheckpointStorage(
         } else if (checkpoint.status == FlowStatus.FAILED) {
             // We need to update only the 'flowState' to null, and we don't want to update the checkpoint state
             // because we want to retain the last clean checkpoint state, therefore just use a query for that update.
-            val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoint_blobs set flow_state = null where flow_id = '$flowId'"
-            val query = currentDBSession().createNativeQuery(sqlQuery)
-            query.executeUpdate()
+            currentDBSession()
+                .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoint_blobs set flow_state = null where flow_id = :flow_id")
+                .setParameter("flow_id", flowId)
+                .executeUpdate()
             null
         } else {
             checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
@@ -491,12 +492,11 @@ class DBCheckpointStorage(
     }
 
     override fun markAllPaused() {
-        val session = currentDBSession()
-        val runnableOrdinals = RUNNABLE_CHECKPOINTS.map { "${it.ordinal}" }.joinToString { it }
-        val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${FlowStatus.PAUSED.ordinal} " +
-                "where status in ($runnableOrdinals)"
-        val query = session.createNativeQuery(sqlQuery)
-        query.executeUpdate()
+        currentDBSession()
+            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set status = :paused_status where status in :runnable_statuses")
+            .setParameter("paused_status", FlowStatus.PAUSED.ordinal)
+            .setParameter("runnable_statuses", RUNNABLE_CHECKPOINTS.map { it.ordinal })
+            .executeUpdate()
     }
 
     @Suppress("MagicNumber")
@@ -627,8 +627,11 @@ class DBCheckpointStorage(
     }
 
     override fun updateCompatible(runId: StateMachineRunId, compatible: Boolean) {
-        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set compatible = $compatible where flow_id = '${runId.uuid}'"
-        currentDBSession().createNativeQuery(update).executeUpdate()
+        currentDBSession()
+            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}checkpoints set compatible = :compatible where flow_id = :flow_id")
+            .setParameter("compatible", compatible)
+            .setParameter("flow_id", runId.uuid.toString())
+            .executeUpdate()
     }
 
     private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowMetadata {
@@ -687,11 +690,11 @@ class DBCheckpointStorage(
     }
 
     private fun setDBFlowMetadataFinishTime(flowId: String, now: Instant) {
-        val session = currentDBSession()
-        val sqlQuery = "Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = '$now' " +
-                "where flow_id = '$flowId'"
-        val query = session.createNativeQuery(sqlQuery)
-        query.executeUpdate()
+        currentDBSession()
+            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = :finish_time where flow_id = :id")
+            .setParameter("finish_time", now)
+            .setParameter("id", flowId)
+            .executeUpdate()
     }
 
     private fun InvocationContext.getStartedType(): StartReason {
