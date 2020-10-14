@@ -207,24 +207,19 @@ class CompatibleTransactionTests {
         assertEquals(wireTransactionA.componentGroups.size + 1, ftxNothing.groupHashes.size)
         ftxNothing.verify()
 
-        try {
-            // Include all of the components.
-            val ftxAll = wireTransactionA.buildFilteredTransaction(Predicate { true }) // All filtered.
+        // Include all of the components.
+        val ftxAll = wireTransactionA.buildFilteredTransaction(Predicate { true }) // All filtered.
 
-            ftxAll.verify()
-            ftxAll.checkAllComponentsVisible(INPUTS_GROUP)
-            ftxAll.checkAllComponentsVisible(OUTPUTS_GROUP)
-            ftxAll.checkAllComponentsVisible(COMMANDS_GROUP)
-            ftxAll.checkAllComponentsVisible(ATTACHMENTS_GROUP)
-            ftxAll.checkAllComponentsVisible(NOTARY_GROUP)
-            ftxAll.checkAllComponentsVisible(TIMEWINDOW_GROUP)
-            ftxAll.checkAllComponentsVisible(SIGNERS_GROUP)
-            ftxAll.checkAllComponentsVisible(PARAMETERS_GROUP)
-        } catch (ex: Exception) {
-            val st = ex.stackTrace
-            ex.printStackTrace()
-            println(st.toString())
-        }
+        ftxAll.verify()
+        ftxAll.checkAllComponentsVisible(INPUTS_GROUP)
+        ftxAll.checkAllComponentsVisible(OUTPUTS_GROUP)
+        ftxAll.checkAllComponentsVisible(COMMANDS_GROUP)
+        ftxAll.checkAllComponentsVisible(ATTACHMENTS_GROUP)
+        ftxAll.checkAllComponentsVisible(NOTARY_GROUP)
+        ftxAll.checkAllComponentsVisible(TIMEWINDOW_GROUP)
+        ftxAll.checkAllComponentsVisible(SIGNERS_GROUP)
+        ftxAll.checkAllComponentsVisible(PARAMETERS_GROUP)
+
         // Filter inputs only.
         fun filtering(elem: Any): Boolean {
             return when (elem) {

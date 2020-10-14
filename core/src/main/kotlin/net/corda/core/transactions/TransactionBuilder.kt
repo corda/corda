@@ -6,7 +6,6 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.DefaultDigest
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -56,7 +55,7 @@ open class TransactionBuilder(
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf(),
         protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub,
-        protected val digestService: DigestService = DefaultDigest.instance
+        protected val digestService: DigestService = DigestService.instance
 ) {
     constructor(notary: Party? = null,
                 lockId: UUID = defaultLockId(),

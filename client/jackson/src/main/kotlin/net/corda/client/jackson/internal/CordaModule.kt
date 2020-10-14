@@ -240,7 +240,7 @@ private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() 
                 wrapper.references,
                 wrapper.networkParametersHash
         )
-        return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: SHA2256DigestService())
+        return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256)
     }
 }
 
@@ -565,7 +565,7 @@ private class DigestServiceSerializer : JsonSerializer<DigestService>() {
 private class DigestServiceDeserializer : JsonDeserializer<DigestService>() {
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): DigestService {
         val wrapper = parser.readValueAs<DigestServiceJson>()
-        return DigestService(wrapper.digestLength, wrapper.hashAlgorithm, wrapper.hashTwiceNonce, wrapper.hashTwiceComponent)
+        return DigestService.create(wrapper.digestLength, wrapper.hashAlgorithm, wrapper.hashTwiceNonce, wrapper.hashTwiceComponent)
     }
 }
 

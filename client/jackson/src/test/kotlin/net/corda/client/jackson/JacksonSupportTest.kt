@@ -46,7 +46,6 @@ import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.coretesting.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -99,7 +98,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         }
         services = rigorousMock()
         cordappProvider = rigorousMock()
-        digestService = DefaultDigest.instance
+        digestService = DigestService.instance
         val networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         val networkParametersService = rigorousMock<NetworkParametersService>().also {
             doReturn(networkParameters.serialize().hash).whenever(it).currentHash
@@ -280,6 +279,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
         assertThat(wtxFields[10].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
         // IEE TODO: FIX actualStx.txBits which ends up being different after converting back into signed transaction
+
         assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
         assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
     }
@@ -377,7 +377,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `simple PartialTree Node`() {
-        val digestService = DefaultDigest.instance
+        val digestService = DigestService.instance
         val node = PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
                 right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
@@ -394,7 +394,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `complex PartialTree Node`() {
-        val digestService = DefaultDigest.instance
+        val digestService = DigestService.instance
         val node = PartialTree.Node(
                 left = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
                 right = PartialTree.Node(

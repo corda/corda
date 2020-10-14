@@ -1,18 +1,15 @@
 package net.corda.coretests.transactions
 
-import co.paralleluniverse.strands.Strand
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.SHA3256DigestService
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.getHashAgilityEnabled
 import net.corda.core.internal.setHashAgilityEnabled
@@ -27,7 +24,6 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.rigorousMock
-import net.corda.nodeapi.internal.persistence.MissingMigrationException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
@@ -266,7 +262,7 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder(digestService = SHA3256DigestService())
+            val builder = TransactionBuilder(digestService = DigestService.sha3_256)
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
@@ -287,7 +283,7 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder(digestService = SHA3256DigestService())
+            val builder = TransactionBuilder(digestService = DigestService.sha3_256)
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 

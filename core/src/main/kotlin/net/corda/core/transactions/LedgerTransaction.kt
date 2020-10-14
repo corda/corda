@@ -14,7 +14,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.crypto.DefaultDigest
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -92,7 +91,7 @@ private constructor(
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-        val digestService: DigestService = DefaultDigest.instance
+        val digestService: DigestService = DigestService.instance
 ) : FullTransaction() {
 
     init {

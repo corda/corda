@@ -11,7 +11,7 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.PartialMerkleTree
-import net.corda.core.crypto.SHA3256DigestService
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.crypto.SecureHash.Companion.hashAs
@@ -89,8 +89,8 @@ class PartialMerkleTreeWithNamedHashTest {
     fun init() {
         hashed = nodes.map { it.serialize().sha3_256() }
         val zeroHash = SecureHash.zeroHashFor(SHA3_256)
-        expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash), SHA3256DigestService()).hash
-        merkleTree = MerkleTree.getMerkleTree(hashed, SHA3256DigestService())
+        expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash), DigestService.sha3_256).hash
+        merkleTree = MerkleTree.getMerkleTree(hashed, DigestService.sha3_256)
 
         testLedger = MockServices(
                 cordappPackages = emptyList(),
@@ -133,13 +133,13 @@ class PartialMerkleTreeWithNamedHashTest {
 
     @Test(timeout=300_000)
     fun `building Merkle tree - no hashes`() {
-        assertFailsWith<MerkleTreeException> { MerkleTree.getMerkleTree(emptyList(), SHA3256DigestService()) }
+        assertFailsWith<MerkleTreeException> { MerkleTree.getMerkleTree(emptyList(), DigestService.sha3_256) }
     }
 
     @Test(timeout=300_000)
     fun `building Merkle tree one node`() {
         val node = 'a'.serialize().sha3_256()
-        val mt = MerkleTree.getMerkleTree(listOf(node), SHA3256DigestService())
+        val mt = MerkleTree.getMerkleTree(listOf(node), DigestService.sha3_256)
         assertEquals(node, mt.hash)
     }
 
@@ -149,7 +149,7 @@ class PartialMerkleTreeWithNamedHashTest {
         val h1 = hashed[0].concatenate(hashed[1])
         val h2 = hashed[2].concatenate(SecureHash.zeroHashFor(SHA3_256))
         val expected = h1.concatenate(h2)
-        val mt = MerkleTree.getMerkleTree(odd, SHA3256DigestService())
+        val mt = MerkleTree.getMerkleTree(odd, DigestService.sha3_256)
         assertEquals(mt.hash, expected)
     }
 
@@ -252,7 +252,7 @@ class PartialMerkleTreeWithNamedHashTest {
     fun `build Partial Merkle Tree - only duplicate leaves, less included failure`() {
         val leaves = "aaa"
         val hashes = leaves.map { it.serialize().hash }
-        val mt = MerkleTree.getMerkleTree(hashes, SHA3256DigestService())
+        val mt = MerkleTree.getMerkleTree(hashes, DigestService.sha3_256)
         assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(mt, hashes.subList(0, 1)) }
     }
 
@@ -274,7 +274,7 @@ class PartialMerkleTreeWithNamedHashTest {
 
     @Test(timeout=300_000)
     fun `verify Partial Merkle Tree - duplicate leaves failure`() {
-        val mt = MerkleTree.getMerkleTree(hashed.subList(0, 5), SHA3256DigestService()) // Odd number of leaves. Last one is duplicated.
+        val mt = MerkleTree.getMerkleTree(hashed.subList(0, 5), DigestService.sha3_256) // Odd number of leaves. Last one is duplicated.
         val inclHashes = arrayListOf(hashed[3], hashed[4])
         val pmt = PartialMerkleTree.build(mt, inclHashes)
         inclHashes.add(hashed[4])
@@ -323,7 +323,7 @@ class PartialMerkleTreeWithNamedHashTest {
     fun `Find leaf index`() {
         // A Merkle tree with 20 leaves.
         val sampleLeaves = IntStream.rangeClosed(0, 19).toList().map { sha3_256(it.toString()) }
-        val merkleTree = MerkleTree.getMerkleTree(sampleLeaves, SHA3256DigestService())
+        val merkleTree = MerkleTree.getMerkleTree(sampleLeaves, DigestService.sha3_256)
 
         // Provided hashes are not in the tree.
         assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf(sha3_256("20"))) }

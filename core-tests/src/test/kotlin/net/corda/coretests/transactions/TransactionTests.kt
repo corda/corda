@@ -147,7 +147,7 @@ class TransactionTests {
                 emptyList(),
                 isAttachmentTrusted = { true },
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                digestService = DefaultDigest.instance
+                digestService = DigestService.instance
         )
 
         transaction.verify()
@@ -203,7 +203,7 @@ class TransactionTests {
                 emptyList(),
                 isAttachmentTrusted = { true },
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                digestService = DefaultDigest.instance
+                digestService = DigestService.instance
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }

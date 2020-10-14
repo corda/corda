@@ -4,7 +4,7 @@ import org.junit.Assert
 import org.junit.Test
 
 class SHA3256DigestServiceTest {
-    private val service: DigestService = SHA3256DigestService()
+    private val service: DigestService = DigestService.sha3_256
 
     @Test(timeout = 300_000)
     fun `test digest service hash and prefix`() {

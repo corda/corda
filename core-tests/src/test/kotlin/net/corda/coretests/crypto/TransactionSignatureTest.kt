@@ -5,7 +5,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.postgresql.shaded.com.ongres.scram.common.bouncycastle.pbkdf2.Digest
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.SignatureException
@@ -26,7 +25,7 @@ class TransactionSignatureTest {
 
     @Before
     fun init() {
-        digestService = DefaultDigest.instance
+        digestService = DigestService.instance
     }
 
     /** Valid sign and verify. */
@@ -66,7 +65,7 @@ class TransactionSignatureTest {
         val txSignature = signMultipleTx(txIds, keyPair, digestService)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DefaultDigest.instance)
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DigestService.instance)
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)

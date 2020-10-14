@@ -8,27 +8,43 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+
 import java.nio.ByteBuffer
 
 @CordaSerializable
 @KeepForDJVM
-open class DigestService(val digestLength: Int,
-                         val hashAlgorithm: String,
-                         val hashTwiceNonce : Boolean = true,
-                         val hashTwiceComponent : Boolean = true) {
-
-    constructor() : this (SHA2_256)
-
-    constructor(hashAlgorithm: String) : this(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm)
-
-    constructor(hashAlgorithm: String, doubleHashNonce: Boolean, doubleHashComponent: Boolean)
-            : this(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, doubleHashNonce, doubleHashComponent)
+class DigestService private constructor(val digestLength: Int,
+                                        val hashAlgorithm: String,
+                                        val hashTwiceNonce : Boolean = true,
+                                        val hashTwiceComponent : Boolean = true) {
 
     init {
         require(hashAlgorithm.isNotEmpty()) { "Hash algorithm name unavailable or not specified" }
         require((hashTwiceNonce && hashTwiceComponent) || hashAlgorithm != SHA2_256) {
             "SHA2-256 requires doubleHashNonce and doubleHashComponent to be set"
         }
+    }
+
+    @KeepForDJVM
+    companion object {
+        private const val NONCE_SIZE = 8
+        private const val WORD_SIZE_32 = 32
+        // IEE TODO: shall be initialized with network parameters to determine the default network hash algorithm
+        val instance : DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256) }
+        val sha2_256: DigestService = DigestService(WORD_SIZE_32, SHA2_256)
+        val sha3_256: DigestService = DigestService(WORD_SIZE_32, SHA3_256)
+
+        fun create(hashAlgorithm: String) =
+            create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce = true, hashTwiceComponent = true)
+
+        fun create(digestLength: Int, hashAlgorithm: String) =
+                create(digestLength, hashAlgorithm, hashTwiceNonce = true, hashTwiceComponent = true)
+
+        fun create(hashAlgorithm: String, hashTwiceNonce : Boolean, hashTwiceComponent : Boolean) =
+            create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce, hashTwiceComponent)
+
+        fun create(digestLength: Int, hashAlgorithm: String, hashTwiceNonce : Boolean, hashTwiceComponent : Boolean) =
+                DigestService(digestLength, hashAlgorithm, hashTwiceNonce, hashTwiceComponent)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -102,22 +118,7 @@ open class DigestService(val digestLength: Int,
      *         HASH(privacySalt || groupIndex || internalIndex) otherwise
      */
     fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) : SecureHash {
-        val data = salted(privacySalt.bytes, ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
+        val data = salted(privacySalt.bytes, ByteBuffer.allocate(NONCE_SIZE).putInt(groupIndex).putInt(internalIndex).array())
         return if(hashTwiceNonce) SecureHash.hashTwiceAs(hashAlgorithm, data) else SecureHash.hashAs(hashAlgorithm, data)
     }
-}
-
-@CordaSerializable
-@KeepForDJVM
-class SHA2256DigestService : DigestService(32, SHA2_256)
-
-@CordaSerializable
-@KeepForDJVM
-class SHA3256DigestService : DigestService(32, SHA3_256)
-
-@KeepForDJVM
-object DefaultDigest {
-    // IEE TODO: shall be initialized with network parameters to determine the default network hash algorithm
-    val instance : DigestService by lazy { SHA2256DigestService() }
-    val sha256 : DigestService = SHA2256DigestService()
 }

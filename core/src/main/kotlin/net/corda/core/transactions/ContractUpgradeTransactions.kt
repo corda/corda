@@ -3,7 +3,6 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DefaultDigest
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -48,7 +47,7 @@ data class ContractUpgradeWireTransaction(
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
     constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
-            : this(serializedComponents, privacySalt, DefaultDigest.instance)
+            : this(serializedComponents, privacySalt, DigestService.instance)
 
     companion object {
         /**
@@ -212,7 +211,7 @@ data class ContractUpgradeFilteredTransaction(
          * Required for computing the transaction id.
          */
         val hiddenComponents: Map<Int, SecureHash>,
-        val digestService: DigestService = DefaultDigest.instance
+        val digestService: DigestService = DigestService.instance
 ) : CoreTransaction() {
     override val inputs: List<StateRef> by lazy {
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()

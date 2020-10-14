@@ -10,9 +10,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
-import net.corda.core.crypto.DefaultDigest
 import net.corda.core.crypto.DigestService
-import net.corda.core.crypto.SHA2256DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
@@ -46,9 +44,7 @@ class LtxFactory : Function<Array<out Any?>, LedgerTransaction> {
             privacySalt = txArgs[TX_PRIVACY_SALT] as PrivacySalt,
             networkParameters = txArgs[TX_NETWORK_PARAMETERS] as NetworkParameters,
             references = (txArgs[TX_REFERENCES] as Array<Array<out Any?>>).map { it.toStateAndRef() },
-            // IEE REVIEW: both solutions work, first looks hacky while second requires extra TX_ array indexing to serialized/deserialized object
-            //digestService = DigestService((txArgs[TX_ID] as SecureHash).algorithm)
-            digestService = if (txArgs.size > TX_DIGEST_SERVICE) (txArgs[TX_DIGEST_SERVICE] as DigestService) else DefaultDigest.sha256
+            digestService = if (txArgs.size > TX_DIGEST_SERVICE) (txArgs[TX_DIGEST_SERVICE] as DigestService) else DigestService.sha2_256
         )
     }
 

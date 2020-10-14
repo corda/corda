@@ -1,11 +1,10 @@
 package net.corda.core.crypto
 
-import net.corda.core.serialization.serialize
 import org.junit.Assert
 import org.junit.Test
 
 class SHA2256DigestServiceTest {
-    private val service: DigestService = SHA2256DigestService()
+    private val service: DigestService = DigestService.sha2_256
 
     @Test(timeout = 300_000)
     fun `test digest service hash and no prefix`() {

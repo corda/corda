@@ -6,7 +6,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
@@ -286,7 +285,8 @@ class JPAUniquenessProvider(
             stateConflicts: Map<StateRef, StateConsumptionDetails>,
             session: Session
     ): InternalResult {
-        val digestService = DigestService(request.txId.algorithm)
+        // IEE TODO: need to pass hashTwice settings
+        val digestService = DigestService.create(request.txId.algorithm)
         return when {
             isConsumedByTheSameTx(digestService.hash(request.txId.bytes), stateConflicts) -> {
                 InternalResult.Success
