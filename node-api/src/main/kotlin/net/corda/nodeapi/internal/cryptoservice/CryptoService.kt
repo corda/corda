@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.cryptoservice
 
-import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -11,14 +10,15 @@ import java.security.PublicKey
 /**
  * Unlike [CryptoService] can only perform "read-only" operations but never create new key pairs.
  */
-@DoNotImplement
 interface SignOnlyCryptoService {
     /** Check if this [CryptoService] has a private key entry for the input alias. */
     fun containsKey(alias: String): Boolean
 
     /**
      * Returns the [PublicKey] of the input alias or null if it doesn't exist.
+     * @throws CryptoServiceException for general cryptographic exceptions).
      */
+    @Throws(CryptoServiceException::class)
     fun getPublicKey(alias: String): PublicKey?
 
     /**
@@ -27,6 +27,7 @@ interface SignOnlyCryptoService {
      * The signAlgorithm if specified determines the signature scheme used for signing, if
      * not specified then the signature scheme is based on the private key scheme.
      */
+    @Throws(CryptoServiceException::class)
     fun sign(alias: String, data: ByteArray, signAlgorithm: String? = null): ByteArray
 
     /**
@@ -48,7 +49,6 @@ interface SignOnlyCryptoService {
 /**
  * Fully-powered crypto service which can sign as well as create new key pairs.
  */
-@DoNotImplement
 interface CryptoService : SignOnlyCryptoService {
 
     /**
@@ -58,9 +58,10 @@ interface CryptoService : SignOnlyCryptoService {
      * because some schemes might not be standardised and thus an official OID might for this scheme not exist yet.
      *
      * Returns the [PublicKey] of the generated [KeyPair].
+     * @throws CryptoServiceException for general cryptographic exceptions).
      */
+    @Throws(CryptoServiceException::class)
     fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey
-
 
     // ******************************************************
     // ENTERPRISE ONLY CODE FOR WRAPPING KEYS API STARTS HERE
@@ -74,7 +75,9 @@ interface CryptoService : SignOnlyCryptoService {
      *   The default value is true.
      *
      * @throws IllegalArgumentException if a key already exists under this alias (and [failIfExists] is set to true].
+     * @throws CryptoServiceException for general cryptographic exceptions.
      */
+    @Throws(CryptoServiceException::class)
     fun createWrappingKey(alias: String, failIfExists: Boolean = true)
 
     /**
@@ -90,7 +93,9 @@ interface CryptoService : SignOnlyCryptoService {
      * @param childKeyScheme the parameters of the key pair to be generated.
      *
      * @throws IllegalStateException if there is no master key existing under the alias specified ([masterKeyAlias]).
+     * @throws CryptoServiceException for general cryptographic exceptions).
      */
+    @Throws(CryptoServiceException::class)
     fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme = defaultWrappingSignatureScheme()): Pair<PublicKey, WrappedPrivateKey>
 
     /**
@@ -101,7 +106,9 @@ interface CryptoService : SignOnlyCryptoService {
      * @param payloadToSign the payload to be signed.
      *
      * @throws IllegalStateException if there is no master key existing under the alias specified ([masterKeyAlias]).
+     * @throws CryptoServiceException for general cryptographic exceptions).
      */
+    @Throws(CryptoServiceException::class)
     fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray
 
     /**
@@ -115,7 +122,7 @@ interface CryptoService : SignOnlyCryptoService {
     fun getWrappingMode(): WrappingMode?
 
     /**
-     * Returns the [SignatureScheme] that should be used with this [CryptoService] when generating wrapped keys
+     * Returns the [SignatureScheme] that should be used with this [CryptoService] when generating wrapped keys.
      */
     fun defaultWrappingSignatureScheme(): SignatureScheme = Crypto.ECDSA_SECP256R1_SHA256
 
@@ -125,11 +132,11 @@ interface CryptoService : SignOnlyCryptoService {
 }
 
 /**
- * If an exception is deemed unrecoverable then it must be set with the flag ``isRecoverable=false``
+ * If an exception is deemed unrecoverable then it must be set with the flag ``isRecoverable=false``.
  *
  * [ManagedCryptoService] will assume any [Throwable] which isn't a [CryptoServiceException] is recoverable and
  * will wrap it in a [CryptoServiceException] with ``isRecoverable=true``.
-*/
+ */
 open class CryptoServiceException(message: String?, cause: Throwable? = null, val isRecoverable: Boolean = true) : Exception(message, cause)
 
 enum class WrappingMode {
@@ -140,7 +147,15 @@ enum class WrappingMode {
     /**
      * In normal mode, wrapped keys' material is encrypted, never exposed to the application and only accessible from inside the HSM.
      */
-    WRAPPED
+    WRAPPED,
+    /**
+     * Marker ENUM for when the HSM to be used supports a native key storage mode that supports LARGE (in the 100,000s at least) numbers of keys.
+     */
+    NATIVE
 }
 
+/**
+ * For the WRAPPED mode the keyMaterial will contain encrypted private key nad for the NATIVE that would be the alias
+ * which the CryptoService implementation assigned to the private key.
+ */
 class WrappedPrivateKey(val keyMaterial: ByteArray, val signatureScheme: SignatureScheme, val encodingVersion: Int? = null)

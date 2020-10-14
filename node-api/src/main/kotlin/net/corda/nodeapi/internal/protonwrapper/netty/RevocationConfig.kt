@@ -7,7 +7,7 @@ import net.corda.nodeapi.internal.config.CustomConfigParser
 /**
  * Data structure for controlling the way how Certificate Revocation Lists are handled.
  */
-@CustomConfigParser(RevocationConfigParser::class)
+@CustomConfigParser(parser = RevocationConfigParser::class)
 interface RevocationConfig {
 
     enum class Mode {

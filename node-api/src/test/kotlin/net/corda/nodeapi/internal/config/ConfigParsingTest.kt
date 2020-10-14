@@ -266,7 +266,7 @@ class ConfigParsingTest {
 
     data class TestObjects(val values: List<TestObject>)
 
-    @CustomConfigParser(TestParser::class)
+    @CustomConfigParser(parser = TestParser::class)
     sealed class TestObject {
         data class Type1(val value: String) : TestObject()
         data class Type2(val value: String) : TestObject()
