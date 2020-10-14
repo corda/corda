@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -35,6 +35,8 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import javax.security.auth.x500.X500Principal
+import kotlin.experimental.and
+import kotlin.experimental.or
 
 object X509Utilities {
     // Note that this default value only applies to BCCryptoService. Other implementations of CryptoService may have to use different
@@ -58,6 +60,7 @@ object X509Utilities {
     const val TLS_CERTIFICATE_DAYS_TO_EXPIRY_WARNING_THRESHOLD = 30
     private const val KEY_ALIAS_REGEX = "[a-z0-9-]+"
     private const val KEY_ALIAS_MAX_LENGTH = 100
+    private const val CERTIFICATE_SERIAL_NUMBER_LENGTH = 16
 
     /**
      * Checks if the provided key alias does not exceed maximum length and
@@ -184,7 +187,7 @@ object X509Utilities {
                                  nameConstraints: NameConstraints? = null,
                                  crlDistPoint: String? = null,
                                  crlIssuer: X500Name? = null): X509v3CertificateBuilder {
-        val serial = BigInteger.valueOf(random63BitValue())
+        val serial = generateCertificateSerialNumber()
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
         val role = certificateType.role
@@ -363,6 +366,15 @@ object X509Utilities {
             val distPoint = DistributionPoint(distPointName, null, crlIssuerGeneralNames)
             builder.addExtension(Extension.cRLDistributionPoints, false, CRLDistPoint(arrayOf(distPoint)))
         }
+    }
+
+    @Suppress("MagicNumber")
+    private fun generateCertificateSerialNumber(): BigInteger {
+        val bytes = ByteArray(CERTIFICATE_SERIAL_NUMBER_LENGTH)
+        newSecureRandom().nextBytes(bytes)
+        // Set highest byte to 01xxxxxx to ensure positive sign and constant bit length.
+        bytes[0] = bytes[0].and(0x3F).or(0x40)
+        return BigInteger(bytes)
     }
 }
 
