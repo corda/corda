@@ -62,6 +62,7 @@ import java.time.Instant
 import java.util.*
 import javax.security.auth.x500.X500Principal
 import kotlin.collections.ArrayList
+import kotlin.math.max
 
 @RunWith(Parameterized::class)
 class JacksonSupportTest(@Suppress("unused") private val name: String, factory: JsonFactory) {
@@ -282,6 +283,9 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         val actualWtx = mapper.convertValue<WireTransaction>(wtxJson)
         val actualStx = mapper.convertValue<SignedTransaction>(json)
         val actualJson = mapper.valueToTree<ObjectNode>(actualStx)
+        //val length = max(actualStx.txBits.size, stx.txBits.size) - 1
+        val ctx = stx.txBits.deserialize() as WireTransaction
+        val actualCtx = actualStx.txBits.deserialize() as WireTransaction
         // IEE TODO: FIX actualStx.txBits is shorter than the original stx.txBits and the test is failing
         assertThat(actualWtx).isEqualTo(wtx)
         assertThat(actualStx).isEqualTo(stx)
@@ -705,6 +709,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     private fun sign(ctx: CoreTransaction): SignedTransaction {
         val digestService = DefaultDigest.instance
+        // IEE REVIEW: should this use randomHash for the given hash algorithm, or hardcoded to SHA256 because related to signatures?
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
                 right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
