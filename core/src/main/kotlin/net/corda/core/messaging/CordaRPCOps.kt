@@ -145,7 +145,9 @@ interface CordaRPCOps : RPCOps {
     // DOCSTART VaultQueryAPIHelpers
     fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T>
 
-    fun <T : ContractState> vaultQueryByHql(contractStateType: Class<out T>, hql: String): Vault.Page<T>
+    fun queryComponent(txId: String, componentGroupType: Int, componentGroupLeafIndex: Int): Any
+
+    fun <T : Any> vaultQueryByHql(resultClass: Class<out T>, hql: String): List<T>
 
     fun <T : ContractState> vaultQueryBySql(contractStateType: Class<out T>, sql: String): String
 

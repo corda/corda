@@ -30,6 +30,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.workflows.asset.CashUtils
 import net.corda.finance.workflows.getCashBalance
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -53,6 +54,7 @@ import java.util.concurrent.Executors
 import javax.persistence.PersistenceException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
@@ -210,18 +212,28 @@ class NodeVaultServiceTest {
     }
 
     @Test(timeout=300_000)
-	fun `query by JPQL gets states`() {
+	fun `query by JPQL gets components`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
         }
         database.transaction {
-            var states = vaultService.queryByHql<Cash.State>(
-                    """select new ${Pair::class.java.name}(v.stateRef.txId, v.stateRef.index)
-                    from ${VaultSchemaV1.VaultStates::class.java.name} v""".trimIndent()).states
-            assertThat(states).hasSize(3)
+            var allComponents = vaultService.queryByHql<DBTransactionStorage.DBTransactionComponent>(
+                    "from ${DBTransactionStorage.DBTransactionComponent::class.java.name}")
+            assertTrue(allComponents.isNotEmpty())
 
-            var count = vaultService.queryByHql<Cash.State>("select count(v) from ${VaultSchemaV1.VaultStates::class.java.name} v")
-            assertThat(count.otherResults[0]).isEqualTo(3L)
+//            var component = vaultService.queryComponent()(
+//                    "from ${DBTransactionStorage.DBTransactionComponent::class.java.name}")
+//            assertTrue(allComponents.isNotEmpty())
+
+            // todo - we need an actual tx id...
+            /*var firstInput = vaultService.queryByHql<DBTransactionStorage.DBTransactionComponent>(
+                    "select c from ${DBTransactionStorage.DBTransactionComponent::class.java.name} c " +
+                            "where c.tx_id = ${.txHash.toString()} " +
+                            "and c.component_group_index = ${ComponentGroupEnum.INPUTS_GROUP} " +
+                            "and c.component_group_leaf_index = ${stateRef.index}")*/
+
+//            var count = vaultService.queryByHql<Cash.State>("select count(v) from ${VaultSchemaV1.VaultStates::class.java.name} v")
+//            assertThat(count.otherResults[0]).isEqualTo(3L)
         }
     }
 

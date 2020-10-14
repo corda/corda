@@ -1,9 +1,12 @@
 package net.corda.core.contracts
 
+import net.corda.core.serialization.CordaSerializable
+
 /**
  * An enum, for which each property corresponds to a transaction component group. The position in the enum class
  * declaration (ordinal) is used for component-leaf ordering when computing the Merkle tree.
  */
+@CordaSerializable
 enum class ComponentGroupEnum {
     INPUTS_GROUP, // ordinal = 0.
     OUTPUTS_GROUP, // ordinal = 1.

@@ -4,6 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.FungibleState
@@ -11,14 +14,17 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.HospitalizeFlowException
+import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.tee
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
@@ -42,6 +48,8 @@ import net.corda.core.node.services.vault.builder
 import net.corda.core.observable.internal.OnResilientSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
+import net.corda.core.transactions.ComponentGroup
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FullTransaction
@@ -56,6 +64,8 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.DBTransactionStorage.*
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -690,20 +700,6 @@ class NodeVaultService(
         }
     }
 
-    // todo conal - remove - not for production
-    private fun dumpHibernateSession(s: Session) {
-        try {
-            val sessionImpl = s as SessionImplementor
-            val persistenceContext: org.hibernate.engine.spi.PersistenceContext = sessionImpl.persistenceContext
-            val entitiesMapField: Field = StatefulPersistenceContext::class.java.getDeclaredField("entitiesByKey")
-            entitiesMapField.isAccessible = true
-            val map: Map<EntityKey, Any> = entitiesMapField.get(persistenceContext) as Map<EntityKey, Any>
-            println(map)
-        } catch (e: java.lang.Exception) {
-            println(e)
-        }
-    }
-
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBySql(contractStateType: Class<out T>,
                                                  sql: String): String {
@@ -716,11 +712,8 @@ class NodeVaultService(
                                                  paging_: PageSpecification): String {
         log.info("Vault Query for contract type $contractStateType and SQL string: $sql")
 
-        // todo conal - allow this to be configurable?
-        //  "only skip pagination checks for total results count query" - comment suggests no
-
         return database.transaction {
-            // todo conal - a pile of validations on the sql?
+            // todo conal
 
             var query = entityManager.createNativeQuery(sql)
 //            dumpHibernateSession(session)
@@ -734,68 +727,55 @@ class NodeVaultService(
         }
     }
 
-    @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _queryByHql(contractStateType: Class<out T>,
-                                                 hql: String): Vault.Page<T> {
-        return _queryByHql(contractStateType, hql, PageSpecification())
-    }
-/*
-select new net.corda.core.contracts.StateRef(v.stateRef.txId, v.stateRef.index)
-from net.corda.node.services.vault.VaultSchemaV1$VaultStates v
- */
-
-    @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _queryByHql(contractStateType: Class<out T>,
-                                                 hql: String,
-                                                 paging_: PageSpecification): Vault.Page<T> {
-        log.info("Vault Query for contract type $contractStateType and HQL string: $hql")
+    override fun _queryComponent(txId: SecureHash, componentGroupEnum: ComponentGroupEnum, componentGroupLeafIndex: Int): Any {
+        log.info("Vault Query for $componentGroupEnum with txId ${txId.toString()} and componentGroupLeafIndex $componentGroupLeafIndex")
         return database.transaction {
+            //todo conal
+            var query = session.createQuery(
+                    "from ${DBTransactionComponent::class.java.name} " +
+                            "where tx_id = :txId and component_group_index = :componentGroupIndex and component_group_leaf_index = :componentIndex",
+                    DBTransactionComponent::class.java)
+                    .setParameter("txId", txId.toString())
+                    .setParameter("componentGroupIndex", componentGroupEnum.name)
+                    .setParameter("componentIndex", componentGroupLeafIndex)
 
-            var query = entityManager.createQuery(hql)
-            val results = query.resultList
-            println("results size: ${results.size}")
-            println("results: $results")
-
-            if (results[0] is Pair<*, *>) {
-                val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
-                val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
-                val otherResults: MutableList<Any> = mutableListOf()
-                val stateRefs = mutableSetOf<StateRef>()
-
-                results.asSequence()
-                        .forEachIndexed { index, result ->
-                            result as Pair<String, Int>
-                            val stateRef = StateRef(SecureHash.parse(result.first as String), result.second as Int)
-                            stateRefs.add(stateRef)
-                            /*statesMeta.add(Vault.StateMetadata(stateRef,
-                                    vaultState.contractStateClassName,
-                                    vaultState.recordedTime,
-                                    vaultState.consumedTime,
-                                    vaultState.stateStatus,
-                                    vaultState.notary,
-                                    vaultState.lockId,
-                                    vaultState.lockUpdateTime,
-                                    vaultState.relevancyStatus,
-                                    constraintInfo(vaultState.constraintType, vaultState.constraintData)*/
-
-                        } /*else {
-                            // TODO: improve typing of returned other results
-                            log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
-                            otherResults.addAll(result.toArray().asList())
-                        }*/
-                if (stateRefs.isNotEmpty())
-                    statesAndRefs.addAll(uncheckedCast(servicesForResolution.loadStates(stateRefs)))
-
-                Vault.Page(states = statesAndRefs, statesMetadata = listOf(), stateTypes = Vault.StateStatus.ALL,
-                        totalStatesAvailable = 0, otherResults = listOf())
-            } else if (results[0] is Int || results[0] is Long) {
-                Vault.Page(states = listOf(), statesMetadata = listOf(), stateTypes = Vault.StateStatus.ALL,
-                        totalStatesAvailable = 0, otherResults = listOf(results[0]) as List<Any>)
-            } else {
-                Vault.Page(states = listOf(), statesMetadata = listOf(), stateTypes = Vault.StateStatus.ALL,
-                        totalStatesAvailable = 0, otherResults = listOf())
+            try {
+                val singleResult = query.singleResult
+                if(singleResult is DBTransactionComponent){
+                    when(componentGroupEnum){
+                        ComponentGroupEnum.INPUTS_GROUP -> singleResult.data.deserialize<StateRef>()
+                        ComponentGroupEnum.OUTPUTS_GROUP -> singleResult.data.deserialize<TransactionState<ContractState>>()
+                        ComponentGroupEnum.COMMANDS_GROUP -> singleResult.data.deserialize<Command<CommandData>>()
+                        ComponentGroupEnum.ATTACHMENTS_GROUP -> singleResult.data.deserialize<SecureHash>()
+                        ComponentGroupEnum.NOTARY_GROUP -> singleResult.data.deserialize<Party>()
+                        ComponentGroupEnum.TIMEWINDOW_GROUP -> singleResult.data.deserialize<TimeWindow>()
+                        ComponentGroupEnum.SIGNERS_GROUP -> throw Exception("Use COMMANDS_GROUP instead")
+                        ComponentGroupEnum.REFERENCES_GROUP -> singleResult.data.deserialize<StateRef>()
+                        ComponentGroupEnum.PARAMETERS_GROUP -> singleResult.data.deserialize<SecureHash>()
+                    }
+                }
+            } catch (e: Exception) {
+                log.error(e.message, e)
+                throw e
             }
+        }
+    }
 
+    @Throws(VaultQueryException::class)
+    override fun <T : Any> _queryByHql(resultClass: Class<out T>, hql: String): List<T> {
+        log.info("Vault Query for result type $resultClass and HQL string: $hql")
+        return database.transaction {
+            var query = entityManager.createQuery(hql, resultClass)
+
+            try {
+                val results = query.resultList
+                println("results size: ${results.size}")
+                println("results: $results")
+                results
+            } catch (e: Exception) {
+                log.error(e.message, e)
+                throw e
+            }
         }
     }
 

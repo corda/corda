@@ -146,20 +146,20 @@ fun createComponentGroups(inputs: List<StateRef>,
                           references: List<StateRef>,
                           networkParametersHash: SecureHash?): List<ComponentGroup> {
     val serialize = { value: Any, _: Int -> value.serialize() }
-    val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
-    if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
-    if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
-    if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.OUTPUTS_GROUP.ordinal, outputs.lazyMapped(serialize)))
+    val componentGroupList: MutableList<ComponentGroup> = mutableListOf()
+    if (inputs.isNotEmpty()) componentGroupList.add(ComponentGroup(ComponentGroupEnum.INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
+    if (references.isNotEmpty()) componentGroupList.add(ComponentGroup(ComponentGroupEnum.REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
+    if (outputs.isNotEmpty()) componentGroupList.add(ComponentGroup(ComponentGroupEnum.OUTPUTS_GROUP.ordinal, outputs.lazyMapped(serialize)))
     // Adding commandData only to the commands group. Signers are added in their own group.
-    if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.COMMANDS_GROUP.ordinal, commands.map { it.value }.lazyMapped(serialize)))
-    if (attachments.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.ATTACHMENTS_GROUP.ordinal, attachments.lazyMapped(serialize)))
-    if (notary != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
-    if (timeWindow != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
+    if (commands.isNotEmpty()) componentGroupList.add(ComponentGroup(ComponentGroupEnum.COMMANDS_GROUP.ordinal, commands.map { it.value }.lazyMapped(serialize)))
+    if (attachments.isNotEmpty()) componentGroupList.add(ComponentGroup(ComponentGroupEnum.ATTACHMENTS_GROUP.ordinal, attachments.lazyMapped(serialize)))
+    if (notary != null) componentGroupList.add(ComponentGroup(ComponentGroupEnum.NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
+    if (timeWindow != null) componentGroupList.add(ComponentGroup(ComponentGroupEnum.TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
     // Adding signers to their own group. This is required for command visibility purposes: a party receiving
     // a FilteredTransaction can now verify it sees all the commands it should sign.
-    if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
-    if (networkParametersHash != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
-    return componentGroupMap
+    if (commands.isNotEmpty()) componentGroupList.add(ComponentGroup(ComponentGroupEnum.SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
+    if (networkParametersHash != null) componentGroupList.add(ComponentGroup(ComponentGroupEnum.PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
+    return componentGroupList
 }
 
 /**

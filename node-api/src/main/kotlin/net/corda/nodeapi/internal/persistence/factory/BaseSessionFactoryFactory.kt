@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.persistence.factory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
-import net.corda.nodeapi.internal.persistence.CustomInterceptor
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.hibernate.SessionFactory
@@ -37,7 +36,6 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
-                //todo conal - whats this for? is there property to allow entity to be picked up by session?
                 .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", TransactionIsolationLevel.default.jdbcValue.toString())
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
@@ -78,7 +76,6 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
             applySecondLevelCacheSupport(false)
             applyQueryCacheSupport(false)
             enableReleaseResourcesOnCloseEnabled(true)
-            applyInterceptor(CustomInterceptor())
             build()
         }
     }

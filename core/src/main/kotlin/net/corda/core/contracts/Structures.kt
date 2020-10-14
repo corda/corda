@@ -197,6 +197,7 @@ data class PartyAndReference(val party: AbstractParty, val reference: OpaqueByte
 /** Marker interface for classes that represent commands */
 @CordaSerializable
 interface CommandData
+// todo conal [WARN] 13:23:09,499 [Time-limited test] java.JavaTypeDescriptorRegistry. - HHH000481: Encountered Java type [interface net.corda.core.contracts.CommandData] for which we could not locate a JavaTypeDescriptor and which does not appear to implement equals and/or hashCode.  This can lead to significant performance problems when performing equality/dirty checking involving this Java type.  Consider registering a custom JavaTypeDescriptor or at least implementing equals/hashCode.
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
 @KeepForDJVM

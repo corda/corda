@@ -2,11 +2,16 @@ package net.corda.node.services.persistence
 
 import junit.framework.TestCase.assertTrue
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.CordaClock
@@ -15,7 +20,9 @@ import net.corda.node.SimpleClock
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -68,6 +75,52 @@ class DBTransactionStorageTests {
     private class TransactionClock(var timeNow: Instant,
                                    override var delegateClock: Clock = systemUTC()) : MutableClock(delegateClock) {
         override fun instant(): Instant = timeNow
+    }
+
+    @Test(timeout = 300_000)
+    fun `create transaction components`() {
+        val DUMMY_KEY_1 = generateKeyPair()
+        val DUMMY_KEY_2 = generateKeyPair()
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val BOB = TestIdentity(BOB_NAME, 80).party
+
+        val now = Instant.ofEpochSecond(111222333L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+
+        val outputState1 = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
+        val wtx1 = createWireTransaction(
+                inputs = emptyList(),
+                attachments = emptyList(),
+                outputs = listOf(outputState1), commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)), notary = DUMMY_NOTARY, timeWindow = null)
+        val stx1 = SignedTransaction(wtx1, listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))))
+        transactionStorage.addTransaction(stx1)
+
+        val outputState2 = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
+        val stateRefPointingToWtx1Output = StateRef(stx1.id, 0)
+        val stateRef2 = StateRef(SecureHash.randomSHA256(), 0)
+        val wtx2 = createWireTransaction(
+                inputs = listOf(stateRefPointingToWtx1Output, stateRef2),
+                attachments = emptyList(),
+                outputs = listOf(outputState2), commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)), notary = DUMMY_NOTARY, timeWindow = null)
+        val stx2 = SignedTransaction(wtx2, listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))))
+        transactionStorage.addTransaction(stx2)
+
+        assertTransactionIsRetrievable(stx1)
+        assertTransactionIsRetrievable(stx2)
+
+        var transactionComponent2 = transactionStorage.fetchSingleTransactionComponent(stx1.id, ComponentGroupEnum.OUTPUTS_GROUP, 0)
+        var resultTransactionState = transactionComponent2.data.deserialize<TransactionState<ContractState>>()
+        assertEquals(outputState1.notary, resultTransactionState.notary)
+
+        var transactionComponent1 = transactionStorage.fetchSingleTransactionComponent(stx2.id, ComponentGroupEnum.OUTPUTS_GROUP, 0)
+        var resultStateRef = transactionComponent1.data.deserialize<StateRef>()
+        assertEquals(stateRefPointingToWtx1Output.txhash, resultStateRef.txhash)
+        assertEquals(stateRefPointingToWtx1Output.index, resultStateRef.index)
+
+        var allTransactionComponents = transactionStorage.fetchTransactionComponents(stx1.id)
+        var groupedComponents = allTransactionComponents.groupBy { it.transactionComponentId.componentGroupIndex }
+
     }
 
     @Test(timeout = 300_000)

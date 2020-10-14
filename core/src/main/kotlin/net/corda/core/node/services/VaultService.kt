@@ -378,14 +378,15 @@ interface VaultService {
                                                                 amount: Amount<*>,
                                                                 contractStateType: Class<out T>): List<StateAndRef<T>>
 
-    // todo conal new
-    // todo conal - must be simple way to do this overload - named parameter with default
     @Throws(VaultQueryException::class)
-    fun <T : ContractState> _queryByHql(contractStateType: Class<out T>, hql: String): Vault.Page<T>
+    fun <T : Any> _queryByHql(resultClass: Class<out T>, hql: String): List<T>
+
     @Throws(VaultQueryException::class)
-    fun <T : ContractState> _queryByHql(contractStateType: Class<out T>, hql: String, paging_: PageSpecification): Vault.Page<T>
+    fun _queryComponent(txId: SecureHash, componentGroupEnum: ComponentGroupEnum, componentGroupLeafIndex: Int): Any
+
     @Throws(VaultQueryException::class)
     fun <T : ContractState> _queryBySql(contractStateType: Class<out T>, sql: String): String
+
     @Throws(VaultQueryException::class)
     fun <T : ContractState> _queryBySql(contractStateType: Class<out T>, sql: String, paging_: PageSpecification): String
 
@@ -439,6 +440,10 @@ interface VaultService {
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations.
     // Java Helpers.
+    fun <T : Any> queryByHql(resultClass: Class<out T>, hql: String): List<T> {
+        return _queryByHql(resultClass, hql)
+    }
+
     fun <T : ContractState> queryBy(contractStateType: Class<out T>): Vault.Page<T> {
         return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractStateType)
     }
@@ -512,8 +517,12 @@ inline fun <reified T : ContractState> VaultService.queryBy(criteria: QueryCrite
     return _queryBy(criteria, paging, sorting, T::class.java)
 }
 
-inline fun <reified T : ContractState> VaultService.queryByHql(hql: String): Vault.Page<T> {
+inline fun <reified T : Any> VaultService.queryByHql(hql: String): List<T> {
     return _queryByHql(T::class.java, hql)
+}
+
+inline fun VaultService.queryComponent(txId: SecureHash, componentGroupEnum: ComponentGroupEnum, componentGroupLeafIndex: Int): Any {
+    return _queryComponent(txId, componentGroupEnum, componentGroupLeafIndex)
 }
 
 inline fun <reified T : ContractState> VaultService.trackBy(): DataFeed<Vault.Page<T>, Vault.Update<T>> {
