@@ -36,6 +36,7 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
@@ -126,7 +127,9 @@ class RetryFlowMockTest {
         ReceiveFlow3.lock.release()
         assertTrue(expectedMessagesSent.await(20, TimeUnit.SECONDS))
         assertEquals(3, messagesSent.size)
-        assertNull(messagesSent.last().senderUUID)
+        // CORDA-4045: We can't be sure that the last message sent will be the last we record, so
+        // instead check we have exactly one message (the first) with sender UUID
+        assertNotNull(messagesSent.singleOrNull { it.senderUUID != null })
     }
 
     @Test(timeout=300_000)
