@@ -11,6 +11,7 @@ import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
@@ -32,6 +33,7 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import java.io.IOException
+import java.lang.Exception
 import java.lang.Long.max
 import java.security.KeyStoreException
 import javax.annotation.concurrent.ThreadSafe
@@ -96,8 +98,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
-            // Throw any exceptions which are detected during startup
-            registerActivationFailureListener { exception -> throw exception }
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
             registerPostQueueCreationCallback { log.debug { "Queue Created: $it" } }
@@ -105,8 +105,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         }
 
         try {
-            activeMQServer.start()
-        } catch (e: IOException) {
+            activeMQServer.startSynchronously()
+        } catch (e: Throwable) {
             log.error("Unable to start message broker", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)

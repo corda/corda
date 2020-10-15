@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.div
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.FlowTimeoutConfiguration
@@ -108,6 +109,7 @@ class ArtemisMessagingTest {
         ServerSocket(serverPort).use {
             val messagingServer = createMessagingServer()
             assertThatThrownBy { messagingServer.start() }
+                    .isInstanceOf(AddressBindingException::class.java)
         }
     }
 

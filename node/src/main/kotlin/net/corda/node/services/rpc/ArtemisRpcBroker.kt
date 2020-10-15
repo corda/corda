@@ -8,6 +8,7 @@ import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -54,8 +55,8 @@ class ArtemisRpcBroker internal constructor(
     override fun start() {
         logger.debug { "Artemis RPC broker is starting for: $addresses" }
         try {
-            server.start()
-        } catch (e: IOException) {
+            server.startSynchronously()
+        } catch (e: Throwable) {
             logger.error("Unable to start message broker", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
@@ -90,7 +91,6 @@ class ArtemisRpcBroker internal constructor(
         val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {
-            registerActivationFailureListener { exception -> throw exception }
             registerPostQueueDeletionCallback { address, qName -> logger.debug("Queue deleted: $qName for $address") }
         }
     }

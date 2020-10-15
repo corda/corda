@@ -23,6 +23,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.rpc.RPCServer
 import net.corda.node.services.rpc.RPCServerConfiguration
+import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
@@ -512,7 +513,7 @@ data class RPCDriverDSL(
         return driverDSL.executorService.fork {
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
             val server = ActiveMQServerImpl(artemisConfig, UserSetSecurityManager(setOf(rpcUser, rpcServerUser)))
-            server.start()
+            server.startSynchronously()
             driverDSL.shutdownManager.registerShutdown {
                 server.stop()
                 addressMustNotBeBound(driverDSL.executorService, hostAndPort)
