@@ -13,11 +13,12 @@ object DatabaseSnapshot {
         return resourceUri.openStream()
     }
 
+    fun databaseFilename(baseDirectory: Path) = baseDirectory.resolve(databaseName)
+
     fun copyDatabaseSnapshot(baseDirectory: Path) {
         getDatabaseSnapshotStream().use { stream ->
             Files.createDirectories(baseDirectory)
-            val path = baseDirectory.resolve(databaseName)
-            Files.copy(stream, path)
+            Files.copy(stream, databaseFilename(baseDirectory))
         }
     }
 }
