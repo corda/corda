@@ -37,9 +37,6 @@
             <column name="command_data" type="blob">
                 <constraints nullable="false"/>
             </column>
-            <column name="command_signers" type="blob">
-                <constraints nullable="true"/>
-            </column>
         </createTable>
         <addPrimaryKey columnNames="id" constraintName="pk_id" tableName="transaction_command"/>
 
