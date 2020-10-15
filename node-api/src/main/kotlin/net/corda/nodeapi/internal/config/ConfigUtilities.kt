@@ -28,12 +28,20 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
 import kotlin.reflect.full.createInstance
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.jvmErasure
 
 @Target(AnnotationTarget.PROPERTY)
 annotation class OldConfig(val value: String)
+
+/**
+ * This annotation can be used to provide ConfigParser for the class,
+ * the [parseAs] method will use the provided parser instead of data class constructs to parse the object.
+ */
+@Target(AnnotationTarget.CLASS)
+annotation class CustomConfigParser(val parser:  KClass<out ConfigParser<*>>)
 
 interface ConfigParser<T> {
     fun parse(config: Config): T
@@ -69,9 +77,7 @@ fun <T : Any> Config.parseAs(
         baseDirectory: Path? = null
 ): T {
     // Use custom parser if provided, instead of treating the object as data class.
-    @Suppress("UNCHECKED_CAST")
-    clazz.java.getAnnotation(CustomConfigParser::class.java)?.let {
-        return ((it.parser.createInstance() as ConfigParser<T>).parse(this)) }
+    clazz.findAnnotation<CustomConfigParser>()?.let { return uncheckedCast(it.parser.createInstance().parse(this)) }
 
     require(clazz.isData) {
         "Only Kotlin data classes or class annotated with CustomConfigParser can be parsed. Offending: ${clazz.qualifiedName}"
