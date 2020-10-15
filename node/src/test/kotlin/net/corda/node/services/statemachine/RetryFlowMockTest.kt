@@ -36,6 +36,7 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
@@ -99,8 +100,14 @@ class RetryFlowMockTest {
         assertEquals(2, SendAndRetryFlow.count)
     }
 
+    @Ignore("CORDA-4045: Disable flaky test")
+<<<<<<< HEAD
     @Test(timeout=300_000)
 	fun `Restart does not set senderUUID`() {
+=======
+    @Test
+    fun `Restart does not set senderUUID`() {
+>>>>>>> 6852a3b66f... CORDA-4045 Disable flaky test
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
         val expectedMessagesSent = CountDownLatch(3)
