@@ -87,6 +87,7 @@ class RetryFlowMockTest {
         assertEquals(2, SendAndRetryFlow.count)
     }
 
+    @Ignore("CORDA-4045: Disable flaky test")
     @Test
     fun `Restart does not set senderUUID`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
