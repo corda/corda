@@ -40,5 +40,5 @@ interface NetworkParametersStorage : NetworkParametersService {
     /**
      * Set information that given parameters are current parameters for the network.
      */
-    fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate)
+    fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoots: List<X509Certificate>)
 }

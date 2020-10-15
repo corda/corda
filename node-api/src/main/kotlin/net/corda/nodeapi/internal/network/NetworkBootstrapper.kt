@@ -399,7 +399,7 @@ constructor(private val initSerEnv: Boolean,
 
         when (netParamsFilesGrouped.size) {
             0 -> return null
-            1 -> return netParamsFilesGrouped.keys.first().deserialize().verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+            1 -> return netParamsFilesGrouped.keys.first().deserialize().verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
         }
 
         val msg = StringBuilder("Differing sets of network parameters were found. Make sure all the nodes have the same " +
@@ -409,7 +409,7 @@ constructor(private val initSerEnv: Boolean,
             netParamsFiles.map { it.parent.fileName }.joinTo(msg, ", ")
             msg.append(":\n")
             val netParamsString = try {
-                bytes.deserialize().verifiedNetworkParametersCert(DEV_ROOT_CA.certificate).toString()
+                bytes.deserialize().verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate)).toString()
             } catch (e: Exception) {
                 "Invalid network parameters file: $e"
             }

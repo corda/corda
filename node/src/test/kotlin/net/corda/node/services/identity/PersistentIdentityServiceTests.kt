@@ -14,6 +14,7 @@ import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
+import net.corda.nodeapi.internal.createDevNodeIdentity
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -21,18 +22,24 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import java.security.cert.CertPathValidatorException
+import java.security.cert.X509CertSelector
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -70,7 +77,7 @@ class PersistentIdentityServiceTests {
         )
         identityService.database = database
         identityService.start(
-                DEV_ROOT_CA.certificate,
+                listOf(DEV_ROOT_CA.certificate),
                 alice.identity,
                 listOf(notary.party),
                 PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
@@ -221,7 +228,11 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
-            it.start(DEV_ROOT_CA.certificate, Companion.alice.identity, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+            it.start(
+                    listOf(DEV_ROOT_CA.certificate),
+                    Companion.alice.identity,
+                    pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
+            )
         }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
@@ -349,5 +360,40 @@ class PersistentIdentityServiceTests {
         assertEquals(alice2.party, identityService.wellKnownPartyFromAnonymous(alice2.party))
 
         assertEquals(setOf(alice2.party), identityService.partiesFromName("Alice Corp", true))
+    }
+
+    @Test(timeout = 300_000)
+    fun `multiple trust roots`() {
+        val (root2, doorman2) = createDevIntermediateCaCertPath(X500Principal("CN=Root2"))
+        val node2 = createDevNodeIdentity(doorman2, BOB_NAME)
+        val bob2 = PartyAndCertificate(X509Utilities.buildCertPath(node2.certificate, doorman2.certificate, root2.certificate))
+
+        val newIdentityService = PersistentIdentityService(cacheFactory)
+        newIdentityService.database = database
+        newIdentityService.start(
+                listOf(DEV_ROOT_CA.certificate, root2.certificate),
+                bob2,
+                listOf(),
+                PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+
+        // Trust root should be taken from bobWithRoot2 identity.
+        assertEquals(root2.certificate, newIdentityService.trustRoot)
+        assertEquals(root2.certificate, newIdentityService.trustAnchor.trustedCert)
+        assertEquals(listOf(DEV_ROOT_CA.certificate, root2.certificate), newIdentityService.trustAnchors.map { it.trustedCert })
+        assertThat(newIdentityService.caCertStore.getCertificates(X509CertSelector())).contains(bob2.certificate, root2.certificate)
+
+
+        // Verify identities with trusted root.
+        newIdentityService.verifyAndRegisterIdentity(bob2)
+        newIdentityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
+
+        val (root3, doorman3) = createDevIntermediateCaCertPath(X500Principal("CN=Root3"))
+        val node3 = createDevNodeIdentity(doorman3, CHARLIE_NAME)
+        val charlie3 = PartyAndCertificate(X509Utilities.buildCertPath(node3.certificate, doorman3.certificate, root3.certificate))
+
+        // Fail to verify identities with untrusted root.
+        assertFailsWith<CertPathValidatorException> {
+            newIdentityService.verifyAndRegisterIdentity(charlie3)
+        }
     }
 }

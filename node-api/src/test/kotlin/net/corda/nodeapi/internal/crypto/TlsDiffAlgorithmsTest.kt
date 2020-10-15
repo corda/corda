@@ -127,7 +127,7 @@ class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAl
                 val peerChain = peerChainTry.getOrThrow()
                 val peerX500Principal = peerChain[0].subjectX500Principal
                 assertEquals(serverCa.certificate.subjectX500Principal, peerX500Principal)
-                X509Utilities.validateCertificateChain(rootCa, peerChain)
+                X509Utilities.validateCertificateChain(listOf(rootCa), peerChain)
                 with(DataOutputStream(clientSocket.outputStream)) {
                     writeUTF(testPhrase)
                 }

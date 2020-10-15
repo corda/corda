@@ -372,7 +372,7 @@ class NetworkBootstrapperTest {
     private val Path.networkParameters: NetworkParameters
         get() {
             return (this / NETWORK_PARAMS_FILE_NAME).readObject<SignedNetworkParameters>()
-                    .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+                    .verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
         }
 
     private val Path.nodeInfoFile: Path
