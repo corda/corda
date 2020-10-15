@@ -18,7 +18,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.IS_S390X
 import org.junit.Assume
 import org.junit.Test
