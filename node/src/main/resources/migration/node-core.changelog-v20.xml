@@ -26,6 +26,7 @@
                        constraintName="pk_tx_id_component_group_index_component_group_leaf_index"
                        tableName="transaction_component"/>
 
+
         <createTable tableName="transaction_command">
             <column name="id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
@@ -40,20 +41,21 @@
                 <constraints nullable="true"/>
             </column>
         </createTable>
-        <addPrimaryKey columnNames="id"
-                       constraintName="pk_id"
-                       tableName="transaction_command"/>
+        <addPrimaryKey columnNames="id" constraintName="pk_id" tableName="transaction_command"/>
 
 
-        <createTable tableName="node_command_signers">
+        <createTable tableName="transaction_command_signer">
             <column name="command_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="signer" type="NVARCHAR(1024)"/>
         </createTable>
-        <addForeignKeyConstraint baseColumnNames="command_id" baseTableName="node_command_signers"
-                                 constraintName="FK__signers__commands"
-                                 referencedColumnNames="id" referencedTableName="transaction_command"/>
+        <addForeignKeyConstraint baseColumnNames="command_id"
+                                 baseTableName="transaction_command_signer"
+                                 constraintName="FK__tx_cmd_signer__transaction_command"
+                                 referencedColumnNames="id"
+                                 referencedTableName="transaction_command"/>
+
 
         <createTable tableName="transaction_referenced_by_stateref">
             <column name="owning_tx_id" type="NVARCHAR(64)">
@@ -78,8 +80,19 @@
         <addUniqueConstraint columnNames="owning_tx_id, owning_component_group_index, owning_component_group_leaf_index"
                              constraintName="unique_owning_tx_id_component_group_index_component_group_leaf_index"
                              tableName="transaction_referenced_by_stateref"/>
+        <addForeignKeyConstraint baseColumnNames="owning_tx_id, owning_component_group_index, owning_component_group_leaf_index"
+                                 baseTableName="transaction_referenced_by_stateref"
+                                 constraintName="FK__owning_tx_ref_by_stateref__transaction_component"
+                                 referencedColumnNames="tx_id, component_group_index, component_group_leaf_index"
+                                 referencedTableName="transaction_component"/>
+        <addForeignKeyConstraint baseColumnNames="referenced_tx_id, referenced_component_group_index, referenced_component_group_leaf_index"
+                                 baseTableName="transaction_referenced_by_stateref"
+                                 constraintName="FK__referenced_tx_ref_by_stateref__transaction_component"
+                                 referencedColumnNames="tx_id, component_group_index, component_group_leaf_index"
+                                 referencedTableName="transaction_component"/>
 
-        <createTable tableName="transaction_signatures">
+
+        <createTable tableName="transaction_signature">
             <column name="id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
@@ -102,5 +115,34 @@
                 <constraints nullable="true"/>
             </column>
         </createTable>
+        <addPrimaryKey tableName="transaction_signature"
+                       columnNames="id"
+                       constraintName="transaction_signature_pkey"/>
+
+
+        <createTable tableName="transaction_component_signature_assoc">
+            <column name="tx_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="component_group_index" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="component_group_leaf_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signature_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="tx_id, component_group_index, component_group_leaf_index"
+                                 baseTableName="transaction_component_signature_assoc"
+                                 constraintName="FK__tx_component_sig_assoc__transaction_component"
+                                 referencedColumnNames="tx_id, component_group_index, component_group_leaf_index"
+                                 referencedTableName="transaction_component"/>
+        <addForeignKeyConstraint baseColumnNames="signature_id"
+                                 baseTableName="transaction_component_signature_assoc"
+                                 constraintName="FK__tx_component_sig_assoc__transaction_signature"
+                                 referencedColumnNames="id"
+                                 referencedTableName="transaction_signature"/>
     </changeSet>
 </databaseChangeLog>

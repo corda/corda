@@ -135,9 +135,12 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             var referenced: DBTransactionComponent? = null,
 
             @ManyToMany(cascade = [CascadeType.ALL])
-            @JoinTable(name = "transaction_component_signatures",
-                    joinColumns = [JoinColumn(name = "tx_id")], inverseJoinColumns = [JoinColumn(name = "tx_id")])
-            // todo conal A Foreign key refering net.corda.node.services.persistence.DBTransactionStorage$DBTransactionComponent from net.corda.node.services.persistence.DBTransactionStorage$DBTransactionSignature has the wrong number of column. should be 3
+            @JoinTable(name = "transaction_component_signature_assoc",
+                    joinColumns = [
+                        JoinColumn(name = "tx_id", referencedColumnName = "tx_id"),
+                        JoinColumn(name = "component_group_index", referencedColumnName = "component_group_index"),
+                        JoinColumn(name = "component_group_leaf_index", referencedColumnName = "component_group_leaf_index")],
+                    inverseJoinColumns = [JoinColumn(name = "signature_id", referencedColumnName = "id")])
             val transactionSignature: List<DBTransactionSignature>
     )
 
@@ -172,7 +175,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     @CordaSerializable
     @Entity
-    @Table(name = "transaction_signatures", indexes = [Index(name = "tx_id_idx", columnList = "tx_id", unique = false)])
+    @Table(name = "transaction_signature", indexes = [Index(name = "tx_id_idx", columnList = "tx_id", unique = false)])
     class DBTransactionSignature(
             @Id
             @Column(name = "id", nullable = false)
@@ -216,8 +219,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
             @ElementCollection(targetClass = PublicKey::class, fetch = FetchType.EAGER)
             @Column(name = "signer", nullable = false)
-            @CollectionTable(name = "node_command_signers", joinColumns = [(JoinColumn(name = "command_id", referencedColumnName = "id"))],
-                    foreignKey = ForeignKey(name = "FK__signers__commands"))
+            @CollectionTable(name = "transaction_command_signer", joinColumns = [(JoinColumn(name = "command_id", referencedColumnName = "id"))])
             var signers: List<PublicKey>? = null
     ): Serializable
 
@@ -338,9 +340,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     private fun deserialiseInputGroup(componentGroups: List<ComponentGroup>, session: Session, transaction: SignedTransaction) {
-        var listOfStateRefs = deserialiseComponentGroup(componentGroups, StateRef::class, ComponentGroupEnum.INPUTS_GROUP, forceDeserialize = true)
+        val listOfStateRefs = deserialiseComponentGroup(componentGroups, StateRef::class, ComponentGroupEnum.INPUTS_GROUP, forceDeserialize = true)
 
-        var listOfSignatures = transaction.sigs.map {
+        val listOfSignatures = transaction.sigs.map {
             DBTransactionSignature(UUID.randomUUID().toString(), transaction.id.toString(), it.by, it.bytes,
                     it.signatureMetadata.platformVersion, it.signatureMetadata.schemeNumberID,
                     // todo conal - partialMerkleTree
@@ -348,7 +350,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 .toList()
 
         listOfStateRefs.forEachIndexed { index, stateRef ->
-            var referencedDbTransactionComponent =
+            val referencedDbTransactionComponent =
                     session.load(
                             DBTransactionComponent::class.java,
                             DBTransactionComponentId(stateRef.txhash.toString(), ComponentGroupEnum.OUTPUTS_GROUP, stateRef.index))
@@ -366,9 +368,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     private fun <T : Any> deserialiseComponentGroupAndStoreComponents(componentGroups: List<ComponentGroup>, session: Session,
                                                                     transaction: SignedTransaction, kClass: KClass<T>,
                                                                     componentGroupEnum: ComponentGroupEnum) {
-        var listOfDeserialisedComponents = deserialiseComponentGroup(componentGroups, kClass, componentGroupEnum, forceDeserialize = true)
+        val listOfDeserialisedComponents = deserialiseComponentGroup(componentGroups, kClass, componentGroupEnum, forceDeserialize = true)
 
-        var listOfSignatures = transaction.sigs.map {
+        val listOfSignatures = transaction.sigs.map {
             DBTransactionSignature(UUID.randomUUID().toString(), transaction.id.toString(), it.by, it.bytes,
                     it.signatureMetadata.platformVersion, it.signatureMetadata.schemeNumberID,
                     // todo conal - partialMerkleTree
@@ -381,9 +383,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     private fun deserialiseComponentGroupAndStoreCommands(it: List<ComponentGroup>, session: Session, transaction: SignedTransaction) {
-        var listOfCommands = deserialiseCommands(it, forceDeserialize = true)
+        val listOfCommands = deserialiseCommands(it, forceDeserialize = true)
         listOfCommands.forEach {
-            var dbTransactionCommand = DBTransactionCommand(id = UUID.randomUUID().toString(), txId = transaction.id.toString(),
+            val dbTransactionCommand = DBTransactionCommand(id = UUID.randomUUID().toString(), txId = transaction.id.toString(),
                     commandData = it.value.serialize().bytes, signers = it.signers)
             session.save(dbTransactionCommand)
         }
