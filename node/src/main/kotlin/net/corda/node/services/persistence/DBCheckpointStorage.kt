@@ -691,9 +691,9 @@ class DBCheckpointStorage(
 
     private fun setDBFlowMetadataFinishTime(flowId: String, now: Instant) {
         currentDBSession()
-            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = :finish_time where flow_id = :id")
+            .createNativeQuery("Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = :finish_time where flow_id = :flow_id")
             .setParameter("finish_time", now)
-            .setParameter("id", flowId)
+            .setParameter("flow_id", flowId)
             .executeUpdate()
     }
 
