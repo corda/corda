@@ -935,7 +935,7 @@ class CryptoUtilsTest {
 
     @Test(timeout=300_000)
 	fun `test default SecureRandom uses platformSecureRandom`() {
-        Assume.assumeTrue(!IS_OPENJ9) // See CORDA-4055
+        Assume.assumeFalse(IS_OPENJ9) // See CORDA-4055
         // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
 
         // Remove [CordaSecurityProvider] in case it is already registered.
