@@ -22,10 +22,12 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.enclosedCordapp
+import org.junit.Assume
 import org.junit.Test
 import java.time.Instant
 import java.util.*
@@ -95,6 +97,7 @@ class ScheduledFlowIntegrationTests {
 
     @Test(timeout=300_000)
 	fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
+        Assume.assumeFalse(IS_S390X)
         driver(DriverParameters(
                 startNodesInProcess = false,
                 cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testMessage", "net.corda.testing.core"), enclosedCordapp())

@@ -19,6 +19,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IS_OPENJ9
+import net.corda.testing.internal.IS_S390X
 import org.junit.Assume
 import org.junit.Test
 import java.time.Duration
@@ -29,7 +30,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep`() {
-        Assume.assumeTrue(!IS_OPENJ9)
+        Assume.assumeFalse(IS_S390X)
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, finish) = alice.rpc.startFlow(::SleepyFlow).returnValue.getOrThrow(1.minutes)
@@ -41,6 +42,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep multiple times`() {
+        Assume.assumeFalse(IS_S390X)
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, middle, finish) = alice.rpc.startFlow(::AnotherSleepyFlow).returnValue.getOrThrow(1.minutes)
@@ -55,7 +57,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep and perform other suspending functions`() {
-        Assume.assumeTrue(!IS_OPENJ9)
+        Assume.assumeFalse(IS_S390X)
         // ensures that events received while the flow is sleeping are not processed
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
