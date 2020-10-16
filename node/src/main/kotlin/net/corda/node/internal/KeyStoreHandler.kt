@@ -91,7 +91,10 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
 
     private fun validateKeyStores(certStores: AllCertificateStores): List<X509Certificate> {
         // Check that trustStore contains the correct key-alias entry.
-        val trustRoots = certStores.trustStore.filter { it.first.startsWith(X509Utilities.CORDA_ROOT_CA) }.map { it.second }
+        val trustRoots = certStores.trustStore.filter { it.first.startsWith(X509Utilities.CORDA_ROOT_CA) }.map {
+            log.info("Loaded trusted root certificate: ${it.second.publicKey.toStringShort()}, alias: ${it.first}")
+            it.second
+        }
         require(trustRoots.isNotEmpty()) {
             "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
         }
