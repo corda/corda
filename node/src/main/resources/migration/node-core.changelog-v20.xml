@@ -4,7 +4,7 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="identity_service_key_rotation" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="identity_service_key_rotation">
         <addColumn tableName="node_identities_no_cert">
             <column name="owning_pk_hash" type="NVARCHAR(130)">
                 <constraints nullable="true"/>
