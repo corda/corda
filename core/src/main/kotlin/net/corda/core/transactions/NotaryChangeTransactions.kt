@@ -156,7 +156,7 @@ private constructor(
         networkParameters?.let { parameters ->
             val notaryWhitelist = parameters.notaries.map { it.identity }
             check(newNotary in notaryWhitelist) {
-                "The output notary $newNotary is not whitelisted in the attached network parameters."
+                "The output notary ${newNotary.description()} is not whitelisted in the attached network parameters."
             }
         }
     }

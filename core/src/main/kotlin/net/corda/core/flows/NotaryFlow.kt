@@ -82,9 +82,13 @@ class NotaryFlow {
          */
         protected fun checkTransaction(): Party {
             val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
-            check(serviceHub.networkMapCache.isNotary(notaryParty)) { "$notaryParty is not a notary on the network" }
-            check(serviceHub.loadStates(stx.inputs.toSet() + stx.references.toSet()).all { it.state.notary == notaryParty }) {
-                "Input states and reference input states must have the same Notary"
+            val notaries = setOf(notaryParty) + serviceHub.loadStates(stx.inputs.toSet() + stx.references.toSet()).map { it.state.notary }
+            notaries.forEach {
+                check(serviceHub.networkMapCache.isNotary(it)) { "${it.description()} is not a notary on the network" }
+                // Transaction can combine different identities of the same notary after key rotation.
+                check(it.name == notaryParty.name) {
+                    "Input states and reference input states must have the same Notary as the transaction Notary"
+                }
             }
 
             if (!skipVerification) {
@@ -117,10 +121,10 @@ class NotaryFlow {
                     and can't be used for regular transactions.
                 */
                 check(stx.coreTransaction is NotaryChangeWireTransaction) {
-                    "Notary $notaryParty is not on the network parameter whitelist. A non-whitelisted notary can only be used for notary change transactions"
+                    "Notary ${notaryParty.description()} is not on the network parameter whitelist. A non-whitelisted notary can only be used for notary change transactions"
                 }
                 val historicNotary = (serviceHub.networkParametersService as NetworkParametersStorage).getHistoricNotary(notaryParty)
-                        ?: throw IllegalStateException("The notary party $notaryParty specified by transaction ${stx.id}, is not recognised as a current or historic notary.")
+                        ?: throw IllegalStateException("The notary party ${notaryParty.description()} specified by transaction ${stx.id}, is not recognised as a current or historic notary.")
                 historicNotary.validating
             } else serviceHub.networkMapCache.isValidatingNotary(notaryParty)
         }

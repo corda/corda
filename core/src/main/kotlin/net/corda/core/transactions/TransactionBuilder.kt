@@ -154,6 +154,7 @@ open class TransactionBuilder(
         if (referenceStates.isNotEmpty()) {
             services.ensureMinimumPlatformVersion(4, "Reference states")
         }
+        resolveNotary(services)
 
         val (allContractAttachments: Collection<AttachmentId>, resolvedOutputs: List<TransactionState<ContractState>>)
                 = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
@@ -635,8 +636,10 @@ open class TransactionBuilder(
 
     private fun checkNotary(stateAndRef: StateAndRef<*>) {
         val notary = stateAndRef.state.notary
-        require(notary == this.notary) {
-            "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"."
+        // Transaction can combine different identities of the same notary after key rotation.
+        require(notary.name == this.notary?.name) {
+            "Input state requires notary \"${notary.description()}\" which does not match" +
+                    " the transaction notary \"${this.notary?.description()}\"."
         }
     }
 
@@ -648,7 +651,25 @@ open class TransactionBuilder(
         }
     }
 
-    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
+    // Transaction can combine different identities of the same notary after key rotation.
+    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary.name }.toSet().size == 1
+
+    // Automatically correct notary after its key rotation
+    private fun resolveNotary(services: ServicesForResolution) {
+        notary?.let {
+            val activeNotary = services.identityService.wellKnownPartyFromX500Name(it.name)
+            if (activeNotary != null && activeNotary != it) {
+                log.warn("Replacing notary on the transaction '${it.description()}' with '${activeNotary.description()}'.")
+                notary = activeNotary
+            }
+            outputs.forEachIndexed { index, transactionState ->
+                if (activeNotary != null && activeNotary != transactionState.notary) {
+                    log.warn("Replacing notary on the transaction output '${it.description()}' with '${activeNotary.description()}'.")
+                    outputs[index] = transactionState.copy(notary = activeNotary)
+                }
+            }
+        }
+    }
 
     /**
      * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method is used
