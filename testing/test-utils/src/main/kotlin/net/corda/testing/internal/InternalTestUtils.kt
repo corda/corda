@@ -254,4 +254,8 @@ fun isLocalPortBound(port: Int): Boolean {
     }
 }
 
+@JvmField
 val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
+
+@JvmField
+val IS_S390X = System.getProperty("os.arch") == "s390x"

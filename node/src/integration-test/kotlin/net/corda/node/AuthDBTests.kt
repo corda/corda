@@ -14,11 +14,13 @@ import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.cordappForClasses
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -173,6 +175,7 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
 
     @Test(timeout=300_000)
 	fun `Modify user permissions during RPC session`() {
+        Assume.assumeFalse(IS_S390X)
         db.insert(UserAndRoles(
                 username = "user3",
                 password = encodePassword("bar"),
