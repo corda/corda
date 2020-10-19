@@ -16,5 +16,6 @@ enum class ComponentGroupEnum {
     TIMEWINDOW_GROUP, // ordinal = 5.
     SIGNERS_GROUP, // ordinal = 6.
     REFERENCES_GROUP, // ordinal = 7.
-    PARAMETERS_GROUP // ordinal = 8.
+    PARAMETERS_GROUP, // ordinal = 8.
+    PRIVACY_SALT // ordinal = 9.
 }

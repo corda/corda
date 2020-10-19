@@ -120,28 +120,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             @Column(name = "data", nullable = false)
             val data: ByteArray,
 
-            @Type(type = "corda-blob")
-            @Column(name = "privacy_salt", nullable = false, length = 32)
-            val privacySalt: ByteArray,
-
-            //todo conal - check with Matthew if this will always be 1-1
             @OneToOne(cascade = [CascadeType.ALL])
-            @JoinTable(name = "transaction_referenced_by_stateref",
+            @JoinTable(name = "transaction_component_referenced_by_stateref",
                     joinColumns = [
                         JoinColumn(name = "owning_tx_id", referencedColumnName = "tx_id"),
                         JoinColumn(name = "owning_component_group_index", referencedColumnName = "component_group_index"),
                         JoinColumn(name = "owning_component_group_leaf_index", referencedColumnName = "component_group_leaf_index")
                     ])
-            var referenced: DBTransactionComponent? = null,
-
-            @ManyToMany(cascade = [CascadeType.ALL])
-            @JoinTable(name = "transaction_component_signature_assoc",
-                    joinColumns = [
-                        JoinColumn(name = "tx_id", referencedColumnName = "tx_id"),
-                        JoinColumn(name = "component_group_index", referencedColumnName = "component_group_index"),
-                        JoinColumn(name = "component_group_leaf_index", referencedColumnName = "component_group_leaf_index")],
-                    inverseJoinColumns = [JoinColumn(name = "signature_id", referencedColumnName = "id")])
-            val transactionSignature: List<DBTransactionSignature>
+            var referenced: DBTransactionComponent? = null
     )
 
     @Embeddable
@@ -169,6 +155,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
 
         override fun hashCode(): Int {
+            //todo conal
             return super.hashCode()
         }
     }
@@ -324,6 +311,16 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         database.transaction {
             txStorage.locked {
                 val session = currentDBSession()
+
+                transaction.sigs.map {
+                    session.save(DBTransactionSignature(UUID.randomUUID().toString(), transaction.id.toString(), it.by, it.bytes,
+                            it.signatureMetadata.platformVersion, it.signatureMetadata.schemeNumberID, null ))}
+                // todo conal - partialMerkleTree
+//                    /*if(it.partialMerkleTree != null){ it.partialMerkleTree!.serialize().bytes} else {null}*/null)) }
+
+                session.save(DBTransactionComponent(DBTransactionComponentId(transaction.id.toString(), ComponentGroupEnum.PRIVACY_SALT, 0),
+                        transaction.tx.privacySalt.serialize().bytes))
+
                 transaction.tx.componentGroups.let {
                     deserialiseInputGroup(it, session, transaction)
                     deserialiseComponentGroupAndStoreComponents(it, session, transaction, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP)
@@ -341,27 +338,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     private fun deserialiseInputGroup(componentGroups: List<ComponentGroup>, session: Session, transaction: SignedTransaction) {
         val listOfStateRefs = deserialiseComponentGroup(componentGroups, StateRef::class, ComponentGroupEnum.INPUTS_GROUP, forceDeserialize = true)
-
-        val listOfSignatures = transaction.sigs.map {
-            DBTransactionSignature(UUID.randomUUID().toString(), transaction.id.toString(), it.by, it.bytes,
-                    it.signatureMetadata.platformVersion, it.signatureMetadata.schemeNumberID,
-                    // todo conal - partialMerkleTree
-                    /*if(it.partialMerkleTree != null){ it.partialMerkleTree!.serialize().bytes} else {null}*/null) }
-                .toList()
-
         listOfStateRefs.forEachIndexed { index, stateRef ->
-            val referencedDbTransactionComponent =
-                    session.load(
-                            DBTransactionComponent::class.java,
-                            DBTransactionComponentId(stateRef.txhash.toString(), ComponentGroupEnum.OUTPUTS_GROUP, stateRef.index))
-
-            session.save(
-                    DBTransactionComponent(
-                            DBTransactionComponentId(transaction.id.toString(), ComponentGroupEnum.INPUTS_GROUP, index),
-                            stateRef.serialize().bytes,
-                            transaction.tx.privacySalt.bytes,
-                            referencedDbTransactionComponent,
-                            listOfSignatures))
+            val referencedDbTransactionComponent = session.load(DBTransactionComponent::class.java,
+                    DBTransactionComponentId(stateRef.txhash.toString(), ComponentGroupEnum.OUTPUTS_GROUP, stateRef.index))
+            session.save(DBTransactionComponent(DBTransactionComponentId(transaction.id.toString(), ComponentGroupEnum.INPUTS_GROUP, index),
+                    stateRef.serialize().bytes, referencedDbTransactionComponent))
         }
     }
 
@@ -369,16 +350,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                                                     transaction: SignedTransaction, kClass: KClass<T>,
                                                                     componentGroupEnum: ComponentGroupEnum) {
         val listOfDeserialisedComponents = deserialiseComponentGroup(componentGroups, kClass, componentGroupEnum, forceDeserialize = true)
-
-        val listOfSignatures = transaction.sigs.map {
-            DBTransactionSignature(UUID.randomUUID().toString(), transaction.id.toString(), it.by, it.bytes,
-                    it.signatureMetadata.platformVersion, it.signatureMetadata.schemeNumberID,
-                    // todo conal - partialMerkleTree
-                    /*if(it.partialMerkleTree != null){ it.partialMerkleTree!.serialize().bytes} else {null}*/null) }.toList()
-
         listOfDeserialisedComponents.forEachIndexed { index, component ->
-            session.save(DBTransactionComponent(DBTransactionComponentId(transaction.id.toString(), componentGroupEnum, index),
-                    component.serialize().bytes, transaction.tx.privacySalt.bytes, null, listOfSignatures))
+            session.save(DBTransactionComponent(
+                    DBTransactionComponentId(transaction.id.toString(), componentGroupEnum, index),
+                    component.serialize().bytes))
         }
     }
 
@@ -435,6 +410,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 ComponentGroupEnum.SIGNERS_GROUP -> it.deserialize<List<PublicKey>>()
                 ComponentGroupEnum.REFERENCES_GROUP -> it.deserialize<StateRef>()
                 ComponentGroupEnum.PARAMETERS_GROUP -> it.deserialize<SecureHash>()
+                ComponentGroupEnum.PRIVACY_SALT -> it.deserialize<PrivacySalt>()
             }
         }
     }
