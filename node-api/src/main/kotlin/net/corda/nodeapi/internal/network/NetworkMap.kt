@@ -55,7 +55,7 @@ data class ParametersUpdate(
 )
 
 /** Verify that a certificate path and its [CertRole] is correct. */
-fun <T : Any> SignedDataWithCert<T>.verifiedCertWithRole(rootCerts: List<X509Certificate>, vararg certRoles: CertRole): T {
+fun <T : Any> SignedDataWithCert<T>.verifiedCertWithRole(rootCerts: Set<X509Certificate>, vararg certRoles: CertRole): T {
     require(CertRole.extract(sig.by) in certRoles) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
     val path = if (sig.parentCertsChain.isEmpty()) {
         val rootCandidate = rootCerts.firstOrNull { it.subjectX500Principal == sig.by.issuerX500Principal }
@@ -68,12 +68,12 @@ fun <T : Any> SignedDataWithCert<T>.verifiedCertWithRole(rootCerts: List<X509Cer
 }
 
 /** Verify that a Network Map certificate path and its [CertRole] is correct. */
-fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCerts: List<X509Certificate>): T {
+fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCerts: Set<X509Certificate>): T {
     return verifiedCertWithRole(rootCerts, CertRole.NETWORK_MAP)
 }
 
 /** Verify that a Network Parameters certificate path and its [CertRole] is correct. */
-fun <T : Any> SignedDataWithCert<T>.verifiedNetworkParametersCert(rootCerts: List<X509Certificate>): T {
+fun <T : Any> SignedDataWithCert<T>.verifiedNetworkParametersCert(rootCerts: Set<X509Certificate>): T {
     // for backwards compatibility we allow network parameters to be signed with
     // the networkmap cert, but going forwards we also accept the specific netparams cert as well
     return verifiedCertWithRole(rootCerts, CertRole.NETWORK_PARAMETERS, CertRole.NETWORK_MAP)

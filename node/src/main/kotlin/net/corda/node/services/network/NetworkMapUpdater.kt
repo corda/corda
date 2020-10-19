@@ -80,7 +80,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
     private val fileWatcherSubscription = AtomicReference<Subscription?>()
     private var autoAcceptNetworkParameters: Boolean = true
-    private lateinit var trustRoots: List<X509Certificate>
+    private lateinit var trustRoots: Set<X509Certificate>
     @Volatile
     private lateinit var currentParametersHash: SecureHash
     private lateinit var ourNodeInfo: SignedNodeInfo
@@ -103,7 +103,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         MoreExecutors.shutdownAndAwaitTermination(networkMapPoller, 50, TimeUnit.SECONDS)
     }
     @Suppress("LongParameterList")
-    fun start(trustRoots: List<X509Certificate>,
+    fun start(trustRoots: Set<X509Certificate>,
               currentParametersHash: SecureHash,
               ourNodeInfo: SignedNodeInfo,
               networkParameters: NetworkParameters,

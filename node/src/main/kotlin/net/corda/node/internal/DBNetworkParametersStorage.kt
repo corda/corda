@@ -33,7 +33,7 @@ class DBNetworkParametersStorage(
         // We could have historic parameters endpoint or always add parameters as an attachment to the transaction.
         private val networkMapClient: NetworkMapClient?
 ) : NetworkParametersStorage, SingletonSerializeAsToken() {
-    private lateinit var trustRoots: List<X509Certificate>
+    private lateinit var trustRoots: Set<X509Certificate>
 
     companion object {
         private val log = contextLogger()
@@ -58,7 +58,7 @@ class DBNetworkParametersStorage(
         }
     }
 
-    override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoots: List<X509Certificate>) {
+    override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoots: Set<X509Certificate>) {
         this.trustRoots = trustRoots
         saveParameters(currentSignedParameters)
         _currentHash = currentSignedParameters.raw.hash

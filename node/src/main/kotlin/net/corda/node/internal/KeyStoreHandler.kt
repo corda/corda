@@ -23,7 +23,7 @@ import java.nio.file.NoSuchFileException
 import java.security.GeneralSecurityException
 import java.security.PublicKey
 import java.security.cert.X509Certificate
-import java.util.Collections.unmodifiableList
+import java.util.Collections.unmodifiableSet
 
 data class KeyAndAlias(val key: PublicKey, val alias: String)
 
@@ -41,7 +41,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
     private val _signingKeys: MutableSet<KeyAndAlias> = mutableSetOf()
     val signingKeys: Set<KeyAndAlias> get() = _signingKeys.toSet()
 
-    private lateinit var trustRoots: List<X509Certificate>
+    private lateinit var trustRoots: Set<X509Certificate>
 
     private lateinit var nodeKeyStore: CertificateStore
 
@@ -50,7 +50,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
      * @param devModeKeyEntropy entropy for legal identity key derivation
      * @return trust root certificates
      */
-    fun init(devModeKeyEntropy: BigInteger? = null): List<X509Certificate> {
+    fun init(devModeKeyEntropy: BigInteger? = null): Set<X509Certificate> {
         if (configuration.devMode) {
             configuration.configureWithDevSSLCertificate(cryptoService, devModeKeyEntropy)
             // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
@@ -63,7 +63,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         trustRoots = validateKeyStores(certStores)
         nodeKeyStore = certStores.nodeKeyStore
         loadIdentities()
-        return unmodifiableList(trustRoots)
+        return unmodifiableSet(trustRoots)
     }
 
     private data class AllCertificateStores(val trustStore: CertificateStore,
@@ -89,12 +89,12 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         }
     }
 
-    private fun validateKeyStores(certStores: AllCertificateStores): List<X509Certificate> {
+    private fun validateKeyStores(certStores: AllCertificateStores): Set<X509Certificate> {
         // Check that trustStore contains the correct key-alias entry.
         val trustRoots = certStores.trustStore.filter { it.first.startsWith(X509Utilities.CORDA_ROOT_CA) }.map {
             log.info("Loaded trusted root certificate: ${it.second.publicKey.toStringShort()}, alias: ${it.first}")
             it.second
-        }
+        }.toSet()
         require(trustRoots.isNotEmpty()) {
             "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
         }

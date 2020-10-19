@@ -180,7 +180,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private val nameToParty = createNameToPartyMap(cacheFactory)
 
     fun start(
-            trustRoots: List<X509Certificate>,
+            trustRoots: Set<X509Certificate>,
             ourIdentity: PartyAndCertificate,
             notaryIdentities: List<Party> = emptyList(),
             pkToIdCache: WritablePublicKeyToOwningIdentityCache

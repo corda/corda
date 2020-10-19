@@ -121,16 +121,16 @@ object X509Utilities {
         return createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
     }
 
-    fun validateCertificateChain(trustedRoots: List<X509Certificate>, vararg certificates: X509Certificate) {
+    fun validateCertificateChain(trustedRoots: Set<X509Certificate>, vararg certificates: X509Certificate) {
         validateCertificateChain(trustedRoots, certificates.asList())
     }
 
-    fun validateCertificateChain(trustedRoots: List<X509Certificate>, certificates: List<X509Certificate>) {
+    fun validateCertificateChain(trustedRoots: Set<X509Certificate>, certificates: List<X509Certificate>) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         validateCertPath(trustedRoots, buildCertPath(certificates))
     }
 
-    fun validateCertPath(trustedRoots: List<X509Certificate>, certPath: CertPath) {
+    fun validateCertPath(trustedRoots: Set<X509Certificate>, certPath: CertPath) {
         certPath.validate(trustedRoots.map { TrustAnchor(it, null) }.toSet())
     }
 

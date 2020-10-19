@@ -32,9 +32,9 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     }
 
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
-    private lateinit var trustRoots: List<X509Certificate>
+    private lateinit var trustRoots: Set<X509Certificate>
 
-    fun start(trustRoots: List<X509Certificate>) {
+    fun start(trustRoots: Set<X509Certificate>) {
         this.trustRoots = trustRoots
     }
 

@@ -18,7 +18,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 
-class NetworkParametersReader(private val trustRoots: List<X509Certificate>,
+class NetworkParametersReader(private val trustRoots: Set<X509Certificate>,
                               private val networkMapClient: NetworkMapClient?,
                               private val networkParamsPath: Path) {
     companion object {
@@ -99,7 +99,7 @@ class NetworkParametersReader(private val trustRoots: List<X509Certificate>,
 
     // By passing in just the SignedNetworkParameters object, this class guarantees that the networkParameters property
     // could have only been derived from it.
-    class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoots: List<X509Certificate>) {
+    class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoots: Set<X509Certificate>) {
         // for backwards compatibility we allow netparams to be signed with the networkmap cert,
         // but going forwards we also accept the distinct netparams cert as well
         val networkParameters: NetworkParameters = signed.verifiedNetworkParametersCert(trustRoots)

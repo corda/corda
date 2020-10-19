@@ -63,7 +63,7 @@ open class NetworkRegistrationHelper(
     private val certificateStore = config.certificateStore
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
-    protected val rootCerts: List<X509Certificate>
+    protected val rootCerts: Set<X509Certificate>
     private val notaryServiceConfig: NotaryServiceConfig? = config.notaryServiceConfig
 
     init {
@@ -73,7 +73,7 @@ open class NetworkRegistrationHelper(
         }
         rootTrustStore = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
         val rootAliases = rootTrustStore.aliases().asSequence().filter { it.startsWith(CORDA_ROOT_CA) }
-        rootCerts = rootAliases.map { rootTrustStore.getCertificate(it) }.toList()
+        rootCerts = rootAliases.map { rootTrustStore.getCertificate(it) }.toSet()
     }
 
     /**

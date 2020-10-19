@@ -77,7 +77,7 @@ class PersistentIdentityServiceTests {
         )
         identityService.database = database
         identityService.start(
-                listOf(DEV_ROOT_CA.certificate),
+                setOf(DEV_ROOT_CA.certificate),
                 alice.identity,
                 listOf(notary.party),
                 PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
@@ -229,7 +229,7 @@ class PersistentIdentityServiceTests {
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
             it.start(
-                    listOf(DEV_ROOT_CA.certificate),
+                    setOf(DEV_ROOT_CA.certificate),
                     Companion.alice.identity,
                     pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
             )
@@ -371,7 +371,7 @@ class PersistentIdentityServiceTests {
         val newIdentityService = PersistentIdentityService(cacheFactory)
         newIdentityService.database = database
         newIdentityService.start(
-                listOf(DEV_ROOT_CA.certificate, root2.certificate),
+                setOf(DEV_ROOT_CA.certificate, root2.certificate),
                 bob2,
                 listOf(),
                 PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))

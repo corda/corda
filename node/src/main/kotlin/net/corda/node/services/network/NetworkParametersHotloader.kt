@@ -16,7 +16,7 @@ import kotlin.reflect.jvm.javaGetter
  * Currently only hotloading notary changes are supported.
  */
 class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient,
-                                 private val trustRoots: List<X509Certificate>,
+                                 private val trustRoots: Set<X509Certificate>,
                                  @Volatile private var networkParameters: NetworkParameters,
                                  private val networkParametersReader: NetworkParametersReader,
                                  private val networkParametersStorage: NetworkParametersStorage) {

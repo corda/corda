@@ -26,7 +26,7 @@ class NetworkParametersHotloaderTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
     private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
-    private val trustRoots = listOf(DEV_ROOT_CA.certificate)
+    private val trustRoots = setOf(DEV_ROOT_CA.certificate)
 
     private val originalNetworkParameters = testNetworkParameters()
     private val notary: Party = TestIdentity.fresh("test notary").party

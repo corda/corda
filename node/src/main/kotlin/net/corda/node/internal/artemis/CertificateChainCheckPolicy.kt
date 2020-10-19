@@ -42,7 +42,7 @@ sealed class CertificateChainCheckPolicy {
     object RootMustMatch : CertificateChainCheckPolicy() {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
             val rootAliases = trustStore.aliases().asSequence().filter { it.startsWith(X509Utilities.CORDA_ROOT_CA) }
-            val rootPublicKeys = rootAliases.map { trustStore.getCertificate(it).publicKey }.toList()
+            val rootPublicKeys = rootAliases.map { trustStore.getCertificate(it).publicKey }.toSet()
             return object : Check {
                 @Suppress("DEPRECATION")    // should use java.security.cert.X509Certificate
                 override fun checkCertificateChain(theirChain: Array<javax.security.cert.X509Certificate>) {
