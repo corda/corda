@@ -14,6 +14,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -31,6 +32,7 @@ import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
@@ -568,7 +570,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         identityService.start(trustRoot, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
 
         val nodeInfoAndSigned = database.transaction {
-            updateNodeInfo(publish = true)
+            updateNodeInfo(publish = true, minimumPlatformVersion = netParams.minimumPlatformVersion)
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
@@ -693,7 +695,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    private fun updateNodeInfo(publish: Boolean): NodeInfoAndSigned {
+    private fun updateNodeInfo(publish: Boolean, minimumPlatformVersion: Int = Int.MAX_VALUE): NodeInfoAndSigned {
         val potentialNodeInfo = NodeInfo(
                 myAddresses(),
                 setOf(keyStoreHandler.nodeIdentity, keyStoreHandler.notaryIdentity).filterNotNull(),
@@ -709,6 +711,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             nodeInfoFromDb
         } else {
             log.info("Node-info has changed so submitting update. Old node-info was $nodeInfoFromDb")
+            if (minimumPlatformVersion < PlatformVersionSwitches.CERTIFICATE_ROTATION && nodeInfoFromDb != null) {
+                requireSameNodeIdentity(nodeInfoFromDb, potentialNodeInfo)
+            }
             val newNodeInfo = potentialNodeInfo.copy(serial = platformClock.millis())
             networkMapCache.addOrUpdateNode(newNodeInfo)
             log.info("New node-info: $newNodeInfo")
@@ -742,6 +747,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.warn("Found more than one node registration with our legal name, this is only expected if our keypair has been regenerated")
                 nodeInfosFromDb[0]
             }
+        }
+    }
+
+    private fun requireSameNodeIdentity(oldNodeInfo: NodeInfo, newNodeInfo: NodeInfo) {
+        val oldIdentity = oldNodeInfo.legalIdentities.first()
+        val newIdentity = newNodeInfo.legalIdentities.first()
+        require(oldIdentity == newIdentity || oldIdentity.name != newIdentity.name) {
+            "Failed to change node legal identity key from ${oldIdentity.owningKey.toStringShort()}"+
+                    " to ${newIdentity.owningKey.toStringShort()}," +
+                    " as it requires minimumPlatformVersion >= ${PlatformVersionSwitches.CERTIFICATE_ROTATION}."
         }
     }
 
