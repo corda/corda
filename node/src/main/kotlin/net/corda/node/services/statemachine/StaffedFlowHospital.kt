@@ -11,7 +11,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.statemachine.hospital.ResuscitationSpecialist
-import net.corda.node.services.statemachine.hospital.TransitionErrorGeneralPractitioner
 import rx.subjects.PublishSubject
 import java.io.Closeable
 import java.time.Clock
@@ -172,8 +171,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      *
      * @param currentState The [StateMachineState] of the flow that is being forced into observation
      * @param errors The errors to include in the new medical record
+     * @param by The staff member(s) that will give the new medical record
      */
-    fun forceIntoOvernightObservation(currentState: StateMachineState, errors: List<Throwable>) {
+    fun forceIntoOvernightObservation(currentState: StateMachineState, errors: List<Throwable>, by: List<Staff>) {
         mutex.locked {
             val id = currentState.flowLogic.runId
             val medicalHistory = flowPatients.computeIfAbsent(id) { FlowMedicalHistory() }
@@ -182,7 +182,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 flowId = id,
                 suspendCount = currentState.checkpoint.checkpointState.numberOfSuspends,
                 errors = errors,
-                by = listOf(TransitionErrorGeneralPractitioner),
+                by = by,
                 outcome = Outcome.OVERNIGHT_OBSERVATION
             )
 
