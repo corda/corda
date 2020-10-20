@@ -215,6 +215,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             val report = consultStaff(flowFiber, currentState, errors, medicalHistory)
 
             val (outcome, event, backOffForChronicCondition) = when (report.diagnosis) {
+                Diagnosis.RESUSCITATE -> {
+                    // reschedule the last outcome as it failed to process it
+                    // do a 0.seconds backoff in dev mode? / when coming from the driver? make it configurable?
+                    val backOff = calculateBackOffForResuscitation(medicalHistory, currentState)
+                    val outcome = medicalHistory.records.last().outcome
+                    log.info("Flow error to be resuscitated, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
+                    onFlowResuscitated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
+                    Triple(outcome, outcome.event, backOff)
+                }
                 Diagnosis.DISCHARGE -> {
                     val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
                     log.info("Flow error discharged from hospital (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
@@ -232,15 +241,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     log.info("Flow error allowed to propagate", report.error)
                     onFlowErrorPropagated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
                     Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
-                }
-                Diagnosis.RESUSCITATE -> {
-                    // reschedule the last outcome as it failed to process it
-                    // do a 0.seconds backoff in dev mode? / when coming from the driver? make it configurable?
-                    val backOff = calculateBackOffForResuscitation(medicalHistory, currentState)
-                    val outcome = medicalHistory.records.last().outcome
-                    log.info("Flow error to be resuscitated, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
-                    onFlowResuscitated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
-                    Triple(outcome, outcome.event, backOff)
                 }
             }
 
