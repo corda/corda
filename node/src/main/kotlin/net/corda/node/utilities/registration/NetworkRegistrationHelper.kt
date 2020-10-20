@@ -63,7 +63,7 @@ open class NetworkRegistrationHelper(
     private val certificateStore = config.certificateStore
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
-    protected val rootCert: X509Certificate
+    protected val rootCerts: Set<X509Certificate>
     private val notaryServiceConfig: NotaryServiceConfig? = config.notaryServiceConfig
 
     init {
@@ -72,7 +72,8 @@ open class NetworkRegistrationHelper(
                     "Please contact your CZ operator."
         }
         rootTrustStore = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
-        rootCert = rootTrustStore.getCertificate(CORDA_ROOT_CA)
+        val rootAliases = rootTrustStore.aliases().asSequence().filter { it.startsWith(CORDA_ROOT_CA) }
+        rootCerts = rootAliases.map { rootTrustStore.getCertificate(it) }.toSet()
     }
 
     /**
@@ -194,7 +195,7 @@ open class NetworkRegistrationHelper(
             logger.info("Generated Node Identity certificate: $nodeIdentityCert")
 
             val nodeIdentityCertificateChain: List<X509Certificate> = listOf(nodeIdentityCert) + nodeCaCertChain
-            X509Utilities.validateCertificateChain(rootCert, nodeIdentityCertificateChain)
+            X509Utilities.validateCertificateChain(rootCerts, nodeIdentityCertificateChain)
             certStore.setCertPathOnly(nodeIdentityAlias, nodeIdentityCertificateChain)
         }
         logProgress("Node identity private key and certificate chain stored in $nodeIdentityAlias.")
@@ -252,7 +253,7 @@ open class NetworkRegistrationHelper(
         }
 
         // Validate certificate chain returned from the doorman with the root cert obtained via out-of-band process, to prevent MITM attack on doorman server.
-        X509Utilities.validateCertificateChain(rootCert, certificates)
+        X509Utilities.validateCertificateChain(rootCerts, certificates)
         logProgress("Certificate signing request approved, storing private key with the certificate chain.")
     }
 
@@ -423,7 +424,7 @@ class NodeRegistrationHelper(
 
     override fun onSuccess(publicKey: PublicKey, contentSigner: ContentSigner, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {
         createSSLKeystore(publicKey, contentSigner, certificates, tlsCrlCertificateIssuer)
-        createTruststore(certificates.last())
+        createTruststore()
     }
 
     private fun createSSLKeystore(nodeCaPublicKey: PublicKey, nodeCaContentSigner: ContentSigner, nodeCaCertificateChain: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
@@ -449,23 +450,21 @@ class NodeRegistrationHelper(
             logger.info("Generated TLS certificate: $sslCert")
 
             val sslCertificateChain: List<X509Certificate> = listOf(sslCert) + nodeCaCertificateChain
-            X509Utilities.validateCertificateChain(rootCert, sslCertificateChain)
+            X509Utilities.validateCertificateChain(rootCerts, sslCertificateChain)
             setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, sslCertificateChain, keyStore.entryPassword)
         }
         logProgress("SSL private key and certificate chain stored in ${keyStore.path}.")
     }
 
-    private fun createTruststore(rootCertificate: X509Certificate) {
+    private fun createTruststore() {
         // Save root certificates to trust store.
         config.p2pSslOptions.trustStore.get(createNew = true).update {
             if (this.aliases().hasNext()) {
                 logger.warn("The node's trust store already exists. The following certificates will be overridden: ${this.aliases().asSequence()}")
             }
             logProgress("Generating trust store for corda node.")
-            // Assumes certificate chain always starts with client certificate and end with root certificate.
-            setCertificate(CORDA_ROOT_CA, rootCertificate)
-            // Copy remaining certificates from the network-trust-store
-            rootTrustStore.aliases().asSequence().filter { it != CORDA_ROOT_CA }.forEach {
+            // Copy all certificates from the network-trust-store.
+            rootTrustStore.aliases().forEach {
                 val certificate = rootTrustStore.getCertificate(it)
                 logger.info("Copying trusted certificate to the node's trust store: Alias: $it, Certificate: $certificate")
                 setCertificate(it, certificate)
@@ -477,8 +476,10 @@ class NodeRegistrationHelper(
     override fun validateAndGetTlsCrlIssuerCert(): X509Certificate? {
         val tlsCertCrlIssuer = config.tlsCertCrlIssuer
         tlsCertCrlIssuer ?: return null
-        if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, rootCert)) {
-            return rootCert
+        for (rootCert in rootCerts) {
+            if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, rootCert)) {
+                return rootCert
+            }
         }
         return findMatchingCertificate(tlsCertCrlIssuer, rootTrustStore)
     }

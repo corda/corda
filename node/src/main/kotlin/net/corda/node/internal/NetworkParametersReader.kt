@@ -18,7 +18,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 
-class NetworkParametersReader(private val trustRoot: X509Certificate,
+class NetworkParametersReader(private val trustRoots: Set<X509Certificate>,
                               private val networkMapClient: NetworkMapClient?,
                               private val networkParamsPath: Path) {
     companion object {
@@ -68,7 +68,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             signedParametersFromFile ?: throw Error.ParamsNotConfigured()
         }
 
-        return NetworkParametersAndSigned(signedParameters, trustRoot)
+        return NetworkParametersAndSigned(signedParameters, trustRoots)
     }
 
     private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
@@ -90,7 +90,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         logger.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
         networkMapClient ?: throw Error.NetworkMapNotConfigured()
         val signedParams = networkMapClient.getNetworkParameters(parametersHash)
-        signedParams.verifiedNetworkParametersCert(trustRoot)
+        signedParams.verifiedNetworkParametersCert(trustRoots)
         networkParamsFile.parent.toFile().mkdirs()
         signedParams.serialize().open().copyTo(networkParamsFile)
         logger.info("Saved network parameters into: $networkParamsFile")
@@ -99,10 +99,10 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
 
     // By passing in just the SignedNetworkParameters object, this class guarantees that the networkParameters property
     // could have only been derived from it.
-    class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoot: X509Certificate) {
+    class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoots: Set<X509Certificate>) {
         // for backwards compatibility we allow netparams to be signed with the networkmap cert,
         // but going forwards we also accept the distinct netparams cert as well
-        val networkParameters: NetworkParameters = signed.verifiedNetworkParametersCert(trustRoot)
+        val networkParameters: NetworkParameters = signed.verifiedNetworkParametersCert(trustRoots)
         operator fun component1() = networkParameters
         operator fun component2() = signed
     }

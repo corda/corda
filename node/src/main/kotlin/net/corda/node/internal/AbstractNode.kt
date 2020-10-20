@@ -437,9 +437,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        val trustRoot = initKeyStores()
+        val trustRoots = initKeyStores()
         startDatabase()
-        identityService.start(trustRoot, keyStoreHandler.nodeIdentity, pkToIdCache = pkToIdCache)
+        identityService.start(trustRoots, keyStoreHandler.nodeIdentity, pkToIdCache = pkToIdCache)
         return database.use {
             it.transaction {
                 val nodeInfoAndSigned = updateNodeInfo(publish = false)
@@ -486,9 +486,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         logVendorString(database, log)
         if (allowHibernateToManageAppSchema) {
             Node.printBasicNodeInfo("Initialising CorDapps to get schemas created by hibernate")
-            val trustRoot = initKeyStores()
-            networkMapClient?.start(trustRoot)
-            val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.networkParametersPath).read()
+            val trustRoots = initKeyStores()
+            networkMapClient?.start(trustRoots)
+            val (netParams, signedNetParams) = NetworkParametersReader(trustRoots, networkMapClient, configuration.networkParametersPath).read()
             log.info("Loaded network parameters: $netParams")
             check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
                 "Node's platform version is lower than network's required minimumPlatformVersion"
@@ -496,7 +496,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             networkMapCache.start(netParams.notaries)
 
             database.transaction {
-                networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
+                networkParametersStorage.setCurrentParameters(signedNetParams, trustRoots)
                 cordappProvider.start()
             }
         }
@@ -536,7 +536,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
-        val trustRoot = initKeyStores()
+        val trustRoots = initKeyStores()
         initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -549,9 +549,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
         startShell()
-        networkMapClient?.start(trustRoot)
+        networkMapClient?.start(trustRoots)
 
-        val networkParametersReader = NetworkParametersReader(trustRoot, networkMapClient, configuration.networkParametersPath)
+        val networkParametersReader = NetworkParametersReader(trustRoots, networkMapClient, configuration.networkParametersPath)
         val (netParams, signedNetParams) = networkParametersReader.read()
         log.info("Loaded network parameters: $netParams")
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
@@ -565,7 +565,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         schedulerService.closeOnStop()
         val rpcOps = makeRPCOps(cordappLoader)
 
-        identityService.start(trustRoot, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
+        identityService.start(trustRoots, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
 
         val nodeInfoAndSigned = database.transaction {
             updateNodeInfo(publish = true)
@@ -577,7 +577,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val networkParametersHotloader = if (networkMapClient == null) {
             null
         } else {
-            NetworkParametersHotloader(networkMapClient, trustRoot, netParams, networkParametersReader, networkParametersStorage).also {
+            NetworkParametersHotloader(networkMapClient, trustRoots, netParams, networkParametersReader, networkParametersStorage).also {
                 it.addNotaryUpdateListener(networkMapCache)
                 it.addNotaryUpdateListener(identityService)
                 it.addNetworkParametersChangedListeners(services)
@@ -586,7 +586,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         networkMapUpdater.start(
-                trustRoot,
+                trustRoots,
                 signedNetParams.raw.hash,
                 signedNodeInfo,
                 netParams,
@@ -608,7 +608,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (resultingNodeInfo, readyFuture) = database.transaction(recoverableFailureTolerance = 0) {
-            networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
+            networkParametersStorage.setCurrentParameters(signedNetParams, trustRoots)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
             cordappProvider.start()

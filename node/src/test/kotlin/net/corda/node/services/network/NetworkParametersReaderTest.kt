@@ -54,7 +54,7 @@ class NetworkParametersReaderTest {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"), VersionInfo(1, "TEST", "TEST", "TEST"))
-        networkMapClient.start(DEV_ROOT_CA.certificate)
+        networkMapClient.start(setOf(DEV_ROOT_CA.certificate))
     }
 
     @After
@@ -69,13 +69,13 @@ class NetworkParametersReaderTest {
         val oldParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(oldParameters).install(networkParamsPath)
         NetworkParametersCopier(server.networkParameters, update = true).install(networkParamsPath) // Parameters update file.
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, networkParamsPath).read().networkParameters
+        val parameters = NetworkParametersReader(setOf(DEV_ROOT_CA.certificate), networkMapClient, networkParamsPath).read().networkParameters
         assertFalse((networkParamsPath / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
         assertEquals(server.networkParameters, parameters)
         // Parameters from update should be moved to `network-parameters` file.
         val parametersFromFile = (networkParamsPath / NETWORK_PARAMS_FILE_NAME)
                 .readObject<SignedNetworkParameters>()
-                .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+                .verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
         assertEquals(server.networkParameters, parametersFromFile)
     }
 
@@ -85,13 +85,13 @@ class NetworkParametersReaderTest {
         val oldParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(oldParameters).install(networkParamsPath)
         NetworkParametersCopier(server.networkParameters, update = true).install(networkParamsPath) // Parameters update file.
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, networkParamsPath).read().networkParameters
+        val parameters = NetworkParametersReader(setOf(DEV_ROOT_CA.certificate), networkMapClient, networkParamsPath).read().networkParameters
         assertFalse((networkParamsPath / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
         assertEquals(server.networkParameters, parameters)
         // Parameters from update should be moved to `network-parameters` file.
         val parametersFromFile = (networkParamsPath / NETWORK_PARAMS_FILE_NAME)
                 .readObject<SignedNetworkParameters>()
-                .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+                .verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
         assertEquals(server.networkParameters, parametersFromFile)
     }
 
@@ -101,7 +101,7 @@ class NetworkParametersReaderTest {
         val networkParamsPath = fs.getPath("/node").createDirectories()
         val fileParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(fileParameters).install(networkParamsPath)
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, networkParamsPath).read().networkParameters
+        val parameters = NetworkParametersReader(setOf(DEV_ROOT_CA.certificate), networkMapClient, networkParamsPath).read().networkParameters
         assertThat(parameters).isEqualTo(fileParameters)
     }
 
@@ -120,17 +120,17 @@ class NetworkParametersReaderTest {
         val netParameters = testNetworkParameters(epoch = 1)
         val certKeyPairNetworkParameters: CertificateAndKeyPair = createDevNetworkParametersCa()
         val netParamsForNetworkParameters= certKeyPairNetworkParameters.sign(netParameters)
-        netParamsForNetworkParameters.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        netParamsForNetworkParameters.verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
 
         val certKeyPairNetworkMap: CertificateAndKeyPair = createDevNetworkMapCa()
         val netParamsForNetworkMap = certKeyPairNetworkMap.sign(netParameters)
-        netParamsForNetworkMap.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        netParamsForNetworkMap.verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
 
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val x = createDevNodeCa(DEV_INTERMEDIATE_CA, megaCorp.name)
         val netParamsForNode = x.sign(netParameters)
         assertFailsWith(IllegalArgumentException::class, "Incorrect cert role: NODE_CA") {
-            netParamsForNode.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+            netParamsForNode.verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
         }
     }
 }
