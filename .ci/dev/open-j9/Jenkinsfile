@@ -9,7 +9,7 @@
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*JDK11$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*JDK11$/)
-boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*JDK11$/)
+boolean isReleaseCandidate = (env.TAG_NAME =~ /^release-.*(RC|HC).*JDK11$/)
 
 /**
  * Common Gradle arguments for all Gradle executions
