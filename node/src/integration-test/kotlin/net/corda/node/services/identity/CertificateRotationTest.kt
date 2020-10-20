@@ -1,5 +1,6 @@
 package net.corda.node.services.identity
 
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.div
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
@@ -82,7 +83,7 @@ class CertificateRotationTest {
     fun `restart with rotated key for one node`() {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = FINANCE_CORDAPPS,
-                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 9)
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
         )
         val alice = mockNet.createPartyNode(ALICE_NAME)
         val bob = mockNet.createPartyNode(BOB_NAME)
@@ -132,7 +133,7 @@ class CertificateRotationTest {
     fun `backchain resolution with rotated issuer key`() {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = FINANCE_CORDAPPS,
-                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 9)
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
         )
         val alice = mockNet.createPartyNode(ALICE_NAME)
         val bob = mockNet.createPartyNode(BOB_NAME)
