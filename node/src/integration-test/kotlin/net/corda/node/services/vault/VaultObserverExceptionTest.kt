@@ -25,6 +25,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
+import net.corda.node.services.statemachine.hospital.DatabaseEndocrinologist
 import net.corda.notary.jpa.JPAUniquenessProvider
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -62,7 +63,7 @@ class VaultObserverExceptionTest {
 
     @After
     fun tearDown() {
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
+        DatabaseEndocrinologist.customConditions.clear()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
         StaffedFlowHospital.onFlowAdmitted.clear()
         DbListenerService.onError = null
@@ -80,7 +81,7 @@ class VaultObserverExceptionTest {
     fun unhandledSqlExceptionFromVaultObserverGetsHospitalised() {
         val testControlFuture = openFuture<Boolean>().toCompletableFuture()
 
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
+        DatabaseEndocrinologist.customConditions.add {
             when (it) {
                 is SQLException -> {
                     testControlFuture.complete(true)
@@ -114,7 +115,7 @@ class VaultObserverExceptionTest {
         DbListenerService.safeSubscription = false
         val testControlFuture = openFuture<Boolean>().toCompletableFuture()
 
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
+        DatabaseEndocrinologist.customConditions.add {
             when (it) {
                 is SQLException -> {
                     testControlFuture.complete(true)
@@ -202,7 +203,7 @@ class VaultObserverExceptionTest {
     @Test(timeout=300_000)
     fun persistenceExceptionDuringRecordTransactionsGetsKeptForObservation() {
         var counter = 0
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
+        DatabaseEndocrinologist.customConditions.add {
             when (it) {
                 is PersistenceException -> {
                     ++counter
@@ -239,7 +240,7 @@ class VaultObserverExceptionTest {
     @Test(timeout=300_000)
     fun persistenceExceptionDuringRecordTransactionsCannotBeSuppressedInFlow() {
         var counter = 0
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
+        DatabaseEndocrinologist.customConditions.add {
             when (it) {
                 is PersistenceException -> {
                     ++counter
