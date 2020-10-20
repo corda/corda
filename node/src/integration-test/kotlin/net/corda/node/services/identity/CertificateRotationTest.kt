@@ -1,5 +1,6 @@
 package net.corda.node.services.identity
 
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.div
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
@@ -14,6 +15,7 @@ import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.storeLegalIdentity
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -21,6 +23,7 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
@@ -78,7 +81,10 @@ class CertificateRotationTest {
 
     @Test(timeout = 300_000)
     fun `restart with rotated key for one node`() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = FINANCE_CORDAPPS)
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = FINANCE_CORDAPPS,
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
+        )
         val alice = mockNet.createPartyNode(ALICE_NAME)
         val bob = mockNet.createPartyNode(BOB_NAME)
 
@@ -112,8 +118,23 @@ class CertificateRotationTest {
     }
 
     @Test(timeout = 300_000)
+    fun `fail to restart with rotated key and wrong minimum platform version`() {
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = FINANCE_CORDAPPS,
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 8)
+        )
+        val alice = mockNet.createPartyNode(ALICE_NAME)
+        assertThatThrownBy {
+            mockNet.restartNodeWithRotateIdentityKey(alice)
+        }.hasMessageContaining("Failed to change node legal identity key")
+    }
+
+    @Test(timeout = 300_000)
     fun `backchain resolution with rotated issuer key`() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = FINANCE_CORDAPPS)
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = FINANCE_CORDAPPS,
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
+        )
         val alice = mockNet.createPartyNode(ALICE_NAME)
         val bob = mockNet.createPartyNode(BOB_NAME)
 
