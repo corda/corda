@@ -50,7 +50,7 @@ pipeline {
                 sh "./gradlew clean --continue test --info -Ptests.failFast=true"
             }
         }
-        stage('Integration Tests') {
+        /* stage('Integration Tests') {
             steps {
                 sh "./gradlew clean --continue integrationTest --info -Ptests.failFast=true"
             }
@@ -64,7 +64,7 @@ pipeline {
             steps {
                 sh "./gradlew clean --continue slowIntegrationTest --info -Ptests.failFast=true"
             }
-        }
+        } */
 
         stage('Publish to Artifactory') {
             when {
