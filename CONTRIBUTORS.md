@@ -177,7 +177,9 @@ see changes to this list.
 * Robin Green (CIBC)
 * Rodrigo Bueno (Itau)
 * Rodrigo Gonçalves (Itau Unibanco)
+* Rodrigo Vieira
 * Roger Willis (R3)
+* Roman Plášil
 * Ross Burnett (Macquarie)
 * Ross Nicoll (R3)
 * Rui Hu (Nordea)
@@ -219,4 +221,5 @@ see changes to this list.
 * Vitalij Reicherdt (Commerzbank AG)
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
+* Xavier Leprêtre
 * Zabrina Smith (Northern Trust)
