@@ -243,17 +243,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 }
             }
 
-            val numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends
             val record = MedicalRecord.Flow(
                 time,
                 flowFiber.id,
-                numberOfSuspends,
+                currentState.checkpoint.checkpointState.numberOfSuspends,
                 errors,
                 report.by,
                 outcome,
                 report.diagnosis == Diagnosis.RESUSCITATE
             )
-
             medicalHistory.records += record
             recordsPublisher.onNext(record)
             Pair(event, backOffForChronicCondition)
