@@ -217,8 +217,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 Diagnosis.RESUSCITATE -> {
                     // reschedule the last outcome as it failed to process it
                     // do a 0.seconds backoff in dev mode? / when coming from the driver? make it configurable?
-                    val backOff = calculateBackOffForResuscitation(medicalHistory, currentState)
                     val outcome = medicalHistory.records.last().outcome
+                    val backOff = calculateBackOffForResuscitation(medicalHistory, currentState, outcome)
                     log.info("Flow error to be resuscitated, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
                     onFlowResuscitated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
                     Triple(Pair(outcome, true), outcome.event, backOff)
@@ -271,8 +271,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
     private fun calculateBackOffForResuscitation(
         medicalHistory: FlowMedicalHistory,
-        currentState: StateMachineState
-    ): Duration = calculateBackOff(medicalHistory.timesResuscitated(currentState))
+        currentState: StateMachineState,
+        outcome: Outcome
+    ): Duration = calculateBackOff(medicalHistory.timesResuscitatedForTheSameOutcome(currentState, outcome))
 
     private fun calculateBackOff(timesDiagnosisGiven: Int): Duration {
         return if (timesDiagnosisGiven == 0) {
@@ -381,9 +382,9 @@ class FlowMedicalHistory {
         return records.count { it.outcome == StaffedFlowHospital.Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
     }
 
-    fun timesResuscitated(currentState: StateMachineState): Int {
+    fun timesResuscitatedForTheSameOutcome(currentState: StateMachineState, outcome: StaffedFlowHospital.Outcome): Int {
         val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
-        return records.count { it.resuscitated && it.suspendCount == lastAdmittanceSuspendCount }
+        return records.count { it.resuscitated && it.outcome == outcome && it.suspendCount == lastAdmittanceSuspendCount }
     }
 
     override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
