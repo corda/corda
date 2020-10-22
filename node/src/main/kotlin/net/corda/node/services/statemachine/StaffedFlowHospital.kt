@@ -10,7 +10,6 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.node.services.statemachine.hospital.ResuscitationSpecialist
 import rx.subjects.PublishSubject
 import java.io.Closeable
 import java.time.Clock
@@ -222,30 +221,30 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     val outcome = medicalHistory.records.last().outcome
                     log.info("Flow error to be resuscitated, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
                     onFlowResuscitated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
-                    Triple(outcome, outcome.event, backOff)
+                    Triple(Pair(outcome, true), outcome.event, backOff)
                 }
                 Diagnosis.DISCHARGE -> {
                     val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
                     log.info("Flow error discharged from hospital (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
                     onFlowDischarged.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
-                    Triple(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint, backOff)
+                    Triple(Pair(Outcome.DISCHARGE, false), Event.RetryFlowFromSafePoint, backOff)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
                     log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
                     onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
-                    Triple(Outcome.OVERNIGHT_OBSERVATION, Event.OvernightObservation, 0.seconds)
+                    Triple(Pair(Outcome.OVERNIGHT_OBSERVATION, false), Event.OvernightObservation, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
                     // None of the staff care for these errors, or someone decided it is a terminal condition, so we let them propagate
                     log.info("Flow error allowed to propagate", report.error)
                     onFlowErrorPropagated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
-                    Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
+                    Triple(Pair(Outcome.UNTREATABLE, false), Event.StartErrorPropagation, 0.seconds)
                 }
             }
 
             val numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends
-            val record = MedicalRecord.Flow(time, flowFiber.id, numberOfSuspends, errors, report.by, outcome)
+            val record = MedicalRecord.Flow(time, flowFiber.id, numberOfSuspends, errors, report.by, outcome.first, outcome.second)
             medicalHistory.records += record
             recordsPublisher.onNext(record)
             Pair(event, backOffForChronicCondition)
@@ -347,7 +346,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                         val suspendCount: Int,
                         override val errors: List<Throwable>,
                         val by: List<Staff>,
-                        override val outcome: Outcome) : MedicalRecord()
+                        override val outcome: Outcome,
+                        val resuscitated: Boolean = false) : MedicalRecord()
 
         /** Medical record for a session initiation that was unsuccessful. */
         data class SessionInit(val id: StateMachineRunId,
@@ -383,7 +383,7 @@ class FlowMedicalHistory {
 
     fun timesResuscitated(currentState: StateMachineState): Int {
         val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
-        return records.count { ResuscitationSpecialist in it.by && it.suspendCount == lastAdmittanceSuspendCount }
+        return records.count { it.resuscitated && it.suspendCount == lastAdmittanceSuspendCount }
     }
 
     override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
