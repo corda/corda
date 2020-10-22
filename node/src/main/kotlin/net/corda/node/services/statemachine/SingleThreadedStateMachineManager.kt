@@ -38,9 +38,9 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
-import net.corda.node.services.statemachine.hospital.DatabaseEndocrinologist
-import net.corda.node.services.statemachine.hospital.DeadlockNurse
-import net.corda.node.services.statemachine.hospital.DuplicateInsertSpecialist
+import net.corda.node.services.statemachine.hospital.external.DatabaseEndocrinologist
+import net.corda.node.services.statemachine.hospital.external.DeadlockNurse
+import net.corda.node.services.statemachine.hospital.external.DuplicateInsertSpecialist
 import net.corda.node.services.statemachine.hospital.ResuscitationSpecialist
 import net.corda.node.services.statemachine.hospital.SedationNurse
 import net.corda.node.services.statemachine.hospital.TransientConnectionCardiologist

@@ -1,4 +1,4 @@
-package net.corda.node.services.statemachine.hospital
+package net.corda.node.services.statemachine.hospital.external
 
 import net.corda.core.internal.VisibleForTesting
 import net.corda.node.services.statemachine.Diagnosis
@@ -8,6 +8,8 @@ import net.corda.node.services.statemachine.Staff
 import net.corda.node.services.statemachine.StateMachineState
 import java.sql.SQLException
 import javax.persistence.PersistenceException
+
+// [DatabaseEndocrinologist] could go in corda transactions module?
 
 /**
  * Hospitalise any database (SQL and Persistence) exception that wasn't handled otherwise, unless on the configurable whitelist

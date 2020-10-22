@@ -21,7 +21,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.statemachine.hospital.DatabaseEndocrinologist
+import net.corda.node.services.statemachine.hospital.external.DatabaseEndocrinologist
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.IS_OPENJ9

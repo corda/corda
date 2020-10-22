@@ -19,7 +19,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowTimeoutException
-import net.corda.node.services.statemachine.hospital.DatabaseEndocrinologist
+import net.corda.node.services.statemachine.hospital.external.DatabaseEndocrinologist
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
