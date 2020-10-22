@@ -177,7 +177,9 @@ see changes to this list.
 * Robin Green (CIBC)
 * Rodrigo Bueno (Itau)
 * Rodrigo Gonçalves (Itau Unibanco)
+* Rodrigo Vieira
 * Roger Willis (R3)
+* Roman Plášil
 * Ross Burnett (Macquarie)
 * Ross Nicoll (R3)
 * Rui Hu (Nordea)
