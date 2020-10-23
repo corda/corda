@@ -6,20 +6,23 @@ import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.statemachine.Diagnosis
 import net.corda.node.services.statemachine.FlowFiber
 import net.corda.node.services.statemachine.FlowMedicalHistory
 import net.corda.node.services.statemachine.Staff
-import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.node.services.statemachine.StateMachineState
 
 // [FinalityDoctor] should be moved in a module along with [FinalityFlow] (corda transactions module?).
 
 object FinalityDoctor : Staff {
+
+    val log = contextLogger()
+
     override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
         return if (currentState.flowLogic is FinalityHandler) {
-            StaffedFlowHospital.log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
+            log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
                     "the flow by re-starting the node. State machine state: $currentState", newError)
             Diagnosis.OVERNIGHT_OBSERVATION
         } else if (isFromReceiveFinalityFlow(newError)) {
@@ -27,7 +30,7 @@ object FinalityDoctor : Staff {
                 // no need to keep around the flow, since notarisation has already failed at the counterparty.
                 Diagnosis.NOT_MY_SPECIALTY
             } else {
-                StaffedFlowHospital.log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
+                log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
                         "the flow by re-starting the node. State machine state: $currentState", newError)
                 Diagnosis.OVERNIGHT_OBSERVATION
             }

@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine.hospital
 
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.statemachine.AsyncOperationTransitionException
 import net.corda.node.services.statemachine.Diagnosis
@@ -7,7 +8,6 @@ import net.corda.node.services.statemachine.FlowFiber
 import net.corda.node.services.statemachine.FlowMedicalHistory
 import net.corda.node.services.statemachine.ReloadFlowFromCheckpointException
 import net.corda.node.services.statemachine.Staff
-import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.node.services.statemachine.StateMachineState
 import net.corda.node.services.statemachine.StateTransitionException
 import net.corda.node.services.statemachine.mentionsThrowable
@@ -22,6 +22,9 @@ import net.corda.node.services.statemachine.mentionsThrowable
  * All other exceptions are retried a maximum of 3 times before being kept in for observation.
  */
 object TransitionErrorGeneralPractitioner : Staff {
+
+    val log = contextLogger()
+
     override fun consult(
             flowFiber: FlowFiber,
             currentState: StateMachineState,
@@ -43,7 +46,7 @@ object TransitionErrorGeneralPractitioner : Staff {
 
     private fun logDiagnosis(diagnosis: Diagnosis, newError: Throwable, flowFiber: FlowFiber, history: FlowMedicalHistory) {
         if (diagnosis != Diagnosis.NOT_MY_SPECIALTY) {
-            StaffedFlowHospital.log.debug {
+            log.debug {
                 """
                         Flow ${flowFiber.id} given $diagnosis diagnosis due to a transition error
                         - Exception: ${newError.message}
