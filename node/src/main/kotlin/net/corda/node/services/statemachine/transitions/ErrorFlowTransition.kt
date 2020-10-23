@@ -63,7 +63,8 @@ class ErrorFlowTransition(
                     flowState = FlowState.Finished,
                     checkpointState = startingState.checkpoint.checkpointState.copy(
                         numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1
-                    )
+                    ),
+                    lastModificationTime = context.time
                 )
                 currentState = currentState.copy(
                     checkpoint = newCheckpoint,

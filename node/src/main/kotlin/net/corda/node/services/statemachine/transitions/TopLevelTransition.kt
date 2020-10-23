@@ -371,7 +371,8 @@ class TopLevelTransition(
                     status = Checkpoint.FlowStatus.HOSPITALIZED,
                     checkpointState = startingState.checkpoint.checkpointState.copy(
                         numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1
-                    )
+                    ),
+                    lastModificationTime = context.time
                 ),
                 pendingDeduplicationHandlers = startingState.pendingDeduplicationHandlers - flowStartEvents,
                 closedSessionsPendingToBeSignalled = emptyMap()
