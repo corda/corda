@@ -85,6 +85,7 @@ dependencies {
     testCompile "com.natpryce:hamkrest:$hamkrest_version"
     testCompile 'org.hamcrest:hamcrest-library:2.1'
 
+    testCompile "org.ow2.asm:asm:$asm_version"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)

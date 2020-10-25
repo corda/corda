@@ -1,7 +1,9 @@
 package net.corda.core.internal
 
 import io.github.classgraph.ClassGraph
+import io.github.classgraph.ClassInfo
 import net.corda.core.StubOutForDJVM
+import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.attachmentScheme
 
 /**
  * Creates instances of all the classes in the classpath of the provided classloader, which implement the interface of the provided class.
@@ -17,16 +19,17 @@ import net.corda.core.StubOutForDJVM
  */
 @StubOutForDJVM
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
-    return ClassGraph().addClassLoader(classloader)
-            .enableClassInfo()
-            .pooledScan()
-            .use {
-                it.getClassesImplementing(clazz.name)
-                        .filterNot { it.isAbstract }
-                        .map { classloader.loadClass(it.name).asSubclass(clazz) }
-                        .map { it.kotlin.objectOrNewInstance() }
-                        .toSet()
-            }
+    return ClassGraph().overrideClassLoaders(classloader)
+        .enableURLScheme(attachmentScheme)
+        .ignoreParentClassLoaders()
+        .enableClassInfo()
+        .pooledScan()
+        .use { result ->
+            result.getClassesImplementing(clazz.name)
+                .filterNot(ClassInfo::isAbstract)
+                .map { classloader.loadClass(it.name).asSubclass(clazz) }
+                .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
+        }
 }
 
 fun <T: Any?> executeWithThreadContextClassLoader(classloader: ClassLoader, fn: () -> T): T {

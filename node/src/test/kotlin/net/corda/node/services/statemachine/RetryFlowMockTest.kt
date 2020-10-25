@@ -19,7 +19,6 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.MessagingServiceSpy
@@ -35,7 +34,9 @@ import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -54,7 +55,6 @@ class RetryFlowMockTest {
         RetryFlow.count = 0
         SendAndRetryFlow.count = 0
         RetryInsertFlow.count = 0
-        KeepSendingFlow.count.set(0)
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { t -> t is LimitedRetryCausingError }
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add { t -> t is RetryCausingError }
     }
@@ -91,35 +91,33 @@ class RetryFlowMockTest {
         assertEquals(2, SendAndRetryFlow.count)
     }
 
-    @Test
-    fun `Restart does not set senderUUID`() {
+    @Test(timeout=300_000)
+	fun `Restart does not set senderUUID`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
+        val expectedMessagesSent = CountDownLatch(3)
         nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
+                expectedMessagesSent.countDown()
                 messagingService.send(message, target)
             }
         })
-        val count = 10000 // Lots of iterations so the flow keeps going long enough
-        nodeA.startFlow(KeepSendingFlow(count, partyB))
-        eventually(duration = Duration.ofSeconds(30), waitBetween = Duration.ofMillis(100)) {
-            assertTrue(messagesSent.isNotEmpty())
-            assertNotNull(messagesSent.first().senderUUID)
-        }
+        nodeA.startFlow(KeepSendingFlow(partyB))
+        KeepSendingFlow.lock.acquire()
+        assertTrue(messagesSent.isNotEmpty())
+        assertNotNull(messagesSent.first().senderUUID)
         nodeA = mockNet.restartNode(nodeA)
-        // This is a bit racy because restarting the node actually starts it, so we need to make sure there's enough iterations we get here with flow still going.
         nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
+                expectedMessagesSent.countDown()
                 messagingService.send(message, target)
             }
         })
-        // Now short circuit the iterations so the flow finishes soon.
-        KeepSendingFlow.count.set(count - 2)
-        eventually(duration = Duration.ofSeconds(30), waitBetween = Duration.ofMillis(100)) {
-            assertTrue(nodeA.smm.allStateMachines.isEmpty())
-        }
+        ReceiveFlow3.lock.release()
+        assertTrue(expectedMessagesSent.await(20, TimeUnit.SECONDS))
+        assertEquals(3, messagesSent.size)
         assertNull(messagesSent.last().senderUUID)
     }
 
@@ -237,32 +235,36 @@ class RetryFlowMockTest {
     }
 
     @InitiatingFlow
-    class KeepSendingFlow(private val i: Int, private val other: Party) : FlowLogic<Unit>() {
+    class KeepSendingFlow(private val other: Party) : FlowLogic<Unit>() {
+
         companion object {
-            val count = AtomicInteger(0)
+            val lock = Semaphore(0)
         }
 
         @Suspendable
         override fun call() {
             val session = initiateFlow(other)
-            session.send(i.toString())
-            do {
-                logger.info("Sending... $count")
-                session.send("Boo")
-            } while (count.getAndIncrement() < i)
+            session.send("boo")
+            lock.release()
+            session.receive<String>()
+            session.send("boo")
         }
     }
 
     @Suppress("unused")
     @InitiatedBy(KeepSendingFlow::class)
     class ReceiveFlow3(private val other: FlowSession) : FlowLogic<Unit>() {
+
+        companion object {
+            val lock = Semaphore(0)
+        }
+
         @Suspendable
         override fun call() {
-            var count = other.receive<String>().unwrap { it.toInt() }
-            while (count-- > 0) {
-                val received = other.receive<String>().unwrap { it }
-                logger.info("Received... $received $count")
-            }
+            other.receive<String>()
+            lock.acquire()
+            other.send("hoo")
+            other.receive<String>()
         }
     }
 
@@ -286,6 +288,29 @@ class RetryFlowMockTest {
         private fun doInsert() {
             val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES, DBTransactionStorage.TransactionStatus.VERIFIED)
             contextTransaction.session.save(tx)
+        }
+    }
+
+    @InitiatingFlow
+    class UnbalancedSendAndReceiveFlow(private val other: Party) : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(other)
+            session.send("boo")
+            session.receive<String>()
+            session.receive<String>()
+        }
+    }
+
+    @Suppress("unused")
+    @InitiatedBy(UnbalancedSendAndReceiveFlow::class)
+    class UnbalancedSendAndReceiveResponder(private val other: FlowSession) : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            other.receive<String>()
+            other.send("hoo")
         }
     }
 }

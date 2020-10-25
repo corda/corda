@@ -345,7 +345,7 @@ object AttachmentsClassLoaderBuilder {
  * This will not be exposed as an API.
  */
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
-    private const val attachmentScheme = "attachment"
+    internal const val attachmentScheme = "attachment"
 
     private val loadedAttachments: AttachmentsHolder = AttachmentsHolderImpl()
 
