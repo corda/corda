@@ -6,19 +6,19 @@ import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
-import net.corda.core.utilities.contextLogger
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.statemachine.Diagnosis
 import net.corda.node.services.statemachine.FlowFiber
 import net.corda.node.services.statemachine.FlowMedicalHistory
 import net.corda.node.services.statemachine.Staff
 import net.corda.node.services.statemachine.StateMachineState
+import org.slf4j.LoggerFactory
 
 // [FinalityDoctor] should be moved in a module along with [FinalityFlow] (corda transactions module?).
 
 object FinalityDoctor : Staff {
 
-    val log = contextLogger()
+    private val log = LoggerFactory.getLogger(javaClass)
 
     override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
         return if (currentState.flowLogic is FinalityHandler) {

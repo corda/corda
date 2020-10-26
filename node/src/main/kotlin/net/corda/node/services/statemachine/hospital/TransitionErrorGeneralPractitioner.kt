@@ -1,6 +1,5 @@
 package net.corda.node.services.statemachine.hospital
 
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.statemachine.AsyncOperationTransitionException
 import net.corda.node.services.statemachine.Diagnosis
@@ -11,6 +10,7 @@ import net.corda.node.services.statemachine.Staff
 import net.corda.node.services.statemachine.StateMachineState
 import net.corda.node.services.statemachine.StateTransitionException
 import net.corda.node.services.statemachine.mentionsThrowable
+import org.slf4j.LoggerFactory
 
 /**
  * Handles exceptions from internal state transitions that are not dealt with by the rest of the staff.
@@ -23,7 +23,7 @@ import net.corda.node.services.statemachine.mentionsThrowable
  */
 object TransitionErrorGeneralPractitioner : Staff {
 
-    val log = contextLogger()
+    private val log = LoggerFactory.getLogger(javaClass)
 
     override fun consult(
             flowFiber: FlowFiber,
