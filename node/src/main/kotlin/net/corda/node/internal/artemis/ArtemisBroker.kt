@@ -19,6 +19,9 @@ data class BrokerAddresses(val primary: NetworkHostAndPort, private val adminArg
     val admin = adminArg ?: primary
 }
 
-fun Throwable.isBindingError() = this is BindException ||
-        this is Errors.NativeIoException && message?.contains("Address already in use") == true ||
-        this is IllegalStateException && this.cause is Errors.NativeIoException && this.cause!!.message?.contains("Address already in use") == true
+fun Throwable.isBindingError(): Boolean {
+    val addressAlreadyUsedMsg = "Address already in use"
+    return this is BindException ||
+            this is Errors.NativeIoException && message?.contains(addressAlreadyUsedMsg) == true ||
+            this is IllegalStateException && this.cause is Errors.NativeIoException && this.cause!!.message?.contains(addressAlreadyUsedMsg) == true
+}

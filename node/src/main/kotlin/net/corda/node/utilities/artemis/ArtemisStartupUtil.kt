@@ -7,16 +7,16 @@ import java.util.concurrent.CompletableFuture
 
 fun ActiveMQServer.startSynchronously() {
     val startupFuture = CompletableFuture<Unit>()
-    this.registerActivateCallback(object: ActivateCallback {
+    registerActivateCallback(object: ActivateCallback {
         override fun activationComplete() {
             startupFuture.complete(Unit)
         }
     })
-    this.registerActivationFailureListener {
+    registerActivationFailureListener {
         startupFuture.completeExceptionally(it)
     }
 
-    this.start()
+    start()
 
     startupFuture.getOrThrow()
 }
