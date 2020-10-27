@@ -55,7 +55,7 @@ open class TransactionBuilder(
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf(),
         protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub,
-        protected val digestService: DigestService = DigestService.instance
+        protected val digestService: DigestService = DigestService.default
 ) {
     constructor(notary: Party? = null,
                 lockId: UUID = defaultLockId(),
@@ -106,7 +106,6 @@ open class TransactionBuilder(
                 serviceHub = serviceHub,
                 digestService = digestService
         )
-        //t.hashAlgorithm = hashAlgorithm
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
         return t

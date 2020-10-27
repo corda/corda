@@ -29,8 +29,8 @@ class DigestService private constructor(val digestLength: Int,
     companion object {
         private const val NONCE_SIZE = 8
         private const val WORD_SIZE_32 = 32
-        // IEE TODO: shall be initialized with network parameters to determine the default network hash algorithm
-        val instance : DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256) }
+        // The `default` instance will be configured from the network parameters. For now hardcoded to SHA2_256.
+        val default : DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256) }
         val sha2_256: DigestService = DigestService(WORD_SIZE_32, SHA2_256)
         val sha3_256: DigestService = DigestService(WORD_SIZE_32, SHA3_256)
 

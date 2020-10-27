@@ -91,7 +91,7 @@ private constructor(
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-        val digestService: DigestService = DigestService.instance
+        val digestService: DigestService = DigestService.default
 ) : FullTransaction() {
 
     init {

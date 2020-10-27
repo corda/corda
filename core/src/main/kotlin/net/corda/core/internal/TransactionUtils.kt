@@ -21,7 +21,7 @@ class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
                                      val notary: Party,
                                      val newNotary: Party,
                                      val networkParametersHash: SecureHash,
-                                     val digestService: DigestService = DigestService.instance) {
+                                     val digestService: DigestService = DigestService.default) {
 
     fun build(): NotaryChangeWireTransaction {
         val components = listOf(inputs, notary, newNotary, networkParametersHash).map { it.serialize() }
@@ -38,7 +38,7 @@ class ContractUpgradeTransactionBuilder(
         val upgradedContractAttachmentId: SecureHash,
         privacySalt: PrivacySalt = PrivacySalt(),
         val networkParametersHash: SecureHash,
-        val digestService: DigestService = DigestService.instance) {
+        val digestService: DigestService = DigestService.default) {
     var privacySalt: PrivacySalt = privacySalt
         private set
 
@@ -115,7 +115,7 @@ fun deserialiseCommands(
         forceDeserialize: Boolean = false,
         factory: SerializationFactory = SerializationFactory.defaultFactory,
         @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext,
-        digestService: DigestService = DigestService.instance
+        digestService: DigestService = DigestService.default
 ): List<Command<*>> {
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed

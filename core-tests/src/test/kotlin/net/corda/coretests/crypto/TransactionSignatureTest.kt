@@ -25,7 +25,7 @@ class TransactionSignatureTest {
 
     @Before
     fun init() {
-        digestService = DigestService.instance
+        digestService = DigestService.default
     }
 
     /** Valid sign and verify. */
@@ -65,7 +65,7 @@ class TransactionSignatureTest {
         val txSignature = signMultipleTx(txIds, keyPair, digestService)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DigestService.instance)
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DigestService.default)
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)

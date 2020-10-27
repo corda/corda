@@ -537,7 +537,7 @@ class AttachmentsClassLoaderTests {
                     emptyList(),
                     isAttachmentTrusted = { true },
                     attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                    digestService = DigestService.instance
+                    digestService = DigestService.default
             )
             transaction.verify()
         }

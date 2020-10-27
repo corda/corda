@@ -5,7 +5,6 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
-import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
@@ -63,7 +62,7 @@ class PartialMerkleTreeTest {
 
     @Before
     fun init() {
-        digestService = DigestService.instance
+        digestService = DigestService.default
         hashed = nodes.map { digestService.hash(it.serialize().bytes) }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(digestService.zeroHash, digestService.zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)

@@ -99,7 +99,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         }
         services = rigorousMock()
         cordappProvider = rigorousMock()
-        digestService = DigestService.instance
+        digestService = DigestService.default
         val networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         val networkParametersService = rigorousMock<NetworkParametersService>().also {
             doReturn(networkParameters.serialize().hash).whenever(it).currentHash
@@ -379,7 +379,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `simple PartialTree Node`() {
-        val digestService = DigestService.instance
+        val digestService = DigestService.default
         val node = PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
                 right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
@@ -396,7 +396,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `complex PartialTree Node`() {
-        val digestService = DigestService.instance
+        val digestService = DigestService.default
         val node = PartialTree.Node(
                 left = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
                 right = PartialTree.Node(

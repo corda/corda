@@ -47,7 +47,7 @@ data class ContractUpgradeWireTransaction(
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
     constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
-            : this(serializedComponents, privacySalt, DigestService.instance)
+            : this(serializedComponents, privacySalt, DigestService.default)
 
     companion object {
         /**
@@ -211,7 +211,7 @@ data class ContractUpgradeFilteredTransaction(
          * Required for computing the transaction id.
          */
         val hiddenComponents: Map<Int, SecureHash>,
-        val digestService: DigestService = DigestService.instance
+        val digestService: DigestService = DigestService.default
 ) : CoreTransaction() {
     override val inputs: List<StateRef> by lazy {
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()

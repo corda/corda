@@ -81,7 +81,6 @@ class DeliverSessionMessageTransition(
 
     private fun TransitionBuilder.confirmMessageTransition(sessionState: SessionState, message: ConfirmSessionMessage) {
         // We received a confirmation message. The corresponding session state must be Initiating.
-        log.error("TransitionBuilder.confirmMessageTransition $sessionState - $message")
         when (sessionState) {
             is SessionState.Initiating -> {
                 // Create the new session state that is now Initiated.
@@ -104,7 +103,7 @@ class DeliverSessionMessageTransition(
                 actions.addAll(sendActions)
                 currentState = currentState.copy(checkpoint = newCheckpoint)
             }
-            else -> freshErrorTransition(UnexpectedEventInState("Unexpected sessionState: $sessionState"))
+            else -> freshErrorTransition(UnexpectedEventInState())
         }
     }
 

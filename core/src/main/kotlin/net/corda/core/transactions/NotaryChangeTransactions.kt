@@ -39,7 +39,7 @@ data class NotaryChangeWireTransaction(
         val digestService: DigestService
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
-    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DigestService.instance)
+    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DigestService.default)
 
     fun copy(serializedComponents: List<OpaqueBytes>): NotaryChangeWireTransaction {
         return NotaryChangeWireTransaction(serializedComponents, digestService)
