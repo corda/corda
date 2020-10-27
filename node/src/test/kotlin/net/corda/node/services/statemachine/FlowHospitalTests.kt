@@ -5,12 +5,10 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.node.migration.VaultStateMigrationTest.Companion.ALICE
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.statemachine.hospital.external.DeadlockNurse
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -19,7 +17,6 @@ import org.junit.After
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
-import java.lang.IllegalArgumentException
 import java.security.SecureRandom
 import java.util.concurrent.Semaphore
 
@@ -103,7 +100,7 @@ class FlowHospitalTests {
                 StateMachine(id, SecureRandom())
             ),
             newStateMachineState(id),
-            listOf(IllegalArgumentException())
+            listOf(IllegalStateException())
         )
 
     }
