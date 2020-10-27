@@ -4,8 +4,10 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.internal.toX500Name
+import net.corda.coretesting.internal.configureTestSSL
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
@@ -16,8 +18,13 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.services.messaging.SimpleAMQPClient.Companion.sendAndVerify
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -29,6 +36,7 @@ import org.bouncycastle.asn1.x509.NameConstraints
 import org.junit.Test
 import java.nio.file.Files
 import javax.jms.JMSSecurityException
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 
 /**
@@ -121,6 +129,51 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         val attacker = clientTo(alice.node.configuration.p2pAddress, p2pSslConfig)
         assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `login with invalid root`() {
+        val legalName = CordaX500Name("MegaCorp", "London", "GB")
+        val sslConfig = configureTestSSL(legalName)
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath(X500Principal("CN=Root2"))
+        sslConfig.trustStore.get()[CORDA_ROOT_CA] = rootCa.certificate
+        sslConfig.keyStore.get().registerDevP2pCertificates(legalName, rootCa.certificate, intermediateCa)
+
+        val attacker = clientTo(alice.node.configuration.p2pAddress, sslConfig)
+        assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
+            attacker.start(PEER_USER, PEER_USER)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `login with different roots`() {
+        val (rootCa2, intermediateCa2) = createDevIntermediateCaCertPath(X500Principal("CN=Root2"))
+        val (rootCa3, intermediateCa3) = createDevIntermediateCaCertPath(X500Principal("CN=Root3"))
+
+        val certificatesDirectory = baseDirectory(BOB_NAME).createDirectories() / "certificates"
+        CertificateStoreStubs.P2P.TrustStore.withCertificatesDirectory(certificatesDirectory).get(true).let {
+            it[CORDA_ROOT_CA] = DEV_ROOT_CA.certificate
+            it["$CORDA_ROOT_CA-2"] = rootCa2.certificate
+        }
+        val bob = startNode(BOB_NAME)
+
+        // Login with different trusted root.
+        configureTestSSL(CHARLIE_NAME).apply {
+            trustStore.get()[CORDA_ROOT_CA] = rootCa2.certificate
+            trustStore.get()["$CORDA_ROOT_CA-2"] = DEV_ROOT_CA.certificate
+            keyStore.get().registerDevP2pCertificates(CHARLIE_NAME, rootCa2.certificate, intermediateCa2)
+            clientTo(bob.node.configuration.p2pAddress, this).start(PEER_USER, PEER_USER)
+        }
+
+        // Login with different non-trusted root.
+        configureTestSSL(CHARLIE_NAME).apply {
+            trustStore.get()[CORDA_ROOT_CA] = rootCa3.certificate
+            trustStore.get()["$CORDA_ROOT_CA-2"] = DEV_ROOT_CA.certificate
+            keyStore.get().registerDevP2pCertificates(CHARLIE_NAME, rootCa3.certificate, intermediateCa3)
+            assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
+                clientTo(bob.node.configuration.p2pAddress, this).start(PEER_USER, PEER_USER)
+            }
         }
     }
 

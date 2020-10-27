@@ -21,7 +21,7 @@ import java.time.Instant
  *
  * @property minimumPlatformVersion Minimum version of Corda platform that is required for nodes in the network.
  * @property notaries List of well known and trusted notary identities with information on validation type.
- * @property maxMessageSize This is currently ignored. However, it will be wired up in a future release.
+ * @property maxMessageSize Maximum allowed size in bytes of an individual message sent over the wire.
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
  * @property modifiedTime ([AutoAcceptable]) Last modification time of network parameters set.
  * @property epoch ([AutoAcceptable]) Version number of the network parameters. Starting from 1, this will always increment on each new set

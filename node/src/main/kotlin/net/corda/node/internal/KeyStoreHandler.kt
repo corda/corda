@@ -23,6 +23,7 @@ import java.nio.file.NoSuchFileException
 import java.security.GeneralSecurityException
 import java.security.PublicKey
 import java.security.cert.X509Certificate
+import java.util.Collections.unmodifiableSet
 
 data class KeyAndAlias(val key: PublicKey, val alias: String)
 
@@ -40,16 +41,16 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
     private val _signingKeys: MutableSet<KeyAndAlias> = mutableSetOf()
     val signingKeys: Set<KeyAndAlias> get() = _signingKeys.toSet()
 
-    private lateinit var trustRoot: X509Certificate
+    private lateinit var trustRoots: Set<X509Certificate>
 
     private lateinit var nodeKeyStore: CertificateStore
 
     /**
      * Initialize key-stores and load identities.
      * @param devModeKeyEntropy entropy for legal identity key derivation
-     * @return trust root certificate
+     * @return trust root certificates
      */
-    fun init(devModeKeyEntropy: BigInteger? = null): X509Certificate {
+    fun init(devModeKeyEntropy: BigInteger? = null): Set<X509Certificate> {
         if (configuration.devMode) {
             configuration.configureWithDevSSLCertificate(cryptoService, devModeKeyEntropy)
             // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
@@ -59,10 +60,10 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
             }
         }
         val certStores = getCertificateStores()
-        trustRoot = validateKeyStores(certStores)
+        trustRoots = validateKeyStores(certStores)
         nodeKeyStore = certStores.nodeKeyStore
         loadIdentities()
-        return trustRoot
+        return unmodifiableSet(trustRoots)
     }
 
     private data class AllCertificateStores(val trustStore: CertificateStore,
@@ -88,12 +89,15 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         }
     }
 
-    private fun validateKeyStores(certStores: AllCertificateStores): X509Certificate {
+    private fun validateKeyStores(certStores: AllCertificateStores): Set<X509Certificate> {
         // Check that trustStore contains the correct key-alias entry.
-        require(X509Utilities.CORDA_ROOT_CA in certStores.trustStore) {
+        val trustRoots = certStores.trustStore.filter { it.first.startsWith(X509Utilities.CORDA_ROOT_CA) }.map {
+            log.info("Loaded trusted root certificate: ${it.second.publicKey.toStringShort()}, alias: ${it.first}")
+            it.second
+        }.toSet()
+        require(trustRoots.isNotEmpty()) {
             "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
         }
-        val trustRoot = certStores.trustStore[X509Utilities.CORDA_ROOT_CA]
 
         certStores.sslKeyStore.let {
             val tlsKeyAlias = CORDA_CLIENT_TLS
@@ -112,10 +116,10 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
 
             // Check TLS cert path chains to the trusted root.
             val sslCertChainRoot = it.query { getCertificateChain(tlsKeyAlias) }.last()
-            require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
+            require(sslCertChainRoot in trustRoots) { "TLS certificate must chain to the trusted root." }
         }
 
-        return trustRoot
+        return trustRoots
     }
 
     /**
@@ -159,7 +163,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         check(certificates.first() == certificate) {
             "Certificates from key store do not line up!"
         }
-        check(certificates.last() == trustRoot) {
+        check(certificates.last() in trustRoots) {
             "Certificate for node identity must chain to the trusted root."
         }
 
@@ -169,7 +173,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         }
 
         val identity = PartyAndCertificate(X509Utilities.buildCertPath(certificates))
-        X509Utilities.validateCertPath(trustRoot, identity.certPath)
+        X509Utilities.validateCertPath(trustRoots, identity.certPath)
         return identity
     }
 
@@ -224,7 +228,7 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         val certificates: List<X509Certificate> = uncheckedCast(listOf(certificate) + baseIdentity.certPath.certificates.drop(1))
 
         val identity = PartyAndCertificate(X509Utilities.buildCertPath(certificates))
-        X509Utilities.validateCertPath(trustRoot, identity.certPath)
+        X509Utilities.validateCertPath(trustRoots, identity.certPath)
         return identity
     }
 }

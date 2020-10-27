@@ -5,6 +5,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
@@ -108,7 +109,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     @Suspendable
     private fun checkNotary(notary: Party?) {
         require(notary?.owningKey == service.notaryIdentityKey) {
-            "The notary specified on the transaction: [$notary] does not match the notary service's identity: [${service.notaryIdentityKey}] "
+            "The notary specified on the transaction: [${notary?.description()}] does not match the notary service's identity:" +
+                    " [${service.notaryIdentityKey.toStringShort()}] "
         }
     }
 

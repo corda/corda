@@ -105,6 +105,17 @@ fun createDevNodeCa(intermediateCa: CertificateAndKeyPair,
     return CertificateAndKeyPair(cert, nodeKeyPair)
 }
 
+fun createDevNodeIdentity(nodeCa: CertificateAndKeyPair, legalName: CordaX500Name): CertificateAndKeyPair {
+    val keyPair = generateKeyPair()
+    val cert = X509Utilities.createCertificate(
+            CertificateType.LEGAL_IDENTITY,
+            nodeCa.certificate,
+            nodeCa.keyPair,
+            legalName.x500Principal,
+            keyPair.public)
+    return CertificateAndKeyPair(cert, keyPair)
+}
+
 val DEV_INTERMEDIATE_CA: CertificateAndKeyPair get() = DevCaHelper.loadDevCa(X509Utilities.CORDA_INTERMEDIATE_CA)
 val DEV_ROOT_CA: CertificateAndKeyPair get() = DevCaHelper.loadDevCa(X509Utilities.CORDA_ROOT_CA)
 const val DEV_CA_PRIVATE_KEY_PASS: String = "cordacadevkeypass"

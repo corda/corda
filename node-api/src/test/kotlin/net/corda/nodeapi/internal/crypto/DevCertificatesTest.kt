@@ -33,7 +33,7 @@ class DevCertificatesTest {
         val certPath = X509Utilities.buildCertPath(*oldX509Certificates)
 
         // when
-        certPath.validate(newTrustAnchor)
+        certPath.validate(setOf(newTrustAnchor))
 
         // then no exception is thrown
     }

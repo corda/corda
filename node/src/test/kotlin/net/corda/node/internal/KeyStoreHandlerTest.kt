@@ -171,9 +171,18 @@ class KeyStoreHandlerTest {
     @Test(timeout = 300_000)
     fun `valid trust root is returned`() {
         val expectedRoot = config.p2pSslOptions.trustStore.get()[CORDA_ROOT_CA]
-        val actualRoot = keyStoreHandler.init()
+        val actualRoot = keyStoreHandler.init().first()
 
         assertThat(actualRoot).isEqualTo(expectedRoot)
+    }
+
+    @Test(timeout = 300_000)
+    fun `valid multiple trust roots are returned`() {
+        val trustStore = config.p2pSslOptions.trustStore.get()
+        trustStore["$CORDA_ROOT_CA-2"] = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, Crypto.generateKeyPair())
+        trustStore["non-root"] = X509Utilities.createSelfSignedCACertificate(BOB_NAME.x500Principal, Crypto.generateKeyPair())
+
+        assertThat(keyStoreHandler.init()).containsExactlyInAnyOrder(trustStore[CORDA_ROOT_CA], trustStore["$CORDA_ROOT_CA-2"])
     }
 
     @Test(timeout = 300_000)

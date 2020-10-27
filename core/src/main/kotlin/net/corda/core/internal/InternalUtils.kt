@@ -506,8 +506,8 @@ fun ExecutorService.join() {
 }
 
 // TODO: Currently the certificate revocation status is not handled here. Nowhere in the code the second parameter is used. Consider adding the support in the future.
-fun CertPath.validate(trustAnchor: TrustAnchor, checkRevocation: Boolean = false): PKIXCertPathValidatorResult {
-    val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = checkRevocation }
+fun CertPath.validate(trustAnchors: Set<TrustAnchor>, checkRevocation: Boolean = false): PKIXCertPathValidatorResult {
+    val parameters = PKIXParameters(trustAnchors).apply { isRevocationEnabled = checkRevocation }
     try {
         return CertPathValidator.getInstance("PKIX").validate(this, parameters) as PKIXCertPathValidatorResult
     } catch (e: CertPathValidatorException) {
@@ -517,8 +517,8 @@ Reason: ${e.reason}
 Offending cert index: ${e.index}
 Cert path: $this
 
-Trust anchor:
-$trustAnchor""", e, this, e.index)
+Trust anchors:
+$trustAnchors""", e, this, e.index)
     }
 }
 

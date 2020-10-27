@@ -188,7 +188,7 @@ open class MockServices private constructor(
             // Create a persistent identity service and add all the supplied identities.
             identityService.apply {
                 database = persistence
-                start(DEV_ROOT_CA.certificate, initialIdentity.identity, pkToIdCache = pkToIdCache)
+                start(setOf(DEV_ROOT_CA.certificate), initialIdentity.identity, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
             }
             val networkMapCache = PersistentNetworkMapCache(cacheFactory, persistence, identityService)

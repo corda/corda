@@ -36,6 +36,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.MIN_PLATFORM_VERSIO
 import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
@@ -57,6 +58,7 @@ import net.corda.core.utilities.toHexString
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
+import net.corda.node.internal.DataSourceFactory
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
@@ -268,13 +270,16 @@ class DriverDSLImpl(
         val name = parameters.providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
 
         val config = createConfig(name, parameters, p2pAddress)
-        if (premigrateH2Database && isH2Database(config)) {
-            if (!inMemoryDB) {
+        if (isH2Database(config) && !inMemoryDB) {
+            if (premigrateH2Database) {
                 try {
                     DatabaseSnapshot.copyDatabaseSnapshot(config.corda.baseDirectory)
                 } catch (ex: java.nio.file.FileAlreadyExistsException) {
                     log.warn("Database already exists on disk, not attempting to pre-migrate database.")
                 }
+            }
+            shutdownManager.registerShutdown {
+                shutdownAndDeleteDatabase(config.corda)
             }
         }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
@@ -1140,6 +1145,17 @@ class DriverDSLImpl(
          */
         private fun Map<String, Any>.removeResolvedClasspath(): Map<String, Any> {
             return filterNot { it.key == "java.class.path" }
+        }
+
+        private fun shutdownAndDeleteDatabase(config: NodeConfiguration) {
+            DataSourceFactory.createDataSource(config.dataSourceProperties).also { dataSource ->
+                dataSource.connection.use { connection ->
+                    connection.createStatement().use { statement ->
+                        statement.execute("SHUTDOWN")
+                    }
+                }
+            }
+            DatabaseSnapshot.databaseFilename(config.baseDirectory).deleteIfExists()
         }
     }
 }

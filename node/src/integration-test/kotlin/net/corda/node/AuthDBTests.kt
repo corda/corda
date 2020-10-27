@@ -23,9 +23,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.sql.Connection
 import java.sql.Statement
 import java.util.*
-import javax.sql.DataSource
 import kotlin.test.assertFailsWith
 
 /*
@@ -34,7 +34,7 @@ import kotlin.test.assertFailsWith
  */
 @RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
-    private lateinit var node: NodeWithInfo
+    private var node: NodeWithInfo? = null
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB
 
@@ -97,8 +97,9 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
                 )
         )
 
-        node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
-        client = CordaRPCClient(node.node.configuration.rpcOptions.address)
+        node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig).also { node ->
+            client = CordaRPCClient(node.node.configuration.rpcOptions.address)
+        }
     }
 
     @Test(timeout=300_000)
@@ -219,6 +220,7 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
 
     @After
     fun tearDown() {
+        node?.node?.stop()
         db.close()
     }
 
@@ -232,7 +234,7 @@ private data class RoleAndPermissions(val role: String, val permissions: List<St
  * Manage in-memory DB mocking a users database with the schema expected by Node's security manager
  */
 private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), roleAndPermissions: List<RoleAndPermissions> = emptyList()) : AutoCloseable {
-    val jdbcUrl = "jdbc:h2:mem:$name;DB_CLOSE_DELAY=-1"
+    val jdbcUrl = "jdbc:h2:mem:$name"
 
     companion object {
         const val DB_CREATE_SCHEMA = """
@@ -273,36 +275,34 @@ private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), rol
         }
     }
 
-    private val dataSource: DataSource
+    private val connection: Connection
     private inline fun session(statement: (Statement) -> Unit) {
-        dataSource.connection.use {
-            it.autoCommit = false
-            it.createStatement().use(statement)
-            it.commit()
-        }
+        connection.createStatement().use(statement)
+        connection.commit()
     }
 
     init {
-        dataSource = DataSourceFactory.createDataSource(Properties().apply {
+        require(users.map { it.username }.toSet().size == users.size) {
+            "Duplicate username in input"
+        }
+        connection = DataSourceFactory.createDataSource(Properties().apply {
             put("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             put("dataSource.url", jdbcUrl)
         }, false)
+                .connection
+                .apply {
+                    autoCommit = false
+                }
         session {
             it.execute(DB_CREATE_SCHEMA)
-        }
-        require(users.map { it.username }.toSet().size == users.size) {
-            "Duplicate username in input"
         }
         users.forEach { insert(it) }
         roleAndPermissions.forEach { insert(it) }
     }
 
     override fun close() {
-        dataSource.connection.use {
-            it.createStatement().use {
-                it.execute("DROP ALL OBJECTS")
-            }
-        }
+        // Close the connection, at which point the database will shut down
+        connection.close()
     }
 }
 
