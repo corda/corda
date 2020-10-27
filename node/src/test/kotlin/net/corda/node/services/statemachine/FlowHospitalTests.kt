@@ -93,7 +93,6 @@ class FlowHospitalTests {
 
     @Test(timeout = 300_000)
     fun `Hospital works if not injected with any staff members`() {
-        // create a hospital with no staff members injected and replace it in node.smm
         flowHospital = StaffedFlowHospital(flowMessaging, serviceHub.clock, "")//.also { it.staff = listOf() }
 
         val id = StateMachineRunId.createRandom()
