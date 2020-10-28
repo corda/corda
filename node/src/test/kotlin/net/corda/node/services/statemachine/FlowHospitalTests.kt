@@ -39,32 +39,32 @@ class FlowHospitalTests {
         @AfterClass
         fun tearDown() = mockNet.stopNodes()
 
-        fun newStateMachineState(id: StateMachineRunId): StateMachineState {
-
+        fun newStateMachineState(): Pair<StateMachineRunId, StateMachineState> {
+            val id = StateMachineRunId.createRandom()
             val flowLogic: FlowLogic<*> = object: FlowLogic<Unit>() {
                 @Suspendable
                 override fun call() {}
             }
 
-            return StateMachineState(
-                newCheckpoint(id, flowLogic),
+            return id to StateMachineState(
+                newCheckpoint(flowLogic),
                 flowLogic,
                 emptyList(),
-                true,
-                false,
-                openFuture<Unit>(),
-                true,
-                false,
-                false,
-                false,
-                "",
-                null,
-                1,
-                Semaphore(0)
+                isFlowResumed = true,
+                isWaitingForFuture = false,
+                future = openFuture<Unit>(),
+                isAnyCheckpointPersisted = true,
+                isStartIdempotent = false,
+                isRemoved = false,
+                isKilled = false,
+                senderUUID = "",
+                reloadCheckpointAfterSuspendCount = null,
+                numberOfCommits = 1,
+                lock = Semaphore(0)
             )
         }
 
-        fun newCheckpoint(id: StateMachineRunId, flowLogic: FlowLogic<*>, version: Int = 1): Checkpoint {
+        private fun newCheckpoint(flowLogic: FlowLogic<*>, version: Int = 1): Checkpoint {
 
             val frozenFlowLogic = flowLogic.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
@@ -92,14 +92,15 @@ class FlowHospitalTests {
     fun `Hospital works if not injected with any staff members`() {
         flowHospital = StaffedFlowHospital(flowMessaging, serviceHub.clock, "")//.also { it.staff = listOf() }
 
-        val id = StateMachineRunId.createRandom()
+        val (id, stateMachineState) = newStateMachineState()
+
         flowHospital!!.requestTreatment(
             DummyFlowFiber(
                 id,
                 StateMachineInstanceId(id, 0L),
                 StateMachine(id, SecureRandom())
             ),
-            newStateMachineState(id),
+            stateMachineState,
             listOf(IllegalStateException())
         )
 
