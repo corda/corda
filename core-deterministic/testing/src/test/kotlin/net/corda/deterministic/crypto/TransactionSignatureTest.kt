@@ -1,4 +1,4 @@
-package net.corda.deterministic.crypto
+   package net.corda.deterministic.crypto
 
 import net.corda.core.crypto.*
 import net.corda.deterministic.KeyStoreProvider
@@ -27,7 +27,7 @@ class TransactionSignatureTest {
         @JvmStatic
         fun setupClass() {
             keyPair = keyStoreProvider.getKeyPair("tx")
-            digestService = DigestService.instance
+            digestService = DigestService.default
         }
     }
 
@@ -67,7 +67,7 @@ class TransactionSignatureTest {
         val txSignature = signMultipleTx(txIds, keyPair)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DigestService.instance)
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DigestService.default)
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)

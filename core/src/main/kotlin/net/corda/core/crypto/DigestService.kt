@@ -30,9 +30,10 @@ class DigestService private constructor(val digestLength: Int,
         private const val NONCE_SIZE = 8
         private const val WORD_SIZE_32 = 32
         // The `default` instance will be configured from the network parameters. For now hardcoded to SHA2_256.
-        val default : DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256) }
-        val sha2_256: DigestService = DigestService(WORD_SIZE_32, SHA2_256)
-        val sha3_256: DigestService = DigestService(WORD_SIZE_32, SHA3_256)
+        //val default : DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256) }
+        val default : DigestService by lazy { sha3_256 }
+        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
+        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
 
         fun create(hashAlgorithm: String) =
             create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce = true, hashTwiceComponent = true)
@@ -71,6 +72,11 @@ class DigestService private constructor(val digestLength: Int,
      * @param salt The [String] to use as salt.
      */
     fun hash(str: String): SecureHash = hash(str.toByteArray())
+
+    /**
+     * Generates a random SHA-256 value.
+     */
+    //fun randomHash(): SecureHash = SecureHash.random(hashAlgorithm)
 
     /**
      * A digest value consisting of [digestLength] 0xFF bytes.

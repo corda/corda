@@ -29,6 +29,7 @@ import kotlin.test.assertFailsWith
 class RaftNotaryServiceTests {
     private val notaryName = CordaX500Name("RAFT Notary Service", "London", "GB")
 
+    // TODO: RETEST
     @Test(timeout=300_000)
 	fun `detect double spend`() {
         driver(DriverParameters(
@@ -74,7 +75,8 @@ class RaftNotaryServiceTests {
                     .setTimeWindow(bankA.services.clock.instant(), 30.seconds)
             val issueTx = bankA.services.signInitialTransaction(builder)
 
-            bankA.startFlow(NotaryFlow.Client(issueTx)).getOrThrow()
+            val client = NotaryFlow.Client(issueTx)
+            bankA.startFlow(client).getOrThrow()
         }
     }
 
