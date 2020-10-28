@@ -47,8 +47,7 @@ import kotlin.test.fail
  */
 
 /** Returns a fake state reference for testing purposes. **/
-//fun generateStateRef(): StateRef = StateRef(SecureHash.randomSHA256(), 0)
-fun generateStateRef(): StateRef = StateRef(SecureHash.random(DigestService.default.hashAlgorithm), 0)
+fun generateStateRef(): StateRef = StateRef(DigestService.default.randomHash(), 0)
 
 private val freePortCounter = AtomicInteger(30000)
 

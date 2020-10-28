@@ -1,6 +1,8 @@
 package net.corda.node.utilities
 
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.TestingNamedCacheFactory
@@ -33,7 +35,7 @@ class PersistentMapTests {
 
     @Test(timeout=300_000)
 	fun `make sure persistence works`() {
-        val testHash = SecureHash.randomSHA256().toString()
+        val testHash = DigestService.default.randomHash().toString()
 
         database.transaction {
             val map = createTestMap()
@@ -49,7 +51,7 @@ class PersistentMapTests {
 
     @Test(timeout=300_000)
 	fun `make sure persistence works using assignment operator`() {
-        val testHash = SecureHash.randomSHA256().toString()
+        val testHash = DigestService.default.randomHash().toString()
 
         database.transaction {
             val map = createTestMap()
@@ -65,7 +67,7 @@ class PersistentMapTests {
 
     @Test(timeout=300_000)
 	fun `make sure updating works`() {
-        val testHash = SecureHash.randomSHA256().toString()
+        val testHash = DigestService.default.randomHash().toString()
 
         database.transaction {
             val map = createTestMap()
@@ -83,7 +85,7 @@ class PersistentMapTests {
 
     @Test(timeout=300_000)
 	fun `make sure updating works using assignment operator`() {
-        val testHash = SecureHash.randomSHA256().toString()
+        val testHash = DigestService.default.randomHash().toString()
 
         database.transaction {
             val map = createTestMap()
@@ -101,7 +103,7 @@ class PersistentMapTests {
 
     @Test(timeout=300_000)
 	fun `make sure removal works`() {
-        val testHash = SecureHash.randomSHA256().toString()
+        val testHash = DigestService.default.randomHash().toString()
 
         database.transaction {
             val map = createTestMap()
@@ -127,7 +129,7 @@ class PersistentMapTests {
 
     @Test(timeout=300_000)
 	fun `make sure persistence works against base class`() {
-        val testHash = SecureHash.randomSHA256().toString()
+        val testHash = DigestService.default.randomHash().toString()
 
         database.transaction {
             val map = createTestMap()
@@ -143,7 +145,7 @@ class PersistentMapTests {
 
     @Test(timeout=300_000)
 	fun `make sure persistence works using assignment operator base class`() {
-        val testHash = SecureHash.randomSHA256().toString()
+        val testHash = DigestService.default.randomHash().toString()
 
         database.transaction {
             val map = createTestMap() as MutableMap<String, String>

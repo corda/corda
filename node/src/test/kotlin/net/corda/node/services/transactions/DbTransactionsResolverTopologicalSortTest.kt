@@ -1,16 +1,18 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.node.services.DbTransactionsResolver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class DbTransactionsResolverTopologicalSortTest {
     private val topologicalSort = DbTransactionsResolver.TopologicalSort()
-    private val t1 = SecureHash.randomSHA256()
-    private val t2 = SecureHash.randomSHA256()
-    private val t3 = SecureHash.randomSHA256()
-    private val t4 = SecureHash.randomSHA256()
+    private val t1 = DigestService.default.randomHash()
+    private val t2 = DigestService.default.randomHash()
+    private val t3 = DigestService.default.randomHash()
+    private val t4 = DigestService.default.randomHash()
 
     @Test(timeout=300_000)
 	fun issuance() {

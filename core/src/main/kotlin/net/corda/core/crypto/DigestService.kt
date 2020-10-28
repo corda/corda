@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
@@ -31,9 +32,13 @@ class DigestService private constructor(val digestLength: Int,
         private const val WORD_SIZE_32 = 32
         // The `default` instance will be configured from the network parameters. For now hardcoded to SHA2_256.
         //val default : DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256) }
-        val default : DigestService by lazy { sha3_256 }
-        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
-        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
+//        val default : DigestService by lazy { sha3_256 }
+//        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
+//        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
+
+        val sha2_256: DigestService = DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true)
+        val sha3_256: DigestService = DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false)
+        val default : DigestService = sha3_256
 
         fun create(hashAlgorithm: String) =
             create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce = true, hashTwiceComponent = true)
@@ -72,11 +77,6 @@ class DigestService private constructor(val digestLength: Int,
      * @param salt The [String] to use as salt.
      */
     fun hash(str: String): SecureHash = hash(str.toByteArray())
-
-    /**
-     * Generates a random SHA-256 value.
-     */
-    //fun randomHash(): SecureHash = SecureHash.random(hashAlgorithm)
 
     /**
      * A digest value consisting of [digestLength] 0xFF bytes.
@@ -128,3 +128,6 @@ class DigestService private constructor(val digestLength: Int,
         return if(hashTwiceNonce) SecureHash.hashTwiceAs(hashAlgorithm, data) else SecureHash.hashAs(hashAlgorithm, data)
     }
 }
+
+@DeleteForDJVM
+fun DigestService.randomHash(): SecureHash = SecureHash.random(DigestService.default.hashAlgorithm)

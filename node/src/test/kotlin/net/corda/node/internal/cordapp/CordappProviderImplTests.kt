@@ -2,6 +2,8 @@ package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.randomHash
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
@@ -35,13 +37,13 @@ class CordappProviderImplTests {
         val validConfig: Config = ConfigFactory.parseString("key=value")
 
         @JvmField
-        val ID1 = AttachmentId.randomSHA256()
+        val ID1 = DigestService.default.randomHash()
         @JvmField
-        val ID2 = AttachmentId.randomSHA256()
+        val ID2 = DigestService.default.randomHash()
         @JvmField
-        val ID3 = AttachmentId.randomSHA256()
+        val ID3 = DigestService.default.randomHash()
         @JvmField
-        val ID4 = AttachmentId.randomSHA256()
+        val ID4 = DigestService.default.randomHash()
 
         val stubConfigProvider = object : CordappConfigProvider {
             override fun getConfigByName(name: String): Config = ConfigFactory.empty()

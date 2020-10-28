@@ -5,9 +5,11 @@ import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.randomHash
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.packageName
@@ -998,7 +1000,7 @@ class NodeVaultServiceTest {
         fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
                 StateAndRef(
                         TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), identity.party), Cash.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint),
-                        StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
+                        StateRef(DigestService.default.randomHash(), Random().nextInt(32))
                 )
 
         val cashIssued = setOf<StateAndRef<ContractState>>(makeCash(100.DOLLARS, dummyCashIssuer.party))

@@ -2,7 +2,9 @@ package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.flows.FlowExternalOperation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -484,7 +486,7 @@ class KillFlowTest {
     class AFlowThatGetsMurderedTryingToWaitForATransaction : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            waitForLedgerCommit(SecureHash.randomSHA256())
+            waitForLedgerCommit(DigestService.default.randomHash())
         }
     }
 

@@ -220,8 +220,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 	fun TransactionSignature() {
         val signatureMetadata = SignatureMetadata(1, 1)
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
-                left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
+                left = PartialTree.Leaf(DigestService.default.randomHash()),
+                right = PartialTree.IncludedLeaf(DigestService.default.randomHash()),
                 hashAlgorithm = digestService.hashAlgorithm
         ))
         val transactionSignature = TransactionSignature(secureRandomBytes(128), BOB_PUBKEY, signatureMetadata, partialMerkleTree)
@@ -241,7 +241,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `SignedTransaction (WireTransaction)`() {
-        val attachmentId = SecureHash.randomSHA256()
+        val attachmentId = DigestService.default.randomHash()
         doReturn(attachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
@@ -255,12 +255,12 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         doReturn("app").whenever(attachment).uploader
         val wtx = TransactionBuilder(
                 notary = DUMMY_NOTARY,
-                inputs = mutableListOf(StateRef(SecureHash.randomSHA256(), 1)),
+                inputs = mutableListOf(StateRef(DigestService.default.randomHash(), 1)),
                 attachments = mutableListOf(attachmentId),
                 outputs = mutableListOf(createTransactionState()),
                 commands = mutableListOf(Command(DummyCommandData, listOf(BOB_PUBKEY))),
                 window = TimeWindow.fromStartAndDuration(Instant.now(), 1.hours),
-                references = mutableListOf(StateRef(SecureHash.randomSHA256(), 0)),
+                references = mutableListOf(StateRef(DigestService.default.randomHash(), 0)),
                 privacySalt = net.corda.core.contracts.PrivacySalt()
         ).toWireTransaction(services)
         val stx = sign(wtx)
@@ -363,7 +363,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `PartialTree IncludedLeaf`() {
-        val includedLeaf = PartialTree.IncludedLeaf(SecureHash.randomSHA256())
+        val includedLeaf = PartialTree.IncludedLeaf(DigestService.default.randomHash())
         val json = mapper.valueToTree<ObjectNode>(includedLeaf)
         assertThat(json.assertHasOnlyFields("includedLeaf")[0].textValue()).isEqualTo(includedLeaf.hash.toString())
         assertThat(mapper.convertValue<PartialTree.IncludedLeaf>(json)).isEqualTo(includedLeaf)
@@ -371,7 +371,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `PartialTree Leaf`() {
-        val leaf = PartialTree.Leaf(SecureHash.randomSHA256())
+        val leaf = PartialTree.Leaf(DigestService.default.randomHash())
         val json = mapper.valueToTree<ObjectNode>(leaf)
         assertThat(json.assertHasOnlyFields("leaf")[0].textValue()).isEqualTo(leaf.hash.toString())
         assertThat(mapper.convertValue<PartialTree.Leaf>(json)).isEqualTo(leaf)
@@ -381,8 +381,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 	fun `simple PartialTree Node`() {
         val digestService = DigestService.default
         val node = PartialTree.Node(
-                left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                right = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
+                left = PartialTree.Leaf(DigestService.default.randomHash()),
+                right = PartialTree.IncludedLeaf(DigestService.default.randomHash()),
                 hashAlgorithm = digestService.hashAlgorithm
         )
         val json = mapper.valueToTree<ObjectNode>(node)
@@ -398,10 +398,10 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 	fun `complex PartialTree Node`() {
         val digestService = DigestService.default
         val node = PartialTree.Node(
-                left = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
+                left = PartialTree.IncludedLeaf(DigestService.default.randomHash()),
                 right = PartialTree.Node(
-                        left = PartialTree.Leaf(SecureHash.randomSHA256()),
-                        right = PartialTree.Leaf(SecureHash.randomSHA256()),
+                        left = PartialTree.Leaf(DigestService.default.randomHash()),
+                        right = PartialTree.Leaf(DigestService.default.randomHash()),
                         hashAlgorithm = digestService.hashAlgorithm
                 ),
                 hashAlgorithm = digestService.hashAlgorithm
@@ -428,7 +428,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `SecureHash SHA256`() {
-        testToStringSerialisation(SecureHash.randomSHA256())
+        testToStringSerialisation(DigestService.default.randomHash())
     }
 
     @Test(timeout=300_000)

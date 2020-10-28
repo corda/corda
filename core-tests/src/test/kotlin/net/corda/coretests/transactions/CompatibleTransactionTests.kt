@@ -31,9 +31,9 @@ class CompatibleTransactionTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val dummyOutState = TransactionState(DummyState(0), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
-    private val stateRef1 = StateRef(SecureHash.randomSHA256(), 0)
-    private val stateRef2 = StateRef(SecureHash.randomSHA256(), 1)
-    private val stateRef3 = StateRef(SecureHash.randomSHA256(), 0)
+    private val stateRef1 = StateRef(DigestService.default.randomHash(), 0)
+    private val stateRef2 = StateRef(DigestService.default.randomHash(), 1)
+    private val stateRef3 = StateRef(DigestService.default.randomHash(), 0)
 
     private val inputs = listOf(stateRef1, stateRef2, stateRef3) // 3 elements.
     private val outputs = listOf(dummyOutState, dummyOutState.copy(notary = BOB)) // 2 elements.
@@ -42,7 +42,7 @@ class CompatibleTransactionTests {
     private val notary = DUMMY_NOTARY
     private val timeWindow = TimeWindow.fromOnly(Instant.now())
     private val privacySalt: PrivacySalt = PrivacySalt()
-    private val paramsHash = SecureHash.randomSHA256()
+    private val paramsHash = DigestService.default.randomHash()
 
     private val inputGroup by lazy { ComponentGroup(INPUTS_GROUP.ordinal, inputs.map { it.serialize() }) }
     private val outputGroup by lazy { ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.map { it.serialize() }) }

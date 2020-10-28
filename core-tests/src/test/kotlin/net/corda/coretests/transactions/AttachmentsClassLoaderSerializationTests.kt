@@ -1,7 +1,9 @@
 package net.corda.coretests.transactions
 
 import net.corda.core.contracts.Contract
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
 import net.corda.core.serialization.deserialize
@@ -79,7 +81,7 @@ class AttachmentsClassLoaderSerializationTests {
     // These tests are not Attachment specific. Should they be removed?
     @Test(timeout=300_000)
 	fun `test serialization of SecureHash`() {
-        val secureHash = SecureHash.randomSHA256()
+        val secureHash = DigestService.default.randomHash()
         val bytes = secureHash.serialize()
         val copiedSecuredHash = bytes.deserialize()
 

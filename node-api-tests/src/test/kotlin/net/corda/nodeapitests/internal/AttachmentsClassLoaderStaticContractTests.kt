@@ -5,7 +5,9 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -89,7 +91,7 @@ class AttachmentsClassLoaderStaticContractTests {
         doReturn(setOf(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
-        val contractAttachmentId = SecureHash.randomSHA256()
+        val contractAttachmentId = DigestService.default.randomHash()
         doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage)
                 .getLatestContractAttachments(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)
         doReturn(mock<IdentityService>()).whenever(it).identityService

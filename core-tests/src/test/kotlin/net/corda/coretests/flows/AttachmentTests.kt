@@ -4,7 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.contracts.Attachment
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -69,7 +71,7 @@ class AttachmentTests : WithMockNet {
 
     @Test(timeout=300_000)
 	fun missing() {
-        val hash: SecureHash = SecureHash.randomSHA256()
+        val hash: SecureHash = DigestService.default.randomHash()
 
         // Get node one to fetch a non-existent attachment.
         assertThat(

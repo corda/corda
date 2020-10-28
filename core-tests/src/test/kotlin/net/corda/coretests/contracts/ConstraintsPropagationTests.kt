@@ -5,11 +5,13 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.allOnesHash
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.randomHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.canBeTransitionedFrom
@@ -335,8 +337,8 @@ class ConstraintsPropagationTests {
         whenever(attachment.allContracts).thenReturn(setOf(propagatingContractClassName))
 
         // Exhaustive positive check
-        assertTrue(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
-        assertTrue(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(WhitelistedByZoneAttachmentConstraint, attachment))
+        assertTrue(HashAttachmentConstraint(DigestService.default.randomHash()).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
+        assertTrue(HashAttachmentConstraint(DigestService.default.randomHash()).canBeTransitionedFrom(WhitelistedByZoneAttachmentConstraint, attachment))
 
         assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
         assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(WhitelistedByZoneAttachmentConstraint, attachment))
@@ -346,26 +348,26 @@ class ConstraintsPropagationTests {
         assertTrue(AlwaysAcceptAttachmentConstraint.canBeTransitionedFrom(AlwaysAcceptAttachmentConstraint, attachment))
 
         // Exhaustive negative check
-        assertFalse(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(AlwaysAcceptAttachmentConstraint, attachment))
+        assertFalse(HashAttachmentConstraint(DigestService.default.randomHash()).canBeTransitionedFrom(AlwaysAcceptAttachmentConstraint, attachment))
         assertFalse(WhitelistedByZoneAttachmentConstraint.canBeTransitionedFrom(AlwaysAcceptAttachmentConstraint, attachment))
         assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(AlwaysAcceptAttachmentConstraint, attachment))
 
-        assertFalse(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(HashAttachmentConstraint(SecureHash.randomSHA256()), attachment))
+        assertFalse(HashAttachmentConstraint(DigestService.default.randomHash()).canBeTransitionedFrom(HashAttachmentConstraint(DigestService.default.randomHash()), attachment))
 
-        assertFalse(WhitelistedByZoneAttachmentConstraint.canBeTransitionedFrom(HashAttachmentConstraint(SecureHash.randomSHA256()), attachment))
+        assertFalse(WhitelistedByZoneAttachmentConstraint.canBeTransitionedFrom(HashAttachmentConstraint(DigestService.default.randomHash()), attachment))
         assertFalse(WhitelistedByZoneAttachmentConstraint.canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
 
-        assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(SecureHash.randomSHA256()), attachment))
+        assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(DigestService.default.randomHash()), attachment))
         assertFalse(SignatureAttachmentConstraint(BOB_PUBKEY).canBeTransitionedFrom(WhitelistedByZoneAttachmentConstraint, attachment))
         assertFalse(SignatureAttachmentConstraint(BOB_PUBKEY).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
 
         assertFalse(AlwaysAcceptAttachmentConstraint.canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
         assertFalse(AlwaysAcceptAttachmentConstraint.canBeTransitionedFrom(WhitelistedByZoneAttachmentConstraint, attachment))
-        assertFalse(AlwaysAcceptAttachmentConstraint.canBeTransitionedFrom(HashAttachmentConstraint(SecureHash.randomSHA256()), attachment))
+        assertFalse(AlwaysAcceptAttachmentConstraint.canBeTransitionedFrom(HashAttachmentConstraint(DigestService.default.randomHash()), attachment))
 
         // Fail when encounter a AutomaticPlaceholderConstraint
         assertFailsWith<IllegalArgumentException> {
-            HashAttachmentConstraint(SecureHash.randomSHA256())
+            HashAttachmentConstraint(DigestService.default.randomHash())
                     .canBeTransitionedFrom(AutomaticPlaceholderConstraint, attachment)
         }
         assertFailsWith<IllegalArgumentException> { AutomaticPlaceholderConstraint.canBeTransitionedFrom(AutomaticPlaceholderConstraint, attachment) }

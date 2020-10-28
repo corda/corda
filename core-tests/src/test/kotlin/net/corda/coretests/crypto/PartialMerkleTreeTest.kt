@@ -130,7 +130,7 @@ class PartialMerkleTreeTest {
 
     @Test(timeout=300_000)
 	fun `check full tree`() {
-        val h = SecureHash.randomSHA256()
+        val h = DigestService.default.randomHash()
         val left = MerkleTree.Node(h, MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)),
                 MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)))
         val right = MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h))

@@ -9,8 +9,10 @@ import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
@@ -373,7 +375,7 @@ class NetworkMapUpdaterTest {
         setUpdater()
         val newParameters = testNetworkParameters(
                 epoch = 314,
-                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
+                whitelistedContractImplementations = mapOf("key" to listOf(DigestService.default.randomHash())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater()
         //TODO: Remove sleep in unit test.
@@ -391,7 +393,7 @@ class NetworkMapUpdaterTest {
         setUpdater()
         val newParameters = testNetworkParameters(
                 epoch = 314,
-                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
+                whitelistedContractImplementations = mapOf("key" to listOf(DigestService.default.randomHash())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater(excludedAutoAcceptNetworkParameters = setOf("whitelistedContractImplementations"))
         //TODO: Remove sleep in unit test.
@@ -405,7 +407,7 @@ class NetworkMapUpdaterTest {
         setUpdater()
         val newParameters = testNetworkParameters(
                 epoch = 314,
-                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
+                whitelistedContractImplementations = mapOf("key" to listOf(DigestService.default.randomHash())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater(autoAcceptNetworkParameters = false)
         //TODO: Remove sleep in unit test.
@@ -610,8 +612,8 @@ class NetworkMapUpdaterTest {
                 "com.example2" to generateKeyPair().public
         )
         val whitelistedContractImplementations = mapOf(
-                "example1" to listOf(AttachmentId.randomSHA256()),
-                "example2" to listOf(AttachmentId.randomSHA256())
+                "example1" to listOf(DigestService.default.randomHash()),
+                "example2" to listOf(DigestService.default.randomHash())
         )
 
         val netParams = testNetworkParameters()

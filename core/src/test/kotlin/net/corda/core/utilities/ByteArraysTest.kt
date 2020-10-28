@@ -1,7 +1,9 @@
 package net.corda.core.utilities
 
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.internal.declaredField
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertSame
@@ -54,7 +56,7 @@ class ByteArraysTest {
         val privacySaltAsHexString = privacySalt.bytes.toHexString()
         assertTrue(privacySaltAsHexString.matches(HEX_REGEX))
 
-        val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+        val stateRef = StateRef(DigestService.default.randomHash(), 0)
         val txhashAsHexString = stateRef.txhash.bytes.toHexString()
         assertTrue(txhashAsHexString.matches(HEX_REGEX))
     }

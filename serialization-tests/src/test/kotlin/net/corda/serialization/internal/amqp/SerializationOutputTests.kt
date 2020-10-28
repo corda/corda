@@ -1013,7 +1013,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
 
-        val obj = StateRef(SecureHash.randomSHA256(), 0)
+        val obj = StateRef(DigestService.default.randomHash(), 0)
         serdes(obj, factory, factory2)
     }
 

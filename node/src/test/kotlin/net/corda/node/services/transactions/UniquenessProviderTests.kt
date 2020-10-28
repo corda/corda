@@ -11,6 +11,7 @@ import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
@@ -209,7 +210,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `rejects transaction with previously used reference states`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = DigestService.default.randomHash()
         val referenceState = generateStateRef()
 
         val result = uniquenessProvider.commit(listOf(referenceState), firstTxId, identity, requestSignature, references = emptyList())

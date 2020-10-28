@@ -73,7 +73,7 @@ class NotaryServiceTests {
 
     @Test(timeout=300_000)
 	fun `should reject when parameters not current`() {
-        val hash = SecureHash.randomSHA256()
+        val hash = DigestService.default.randomHash()
         val stx = generateTransaction(aliceNode, alice, notary, hash, 13)
         val future = aliceNode.services.startFlow(DummyClientFlow(stx, notary)).resultFuture
         mockNet.runNetwork()
@@ -96,7 +96,7 @@ class NotaryServiceTests {
                                         party: Party, notary: Party,
                                         paramsHash: SecureHash? = node.services.networkParametersService.currentHash,
                                         numberOfInputs: Int = 10_005): SignedTransaction {
-            val txHash = SecureHash.randomSHA256()
+            val txHash = DigestService.default.randomHash()
             val inputs = (1..numberOfInputs).map { StateRef(txHash, it) }
             val tx = if (paramsHash != null) {
                 NotaryChangeTransactionBuilder(inputs, notary, party, paramsHash).build()

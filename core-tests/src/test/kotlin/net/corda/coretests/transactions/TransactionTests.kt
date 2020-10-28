@@ -66,7 +66,7 @@ class TransactionTests {
         val c1 = CompositeKey.Builder().addKeys(apub, bpub).build(2)
         val compKey = CompositeKey.Builder().addKeys(c1, cpub).build(1)
         val wtx = createWireTransaction(
-                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
+                inputs = listOf(StateRef(DigestService.default.randomHash(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
@@ -92,7 +92,7 @@ class TransactionTests {
     @Test(timeout=300_000)
 	fun `signed transaction missing signatures`() {
         val wtx = createWireTransaction(
-                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
+                inputs = listOf(StateRef(DigestService.default.randomHash(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
@@ -130,7 +130,7 @@ class TransactionTests {
             doReturn(SecureHash.zeroHash).whenever(it).id
             doReturn(fakeAttachment("nothing", "nada").inputStream()).whenever(it).open()
         }, DummyContract.PROGRAM_ID, uploader = "app"))
-        val id = SecureHash.randomSHA256()
+        val id = DigestService.default.randomHash()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
         val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
@@ -155,7 +155,7 @@ class TransactionTests {
 
     @Test(timeout=300_000)
 	fun `transaction cannot have duplicate inputs`() {
-        val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+        val stateRef = StateRef(DigestService.default.randomHash(), 0)
         fun buildTransaction() = createWireTransaction(
                 inputs = listOf(stateRef, stateRef),
                 attachments = emptyList(),
@@ -173,7 +173,7 @@ class TransactionTests {
         val notary: Party = DUMMY_NOTARY
         val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, notary)
         val outState = inState.copy(notary = ALICE)
-        val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))
+        val inputs = listOf(StateAndRef(inState, StateRef(DigestService.default.randomHash(), 0)))
         val outputs = listOf(outState)
         val commands = emptyList<CommandWithParties<CommandData>>()
         val attachments = listOf(object : AbstractAttachment({
@@ -185,7 +185,7 @@ class TransactionTests {
             override val size: Int = 1234
             override val id: SecureHash = SecureHash.zeroHash
         })
-        val id = SecureHash.randomSHA256()
+        val id = DigestService.default.randomHash()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
         val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())

@@ -8,7 +8,9 @@ import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.flows.NotaryError
 import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.internal.concurrent.transpose
@@ -67,8 +69,8 @@ class RaftTransactionCommitLogTests {
 	fun `stores entries correctly`() {
         val client = cluster.last().client
 
-        val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txId: SecureHash = SecureHash.randomSHA256()
+        val states = listOf(StateRef(DigestService.default.randomHash(), 0), StateRef(DigestService.default.randomHash(), 0))
+        val txId: SecureHash = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
 
@@ -87,9 +89,9 @@ class RaftTransactionCommitLogTests {
 	fun `returns conflict for duplicate entries`() {
         val client = cluster.last().client
 
-        val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txIdFirst = SecureHash.randomSHA256()
-        val txIdSecond = SecureHash.randomSHA256()
+        val states = listOf(StateRef(DigestService.default.randomHash(), 0), StateRef(DigestService.default.randomHash(), 0))
+        val txIdFirst = DigestService.default.randomHash()
+        val txIdSecond = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
 
@@ -107,8 +109,8 @@ class RaftTransactionCommitLogTests {
 	fun `transactions outside their time window are rejected`() {
         val client = cluster.last().client
 
-        val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txId: SecureHash = SecureHash.randomSHA256()
+        val states = listOf(StateRef(DigestService.default.randomHash(), 0), StateRef(DigestService.default.randomHash(), 0))
+        val txId: SecureHash = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
         val timeWindow = TimeWindow.fromOnly(Instant.MAX)
@@ -124,8 +126,8 @@ class RaftTransactionCommitLogTests {
 	fun `transactions can be re-notarised outside their time window`() {
         val client = cluster.last().client
 
-        val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txId: SecureHash = SecureHash.randomSHA256()
+        val states = listOf(StateRef(DigestService.default.randomHash(), 0), StateRef(DigestService.default.randomHash(), 0))
+        val txId: SecureHash = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
         val timeWindow = TimeWindow.fromOnly(Instant.MIN)

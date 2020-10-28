@@ -3,7 +3,9 @@ package net.corda.core.internal
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
@@ -32,7 +34,7 @@ class ClassLoadingUtilsTest {
     companion object {
         const val STANDALONE_CLASS_NAME = "com.example.StandaloneClassWithEmptyConstructor"
         const val PROGRAM_ID: ContractClassName = "net.corda.core.internal.DummyContract"
-        val contractAttachmentId = SecureHash.randomSHA256()
+        val contractAttachmentId = DigestService.default.randomHash()
 
         fun directoryEntry(internalName: String) = ZipEntry("$internalName/").apply {
             method = STORED
@@ -218,7 +220,7 @@ class ClassLoadingUtilsTest {
         }
 
         val attachment1 = signedAttachment(jarData1)
-        val attachment2 = signedAttachment(jarData1, id = SecureHash.randomSHA256())
+        val attachment2 = signedAttachment(jarData1, id = DigestService.default.randomHash())
         var url1: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment1)
         var url2: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment2)
 

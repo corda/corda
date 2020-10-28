@@ -5,7 +5,9 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
@@ -100,7 +102,7 @@ open class MockServices private constructor(
          */
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+        fun makeTestDataSourceProperties(nodeName: String = DigestService.default.randomHash().toString()): Properties {
             val dbDir = Paths.get("","build", "mocknetworktestdb", nodeName)
                     .toAbsolutePath()
             val dbPath = dbDir.resolve("persistence")

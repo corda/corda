@@ -8,7 +8,9 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
@@ -128,7 +130,7 @@ class NodeAttachmentServiceTest {
         val id = testJar.read { storage.importAttachment(it, "test", null) }
         assertEquals(expectedHash, id)
 
-        assertNull(storage.openAttachment(SecureHash.randomSHA256()))
+        assertNull(storage.openAttachment(DigestService.default.randomHash()))
         val stream = storage.openAttachment(expectedHash)!!.openAsJAR()
         val e1 = stream.nextJarEntry!!
         assertEquals("test1.txt", e1.name)

@@ -2,7 +2,9 @@ package net.corda.node.services.events
 
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.configureDatabase
@@ -24,11 +26,11 @@ class PersistentScheduledFlowRepositoryTest {
 
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
-            val laterStateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val laterStateRef = StateRef(DigestService.default.randomHash(), 0)
             val laterSsr = ScheduledStateRef(laterStateRef, laterTime)
             repo.merge(laterSsr)
 
-            val earlierStateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val earlierStateRef = StateRef(DigestService.default.randomHash(), 0)
             val earlierSsr = ScheduledStateRef(earlierStateRef, mark)
             repo.merge(earlierSsr)
 
@@ -45,7 +47,7 @@ class PersistentScheduledFlowRepositoryTest {
         val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
-            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val stateRef = StateRef(DigestService.default.randomHash(), 0)
             val laterSsr = ScheduledStateRef(stateRef, laterTime)
 
             repo.merge(laterSsr)

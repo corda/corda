@@ -1,7 +1,9 @@
 package net.corda.coretests.serialization
 
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
@@ -21,7 +23,7 @@ class NotaryExceptionSerializationTest {
 
     @Test(timeout=300_000)
 	fun testSerializationRoundTrip() {
-        val txhash = SecureHash.randomSHA256()
+        val txhash = DigestService.default.randomHash()
         val stateHistory: Map<StateRef, StateConsumptionDetails> = mapOf(
                 StateRef(txhash, 0) to StateConsumptionDetails(txhash.reHash())
         )

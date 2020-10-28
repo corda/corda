@@ -14,6 +14,7 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.AttachmentTrustCalculator
@@ -520,7 +521,7 @@ class AttachmentsClassLoaderTests {
 
             val attachments = createAttachments(contractJarPath)
 
-            val id = SecureHash.randomSHA256()
+            val id = DigestService.default.randomHash()
             val timeWindow: TimeWindow? = null
             val privacySalt = PrivacySalt()
             val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory)

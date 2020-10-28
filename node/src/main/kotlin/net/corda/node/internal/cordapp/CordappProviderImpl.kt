@@ -151,7 +151,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
     private fun parseIds(ids: String): Set<AttachmentId> {
         return ids.split(",").map(String::trim)
             .filterNot(String::isEmpty)
-            .mapTo(LinkedHashSet(), SecureHash.Companion::parse)
+            .mapTo(LinkedHashSet(), SecureHash.Companion::create)
     }
 
     /**

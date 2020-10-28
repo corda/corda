@@ -306,7 +306,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test(timeout=300_000)
 	fun `serialize - deserialize HashNotFound`() {
-        val randomHash = SecureHash.randomSHA256()
+        val randomHash = DigestService.default.randomHash()
         val exception = FetchDataFlow.HashNotFound(randomHash)
         val exception2 = exception.checkpointSerialize(context).checkpointDeserialize(context)
         assertEquals(randomHash, exception2.requested)
