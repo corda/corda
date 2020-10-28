@@ -23,7 +23,7 @@ class NotaryExceptionSerializationTest {
 	fun testSerializationRoundTrip() {
         val txhash = SecureHash.randomSHA256()
         val stateHistory: Map<StateRef, StateConsumptionDetails> = mapOf(
-                StateRef(txhash, 0) to StateConsumptionDetails(txhash.sha256())
+                StateRef(txhash, 0) to StateConsumptionDetails(txhash.reHash())
         )
         val error = NotaryError.Conflict(txhash, stateHistory)
         val instance = NotaryException(error)

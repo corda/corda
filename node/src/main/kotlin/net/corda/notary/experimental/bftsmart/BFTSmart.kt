@@ -230,7 +230,7 @@ object BFTSmart {
                 type: StateConsumptionDetails.ConsumedStateType
         ) {
             states.forEach { stateRef ->
-                commitLog[stateRef]?.let { conflictingStates[stateRef] = StateConsumptionDetails(it.sha256(), type) }
+                commitLog[stateRef]?.let { conflictingStates[stateRef] = StateConsumptionDetails(it.reHash(), type) }
             }
         }
 
@@ -277,7 +277,7 @@ object BFTSmart {
         }
 
         private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
-            if (isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
+            if (isConsumedByTheSameTx(txId.reHash(), conflictingStates)) {
                 log.debug { "Transaction $txId already notarised" }
                 return
             } else {

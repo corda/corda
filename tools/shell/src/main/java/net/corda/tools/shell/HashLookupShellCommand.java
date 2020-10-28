@@ -60,7 +60,8 @@ public class HashLookupShellCommand extends CordaRpcOpsShellCommand {
         Optional<SecureHash> match = mapping.stream()
                 .map(StateMachineTransactionMapping::getTransactionId)
                 .filter(
-                        txId -> txId.equals(txIdHashParsed) || SecureHash.sha256(txId.getBytes()).equals(txIdHashParsed)
+                        //txId -> txId.equals(txIdHashParsed) || SecureHash.sha256(txId.getBytes()).equals(txIdHashParsed)
+                        txId -> txId.equals(txIdHashParsed) || SecureHash.hashAs(txIdHashParsed.getAlgorithm(), txId.getBytes()).equals(txIdHashParsed)
                 )
                 .findFirst();
 

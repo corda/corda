@@ -79,7 +79,7 @@ class RaftTransactionCommitLog<E, EK>(
         val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
 
         fun checkConflict(states: List<StateRef>, type: StateConsumptionDetails.ConsumedStateType) = states.forEach { stateRef ->
-            map[stateRef]?.let { conflictingStates[stateRef] = StateConsumptionDetails(it.second.sha256(), type) }
+            map[stateRef]?.let { conflictingStates[stateRef] = StateConsumptionDetails(it.second.reHash(), type) }
         }
 
         raftCommit.use {
@@ -116,7 +116,7 @@ class RaftTransactionCommitLog<E, EK>(
     }
 
     private fun handleConflicts(txId: SecureHash, conflictingStates: java.util.LinkedHashMap<StateRef, StateConsumptionDetails>): NotaryError? {
-        return if (isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
+        return if (isConsumedByTheSameTx(txId.reHash(), conflictingStates)) {
             log.debug { "Transaction $txId already notarised" }
             null
         } else {
