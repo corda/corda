@@ -47,12 +47,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
         @VisibleForTesting
         val onFlowAdmitted = mutableListOf<(id: StateMachineRunId) -> Unit>()
+
+        val EMPTY_DIAGNOSES = mapOf<Diagnosis, List<Staff>>(Diagnosis.TERMINAL to listOf())
     }
 
-    private var _staff: List<Staff>? = null
-    var staff: List<Staff>
-        get() = _staff ?: throw IllegalStateException("Staff members not injected yet.")
-        set(value) { _staff = value }
+    var staff: List<Staff>? = null
 
     private val hospitalJobTimer = Timer("FlowHospitalJobTimer", true)
 
@@ -198,17 +197,26 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     fun requestTreatment(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
         if (!currentState.isRemoved) {
             flowsInHospital[flowFiber.id] = flowFiber
-            admit(flowFiber, currentState, errors)
+            val (event, backOffForChronicCondition) = admit(flowFiber, currentState, errors)
+
+            if (backOffForChronicCondition.isZero) {
+                flowFiber.scheduleEvent(event)
+            } else {
+                hospitalJobTimer.schedule(timerTask {
+                    flowFiber.scheduleEvent(event)
+                }, backOffForChronicCondition.toMillis())
+            }
         }
     }
 
     @Suppress("ComplexMethod")
-    private fun admit(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
+    @VisibleForTesting
+    fun admit(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>): Pair<Event, Duration> {
         val time = clock.instant()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
         onFlowAdmitted.forEach { it.invoke(flowFiber.id) }
 
-        val (event, backOffForChronicCondition) = mutex.locked {
+        return mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
 
             val report = consultStaff(flowFiber, currentState, errors, medicalHistory)
@@ -256,14 +264,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             recordsPublisher.onNext(record)
             Pair(event, backOffForChronicCondition)
         }
-
-        if (backOffForChronicCondition.isZero) {
-            flowFiber.scheduleEvent(event)
-        } else {
-            hospitalJobTimer.schedule(timerTask {
-                flowFiber.scheduleEvent(event)
-            }, backOffForChronicCondition.toMillis())
-        }
     }
 
     private fun calculateBackOffForChronicCondition(
@@ -299,7 +299,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 .mapIndexed { index, error ->
                     // Rely on the logging context to print details of the flow ID.
                     log.info("Error ${index + 1} of ${errors.size}:", error)
-                    val diagnoses: Map<Diagnosis, List<Staff>> = staff.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) }
+                    val diagnoses: Map<Diagnosis, List<Staff>> =
+                        staff?.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) } ?: {
+                            log.info("Staff hospital has no staff members.")
+                            EMPTY_DIAGNOSES
+                        }.invoke()
+
                     // We're only interested in the highest priority diagnosis for the error
                     val (diagnosis, by) = diagnoses.entries.minBy { it.key }!!
                     ConsultationReport(error, diagnosis, by)
@@ -411,6 +416,7 @@ enum class Diagnosis {
     NOT_MY_SPECIALTY
 }
 
+// Since Flow hospital stays in :node, then everything that staff members need, need to move under :core.
 interface Staff {
     fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis
 }
