@@ -9,7 +9,9 @@ import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty

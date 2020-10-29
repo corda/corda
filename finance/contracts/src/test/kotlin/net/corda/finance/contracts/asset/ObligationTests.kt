@@ -4,8 +4,10 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -66,7 +68,7 @@ class ObligationTests {
     private val defaultRef = OpaqueBytes.of(1)
     private val defaultIssuer = MEGA_CORP.ref(defaultRef)
     private val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
-    private val trustedCashContract = NonEmptySet.of(DigestService.default.randomHash() as SecureHash)
+    private val trustedCashContract = NonEmptySet.of(DigestService.default.randomHash())
     private val megaIssuedDollars = NonEmptySet.of(Issued(defaultIssuer, USD))
     private val megaIssuedPounds = NonEmptySet.of(Issued(defaultIssuer, GBP))
     private val fivePm: Instant = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours

@@ -6,24 +6,24 @@
     <changeSet author="R3.Corda" id="vault_transaction_id_size">
         <modifyDataType tableName="vault_fungible_states"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="vault_fungible_states_parts"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="vault_linear_states"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="vault_linear_states_parts"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="vault_states"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="vault_transaction_notes"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="state_party"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
     </changeSet>
 </databaseChangeLog>

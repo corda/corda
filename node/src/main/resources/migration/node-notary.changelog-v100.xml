@@ -6,15 +6,15 @@
     <changeSet author="R3.Corda" id="node_notary_transaction_id_size">
         <modifyDataType tableName="node_notary_committed_txs"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="node_notary_committed_states"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="node_notary_committed_states"
                         columnName="consuming_transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="node_notary_request_log"
                         columnName="consuming_transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
     </changeSet>
 </databaseChangeLog>

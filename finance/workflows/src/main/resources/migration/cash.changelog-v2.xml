@@ -6,6 +6,6 @@
     <changeSet id="extend_cash_states_transaction_id" author="R3.Corda">
         <modifyDataType tableName="contract_cash_states"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
     </changeSet>
 </databaseChangeLog>

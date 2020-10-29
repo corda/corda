@@ -8,4 +8,12 @@
         <addNotNullConstraint tableName="node_raft_committed_states" columnName="state_index" columnDataType="BIGINT"/>
         <addNotNullConstraint tableName="node_raft_committed_states" columnName="state_value" columnDataType="BLOB"/>
     </changeSet>
+    <changeSet author="R3.Corda" id="node_raft_transaction_id_size">
+        <modifyDataType tableName="node_raft_committed_txs"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="node_notary_request_log"
+                        columnName="consuming_transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+    </changeSet>
 </databaseChangeLog>

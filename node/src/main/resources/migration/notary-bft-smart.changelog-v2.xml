@@ -3,12 +3,15 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
-    <changeSet author="R3.Corda" id="node_raft_transaction_id_size">
-        <modifyDataType tableName="node_raft_committed_txs"
+    <changeSet author="R3.Corda" id="node_bft_transaction_id_size">
+        <modifyDataType tableName="node_bft_committed_states"
                         columnName="transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="node_bft_committed_states"
+                        columnName="consuming_transaction_id"
+                        newDataType="NVARCHAR(144)"/>
         <modifyDataType tableName="node_notary_request_log"
                         columnName="consuming_transaction_id"
-                        newDataType="NVARCHAR(80)"/>
+                        newDataType="NVARCHAR(144)"/>
     </changeSet>
 </databaseChangeLog>
