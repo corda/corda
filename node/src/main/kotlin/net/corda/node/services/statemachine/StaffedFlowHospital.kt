@@ -301,6 +301,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     val diagnoses: Map<Diagnosis, List<Staff>> =
                         staff.run {
                             if (isEmpty()) {
+                                log.info("Staff flow hospital has no staff members.")
                                 EMPTY_DIAGNOSES
                             } else {
                                 this.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) }
