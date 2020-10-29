@@ -1013,7 +1013,7 @@ internal class SingleThreadedStateMachineManager(
                 NotaryDoctor,
                 ResuscitationSpecialist
         )
-        return StaffedFlowHospital(flowMessaging, serviceHub.clock, ourSenderUUID).also { it.staff = staff }
+        return StaffedFlowHospital(flowMessaging, serviceHub.clock, ourSenderUUID, staff)
     }
 
     private fun StateMachineInnerState.removeFlowOrderly(

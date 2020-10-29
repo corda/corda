@@ -44,7 +44,7 @@ class StaffedFlowHospitalTest {
         doReturn(Instant.now()).whenever(clock).instant()
         doReturn(1).whenever(checkpointState).numberOfSuspends
 
-        flowHospital = StaffedFlowHospital(flowMessaging, clock, ourSenderUUID)//.also { it.staff = listOf() }
+        flowHospital = StaffedFlowHospital(flowMessaging, clock, ourSenderUUID)
 
         val (event, backOffForChronicCondition) = flowHospital!!.admit(
             fiber,

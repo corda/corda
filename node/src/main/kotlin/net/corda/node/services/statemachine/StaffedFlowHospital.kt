@@ -27,7 +27,8 @@ import kotlin.math.pow
 @Suppress("TooManyFunctions")
 class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                           private val clock: Clock,
-                          private val ourSenderUUID: String) : Closeable {
+                          private val ourSenderUUID: String,
+                          private val staff: List<Staff> = listOf()) : Closeable {
     companion object {
         val log = contextLogger()
 
@@ -50,8 +51,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
         val EMPTY_DIAGNOSES = mapOf<Diagnosis, List<Staff>>(Diagnosis.TERMINAL to listOf())
     }
-
-    var staff: List<Staff>? = null
 
     private val hospitalJobTimer = Timer("FlowHospitalJobTimer", true)
 
@@ -300,11 +299,13 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     // Rely on the logging context to print details of the flow ID.
                     log.info("Error ${index + 1} of ${errors.size}:", error)
                     val diagnoses: Map<Diagnosis, List<Staff>> =
-                        staff?.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) } ?: {
-                            log.info("Staff hospital has no staff members.")
-                            EMPTY_DIAGNOSES
-                        }.invoke()
-
+                        staff.run {
+                            if (isEmpty()) {
+                                EMPTY_DIAGNOSES
+                            } else {
+                                this.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) }
+                            }
+                        }
                     // We're only interested in the highest priority diagnosis for the error
                     val (diagnosis, by) = diagnoses.entries.minBy { it.key }!!
                     ConsultationReport(error, diagnosis, by)
