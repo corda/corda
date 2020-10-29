@@ -384,6 +384,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 }
 
+// The below classes, interfaces ,helper method should be moved under :core to be available for Cordapp developers
+// to define their own staff members if they wanted to
 class FlowMedicalHistory {
     internal val records: MutableList<StaffedFlowHospital.MedicalRecord.Flow> = mutableListOf()
 
