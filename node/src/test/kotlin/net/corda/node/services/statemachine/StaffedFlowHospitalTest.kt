@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.seconds
 import org.junit.After
@@ -39,7 +40,7 @@ class StaffedFlowHospitalTest {
     }
 
     @Test(timeout = 300_000)
-    fun `Hospital works if not injected with any staff members`() {
+    fun `Hospital gives a Diagnosis_TERMINAL if not injected with any staff members`() {
         doReturn(id).whenever(fiber).id
         doReturn(Instant.now()).whenever(clock).instant()
         doReturn(1).whenever(checkpointState).numberOfSuspends
@@ -49,7 +50,7 @@ class StaffedFlowHospitalTest {
         val (event, backOffForChronicCondition) = flowHospital!!.admit(
             fiber,
             currentState,
-            listOf(IllegalStateException())
+            listOf(HospitalizeFlowException())
         )
 
         assertTrue(event is Event.StartErrorPropagation)
