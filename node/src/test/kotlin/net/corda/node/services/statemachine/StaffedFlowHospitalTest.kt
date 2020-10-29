@@ -8,7 +8,7 @@ import org.junit.After
 import org.junit.Test
 import java.time.Clock
 
-class FlowHospitalTests {
+class StaffedFlowHospitalTest {
 
     private val clock = mock<Clock>()
     private val flowMessaging = mock<FlowMessaging>()
