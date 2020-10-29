@@ -7,5 +7,7 @@ import net.corda.core.internal.AbstractAttachment
 
 @KeepForDJVM
 class GeneratedAttachment(val bytes: ByteArray, uploader: String?) : AbstractAttachment({ bytes }, uploader) {
-    override val id = DigestService.default.hash(bytes)
+    // TODO(iee): use default instead of sha2_256 once clarified what hash algorithm should be used for
+    //            attachments. Does it also have impact on CorDapp jars? Would it be backward compatible?
+    override val id = DigestService.sha2_256.hash(bytes)
 }

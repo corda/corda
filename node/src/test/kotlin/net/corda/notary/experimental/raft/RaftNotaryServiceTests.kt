@@ -75,7 +75,6 @@ class RaftNotaryServiceTests {
             val issueTx = bankA.services.signInitialTransaction(builder)
 
             bankA.startFlow(NotaryFlow.Client(issueTx)).getOrThrow()
-
         }
     }
 

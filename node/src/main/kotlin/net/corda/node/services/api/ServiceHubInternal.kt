@@ -3,6 +3,7 @@ package net.corda.node.services.api
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
@@ -69,6 +70,10 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
                                database: CordaPersistence) {
+
+            require(txs.all { it.id.algorithm == SHA2_256 } || HashAgility.isEnabled()) {
+                "Tried to record a transaction with non-standard hash algorithm (experimental mode off)"
+            }
 
             database.transaction {
                 require(txs.isNotEmpty()) { "No transactions passed in for recording" }

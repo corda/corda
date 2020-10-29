@@ -4,6 +4,7 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -67,6 +68,7 @@ class StandaloneCordaRPClientTest {
         val rpcUser = User("rpcUser", "test", permissions = setOf("InvokeRpc.startFlow", "InvokeRpc.killFlow"))
         val flowUser = User("flowUser", "test", permissions = setOf("StartFlow.net.corda.finance.flows.CashIssueFlow"))
         val port = AtomicInteger(15200)
+        val digestService = DigestService.default
         const val attachmentSize = 2116
         val timeout = 60.seconds
     }
