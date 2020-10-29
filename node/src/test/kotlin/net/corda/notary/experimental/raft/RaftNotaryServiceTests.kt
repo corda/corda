@@ -29,7 +29,6 @@ import kotlin.test.assertFailsWith
 class RaftNotaryServiceTests {
     private val notaryName = CordaX500Name("RAFT Notary Service", "London", "GB")
 
-    // TODO: RETEST
     @Test(timeout=300_000)
 	fun `detect double spend`() {
         driver(DriverParameters(

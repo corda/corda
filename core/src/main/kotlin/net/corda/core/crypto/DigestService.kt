@@ -2,7 +2,9 @@ package net.corda.core.crypto
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.serialization.CordaSerializable
@@ -12,6 +14,21 @@ import net.corda.core.utilities.OpaqueBytes
 
 import java.nio.ByteBuffer
 
+/**
+ * The DigestService class is a service that offers the main crypto methods for calculating transaction hashes and
+ * building Merkle trees. The [default] instance is passed by default to instances of classes like TransactionBuilder
+ * and as a parameter to MerkleTree.getMerkleTree(...) method. In future the [default] instance can be parametrized
+ * to initialize with the network default hash algorithm or just a more secure algorithm (e.g. SHA3_256). While the
+ * SHA2_256 is vulnerable to pre-image attacks, the computeNonce and componentHash methods behaviour is defined by
+ * the hashTwiceNonce and hashTwiceComponent; with SHA2_256 they both must be set to true to ensure pre-image attack
+ * won't work (and for backward compatibility), but for other algorithms like SHA3_256 that are not affected, they
+ * can and should be set to false as hashing twice would not improve security but affect performance.
+ *
+ * @param digestLength specifies the WORD size for the given hash algorithm
+ * @param hashAlgorithm the name of the hash algorithm to be used for the instance
+ * @param hashTwiceNonce should be true if the given hash algorithm is vulnerable to pre-image attacks, false otherwise
+ * @param hashTwiceComponent should be true if the given hash algorithm is vulnerable to pre-image attacks, false otherwise
+ */
 @CordaSerializable
 @KeepForDJVM
 class DigestService private constructor(val digestLength: Int,
@@ -30,21 +47,14 @@ class DigestService private constructor(val digestLength: Int,
     companion object {
         private const val NONCE_SIZE = 8
         private const val WORD_SIZE_32 = 32
-        // The `default` instance will be configured from the network parameters. For now hardcoded to SHA2_256.
-        //val default : DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256) }
-//        val default : DigestService by lazy { sha3_256 }
-//        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
-//        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
-
-        val sha2_256: DigestService = DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true)
-        val sha3_256: DigestService = DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false)
-        val default : DigestService = sha3_256
-
-        fun create(hashAlgorithm: String) =
-            create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce = true, hashTwiceComponent = true)
-
-        fun create(digestLength: Int, hashAlgorithm: String) =
-                create(digestLength, hashAlgorithm, hashTwiceNonce = true, hashTwiceComponent = true)
+        /**
+         * The [default] instance will be parametrized and initialized at runtime. It would be probably useful to assume an override
+         * priority order.
+         */
+        //val default : DigestService by lazy { sha2_256 }
+        val default : DigestService by lazy { sha3_256 }
+        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
+        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
 
         fun create(hashAlgorithm: String, hashTwiceNonce : Boolean, hashTwiceComponent : Boolean) =
             create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce, hashTwiceComponent)

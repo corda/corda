@@ -105,7 +105,6 @@ class BFTNotaryServiceTests {
         }
     }
 
-    // TODO: RETEST
     @Test(timeout=300_000)
 	fun `detect double spend`() {
         node.run {

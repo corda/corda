@@ -70,7 +70,7 @@ class UniquenessProviderTests(
     val testSerialization = SerializationEnvironmentRule(inheritable = true)
     private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
     private val digestService = DigestService.default
-    private val txID = SecureHash.random(digestService.hashAlgorithm)
+    private val txID = digestService.randomHash()
     private val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(NullKeys.NullPublicKey, ByteArray(32)), 0)
     private lateinit var testClock: TestClock
     private lateinit var uniquenessProvider: UniquenessProvider
@@ -105,7 +105,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `rejects transaction before time window is valid`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val timeWindow = TimeWindow.between(
                 Clock.systemUTC().instant().plus(30.minutes),
                 Clock.systemUTC().instant().plus(60.minutes))
@@ -130,7 +130,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `commits transaction within time window`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val result = uniquenessProvider.commit(
                 emptyList(), firstTxId, identity, requestSignature, timeWindow).get()
@@ -151,7 +151,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `rejects transaction after time window has expired`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
         val result = uniquenessProvider.commit(
                 emptyList(), firstTxId, identity, requestSignature, timeWindow).get()
@@ -170,8 +170,8 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `time window only transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
+        val secondTxId = digestService.randomHash()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
 
@@ -195,7 +195,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `commits transaction with unused reference states`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val referenceState = generateStateRef()
 
         val result = uniquenessProvider.commit(emptyList(), firstTxId, identity, requestSignature, references = listOf(referenceState))
@@ -218,7 +218,7 @@ class UniquenessProviderTests(
         assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
         val result2 = uniquenessProvider.commit(emptyList(), secondTxId, identity, requestSignature, references = listOf(referenceState))
                 .get()
         val error = (result2 as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
@@ -229,7 +229,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `commits retry transaction when reference states were spent since initial transaction`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val referenceState = generateStateRef()
 
         val result = uniquenessProvider.commit(
@@ -238,7 +238,7 @@ class UniquenessProviderTests(
         assert(result is UniquenessProvider.Result.Success)
 
         // Spend reference state
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
         val result2 = uniquenessProvider.commit(
                 listOf(referenceState), secondTxId, identity, requestSignature, references = emptyList())
                 .get()
@@ -253,8 +253,8 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `reference state only transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
+        val secondTxId = digestService.randomHash()
         val referenceState = generateStateRef()
 
         val validFuture3 = uniquenessProvider.commit(
@@ -277,7 +277,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `commits transaction with unused reference states and valid time window`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val referenceState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
@@ -286,7 +286,7 @@ class UniquenessProviderTests(
         assert(result is UniquenessProvider.Result.Success)
 
         // The reference state gets consumed.
-        val result2 = uniquenessProvider.commit(listOf(referenceState), SecureHash.random(digestService.hashAlgorithm), identity, requestSignature, timeWindow)
+        val result2 = uniquenessProvider.commit(listOf(referenceState), digestService.randomHash(), identity, requestSignature, timeWindow)
                 .get()
         assert(result2 is UniquenessProvider.Result.Success)
 
@@ -299,7 +299,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `rejects transaction with unused reference states and invalid time window`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val referenceState = generateStateRef()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
 
@@ -311,7 +311,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `rejects transaction with previously used reference states and valid time window`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val referenceState = generateStateRef()
 
         val result = uniquenessProvider.commit(listOf(referenceState), firstTxId, identity, requestSignature, references = emptyList())
@@ -319,7 +319,7 @@ class UniquenessProviderTests(
         assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val result2 = uniquenessProvider.commit(emptyList(), secondTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
                 .get()
@@ -331,7 +331,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `rejects transaction with previously used reference states and invalid time window`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val referenceState = generateStateRef()
 
         val result = uniquenessProvider.commit(listOf(referenceState), firstTxId, identity, requestSignature, references = emptyList())
@@ -339,7 +339,7 @@ class UniquenessProviderTests(
         assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
         val result2 = uniquenessProvider.commit(emptyList(), secondTxId, identity, requestSignature, invalidTimeWindow, references = listOf(referenceState))
                 .get()
@@ -372,7 +372,7 @@ class UniquenessProviderTests(
         val result = uniquenessProvider.commit(inputs, firstTxId, identity, requestSignature).get()
         assert(result is UniquenessProvider.Result.Success)
 
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
 
         val response: UniquenessProvider.Result = uniquenessProvider.commit(inputs, secondTxId, identity, requestSignature).get()
         val error = (response as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
@@ -383,8 +383,8 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `input state only transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
+        val secondTxId = digestService.randomHash()
         val inputState = generateStateRef()
 
         val validFuture1 = uniquenessProvider.commit(
@@ -437,7 +437,7 @@ class UniquenessProviderTests(
         val result = uniquenessProvider.commit(inputs, firstTxId, identity, requestSignature).get()
         assert(result is UniquenessProvider.Result.Success)
 
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
 
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val response: UniquenessProvider.Result = uniquenessProvider.commit(inputs, secondTxId, identity, requestSignature, timeWindow)
@@ -456,7 +456,7 @@ class UniquenessProviderTests(
         val result = uniquenessProvider.commit(inputs, firstTxId, identity, requestSignature).get()
         assert(result is UniquenessProvider.Result.Success)
 
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
 
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
         val response: UniquenessProvider.Result = uniquenessProvider.commit(inputs, secondTxId, identity, requestSignature, invalidTimeWindow)
@@ -471,7 +471,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `commits transaction with unused input & reference states`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
@@ -489,7 +489,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `re-notarise after reference state is spent`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
@@ -502,7 +502,7 @@ class UniquenessProviderTests(
         // Spend the reference state.
         val referenceSpend = uniquenessProvider.commit(
                 listOf(referenceState),
-                SecureHash.random(digestService.hashAlgorithm),
+                digestService.randomHash(),
                 identity,
                 requestSignature,
                 timeWindow,
@@ -520,7 +520,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `rejects transaction with unused reference states and used input states`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
 
@@ -528,7 +528,7 @@ class UniquenessProviderTests(
         assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val result2 = uniquenessProvider.commit(listOf(inputState), secondTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
                 .get()
@@ -540,7 +540,7 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
 	fun `rejects transaction with used reference states and unused input states`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
 
@@ -549,7 +549,7 @@ class UniquenessProviderTests(
         assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val secondTxId = digestService.randomHash()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val result2 = uniquenessProvider.commit(listOf(inputState), secondTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
                 .get()
@@ -561,8 +561,8 @@ class UniquenessProviderTests(
 
     @Test(timeout=300_000)
     fun `input and reference state transactions are processed correctly when duplicate requests occur in succession`() {
-        val firstTxId = SecureHash.random(digestService.hashAlgorithm)
-        val secondTxId = SecureHash.random(digestService.hashAlgorithm)
+        val firstTxId = digestService.randomHash()
+        val secondTxId = digestService.randomHash()
         val referenceState = generateStateRef()
 
         // Ensure batch contains duplicates
@@ -575,7 +575,7 @@ class UniquenessProviderTests(
 
         // Attempt to use the reference state after it has been consumed
         val validFuture4 = uniquenessProvider.commit(
-                emptyList(), SecureHash.random(digestService.hashAlgorithm), identity, requestSignature, references = listOf(referenceState))
+                emptyList(), digestService.randomHash(), identity, requestSignature, references = listOf(referenceState))
 
         // Ensure that transactions are processed correctly and duplicates get the same responses to original
         assert(validFuture1.get() is UniquenessProvider.Result.Success)
@@ -591,7 +591,7 @@ class UniquenessProviderTests(
 	fun `signs transactions correctly`() {
         (1..10).map {
             val inputState1 = generateStateRef()
-            val firstTxId = SecureHash.random(digestService.hashAlgorithm)
+            val firstTxId = digestService.randomHash()
             val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
             Pair(firstTxId, uniquenessProvider.commit(listOf(inputState1), firstTxId, identity, requestSignature, timeWindow))
         }.forEach {

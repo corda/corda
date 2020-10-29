@@ -68,7 +68,7 @@ class JPAUniquenessProvider(
             @Column(nullable = true, length = 76)
             var id: String? = null,
 
-            @Column(name = "consuming_transaction_id", nullable = true, length = 80)
+            @Column(name = "consuming_transaction_id", nullable = true, length = 144)
             val consumingTxHash: String?,
 
             @Column(name = "requesting_party_name", nullable = true, length = 255)
@@ -102,14 +102,14 @@ class JPAUniquenessProvider(
     class CommittedState(
             @EmbeddedId
             val id: PersistentStateRef,
-            @Column(name = "consuming_transaction_id", nullable = false, length = 80)
+            @Column(name = "consuming_transaction_id", nullable = false, length = 144)
             val consumingTxHash: String)
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
     class CommittedTransaction(
             @Id
-            @Column(name = "transaction_id", nullable = false, length = 80)
+            @Column(name = "transaction_id", nullable = false, length = 144)
             val transactionId: String
     )
 
@@ -285,10 +285,8 @@ class JPAUniquenessProvider(
             stateConflicts: Map<StateRef, StateConsumptionDetails>,
             session: Session
     ): InternalResult {
-        // IEE TODO: need to pass hashTwice settings
-        val digestService = DigestService.create(request.txId.algorithm)
         return when {
-            isConsumedByTheSameTx(digestService.hash(request.txId.bytes), stateConflicts) -> {
+            isConsumedByTheSameTx(request.txId.reHash(), stateConflicts) -> {
                 InternalResult.Success
             }
             request.states.isEmpty() && isPreviouslyNotarised(session, request.txId) -> {

@@ -280,7 +280,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[7].childrenAs<StateRef>(mapper)).isEqualTo(wtx.references)
         assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
         assertThat(wtxFields[10].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
-        // IEE TODO: FIX actualStx.txBits which ends up being different after converting back into signed transaction
 
         assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
         assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
@@ -381,16 +380,15 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 	fun `simple PartialTree Node`() {
         val digestService = DigestService.default
         val node = PartialTree.Node(
-                left = PartialTree.Leaf(DigestService.default.randomHash()),
-                right = PartialTree.IncludedLeaf(DigestService.default.randomHash()),
+                left = PartialTree.Leaf(digestService.randomHash()),
+                right = PartialTree.IncludedLeaf(digestService.randomHash()),
                 hashAlgorithm = digestService.hashAlgorithm
         )
         val json = mapper.valueToTree<ObjectNode>(node)
-        // IEE REVIEW: is assertHasOnlyFields("left", "right") a hard requirement or can handle the addition of hashAlgorithm?
-        //val (leftJson, rightJson) = json.assertHasOnlyFields("left", "right")
-        val (leftJson, rightJson, ignored) = json.assertHasOnlyFields("left", "right", "hashAlgorithm")
+        val (leftJson, rightJson, algorithm) = json.assertHasOnlyFields("left", "right", "hashAlgorithm")
         assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
         assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
+        assertThat(algorithm.valueAs<String>(mapper)).isEqualTo(node.hashAlgorithm)
         assertThat(mapper.convertValue<PartialTree.Node>(json)).isEqualTo(node)
     }
 
@@ -398,10 +396,10 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 	fun `complex PartialTree Node`() {
         val digestService = DigestService.default
         val node = PartialTree.Node(
-                left = PartialTree.IncludedLeaf(DigestService.default.randomHash()),
+                left = PartialTree.IncludedLeaf(digestService.randomHash()),
                 right = PartialTree.Node(
-                        left = PartialTree.Leaf(DigestService.default.randomHash()),
-                        right = PartialTree.Leaf(DigestService.default.randomHash()),
+                        left = PartialTree.Leaf(digestService.randomHash()),
+                        right = PartialTree.Leaf(digestService.randomHash()),
                         hashAlgorithm = digestService.hashAlgorithm
                 ),
                 hashAlgorithm = digestService.hashAlgorithm

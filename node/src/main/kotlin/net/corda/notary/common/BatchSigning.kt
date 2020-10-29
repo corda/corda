@@ -27,9 +27,9 @@ fun signBatch(
     require(algorithms.size == 1) {
         "Cannot sign a batch with multiple hash algorithms: $algorithms"
     }
-    // IEE TODO: need to pass hashTwice settings
-    val digestService = DigestService.create(algorithms.first())
-    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, digestService)
+    // TODO(iee): assuming this is running on a notary node, and therefore using only the default
+    //            hash algorithm. Review and discuss.
+    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, DigestService.default)
     val merkleTreeRoot = merkleTree.hash
     val signableData = SignableData(
             merkleTreeRoot,

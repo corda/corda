@@ -121,7 +121,7 @@ class RaftUniquenessProvider(
     @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_txs")
     class CommittedTransaction(
             @Id
-            @Column(name = "transaction_id", nullable = false, length = 80)
+            @Column(name = "transaction_id", nullable = false, length = 144)
             val transactionId: String
     )
 
