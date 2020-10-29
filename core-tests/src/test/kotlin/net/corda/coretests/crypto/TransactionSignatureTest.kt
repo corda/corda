@@ -20,13 +20,7 @@ class TransactionSignatureTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val testBytes = "12345678901234567890123456789012".toByteArray()
-    private lateinit var digestService: DigestService
-
-
-    @Before
-    fun init() {
-        digestService = DigestService.default
-    }
+    private val digestService: DigestService = DigestService.default
 
     /** Valid sign and verify. */
     @Test(timeout=300_000)
@@ -34,25 +28,25 @@ class TransactionSignatureTest {
         val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
 
         // Create a SignableData object.
-        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+        val signableData = SignableData(digestService.hash(testBytes), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
 
         // Sign the meta object.
         val transactionSignature: TransactionSignature = keyPair.sign(signableData)
 
         // Check auto-verification.
-        assertTrue(transactionSignature.verify(testBytes.sha256()))
+        assertTrue(transactionSignature.verify(digestService.hash(testBytes)))
 
         // Check manual verification.
-        assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
+        assertTrue(Crypto.doVerify(digestService.hash(testBytes), transactionSignature))
     }
 
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
     @Test(expected = SignatureException::class,timeout=300_000)
     fun `Signature metadata full failure clearData has changed`() {
         val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+        val signableData = SignableData(digestService.hash(testBytes), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         val transactionSignature = keyPair.sign(signableData)
-        Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
+        Crypto.doVerify(digestService.hash(testBytes + testBytes), transactionSignature)
     }
 
     @Test(timeout=300_000)
@@ -106,7 +100,7 @@ class TransactionSignatureTest {
     @Test(timeout=300_000)
 	fun `Verify one-tx signature`() {
         val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(1234567890L))
-        val txId = "aTransaction".toByteArray().sha256()
+        val txId = digestService.hash("aTransaction".toByteArray())
         // One-tx signature.
         val txSignature = signOneTx(txId, keyPair)
 
@@ -119,7 +113,7 @@ class TransactionSignatureTest {
         assertTrue(txSignature.isValid(txId))
 
         // We signed the txId itself, not its hash (because it was a signature over one tx only and no partial tree has been received).
-        assertFailsWith<SignatureException> { Crypto.doVerify(txId.sha256(), txSignature) }
+        assertFailsWith<SignatureException> { Crypto.doVerify(txId.reHash(), txSignature) }
     }
 
     // Returns a TransactionSignature over the Merkle root, but the partial tree is null.

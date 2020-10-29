@@ -74,8 +74,8 @@ class RaftNotaryServiceTests {
                     .setTimeWindow(bankA.services.clock.instant(), 30.seconds)
             val issueTx = bankA.services.signInitialTransaction(builder)
 
-            val client = NotaryFlow.Client(issueTx)
-            bankA.startFlow(client).getOrThrow()
+            bankA.startFlow(NotaryFlow.Client(issueTx)).getOrThrow()
+
         }
     }
 

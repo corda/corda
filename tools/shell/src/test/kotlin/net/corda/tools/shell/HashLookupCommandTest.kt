@@ -3,7 +3,6 @@ package net.corda.tools.shell
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.randomHash
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -47,7 +46,7 @@ class HashLookupCommandTest {
         MatcherAssert.assertThat(response, StringContains.containsString("Found a matching transaction with Id: $DEFAULT_TXID"))
 
         // Verify the hash of the TX ID also works
-        response = runCommand(ops, DEFAULT_TXID.sha256().toString())
+        response = runCommand(ops, DEFAULT_TXID.reHash().toString())
         MatcherAssert.assertThat(response, StringContains.containsString("Found a matching transaction with Id: $DEFAULT_TXID"))
     }
 
