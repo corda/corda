@@ -31,6 +31,9 @@ class StaffedFlowHospitalTest {
 
     @Before
     fun setUp() {
+        doReturn(id).whenever(fiber).id
+        doReturn(Instant.now()).whenever(clock).instant()
+        doReturn(1).whenever(checkpointState).numberOfSuspends
         doReturn(checkpoint).whenever(currentState).checkpoint
         doReturn(checkpointState).whenever(checkpoint).checkpointState
     }
@@ -42,10 +45,6 @@ class StaffedFlowHospitalTest {
 
     @Test(timeout = 300_000)
     fun `Hospital gives a Diagnosis_TERMINAL if not injected with any staff members`() {
-        doReturn(id).whenever(fiber).id
-        doReturn(Instant.now()).whenever(clock).instant()
-        doReturn(1).whenever(checkpointState).numberOfSuspends
-
         flowHospital = StaffedFlowHospital(flowMessaging, clock, ourSenderUUID)
 
         val (event, backOffForChronicCondition) = flowHospital!!.admit(
@@ -60,10 +59,6 @@ class StaffedFlowHospitalTest {
 
     @Test(timeout = 300_000)
     fun `Hospital gives a Diagnosis_OVERNIGHT_OBSERVATION for HospitalizeFlowException if injected with SedationNurse`() {
-        doReturn(id).whenever(fiber).id
-        doReturn(Instant.now()).whenever(clock).instant()
-        doReturn(1).whenever(checkpointState).numberOfSuspends
-
         flowHospital = StaffedFlowHospital(flowMessaging, clock, ourSenderUUID, listOf(SedationNurse))
 
         val (event, backOffForChronicCondition) = flowHospital!!.admit(
@@ -75,5 +70,4 @@ class StaffedFlowHospitalTest {
         assertTrue(event is Event.OvernightObservation)
         assertEquals(0.seconds, backOffForChronicCondition)
     }
-
 }
