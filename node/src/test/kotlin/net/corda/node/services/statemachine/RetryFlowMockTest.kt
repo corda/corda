@@ -36,6 +36,7 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
@@ -99,6 +100,7 @@ class RetryFlowMockTest {
         assertEquals(2, SendAndRetryFlow.count)
     }
 
+    @Ignore("CORDA-4045: Disable flaky test")
     @Test(timeout=300_000)
 	fun `Restart does not set senderUUID`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
