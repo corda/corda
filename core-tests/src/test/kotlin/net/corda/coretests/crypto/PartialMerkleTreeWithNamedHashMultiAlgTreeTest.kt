@@ -16,7 +16,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.crypto.SecureHash.Companion.hashAs
-import net.corda.core.crypto.hashAs
 import net.corda.core.crypto.keys
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -71,7 +70,7 @@ class PartialMerkleTreeWithNamedHashMultiAlgTreeTest {
             return hashAs(SHA3_256, str.toByteArray())
         }
 
-        fun OpaqueBytes.sha3_256(): SecureHash = hashAs(SHA3_256)
+        fun OpaqueBytes.sha3_256(): SecureHash = SecureHash.hashAs(SHA3_256)
     }
 
     @Rule

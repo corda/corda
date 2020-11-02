@@ -43,7 +43,7 @@ class TransactionBuilderTest {
 
     private val notary = TestIdentity(DUMMY_NOTARY_NAME).party
     private val services = rigorousMock<ServicesForResolution>()
-    private val contractAttachmentId = DigestService.default.randomHash()
+    private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
     private val networkParametersService = mock<NetworkParametersService>()
 

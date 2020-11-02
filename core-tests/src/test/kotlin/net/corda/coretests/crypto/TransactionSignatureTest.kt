@@ -25,19 +25,20 @@ class TransactionSignatureTest {
     /** Valid sign and verify. */
     @Test(timeout=300_000)
 	fun `Signature metadata full sign and verify`() {
+        val txId = digestService.hash(testBytes)
         val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
 
         // Create a SignableData object.
-        val signableData = SignableData(digestService.hash(testBytes), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+        val signableData = SignableData(txId, SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
 
         // Sign the meta object.
         val transactionSignature: TransactionSignature = keyPair.sign(signableData)
 
         // Check auto-verification.
-        assertTrue(transactionSignature.verify(digestService.hash(testBytes)))
+        assertTrue(transactionSignature.verify(txId))
 
         // Check manual verification.
-        assertTrue(Crypto.doVerify(digestService.hash(testBytes), transactionSignature))
+        assertTrue(Crypto.doVerify(txId, transactionSignature))
     }
 
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
@@ -56,10 +57,10 @@ class TransactionSignatureTest {
         // Deterministically create 5 txIds.
         val txIds: List<SecureHash> = IntRange(0, 4).map { digestService.hash(byteArrayOf(it.toByte())) }
         // Multi-tx signature.
-        val txSignature = signMultipleTx(txIds, keyPair, digestService)
+        val txSignature = signMultipleTx(txIds, keyPair)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DigestService.default)
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() })
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)
@@ -67,7 +68,7 @@ class TransactionSignatureTest {
         assertFailsWith<SignatureException> { Crypto.doVerify(txIds[3], txSignature) }
 
         // Create a partial tree for one tx.
-        val pmt = PartialMerkleTree.build(merkleTree, listOf(digestService.hash(txIds[0].bytes)))
+        val pmt = PartialMerkleTree.build(merkleTree, listOf(txIds[0].reHash()))
         // Add the partial Merkle tree to the tx signature.
         val txSignatureWithTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmt)
 
@@ -87,7 +88,7 @@ class TransactionSignatureTest {
 
         // What if we send the Full tree. This could be used if notaries didn't want to create a per tx partial tree.
         // Create a partial tree for all txs, thus all leaves are included.
-        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { digestService.hash(it.bytes) })
+        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { it.reHash() })
         // Add the partial Merkle tree to the tx.
         val txSignatureWithFullTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmtFull)
 
@@ -100,7 +101,7 @@ class TransactionSignatureTest {
     @Test(timeout=300_000)
 	fun `Verify one-tx signature`() {
         val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(1234567890L))
-        val txId = digestService.hash("aTransaction".toByteArray())
+        val txId = digestService.hash("aTransaction")
         // One-tx signature.
         val txSignature = signOneTx(txId, keyPair)
 
@@ -117,8 +118,8 @@ class TransactionSignatureTest {
     }
 
     // Returns a TransactionSignature over the Merkle root, but the partial tree is null.
-    private fun signMultipleTx(txIds: List<SecureHash>, keyPair: KeyPair, digestService: DigestService): TransactionSignature {
-        val merkleTreeRoot = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }).hash
+    private fun signMultipleTx(txIds: List<SecureHash>, keyPair: KeyPair): TransactionSignature {
+        val merkleTreeRoot = MerkleTree.getMerkleTree(txIds.map { it.reHash() }).hash
         return signOneTx(merkleTreeRoot, keyPair)
     }
 

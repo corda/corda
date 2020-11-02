@@ -1,4 +1,4 @@
-   package net.corda.deterministic.crypto
+package net.corda.deterministic.crypto
 
 import net.corda.core.crypto.*
 import net.corda.deterministic.KeyStoreProvider
@@ -34,8 +34,10 @@ class TransactionSignatureTest {
     /** Valid sign and verify. */
     @Test(timeout=300_000)
 	fun `Signature metadata full sign and verify`() {
+        val txId = digestService.hash(testBytes)
+
         // Create a SignableData object.
-        val signableData = SignableData(digestService.hash(testBytes), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+        val signableData = SignableData(txId, SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
 
         // Sign the meta object.
         val transactionSignature: TransactionSignature = CheatingSecurityProvider().use {
@@ -43,7 +45,7 @@ class TransactionSignatureTest {
         }
 
         // Check auto-verification.
-        assertTrue(transactionSignature.verify(digestService.hash(testBytes)))
+        assertTrue(transactionSignature.verify(txId))
 
         // Check manual verification.
         assertTrue(Crypto.doVerify(digestService.hash(testBytes), transactionSignature))
@@ -67,7 +69,7 @@ class TransactionSignatureTest {
         val txSignature = signMultipleTx(txIds, keyPair)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it.bytes) }, DigestService.default)
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, digestService)
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)
@@ -75,7 +77,7 @@ class TransactionSignatureTest {
         assertFailsWith<SignatureException> { Crypto.doVerify(txIds[3], txSignature) }
 
         // Create a partial tree for one tx.
-        val pmt = PartialMerkleTree.build(merkleTree, listOf(digestService.hash(txIds[0].bytes)))
+        val pmt = PartialMerkleTree.build(merkleTree, listOf(txIds[0].reHash()))
         // Add the partial Merkle tree to the tx signature.
         val txSignatureWithTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmt)
 
@@ -95,7 +97,7 @@ class TransactionSignatureTest {
 
         // What if we send the Full tree. This could be used if notaries didn't want to create a per tx partial tree.
         // Create a partial tree for all txs, thus all leaves are included.
-        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { digestService.hash(it.bytes) })
+        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { it.reHash() })
         // Add the partial Merkle tree to the tx.
         val txSignatureWithFullTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmtFull)
 
@@ -104,52 +106,6 @@ class TransactionSignatureTest {
             assertTrue(Crypto.doVerify(it, txSignatureWithFullTree))
         }
     }
-
-//    @Test(timeout=300_000)
-//    fun `Verify multi-tx signature`() {
-//        // Deterministically create 5 txIds.
-//        val txIds: List<SecureHash> = IntRange(0, 4).map { digestService.hash(byteArrayOf(it.toByte())) }
-//        // Multi-tx signature.
-//        val txSignature = signMultipleTx(txIds, keyPair)
-//
-//        // The hash of all txIds are used as leaves.
-//        val merkleTree = MerkleTree.getMerkleTree(txIds.map { digestService.hash(it) })
-//
-//        // We haven't added the partial tree yet.
-//        assertNull(txSignature.partialMerkleTree)
-//        // Because partial tree is still null, but we signed over a block of txs, verifying a single tx will fail.
-//        assertFailsWith<SignatureException> { Crypto.doVerify(txIds[3], txSignature) }
-//
-//        // Create a partial tree for one tx.
-//        val pmt = PartialMerkleTree.build(merkleTree, listOf(digestService.hash(txIds[0])))
-//        // Add the partial Merkle tree to the tx signature.
-//        val txSignatureWithTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmt)
-//
-//        // Verify the corresponding txId with every possible way.
-//        assertTrue(Crypto.doVerify(txIds[0], txSignatureWithTree))
-//        assertTrue(txSignatureWithTree.verify(txIds[0]))
-//        assertTrue(Crypto.isValid(txIds[0], txSignatureWithTree))
-//        assertTrue(txSignatureWithTree.isValid(txIds[0]))
-//
-//        // Verify the rest txs in the block, which are not included in the partial Merkle tree.
-//        txIds.subList(1, txIds.size).forEach {
-//            assertFailsWith<IllegalArgumentException> { Crypto.doVerify(it, txSignatureWithTree) }
-//        }
-//
-//        // Test that the Merkle tree consists of hash(txId), not txId.
-//        assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf(txIds[0])) }
-//
-//        // What if we send the Full tree. This could be used if notaries didn't want to create a per tx partial tree.
-//        // Create a partial tree for all txs, thus all leaves are included.
-//        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { digestService.hash(it) })
-//        // Add the partial Merkle tree to the tx.
-//        val txSignatureWithFullTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmtFull)
-//
-//        // All txs can be verified, as they are all included in the provided partial tree.
-//        txIds.forEach {
-//            assertTrue(Crypto.doVerify(it, txSignatureWithFullTree))
-//        }
-//    }
 
     @Test(timeout=300_000)
 	fun `Verify one-tx signature`() {

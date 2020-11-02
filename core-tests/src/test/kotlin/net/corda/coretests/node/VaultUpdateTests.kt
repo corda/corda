@@ -2,7 +2,6 @@ package net.corda.coretests.node
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.randomHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
@@ -31,11 +30,12 @@ class VaultUpdateTests {
         override val participants: List<AbstractParty> = emptyList()
     }
 
-    private val stateRef0 = StateRef(DigestService.default.randomHash(), 0)
-    private val stateRef1 = StateRef(DigestService.default.randomHash(), 1)
-    private val stateRef2 = StateRef(DigestService.default.randomHash(), 2)
-    private val stateRef3 = StateRef(DigestService.default.randomHash(), 3)
-    private val stateRef4 = StateRef(DigestService.default.randomHash(), 4)
+    private val digestService = DigestService.default
+    private val stateRef0 = StateRef(digestService.randomHash(), 0)
+    private val stateRef1 = StateRef(digestService.randomHash(), 1)
+    private val stateRef2 = StateRef(digestService.randomHash(), 2)
+    private val stateRef3 = StateRef(digestService.randomHash(), 3)
+    private val stateRef4 = StateRef(digestService.randomHash(), 4)
 
     private val stateAndRef0 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), stateRef0)
     private val stateAndRef1 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), stateRef1)

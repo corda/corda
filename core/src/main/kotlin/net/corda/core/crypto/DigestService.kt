@@ -51,8 +51,7 @@ class DigestService private constructor(val digestLength: Int,
          * The [default] instance will be parametrized and initialized at runtime. It would be probably useful to assume an override
          * priority order.
          */
-        //val default : DigestService by lazy { sha2_256 }
-        val default : DigestService by lazy { sha3_256 }
+        val default : DigestService by lazy { sha2_256 }
         val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
         val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
 

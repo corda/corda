@@ -363,11 +363,11 @@ private class PartialTreeDeserializer : JsonDeserializer<PartialTree>() {
 }
 
 @JsonInclude(Include.NON_NULL)
-private class PartialTreeJson(val hashAlgorithm: String? = null,
-                              val includedLeaf: SecureHash? = null,
+private class PartialTreeJson(val includedLeaf: SecureHash? = null,
                               val leaf: SecureHash? = null,
                               val left: PartialTreeJson? = null,
-                              val right: PartialTreeJson? = null) {
+                              val right: PartialTreeJson? = null,
+                              val hashAlgorithm: String? = SHA2_256) {
     init {
         if (includedLeaf != null) {
             require(leaf == null && left == null && right == null) { "Invalid JSON structure" }

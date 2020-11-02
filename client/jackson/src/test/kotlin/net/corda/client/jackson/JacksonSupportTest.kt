@@ -50,6 +50,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
@@ -220,8 +221,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 	fun TransactionSignature() {
         val signatureMetadata = SignatureMetadata(1, 1)
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
-                left = PartialTree.Leaf(DigestService.default.randomHash()),
-                right = PartialTree.IncludedLeaf(DigestService.default.randomHash()),
+                left = PartialTree.Leaf(digestService.randomHash()),
+                right = PartialTree.IncludedLeaf(digestService.randomHash()),
                 hashAlgorithm = digestService.hashAlgorithm
         ))
         val transactionSignature = TransactionSignature(secureRandomBytes(128), BOB_PUBKEY, signatureMetadata, partialMerkleTree)
@@ -241,7 +242,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `SignedTransaction (WireTransaction)`() {
-        val attachmentId = DigestService.default.randomHash()
+        val attachmentId = SecureHash.randomSHA256()
         doReturn(attachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
@@ -253,14 +254,15 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
+
         val wtx = TransactionBuilder(
                 notary = DUMMY_NOTARY,
-                inputs = mutableListOf(StateRef(DigestService.default.randomHash(), 1)),
+                inputs = mutableListOf(StateRef(digestService.randomHash(), 1)),
                 attachments = mutableListOf(attachmentId),
                 outputs = mutableListOf(createTransactionState()),
                 commands = mutableListOf(Command(DummyCommandData, listOf(BOB_PUBKEY))),
                 window = TimeWindow.fromStartAndDuration(Instant.now(), 1.hours),
-                references = mutableListOf(StateRef(DigestService.default.randomHash(), 0)),
+                references = mutableListOf(StateRef(digestService.randomHash(), 0)),
                 privacySalt = net.corda.core.contracts.PrivacySalt()
         ).toWireTransaction(services)
         val stx = sign(wtx)
@@ -280,7 +282,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[7].childrenAs<StateRef>(mapper)).isEqualTo(wtx.references)
         assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
         assertThat(wtxFields[10].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
-
         assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
         assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
     }
@@ -362,7 +363,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `PartialTree IncludedLeaf`() {
-        val includedLeaf = PartialTree.IncludedLeaf(DigestService.default.randomHash())
+        val includedLeaf = PartialTree.IncludedLeaf(digestService.randomHash())
         val json = mapper.valueToTree<ObjectNode>(includedLeaf)
         assertThat(json.assertHasOnlyFields("includedLeaf")[0].textValue()).isEqualTo(includedLeaf.hash.toString())
         assertThat(mapper.convertValue<PartialTree.IncludedLeaf>(json)).isEqualTo(includedLeaf)
@@ -370,7 +371,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `PartialTree Leaf`() {
-        val leaf = PartialTree.Leaf(DigestService.default.randomHash())
+        val leaf = PartialTree.Leaf(digestService.randomHash())
         val json = mapper.valueToTree<ObjectNode>(leaf)
         assertThat(json.assertHasOnlyFields("leaf")[0].textValue()).isEqualTo(leaf.hash.toString())
         assertThat(mapper.convertValue<PartialTree.Leaf>(json)).isEqualTo(leaf)
@@ -378,13 +379,13 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `simple PartialTree Node`() {
-        val digestService = DigestService.default
         val node = PartialTree.Node(
                 left = PartialTree.Leaf(digestService.randomHash()),
                 right = PartialTree.IncludedLeaf(digestService.randomHash()),
                 hashAlgorithm = digestService.hashAlgorithm
         )
         val json = mapper.valueToTree<ObjectNode>(node)
+        println(mapper.writeValueAsString(json))
         val (leftJson, rightJson, algorithm) = json.assertHasOnlyFields("left", "right", "hashAlgorithm")
         assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
         assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
@@ -393,8 +394,25 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test(timeout=300_000)
+    fun `PartialTree Node backward compatible deserialize`() {
+        val left = SecureHash.randomSHA256()
+        val right = SecureHash.randomSHA256()
+        val node = PartialTree.Node(
+                left = PartialTree.Leaf(left),
+                right = PartialTree.IncludedLeaf(right),
+                hashAlgorithm = SecureHash.SHA2_256
+        )
+        val legacyJson = mapper.readTree("{\"left\":{\"leaf\":\"$left\"},\"right\":{\"includedLeaf\":\"$right\"}}")
+        val (leftJson, rightJson) = legacyJson.assertHasOnlyFields("left", "right")
+
+        assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
+        assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
+        assertThat(mapper.convertValue<PartialTree.Node>(legacyJson)).isEqualTo(node)
+    }
+
+    @Test(timeout=300_000)
+    @TestFactory()
 	fun `complex PartialTree Node`() {
-        val digestService = DigestService.default
         val node = PartialTree.Node(
                 left = PartialTree.IncludedLeaf(digestService.randomHash()),
                 right = PartialTree.Node(
