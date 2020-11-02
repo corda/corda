@@ -375,7 +375,7 @@ class NetworkMapUpdaterTest {
         setUpdater()
         val newParameters = testNetworkParameters(
                 epoch = 314,
-                whitelistedContractImplementations = mapOf("key" to listOf(DigestService.default.randomHash())))
+                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater()
         //TODO: Remove sleep in unit test.
@@ -393,7 +393,7 @@ class NetworkMapUpdaterTest {
         setUpdater()
         val newParameters = testNetworkParameters(
                 epoch = 314,
-                whitelistedContractImplementations = mapOf("key" to listOf(DigestService.default.randomHash())))
+                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater(excludedAutoAcceptNetworkParameters = setOf("whitelistedContractImplementations"))
         //TODO: Remove sleep in unit test.
@@ -407,7 +407,7 @@ class NetworkMapUpdaterTest {
         setUpdater()
         val newParameters = testNetworkParameters(
                 epoch = 314,
-                whitelistedContractImplementations = mapOf("key" to listOf(DigestService.default.randomHash())))
+                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater(autoAcceptNetworkParameters = false)
         //TODO: Remove sleep in unit test.
@@ -612,8 +612,8 @@ class NetworkMapUpdaterTest {
                 "com.example2" to generateKeyPair().public
         )
         val whitelistedContractImplementations = mapOf(
-                "example1" to listOf(DigestService.default.randomHash()),
-                "example2" to listOf(DigestService.default.randomHash())
+                "example1" to listOf(AttachmentId.randomSHA256()),
+                "example2" to listOf(AttachmentId.randomSHA256())
         )
 
         val netParams = testNetworkParameters()

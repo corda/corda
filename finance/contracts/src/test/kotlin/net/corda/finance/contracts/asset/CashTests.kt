@@ -529,7 +529,7 @@ class CashTests {
     private fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
             StateAndRef(
                     TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), ourIdentity), Cash.PROGRAM_ID, dummyNotary.party, constraint = AlwaysAcceptAttachmentConstraint),
-                    StateRef(DigestService.default.randomHash(), Random().nextInt(32))
+                    StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 
     /**

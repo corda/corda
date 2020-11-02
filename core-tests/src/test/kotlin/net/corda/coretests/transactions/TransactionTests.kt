@@ -20,8 +20,11 @@ import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.internal.TestingNamedCacheFactory
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
@@ -29,7 +32,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
-class TransactionTests {
+@RunWith(Parameterized::class)
+class TransactionTests(private val digestService : DigestService) {
     private companion object {
         val DUMMY_KEY_1 = generateKeyPair()
         val DUMMY_KEY_2 = generateKeyPair()
@@ -39,6 +43,14 @@ class TransactionTests {
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val DUMMY_NOTARY get() = dummyNotary.party
         val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
+
+        @JvmStatic
+        @Parameterized.Parameters
+        fun data(): Collection<DigestService> = listOf(
+                DigestService.sha2_256,
+                DigestService.sha3_256,
+                DigestService.sha3_512
+        )
     }
 
     @Rule
@@ -66,7 +78,7 @@ class TransactionTests {
         val c1 = CompositeKey.Builder().addKeys(apub, bpub).build(2)
         val compKey = CompositeKey.Builder().addKeys(c1, cpub).build(1)
         val wtx = createWireTransaction(
-                inputs = listOf(StateRef(DigestService.default.randomHash(), 0)),
+                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
@@ -92,7 +104,7 @@ class TransactionTests {
     @Test(timeout=300_000)
 	fun `signed transaction missing signatures`() {
         val wtx = createWireTransaction(
-                inputs = listOf(StateRef(DigestService.default.randomHash(), 0)),
+                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
@@ -130,7 +142,7 @@ class TransactionTests {
             doReturn(SecureHash.zeroHash).whenever(it).id
             doReturn(fakeAttachment("nothing", "nada").inputStream()).whenever(it).open()
         }, DummyContract.PROGRAM_ID, uploader = "app"))
-        val id = DigestService.default.randomHash()
+        val id = digestService.randomHash()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
         val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
@@ -147,7 +159,7 @@ class TransactionTests {
                 emptyList(),
                 isAttachmentTrusted = { true },
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                digestService = DigestService.default
+                digestService = digestService
         )
 
         transaction.verify()
@@ -155,7 +167,7 @@ class TransactionTests {
 
     @Test(timeout=300_000)
 	fun `transaction cannot have duplicate inputs`() {
-        val stateRef = StateRef(DigestService.default.randomHash(), 0)
+        val stateRef = StateRef(SecureHash.randomSHA256(), 0)
         fun buildTransaction() = createWireTransaction(
                 inputs = listOf(stateRef, stateRef),
                 attachments = emptyList(),
@@ -173,7 +185,8 @@ class TransactionTests {
         val notary: Party = DUMMY_NOTARY
         val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, notary)
         val outState = inState.copy(notary = ALICE)
-        val inputs = listOf(StateAndRef(inState, StateRef(DigestService.default.randomHash(), 0)))
+        val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))
+
         val outputs = listOf(outState)
         val commands = emptyList<CommandWithParties<CommandData>>()
         val attachments = listOf(object : AbstractAttachment({
@@ -185,9 +198,9 @@ class TransactionTests {
             override val size: Int = 1234
             override val id: SecureHash = SecureHash.zeroHash
         })
-        val id = DigestService.default.randomHash()
+        val id = digestService.randomHash()
         val timeWindow: TimeWindow? = null
-        val privacySalt = PrivacySalt()
+        val privacySalt = PrivacySalt(digestService.digestLength)
         val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
 
         fun buildTransaction() = createLedgerTransaction(
@@ -203,7 +216,7 @@ class TransactionTests {
                 emptyList(),
                 isAttachmentTrusted = { true },
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                digestService = DigestService.default
+                digestService = digestService
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }
@@ -219,7 +232,8 @@ class TransactionTests {
                 commands = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public)),
                 notary = null,
                 timeWindow = null,
-                privacySalt = PrivacySalt() // Randomly-generated – used for calculating the id
+                privacySalt = PrivacySalt(digestService.digestLength), // Randomly-generated – used for calculating the id
+                digestService = digestService
         )
 
         val issueTx1 = buildTransaction()

@@ -842,14 +842,6 @@ open class TransactionBuilder(
         this.privacySalt = privacySalt
     }
 
-//    fun setHashAlgorithm(hashAlgorithm: String) = apply {
-//        this.hashAlgorithm = hashAlgorithm
-//    }
-//
-//    fun resalt() = apply {
-//        privacySalt = PrivacySalt.createFor(hashAlgorithm)
-//    }
-
     /** Returns an immutable list of input [StateRef]s. */
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 

@@ -4,9 +4,9 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.NullKeys.NULL_PARTY
-import net.corda.core.crypto.randomHash
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -60,7 +60,6 @@ class ObligationTests {
         val MINI_CORP_PUBKEY get() = miniCorp.publicKey
         // TODO(iee): Obligations fail to find attachments if we use anything else than sha2_256. All attachment logic is still
         //            using direct calls to .sha256() which still needs to be replaced with DigestService.default
-        val digestService = DigestService.sha2_256
     }
 
     @Rule
@@ -69,7 +68,7 @@ class ObligationTests {
     private val defaultRef = OpaqueBytes.of(1)
     private val defaultIssuer = MEGA_CORP.ref(defaultRef)
     private val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
-    private val trustedCashContract = NonEmptySet.of(digestService.randomHash())
+    private val trustedCashContract = NonEmptySet.of(SecureHash.randomSHA256() as SecureHash)
     private val megaIssuedDollars = NonEmptySet.of(Issued(defaultIssuer, USD))
     private val megaIssuedPounds = NonEmptySet.of(Issued(defaultIssuer, GBP))
     private val fivePm: Instant = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours
@@ -326,8 +325,7 @@ class ObligationTests {
 
     private inline fun <reified T : ContractState> getStateAndRef(state: T, contractClassName: ContractClassName): StateAndRef<T> {
         val txState = TransactionState(state, contractClassName, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
-        return StateAndRef(txState, StateRef(digestService.randomHash(), 0))
-
+        return StateAndRef(txState, StateRef(SecureHash.randomSHA256(), 0))
     }
 
     /** Test generating a transaction to mark outputs as having defaulted. */
@@ -339,7 +337,7 @@ class ObligationTests {
         // Generate a transaction issuing the obligation.
         var tx = TransactionBuilder(null).apply {
             val amount = Amount(100, Issued(defaultIssuer, USD))
-            ObligationUtils.generateCashIssue(this, ALICE, digestService.hash(cashContractBytes), amount, dueBefore,
+            ObligationUtils.generateCashIssue(this, ALICE, cashContractBytes.sha256(), amount, dueBefore,
                     beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
         }
         var stx = miniCorpServices.signInitialTransaction(tx)
@@ -579,7 +577,7 @@ class ObligationTests {
         val commodityContractBytes = fakeAttachment("file1.txt", "https://www.big-book-of-banking-law.gov/commodity-claims.html")
         val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
-        val obligationDef = Obligation.Terms(NonEmptySet.of(digestService.hash(commodityContractBytes)), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
+        val obligationDef = Obligation.Terms(NonEmptySet.of(commodityContractBytes.sha256() as SecureHash), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
                 obligationDef, oneUnitFcoj.quantity, NULL_PARTY)
         // Try settling a simple commodity obligation
@@ -849,7 +847,7 @@ class ObligationTests {
 
         // States must not be nettable if the cash contract differs
         assertNotEquals(fiveKDollarsFromMegaToMega.bilateralNetState,
-                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = NonEmptySet.of(digestService.randomHash()))).bilateralNetState)
+                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = NonEmptySet.of(SecureHash.randomSHA256()))).bilateralNetState)
 
         // States must not be nettable if the trusted issuers differ
         val miniCorpIssuer = NonEmptySet.of(Issued(MINI_CORP.ref(1), USD))
@@ -970,7 +968,7 @@ class ObligationTests {
 
     private val cashContractBytes = fakeAttachment("file1.txt", "https://www.big-book-of-banking-law.gov/cash-claims.html")
     private val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
-        get() = Obligation.Terms(NonEmptySet.of(digestService.hash(cashContractBytes)), NonEmptySet.of(this), TEST_TX_TIME)
+        get() = Obligation.Terms(NonEmptySet.of(cashContractBytes.sha256() as SecureHash), NonEmptySet.of(this), TEST_TX_TIME)
     private val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
         get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)
 }

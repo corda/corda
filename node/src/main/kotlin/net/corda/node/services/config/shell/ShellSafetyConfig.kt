@@ -10,7 +10,7 @@ const val SAFE_INTERNAL_SHELL_PERMISSION = ""
 const val UNSAFE_INTERNAL_SHELL_PERMISSION = "ALL"
 
 const val INTERNAL_SHELL_USER = "internalShell"
-val internalShellPassword: String by lazy { DigestService.default.randomHash().toString() }
+val internalShellPassword: String by lazy { SecureHash.randomSHA256().toString() }
 
 fun internalShellPermissions(safe: Boolean): Set<String> {
     return setOf(if (safe) { SAFE_INTERNAL_SHELL_PERMISSION } else { UNSAFE_INTERNAL_SHELL_PERMISSION })

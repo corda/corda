@@ -8,6 +8,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -153,9 +154,10 @@ fun createWireTransaction(inputs: List<StateRef>,
                           commands: List<Command<*>>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
-                          privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
+                          privacySalt: PrivacySalt = PrivacySalt(),
+                          digestService: DigestService = DigestService.default): WireTransaction {
     val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
-    return WireTransaction(componentGroups, privacySalt)
+    return WireTransaction(componentGroups, privacySalt, digestService)
 }
 
 /**

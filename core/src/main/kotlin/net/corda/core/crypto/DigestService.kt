@@ -2,15 +2,14 @@ package net.corda.core.crypto
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import java.io.ByteArrayOutputStream
 
 import java.nio.ByteBuffer
 
@@ -47,6 +46,7 @@ class DigestService private constructor(val digestLength: Int,
     companion object {
         private const val NONCE_SIZE = 8
         private const val WORD_SIZE_32 = 32
+        private const val WORD_SIZE_64 = 64
         /**
          * The [default] instance will be parametrized and initialized at runtime. It would be probably useful to assume an override
          * priority order.
@@ -54,6 +54,7 @@ class DigestService private constructor(val digestLength: Int,
         val default : DigestService by lazy { sha2_256 }
         val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
         val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
+        val sha3_512: DigestService by lazy { DigestService(WORD_SIZE_64, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
 
         fun create(hashAlgorithm: String, hashTwiceNonce : Boolean, hashTwiceComponent : Boolean) =
             create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce, hashTwiceComponent)

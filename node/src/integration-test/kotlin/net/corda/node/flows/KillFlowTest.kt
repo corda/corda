@@ -486,7 +486,7 @@ class KillFlowTest {
     class AFlowThatGetsMurderedTryingToWaitForATransaction : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            waitForLedgerCommit(DigestService.default.randomHash())
+            waitForLedgerCommit(SecureHash.randomSHA256())
         }
     }
 

@@ -58,7 +58,7 @@ class PartialMerkleTree(val root: PartialTree) {
     sealed class PartialTree {
         @KeepForDJVM data class IncludedLeaf(val hash: SecureHash) : PartialTree()
         @KeepForDJVM data class Leaf(val hash: SecureHash) : PartialTree()
-        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree, val hashAlgorithm: String?) : PartialTree()
+        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree, val hashAlgorithm: String? = SecureHash.SHA2_256) : PartialTree()
     }
 
     companion object {

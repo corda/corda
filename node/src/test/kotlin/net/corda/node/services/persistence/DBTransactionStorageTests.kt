@@ -403,7 +403,7 @@ class DBTransactionStorageTests {
 
     private fun newTransaction(): SignedTransaction {
         val wtx = createWireTransaction(
-                inputs = listOf(StateRef(DigestService.default.randomHash(), 0)),
+                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
                 commands = listOf(dummyCommand()),

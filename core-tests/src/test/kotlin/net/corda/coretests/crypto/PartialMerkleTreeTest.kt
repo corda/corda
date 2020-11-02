@@ -30,13 +30,16 @@ import net.corda.testing.node.ledger
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.security.PublicKey
 import java.util.function.Predicate
 import java.util.stream.IntStream
 import kotlin.streams.toList
 import kotlin.test.*
 
-class PartialMerkleTreeTest {
+@RunWith(Parameterized::class)
+class PartialMerkleTreeTest(private var digestService: DigestService) {
     private companion object {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
@@ -45,6 +48,14 @@ class PartialMerkleTreeTest {
         val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
         val MINI_CORP_PUBKEY get() = miniCorp.publicKey
+
+        @JvmStatic
+        @Parameterized.Parameters
+        fun data(): Collection<DigestService> = listOf(
+                DigestService.sha2_256,
+                DigestService.sha3_256,
+                DigestService.sha3_512
+        )
     }
 
     @Rule
@@ -58,14 +69,13 @@ class PartialMerkleTreeTest {
     private lateinit var testLedger: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     private lateinit var txs: List<WireTransaction>
     private lateinit var testTx: WireTransaction
-    private lateinit var digestService: DigestService
 
     @Before
     fun init() {
         digestService = DigestService.default
         hashed = nodes.map { digestService.hash(it.serialize().bytes) }
-        expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(digestService.zeroHash, digestService.zeroHash)).hash
-        merkleTree = MerkleTree.getMerkleTree(hashed)
+        expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(digestService.zeroHash, digestService.zeroHash), digestService).hash
+        merkleTree = MerkleTree.getMerkleTree(hashed, digestService)
 
         testLedger = MockServices(
                 cordappPackages = emptyList(),
@@ -108,13 +118,13 @@ class PartialMerkleTreeTest {
 
     @Test(timeout=300_000)
 	fun `building Merkle tree - no hashes`() {
-        assertFailsWith<MerkleTreeException> { MerkleTree.getMerkleTree(emptyList()) }
+        assertFailsWith<MerkleTreeException> { MerkleTree.getMerkleTree(emptyList(), digestService) }
     }
 
     @Test(timeout=300_000)
 	fun `building Merkle tree one node`() {
         val node = 'a'.serialize().sha256()
-        val mt = MerkleTree.getMerkleTree(listOf(node))
+        val mt = MerkleTree.getMerkleTree(listOf(node), digestService)
         assertEquals(node, mt.hash)
     }
 
@@ -124,7 +134,7 @@ class PartialMerkleTreeTest {
         val h1 = hashed[0].concatenate(hashed[1])
         val h2 = hashed[2].concatenate(digestService.zeroHash)
         val expected = h1.concatenate(h2)
-        val mt = MerkleTree.getMerkleTree(odd)
+        val mt = MerkleTree.getMerkleTree(odd, digestService)
         assertEquals(mt.hash, expected)
     }
 
@@ -227,7 +237,7 @@ class PartialMerkleTreeTest {
 	fun `build Partial Merkle Tree - only duplicate leaves, less included failure`() {
         val leaves = "aaa"
         val hashes = leaves.map { it.serialize().hash }
-        val mt = MerkleTree.getMerkleTree(hashes)
+        val mt = MerkleTree.getMerkleTree(hashes, digestService)
         assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(mt, hashes.subList(0, 1)) }
     }
 
@@ -249,7 +259,7 @@ class PartialMerkleTreeTest {
 
     @Test(timeout=300_000)
 	fun `verify Partial Merkle Tree - duplicate leaves failure`() {
-        val mt = MerkleTree.getMerkleTree(hashed.subList(0, 5)) // Odd number of leaves. Last one is duplicated.
+        val mt = MerkleTree.getMerkleTree(hashed.subList(0, 5), digestService) // Odd number of leaves. Last one is duplicated.
         val inclHashes = arrayListOf(hashed[3], hashed[4])
         val pmt = PartialMerkleTree.build(mt, inclHashes)
         inclHashes.add(hashed[4])
@@ -290,7 +300,8 @@ class PartialMerkleTreeTest {
                 commands = testTx.commands,
                 notary = notary,
                 timeWindow = timeWindow,
-                privacySalt = privacySalt
+                privacySalt = privacySalt,
+                digestService = digestService
         )
     }
 
@@ -298,7 +309,7 @@ class PartialMerkleTreeTest {
 	fun `Find leaf index`() {
         // A Merkle tree with 20 leaves.
         val sampleLeaves = IntStream.rangeClosed(0, 19).toList().map { digestService.hash(it.toString()) }
-        val merkleTree = MerkleTree.getMerkleTree(sampleLeaves)
+        val merkleTree = MerkleTree.getMerkleTree(sampleLeaves, digestService)
 
         // Provided hashes are not in the tree.
         assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(merkleTree, listOf<SecureHash>(digestService.hash("20"))) }

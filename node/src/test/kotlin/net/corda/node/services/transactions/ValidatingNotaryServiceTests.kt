@@ -294,7 +294,7 @@ class ValidatingNotaryServiceTests {
 	fun `should reject when incorrect notarisation request signed - inputs don't match`() {
         runNotarisationAndInterceptClientPayload { originalPayload ->
             val transaction = originalPayload.signedTransaction
-            val wrongInputs = listOf(StateRef(DigestService.default.randomHash(), 0))
+            val wrongInputs = listOf(StateRef(SecureHash.randomSHA256(), 0))
             val request = NotarisationRequest(wrongInputs, transaction.id)
             val modifiedSignature = request.generateSignature(aliceNode.services)
             originalPayload.copy(requestSignature = modifiedSignature)
@@ -305,7 +305,7 @@ class ValidatingNotaryServiceTests {
 	fun `should reject when incorrect notarisation request signed - transaction id doesn't match`() {
         runNotarisationAndInterceptClientPayload { originalPayload ->
             val transaction = originalPayload.signedTransaction
-            val wrongTransactionId = DigestService.default.randomHash()
+            val wrongTransactionId = SecureHash.randomSHA256()
             val request = NotarisationRequest(transaction.inputs, wrongTransactionId)
             val modifiedSignature = request.generateSignature(aliceNode.services)
             originalPayload.copy(requestSignature = modifiedSignature)

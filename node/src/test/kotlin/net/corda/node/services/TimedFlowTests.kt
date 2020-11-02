@@ -8,9 +8,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -299,7 +297,7 @@ class TimedFlowTests {
             if (requestsReceived.getAndIncrement() == 0) {
                 log.info("Ignoring")
                 // Waiting forever
-                callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(DigestService.default.randomHash()), false)
+                callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)
             } else {
                 log.info("Processing")
                 return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references)

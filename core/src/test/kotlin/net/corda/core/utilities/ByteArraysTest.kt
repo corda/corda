@@ -56,7 +56,7 @@ class ByteArraysTest {
         val privacySaltAsHexString = privacySalt.bytes.toHexString()
         assertTrue(privacySaltAsHexString.matches(HEX_REGEX))
 
-        val stateRef = StateRef(DigestService.default.randomHash(), 0)
+        val stateRef = StateRef(SecureHash.randomSHA256(), 0)
         val txhashAsHexString = stateRef.txhash.bytes.toHexString()
         assertTrue(txhashAsHexString.matches(HEX_REGEX))
     }

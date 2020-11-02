@@ -24,6 +24,7 @@ fun signBatch(
     require(algorithms.size > 0) {
         "Cannot sign an empty batch"
     }
+    // TODO(iee): too strict? will be valid in the future?
     require(algorithms.size == 1) {
         "Cannot sign a batch with multiple hash algorithms: $algorithms"
     }

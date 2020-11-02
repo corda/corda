@@ -34,7 +34,7 @@ class ClassLoadingUtilsTest {
     companion object {
         const val STANDALONE_CLASS_NAME = "com.example.StandaloneClassWithEmptyConstructor"
         const val PROGRAM_ID: ContractClassName = "net.corda.core.internal.DummyContract"
-        val contractAttachmentId = DigestService.default.randomHash()
+        val contractAttachmentId = SecureHash.randomSHA256()
 
         fun directoryEntry(internalName: String) = ZipEntry("$internalName/").apply {
             method = STORED
@@ -220,7 +220,7 @@ class ClassLoadingUtilsTest {
         }
 
         val attachment1 = signedAttachment(jarData1)
-        val attachment2 = signedAttachment(jarData1, id = DigestService.default.randomHash())
+        val attachment2 = signedAttachment(jarData1, id = SecureHash.randomSHA256())
         var url1: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment1)
         var url2: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment2)
 

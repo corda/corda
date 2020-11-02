@@ -26,11 +26,11 @@ class PersistentScheduledFlowRepositoryTest {
 
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
-            val laterStateRef = StateRef(DigestService.default.randomHash(), 0)
+            val laterStateRef = StateRef(SecureHash.randomSHA256(), 0)
             val laterSsr = ScheduledStateRef(laterStateRef, laterTime)
             repo.merge(laterSsr)
 
-            val earlierStateRef = StateRef(DigestService.default.randomHash(), 0)
+            val earlierStateRef = StateRef(SecureHash.randomSHA256(), 0)
             val earlierSsr = ScheduledStateRef(earlierStateRef, mark)
             repo.merge(earlierSsr)
 
@@ -47,7 +47,7 @@ class PersistentScheduledFlowRepositoryTest {
         val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
-            val stateRef = StateRef(DigestService.default.randomHash(), 0)
+            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
             val laterSsr = ScheduledStateRef(stateRef, laterTime)
 
             repo.merge(laterSsr)

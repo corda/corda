@@ -114,7 +114,7 @@ data class ContractUpgradeWireTransaction(
         val componentHashes = serializedComponents.mapIndexed { index, component ->
             digestService.componentHash(nonces[index], component)
         }
-        combinedHash(componentHashes)
+        combinedHash(componentHashes, digestService)
     }
 
     /** Required for filtering transaction components. */
@@ -235,7 +235,7 @@ data class ContractUpgradeFilteredTransaction(
                 else -> throw IllegalStateException("Missing component hashes")
             }
         }
-        combinedHash(hashList)
+        combinedHash(hashList, digestService)
     }
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
     override val references: List<StateRef> get() = emptyList()

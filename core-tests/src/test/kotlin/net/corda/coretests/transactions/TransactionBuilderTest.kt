@@ -46,7 +46,6 @@ class TransactionBuilderTest {
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
     private val networkParametersService = mock<NetworkParametersService>()
-
     @Before
     fun setup() {
         val cordappProvider = rigorousMock<CordappProvider>()
@@ -104,7 +103,7 @@ class TransactionBuilderTest {
         doReturn(unsignedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
 
         val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val referenceStateRef = StateRef(DigestService.default.randomHash(), 1)
+        val referenceStateRef = StateRef(SecureHash.randomSHA256(), 1)
         val builder = TransactionBuilder(notary)
                 .addReferenceState(StateAndRef(referenceState, referenceStateRef).referenced())
                 .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
@@ -161,17 +160,17 @@ class TransactionBuilderTest {
     @Test(timeout=300_000)
     fun `list accessors are mutable copies`() {
         val inputState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val inputStateRef1 = StateRef(DigestService.default.randomHash(), 0)
+        val inputStateRef1 = StateRef(SecureHash.randomSHA256(), 0)
         val referenceState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val referenceStateRef1 = StateRef(DigestService.default.randomHash(), 1)
+        val referenceStateRef1 = StateRef(SecureHash.randomSHA256(), 1)
         val builder = TransactionBuilder(notary)
                 .addInputState(StateAndRef(inputState1, inputStateRef1))
                 .addAttachment(SecureHash.allOnesHash)
                 .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
                 .addCommand(DummyCommandData, notary.owningKey)
                 .addReferenceState(StateAndRef(referenceState1, referenceStateRef1).referenced())
-        val inputStateRef2 = StateRef(DigestService.default.randomHash(), 0)
-        val referenceStateRef2 = StateRef(DigestService.default.randomHash(), 1)
+        val inputStateRef2 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceStateRef2 = StateRef(SecureHash.randomSHA256(), 1)
 
         // List accessors are mutable.
         assertThat((builder.inputStates() as ArrayList).also { it.add(inputStateRef2) }).hasSize(2)
@@ -191,9 +190,9 @@ class TransactionBuilderTest {
     @Test(timeout=300_000)
     fun `copy makes copy except lockId`() {
         val inputState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val inputStateRef = StateRef(DigestService.default.randomHash(), 0)
+        val inputStateRef = StateRef(SecureHash.randomSHA256(), 0)
         val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val referenceStateRef = StateRef(DigestService.default.randomHash(), 1)
+        val referenceStateRef = StateRef(SecureHash.randomSHA256(), 1)
         val timeWindow = TimeWindow.untilOnly(Instant.now())
         val builder = TransactionBuilder(notary)
                 .addInputState(StateAndRef(inputState, inputStateRef))
@@ -219,9 +218,9 @@ class TransactionBuilderTest {
     @Test(timeout=300_000)
     fun `copy makes deep copy of lists`() {
         val inputState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val inputStateRef1 = StateRef(DigestService.default.randomHash(), 0)
+        val inputStateRef1 = StateRef(SecureHash.randomSHA256(), 0)
         val referenceState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val referenceStateRef1 = StateRef(DigestService.default.randomHash(), 1)
+        val referenceStateRef1 = StateRef(SecureHash.randomSHA256(), 1)
         val builder = TransactionBuilder(notary)
                 .addInputState(StateAndRef(inputState1, inputStateRef1))
                 .addAttachment(SecureHash.allOnesHash)
@@ -229,9 +228,9 @@ class TransactionBuilderTest {
                 .addCommand(DummyCommandData, notary.owningKey)
                 .addReferenceState(StateAndRef(referenceState1, referenceStateRef1).referenced())
         val inputState2 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val inputStateRef2 = StateRef(DigestService.default.randomHash(), 0)
+        val inputStateRef2 = StateRef(SecureHash.randomSHA256(), 0)
         val referenceState2 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
-        val referenceStateRef2 = StateRef(DigestService.default.randomHash(), 1)
+        val referenceStateRef2 = StateRef(SecureHash.randomSHA256(), 1)
         val copy = builder.copy()
                 .addInputState(StateAndRef(inputState2, inputStateRef2))
                 .addAttachment(SecureHash.zeroHash)
@@ -255,7 +254,7 @@ class TransactionBuilderTest {
     }
 
     @Test(timeout=300_000, expected = TransactionVerificationException.UnsupportedHashTypeException::class)
-    fun `throws with nonstandard hash algorithm`() {
+    fun `throws with non-default hash algorithm`() {
         val oldValue = services.networkParameters.getHashAgilityEnabled()
         services.networkParameters.setHashAgilityEnabled(false)
         try {
@@ -276,7 +275,7 @@ class TransactionBuilderTest {
     }
 
     @Test(timeout=300_000, expected = Test.None::class)
-    fun `allows nonstandard hash algorithm`() {
+    fun `allows non-default hash algorithm`() {
         val oldValue = services.networkParameters.getHashAgilityEnabled()
         services.networkParameters.setHashAgilityEnabled(true)
         try {

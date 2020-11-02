@@ -221,6 +221,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
     override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
         val componentGroups: List<ComponentGroup> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
+        // TODO(iee): handle backward compatibility when deserializing old version of WTX
         val digestService = kryo.readClassAndObject(input) as DigestService
         return WireTransaction(componentGroups, privacySalt, digestService)
     }
@@ -235,6 +236,7 @@ object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransa
 
     override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
         val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
+        // TODO(iee): handle backward compatibility when deserializing old version of NCWTX
         val digestService = kryo.readClassAndObject(input) as DigestService
         return NotaryChangeWireTransaction(components, digestService)
     }
@@ -251,6 +253,7 @@ object ContractUpgradeWireTransactionSerializer : Serializer<ContractUpgradeWire
     override fun read(kryo: Kryo, input: Input, type: Class<ContractUpgradeWireTransaction>): ContractUpgradeWireTransaction {
         val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
+        // TODO(iee): handle backward compatibility when deserializing old version of WTX
         val digestService = kryo.readClassAndObject(input) as DigestService
         return ContractUpgradeWireTransaction(components, privacySalt, digestService)
     }

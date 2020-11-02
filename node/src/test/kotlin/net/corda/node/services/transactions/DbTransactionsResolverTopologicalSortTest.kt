@@ -9,10 +9,10 @@ import org.junit.Test
 
 class DbTransactionsResolverTopologicalSortTest {
     private val topologicalSort = DbTransactionsResolver.TopologicalSort()
-    private val t1 = DigestService.default.randomHash()
-    private val t2 = DigestService.default.randomHash()
-    private val t3 = DigestService.default.randomHash()
-    private val t4 = DigestService.default.randomHash()
+    private val t1 = SecureHash.randomSHA256()
+    private val t2 = SecureHash.randomSHA256()
+    private val t3 = SecureHash.randomSHA256()
+    private val t4 = SecureHash.randomSHA256()
 
     @Test(timeout=300_000)
 	fun issuance() {
