@@ -3,8 +3,6 @@ package net.corda.core.crypto
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
-import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
@@ -36,7 +34,7 @@ class DigestService private constructor(val digestLength: Int,
 
     init {
         require(hashAlgorithm.isNotEmpty()) { "Hash algorithm name unavailable or not specified" }
-        require((hashTwiceNonce && hashTwiceComponent) || hashAlgorithm != SHA2_256) {
+        require((hashTwiceNonce && hashTwiceComponent) || hashAlgorithm != SecureHash.SHA2_256) {
             "SHA2-256 requires doubleHashNonce and doubleHashComponent to be set"
         }
     }
@@ -45,15 +43,18 @@ class DigestService private constructor(val digestLength: Int,
     companion object {
         private const val NONCE_SIZE = 8
         private const val WORD_SIZE_32 = 32
+        private const val WORD_SIZE_48 = 48
         private const val WORD_SIZE_64 = 64
         /**
          * The [default] instance will be parametrized and initialized at runtime. It would be probably useful to assume an override
          * priority order.
          */
         val default : DigestService by lazy { sha2_256 }
-        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
-        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
-        val sha3_512: DigestService by lazy { DigestService(WORD_SIZE_64, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
+        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SecureHash.SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
+        val sha2_384: DigestService by lazy { DigestService(WORD_SIZE_48, SecureHash.SHA2_384, hashTwiceNonce = true, hashTwiceComponent = true) }
+        val sha2_512: DigestService by lazy { DigestService(WORD_SIZE_64, SecureHash.SHA2_512, hashTwiceNonce = true, hashTwiceComponent = true) }
+//        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
+//        val sha3_512: DigestService by lazy { DigestService(WORD_SIZE_64, SHA3_512, hashTwiceNonce = false, hashTwiceComponent = false) }
 
         fun create(hashAlgorithm: String, hashTwiceNonce : Boolean, hashTwiceComponent : Boolean) =
             create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce, hashTwiceComponent)
