@@ -22,6 +22,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.coretesting.internal.doLookup
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.spectator
+import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
 import org.junit.*
@@ -296,6 +297,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
 
     @Test(timeout=300_000)
 	fun `test that schedule is persisted`() {
+        Assume.assumeFalse(IS_S390X)
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
         val timeInTheFuture = mark + 1.days
         val stateRef = StateRef(SecureHash.zeroHash, 0)
