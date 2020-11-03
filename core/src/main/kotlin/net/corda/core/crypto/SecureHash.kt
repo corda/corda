@@ -129,7 +129,7 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         const val SHA3_512 = "SHA3-512"
         const val DELIMITER = ':'
 
-        val BANNED: Set<String> = unmodifiableSet(setOf("MD5", "MD2", "SHA-1"))
+        private val BANNED: Set<String> = unmodifiableSet(setOf("MD5", "MD2", "SHA-1"))
 
         /**
          * Converts a SecureHash hash value represented as a {algorithm:}hexadecimal [String] into a [SecureHash].
@@ -184,7 +184,9 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
         private fun digestFor(algorithm: String): DigestSupplier {
-            require(algorithm !in BANNED) { "$algorithm is forbidden!" }
+            require(algorithm !in BANNED) {
+                "$algorithm is forbidden!"
+            }
             return messageDigests.computeIfAbsent(algorithm, ::DigestSupplier)
         }
 
@@ -373,7 +375,9 @@ private class LocalDigest(private val algorithm: String) : FastThreadLocal<Custo
     override fun initialValue(): CustomMessageDigest = try {
         when (algorithm) {
             SHA2_256 ->  MessageDigestWrapper(MessageDigest.getInstance(algorithm))
-            else -> loadService<CustomMessageDigest>(algorithm) ?: MessageDigestWrapper(MessageDigest.getInstance(algorithm))
+            else -> loadService(algorithm) ?: MessageDigestWrapper(MessageDigest.getInstance(algorithm.apply {
+                require(toUpperCase() == this) { "Algorithm name $this must be in the upper case" }
+            }))
         }
     } catch (_: NoSuchAlgorithmException) {
         throw IllegalArgumentException("Unknown hash algorithm $algorithm")
