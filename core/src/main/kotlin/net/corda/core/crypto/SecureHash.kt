@@ -5,7 +5,6 @@ package net.corda.core.crypto
 import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.crypto.SecureHash.Companion.BANNED
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
@@ -185,6 +184,7 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
         private fun digestFor(algorithm: String): DigestSupplier {
+            require(algorithm !in BANNED) { "$algorithm is forbidden!" }
             return messageDigests.computeIfAbsent(algorithm, ::DigestSupplier)
         }
 
@@ -362,9 +362,6 @@ fun OpaqueBytes.hashAs(algorithm: String): SecureHash = SecureHash.hashAs(algori
  * so that we can remove it for core-deterministic.
  */
 private class DigestSupplier(algorithm: String) : Supplier<CustomMessageDigest> {
-    init {
-        require(algorithm !in BANNED) { "$algorithm is forbidden!" }
-    }
     private val threadLocalMessageDigest = LocalDigest(algorithm)
     override fun get(): CustomMessageDigest = threadLocalMessageDigest.get()
     val digestLength: Int = get().digestLength
@@ -381,22 +378,24 @@ private class LocalDigest(private val algorithm: String) : FastThreadLocal<Custo
     } catch (_: NoSuchAlgorithmException) {
         throw IllegalArgumentException("Unknown hash algorithm $algorithm")
     }
-}
 
-private class MessageDigestWrapper(val messageDigest: MessageDigest) : CustomMessageDigest {
-    override val digestLength = messageDigest.digestLength
-    override fun digest(bytes: ByteArray): ByteArray = messageDigest.digest(bytes)
-}
+    private class MessageDigestWrapper(val messageDigest: MessageDigest) : CustomMessageDigest {
+        override val digestLength = messageDigest.digestLength
+        override fun digest(bytes: ByteArray): ByteArray = messageDigest.digest(bytes)
+    }
 
-private inline fun <reified T> loadService(className: String): T? {
-    try {
-        val cl = Class.forName(className)
-        if (T::class.java.isAssignableFrom(cl)) {
-            return cl.getDeclaredConstructor().newInstance() as T
+    companion object {
+        private inline fun <reified T> loadService(className: String): T? {
+            try {
+                val cl = Class.forName(className)
+                if (T::class.java.isAssignableFrom(cl)) {
+                    return cl.getDeclaredConstructor().newInstance() as T
+                }
+                return null
+            } catch (e: ClassNotFoundException) {
+                return null
+            }
         }
-        return null
-    } catch (e: ClassNotFoundException) {
-        return null
     }
 }
 
