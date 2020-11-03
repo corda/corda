@@ -343,10 +343,8 @@ allprojects {
     
     tasks.withType(Test).configureEach {
         forkEvery = 20
-//        ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
-//        failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
-        ignoreFailures = true
-        failFast = false
+        ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
+        failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath

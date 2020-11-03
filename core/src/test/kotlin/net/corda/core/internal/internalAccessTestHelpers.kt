@@ -36,7 +36,7 @@ fun createLedgerTransaction(
         serializedReferences: List<SerializedStateAndRef>? = null,
         isAttachmentTrusted: (Attachment) -> Boolean,
         attachmentsClassLoaderCache: AttachmentsClassLoaderCache,
-        digestService: DigestService
+        digestService: DigestService = DigestService.default
 ): LedgerTransaction = LedgerTransaction.create(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, componentGroups, serializedInputs, serializedReferences, isAttachmentTrusted, attachmentsClassLoaderCache, digestService)
 
 fun createContractCreationError(txId: SecureHash, contractClass: String, cause: Throwable) = TransactionVerificationException.ContractCreationError(txId, contractClass, cause)

@@ -216,7 +216,7 @@ class HashAgility {
         fun setEnabled(enabled : Boolean, freeze: Boolean = false) {
             if(!frozen) {
                 frozen = freeze
-                hashAgilityEnabled = true//enabled
+                hashAgilityEnabled = enabled
             }
         }
     }

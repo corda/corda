@@ -78,7 +78,7 @@ data class NotaryChangeWireTransaction(
      */
     override val id: SecureHash by lazy {
         serializedComponents.map { component ->
-            component.bytes.hashAs(digestService.hashAlgorithm)
+            digestService.hash(component.bytes)
         }.reduce { combinedHash, componentHash ->
             combinedHash.concatenate(componentHash)
         }

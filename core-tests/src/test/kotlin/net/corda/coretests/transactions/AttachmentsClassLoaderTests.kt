@@ -521,7 +521,7 @@ class AttachmentsClassLoaderTests {
 
             val attachments = createAttachments(contractJarPath)
 
-            val id = DigestService.default.randomHash()
+            val id = SecureHash.randomSHA256()
             val timeWindow: TimeWindow? = null
             val privacySalt = PrivacySalt()
             val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory)
@@ -537,8 +537,7 @@ class AttachmentsClassLoaderTests {
                     testNetworkParameters(),
                     emptyList(),
                     isAttachmentTrusted = { true },
-                    attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                    digestService = DigestService.default
+                    attachmentsClassLoaderCache = attachmentsClassLoaderCache
             )
             transaction.verify()
         }
