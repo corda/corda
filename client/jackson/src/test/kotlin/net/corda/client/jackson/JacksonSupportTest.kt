@@ -475,7 +475,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `SecureHash SHA256`() {
-        testToStringSerialisation(DigestService.default.randomHash())
+        testToStringSerialisation(SecureHash.randomSHA256())
     }
 
     @Test(timeout=300_000)

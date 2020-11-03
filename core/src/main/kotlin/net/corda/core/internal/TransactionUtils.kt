@@ -49,7 +49,7 @@ class ContractUpgradeTransactionBuilder(
 }
 
 /** Concatenates the hash components into a single [ByteArray] and returns its hash. */
-fun combinedHash(components: Iterable<SecureHash>, digestService: DigestService = DigestService.default): SecureHash {
+fun combinedHash(components: Iterable<SecureHash>/*, digestService: DigestService = DigestService.default*/): SecureHash {
     val stream = ByteArrayOutputStream()
     components.forEach {
         stream.write(it.bytes)
