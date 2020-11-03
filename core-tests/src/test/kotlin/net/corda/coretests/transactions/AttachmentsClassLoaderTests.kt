@@ -12,9 +12,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.AttachmentTrustCalculator
