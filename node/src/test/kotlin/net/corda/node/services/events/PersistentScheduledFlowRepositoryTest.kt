@@ -2,9 +2,7 @@ package net.corda.node.services.events
 
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.configureDatabase

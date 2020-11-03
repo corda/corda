@@ -53,14 +53,13 @@ public class HashLookupShellCommand extends CordaRpcOpsShellCommand {
         try {
             txIdHashParsed = SecureHash.create(txIdHash);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("The provided string is not a valid hexadecimal SHA-256 hash value");
+            throw new IllegalArgumentException("The provided string is neither a valid SHA-256 hash value or a supported hash algorithm");
         }
 
         List<StateMachineTransactionMapping> mapping = proxy.stateMachineRecordedTransactionMappingSnapshot();
         Optional<SecureHash> match = mapping.stream()
                 .map(StateMachineTransactionMapping::getTransactionId)
                 .filter(
-                        //txId -> txId.equals(txIdHashParsed) || SecureHash.sha256(txId.getBytes()).equals(txIdHashParsed)
                         txId -> txId.equals(txIdHashParsed) || SecureHash.hashAs(txIdHashParsed.getAlgorithm(), txId.getBytes()).equals(txIdHashParsed)
                 )
                 .findFirst();

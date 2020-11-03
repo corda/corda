@@ -16,7 +16,6 @@ class TransactionSignatureTest {
 
         private val keyStoreProvider = KeyStoreProvider("keystore/txsignature.pfx", KEYSTORE_PASSWORD)
         private lateinit var keyPair: KeyPair
-        private lateinit var digestService: DigestService
 
         @ClassRule
         @JvmField
@@ -27,17 +26,14 @@ class TransactionSignatureTest {
         @JvmStatic
         fun setupClass() {
             keyPair = keyStoreProvider.getKeyPair("tx")
-            digestService = DigestService.default
         }
     }
 
     /** Valid sign and verify. */
     @Test(timeout=300_000)
 	fun `Signature metadata full sign and verify`() {
-        val txId = digestService.hash(testBytes)
-
         // Create a SignableData object.
-        val signableData = SignableData(txId, SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
 
         // Sign the meta object.
         val transactionSignature: TransactionSignature = CheatingSecurityProvider().use {
@@ -45,31 +41,31 @@ class TransactionSignatureTest {
         }
 
         // Check auto-verification.
-        assertTrue(transactionSignature.verify(txId))
+        assertTrue(transactionSignature.verify(testBytes.sha256()))
 
         // Check manual verification.
-        assertTrue(Crypto.doVerify(digestService.hash(testBytes), transactionSignature))
+        assertTrue(Crypto.doVerify(testBytes.sha256(), transactionSignature))
     }
 
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
     @Test(expected = SignatureException::class)
     fun `Signature metadata full failure clearData has changed`() {
-        val signableData = SignableData(digestService.hash(testBytes), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
+        val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         val transactionSignature = CheatingSecurityProvider().use {
             CryptoSignUtils.doSign(keyPair, signableData)
         }
-        Crypto.doVerify(digestService.hash(testBytes + testBytes), transactionSignature)
+        Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
     }
 
     @Test(timeout=300_000)
 	fun `Verify multi-tx signature`() {
         // Deterministically create 5 txIds.
-        val txIds: List<SecureHash> = IntRange(0, 4).map { digestService.hash(byteArrayOf(it.toByte())) }
+        val txIds: List<SecureHash> = IntRange(0, 4).map { byteArrayOf(it.toByte()).sha256() }
         // Multi-tx signature.
         val txSignature = signMultipleTx(txIds, keyPair)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, digestService)
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.sha256() })
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)
@@ -77,7 +73,7 @@ class TransactionSignatureTest {
         assertFailsWith<SignatureException> { Crypto.doVerify(txIds[3], txSignature) }
 
         // Create a partial tree for one tx.
-        val pmt = PartialMerkleTree.build(merkleTree, listOf(txIds[0].reHash()))
+        val pmt = PartialMerkleTree.build(merkleTree, listOf(txIds[0].sha256()))
         // Add the partial Merkle tree to the tx signature.
         val txSignatureWithTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmt)
 
@@ -97,7 +93,7 @@ class TransactionSignatureTest {
 
         // What if we send the Full tree. This could be used if notaries didn't want to create a per tx partial tree.
         // Create a partial tree for all txs, thus all leaves are included.
-        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { it.reHash() })
+        val pmtFull = PartialMerkleTree.build(merkleTree, txIds.map { it.sha256() })
         // Add the partial Merkle tree to the tx.
         val txSignatureWithFullTree = TransactionSignature(txSignature.bytes, txSignature.by, txSignature.signatureMetadata, pmtFull)
 
@@ -109,7 +105,7 @@ class TransactionSignatureTest {
 
     @Test(timeout=300_000)
 	fun `Verify one-tx signature`() {
-        val txId = digestService.hash("aTransaction")
+        val txId = "aTransaction".toByteArray().sha256()
         // One-tx signature.
         val txSignature = try {
             signOneTx(txId, keyPair)
@@ -127,12 +123,12 @@ class TransactionSignatureTest {
         assertTrue(txSignature.isValid(txId))
 
         // We signed the txId itself, not its hash (because it was a signature over one tx only and no partial tree has been received).
-        assertFailsWith<SignatureException> { Crypto.doVerify(txId.reHash(), txSignature) }
+        assertFailsWith<SignatureException> { Crypto.doVerify(txId.sha256(), txSignature) }
     }
 
     // Returns a TransactionSignature over the Merkle root, but the partial tree is null.
     private fun signMultipleTx(txIds: List<SecureHash>, keyPair: KeyPair): TransactionSignature {
-        val merkleTreeRoot = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, digestService).hash
+        val merkleTreeRoot = MerkleTree.getMerkleTree(txIds.map { it.sha256() }).hash
         return signOneTx(merkleTreeRoot, keyPair)
     }
 

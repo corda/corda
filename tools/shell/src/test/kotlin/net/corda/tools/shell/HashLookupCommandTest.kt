@@ -1,8 +1,7 @@
 package net.corda.tools.shell
 
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -17,7 +16,7 @@ import kotlin.test.assertFailsWith
 
 class HashLookupCommandTest {
     companion object {
-        private val DEFAULT_TXID: SecureHash = DigestService.default.randomHash()
+        private val DEFAULT_TXID: SecureHash = SecureHash.randomSHA256()
 
         private fun ops(vararg txIds: SecureHash): CordaRPCOps? {
             val snapshot: List<StateMachineTransactionMapping> = txIds.map { txId ->
@@ -46,7 +45,7 @@ class HashLookupCommandTest {
         MatcherAssert.assertThat(response, StringContains.containsString("Found a matching transaction with Id: $DEFAULT_TXID"))
 
         // Verify the hash of the TX ID also works
-        response = runCommand(ops, DEFAULT_TXID.reHash().toString())
+        response = runCommand(ops, DEFAULT_TXID.sha256().toString())
         MatcherAssert.assertThat(response, StringContains.containsString("Found a matching transaction with Id: $DEFAULT_TXID"))
     }
 
@@ -62,7 +61,7 @@ class HashLookupCommandTest {
     fun `should reject unknown txid`() {
         val ops = ops(DEFAULT_TXID)
         assertFailsWith<IllegalArgumentException>("No matching transaction found") {
-            runCommand(ops, DigestService.default.randomHash().toString())
+            runCommand(ops, SecureHash.randomSHA256().toString())
         }
     }
 }

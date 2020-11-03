@@ -148,6 +148,7 @@ fun p2pSslOptions(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "L
 }
 
 /** This is the same as the deprecated [WireTransaction] c'tor but avoids the deprecation warning. */
+@SuppressWarnings("LongParameterList")
 fun createWireTransaction(inputs: List<StateRef>,
                           attachments: List<SecureHash>,
                           outputs: List<TransactionState<*>>,

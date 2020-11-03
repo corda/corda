@@ -1,9 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.internal.declaredField
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertSame

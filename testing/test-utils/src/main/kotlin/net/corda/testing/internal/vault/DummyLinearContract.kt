@@ -4,9 +4,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -37,7 +35,7 @@ class DummyLinearContract : Contract {
             val linearNumber: Long = 123L,
             val linearTimestamp: java.time.Instant = LocalDateTime.now().toInstant(UTC),
             val linearBoolean: Boolean = true,
-            val nonce: SecureHash = DigestService.default.randomHash()) : LinearState, QueryableState {
+            val nonce: SecureHash = SecureHash.randomSHA256()) : LinearState, QueryableState {
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(DummyLinearStateSchemaV1, DummyLinearStateSchemaV2)
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {

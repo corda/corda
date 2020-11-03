@@ -9,9 +9,7 @@ import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
@@ -1015,7 +1013,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
 
-        val obj = StateRef(DigestService.default.randomHash(), 0)
+        val obj = StateRef(SecureHash.randomSHA256(), 0)
         serdes(obj, factory, factory2)
     }
 

@@ -367,14 +367,14 @@ private class PartialTreeJson(val includedLeaf: SecureHash? = null,
                               val leaf: SecureHash? = null,
                               val left: PartialTreeJson? = null,
                               val right: PartialTreeJson? = null,
-                              val hashAlgorithm: String? = SHA2_256) {
+                              val hashAlgorithm: String? = null) {
     init {
         if (includedLeaf != null) {
             require(leaf == null && left == null && right == null) { "Invalid JSON structure" }
         } else if (leaf != null) {
             require(left == null && right == null) { "Invalid JSON structure" }
         } else {
-            require(left != null && right != null && hashAlgorithm != null) { "Invalid JSON structure" }
+            require(left != null && right != null) { "Invalid JSON structure" }
         }
     }
 }

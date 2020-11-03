@@ -1,9 +1,7 @@
 package net.corda.coretests.node
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.LedgerTransaction

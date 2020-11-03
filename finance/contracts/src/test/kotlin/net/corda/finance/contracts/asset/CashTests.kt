@@ -1,9 +1,7 @@
 package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name

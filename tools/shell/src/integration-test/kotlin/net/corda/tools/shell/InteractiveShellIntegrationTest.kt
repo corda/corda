@@ -12,9 +12,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.internal.valueAs
 import net.corda.client.rpc.RPCException
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -345,9 +343,9 @@ class InteractiveShellIntegrationTest {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
             val stateRefs = setOf(
-                StateRef(DigestService.default.randomHash(), 0),
-                StateRef(DigestService.default.randomHash(), 1),
-                StateRef(DigestService.default.randomHash(), 2)
+                StateRef(SecureHash.randomSHA256(), 0),
+                StateRef(SecureHash.randomSHA256(), 1),
+                StateRef(SecureHash.randomSHA256(), 2)
             )
             assertThrows<TimeoutException> {
                 alice.rpc.startFlow(::WaitForStateConsumptionFlow, stateRefs).returnValue.getOrThrow(10.seconds)

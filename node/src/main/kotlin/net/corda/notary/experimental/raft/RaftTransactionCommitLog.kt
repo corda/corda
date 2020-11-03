@@ -14,7 +14,6 @@ import io.atomix.copycat.server.storage.snapshot.SnapshotWriter
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.internal.VisibleForTesting

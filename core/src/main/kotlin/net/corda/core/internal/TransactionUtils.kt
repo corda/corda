@@ -57,7 +57,7 @@ fun combinedHash(components: Iterable<SecureHash>/*, digestService: DigestServic
     // TODO(iee): need to re-visit and review this code to understand which is the right
     //            way to combine the hashes. Is this meant to match a pre-existing tx id,
     //            or create a new tx id with the [default] hash algorithm from whatever
-    //            components are passed in and indenendently from their algorithm?
+    //            components are passed in and independently from their algorithm?
     //            This is used to build the tx id of ContractUpgradeFilteredTransaction and
     //            ContractUpgradeWireTransaction
     return stream.toByteArray().hashAs(components.first().algorithm)

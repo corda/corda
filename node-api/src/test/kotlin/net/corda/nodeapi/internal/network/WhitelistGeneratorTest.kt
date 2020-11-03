@@ -1,9 +1,7 @@
 package net.corda.nodeapi.internal.network
 
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.node.services.AttachmentId
 import net.corda.testing.common.internal.testNetworkParameters
 import org.assertj.core.api.Assertions.assertThat

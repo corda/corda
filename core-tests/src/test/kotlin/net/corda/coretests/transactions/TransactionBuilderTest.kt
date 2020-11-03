@@ -8,7 +8,6 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.PLATFORM_VERSION

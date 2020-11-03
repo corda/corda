@@ -1,8 +1,6 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.node.services.DbTransactionsResolver
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test

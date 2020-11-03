@@ -9,10 +9,8 @@ import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.randomHash
 import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name

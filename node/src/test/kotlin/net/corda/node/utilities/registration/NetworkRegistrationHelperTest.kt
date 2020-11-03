@@ -7,9 +7,7 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.createDirectories
@@ -347,7 +345,7 @@ class NetworkRegistrationHelperTest {
         val certService = rigorousMock<NetworkRegistrationService>().also {
             val requests = mutableMapOf<String, JcaPKCS10CertificationRequest>()
             doAnswer {
-                val requestId = DigestService.default.randomHash().toString()
+                val requestId = SecureHash.randomSHA256().toString()
                 val request = JcaPKCS10CertificationRequest(it.getArgument<PKCS10CertificationRequest>(0))
                 requests[requestId] = request
                 requestId

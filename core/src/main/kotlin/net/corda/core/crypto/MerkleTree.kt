@@ -22,8 +22,9 @@ sealed class MerkleTree {
         private fun isPow2(num: Int): Boolean = num and (num - 1) == 0
 
         @Throws(MerkleTreeException::class)
-        fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree =
-                getMerkleTree(allLeavesHashes, DigestService.default)
+        fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
+            return getMerkleTree(allLeavesHashes, DigestService.default);
+        }
 
         /**
          * Merkle tree building using hashes, with zero hash padding to full power of 2.

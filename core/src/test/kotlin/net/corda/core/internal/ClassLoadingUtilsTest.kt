@@ -3,9 +3,7 @@ package net.corda.core.internal
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory

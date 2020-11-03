@@ -1,8 +1,6 @@
 package net.corda.node.services.config.shell
 
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.randomHash
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.User
 

@@ -20,7 +20,6 @@ import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.internal.TestingNamedCacheFactory
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
