@@ -125,8 +125,8 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
         const val SHA2_256 = "SHA-256"
-        const val SHA2_384 = "SHA3-256"
-        const val SHA2_512 = "SHA3-512"
+        const val SHA2_384 = "SHA-384"
+        const val SHA2_512 = "SHA-512"
         const val DELIMITER = ':'
 
         private val BANNED: Set<String> = unmodifiableSet(setOf("MD5", "MD2", "SHA-1"))

@@ -263,7 +263,10 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder(digestService = DigestService.sha2_384)
+            val builder = TransactionBuilder(
+                    //privacySalt = DigestService.sha2_384.privacySalt,
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm),
+                    digestService = DigestService.sha2_384)
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
@@ -284,7 +287,10 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder(digestService = DigestService.sha2_384)
+            val builder = TransactionBuilder(
+                    //privacySalt = DigestService.sha2_384.privacySalt,
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm),
+                    digestService = DigestService.sha2_384)
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
