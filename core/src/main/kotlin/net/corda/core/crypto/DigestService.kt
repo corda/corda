@@ -100,6 +100,9 @@ class DigestService private constructor(val digestLength: Int,
     val zeroHash: SecureHash
         get() = SecureHash.zeroHashFor(hashAlgorithm)
 
+//    val privacySalt: PrivacySalt
+//        get() = PrivacySalt.createFor(hashAlgorithm)
+
     fun salted(salt: ByteArray?, data: ByteArray) = salt?.plus(data) ?: data
 
     /**
