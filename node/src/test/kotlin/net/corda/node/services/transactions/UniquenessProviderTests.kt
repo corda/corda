@@ -61,8 +61,8 @@ class UniquenessProviderTests(
         fun data(): Collection<Array<Any>> = listOf(
             arrayOf(JPAUniquenessProviderFactory(), DigestService.sha2_256),
             arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_256),
-            arrayOf(JPAUniquenessProviderFactory(), DigestService.sha3_512),
-            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha3_512)
+            arrayOf(JPAUniquenessProviderFactory(), DigestService.sha2_512),
+            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_512)
         )
     }
 

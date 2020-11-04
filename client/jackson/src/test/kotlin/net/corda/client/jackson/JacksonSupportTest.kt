@@ -241,9 +241,9 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     fun `TransactionSignature with SHA3`() {
         val signatureMetadata = SignatureMetadata(1, 1)
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
-                left = PartialTree.Leaf(SecureHash.random(SecureHash.SHA3_256)),
-                right = PartialTree.IncludedLeaf(SecureHash.random(SecureHash.SHA3_256)),
-                hashAlgorithm = SecureHash.SHA3_256
+                left = PartialTree.Leaf(SecureHash.random(SecureHash.SHA2_384)),
+                right = PartialTree.IncludedLeaf(SecureHash.random(SecureHash.SHA2_384)),
+                hashAlgorithm = SecureHash.SHA2_384
         ))
         val transactionSignature = TransactionSignature(secureRandomBytes(128), BOB_PUBKEY, signatureMetadata, partialMerkleTree)
         val json = mapper.valueToTree<ObjectNode>(transactionSignature)
@@ -414,9 +414,9 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     @Test(timeout=300_000)
     fun `simple PartialTree Node with SHA3`() {
         val node = PartialTree.Node(
-                left = PartialTree.Leaf(SecureHash.random(SecureHash.SHA3_256)),
-                right = PartialTree.IncludedLeaf(SecureHash.random(SecureHash.SHA3_256)),
-                hashAlgorithm = SecureHash.SHA3_256
+                left = PartialTree.Leaf(SecureHash.random(SecureHash.SHA2_384)),
+                right = PartialTree.IncludedLeaf(SecureHash.random(SecureHash.SHA2_384)),
+                hashAlgorithm = SecureHash.SHA2_384
         )
         val json = mapper.valueToTree<ObjectNode>(node)
         val (leftJson, rightJson, algorithm) = json.assertHasOnlyFields("left", "right", "hashAlgorithm")

@@ -263,7 +263,7 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder(digestService = DigestService.sha3_256)
+            val builder = TransactionBuilder(digestService = DigestService.sha2_384)
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
@@ -284,7 +284,7 @@ class TransactionBuilderTest {
                     notary = notary,
                     constraint = HashAttachmentConstraint(contractAttachmentId)
             )
-            val builder = TransactionBuilder(digestService = DigestService.sha3_256)
+            val builder = TransactionBuilder(digestService = DigestService.sha2_384)
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
