@@ -50,11 +50,14 @@ import java.util.function.Predicate
 @CordaSerializable
 @KeepForDJVM
 class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
-    @DeprecatedConstructorForDeserialization(1)
-    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DigestService.default)
-
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
+
+    /**
+     * Old version of [WireTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DigestService.sha2_256)
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",
             ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
@@ -67,9 +70,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             commands: List<Command<*>>,
             notary: Party?,
             timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt = PrivacySalt(),
-            digestService: DigestService = DigestService.default
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, digestService)
+            privacySalt: PrivacySalt = PrivacySalt()
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, DigestService.sha2_256)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }

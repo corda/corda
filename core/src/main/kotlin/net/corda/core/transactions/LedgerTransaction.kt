@@ -27,6 +27,7 @@ import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
@@ -93,6 +94,37 @@ private constructor(
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
         val digestService: DigestService = DigestService.default
 ) : FullTransaction() {
+
+    /**
+     * Old version of [LedgerTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(inputs: List<StateAndRef<ContractState>>,
+                outputs: List<TransactionState<ContractState>>,
+                commands: List<CommandWithParties<CommandData>>,
+                attachments: List<Attachment>,
+                id: SecureHash,
+                notary: Party?,
+                timeWindow: TimeWindow?,
+                privacySalt: PrivacySalt,
+                networkParameters: NetworkParameters?,
+                references: List<StateAndRef<ContractState>>,
+                componentGroups: List<ComponentGroup>?,
+                serializedInputs: List<SerializedStateAndRef>?,
+                serializedReferences: List<SerializedStateAndRef>?,
+                isAttachmentTrusted: (Attachment) -> Boolean,
+                verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
+                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?) : this(
+            inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
+            networkParameters, references, componentGroups, serializedInputs, serializedReferences,
+            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
+
+    // TODO(iee): add missing
+    //  public <init>(java.util.List, java.util.List, java.util.List, java.util.List, net.corda.core.crypto.SecureHash,
+    //      net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt,
+    //      net.corda.core.node.NetworkParameters, java.util.List, java.util.List, java.util.List, java.util.List,
+    //      kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function2,
+    //      net.corda.core.serialization.internal.AttachmentsClassLoaderCache, kotlin.jvm.internal.DefaultConstructorMarker)
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }

@@ -213,6 +213,21 @@ data class ContractUpgradeFilteredTransaction(
         val hiddenComponents: Map<Int, SecureHash>,
         val digestService: DigestService = DigestService.default
 ) : CoreTransaction() {
+
+    /**
+     * Old version of [ContractUpgradeFilteredTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(visibleComponents: Map<Int, FilteredComponent>, hiddenComponents: Map<Int, SecureHash>)
+        : this(visibleComponents, hiddenComponents, DigestService.sha2_256)
+
+    /**
+     * Old version of [ContractUpgradeFilteredTransaction.copy] for ABI compatibility.
+     */
+    fun copy(visibleComponents: Map<Int, FilteredComponent>, hiddenComponents: Map<Int, SecureHash>) : ContractUpgradeFilteredTransaction {
+        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents, DigestService.sha2_256)
+    }
+
     override val inputs: List<StateRef> by lazy {
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
                 ?: throw IllegalArgumentException("Inputs not specified")

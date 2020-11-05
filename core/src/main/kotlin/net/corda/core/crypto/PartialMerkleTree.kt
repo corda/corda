@@ -4,6 +4,8 @@ import net.corda.core.CordaException
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import java.util.*
 
 @KeepForDJVM
@@ -58,7 +60,20 @@ class PartialMerkleTree(val root: PartialTree) {
     sealed class PartialTree {
         @KeepForDJVM data class IncludedLeaf(val hash: SecureHash) : PartialTree()
         @KeepForDJVM data class Leaf(val hash: SecureHash) : PartialTree()
-        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree, val hashAlgorithm: String? = SecureHash.SHA2_256) : PartialTree()
+        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree, val hashAlgorithm: String? = SecureHash.SHA2_256) : PartialTree(){
+            /**
+             * Old version of [PartialTree.Node] constructor for ABI compatibility.
+             */
+            @DeprecatedConstructorForDeserialization(1)
+            constructor(left: PartialTree, right: PartialTree) : this(left, right, SecureHash.SHA2_256)
+
+            /**
+             * Old version of [PartialTree.Node.copy] for ABI compatibility.
+             */
+            fun copy(left: PartialTree, right: PartialTree) : Node {
+                return Node(left, right, SecureHash.SHA2_256)
+            }
+        }
     }
 
     companion object {

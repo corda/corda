@@ -57,6 +57,19 @@ open class TransactionBuilder(
         protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub,
         protected val digestService: DigestService = DigestService.default
 ) {
+    // TODO(iee): add missing
+    //  public <init>(net.corda.core.identity.Party, java.util.UUID, java.util.List, java.util.List, java.util.List,
+    //      java.util.List, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt, java.util.List,
+    //      net.corda.core.node.ServiceHub, int, kotlin.jvm.internal.DefaultConstructorMarker)
+    //
+    // TODO(IEE): add missing
+    //  public <init>(net.corda.core.identity.Party, java.util.UUID, java.util.List<net.corda.core.contracts.StateRef>,
+    //      java.util.List<net.corda.core.crypto.SecureHash>,
+    //      java.util.List<net.corda.core.contracts.TransactionState<net.corda.core.contracts.ContractState>>,
+    //      java.util.List<net.corda.core.contracts.Command<?>>, net.corda.core.contracts.TimeWindow,
+    //      net.corda.core.contracts.PrivacySalt, java.util.List<net.corda.core.contracts.StateRef>,
+    //      net.corda.core.node.ServiceHub)
+
     constructor(notary: Party? = null,
                 lockId: UUID = defaultLockId(),
                 inputs: MutableList<StateRef> = arrayListOf(),
