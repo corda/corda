@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
@@ -22,6 +23,13 @@ import java.util.function.Predicate
  * "Transaction tear-offs" to learn more about this feature.
  */
 abstract class TraversableTransaction(open val componentGroups: List<ComponentGroup>, val digestService: DigestService) : CoreTransaction() {
+
+    /**
+     * Old version of [TraversableTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, DigestService.sha2_256)
+
     /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
     val attachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_GROUP)
 
@@ -90,6 +98,13 @@ class FilteredTransaction internal constructor(
         val groupHashes: List<SecureHash>,
         digestService: DigestService
 ) : TraversableTransaction(filteredComponentGroups, digestService) {
+
+    /**
+     * Old version of [FilteredTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    internal constructor(id: SecureHash, filteredComponentGroups: List<FilteredComponentGroup>, groupHashes: List<SecureHash>)
+            : this(id, filteredComponentGroups, groupHashes, DigestService.sha2_256)
 
     companion object {
         /**
