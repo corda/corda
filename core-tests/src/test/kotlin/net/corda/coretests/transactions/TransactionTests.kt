@@ -48,9 +48,9 @@ class TransactionTests(private val digestService : DigestService) {
         @JvmStatic
         @Parameterized.Parameters
         fun data(): Collection<DigestService> = listOf(
-                DigestService.sha2_256,
-                DigestService.sha2_384,
-                DigestService.sha2_512
+                DigestService.sha2_256
+//                DigestService.sha2_384,
+//                DigestService.sha2_512
         )
     }
 

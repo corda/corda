@@ -61,9 +61,9 @@ class UniquenessProviderTests(
         @Parameterized.Parameters
         fun data(): Collection<Array<Any>> = listOf(
             arrayOf(JPAUniquenessProviderFactory(DigestService.sha2_256), DigestService.sha2_256),
-            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_256),
-            arrayOf(JPAUniquenessProviderFactory(DigestService.sha2_512), DigestService.sha2_512),
-            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_512)
+            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_256)
+//            arrayOf(JPAUniquenessProviderFactory(DigestService.sha2_512), DigestService.sha2_512),
+//            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_512)
         )
     }
 
