@@ -8,6 +8,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -147,15 +148,17 @@ fun p2pSslOptions(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "L
 }
 
 /** This is the same as the deprecated [WireTransaction] c'tor but avoids the deprecation warning. */
+@SuppressWarnings("LongParameterList")
 fun createWireTransaction(inputs: List<StateRef>,
                           attachments: List<SecureHash>,
                           outputs: List<TransactionState<*>>,
                           commands: List<Command<*>>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
-                          privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
+                          privacySalt: PrivacySalt = PrivacySalt(),
+                          digestService: DigestService = DigestService.default): WireTransaction {
     val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
-    return WireTransaction(componentGroups, privacySalt)
+    return WireTransaction(componentGroups, privacySalt, digestService)
 }
 
 /**

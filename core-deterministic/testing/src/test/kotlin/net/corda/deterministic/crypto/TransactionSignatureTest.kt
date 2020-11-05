@@ -65,7 +65,7 @@ class TransactionSignatureTest {
         val txSignature = signMultipleTx(txIds, keyPair)
 
         // The hash of all txIds are used as leaves.
-        val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.sha256() })
+        val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.sha256() }, DigestService.default)
 
         // We haven't added the partial tree yet.
         assertNull(txSignature.partialMerkleTree)
@@ -128,7 +128,7 @@ class TransactionSignatureTest {
 
     // Returns a TransactionSignature over the Merkle root, but the partial tree is null.
     private fun signMultipleTx(txIds: List<SecureHash>, keyPair: KeyPair): TransactionSignature {
-        val merkleTreeRoot = MerkleTree.getMerkleTree(txIds.map { it.sha256() }).hash
+        val merkleTreeRoot = MerkleTree.getMerkleTree(txIds.map { it.sha256() }, DigestService.default).hash
         return signOneTx(merkleTreeRoot, keyPair)
     }
 

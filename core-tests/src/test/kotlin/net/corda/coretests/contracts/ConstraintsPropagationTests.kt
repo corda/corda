@@ -14,6 +14,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.canBeTransitionedFrom
 import net.corda.core.internal.inputStream
+import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.internal.toPath
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
@@ -372,6 +373,7 @@ class ConstraintsPropagationTests {
     }
 
     private fun MockServices.recordTransaction(wireTransaction: WireTransaction) {
+        requireSupportedHashType(wireTransaction)
         val nodeKey = ALICE_PUBKEY
         val sigs = listOf(keyManagementService.sign(
                 SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))

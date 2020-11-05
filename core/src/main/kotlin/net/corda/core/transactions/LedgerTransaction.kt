@@ -14,6 +14,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -26,6 +27,7 @@ import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
@@ -89,8 +91,41 @@ private constructor(
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
-        private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
+        private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
+        val digestService: DigestService = DigestService.sha2_256
 ) : FullTransaction() {
+
+    /**
+     * Old version of [LedgerTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    private constructor(
+            inputs: List<StateAndRef<ContractState>>,
+                outputs: List<TransactionState<ContractState>>,
+                commands: List<CommandWithParties<CommandData>>,
+                attachments: List<Attachment>,
+                id: SecureHash,
+                notary: Party?,
+                timeWindow: TimeWindow?,
+                privacySalt: PrivacySalt,
+                networkParameters: NetworkParameters?,
+                references: List<StateAndRef<ContractState>>,
+                componentGroups: List<ComponentGroup>?,
+                serializedInputs: List<SerializedStateAndRef>?,
+                serializedReferences: List<SerializedStateAndRef>?,
+                isAttachmentTrusted: (Attachment) -> Boolean,
+                verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
+                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?) : this(
+            inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
+            networkParameters, references, componentGroups, serializedInputs, serializedReferences,
+            isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
+
+    // TODO(iee): add missing => Removed from API txt
+    //  public <init>(java.util.List, java.util.List, java.util.List, java.util.List, net.corda.core.crypto.SecureHash,
+    //      net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt,
+    //      net.corda.core.node.NetworkParameters, java.util.List, java.util.List, java.util.List, java.util.List,
+    //      kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function2,
+    //      net.corda.core.serialization.internal.AttachmentsClassLoaderCache, kotlin.jvm.internal.DefaultConstructorMarker)
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
@@ -127,7 +162,8 @@ private constructor(
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 isAttachmentTrusted: (Attachment) -> Boolean,
-                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
+                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
+                digestService: DigestService
         ): LedgerTransaction {
             return LedgerTransaction(
                 inputs = inputs,
@@ -145,7 +181,8 @@ private constructor(
                 serializedReferences = protect(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = ::BasicVerifier,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = digestService
             )
         }
 
@@ -164,7 +201,8 @@ private constructor(
                 timeWindow: TimeWindow?,
                 privacySalt: PrivacySalt,
                 networkParameters: NetworkParameters,
-                references: List<StateAndRef<ContractState>>): LedgerTransaction {
+                references: List<StateAndRef<ContractState>>,
+                digestService: DigestService): LedgerTransaction {
             return LedgerTransaction(
                 inputs = inputs,
                 outputs = outputs,
@@ -181,7 +219,8 @@ private constructor(
                 serializedReferences = null,
                 isAttachmentTrusted = { true },
                 verifierFactory = ::BasicVerifier,
-                attachmentsClassLoaderCache = null
+                attachmentsClassLoaderCache = null,
+                digestService = digestService
             )
         }
     }
@@ -261,7 +300,8 @@ private constructor(
         serializedReferences = serializedReferences,
         isAttachmentTrusted = isAttachmentTrusted,
         verifierFactory = alternateVerifier,
-        attachmentsClassLoaderCache = attachmentsClassLoaderCache
+        attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+        digestService = digestService
     )
 
     // Read network parameters with backwards compatibility goo.
@@ -305,7 +345,7 @@ private constructor(
             val deserializedInputs = serializedInputs.map { it.toStateAndRef() }
             val deserializedReferences = serializedReferences.map { it.toStateAndRef() }
             val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
-            val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true)
+            val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = digestService)
             val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
                 @Suppress("DEPRECATION")   // Deprecated feature.
                 val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
@@ -328,7 +368,8 @@ private constructor(
                     serializedReferences = serializedReferences,
                     isAttachmentTrusted = isAttachmentTrusted,
                     verifierFactory = verifierFactory,
-                    attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                    attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                    digestService = digestService
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -772,7 +813,8 @@ private constructor(
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = verifierFactory,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = digestService
         )
     }
 
@@ -803,7 +845,8 @@ private constructor(
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = verifierFactory,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                digestService = digestService
         )
     }
 }

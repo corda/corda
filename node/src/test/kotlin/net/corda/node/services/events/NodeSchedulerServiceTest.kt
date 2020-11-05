@@ -2,7 +2,9 @@ package net.corda.node.services.events
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -283,7 +285,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
-            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val stateRef = StateRef(DigestService.default.randomHash(), 0)
             val ssr = ScheduledStateRef(stateRef, mark)
             repo.merge(ssr)
 

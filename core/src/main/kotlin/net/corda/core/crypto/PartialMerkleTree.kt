@@ -3,8 +3,8 @@ package net.corda.core.crypto
 import net.corda.core.CordaException
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
-import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import java.util.*
 
 @KeepForDJVM
@@ -59,7 +59,20 @@ class PartialMerkleTree(val root: PartialTree) {
     sealed class PartialTree {
         @KeepForDJVM data class IncludedLeaf(val hash: SecureHash) : PartialTree()
         @KeepForDJVM data class Leaf(val hash: SecureHash) : PartialTree()
-        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
+        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree, val hashAlgorithm: String? = SecureHash.SHA2_256) : PartialTree(){
+            /**
+             * Old version of [PartialTree.Node] constructor for ABI compatibility.
+             */
+            @DeprecatedConstructorForDeserialization(1)
+            constructor(left: PartialTree, right: PartialTree) : this(left, right, SecureHash.SHA2_256)
+
+            /**
+             * Old version of [PartialTree.Node.copy] for ABI compatibility.
+             */
+            fun copy(left: PartialTree, right: PartialTree) : Node {
+                return Node(left, right, SecureHash.SHA2_256)
+            }
+        }
     }
 
     companion object {
@@ -70,13 +83,14 @@ class PartialMerkleTree(val root: PartialTree) {
          */
         @Throws(IllegalArgumentException::class, MerkleTreeException::class)
         fun build(merkleRoot: MerkleTree, includeHashes: List<SecureHash>): PartialMerkleTree {
-            val usedHashes = ArrayList<SecureHash>()
-            require(zeroHash !in includeHashes) { "Zero hashes shouldn't be included in partial tree." }
+            require(includeHashes.none(SecureHash::isZero)) { "Zero hashes shouldn't be included in partial tree." }
             checkFull(merkleRoot) // Throws MerkleTreeException if it is not a full binary tree.
+            val usedHashes = ArrayList<SecureHash>()
             val tree = buildPartialTree(merkleRoot, includeHashes, usedHashes)
             // Too many included hashes or different ones.
-            if (includeHashes.size != usedHashes.size)
+            if (includeHashes.size != usedHashes.size) {
                 throw MerkleTreeException("Some of the provided hashes are not in the tree.")
+            }
             return PartialMerkleTree(tree.second)
         }
 
@@ -116,7 +130,7 @@ class PartialMerkleTree(val root: PartialTree) {
                     val rightNode = buildPartialTree(root.right, includeHashes, usedHashes)
                     if (leftNode.first or rightNode.first) {
                         // This node is on a path to some included leaves. Don't store hash.
-                        val newTree = PartialTree.Node(leftNode.second, rightNode.second)
+                        val newTree = PartialTree.Node(leftNode.second, rightNode.second, root.hash.algorithm)
                         Pair(true, newTree)
                     } else {
                         // This node has no included leaves below. Cut the tree here and store a hash as a Leaf.
@@ -144,7 +158,7 @@ class PartialMerkleTree(val root: PartialTree) {
                 is PartialTree.Node -> {
                     val leftHash = rootAndUsedHashes(node.left, usedHashes)
                     val rightHash = rootAndUsedHashes(node.right, usedHashes)
-                    leftHash.hashConcat(rightHash)
+                    leftHash.concatenateAs(node.hashAlgorithm!!, rightHash)
                 }
             }
         }

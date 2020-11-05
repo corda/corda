@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
@@ -21,7 +22,14 @@ import java.util.function.Predicate
  * may be missing in the case of this representing a "torn" transaction. Please see the user guide section
  * "Transaction tear-offs" to learn more about this feature.
  */
-abstract class TraversableTransaction(open val componentGroups: List<ComponentGroup>) : CoreTransaction() {
+abstract class TraversableTransaction(open val componentGroups: List<ComponentGroup>, val digestService: DigestService) : CoreTransaction() {
+
+    /**
+     * Old version of [TraversableTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, DigestService.sha2_256)
+
     /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
     val attachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_GROUP)
 
@@ -34,7 +42,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(componentGroups, TransactionState::class, OUTPUTS_GROUP)
 
     /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
-    val commands: List<Command<*>> = deserialiseCommands(componentGroups)
+    val commands: List<Command<*>> = deserialiseCommands(componentGroups, digestService = digestService)
 
     override val notary: Party? = let {
         val notaries: List<Party> = deserialiseComponentGroup(componentGroups, Party::class, NOTARY_GROUP)
@@ -87,8 +95,16 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
 class FilteredTransaction internal constructor(
         override val id: SecureHash,
         val filteredComponentGroups: List<FilteredComponentGroup>,
-        val groupHashes: List<SecureHash>
-) : TraversableTransaction(filteredComponentGroups) {
+        val groupHashes: List<SecureHash>,
+        digestService: DigestService
+) : TraversableTransaction(filteredComponentGroups, digestService) {
+
+    /**
+     * Old version of [FilteredTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    internal constructor(id: SecureHash, filteredComponentGroups: List<FilteredComponentGroup>, groupHashes: List<SecureHash>)
+            : this(id, filteredComponentGroups, groupHashes, DigestService.sha2_256)
 
     companion object {
         /**
@@ -99,7 +115,7 @@ class FilteredTransaction internal constructor(
         @JvmStatic
         fun buildFilteredTransaction(wtx: WireTransaction, filtering: Predicate<Any>): FilteredTransaction {
             val filteredComponentGroups = filterWithFun(wtx, filtering)
-            return FilteredTransaction(wtx.id, filteredComponentGroups, wtx.groupHashes)
+            return FilteredTransaction(wtx.id, filteredComponentGroups, wtx.groupHashes, wtx.digestService)
         }
 
         /**
@@ -176,7 +192,7 @@ class FilteredTransaction internal constructor(
 
             fun createPartialMerkleTree(componentGroupIndex: Int): PartialMerkleTree {
                 return PartialMerkleTree.build(
-                        MerkleTree.getMerkleTree(wtx.availableComponentHashes[componentGroupIndex]!!),
+                        MerkleTree.getMerkleTree(wtx.availableComponentHashes[componentGroupIndex]!!, wtx.digestService),
                         filteredComponentHashes[componentGroupIndex]!!
                 )
             }
@@ -206,7 +222,7 @@ class FilteredTransaction internal constructor(
         verificationCheck(groupHashes.isNotEmpty()) { "At least one component group hash is required" }
         // Verify the top level Merkle tree (group hashes are its leaves, including allOnesHash for empty list or null
         // components in WireTransaction).
-        verificationCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {
+        verificationCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {
             "Top level Merkle tree cannot be verified against transaction's id"
         }
 
@@ -220,7 +236,7 @@ class FilteredTransaction internal constructor(
             verificationCheck(groupMerkleRoot == PartialMerkleTree.rootAndUsedHashes(groupPartialTree.root, mutableListOf())) {
                 "Partial Merkle tree root and advertised full Merkle tree root for component group $groupIndex do not match"
             }
-            verificationCheck(groupPartialTree.verify(groupMerkleRoot, components.mapIndexed { index, component -> componentHash(nonces[index], component) })) {
+            verificationCheck(groupPartialTree.verify(groupMerkleRoot, components.mapIndexed { index, component -> digestService.componentHash(nonces[index], component) })) {
                 "Visible components in group $groupIndex cannot be verified against their partial Merkle tree"
             }
         }
@@ -260,16 +276,16 @@ class FilteredTransaction internal constructor(
             // If we don't receive elements of a particular component, check if its ordinal is bigger that the
             // groupHashes.size or if the group hash is allOnesHash,
             // to ensure there were indeed no elements in the original wire transaction.
-            visibilityCheck(componentGroupEnum.ordinal >= groupHashes.size || groupHashes[componentGroupEnum.ordinal] == SecureHash.allOnesHash) {
+            visibilityCheck(componentGroupEnum.ordinal >= groupHashes.size || groupHashes[componentGroupEnum.ordinal] == SecureHash.allOnesHashFor(id.algorithm)) {
                 "Did not receive components for group ${componentGroupEnum.ordinal} and cannot verify they didn't exist in the original wire transaction"
             }
         } else {
             visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
-            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }).hash
+            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }, digestService).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
-            visibilityCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {
+            visibilityCheck(MerkleTree.getMerkleTree(groupHashes, digestService).hash == id) {
                 "Transaction is malformed. Top level Merkle tree cannot be verified against transaction's id"
             }
         }

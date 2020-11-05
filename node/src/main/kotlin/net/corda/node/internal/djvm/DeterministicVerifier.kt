@@ -91,6 +91,7 @@ class DeterministicVerifier(
                 val timeWindowData = ltx.timeWindow?.serialize()
                 val privacySaltData = ltx.privacySalt.serialize()
                 val networkingParametersData = ltx.networkParameters?.serialize()
+                val digestServiceData = ltx.digestService.serialize()
 
                 val createSandboxTx = taskFactory.apply(LtxFactory::class.java)
                 createSandboxTx.apply(arrayOf(
@@ -99,7 +100,7 @@ class DeterministicVerifier(
                     CommandFactory(taskFactory).toSandbox(
                         componentFactory.toSandbox(SIGNERS_GROUP, List::class.java),
                         componentFactory.toSandbox(COMMANDS_GROUP, CommandData::class.java),
-                        componentFactory.calculateLeafIndicesFor(COMMANDS_GROUP)
+                        componentFactory.calculateLeafIndicesFor(COMMANDS_GROUP, digestService = ltx.digestService)
                     ),
                     attachmentFactory.toSandbox(ltx.attachments),
                     serializer.deserialize(idData),
@@ -107,7 +108,8 @@ class DeterministicVerifier(
                     serializer.deserialize(timeWindowData),
                     serializer.deserialize(privacySaltData),
                     serializer.deserialize(networkingParametersData),
-                    serializer.deserialize(serializedReferences)
+                    serializer.deserialize(serializedReferences),
+                    serializer.deserialize(digestServiceData)
                 ))
             }
 

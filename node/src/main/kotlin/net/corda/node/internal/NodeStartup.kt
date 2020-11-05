@@ -175,6 +175,11 @@ open class NodeStartup : NodeStartupLogging {
         // This needs to go after initLogging(netty clashes with our logging)
         Crypto.registerProviders()
 
+        // Temp Step. Enable experimental hash agility feature allowing to override default transaction hash algorithm.
+        val txHashAlgoName = System.getProperty("corda.experimental.txHashAlgoName")
+        val txHashAlgoClass = System.getProperty("corda.experimental.txHashAlgoClass")
+        HashAgility.init(txHashAlgoName, txHashAlgoClass)
+
         // Step 4. Print banner and basic node info.
         val versionInfo = getVersionInfo()
         drawBanner(versionInfo)

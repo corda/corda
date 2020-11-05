@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
@@ -88,7 +87,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
     class CommittedTransaction(
             @Id
-            @Column(name = "transaction_id", nullable = false, length = 64)
+            @Column(name = "transaction_id", nullable = false, length = 144)
             val transactionId: String
     )
 
@@ -161,8 +160,8 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
                             val txId = it.id.txId
                             val index = it.id.index
                             Pair(
-                                    StateRef(txhash = SecureHash.parse(txId), index = index),
-                                    SecureHash.parse(it.consumingTxHash)
+                                    StateRef(txhash = SecureHash.create(txId), index = index),
+                                    SecureHash.create(it.consumingTxHash)
                             )
 
                         },
@@ -218,7 +217,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         fun checkConflicts(toCheck: List<StateRef>, type: StateConsumptionDetails.ConsumedStateType) {
             return toCheck.forEach { stateRef ->
                 val consumingTx = commitLog[stateRef]
-                if (consumingTx != null) conflictingStates[stateRef] = StateConsumptionDetails(consumingTx.sha256(), type)
+                if (consumingTx != null) conflictingStates[stateRef] = StateConsumptionDetails(consumingTx.reHash(), type)
             }
         }
 
@@ -266,7 +265,8 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
-        if (isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
+        // TODO(iee): is the use of reHash correct here? Check backward/forward compatibility
+        if (isConsumedByTheSameTx(txId.reHash(), conflictingStates)) {
             log.info("Transaction $txId already notarised. TxId: $txId")
             return
         } else {

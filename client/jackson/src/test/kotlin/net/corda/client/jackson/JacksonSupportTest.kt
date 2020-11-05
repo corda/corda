@@ -50,6 +50,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
@@ -237,6 +238,29 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test(timeout=300_000)
+    fun `TransactionSignature with SHA3`() {
+        val signatureMetadata = SignatureMetadata(1, 1)
+        val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
+                left = PartialTree.Leaf(SecureHash.random(SecureHash.SHA2_384)),
+                right = PartialTree.IncludedLeaf(SecureHash.random(SecureHash.SHA2_384)),
+                hashAlgorithm = SecureHash.SHA2_384
+        ))
+        val transactionSignature = TransactionSignature(secureRandomBytes(128), BOB_PUBKEY, signatureMetadata, partialMerkleTree)
+        val json = mapper.valueToTree<ObjectNode>(transactionSignature)
+        val (bytesJson, byJson, signatureMetadataJson, partialMerkleTreeJson) = json.assertHasOnlyFields(
+                "bytes",
+                "by",
+                "signatureMetadata",
+                "partialMerkleTree"
+        )
+        assertThat(bytesJson.binaryValue()).isEqualTo(transactionSignature.bytes)
+        assertThat(byJson.valueAs<PublicKey>(mapper)).isEqualTo(BOB_PUBKEY)
+        assertThat(signatureMetadataJson.valueAs<SignatureMetadata>(mapper)).isEqualTo(signatureMetadata)
+        assertThat(partialMerkleTreeJson.valueAs<PartialMerkleTree>(mapper).root).isEqualTo(partialMerkleTree.root)
+        assertThat(mapper.convertValue<TransactionSignature>(json)).isEqualTo(transactionSignature)
+    }
+
+    @Test(timeout=300_000)
 	fun `SignedTransaction (WireTransaction)`() {
         val attachmentId = SecureHash.randomSHA256()
         doReturn(attachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
@@ -267,7 +291,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         println(mapper.writeValueAsString(json))
         val (wtxJson, signaturesJson) = json.assertHasOnlyFields("wire", "signatures")
         assertThat(signaturesJson.childrenAs<TransactionSignature>(mapper)).isEqualTo(stx.sigs)
-        val wtxFields = wtxJson.assertHasOnlyFields("id", "notary", "inputs", "attachments", "outputs", "commands", "timeWindow", "references", "privacySalt", "networkParametersHash")
+        val wtxFields = wtxJson.assertHasOnlyFields("id", "notary", "inputs", "attachments", "outputs", "commands", "timeWindow", "references", "privacySalt", "networkParametersHash", "digestService")
         assertThat(wtxFields[0].valueAs<SecureHash>(mapper)).isEqualTo(wtx.id)
         assertThat(wtxFields[1].valueAs<Party>(mapper)).isEqualTo(wtx.notary)
         assertThat(wtxFields[2].childrenAs<StateRef>(mapper)).isEqualTo(wtx.inputs)
@@ -277,6 +301,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[6].valueAs<TimeWindow>(mapper)).isEqualTo(wtx.timeWindow)
         assertThat(wtxFields[7].childrenAs<StateRef>(mapper)).isEqualTo(wtx.references)
         assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
+        assertThat(wtxFields[10].valueAs<DigestService>(mapper)).isEqualTo(wtx.digestService)
         assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
         assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
     }
@@ -379,14 +404,47 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
                 right = PartialTree.IncludedLeaf(SecureHash.randomSHA256())
         )
         val json = mapper.valueToTree<ObjectNode>(node)
-        println(mapper.writeValueAsString(json))
-        val (leftJson, rightJson) = json.assertHasOnlyFields("left", "right")
+        val (leftJson, rightJson, algorithm) = json.assertHasOnlyFields("left", "right", "hashAlgorithm")
         assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
         assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
+        assertThat(algorithm.valueAs<String>(mapper)).isEqualTo(node.hashAlgorithm)
         assertThat(mapper.convertValue<PartialTree.Node>(json)).isEqualTo(node)
     }
 
     @Test(timeout=300_000)
+    fun `simple PartialTree Node with SHA3`() {
+        val node = PartialTree.Node(
+                left = PartialTree.Leaf(SecureHash.random(SecureHash.SHA2_384)),
+                right = PartialTree.IncludedLeaf(SecureHash.random(SecureHash.SHA2_384)),
+                hashAlgorithm = SecureHash.SHA2_384
+        )
+        val json = mapper.valueToTree<ObjectNode>(node)
+        val (leftJson, rightJson, algorithm) = json.assertHasOnlyFields("left", "right", "hashAlgorithm")
+        assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
+        assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
+        assertThat(algorithm.valueAs<String>(mapper)).isEqualTo(node.hashAlgorithm)
+        assertThat(mapper.convertValue<PartialTree.Node>(json)).isEqualTo(node)
+    }
+
+    @Test(timeout=300_000)
+    fun `PartialTree Node backward compatible deserialize`() {
+        val left = SecureHash.randomSHA256()
+        val right = SecureHash.randomSHA256()
+        val node = PartialTree.Node(
+                left = PartialTree.Leaf(left),
+                right = PartialTree.IncludedLeaf(right),
+                hashAlgorithm = SecureHash.SHA2_256
+        )
+        val legacyJson = mapper.readTree("{\"left\":{\"leaf\":\"$left\"},\"right\":{\"includedLeaf\":\"$right\"}}")
+        val (leftJson, rightJson) = legacyJson.assertHasOnlyFields("left", "right")
+
+        assertThat(leftJson.valueAs<PartialTree>(mapper)).isEqualTo(node.left)
+        assertThat(rightJson.valueAs<PartialTree>(mapper)).isEqualTo(node.right)
+        assertThat(mapper.convertValue<PartialTree.Node>(legacyJson)).isEqualTo(node)
+    }
+
+    @Test(timeout=300_000)
+    @TestFactory()
 	fun `complex PartialTree Node`() {
         val node = PartialTree.Node(
                 left = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),

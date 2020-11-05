@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -236,6 +237,7 @@ open class MockServices private constructor(
                 override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                 override val vaultService: VaultService = makeVaultService(schemaService, persistence, cordappLoader)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+                    txs.forEach { requireSupportedHashType(it) }
                     ServiceHubInternal.recordTransactions(
                             statesToRecord,
                             txs as? Collection ?: txs.toList(),

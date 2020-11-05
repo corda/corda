@@ -8,7 +8,9 @@ import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.flows.NotaryError
 import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.internal.concurrent.transpose
@@ -68,7 +70,7 @@ class RaftTransactionCommitLogTests {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txId: SecureHash = SecureHash.randomSHA256()
+        val txId: SecureHash = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
 
@@ -88,8 +90,8 @@ class RaftTransactionCommitLogTests {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txIdFirst = SecureHash.randomSHA256()
-        val txIdSecond = SecureHash.randomSHA256()
+        val txIdFirst = DigestService.default.randomHash()
+        val txIdSecond = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
 
@@ -108,7 +110,7 @@ class RaftTransactionCommitLogTests {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txId: SecureHash = SecureHash.randomSHA256()
+        val txId: SecureHash = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
         val timeWindow = TimeWindow.fromOnly(Instant.MAX)
@@ -125,7 +127,7 @@ class RaftTransactionCommitLogTests {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
-        val txId: SecureHash = SecureHash.randomSHA256()
+        val txId: SecureHash = DigestService.default.randomHash()
         val requestingPartyName = ALICE_NAME
         val requestSignature = ByteArray(1024)
         val timeWindow = TimeWindow.fromOnly(Instant.MIN)

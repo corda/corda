@@ -5,4 +5,5 @@
 
     <include file="migration/dbfailure.changelog-init.xml"/>
     <include file="migration/dbfailure.changelog-errortarget.xml"/>
+    <include file="migration/dbfailure.changelog-v2.xml"/>
 </databaseChangeLog>

@@ -544,7 +544,7 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
             fileTree(dir: it,
                     // these exclusions are necessary because jacoco gets confused by same class names
                     // which occur due to deterministic versions of non deterministic classes
-                    exclude: ['**/net/corda/core/crypto/SHA256DigestSupplier**',
+                    exclude: ['**/net/corda/core/crypto/DigestSupplier**',
                     '**/net/corda/core/crypto/DelegatingSecureRandomService',
                     '**/net/corda/core/internal/ThreadLocalToggleField**',
                     '**/net/corda/core/internal/InheritableThreadLocalToggleField**',

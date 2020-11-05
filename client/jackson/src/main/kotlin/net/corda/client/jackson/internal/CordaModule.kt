@@ -34,6 +34,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.PartialMerkleTree.PartialTree
+import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.*
 import net.corda.core.internal.DigitalSignatureWithCert
@@ -80,8 +81,9 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(Party::class.java, PartyMixin::class.java)
         context.setMixInAnnotations(PublicKey::class.java, PublicKeyMixin::class.java)
         context.setMixInAnnotations(ByteSequence::class.java, ByteSequenceMixin::class.java)
-        context.setMixInAnnotations(SecureHash.SHA256::class.java, SecureHashSHA256Mixin::class.java)
-        context.setMixInAnnotations(SecureHash::class.java, SecureHashSHA256Mixin::class.java)
+        context.setMixInAnnotations(SecureHash.SHA256::class.java, SecureHashMixin::class.java)
+        context.setMixInAnnotations(SecureHash.HASH::class.java, SecureHashMixin::class.java)
+        context.setMixInAnnotations(SecureHash::class.java, SecureHashMixin::class.java)
         context.setMixInAnnotations(SerializedBytes::class.java, SerializedBytesMixin::class.java)
         context.setMixInAnnotations(DigitalSignature.WithKey::class.java, ByteSequenceWithPropertiesMixin::class.java)
         context.setMixInAnnotations(DigitalSignatureWithCert::class.java, ByteSequenceWithPropertiesMixin::class.java)
@@ -97,6 +99,7 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(PartialTree::class.java, PartialTreeMixin::class.java)
         context.setMixInAnnotations(NodeInfo::class.java, NodeInfoMixin::class.java)
         context.setMixInAnnotations(StateMachineRunId::class.java, StateMachineRunIdMixin::class.java)
+        context.setMixInAnnotations(DigestService::class.java, DigestServiceMixin::class.java)
     }
 }
 
@@ -209,6 +212,7 @@ private interface WireTransactionMixin
 private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
     override fun serialize(value: WireTransaction, gen: JsonGenerator, serializers: SerializerProvider) {
         gen.writeObject(WireTransactionJson(
+                value.digestService,
                 value.id,
                 value.notary,
                 value.inputs,
@@ -236,11 +240,12 @@ private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() 
                 wrapper.references,
                 wrapper.networkParametersHash
         )
-        return WireTransaction(componentGroups, wrapper.privacySalt)
+        return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256)
     }
 }
 
-private class WireTransactionJson(val id: SecureHash,
+private class WireTransactionJson(@get:JsonInclude(Include.NON_NULL) val digestService: DigestService?,
+                                  val id: SecureHash,
                                   val notary: Party?,
                                   val inputs: List<StateRef>,
                                   val outputs: List<TransactionState<*>>,
@@ -335,7 +340,7 @@ private class PartialTreeSerializer : JsonSerializer<PartialTree>() {
         return when (tree) {
             is PartialTree.IncludedLeaf -> PartialTreeJson(includedLeaf = tree.hash)
             is PartialTree.Leaf -> PartialTreeJson(leaf = tree.hash)
-            is PartialTree.Node -> PartialTreeJson(left = convert(tree.left), right = convert(tree.right))
+            is PartialTree.Node -> PartialTreeJson(left = convert(tree.left), right = convert(tree.right), hashAlgorithm = tree.hashAlgorithm)
             else -> throw IllegalArgumentException("Don't know how to serialize $tree")
         }
     }
@@ -351,7 +356,7 @@ private class PartialTreeDeserializer : JsonDeserializer<PartialTree>() {
             when {
                 includedLeaf != null -> PartialTree.IncludedLeaf(includedLeaf)
                 leaf != null -> PartialTree.Leaf(leaf)
-                else -> PartialTree.Node(convert(left!!), convert(right!!))
+                else -> PartialTree.Node(convert(left!!), convert(right!!), hashAlgorithm ?: SHA2_256)
             }
         }
     }
@@ -361,7 +366,8 @@ private class PartialTreeDeserializer : JsonDeserializer<PartialTree>() {
 private class PartialTreeJson(val includedLeaf: SecureHash? = null,
                               val leaf: SecureHash? = null,
                               val left: PartialTreeJson? = null,
-                              val right: PartialTreeJson? = null) {
+                              val right: PartialTreeJson? = null,
+                              val hashAlgorithm: String? = null) {
     init {
         if (includedLeaf != null) {
             require(leaf == null && left == null && right == null) { "Invalid JSON structure" }
@@ -440,7 +446,7 @@ private interface NodeInfoMixin
 
 @ToStringSerialize
 @JsonDeserialize(using = JacksonSupport.SecureHashDeserializer::class)
-private interface SecureHashSHA256Mixin
+private interface SecureHashMixin
 
 @JsonSerialize(using = JacksonSupport.PublicKeySerializer::class)
 @JsonDeserialize(using = JacksonSupport.PublicKeyDeserializer::class)
@@ -540,6 +546,25 @@ private class AmountDeserializer(delegate: JsonDeserializer<*>) : DelegatingDese
         }
     }
 }
+
+@JsonSerialize(using = DigestServiceSerializer::class)
+@JsonDeserialize(using = DigestServiceDeserializer::class)
+private interface DigestServiceMixin
+
+private class DigestServiceSerializer : JsonSerializer<DigestService>() {
+    override fun serialize(value: DigestService, gen: JsonGenerator, serializers: SerializerProvider) {
+        gen.writeObject(DigestServiceJson(value.hashAlgorithm))
+    }
+}
+
+private class DigestServiceDeserializer : JsonDeserializer<DigestService>() {
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): DigestService {
+        val wrapper = parser.readValueAs<DigestServiceJson>()
+        return DigestService(wrapper.hashAlgorithm)
+    }
+}
+
+private class DigestServiceJson(val hashAlgorithm: String)
 
 @JsonDeserialize(using = JacksonSupport.OpaqueBytesDeserializer::class)
 private interface ByteSequenceMixin {
