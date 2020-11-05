@@ -55,7 +55,7 @@ data class BatchSignature(
     /** Extracts a signature with a partial Merkle tree for the specified leaf in the batch signature. */
     fun forParticipant(txId: SecureHash): TransactionSignature {
         require(fullMerkleTree.hash.algorithm == txId.algorithm) {
-            "The leaf hash algorithm does not match the Merkle tree hash algorithm"
+            "The leaf hash algorithm ${txId.algorithm} does not match the Merkle tree hash algorithm ${fullMerkleTree.hash.algorithm}"
         }
         return TransactionSignature(
                 rootSignature.bytes,

@@ -7,6 +7,7 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.HashAgility
 import net.corda.core.internal.TESTDSL_UPLOADER
 import net.corda.core.internal.createLedgerTransaction
 import net.corda.core.node.NotaryInfo
@@ -20,6 +21,7 @@ import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.internal.TestingNamedCacheFactory
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,6 +57,16 @@ class TransactionTests(private val digestService : DigestService) {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
+    @Before
+    fun before() {
+        HashAgility.init(txHashAlgoName = digestService.hashAlgorithm)
+    }
+
+    @Before
+    fun after() {
+        HashAgility.init()
+    }
 
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair, notarySig: Boolean = true): SignedTransaction {
         val keySigs = keys.map { it.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(it.public).schemeNumberID))) }
