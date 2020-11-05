@@ -266,10 +266,8 @@ fun random63BitValue(): Long {
  * from [computeNonce].
  */
 @Deprecated("This has been moved to DigestService")
-fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash {
-    val nonce = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(componentGroupIndex).putInt(internalIndex).array())
-    return SecureHash.sha256Twice(nonce.bytes + opaqueBytes.bytes)
-}
+fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
+        @Suppress("DEPRECATION") componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
 
 /** Return the SHA256(SHA256(nonce || serializedComponent)). */
 @Deprecated("This has been moved to DigestService")

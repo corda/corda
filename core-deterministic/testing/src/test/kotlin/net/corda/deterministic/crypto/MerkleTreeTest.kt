@@ -17,7 +17,7 @@ class MerkleTreeTest {
     }
 
     @Test(timeout=300_000)
-    fun testCreateSHA2_384() {
+    fun testCreateSHA2384() {
         val merkle = MerkleTree.getMerkleTree(leafs(SecureHash.SHA2_384), DigestService.sha2_384)
         assertEquals(SecureHash.create("SHA-384:2B83D37859E3665D7C239964D769CF950EE6478C13E4CA2D6643C23B6C4EAE035C88F654D22E0D65E7CA40BAE4F3718F"), merkle.hash)
     }

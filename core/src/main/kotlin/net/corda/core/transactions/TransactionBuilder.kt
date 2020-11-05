@@ -57,6 +57,20 @@ open class TransactionBuilder(
         protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub,
         protected val digestService: DigestService = DigestService.default
 ) {
+
+    constructor(
+        notary: Party? = null,
+        lockId: UUID = defaultLockId(),
+        inputs: MutableList<StateRef> = arrayListOf(),
+        attachments: MutableList<AttachmentId> = arrayListOf(),
+        outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+        commands: MutableList<Command<*>> = arrayListOf(),
+        window: TimeWindow? = null,
+        privacySalt: PrivacySalt = PrivacySalt(),
+        references: MutableList<StateRef> = arrayListOf(),
+        serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub) : this(
+            notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, references, serviceHub, DigestService.sha2_256)
+
     // TODO(iee): add missing
     //  public <init>(net.corda.core.identity.Party, java.util.UUID, java.util.List, java.util.List, java.util.List,
     //      java.util.List, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt, java.util.List,
