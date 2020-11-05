@@ -55,33 +55,6 @@ open class TransactionBuilder(
         protected val references: MutableList<StateRef> = arrayListOf(),
         protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
 ) {
-
-    constructor(
-        notary: Party? = null,
-        lockId: UUID = defaultLockId(),
-        inputs: MutableList<StateRef> = arrayListOf(),
-        attachments: MutableList<AttachmentId> = arrayListOf(),
-        outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
-        commands: MutableList<Command<*>> = arrayListOf(),
-        window: TimeWindow? = null,
-        privacySalt: PrivacySalt = PrivacySalt(),
-        references: MutableList<StateRef> = arrayListOf(),
-        serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub) : this(
-            notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, references, serviceHub, DigestService.sha2_256)
-
-    // TODO(iee): add missing
-    //  public <init>(net.corda.core.identity.Party, java.util.UUID, java.util.List, java.util.List, java.util.List,
-    //      java.util.List, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt, java.util.List,
-    //      net.corda.core.node.ServiceHub, int, kotlin.jvm.internal.DefaultConstructorMarker)
-    //
-    // TODO(IEE): add missing
-    //  public <init>(net.corda.core.identity.Party, java.util.UUID, java.util.List<net.corda.core.contracts.StateRef>,
-    //      java.util.List<net.corda.core.crypto.SecureHash>,
-    //      java.util.List<net.corda.core.contracts.TransactionState<net.corda.core.contracts.ContractState>>,
-    //      java.util.List<net.corda.core.contracts.Command<?>>, net.corda.core.contracts.TimeWindow,
-    //      net.corda.core.contracts.PrivacySalt, java.util.List<net.corda.core.contracts.StateRef>,
-    //      net.corda.core.node.ServiceHub)
-
     constructor(notary: Party? = null,
                 lockId: UUID = defaultLockId(),
                 inputs: MutableList<StateRef> = arrayListOf(),
