@@ -5,7 +5,6 @@ import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
-import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import java.util.*
 
 @KeepForDJVM

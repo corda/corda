@@ -9,6 +9,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 
 /**
  * The DigestService class is a service that offers the main crypto methods for calculating transaction hashes and
@@ -79,16 +80,18 @@ data class DigestService(val hashAlgorithm: String) {
 
     /**
      * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
-     * calculated using the service's hash algorithm, thus HASH(HASH(nonce || serializedComponent)) for SHA2-256 or
-     * HASH(nonce || serializedComponent) otherwise, where nonce is computed from [computeNonce].
+     * calculated using the service's hash algorithm, thus HASH(HASH(nonce || serializedComponent)) for SHA2-256 and other
+     * algorithms loaded via JCA [MessageDigest], or DigestAlgorithm.preImageResistantDigest(nonce || serializedComponent)
+     * otherwise, where nonce is computed from [computeNonce].
      */
     fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
             componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
 
-    /** Return the HASH(HASH(nonce || serializedComponent)) for SHA2-256 or HASH(nonce || serializedComponent) otherwise. */
+    /** Return the HASH(HASH(nonce || serializedComponent)) for SHA2-256 and other algorithms loaded via JCA [MessageDigest],
+     *  otherwise it's defined by DigestAlgorithm.preImageResistantDigest(nonce || serializedComponent). */
     fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash {
         val data = nonce.bytes + opaqueBytes.bytes
-        return if(hashAlgorithm == SecureHash.SHA2_256) SecureHash.sha256Twice(data) else SecureHash.hashAs(hashAlgorithm, data)
+        return SecureHash.preImageResistantHashAs(hashAlgorithm, data)
     }
 
     /**
@@ -105,12 +108,12 @@ data class DigestService(val hashAlgorithm: String) {
      * @param privacySalt a [PrivacySalt].
      * @param groupIndex the fixed index (ordinal) of this component group.
      * @param internalIndex the internal index of this object in its corresponding components list.
-     * @return HASH(HASH(privacySalt || groupIndex || internalIndex)) for SHA2-256,
-     *         HASH(privacySalt || groupIndex || internalIndex) otherwise
+     * @return HASH(HASH(privacySalt || groupIndex || internalIndex)) for SHA2-256 and other algorithms loaded via JCA [MessageDigest],
+     *         otherwise it's defined by DigestAlgorithm.preImageResistantDigest(privacySalt || groupIndex || internalIndex).
      */
     fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) : SecureHash {
         val data = (privacySalt.bytes + ByteBuffer.allocate(NONCE_SIZE).putInt(groupIndex).putInt(internalIndex).array())
-        return if(hashAlgorithm == SecureHash.SHA2_256) SecureHash.sha256Twice(data) else SecureHash.hashAs(hashAlgorithm, data)
+        return SecureHash.preImageResistantHashAs(hashAlgorithm, data)
     }
 }
 

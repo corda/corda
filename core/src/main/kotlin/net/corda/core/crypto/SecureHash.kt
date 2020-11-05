@@ -12,7 +12,6 @@ import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import java.nio.ByteBuffer
 import java.security.MessageDigest
-import java.util.Collections.unmodifiableSet
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.function.Supplier
@@ -181,7 +180,7 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
         private fun digestFor(algorithm: String): DigestSupplier {
-            return messageDigests.computeIfAbsent(algorithm, ::DigestSupplier)
+            return messageDigests.getOrPut(algorithm) { DigestSupplier(algorithm) }
         }
 
         private fun digestAs(algorithm: String, bytes: ByteArray): ByteArray = digestFor(algorithm).get().digest(bytes)
@@ -206,6 +205,24 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
                 SHA256(hashBytes)
             } else {
                 HASH(algorithm, hashBytes)
+            }
+        }
+
+        /**
+         * Computes the digest of the [ByteArray] which is resistant to pre-image attacks.
+         * It computes the hash of the hash for SHA2-256 and other algorithms loaded via JCA [MessageDigest].
+         * For custom algorithms the strategy can be modified via [DigestAlgorithm].
+         * @param algorithm The [MessageDigest] algorithm to use.
+         * @param bytes The [ByteArray] to hash.
+         */
+        @JvmStatic
+        fun preImageResistantHashAs(algorithm: String, bytes: ByteArray): SecureHash {
+            return if (algorithm == SHA2_256) {
+                sha256Twice(bytes)
+            } else {
+                val digest = digestFor(algorithm).get()
+                val firstHash = digest.preImageResistantDigest(bytes)
+                HASH(algorithm, digest.digest(firstHash))
             }
         }
 
@@ -285,11 +302,11 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         }
 
         private fun getConstantsFor(algorithm: String): HashConstants {
-            return hashConstants.computeIfAbsent(algorithm) { algName ->
-                val digestLength = digestFor(algName).digestLength
+            return hashConstants.getOrPut(algorithm) {
+                val digestLength = digestFor(algorithm).digestLength
                 HashConstants(
-                        zero = HASH(algName, ByteArray(digestLength)),
-                        allOnes = HASH(algName, ByteArray(digestLength) { 255.toByte() })
+                        zero = HASH(algorithm, ByteArray(digestLength)),
+                        allOnes = HASH(algorithm, ByteArray(digestLength) { 255.toByte() })
                 )
             }
         }

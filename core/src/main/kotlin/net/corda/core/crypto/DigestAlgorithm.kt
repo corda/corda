@@ -23,4 +23,10 @@ interface DigestAlgorithm {
      * @param bytes The [ByteArray] to hash.
      */
     fun digest(bytes: ByteArray): ByteArray
+
+    /**
+     * Computes the digest of the [ByteArray] which is resistant to pre-image attacks.
+     * Default implementation provides double hashing, but can it be changed to single hashing or something else for better performance.
+     */
+    fun preImageResistantDigest(bytes: ByteArray): ByteArray = digest(digest(bytes))
 }

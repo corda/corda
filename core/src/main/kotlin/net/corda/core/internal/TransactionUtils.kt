@@ -3,7 +3,6 @@ package net.corda.core.internal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
-import net.corda.core.crypto.DigestService.Companion.default
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.hashAs
 import net.corda.core.crypto.internal.DigestAlgorithmFactory

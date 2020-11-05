@@ -54,12 +54,9 @@ sealed class DigestAlgorithmFactory {
         fun registerClass(className: String): String {
             val factory = CustomAlgorithmFactory(className)
             check(factory.algorithm)
+            require(factory.algorithm != SHA2_256) { "Standard algorithm name is not allowed in $className" }
             factories.putIfAbsent(factory.algorithm, factory)
             return factory.algorithm
-        }
-
-        // TODO: remove
-        fun reset() {
         }
 
         fun create(algorithm: String): DigestAlgorithm {
