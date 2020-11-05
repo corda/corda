@@ -17,13 +17,13 @@ class MerkleTreeTest {
     }
 
     @Test(timeout=300_000)
-    fun testCreateSHA2384() {
+    fun `test create SHA2-384`() {
         val merkle = MerkleTree.getMerkleTree(leafs(SecureHash.SHA2_384), DigestService.sha2_384)
         assertEquals(SecureHash.create("SHA-384:2B83D37859E3665D7C239964D769CF950EE6478C13E4CA2D6643C23B6C4EAE035C88F654D22E0D65E7CA40BAE4F3718F"), merkle.hash)
     }
 
     @Test(timeout=300_000)
-    fun testCreateSHA2256toSHA2384() {
+    fun `test create SHA2-256 to SHA2-384`() {
         val merkle = MerkleTree.getMerkleTree(leafs(SecureHash.SHA2_256), DigestService.sha2_384)
         assertEquals(SecureHash.create("SHA-384:02A4E8EA5AA4BBAFE80C0E7127B15994B84030BE8616EA2A0127D85203CF34221403635C08084A6BDDB1DB06333F0A49"), merkle.hash)
     }

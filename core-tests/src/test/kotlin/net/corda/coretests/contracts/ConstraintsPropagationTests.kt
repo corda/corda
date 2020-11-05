@@ -6,16 +6,15 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.SecureHash.Companion.allOnesHash
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.HashAgility
 import net.corda.core.internal.canBeTransitionedFrom
 import net.corda.core.internal.inputStream
+import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.internal.toPath
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
@@ -374,9 +373,7 @@ class ConstraintsPropagationTests {
     }
 
     private fun MockServices.recordTransaction(wireTransaction: WireTransaction) {
-        require(wireTransaction.id.algorithm == SHA2_256 || HashAgility.isEnabled()){
-            "Tried to record a transaction with non-standard hash algorithm (experimental mode off)"
-        }
+        requireSupportedHashType(wireTransaction)
         val nodeKey = ALICE_PUBKEY
         val sigs = listOf(keyManagementService.sign(
                 SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))

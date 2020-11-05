@@ -15,6 +15,7 @@ import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.HashAgility
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.minutes
@@ -59,9 +60,9 @@ class UniquenessProviderTests(
         @JvmStatic
         @Parameterized.Parameters
         fun data(): Collection<Array<Any>> = listOf(
-            arrayOf(JPAUniquenessProviderFactory(), DigestService.sha2_256),
+            arrayOf(JPAUniquenessProviderFactory(DigestService.sha2_256), DigestService.sha2_256),
             arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_256),
-            arrayOf(JPAUniquenessProviderFactory(), DigestService.sha2_512),
+            arrayOf(JPAUniquenessProviderFactory(DigestService.sha2_512), DigestService.sha2_512),
             arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_512)
         )
     }
@@ -80,10 +81,12 @@ class UniquenessProviderTests(
         testClock = TestClock(Clock.systemUTC())
         uniquenessProvider = uniquenessProviderFactory.create(testClock)
         LogHelper.setLevel(uniquenessProvider::class)
+        HashAgility.init(txHashAlgoName = digestService.hashAlgorithm)
     }
 
     @After
     fun tearDown() {
+        HashAgility.init()
         uniquenessProviderFactory.cleanUp()
         LogHelper.reset(uniquenessProvider::class)
     }
@@ -640,15 +643,8 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
     }
 }
 
-fun signBatch(it: Iterable<SecureHash>): BatchSignature {
-    val root = MerkleTree.getMerkleTree(it.map { it.reHash() })
 
-    val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)
-    val signature = keyService.sign(SignableData(root.hash, signableMetadata), pubKey)
-    return BatchSignature(signature, root)
-}
-
-class JPAUniquenessProviderFactory : UniquenessProviderFactory {
+class JPAUniquenessProviderFactory(val digestService: DigestService) : UniquenessProviderFactory {
     private var database: CordaPersistence? = null
     private val notaryConfig = JPANotaryConfiguration(maxInputStates = 10)
     private val notaryWorkerName = CordaX500Name.parse("CN=NotaryWorker, O=Corda, L=London, C=GB")
@@ -667,6 +663,14 @@ class JPAUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun cleanUp() {
         database?.close()
+    }
+
+    fun signBatch(it: Iterable<SecureHash>): BatchSignature {
+        val root = MerkleTree.getMerkleTree(it.map { it.reHash() }, digestService)
+
+        val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)
+        val signature = keyService.sign(SignableData(root.hash, signableMetadata), pubKey)
+        return BatchSignature(signature, root)
     }
 }
 

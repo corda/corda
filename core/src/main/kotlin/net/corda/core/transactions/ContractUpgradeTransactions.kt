@@ -47,7 +47,7 @@ data class ContractUpgradeWireTransaction(
 ) : CoreTransaction() {
     @DeprecatedConstructorForDeserialization(1)
     constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
-            : this(serializedComponents, privacySalt, DigestService.default)
+            : this(serializedComponents, privacySalt, DigestService.sha2_256)
 
     companion object {
         /**
@@ -188,7 +188,7 @@ data class ContractUpgradeWireTransaction(
             index to hash
         }.toMap()
 
-        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents)
+        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents, digestService)
     }
 
     enum class Component {
@@ -211,7 +211,7 @@ data class ContractUpgradeFilteredTransaction(
          * Required for computing the transaction id.
          */
         val hiddenComponents: Map<Int, SecureHash>,
-        val digestService: DigestService = DigestService.default
+        val digestService: DigestService = DigestService.sha2_256
 ) : CoreTransaction() {
 
     /**

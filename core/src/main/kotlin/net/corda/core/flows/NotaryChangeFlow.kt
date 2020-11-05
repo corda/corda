@@ -8,6 +8,7 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.NotaryChangeTransactionBuilder
+import net.corda.core.internal.digestService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 
@@ -34,7 +35,8 @@ class NotaryChangeFlow<out T : ContractState>(
                 inputs.map { it.ref },
                 originalState.state.notary,
                 modification,
-                serviceHub.networkParametersService.currentHash
+                serviceHub.networkParametersService.currentHash,
+                serviceHub.digestService
         ).build()
 
         val participantKeys = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()

@@ -56,12 +56,6 @@ open class SharedNodeCmdLineOptions {
     )
     var allowHibernateToManageAppSchema: Boolean = false
 
-    @Option(
-            names = ["--enable-hash-agility"],
-            description = ["Allows alternate hash algorithms for new transactions (experimental)"]
-    )
-    var enableHashAgility: Boolean = false
-
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
         return configuration.parseAsNodeConfiguration(option)
