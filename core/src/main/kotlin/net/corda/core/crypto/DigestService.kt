@@ -118,4 +118,4 @@ data class DigestService(val hashAlgorithm: String) {
 }
 
 @DeleteForDJVM
-fun DigestService.randomHash(): SecureHash = SecureHash.random(DigestService.default.hashAlgorithm)
+fun DigestService.randomHash(): SecureHash = SecureHash.random(this.hashAlgorithm)
