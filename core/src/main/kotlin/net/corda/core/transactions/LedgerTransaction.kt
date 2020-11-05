@@ -92,7 +92,7 @@ private constructor(
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-        val digestService: DigestService = DigestService.default
+        val digestService: DigestService = DigestService.sha2_256
 ) : FullTransaction() {
 
     /**
