@@ -47,7 +47,7 @@ data class NotaryChangeWireTransaction(
      * Old version of [NotaryChangeWireTransaction.copy] for ABI compatibility.
      */
     fun copy(serializedComponents: List<OpaqueBytes>): NotaryChangeWireTransaction {
-        return NotaryChangeWireTransaction(serializedComponents, digestService)
+        return NotaryChangeWireTransaction(serializedComponents, DigestService.sha2_256)
     }
 
     // TODO(iee): add missing:

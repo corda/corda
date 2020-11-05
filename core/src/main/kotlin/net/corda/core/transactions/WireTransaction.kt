@@ -80,7 +80,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         check(inputs.isNotEmpty() || outputs.isNotEmpty()) { "A transaction must contain at least one input or output state" }
         check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
-        // IEE: review salt validation
+        // TODO(iee): review salt validation - Should we just warn when privacy bytes already >= 32 but <= digestLength?
         privacySalt.validateFor(digestService.hashAlgorithm)
     }
 

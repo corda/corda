@@ -417,7 +417,9 @@ class CompatibleTransactionTests {
     @Test(timeout=300_000)
 	fun `FilteredTransaction signer manipulation tests`() {
         // Required to call the private constructor.
-        val ftxConstructor = FilteredTransaction::class.constructors.first()
+        //val ftxConstructor = FilteredTransaction::class.constructors.first()
+        // TODO(iee): verify if it was a hard requirement that the constructor must be the first()
+        val ftxConstructor = FilteredTransaction::class.constructors.last()
 
         // 1st and 3rd commands require a signature from KEY_1.
         val twoCommandsforKey1 = listOf(dummyCommand(DUMMY_KEY_1.public, DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_2.public), dummyCommand(DUMMY_KEY_1.public))
