@@ -10,9 +10,9 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.internal.getHashAgilityEnabled
-import net.corda.core.internal.setHashAgilityEnabled
+import net.corda.core.internal.digestService
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
@@ -30,6 +30,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
@@ -45,6 +46,7 @@ class TransactionBuilderTest {
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
     private val networkParametersService = mock<NetworkParametersService>()
+
     @Before
     fun setup() {
         val cordappProvider = rigorousMock<CordappProvider>()
@@ -252,10 +254,10 @@ class TransactionBuilderTest {
         assertThat(builder.referenceStates()).hasSize(1)
     }
 
+    @Ignore
     @Test(timeout=300_000, expected = TransactionVerificationException.UnsupportedHashTypeException::class)
     fun `throws with non-default hash algorithm`() {
-        val oldValue = services.networkParameters.getHashAgilityEnabled()
-        services.networkParameters.setHashAgilityEnabled(false)
+        HashAgility.init()
         try {
             val outputState = TransactionState(
                     data = DummyState(),
@@ -265,21 +267,20 @@ class TransactionBuilderTest {
             )
             val builder = TransactionBuilder(
                     //privacySalt = DigestService.sha2_384.privacySalt,
-                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm),
-                    digestService = DigestService.sha2_384)
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm))
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
             builder.toWireTransaction(services)
         } finally {
-            services.networkParameters.setHashAgilityEnabled(oldValue)
+            HashAgility.init()
         }
     }
 
     @Test(timeout=300_000, expected = Test.None::class)
     fun `allows non-default hash algorithm`() {
-        val oldValue = services.networkParameters.getHashAgilityEnabled()
-        services.networkParameters.setHashAgilityEnabled(true)
+        HashAgility.init(txHashAlgoName = DigestService.sha2_384.hashAlgorithm)
+        assertThat(services.digestService).isEqualTo(DigestService.sha2_384)
         try {
             val outputState = TransactionState(
                     data = DummyState(),
@@ -289,14 +290,13 @@ class TransactionBuilderTest {
             )
             val builder = TransactionBuilder(
                     //privacySalt = DigestService.sha2_384.privacySalt,
-                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm),
-                    digestService = DigestService.sha2_384)
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm))
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
-            builder.toWireTransaction(services)
+            assertThat(builder.toWireTransaction(services).digestService).isEqualTo(DigestService.sha2_384)
         } finally {
-            services.networkParameters.setHashAgilityEnabled(oldValue)
+            HashAgility.init()
         }
     }
 }

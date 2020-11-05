@@ -1,12 +1,16 @@
 package net.corda.core.crypto
 
+import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import org.bouncycastle.crypto.digests.Blake2sDigest
 import org.junit.Assert.assertArrayEquals
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class Blake2s256DigestServiceTest {
-    private class BLAKE2s256DigestService : CustomMessageDigest {
+    class BLAKE2s256DigestService : DigestAlgorithm {
+        override val algorithm = "BLAKE_TEST"
+
         override val digestLength = 32
 
         override fun digest(bytes: ByteArray): ByteArray {
@@ -19,11 +23,15 @@ class Blake2s256DigestServiceTest {
         }
     }
 
-    private val service = DigestService.create(BLAKE2s256DigestService::class.java.name, hashTwiceNonce = false, hashTwiceComponent = false)
+    private val service = DigestService("BLAKE_TEST")
+
+    @Before
+    fun before() {
+        DigestAlgorithmFactory.registerClass(BLAKE2s256DigestService::class.java.name)
+    }
 
     @Test(timeout = 300_000)
     fun testBlankHash() {
-        println("Class name ${BLAKE2s256DigestService::class.java.name}")
         assertEquals(
                 "C59F682376D137F3F255E671E207D1F2374EBE504E9314208A52D9F88D69E8C8",
                 service.hash(byteArrayOf()).toHexString()

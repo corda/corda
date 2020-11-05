@@ -6,7 +6,6 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
@@ -54,8 +53,7 @@ open class TransactionBuilder(
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf(),
-        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub,
-        protected val digestService: DigestService = DigestService.default
+        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
 ) {
     // TODO(iee): add missing
     //  public <init>(net.corda.core.identity.Party, java.util.UUID, java.util.List, java.util.List, java.util.List,
@@ -116,8 +114,7 @@ open class TransactionBuilder(
                 window = window,
                 privacySalt = privacySalt,
                 references = ArrayList(references),
-                serviceHub = serviceHub,
-                digestService = digestService
+                serviceHub = serviceHub
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
@@ -154,7 +151,7 @@ open class TransactionBuilder(
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
-            .apply { this.checkSupportedHashType(services.networkParameters) }
+            .apply { checkSupportedHashType() }
 
     @CordaInternal
     internal fun toWireTransactionWithContext(
@@ -194,7 +191,7 @@ open class TransactionBuilder(
                             referenceStates,
                             services.networkParametersService.currentHash),
                     privacySalt,
-                    digestService
+                    services.digestService
             )
         }
 

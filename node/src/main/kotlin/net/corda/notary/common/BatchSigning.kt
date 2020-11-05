@@ -1,7 +1,6 @@
 package net.corda.notary.common
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
@@ -9,6 +8,7 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotaryError
+import net.corda.core.internal.digestService
 import net.corda.core.node.ServiceHub
 import java.security.PublicKey
 
@@ -30,7 +30,7 @@ fun signBatch(
     }
     // TODO(iee): assuming this is running on a notary node, and therefore using only the default
     //            hash algorithm. Review and discuss.
-    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, DigestService.default)
+    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, services.digestService)
     val merkleTreeRoot = merkleTree.hash
     val signableData = SignableData(
             merkleTreeRoot,

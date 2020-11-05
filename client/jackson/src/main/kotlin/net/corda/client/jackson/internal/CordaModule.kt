@@ -553,26 +553,18 @@ private interface DigestServiceMixin
 
 private class DigestServiceSerializer : JsonSerializer<DigestService>() {
     override fun serialize(value: DigestService, gen: JsonGenerator, serializers: SerializerProvider) {
-        gen.writeObject(DigestServiceJson(
-                value.digestLength,
-                value.hashAlgorithm,
-                value.hashTwiceNonce,
-                value.hashTwiceComponent
-        ))
+        gen.writeObject(DigestServiceJson(value.hashAlgorithm))
     }
 }
 
 private class DigestServiceDeserializer : JsonDeserializer<DigestService>() {
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): DigestService {
         val wrapper = parser.readValueAs<DigestServiceJson>()
-        return DigestService.create(wrapper.digestLength, wrapper.hashAlgorithm, wrapper.hashTwiceNonce, wrapper.hashTwiceComponent)
+        return DigestService(wrapper.hashAlgorithm)
     }
 }
 
-private class DigestServiceJson(val digestLength: Int,
-                                val hashAlgorithm: String,
-                                val hashTwiceNonce: Boolean,
-                                val hashTwiceComponent: Boolean)
+private class DigestServiceJson(val hashAlgorithm: String)
 
 @JsonDeserialize(using = JacksonSupport.OpaqueBytesDeserializer::class)
 private interface ByteSequenceMixin {

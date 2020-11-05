@@ -46,7 +46,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         // list, the contents of which need to be deserialized under the correct classloader.
         checkNoNotaryChange()
         checkEncumbrancesValid()
-        checkSupportedHashType(ltx.networkParameters)
+        ltx.checkSupportedHashType()
 
         // The following checks ensure the integrity of the current transaction and also of the future chain.
         // See: https://docs.corda.net/head/api-contract-constraints.html

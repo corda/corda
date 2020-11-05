@@ -53,12 +53,6 @@ class SecureHashTest {
     }
 
     @Test(timeout = 300_000)
-    fun `test double hashing is equivalent`() {
-        val data = byteArrayOf(0x64, -0x13, 0x42, 0x3a)
-        assertEquals(SecureHash.sha256Twice(data), SecureHash.hashTwiceAs(SHA2_256, data))
-    }
-
-    @Test(timeout = 300_000)
     fun `test hash concatenation is equivalent`() {
         val data = byteArrayOf(0x45, 0x33, -0x63, 0x2a, 0x76, -0x64, 0x01, 0x5f)
         val oldHash = data.sha256()

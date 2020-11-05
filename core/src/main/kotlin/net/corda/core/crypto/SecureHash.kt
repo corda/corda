@@ -5,14 +5,13 @@ package net.corda.core.crypto
 import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
+import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import java.nio.ByteBuffer
 import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
 import java.util.Collections.unmodifiableSet
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -129,8 +128,6 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         const val SHA2_512 = "SHA-512"
         const val DELIMITER = ':'
 
-        private val BANNED: Set<String> = unmodifiableSet(setOf("MD5", "MD2", "SHA-1"))
-
         /**
          * Converts a SecureHash hash value represented as a {algorithm:}hexadecimal [String] into a [SecureHash].
          * @param str An optional algorithm id followed by a delimiter and the sequence of hexadecimal digits that represents a hash value.
@@ -184,9 +181,6 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
         private fun digestFor(algorithm: String): DigestSupplier {
-            require(algorithm !in BANNED) {
-                "$algorithm is forbidden!"
-            }
             return messageDigests.computeIfAbsent(algorithm, ::DigestSupplier)
         }
 
@@ -212,22 +206,6 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
                 SHA256(hashBytes)
             } else {
                 HASH(algorithm, hashBytes)
-            }
-        }
-
-        /**
-         * Computes the hash of the [ByteArray], and then computes the hash of the hash.
-         * @param algorithm The [MessageDigest] algorithm to use.
-         * @param bytes The [ByteArray] to hash.
-         */
-        @JvmStatic
-        fun hashTwiceAs(algorithm: String, bytes: ByteArray): SecureHash {
-            return if (algorithm == SHA2_256) {
-                sha256Twice(bytes)
-            } else {
-                val digest = digestFor(algorithm).get()
-                val firstHash = digest.digest(bytes)
-                HASH(algorithm, digest.digest(firstHash))
             }
         }
 
@@ -363,44 +341,16 @@ fun OpaqueBytes.hashAs(algorithm: String): SecureHash = SecureHash.hashAs(algori
  * Hide the [FastThreadLocal] class behind a [Supplier] interface
  * so that we can remove it for core-deterministic.
  */
-private class DigestSupplier(algorithm: String) : Supplier<CustomMessageDigest> {
+private class DigestSupplier(algorithm: String) : Supplier<DigestAlgorithm> {
     private val threadLocalMessageDigest = LocalDigest(algorithm)
-    override fun get(): CustomMessageDigest = threadLocalMessageDigest.get()
+    override fun get(): DigestAlgorithm = threadLocalMessageDigest.get()
     val digestLength: Int = get().digestLength
 }
 
 // Declaring this as "object : FastThreadLocal<>" would have
 // created an extra public class in the API definition.
-private class LocalDigest(private val algorithm: String) : FastThreadLocal<CustomMessageDigest>() {
-    override fun initialValue(): CustomMessageDigest = try {
-        when (algorithm) {
-            SHA2_256 ->  MessageDigestWrapper(MessageDigest.getInstance(algorithm))
-            else -> loadService(algorithm) ?: MessageDigestWrapper(MessageDigest.getInstance(algorithm.apply {
-                require(toUpperCase() == this) { "Algorithm name $this must be in the upper case" }
-            }))
-        }
-    } catch (_: NoSuchAlgorithmException) {
-        throw IllegalArgumentException("Unknown hash algorithm $algorithm")
-    }
-
-    private class MessageDigestWrapper(val messageDigest: MessageDigest) : CustomMessageDigest {
-        override val digestLength = messageDigest.digestLength
-        override fun digest(bytes: ByteArray): ByteArray = messageDigest.digest(bytes)
-    }
-
-    companion object {
-        private inline fun <reified T> loadService(className: String): T? {
-            try {
-                val cl = Class.forName(className)
-                if (T::class.java.isAssignableFrom(cl)) {
-                    return cl.getDeclaredConstructor().newInstance() as T
-                }
-                return null
-            } catch (e: ClassNotFoundException) {
-                return null
-            }
-        }
-    }
+private class LocalDigest(private val algorithm: String) : FastThreadLocal<DigestAlgorithm>() {
+    override fun initialValue() = DigestAlgorithmFactory.create(algorithm)
 }
 
 private class HashConstants(val zero: SecureHash, val allOnes: SecureHash)

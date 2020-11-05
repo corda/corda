@@ -6,9 +6,14 @@ import net.corda.core.KeepForDJVM
  * Interface for injecting custom digest implementation bypassing JCA.
  */
 @KeepForDJVM
-interface CustomMessageDigest {
+interface DigestAlgorithm {
     /**
-     * The length of the digest in bytes
+     * Algorithm identifier.
+     */
+    val algorithm: String
+
+    /**
+     * The length of the digest in bytes.
      */
     val digestLength: Int
 

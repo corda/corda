@@ -3,12 +3,13 @@ package net.corda.core.internal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.DigestService.Companion.default
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.hashAs
+import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.node.NetworkParameters
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
@@ -21,7 +22,7 @@ class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
                                      val notary: Party,
                                      val newNotary: Party,
                                      val networkParametersHash: SecureHash,
-                                     val digestService: DigestService = DigestService.default) {
+                                     val digestService: DigestService = DigestService.sha2_256) {
 
     fun build(): NotaryChangeWireTransaction {
         val components = listOf(inputs, notary, newNotary, networkParametersHash).map { it.serialize() }
@@ -38,7 +39,7 @@ class ContractUpgradeTransactionBuilder(
         val upgradedContractAttachmentId: SecureHash,
         privacySalt: PrivacySalt = PrivacySalt(),
         val networkParametersHash: SecureHash,
-        val digestService: DigestService = DigestService.default) {
+        val digestService: DigestService = DigestService.sha2_256) {
     var privacySalt: PrivacySalt = privacySalt
         private set
 
@@ -122,7 +123,7 @@ fun deserialiseCommands(
         forceDeserialize: Boolean = false,
         factory: SerializationFactory = SerializationFactory.defaultFactory,
         @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext,
-        digestService: DigestService = DigestService.default
+        digestService: DigestService = DigestService.sha2_256
 ): List<Command<*>> {
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed
@@ -209,30 +210,43 @@ val SignedTransaction.dependencies: Set<SecureHash>
 
 class HashAgility {
     companion object {
-        private var frozen: Boolean = false
-        private var hashAgilityEnabled: Boolean = true
+        @Volatile
+        internal var digestService = DigestService.sha2_256
+            private set
 
-        fun isEnabled() : Boolean = hashAgilityEnabled
-        fun setEnabled(enabled : Boolean, freeze: Boolean = false) {
-            if(!frozen) {
-                frozen = freeze
-                hashAgilityEnabled = enabled
+        fun init(txHashAlgoName: String? = null, txHashAlgoClass: String? = null) {
+            digestService = DigestService.sha2_256
+            txHashAlgoName?.let {
+                // Verify that algorithm exists.
+                DigestAlgorithmFactory.create(it)
+                digestService = DigestService(it)
             }
+            txHashAlgoClass?.let {
+                val algorithm = DigestAlgorithmFactory.registerClass(it)
+                digestService = DigestService(algorithm)
+            }
+        }
+
+        internal fun isAlgorithmSupported(algorithm: String): Boolean {
+            return algorithm == SecureHash.SHA2_256 || algorithm == digestService.hashAlgorithm
         }
     }
 }
 
-// NOTE: NetworkParameters' hashAgilityEnable get/set methods will be replaced by a field that is set by the network and hash verified
-fun NetworkParameters.getHashAgilityEnabled() = HashAgility.isEnabled()
-fun NetworkParameters.setHashAgilityEnabled(enabled: Boolean) = HashAgility.setEnabled(enabled)
-fun NetworkParameters.getDefaultHashAlgorithm() = SHA2_256
+/**
+ * The configured instance of DigestService which is passed by default to instances of classes like TransactionBuilder
+ * and as a parameter to MerkleTree.getMerkleTree(...) method. Default: SHA2_256.
+ */
+val ServicesForResolution.digestService get() = HashAgility.digestService
 
-fun NetworkParameters.checkSupportedHashType(hash : SecureHash) : Unit {
-    val pass = this.getHashAgilityEnabled() || hash.algorithm == SHA2_256
-    if(!pass) {
-        throw TransactionVerificationException.UnsupportedHashTypeException(hash)
+fun ServicesForResolution.requireSupportedHashType(hash: NamedByHash) {
+    require(HashAgility.isAlgorithmSupported(hash.id.algorithm)) {
+        "Tried to record a transaction with non-standard hash algorithm ${hash.id.algorithm} (experimental mode off)"
     }
 }
 
-internal fun Verifier.checkSupportedHashType(networkParameters : NetworkParameters?) = networkParameters?.checkSupportedHashType(this.ltx.id)
-internal fun WireTransaction.checkSupportedHashType(networkParameters : NetworkParameters?) = networkParameters?.checkSupportedHashType(this.id)
+internal fun BaseTransaction.checkSupportedHashType() {
+    if (!HashAgility.isAlgorithmSupported(id.algorithm)) {
+        throw TransactionVerificationException.UnsupportedHashTypeException(id)
+    }
+}

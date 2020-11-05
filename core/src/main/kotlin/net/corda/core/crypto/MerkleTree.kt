@@ -23,7 +23,7 @@ sealed class MerkleTree {
 
         @Throws(MerkleTreeException::class)
         fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
-            return getMerkleTree(allLeavesHashes, DigestService.default);
+            return getMerkleTree(allLeavesHashes, DigestService.sha2_256);
         }
 
         /**

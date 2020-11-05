@@ -20,63 +20,38 @@ import java.nio.ByteBuffer
  * won't work (and for backward compatibility), but for other algorithms like SHA3_256 that are not affected, they
  * can and should be set to false as hashing twice would not improve security but affect performance.
  *
- * @param digestLength specifies the WORD size for the given hash algorithm
  * @param hashAlgorithm the name of the hash algorithm to be used for the instance
- * @param hashTwiceNonce should be true if the given hash algorithm is vulnerable to pre-image attacks, false otherwise
- * @param hashTwiceComponent should be true if the given hash algorithm is vulnerable to pre-image attacks, false otherwise
  */
 @CordaSerializable
 @KeepForDJVM
-class DigestService private constructor(val digestLength: Int,
-                                        val hashAlgorithm: String,
-                                        val hashTwiceNonce : Boolean = true,
-                                        val hashTwiceComponent : Boolean = true) {
-
+data class DigestService(val hashAlgorithm: String) {
     init {
         require(hashAlgorithm.isNotEmpty()) { "Hash algorithm name unavailable or not specified" }
-        require((hashTwiceNonce && hashTwiceComponent) || hashAlgorithm != SecureHash.SHA2_256) {
-            "SHA2-256 requires doubleHashNonce and doubleHashComponent to be set"
-        }
     }
 
     @KeepForDJVM
     companion object {
         private const val NONCE_SIZE = 8
-        private const val WORD_SIZE_32 = 32
-        private const val WORD_SIZE_48 = 48
-        private const val WORD_SIZE_64 = 64
         /**
          * The [default] instance will be parametrized and initialized at runtime. It would be probably useful to assume an override
          * priority order.
          */
         val default : DigestService by lazy { sha2_256 }
-        val sha2_256: DigestService by lazy { DigestService(WORD_SIZE_32, SecureHash.SHA2_256, hashTwiceNonce = true, hashTwiceComponent = true) }
-        val sha2_384: DigestService by lazy { DigestService(WORD_SIZE_48, SecureHash.SHA2_384, hashTwiceNonce = true, hashTwiceComponent = true) }
-        val sha2_512: DigestService by lazy { DigestService(WORD_SIZE_64, SecureHash.SHA2_512, hashTwiceNonce = true, hashTwiceComponent = true) }
-//        val sha3_256: DigestService by lazy { DigestService(WORD_SIZE_32, SHA3_256, hashTwiceNonce = false, hashTwiceComponent = false) }
-//        val sha3_512: DigestService by lazy { DigestService(WORD_SIZE_64, SHA3_512, hashTwiceNonce = false, hashTwiceComponent = false) }
-
-        fun create(hashAlgorithm: String, hashTwiceNonce : Boolean, hashTwiceComponent : Boolean) =
-            create(SecureHash.digestLengthFor(hashAlgorithm), hashAlgorithm, hashTwiceNonce, hashTwiceComponent)
-
-        fun create(digestLength: Int, hashAlgorithm: String, hashTwiceNonce : Boolean, hashTwiceComponent : Boolean) =
-                DigestService(digestLength, hashAlgorithm, hashTwiceNonce, hashTwiceComponent)
+        val sha2_256: DigestService by lazy { DigestService(SecureHash.SHA2_256) }
+        val sha2_384: DigestService by lazy { DigestService(SecureHash.SHA2_384) }
+        val sha2_512: DigestService by lazy { DigestService(SecureHash.SHA2_512) }
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        return other is DigestService &&
-                other.digestLength == this.digestLength &&
-                other.hashAlgorithm == this.hashAlgorithm
-    }
-
-    override fun hashCode(): Int = digestLength * 31 + hashAlgorithm.hashCode() * 31
+    /**
+     * Specifies the WORD size for the given hash algorithm.
+     */
+    val digestLength: Int
+        get() = SecureHash.digestLengthFor(hashAlgorithm)
 
     /**
      * Computes the digest of the [ByteArray].
      *
      * @param bytes The [ByteArray] to hash.
-     * @param salt The [ByteArray] to use as salt.
      */
     fun hash(bytes: ByteArray): SecureHash = SecureHash.hashAs(hashAlgorithm, bytes)
 
@@ -84,18 +59,17 @@ class DigestService private constructor(val digestLength: Int,
      * Computes the digest of the [String]'s UTF-8 byte contents.
      *
      * @param str [String] whose UTF-8 contents will be hashed.
-     * @param salt The [String] to use as salt.
      */
     fun hash(str: String): SecureHash = hash(str.toByteArray())
 
     /**
-     * A digest value consisting of [digestLength] 0xFF bytes.
+     * A digest value consisting of 0xFF bytes.
      */
     val allOnesHash: SecureHash
         get() = SecureHash.allOnesHashFor(hashAlgorithm)
 
     /**
-     * A hash value consisting of [digestLength] 0x00 bytes.
+     * A hash value consisting of 0x00 bytes.
      */
     val zeroHash: SecureHash
         get() = SecureHash.zeroHashFor(hashAlgorithm)
@@ -103,20 +77,18 @@ class DigestService private constructor(val digestLength: Int,
 //    val privacySalt: PrivacySalt
 //        get() = PrivacySalt.createFor(hashAlgorithm)
 
-    fun salted(salt: ByteArray?, data: ByteArray) = salt?.plus(data) ?: data
-
     /**
      * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
-     * calculated using the service's hash algorithm, thus HASH(HASH(nonce || serializedComponent)) if doubleHashComponent is or
+     * calculated using the service's hash algorithm, thus HASH(HASH(nonce || serializedComponent)) for SHA2-256 or
      * HASH(nonce || serializedComponent) otherwise, where nonce is computed from [computeNonce].
      */
     fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
             componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
 
-    /** Return the HASH(HASH(nonce || serializedComponent)) if doubleHashComponent is set, HASH(nonce || serializedComponent) otherwise */
+    /** Return the HASH(HASH(nonce || serializedComponent)) for SHA2-256 or HASH(nonce || serializedComponent) otherwise. */
     fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash {
         val data = nonce.bytes + opaqueBytes.bytes
-        return if(hashTwiceComponent) SecureHash.hashTwiceAs(hashAlgorithm, data) else SecureHash.hashAs(hashAlgorithm, data)
+        return if(hashAlgorithm == SecureHash.SHA2_256) SecureHash.sha256Twice(data) else SecureHash.hashAs(hashAlgorithm, data)
     }
 
     /**
@@ -133,12 +105,12 @@ class DigestService private constructor(val digestLength: Int,
      * @param privacySalt a [PrivacySalt].
      * @param groupIndex the fixed index (ordinal) of this component group.
      * @param internalIndex the internal index of this object in its corresponding components list.
-     * @return HASH(HASH(privacySalt || groupIndex || internalIndex)) if doubleHashNonce is set,
+     * @return HASH(HASH(privacySalt || groupIndex || internalIndex)) for SHA2-256,
      *         HASH(privacySalt || groupIndex || internalIndex) otherwise
      */
     fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) : SecureHash {
-        val data = salted(privacySalt.bytes, ByteBuffer.allocate(NONCE_SIZE).putInt(groupIndex).putInt(internalIndex).array())
-        return if(hashTwiceNonce) SecureHash.hashTwiceAs(hashAlgorithm, data) else SecureHash.hashAs(hashAlgorithm, data)
+        val data = (privacySalt.bytes + ByteBuffer.allocate(NONCE_SIZE).putInt(groupIndex).putInt(internalIndex).array())
+        return if(hashAlgorithm == SecureHash.SHA2_256) SecureHash.sha256Twice(data) else SecureHash.hashAs(hashAlgorithm, data)
     }
 }
 
