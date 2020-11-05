@@ -99,7 +99,8 @@ private constructor(
      * Old version of [LedgerTransaction] constructor for ABI compatibility.
      */
     @DeprecatedConstructorForDeserialization(1)
-    constructor(inputs: List<StateAndRef<ContractState>>,
+    private constructor(
+            inputs: List<StateAndRef<ContractState>>,
                 outputs: List<TransactionState<ContractState>>,
                 commands: List<CommandWithParties<CommandData>>,
                 attachments: List<Attachment>,
@@ -119,7 +120,7 @@ private constructor(
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
             isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
 
-    // TODO(iee): add missing
+    // TODO(iee): add missing => Removed from API txt
     //  public <init>(java.util.List, java.util.List, java.util.List, java.util.List, net.corda.core.crypto.SecureHash,
     //      net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt,
     //      net.corda.core.node.NetworkParameters, java.util.List, java.util.List, java.util.List, java.util.List,
