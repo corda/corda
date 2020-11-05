@@ -1849,6 +1849,15 @@ public final class net.corda.core.crypto.CryptoUtils extends java.lang.Object
   public static final boolean verify(java.security.PublicKey, byte[], net.corda.core.crypto.DigitalSignature)
   public static final boolean verify(java.security.PublicKey, byte[], byte[])
 ##
+public interface net.corda.core.crypto.DigestAlgorithm
+  @NotNull
+  public abstract byte[] digest(byte[])
+  @NotNull
+  public abstract String getAlgorithm()
+  public abstract int getDigestLength()
+  @NotNull
+  public abstract byte[] preImageResistantDigest(byte[])
+##
 @CordaSerializable
 public class net.corda.core.crypto.DigitalSignature extends net.corda.core.utilities.OpaqueBytes
   public <init>(byte[])
