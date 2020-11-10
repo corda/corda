@@ -71,7 +71,7 @@ class TransientReference<out A>(@Transient val value: A)
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
-                              override val creationTime: Long = System.currentTimeMillis()
+                              override val creationTime: Long = System.nanoTime()
 ) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R>, FlowFiber {
     companion object {
         /**
@@ -333,6 +333,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
+        serviceHub.monitoringService.metrics
+                .timer("Flows.StartupQueueTime")
+                .update(creationTime - startTime, TimeUnit.NANOSECONDS)
         var initialised = false
         val resultOrError = try {
 

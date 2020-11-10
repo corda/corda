@@ -10,6 +10,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowExternalAsyncOperation
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.notary.UniquenessProvider.Result
@@ -65,6 +66,12 @@ abstract class SinglePartyNotaryService : NotaryService() {
 
         return result
     }
+
+    @Suspendable
+    open fun recordNotarisationDuration(elapsedTime: Duration) {}
+
+    @Suspendable
+    open fun trackNotarisationMessage(fromSession: FlowSession) {}
 
     /**
      * Estimate the wait time to be notarised taking into account the new request size.
