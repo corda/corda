@@ -2,7 +2,9 @@ package net.corda.node.services.events
 
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.randomHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
@@ -20,6 +22,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.coretesting.internal.doLookup
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.spectator
+import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
 import org.junit.*
@@ -282,7 +285,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
-            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val stateRef = StateRef(DigestService.default.randomHash(), 0)
             val ssr = ScheduledStateRef(stateRef, mark)
             repo.merge(ssr)
 
@@ -294,6 +297,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
 
     @Test(timeout=300_000)
 	fun `test that schedule is persisted`() {
+        Assume.assumeFalse(IS_S390X)
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
         val timeInTheFuture = mark + 1.days
         val stateRef = StateRef(SecureHash.zeroHash, 0)

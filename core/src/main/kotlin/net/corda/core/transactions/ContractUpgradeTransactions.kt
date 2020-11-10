@@ -3,10 +3,9 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.componentHash
-import net.corda.core.crypto.computeNonce
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.ServiceHubCoreInternal
@@ -14,6 +13,7 @@ import net.corda.core.internal.combinedHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
@@ -42,8 +42,13 @@ data class ContractUpgradeWireTransaction(
          */
         val serializedComponents: List<OpaqueBytes>,
         /** Required for hiding components in [ContractUpgradeFilteredTransaction]. */
-        val privacySalt: PrivacySalt = PrivacySalt()
+        val privacySalt: PrivacySalt,
+        val digestService: DigestService
 ) : CoreTransaction() {
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
+            : this(serializedComponents, privacySalt, DigestService.sha2_256)
+
     companion object {
         /**
          * Runs the explicit upgrade logic.
@@ -83,6 +88,14 @@ data class ContractUpgradeWireTransaction(
     init {
         check(inputs.isNotEmpty()) { "A contract upgrade transaction must have inputs" }
         checkBaseInvariants()
+        // privacySalt.validateFor(digestService.hashAlgorithm)
+    }
+
+    /**
+     * Old version of [ContractUpgradeWireTransaction.copy] for sake of ABI compatibility.
+     */
+    fun copy(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt): ContractUpgradeWireTransaction {
+        return ContractUpgradeWireTransaction(serializedComponents, privacySalt, digestService)
     }
 
     /**
@@ -99,14 +112,14 @@ data class ContractUpgradeWireTransaction(
 
     override val id: SecureHash by lazy {
         val componentHashes = serializedComponents.mapIndexed { index, component ->
-            componentHash(nonces[index], component)
+            digestService.componentHash(nonces[index], component)
         }
-        combinedHash(componentHashes)
+        combinedHash(componentHashes/*, digestService*/)
     }
 
     /** Required for filtering transaction components. */
-    private val nonces = (0 until serializedComponents.size).map {
-        computeNonce(privacySalt, it, 0)
+    private val nonces = serializedComponents.indices.map {
+        digestService.computeNonce(privacySalt, it, 0)
     }
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
@@ -171,11 +184,11 @@ data class ContractUpgradeWireTransaction(
                 PARAMETERS_HASH.ordinal to FilteredComponent(serializedComponents[PARAMETERS_HASH.ordinal], nonces[PARAMETERS_HASH.ordinal])
         )
         val hiddenComponents = (totalComponents - visibleComponents.keys).map { index ->
-            val hash = componentHash(nonces[index], serializedComponents[index])
+            val hash = digestService.componentHash(nonces[index], serializedComponents[index])
             index to hash
         }.toMap()
 
-        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents)
+        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents, digestService)
     }
 
     enum class Component {
@@ -197,8 +210,24 @@ data class ContractUpgradeFilteredTransaction(
          * Hashes of the transaction components that are not revealed in this transaction.
          * Required for computing the transaction id.
          */
-        val hiddenComponents: Map<Int, SecureHash>
+        val hiddenComponents: Map<Int, SecureHash>,
+        val digestService: DigestService = DigestService.sha2_256
 ) : CoreTransaction() {
+
+    /**
+     * Old version of [ContractUpgradeFilteredTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(visibleComponents: Map<Int, FilteredComponent>, hiddenComponents: Map<Int, SecureHash>)
+        : this(visibleComponents, hiddenComponents, DigestService.sha2_256)
+
+    /**
+     * Old version of [ContractUpgradeFilteredTransaction.copy] for ABI compatibility.
+     */
+    fun copy(visibleComponents: Map<Int, FilteredComponent>, hiddenComponents: Map<Int, SecureHash>) : ContractUpgradeFilteredTransaction {
+        return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents, DigestService.sha2_256)
+    }
+
     override val inputs: List<StateRef> by lazy {
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
                 ?: throw IllegalArgumentException("Inputs not specified")
@@ -215,13 +244,13 @@ data class ContractUpgradeFilteredTransaction(
         val hashList = (0 until totalComponents).map { i ->
             when {
                 visibleComponents.containsKey(i) -> {
-                    componentHash(visibleComponents[i]!!.nonce, visibleComponents[i]!!.component)
+                    digestService.componentHash(visibleComponents[i]!!.nonce, visibleComponents[i]!!.component)
                 }
                 hiddenComponents.containsKey(i) -> hiddenComponents[i]!!
                 else -> throw IllegalStateException("Missing component hashes")
             }
         }
-        combinedHash(hashList)
+        combinedHash(hashList/*, digestService*/)
     }
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
     override val references: List<StateRef> get() = emptyList()

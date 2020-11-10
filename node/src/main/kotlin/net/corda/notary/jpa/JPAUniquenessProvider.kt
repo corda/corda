@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
@@ -68,7 +67,7 @@ class JPAUniquenessProvider(
             @Column(nullable = true, length = 76)
             var id: String? = null,
 
-            @Column(name = "consuming_transaction_id", nullable = true, length = 64)
+            @Column(name = "consuming_transaction_id", nullable = true, length = 144)
             val consumingTxHash: String?,
 
             @Column(name = "requesting_party_name", nullable = true, length = 255)
@@ -102,14 +101,14 @@ class JPAUniquenessProvider(
     class CommittedState(
             @EmbeddedId
             val id: PersistentStateRef,
-            @Column(name = "consuming_transaction_id", nullable = false, length = 64)
+            @Column(name = "consuming_transaction_id", nullable = false, length = 144)
             val consumingTxHash: String)
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_txs")
     class CommittedTransaction(
             @Id
-            @Column(name = "transaction_id", nullable = false, length = 64)
+            @Column(name = "transaction_id", nullable = false, length = 144)
             val transactionId: String
     )
 
@@ -145,7 +144,7 @@ class JPAUniquenessProvider(
         }
 
         fun decodeStateRef(s: PersistentStateRef): StateRef {
-            return StateRef(txhash = SecureHash.parse(s.txId), index = s.index)
+            return StateRef(txhash = SecureHash.create(s.txId), index = s.index)
         }
     }
 
@@ -217,12 +216,12 @@ class JPAUniquenessProvider(
         }
 
         return committedStates.map {
-            val stateRef = StateRef(txhash = SecureHash.parse(it.id.txId), index = it.id.index)
-            val consumingTxId = SecureHash.parse(it.consumingTxHash)
+            val stateRef = StateRef(txhash = SecureHash.create(it.id.txId), index = it.id.index)
+            val consumingTxId = SecureHash.create(it.consumingTxHash)
             if (stateRef in references) {
-                stateRef to StateConsumptionDetails(consumingTxId.sha256(), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+                stateRef to StateConsumptionDetails(consumingTxId.reHash(), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
             } else {
-                stateRef to StateConsumptionDetails(consumingTxId.sha256())
+                stateRef to StateConsumptionDetails(consumingTxId.reHash())
             }
         }.toMap()
     }
@@ -286,7 +285,7 @@ class JPAUniquenessProvider(
             session: Session
     ): InternalResult {
         return when {
-            isConsumedByTheSameTx(request.txId.sha256(), stateConflicts) -> {
+            isConsumedByTheSameTx(request.txId.reHash(), stateConflicts) -> {
                 InternalResult.Success
             }
             request.states.isEmpty() && isPreviouslyNotarised(session, request.txId) -> {
@@ -326,7 +325,7 @@ class JPAUniquenessProvider(
                 } else {
                     // Mark states as consumed to capture conflicting transactions in the same batch
                     request.states.forEach {
-                        consumedStates[it] = StateConsumptionDetails(request.txId.sha256())
+                        consumedStates[it] = StateConsumptionDetails(request.txId.reHash())
                     }
                     toCommit.add(request)
                     InternalResult.Success

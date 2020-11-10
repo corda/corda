@@ -6,10 +6,13 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.digestService
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
@@ -27,6 +30,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
@@ -248,5 +252,51 @@ class TransactionBuilderTest {
         assertThat(builder.outputStates()).hasSize(1)
         assertThat(builder.commands()).hasSize(1)
         assertThat(builder.referenceStates()).hasSize(1)
+    }
+
+    @Ignore
+    @Test(timeout=300_000, expected = TransactionVerificationException.UnsupportedHashTypeException::class)
+    fun `throws with non-default hash algorithm`() {
+        HashAgility.init()
+        try {
+            val outputState = TransactionState(
+                    data = DummyState(),
+                    contract = DummyContract.PROGRAM_ID,
+                    notary = notary,
+                    constraint = HashAttachmentConstraint(contractAttachmentId)
+            )
+            val builder = TransactionBuilder(
+                    //privacySalt = DigestService.sha2_384.privacySalt,
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm))
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, notary.owningKey)
+
+            builder.toWireTransaction(services)
+        } finally {
+            HashAgility.init()
+        }
+    }
+
+    @Test(timeout=300_000, expected = Test.None::class)
+    fun `allows non-default hash algorithm`() {
+        HashAgility.init(txHashAlgoName = DigestService.sha2_384.hashAlgorithm)
+        assertThat(services.digestService).isEqualTo(DigestService.sha2_384)
+        try {
+            val outputState = TransactionState(
+                    data = DummyState(),
+                    contract = DummyContract.PROGRAM_ID,
+                    notary = notary,
+                    constraint = HashAttachmentConstraint(contractAttachmentId)
+            )
+            val builder = TransactionBuilder(
+                    //privacySalt = DigestService.sha2_384.privacySalt,
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm))
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, notary.owningKey)
+
+            assertThat(builder.toWireTransaction(services).digestService).isEqualTo(DigestService.sha2_384)
+        } finally {
+            HashAgility.init()
+        }
     }
 }

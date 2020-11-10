@@ -7,8 +7,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
+import net.corda.core.internal.digestService
 import net.corda.core.node.ServiceHub
 import java.security.PublicKey
 
@@ -20,7 +20,17 @@ fun signBatch(
         notaryIdentityKey: PublicKey,
         services: ServiceHub
 ): BatchSignature {
-    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.sha256() })
+    val algorithms = txIds.mapTo(HashSet(), SecureHash::algorithm)
+    require(algorithms.size > 0) {
+        "Cannot sign an empty batch"
+    }
+    // TODO(iee): too strict? will be valid in the future?
+    require(algorithms.size == 1) {
+        "Cannot sign a batch with multiple hash algorithms: $algorithms"
+    }
+    // TODO(iee): assuming this is running on a notary node, and therefore using only the default
+    //            hash algorithm. Review and discuss.
+    val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, services.digestService)
     val merkleTreeRoot = merkleTree.hash
     val signableData = SignableData(
             merkleTreeRoot,
@@ -44,11 +54,14 @@ data class BatchSignature(
         val fullMerkleTree: MerkleTree) {
     /** Extracts a signature with a partial Merkle tree for the specified leaf in the batch signature. */
     fun forParticipant(txId: SecureHash): TransactionSignature {
+        require(fullMerkleTree.hash.algorithm == txId.algorithm) {
+            "The leaf hash algorithm ${txId.algorithm} does not match the Merkle tree hash algorithm ${fullMerkleTree.hash.algorithm}"
+        }
         return TransactionSignature(
                 rootSignature.bytes,
                 rootSignature.by,
                 rootSignature.signatureMetadata,
-                PartialMerkleTree.build(fullMerkleTree, listOf(txId.sha256()))
+                PartialMerkleTree.build(fullMerkleTree, listOf(txId.reHash()))
         )
     }
 }

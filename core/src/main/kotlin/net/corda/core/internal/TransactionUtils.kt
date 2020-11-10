@@ -2,11 +2,13 @@ package net.corda.core.internal
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.componentHash
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.hashAs
+import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
@@ -18,10 +20,12 @@ import kotlin.reflect.KClass
 class NotaryChangeTransactionBuilder(val inputs: List<StateRef>,
                                      val notary: Party,
                                      val newNotary: Party,
-                                     val networkParametersHash: SecureHash) {
+                                     val networkParametersHash: SecureHash,
+                                     val digestService: DigestService = DigestService.sha2_256) {
+
     fun build(): NotaryChangeWireTransaction {
         val components = listOf(inputs, notary, newNotary, networkParametersHash).map { it.serialize() }
-        return NotaryChangeWireTransaction(components)
+        return NotaryChangeWireTransaction(components, digestService)
     }
 }
 
@@ -32,21 +36,32 @@ class ContractUpgradeTransactionBuilder(
         val legacyContractAttachmentId: SecureHash,
         val upgradedContractClassName: ContractClassName,
         val upgradedContractAttachmentId: SecureHash,
-        val privacySalt: PrivacySalt = PrivacySalt(),
-        val networkParametersHash: SecureHash) {
+        privacySalt: PrivacySalt = PrivacySalt(),
+        val networkParametersHash: SecureHash,
+        val digestService: DigestService = DigestService.sha2_256) {
+    var privacySalt: PrivacySalt = privacySalt
+        private set
+
     fun build(): ContractUpgradeWireTransaction {
         val components = listOf(inputs, notary, legacyContractAttachmentId, upgradedContractClassName, upgradedContractAttachmentId, networkParametersHash).map { it.serialize() }
-        return ContractUpgradeWireTransaction(components, privacySalt)
+        return ContractUpgradeWireTransaction(components, privacySalt, digestService)
     }
 }
 
 /** Concatenates the hash components into a single [ByteArray] and returns its hash. */
-fun combinedHash(components: Iterable<SecureHash>): SecureHash {
+fun combinedHash(components: Iterable<SecureHash>/*, digestService: DigestService = DigestService.default*/): SecureHash {
     val stream = ByteArrayOutputStream()
     components.forEach {
         stream.write(it.bytes)
     }
-    return stream.toByteArray().sha256()
+    // TODO(iee): need to re-visit and review this code to understand which is the right
+    //            way to combine the hashes. Is this meant to match a pre-existing tx id,
+    //            or create a new tx id with the [default] hash algorithm from whatever
+    //            components are passed in and independently from their algorithm?
+    //            This is used to build the tx id of ContractUpgradeFilteredTransaction and
+    //            ContractUpgradeWireTransaction
+    return stream.toByteArray().hashAs(components.first().algorithm)
+    //return digestService.hash(stream.toByteArray());
 }
 
 /**
@@ -106,7 +121,8 @@ fun deserialiseCommands(
         componentGroups: List<ComponentGroup>,
         forceDeserialize: Boolean = false,
         factory: SerializationFactory = SerializationFactory.defaultFactory,
-        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext
+        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext,
+        digestService: DigestService = DigestService.sha2_256
 ): List<Command<*>> {
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed
@@ -118,7 +134,7 @@ fun deserialiseCommands(
         check(commandDataList.size <= signersList.size) {
             "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
         }
-        val componentHashes = group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }
+        val componentHashes = group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }
         val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
         if (leafIndices.isNotEmpty())
             check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
@@ -191,3 +207,45 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
 val SignedTransaction.dependencies: Set<SecureHash>
     get() = (inputs.asSequence() + references.asSequence()).map { it.txhash }.toSet()
 
+class HashAgility {
+    companion object {
+        @Volatile
+        internal var digestService = DigestService.sha2_256
+            private set
+
+        fun init(txHashAlgoName: String? = null, txHashAlgoClass: String? = null) {
+            digestService = DigestService.sha2_256
+            txHashAlgoName?.let {
+                // Verify that algorithm exists.
+                DigestAlgorithmFactory.create(it)
+                digestService = DigestService(it)
+            }
+            txHashAlgoClass?.let {
+                val algorithm = DigestAlgorithmFactory.registerClass(it)
+                digestService = DigestService(algorithm)
+            }
+        }
+
+        internal fun isAlgorithmSupported(algorithm: String): Boolean {
+            return algorithm == SecureHash.SHA2_256 || algorithm == digestService.hashAlgorithm
+        }
+    }
+}
+
+/**
+ * The configured instance of DigestService which is passed by default to instances of classes like TransactionBuilder
+ * and as a parameter to MerkleTree.getMerkleTree(...) method. Default: SHA2_256.
+ */
+val ServicesForResolution.digestService get() = HashAgility.digestService
+
+fun ServicesForResolution.requireSupportedHashType(hash: NamedByHash) {
+    require(HashAgility.isAlgorithmSupported(hash.id.algorithm)) {
+        "Tried to record a transaction with non-standard hash algorithm ${hash.id.algorithm} (experimental mode off)"
+    }
+}
+
+internal fun BaseTransaction.checkSupportedHashType() {
+    if (!HashAgility.isAlgorithmSupported(id.algorithm)) {
+        throw TransactionVerificationException.UnsupportedHashTypeException(id)
+    }
+}
