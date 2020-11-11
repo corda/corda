@@ -80,7 +80,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         check(inputs.isNotEmpty() || outputs.isNotEmpty()) { "A transaction must contain at least one input or output state" }
         check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
-
         // privacySalt.validateFor(digestService.hashAlgorithm)
     }
 
