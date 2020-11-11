@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.algorithm
 import net.corda.core.flows.NotaryError
 import net.corda.core.internal.digestService
 import net.corda.core.node.ServiceHub
