@@ -81,7 +81,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
 
-        //privacySalt.validateFor(digestService.hashAlgorithm)
+        // privacySalt.validateFor(digestService.hashAlgorithm)
     }
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */

@@ -88,7 +88,7 @@ data class ContractUpgradeWireTransaction(
     init {
         check(inputs.isNotEmpty()) { "A contract upgrade transaction must have inputs" }
         checkBaseInvariants()
-        //privacySalt.validateFor(digestService.hashAlgorithm)
+        // privacySalt.validateFor(digestService.hashAlgorithm)
     }
 
     /**

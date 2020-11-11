@@ -342,7 +342,7 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
 
     fun validateFor(algorithm: String) {
         val digestLength = SecureHash.digestLengthFor(algorithm)
-        require(bytes.size >= digestLength) { "Privacy salt should be at least 32 bytes ($digestLength bytes recommended for $algorithm)." }
+        require(bytes.size >= digestLength) { "Privacy salt should be at least $digestLength bytes for $algorithm." }
     }
 
     companion object {
