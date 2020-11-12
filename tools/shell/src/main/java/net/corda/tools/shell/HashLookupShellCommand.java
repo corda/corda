@@ -1,6 +1,7 @@
 package net.corda.tools.shell;
 
 import net.corda.core.crypto.SecureHash;
+import net.corda.core.crypto.SecureHashKt;
 import net.corda.core.internal.VisibleForTesting;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.StateMachineTransactionMapping;
@@ -60,7 +61,7 @@ public class HashLookupShellCommand extends CordaRpcOpsShellCommand {
         Optional<SecureHash> match = mapping.stream()
                 .map(StateMachineTransactionMapping::getTransactionId)
                 .filter(
-                        txId -> txId.equals(txIdHashParsed) || SecureHash.hashAs(txIdHashParsed.getAlgorithm(), txId.getBytes()).equals(txIdHashParsed)
+                        txId -> txId.equals(txIdHashParsed) || SecureHash.hashAs(SecureHashKt.getAlgorithm(txIdHashParsed), txId.getBytes()).equals(txIdHashParsed)
                 )
                 .findFirst();
 

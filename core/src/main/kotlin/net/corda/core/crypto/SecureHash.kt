@@ -22,9 +22,7 @@ import java.util.function.Supplier
  */
 @KeepForDJVM
 @CordaSerializable
-sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(bytes) {
-    constructor(bytes: ByteArray) : this(SHA2_256, bytes)
-
+sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
     class SHA256(bytes: ByteArray) : SecureHash(bytes) {
         init {
@@ -52,7 +50,7 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
         }
     }
 
-    class HASH(algorithm: String, bytes: ByteArray) : SecureHash(algorithm, bytes) {
+    class HASH(val algorithm: String, bytes: ByteArray) : SecureHash(bytes) {
         override fun equals(other: Any?): Boolean {
             return when {
                 this === other -> true
@@ -63,6 +61,10 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
 
         override fun hashCode() = ByteBuffer.wrap(bytes).int
 
+        override fun toString(): String {
+            return "$algorithm$DELIMITER${toHexString()}"
+        }
+
         override fun generate(data: ByteArray): SecureHash {
             return HASH(algorithm, digestAs(algorithm, data))
         }
@@ -70,9 +72,7 @@ sealed class SecureHash(val algorithm: String, bytes: ByteArray) : OpaqueBytes(b
 
     fun toHexString(): String = bytes.toHexString()
 
-    override fun toString(): String {
-        return "$algorithm$DELIMITER${toHexString()}"
-    }
+    override fun toString(): String = bytes.toHexString()
 
     /**
      * Returns the first [prefixLen] hexadecimal digits of the [SecureHash] value.
@@ -353,6 +353,11 @@ fun ByteArray.hashAs(algorithm: String): SecureHash = SecureHash.hashAs(algorith
  * Compute the [algorithm] hash for the contents of the [OpaqueBytes].
  */
 fun OpaqueBytes.hashAs(algorithm: String): SecureHash = SecureHash.hashAs(algorithm, bytes)
+
+/**
+ * Hash algorithm.
+ */
+val SecureHash.algorithm: String get() = if (this is SecureHash.HASH) algorithm else SecureHash.SHA2_256
 
 /**
  * Hide the [FastThreadLocal] class behind a [Supplier] interface
