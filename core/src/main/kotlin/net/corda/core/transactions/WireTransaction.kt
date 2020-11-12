@@ -79,7 +79,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         checkBaseInvariants()
         check(inputs.isNotEmpty() || outputs.isNotEmpty()) { "A transaction must contain at least one input or output state" }
         check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
-        if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }§
+        if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
     }
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
