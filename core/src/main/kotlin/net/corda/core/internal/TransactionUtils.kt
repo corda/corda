@@ -5,7 +5,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.algorithm
-import net.corda.core.crypto.hashAs
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -50,19 +49,12 @@ class ContractUpgradeTransactionBuilder(
 }
 
 /** Concatenates the hash components into a single [ByteArray] and returns its hash. */
-fun combinedHash(components: Iterable<SecureHash>/*, digestService: DigestService = DigestService.default*/): SecureHash {
+fun combinedHash(components: Iterable<SecureHash>, digestService: DigestService): SecureHash {
     val stream = ByteArrayOutputStream()
     components.forEach {
         stream.write(it.bytes)
     }
-    // TODO(iee): need to re-visit and review this code to understand which is the right
-    //            way to combine the hashes. Is this meant to match a pre-existing tx id,
-    //            or create a new tx id with the [default] hash algorithm from whatever
-    //            components are passed in and independently from their algorithm?
-    //            This is used to build the tx id of ContractUpgradeFilteredTransaction and
-    //            ContractUpgradeWireTransaction
-    return stream.toByteArray().hashAs(components.first().algorithm)
-    //return digestService.hash(stream.toByteArray());
+    return digestService.hash(stream.toByteArray());
 }
 
 /**

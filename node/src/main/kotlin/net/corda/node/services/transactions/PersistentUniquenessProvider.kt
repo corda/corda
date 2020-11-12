@@ -265,7 +265,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
-        // TODO(iee): is the use of reHash correct here? Check backward/forward compatibility
         if (isConsumedByTheSameTx(txId.reHash(), conflictingStates)) {
             log.info("Transaction $txId already notarised. TxId: $txId")
             return

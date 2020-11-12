@@ -58,8 +58,6 @@ class ObligationTests {
         val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MINI_CORP get() = miniCorp.party
         val MINI_CORP_PUBKEY get() = miniCorp.publicKey
-        // TODO(iee): Obligations fail to find attachments if we use anything else than sha2_256. All attachment logic is still
-        //            using direct calls to .sha256() which still needs to be replaced with DigestService.default
     }
 
     @Rule
