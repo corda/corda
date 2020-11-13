@@ -45,14 +45,16 @@ class DockerInstantiator(private val volume: LocalVolume,
         val ports = (portsToOpen + Constants.NODE_RPC_ADMIN_PORT).map { ExposedPort.tcp(it) }
                 .map { PortBinding(null, it) }
                 .let { Ports(*it.toTypedArray()) }
+        val hostConfig = HostConfig()
+            .withBinds(Bind(volume.getPath(), nodeInfosVolume))
+            .withPortBindings(ports)
+            .withPublishAllPorts(true)
+            .withNetworkMode(networkId)
         val createCmd = localClient.createContainerCmd(imageId)
                 .withName(instanceName)
                 .withVolumes(nodeInfosVolume)
-                .withBinds(Bind(volume.getPath(), nodeInfosVolume))
-                .withPortBindings(ports)
+                .withHostConfig(hostConfig)
                 .withExposedPorts(ports.bindings.map { it.key })
-                .withPublishAllPorts(true)
-                .withNetworkMode(networkId)
                 .withEnv(convertedEnv).exec()
 
         localClient.startContainerCmd(createCmd.id).exec()

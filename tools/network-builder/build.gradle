@@ -41,7 +41,7 @@ configurations {
 
 dependencies {
     compile "com.microsoft.azure:azure:1.22.0"
-    compile "com.github.docker-java:docker-java:3.0.6"
+    compile "com.github.docker-java:docker-java:$docker_java_version"
 
     testCompile "org.jetbrains.kotlin:kotlin-test"
     testCompile "org.jetbrains.kotlin:kotlin-test-junit"
