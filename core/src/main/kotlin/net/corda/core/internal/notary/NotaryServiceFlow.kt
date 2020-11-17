@@ -142,8 +142,13 @@ abstract class NotaryServiceFlow(
     @Suspendable
     private fun sendSignedResponse(txId: SecureHash, signature: TransactionSignature) {
         logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
-        service.recordNotarisationDuration(Duration.ofNanos(System.nanoTime() - creationTime))
+        val flowDuration = Duration.ofNanos(System.nanoTime() - creationTime)
         otherSideSession.send(NotarisationResponse(listOf(signature)))
+        //This is done here to persist in case of flow retry:
+        //If we fail inside the .send() call and the flow retries,
+        //new timestamp will be generated. This prevents generating
+        //multiple timestamps for a single flow.
+        service.recordNotarisationDuration(flowDuration)
     }
 
     /**
