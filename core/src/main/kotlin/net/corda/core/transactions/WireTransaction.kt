@@ -205,6 +205,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException.UnknownParametersException(id, networkParametersHash!!)
 
+        if (inputs.isEmpty()) {
+            outputs.forEach { checkIssuer(resolveIdentity, it.data) }
+        }
+
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
                 outputs,
@@ -227,6 +231,21 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
 
         return ltx
+    }
+
+    private fun checkIssuer(resolveIdentity: (PublicKey) -> Party?, state: ContractState) {
+        val issuer = when (state) {
+            is FungibleAsset<*> -> state.amount.token.issuer.party
+            // Add handling for AbstractToken here
+            // ...
+            else -> null
+        }
+        // Can issuer be AnonymousParty?
+        if (issuer is Party) {
+            require(resolveIdentity(issuer.owningKey) != null) {
+                "Unable to resolve issuer ${issuer.description()} for transaction $id"
+            }
+        }
     }
 
     /**
