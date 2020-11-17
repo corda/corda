@@ -143,7 +143,6 @@ abstract class NotaryServiceFlow(
     private fun sendSignedResponse(txId: SecureHash, signature: TransactionSignature) {
         logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
         service.recordNotarisationDuration(Duration.ofNanos(System.nanoTime() - creationTime))
-        service.trackNotarisationMessage(otherSideSession)
         otherSideSession.send(NotarisationResponse(listOf(signature)))
     }
 

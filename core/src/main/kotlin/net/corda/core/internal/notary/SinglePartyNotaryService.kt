@@ -70,9 +70,6 @@ abstract class SinglePartyNotaryService : NotaryService() {
     @Suspendable
     open fun recordNotarisationDuration(elapsedTime: Duration) {}
 
-    @Suspendable
-    open fun trackNotarisationMessage(fromSession: FlowSession) {}
-
     /**
      * Estimate the wait time to be notarised taking into account the new request size.
      *
