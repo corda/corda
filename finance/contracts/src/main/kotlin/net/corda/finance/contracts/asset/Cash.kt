@@ -194,6 +194,8 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             "output states are issued by a command signer" using (issuer.party.owningKey in issueCommand.signers)
             "output values sum to more than the inputs" using (outputAmount > inputAmount)
             "there is only a single issue command" using (cashCommands.count() == 1)
+            @Suppress("DEPRECATION")
+            "issuer is not trusted" using (issueCommand.signingParties.isNotEmpty())
         }
     }
 
