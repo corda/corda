@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.algorithm
 import net.corda.core.flows.NotaryError
 import net.corda.core.internal.digestService
 import net.corda.core.node.ServiceHub
@@ -24,12 +25,9 @@ fun signBatch(
     require(algorithms.size > 0) {
         "Cannot sign an empty batch"
     }
-    // TODO(iee): too strict? will be valid in the future?
     require(algorithms.size == 1) {
         "Cannot sign a batch with multiple hash algorithms: $algorithms"
     }
-    // TODO(iee): assuming this is running on a notary node, and therefore using only the default
-    //            hash algorithm. Review and discuss.
     val merkleTree = MerkleTree.getMerkleTree(txIds.map { it.reHash() }, services.digestService)
     val merkleTreeRoot = merkleTree.hash
     val signableData = SignableData(

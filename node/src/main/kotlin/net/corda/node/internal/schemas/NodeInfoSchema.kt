@@ -29,11 +29,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id", nullable = false)
             var id: Int,
 
-            // TODO(iee): this field receives a hardcoded SHA2_256 string that comes from SerializationAPI's
-            // SerializedBytes' hash method that calls directly to .sha256(). It appears to be used
-            // only for serialized NodeInfo instances. Requires review and discussion to determine if
-            // it should follow the node/system hash algorithm or remain sha256 (in case it does change,
-            // it will be necessary to change length from 64 to 144.
             @Suppress("MagicNumber") // database column width
             @Column(name = "node_info_hash", length = 64, nullable = false)
             val hash: String,

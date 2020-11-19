@@ -50,14 +50,6 @@ data class NotaryChangeWireTransaction(
         return NotaryChangeWireTransaction(serializedComponents, DigestService.sha2_256)
     }
 
-    // TODO(iee): add missing:
-    //  public <init>(net.corda.core.identity.Party, java.util.UUID, java.util.List<net.corda.core.contracts.StateRef>,
-    //      java.util.List<net.corda.core.crypto.SecureHash>,
-    //      java.util.List<net.corda.core.contracts.TransactionState<net.corda.core.contracts.ContractState>>,
-    //      java.util.List<net.corda.core.contracts.Command<?>>, net.corda.core.contracts.TimeWindow,
-    //      net.corda.core.contracts.PrivacySalt, java.util.List<net.corda.core.contracts.StateRef>,
-    //      net.corda.core.node.ServiceHub)
-
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val references: List<StateRef> = emptyList()
     override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()

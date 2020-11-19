@@ -92,7 +92,7 @@ private constructor(
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-        val digestService: DigestService = DigestService.sha2_256
+        val digestService: DigestService
 ) : FullTransaction() {
 
     /**
@@ -119,13 +119,6 @@ private constructor(
             inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
             isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
-
-    // TODO(iee): add missing => Removed from API txt
-    //  public <init>(java.util.List, java.util.List, java.util.List, java.util.List, net.corda.core.crypto.SecureHash,
-    //      net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt,
-    //      net.corda.core.node.NetworkParameters, java.util.List, java.util.List, java.util.List, java.util.List,
-    //      kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function2,
-    //      net.corda.core.serialization.internal.AttachmentsClassLoaderCache, kotlin.jvm.internal.DefaultConstructorMarker)
 
     init {
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
