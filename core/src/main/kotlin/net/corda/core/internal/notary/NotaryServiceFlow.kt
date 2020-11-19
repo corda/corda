@@ -32,8 +32,7 @@ import java.time.Duration
 abstract class NotaryServiceFlow(
         val otherSideSession: FlowSession,
         val service: SinglePartyNotaryService,
-        private val etaThreshold: Duration,
-        private val creationTime : Long = System.nanoTime()
+        private val etaThreshold: Duration
 ) : FlowLogic<Void?>(), IdempotentFlow {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
@@ -141,8 +140,8 @@ abstract class NotaryServiceFlow(
 
     @Suspendable
     private fun sendSignedResponse(txId: SecureHash, signature: TransactionSignature) {
-        logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
         val flowDuration = Duration.ofNanos(System.nanoTime() - creationTime)
+        logger.info("Transaction [$txId][${flowDuration.toMillis()}ms] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
         otherSideSession.send(NotarisationResponse(listOf(signature)))
         //This is done here to persist in case of flow retry:
         //If we fail inside the .send() call and the flow retries,
