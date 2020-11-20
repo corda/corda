@@ -1,8 +1,8 @@
 package net.corda.networkbuilder.nodes
 
 import com.github.dockerjava.api.model.BuildResponseItem
-import com.github.dockerjava.core.async.ResultCallbackTemplate
-import com.github.dockerjava.core.command.BuildImageResultCallback
+import com.github.dockerjava.api.async.ResultCallbackTemplate
+import com.github.dockerjava.api.command.BuildImageResultCallback
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
