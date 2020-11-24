@@ -25,9 +25,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.common.BatchSignature
-import net.corda.notary.experimental.raft.RaftConfig
-import net.corda.notary.experimental.raft.RaftNotarySchemaV1
-import net.corda.notary.experimental.raft.RaftUniquenessProvider
 import net.corda.notary.jpa.JPANotaryConfiguration
 import net.corda.notary.jpa.JPANotarySchemaV1
 import net.corda.notary.jpa.JPAUniquenessProvider
@@ -61,9 +58,6 @@ class UniquenessProviderTests(
         @Parameterized.Parameters
         fun data(): Collection<Array<Any>> = listOf(
             arrayOf(JPAUniquenessProviderFactory(DigestService.sha2_256), DigestService.sha2_256),
-            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_256)
-//            arrayOf(JPAUniquenessProviderFactory(DigestService.sha2_512), DigestService.sha2_512),
-//            arrayOf(RaftUniquenessProviderFactory(), DigestService.sha2_512)
         )
     }
 
@@ -610,39 +604,6 @@ interface UniquenessProviderFactory {
     fun create(clock: Clock): UniquenessProvider
     fun cleanUp() {}
 }
-
-class RaftUniquenessProviderFactory : UniquenessProviderFactory {
-    private var database: CordaPersistence? = null
-    private var provider: RaftUniquenessProvider? = null
-
-    override fun create(clock: Clock): UniquenessProvider {
-        database?.close()
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
-
-        val testSSL = configureTestSSL(CordaX500Name("Raft", "London", "GB"))
-        val raftNodePort = 10987
-
-        return RaftUniquenessProvider(
-                null,
-                testSSL,
-                database!!,
-                clock,
-                MetricRegistry(),
-                TestingNamedCacheFactory(),
-                RaftConfig(NetworkHostAndPort("localhost", raftNodePort), emptyList()),
-                ::signSingle
-        ).apply {
-            start()
-            provider = this
-        }
-    }
-
-    override fun cleanUp() {
-        provider?.stop()
-        database?.close()
-    }
-}
-
 
 class JPAUniquenessProviderFactory(val digestService: DigestService) : UniquenessProviderFactory {
     private var database: CordaPersistence? = null
