@@ -1,0 +1,11 @@
+Properties constants = new Properties()
+file("$rootDir/../constants.properties").withInputStream { constants.load(it) }
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'com.github.docker-java', name: 'docker-java', version: constants.dockerJavaVersion
+    compile group: 'com.github.docker-java', name: 'docker-java-transport-httpclient5', version: constants.dockerJavaVersion
+}
