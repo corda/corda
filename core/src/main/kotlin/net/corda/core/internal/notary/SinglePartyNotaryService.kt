@@ -67,14 +67,6 @@ abstract class SinglePartyNotaryService : NotaryService() {
     }
 
     /**
-     * Record the duration of the flow until before the notarisation response is sent back.
-     *
-     * @param elapsedTime Duration representing the time between flow creation and flow reaching the final point.
-     */
-    @Suspendable
-    open fun recordNotarisationDuration(elapsedTime: Duration) {}
-
-    /**
      * Estimate the wait time to be notarised taking into account the new request size.
      *
      * @param numStates The number of states we're about to request be notarised.
