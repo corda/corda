@@ -70,10 +70,7 @@ abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
 
-    /**
-     * Saves the time when the flow logic is created. This happens before the stateMachine
-     * and the creation times are different.
-     */
+    /** Saves the time when the flow logic is created. */
     val creationTime: Long = System.nanoTime()
 
     @DeleteForDJVM
