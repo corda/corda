@@ -1,0 +1,103 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="vault_transaction_id_size">
+        <!-- dropView to avoid org.postgresql.util.PSQLException: cannot alter type of a column used by a view or rule -->
+        <dropView viewName="v_pkey_hash_ex_id_map"/>
+
+        <dropForeignKeyConstraint baseTableName="vault_fungible_states_parts"
+                                  constraintName="FK__fung_st_parts__fung_st"/>
+        <dropForeignKeyConstraint baseTableName="vault_linear_states_parts"
+                                  constraintName="FK__lin_stat_parts__lin_stat"/>
+        <dropPrimaryKey tableName="vault_fungible_states" constraintName="vault_fungible_states_pkey"/>
+        <dropPrimaryKey tableName="vault_linear_states" constraintName="vault_linear_states_pkey"/>
+        <dropPrimaryKey tableName="vault_states" constraintName="vault_states_pkey"/>
+        <dropIndex indexName="transaction_id_index" tableName="vault_transaction_notes"/>
+
+        <dropNotNullConstraint tableName="vault_fungible_states" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="vault_fungible_states_parts" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="vault_linear_states" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="vault_linear_states_parts" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="vault_states" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+
+        <modifyDataType tableName="vault_fungible_states"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="vault_fungible_states_parts"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="vault_linear_states"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="vault_linear_states_parts"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="vault_states"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="vault_transaction_notes"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="state_party"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+
+        <addNotNullConstraint tableName="vault_fungible_states" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="vault_fungible_states_parts" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="vault_linear_states" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="vault_linear_states_parts" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="vault_states" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+
+        <addPrimaryKey tableName="vault_fungible_states" columnNames="transaction_id, output_index"
+                       constraintName="vault_fungible_states_pkey"/>
+        <addPrimaryKey tableName="vault_linear_states" columnNames="transaction_id, output_index"
+                       constraintName="vault_linear_states_pkey"/>
+        <addPrimaryKey tableName="vault_states" columnNames="transaction_id, output_index"
+                       constraintName="vault_states_pkey"/>
+        <createIndex indexName="transaction_id_index" tableName="vault_transaction_notes">
+            <column name="transaction_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="vault_transaction_id_size_non-clustered_pk-1" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="vault_fungible_states" constraintName="vault_fungible_states_pkey"/>
+        <addPrimaryKey tableName="vault_fungible_states" columnNames="transaction_id, output_index"
+                       constraintName="vault_fungible_states_pkey" clustered="false"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="vault_transaction_id_size_non-clustered_pk-2" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="vault_linear_states" constraintName="vault_linear_states_pkey"/>
+        <addPrimaryKey tableName="vault_linear_states" columnNames="transaction_id, output_index"
+                       constraintName="vault_linear_states_pkey" clustered="false"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="vault_transaction_id_size_non-clustered_pk-3" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="vault_states" constraintName="vault_states_pkey"/>
+        <addPrimaryKey tableName="vault_states" columnNames="transaction_id, output_index"
+                       constraintName="vault_states_pkey" clustered="false"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="vault_transaction_id_size_2">
+        <addForeignKeyConstraint baseColumnNames="transaction_id,output_index"
+                                 baseTableName="vault_fungible_states_parts"
+                                 constraintName="FK__fung_st_parts__fung_st"
+                                 referencedColumnNames="transaction_id,output_index"
+                                 referencedTableName="vault_fungible_states"/>
+        <addForeignKeyConstraint baseColumnNames="transaction_id,output_index" baseTableName="vault_linear_states_parts"
+                                 constraintName="FK__lin_stat_parts__lin_stat"
+                                 referencedColumnNames="transaction_id,output_index"
+                                 referencedTableName="vault_linear_states"/>
+        <createView viewName="v_pkey_hash_ex_id_map">
+            select
+            state_party.public_key_hash,
+            state_party.transaction_id,
+            state_party.output_index,
+            pk_hash_to_ext_id_map.external_id
+            from state_party
+            join pk_hash_to_ext_id_map
+            on state_party.public_key_hash = pk_hash_to_ext_id_map.public_key_hash
+        </createView>
+    </changeSet>
+</databaseChangeLog>

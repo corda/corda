@@ -48,6 +48,22 @@ class PersistentMapTests {
     }
 
     @Test(timeout=300_000)
+    fun `make sure persistence works with SHA-512`() {
+        val testHash = SecureHash.random(SecureHash.SHA2_512).toString()
+
+        database.transaction {
+            val map = createTestMap()
+            map[testHash] = "test"
+            assertEquals(map[testHash], "test")
+        }
+
+        database.transaction {
+            val reloadedMap = createTestMap()
+            assertEquals("test", reloadedMap[testHash])
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `make sure persistence works using assignment operator`() {
         val testHash = SecureHash.randomSHA256().toString()
 
