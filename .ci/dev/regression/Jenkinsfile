@@ -286,7 +286,9 @@ pipeline {
                     sh script: [
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
-                            'pushOfficialImages'
+                            'docker:pushDockerImage',
+                            '-Pdocker.image.repository=corda/corda',
+                            '--image ALPINE_ZULU'
                             ].join(' ')
                 }
             }
