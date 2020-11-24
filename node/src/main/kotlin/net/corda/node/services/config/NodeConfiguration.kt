@@ -15,8 +15,6 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.notary.experimental.bftsmart.BFTSmartConfig
-import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -167,8 +165,8 @@ data class NotaryConfig(
         val etaMessageThresholdSeconds: Int = NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt(),
         /** Notary implementation-specific configuration parameters. */
         val extraConfig: Config? = null,
-        val raft: RaftConfig? = null,
-        val bftSMaRt: BFTSmartConfig? = null
+        val raft: Config? = null,
+        val bftSMaRt: Config? = null
 )
 
 /**

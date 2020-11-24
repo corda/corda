@@ -160,7 +160,6 @@ constructor(private val initSerEnv: Boolean,
     }
 
     sealed class NotaryCluster {
-        data class BFT(val name: CordaX500Name) : NotaryCluster()
         data class CFT(val name: CordaX500Name) : NotaryCluster()
     }
 
@@ -175,30 +174,13 @@ constructor(private val initSerEnv: Boolean,
             }
         }
         return clusteredNotaries.groupBy { it.first }.map { (k, vs) ->
-            val cs = vs.map { it.second.config }
-            if (cs.any { isBFTNotary(it) }) {
-                require(cs.all { isBFTNotary(it) }) { "Mix of BFT and non-BFT notaries with service name $k" }
-                NotaryCluster.BFT(k) to vs.map { it.second.directory }
-            } else {
-                NotaryCluster.CFT(k) to vs.map { it.second.directory }
-            }
+            NotaryCluster.CFT(k) to vs.map { it.second.directory }
         }.toMap()
-    }
-
-    private fun isBFTNotary(config: Config): Boolean {
-        // TODO: pass a commandline parameter to the bootstrapper instead. Better yet, a notary config map
-        //       specifying the notary identities and the type (single-node, CFT, BFT) of each notary to set up.
-        return config.hasPath("notary.bftSMaRt")
     }
 
     private fun generateServiceIdentitiesForNotaryClusters(configs: Map<Path, Config>) {
         notaryClusters(configs).forEach { (cluster, directories) ->
             when (cluster) {
-                is NotaryCluster.BFT -> DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
-                        directories,
-                        cluster.name,
-                        threshold = 1 + 2 * directories.size / 3
-                )
                 is NotaryCluster.CFT -> DevIdentityGenerator.generateDistributedNotarySingularIdentity(directories, cluster.name)
             }
         }

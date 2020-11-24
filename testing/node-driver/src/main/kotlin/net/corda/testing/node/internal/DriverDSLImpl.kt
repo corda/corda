@@ -68,7 +68,6 @@ import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
 import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.config.parseAsNodeConfiguration
@@ -84,7 +83,6 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -600,7 +598,7 @@ class DriverDSLImpl(
                 is ClusterSpec.Raft,
                     // DummyCluster is used for testing the notary communication path, and it does not matter
                     // which underlying consensus algorithm is used, so we just stick to Raft
-                is DummyClusterSpec -> startRaftNotaryCluster(spec, localNetworkMap)
+                is DummyClusterSpec -> throw IllegalArgumentException("RAFT not supported!")
                 else -> throw IllegalArgumentException("BFT-SMaRt not supported")
             }
         }
@@ -617,51 +615,6 @@ class DriverDSLImpl(
                         customOverrides = notaryConfig + customOverrides,
                         maximumHeapSize = spec.maximumHeapSize)
         ).map { listOf(it) }
-    }
-
-    private fun startRaftNotaryCluster(spec: NotarySpec, localNetworkMap: LocalNetworkMap?): CordaFuture<List<NodeHandle>> {
-        fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
-            val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
-            val config = NotaryConfig(
-                    validating = spec.validating,
-                    serviceLegalName = spec.name,
-                    raft = RaftConfig(
-                            nodeAddress = nodeAddress,
-                            clusterAddresses = clusterAddresses
-                    )
-            )
-            return mapOf("notary" to config.toConfig().root().unwrapped())
-        }
-
-        val nodeNames = generateNodeNames(spec)
-        val clusterAddress = portAllocation.nextHostAndPort()
-
-        val firstParams = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(clusterAddress))
-        val firstConfig = createSchema(createConfig(nodeNames[0], firstParams), allowHibernateToManageAppSchema)
-
-        // Start the first node that will bootstrap the cluster
-        val firstNodeFuture = startRegisteredNode(
-                firstConfig.getOrThrow(),
-                localNetworkMap,
-                firstParams
-        )
-
-        // All other nodes will join the cluster
-        val restNodeFutures = nodeNames.drop(1).map {
-            val nodeAddress = portAllocation.nextHostAndPort()
-            val params = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(nodeAddress, clusterAddress))
-            val config = createSchema(createConfig(it, params), allowHibernateToManageAppSchema)
-            startRegisteredNode(
-                    config.getOrThrow(),
-                    localNetworkMap,
-                    params
-
-            )
-        }
-
-        return firstNodeFuture.flatMap { first ->
-            restNodeFutures.transpose().map { rest -> listOf(first) + rest }
-        }
     }
 
     override fun baseDirectory(nodeName: CordaX500Name): Path {

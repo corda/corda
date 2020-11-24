@@ -409,7 +409,6 @@ allprojects {
                     includeGroupByRegex 'com\\.r3(\\..*)?'
                     includeGroup 'co.paralleluniverse'
                     includeGroup 'org.crashub'
-                    includeGroup 'com.github.bft-smart'
                 }
             }
             maven {

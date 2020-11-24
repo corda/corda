@@ -6,10 +6,6 @@ import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.location
 import net.corda.node.VersionInfo
-import net.corda.notary.experimental.bftsmart.BFTSmartNotarySchemaV1
-import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
-import net.corda.notary.experimental.raft.RaftNotarySchemaV1
-import net.corda.notary.experimental.raft.RaftNotaryService
 import net.corda.notary.jpa.JPANotarySchemaV1
 import net.corda.notary.jpa.JPANotaryService
 
@@ -67,54 +63,6 @@ internal object VirtualCordapp {
                 notaryService = JPANotaryService::class.java,
                 isLoaded = false,
                 isVirtual = true
-        )
-    }
-
-    /** A Cordapp for the built-in Raft notary service implementation. */
-    fun generateRaftNotary(versionInfo: VersionInfo): CordappImpl {
-        return CordappImpl(
-                contractClassNames = listOf(),
-                initiatedFlows = listOf(),
-                rpcFlows = listOf(),
-                serviceFlows = listOf(),
-                schedulableFlows = listOf(),
-                services = listOf(),
-                serializationWhitelists = listOf(),
-                serializationCustomSerializers = listOf(),
-                checkpointCustomSerializers = listOf(),
-                customSchemas = setOf(RaftNotarySchemaV1),
-                info = Cordapp.Info.Default("corda-notary-raft", versionInfo.vendor, versionInfo.releaseVersion, "Open Source (Apache 2)"),
-                allFlows = listOf(),
-                jarPath = RaftNotaryService::class.java.location,
-                jarHash = SecureHash.allOnesHash,
-                minimumPlatformVersion = versionInfo.platformVersion,
-                targetPlatformVersion = versionInfo.platformVersion,
-                notaryService = RaftNotaryService::class.java,
-                isLoaded = false
-        )
-    }
-
-    /** A Cordapp for the built-in BFT-Smart notary service implementation. */
-    fun generateBFTSmartNotary(versionInfo: VersionInfo): CordappImpl {
-        return CordappImpl(
-                contractClassNames = listOf(),
-                initiatedFlows = listOf(),
-                rpcFlows = listOf(),
-                serviceFlows = listOf(),
-                schedulableFlows = listOf(),
-                services = listOf(),
-                serializationWhitelists = listOf(),
-                serializationCustomSerializers = listOf(),
-                checkpointCustomSerializers = listOf(),
-                customSchemas = setOf(BFTSmartNotarySchemaV1),
-                info = Cordapp.Info.Default("corda-notary-bft-smart", versionInfo.vendor, versionInfo.releaseVersion, "Open Source (Apache 2)"),
-                allFlows = listOf(),
-                jarPath = BFTSmartNotaryService::class.java.location,
-                jarHash = SecureHash.allOnesHash,
-                minimumPlatformVersion = versionInfo.platformVersion,
-                targetPlatformVersion = versionInfo.platformVersion,
-                notaryService = BFTSmartNotaryService::class.java,
-                isLoaded = false
         )
     }
 }

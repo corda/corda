@@ -10,8 +10,6 @@ import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
-import net.corda.notary.experimental.raft.RaftNotaryService
 import net.corda.notary.jpa.JPANotaryService
 import java.lang.reflect.InvocationTargetException
 import java.security.PublicKey
@@ -36,12 +34,10 @@ class NotaryLoader(
             // Using a built-in notary
             when {
                 config.bftSMaRt != null -> {
-                    builtInNotary = VirtualCordapp.generateBFTSmartNotary(versionInfo)
-                    BFTSmartNotaryService::class.java
+                    throw IllegalStateException("The experimental BFT notary is no longer available!")
                 }
                 config.raft != null -> {
-                    builtInNotary = VirtualCordapp.generateRaftNotary(versionInfo)
-                    RaftNotaryService::class.java
+                    throw IllegalStateException("The experimental RAFT notary is no longer available!")
                 }
                 else -> {
                     builtInNotary = VirtualCordapp.generateJPANotary(versionInfo)
