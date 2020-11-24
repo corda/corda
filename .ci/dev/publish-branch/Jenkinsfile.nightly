@@ -3,17 +3,6 @@
  * Jenkins pipeline to build Corda OS nightly snapshots
  */
 
-/**
- * Kill already started job.
- * Assume new commit takes precendence and results from previous
- * unfinished builds are not required.
- * This feature doesn't play well with disableConcurrentBuilds() option
- */
-@Library('corda-shared-build-pipeline-steps')
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-
-killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
-
 /*
 ** calculate the stage for NexusIQ evaluation
 **  * build for snapshots
@@ -33,15 +22,29 @@ def nexusIqStageChoices = [nexusDefaultIqStage].plus(
                         'operate'
                 ].minus([nexusDefaultIqStage]))
 
+/**
+ * Common Gradle arguments for all Gradle executions
+ */
+String COMMON_GRADLE_PARAMS = [
+        '--no-daemon',
+        '--stacktrace',
+        '--info',
+        '-Pcompilation.warningsAsErrors=false',
+        '-Ptests.failFast=true',
+].join(' ')
+
 pipeline {
     agent { label 'standard' }
 
+    /*
+     * List options in alphabetical order
+     */
     options {
-        timestamps()
         ansiColor('xterm')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
         overrideIndexTriggers(false)
         timeout(time: 3, unit: 'HOURS')
-        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        timestamps()
     }
 
     parameters {
@@ -53,10 +56,7 @@ pipeline {
     }
 
     environment {
-        // Replace / with :: as links from Jenkins to Artifactory are broken if we use slashes
-        // in the name
-        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Nightly to Artifactory"
-                .replaceAll("/", " :: ")
+        ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish Nightly to Artifactory :: ${env.BRANCH_NAME}"
         DOCKER_URL = "https://index.docker.io/v1/"
     }
 
@@ -100,7 +100,7 @@ pipeline {
                     rtGradleRun (
                             usesPlugin: true,
                             useWrapper: true,
-                            switches: "--no-daemon -s",
+                            switches: '-s --info',
                             tasks: 'artifactoryPublish',
                             deployerId: 'deployer',
                             buildName: env.ARTIFACTORY_BUILD_NAME
