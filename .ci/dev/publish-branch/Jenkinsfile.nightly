@@ -121,7 +121,6 @@ pipeline {
                                 passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh script: [
                             './gradlew',
-                            COMMON_GRADLE_PARAMS,
                             'docker:pushDockerImage',
                             '-Pdocker.image.repository=corda/corda',
                             '--image ALPINE_ZULU'
