@@ -332,10 +332,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         setLoggingContext()
 
         logger.debug { "Calling flow: $logic" }
-        val startTime = System.nanoTime()
+        val startTime = System.currentTimeMillis()
         serviceHub.monitoringService.metrics
                 .timer("Flows.StartupQueueTime")
-                .update(startTime - logic.creationTime, TimeUnit.NANOSECONDS)
+                .update(startTime - creationTime, TimeUnit.MILLISECONDS)
         var initialised = false
         val resultOrError = try {
 
