@@ -12,7 +12,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
@@ -53,7 +52,6 @@ class DBTransactionStorageTests {
     private lateinit var transactionStorage: DBTransactionStorage
     @Before
     fun setUp() {
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null })
         newTransactionStorage()
@@ -62,7 +60,6 @@ class DBTransactionStorageTests {
     @After
     fun cleanUp() {
         database.close()
-        LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
     private class TransactionClock(var timeNow: Instant,

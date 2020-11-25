@@ -11,7 +11,6 @@ import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -90,7 +89,6 @@ class ArtemisMessagingTest {
             doReturn(true).whenever(it).crlCheckSoftFail
             doReturn(true).whenever(it).crlCheckArtemisServer
         }
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
         networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, rigorousMock()).apply { start(emptyList()) }
     }
@@ -100,7 +98,6 @@ class ArtemisMessagingTest {
         messagingClient?.stop()
         messagingServer?.stop()
         database.close()
-        LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
     @Test(timeout=300_000)

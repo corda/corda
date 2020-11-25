@@ -68,40 +68,6 @@ task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     }
 }
 
-task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
-    directory file("$buildDir/nodes/nodesCustom")
-    nodeDefaults {
-        projectCordapp {
-            deploy = false
-        }
-        extraConfig = [h2Settings: [address: "localhost:0"]]
-        cordapp project(':samples:notary-demo:contracts')
-        cordapp project(':samples:notary-demo:workflows')
-    }
-    node {
-        name "O=Alice Corp,L=Madrid,C=ES"
-        p2pPort 10002
-        rpcSettings {
-            address "localhost:10003"
-            adminAddress "localhost:10103"
-        }
-        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
-    }
-    node {
-        name "O=Notary Node,L=Zurich,C=CH"
-        p2pPort 10009
-        rpcSettings {
-            address "localhost:10010"
-            adminAddress "localhost:10110"
-        }
-        notary = [
-                validating: true,
-                className: "net.corda.notarydemo.MyCustomValidatingNotaryService",
-                serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
-        ]
-    }
-}
-
 task notarise(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.notarydemo.client.NotariseKt'
