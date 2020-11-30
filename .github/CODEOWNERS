@@ -24,7 +24,7 @@ tools/demobench/src/main/kotlin/net/corda/demobench @vkolomeyko
 client/rpc	@vkolomeyko
 
 core/src/main/kotlin/net/corda/core/flows	@dimosr
-core/src/main/kotlin/net/corda/core/internal/notary	@thschroeter
+core/src/main/kotlin/net/corda/core/internal/notary	@corda/notaries
 core/src/main/kotlin/net/corda/core/messaging	@vkolomeyko
 
 node/src/integration-test/kotlin/net/corda/node/persistence	@blsemo
@@ -38,7 +38,7 @@ node/src/main/kotlin/net/corda/node/services/persistence	@blsemo
 node/src/main/kotlin/net/corda/node/services/rpc	@vkolomeyko
 node/src/main/kotlin/net/corda/node/services/statemachine	@lankydan
 node/src/main/kotlin/net/corda/node/utilities/registration	@rekalov
-node/src/main/kotlin/net/corda/notary	@thschroeter
+node/src/main/kotlin/net/corda/notary	@corda/notaries
 
 node-api/src/main/kotlin/net/corda/nodeapi/internal/bridging	@vkolomeyko
 node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto	@rekalov
