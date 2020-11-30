@@ -275,7 +275,8 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+                /* Note we do publish release tags, unlike Corda Enterprise */
+                expression { !isInternalRelease && isReleaseTag }
             }
             steps {
                 withCredentials([
@@ -288,7 +289,7 @@ pipeline {
                             COMMON_GRADLE_PARAMS,
                             'docker:pushDockerImage',
                             '-Pdocker.image.repository=corda/corda',
-                            '--image ALPINE_ZULU'
+                            '--image OFFICIAL'
                             ].join(' ')
                 }
             }
