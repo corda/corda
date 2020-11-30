@@ -62,6 +62,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 class FlowPermissionException(message: String) : FlowException(message)
@@ -333,6 +334,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
+        serviceHub.monitoringService.metrics
+                .timer("Flows.StartupQueueTime")
+                .update(Duration.ofNanos(startTime).toMillis() - creationTime, TimeUnit.MILLISECONDS)
         var initialised = false
         val resultOrError = try {
 
