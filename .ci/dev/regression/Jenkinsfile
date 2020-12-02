@@ -273,10 +273,30 @@ pipeline {
             }
         }
 
+        stage('Publish Release Candidate to Internal Repository') {
+            when {
+                expression { isReleaseCandidate }
+            }
+            steps {
+                withCredentials([
+                        usernamePassword(credentialsId: 'docker-image-pusher-os',
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD')
+                ]) {
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'docker:pushDockerImage',
+                            '--image OFFICIAL',
+                            '--registry-url=entdocker.software.r3.com'
+                            ].join(' ')
+                }
+            }
+        }
+
         stage('Publish Release to Docker Hub') {
             when {
-                /* Note we do publish release tags, unlike Corda Enterprise */
-                expression { !isInternalRelease && isReleaseTag }
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
             }
             steps {
                 withCredentials([
