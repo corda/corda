@@ -279,7 +279,7 @@ pipeline {
             }
             steps {
                 withCredentials([
-                        usernamePassword(credentialsId: 'docker-image-pusher-ent',
+                        usernamePassword(credentialsId: 'docker-image-pusher-os',
                                 usernameVariable: 'DOCKER_USERNAME',
                                 passwordVariable: 'DOCKER_PASSWORD')
                 ]) {
