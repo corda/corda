@@ -286,6 +286,7 @@ pipeline {
                     sh script: [
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
+                            '-Pdocker.image.repository=entdocker.software.r3.com/corda',
                             'docker:pushDockerImage',
                             '--image OFFICIAL',
                             '--registry-url=entdocker.software.r3.com'
