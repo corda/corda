@@ -47,6 +47,7 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.AppServiceHub
+import net.corda.core.node.MemberInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -89,6 +90,7 @@ import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.AuditService
 import net.corda.node.services.api.DummyAuditService
 import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.MembershipGroupCacheInternal
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.NodePropertiesStore
@@ -270,6 +272,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
+    val membershipGroupCache: MembershipGroupCacheInternal get() = throw UnsupportedOperationException()
+    val myMemberInfo: MemberInfo get() = throw UnsupportedOperationException()
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
@@ -1098,6 +1102,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val validatedTransactions: WritableTransactionStorage get() = this@AbstractNode.transactionStorage
         override val cordappProvider: CordappProviderInternal get() = this@AbstractNode.cordappProvider
         override val networkMapCache: NetworkMapCacheInternal get() = this@AbstractNode.networkMapCache
+        override val myMemberInfo: MemberInfo get() = this@AbstractNode.myMemberInfo
+        override val membershipGroupCache: MembershipGroupCacheInternal get() = this@AbstractNode.membershipGroupCache
         override val vaultService: VaultServiceInternal get() = this@AbstractNode.vaultService
         override val nodeProperties: NodePropertiesStore get() = this@AbstractNode.nodeProperties
         override val database: CordaPersistence get() = this@AbstractNode.database

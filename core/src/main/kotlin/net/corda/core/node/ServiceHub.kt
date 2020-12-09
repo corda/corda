@@ -158,6 +158,8 @@ interface ServiceHub : ServicesForResolution {
      */
     val networkMapCache: NetworkMapCache
 
+    val membershipGroupCache: MembershipGroupCache
+
     /**
      * The [DiagnosticsService] provides diagnostic level information about the node, including the current version of the node, and the
      * CorDapps currently installed on the node. Note that this information should be used to provide diagnostics only, and no functional
@@ -179,6 +181,9 @@ interface ServiceHub : ServicesForResolution {
 
     /** The [NodeInfo] object corresponding to our own entry in the network map. */
     val myInfo: NodeInfo
+
+    /** The [MemberInfo] object which corresponds to our entry in the Membership Group. **/
+    val myMemberInfo: MemberInfo
 
     /**
      * Return the singleton instance of the given Corda service type. This is a class that is annotated with

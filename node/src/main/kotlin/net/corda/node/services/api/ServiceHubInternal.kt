@@ -143,6 +143,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val monitoringService: MonitoringService
     val schemaService: SchemaService
     override val networkMapCache: NetworkMapCacheInternal
+    override val membershipGroupCache: MembershipGroupCacheInternal
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
