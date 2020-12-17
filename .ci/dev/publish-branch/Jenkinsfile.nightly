@@ -119,7 +119,12 @@ pipeline {
                         usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
                                 usernameVariable: 'DOCKER_USERNAME',
                                 passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh "./gradlew pushOfficialImages"
+                    sh script: [
+                            './gradlew',
+                            'docker:pushDockerImage',
+                            '-Pdocker.image.repository=corda/corda',
+                            '--image OFFICIAL'
+                            ].join(' ')
                 }
             }
         }
