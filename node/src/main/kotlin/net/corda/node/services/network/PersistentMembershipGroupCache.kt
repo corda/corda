@@ -1,14 +1,25 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.MemberInfo
+import net.corda.core.node.MemberRole
+import net.corda.core.node.MemberStatus
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.MembershipGroupCache
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.MemberInfoSchemaV1.PersistentMemberInfo
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.MembershipGroupCacheInternal
+import net.corda.node.services.api.MembershipRequest
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -16,29 +27,68 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 
+@Suppress("TooManyFunctions")
 class PersistentMembershipGroupCache(
+        @Suppress("UNUSED_PARAMETER") cacheFactory: NamedCacheFactory,
         private val database: CordaPersistence,
-        override val managerInfo: MemberInfo
+        private val identityService: IdentityServiceInternal
 ) : MembershipGroupCacheInternal, SingletonSerializeAsToken() {
 
+    companion object {
+        private val logger = contextLogger()
+    }
+
+    override val nodeReady: OpenFuture<Void?> = openFuture()
     private val _changed = PublishSubject.create<MembershipGroupCache.GroupChange>()
     override val changed: Observable<MembershipGroupCache.GroupChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MembershipGroupCache.GroupChange> get() = _changed.bufferUntilDatabaseCommit()
 
-    override val allMembers: List<MemberInfo> get() = queryAllPersistentInfo().map { it.toMemberInfo() }
+    private lateinit var _mgmInfo: MemberInfo
+    override val mgmInfo: MemberInfo get() = _mgmInfo
+    // TODO[DR]: Use _mgmInfo.groupId
+    private val groupId get() = DEFAULT_MEMBER_GROUP_ID
+
+    override val allMembers: List<MemberInfo> get() = queryAllPersistentInfo().map { it.toMemberInfo(groupId) }
+    override val allParties: List<Party> get() = allMembers.map { it.party }
+
+    private lateinit var notaries: List<NotaryInfo>
+
+    fun start(notaries: List<NotaryInfo>, mgmInfo: MemberInfo) {
+        this.notaries = notaries
+        _mgmInfo = mgmInfo
+        addOrUpdateMember(mgmInfo)
+    }
+
+    override fun track(): DataFeed<List<MemberInfo>, MembershipGroupCache.GroupChange> {
+        synchronized(_changed) {
+            return DataFeed(allMembers, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+        }
+    }
+
+    // TODO[DR]: Look later
+    override fun addRegistrationRequest(request: MembershipRequest): Party {
+        val memberInfo = request.memberInfo.copy(status = MemberStatus.PENDING, role = MemberRole.NODE)
+        addOrUpdateMember(memberInfo)
+        return memberInfo.party
+    }
 
     override fun addOrUpdateMember(memberInfo: MemberInfo) {
         synchronized(_changed) {
             database.transaction {
-                val oldMemberInfo = queryPersistentInfoById(memberInfo.memberId)?.toMemberInfo()
-                val persistentMemberInfo = PersistentMemberInfo.fromMemberInfo(memberInfo)
-                session.merge(persistentMemberInfo)
+                val oldMemberInfo = queryPersistentInfoByName(memberInfo.party.name)?.toMemberInfo(groupId)
+                if (oldMemberInfo != memberInfo) {
+                    val persistentMemberInfo = PersistentMemberInfo.fromMemberInfo(memberInfo)
+                    // TODO[DR]: Remove use of identityService
+                    identityService.registerIdentity(getTestPartyAndCertificate(memberInfo.party))
+                    session.merge(persistentMemberInfo)
 
-                val change = oldMemberInfo?.let {
-                    MembershipGroupCache.GroupChange.Modified(memberInfo, oldMemberInfo)
-                } ?: MembershipGroupCache.GroupChange.Added(memberInfo)
-                changePublisher.onNext(change)
+                    val change = oldMemberInfo?.let {
+                        MembershipGroupCache.GroupChange.Modified(memberInfo, oldMemberInfo)
+                    } ?: MembershipGroupCache.GroupChange.Added(memberInfo)
+                    changePublisher.onNext(change)
+                }
             }
+            identityService.invalidateCaches(memberInfo.party.name)
         }
     }
 
@@ -49,56 +99,56 @@ class PersistentMembershipGroupCache(
     }
 
     override fun removeMember(memberInfo: MemberInfo) {
+        if (memberInfo.role == MemberRole.MANAGER) {
+            // TODO[DR]: Fix later
+            return
+        }
         synchronized(_changed) {
             database.transaction {
-                val dbEntry = queryPersistentInfoById(memberInfo.memberId)
+                val dbEntry = queryPersistentInfoByName(memberInfo.party.name)
                 dbEntry?.let {
                     session.remove(it)
-                    changePublisher.onNext(MembershipGroupCache.GroupChange.Removed(it.toMemberInfo()))
+                    changePublisher.onNext(MembershipGroupCache.GroupChange.Removed(it.toMemberInfo(groupId)))
                 }
             }
+            identityService.invalidateCaches(memberInfo.party.name)
         }
     }
 
-    /* TODO[MGM]: Should be optimized - no need to query the whole MemberInfo structure */
-    override fun getPartyByName(name: CordaX500Name): Party? {
-        return queryPersistentInfoByName(name)?.toMemberInfo()?.party
+    // TODO[DR]: Optimization needed: no need to retrieve the whole MemberInfo.
+    override fun getParty(name: CordaX500Name): Party? {
+        return getMemberInfo(name)?.party
     }
 
-    /* TODO[MGM]: Should use lookup by key table instead */
-    override fun getPartyByKey(key: PublicKey): Party? {
-        return queryPersistentInfoById(key.toStringShort())?.toMemberInfo()?.party
+    // TODO[DR]: Optimization needed: no need to retrieve the whole MemberInfo.
+    override fun getParty(key: PublicKey): Party? {
+        return getMemberInfoByKeyHash(key.toStringShort())?.party
     }
 
-    /* TODO[MGM]: Should use lookup by key table instead */
-    override fun getMemberInfo(party: AbstractParty): MemberInfo? {
-        if (party is Party) {
-            val memberInfo = queryPersistentInfoByName(party.name)?.toMemberInfo()
-            if (memberInfo != null && party.owningKey in memberInfo.keys) {
-                return memberInfo
-            }
-            return null
-        } else {
-            return queryPersistentInfoById(party.owningKey.toStringShort())?.toMemberInfo()
-        }
+    override fun getMemberInfo(party: Party): MemberInfo? {
+        return getMemberInfoByKeyHash(party.owningKey.toStringShort())?.takeIf { party.name == it.party.name }
     }
 
-    override fun getMemberInfo(memberId: String): MemberInfo? {
-        return queryPersistentInfoById(memberId)?.toMemberInfo()
+    override fun getMemberInfo(name: CordaX500Name): MemberInfo? {
+        return queryPersistentInfoByName(name)?.toMemberInfo(groupId)
     }
 
-    private fun queryPersistentInfoById(memberId: String): PersistentMemberInfo? = database.transaction {
+    override fun getMemberInfoByKeyHash(keyHash: String): MemberInfo? {
+        return queryPersistentInfoByKeyHash(keyHash)?.toMemberInfo(groupId)
+    }
+
+    private fun queryPersistentInfoByKeyHash(keyHash: String): PersistentMemberInfo? = database.transaction {
         session.createQuery(
-                "SELECT m FROM ${PersistentMemberInfo::class.java.name} m WHERE member_id = :memberId",
+                "SELECT m FROM ${PersistentMemberInfo::class.java.name} m INNER JOIN m.keys k WHERE k.publicKeyHash = :keyHash",
                 PersistentMemberInfo::class.java
-        ).setParameter("memberId", memberId)
+        ).setParameter("keyHash", keyHash)
                 .resultList
                 .singleOrNull()
     }
 
     private fun queryPersistentInfoByName(name: CordaX500Name): PersistentMemberInfo? = database.transaction {
         session.createQuery(
-                "SELECT m FROM ${PersistentMemberInfo::class.java.name} m WHERE party_name = :name",
+                "SELECT m FROM ${PersistentMemberInfo::class.java.name} m WHERE name = :name",
                 PersistentMemberInfo::class.java
         ).setParameter("name", name.toString())
                 .resultList
@@ -111,4 +161,19 @@ class PersistentMembershipGroupCache(
                 PersistentMemberInfo::class.java
         ).resultList
     }
+
+    override fun clearNetworkMapCache() {
+        logger.info("Clearing Membership Group Cache entries")
+        database.transaction {
+            val result = queryAllPersistentInfo()
+            logger.debug { "Number of member infos to be cleared: ${result.size}" }
+            for (memberInfo in result) session.remove(memberInfo)
+        }
+    }
+
+    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
+
+    override fun isNotary(party: Party): Boolean = notaries.any { it.identity == party }
+
+    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 }

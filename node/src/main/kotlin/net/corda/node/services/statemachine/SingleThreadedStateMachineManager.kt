@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.PermissionException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.SignedData
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
@@ -35,8 +36,10 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
+import net.corda.node.services.api.MembershipRequest
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.network.isMGM
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
@@ -700,7 +703,8 @@ internal class SingleThreadedStateMachineManager(
             event.deduplicationHandler.afterDatabaseTransaction()
             return
         }
-        val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
+        // TODO[DR]: Need a different lookup from MembershipGroupCache + check for TLS subject.
+        val sender = serviceHub.networkMapCache.getParty(peer) ?: authoriseUnknownSender(sessionMessage)
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event)
@@ -711,6 +715,25 @@ internal class SingleThreadedStateMachineManager(
             // TODO Test that restarting the node attempts to retry
             logger.error("Unknown peer $peer in $sessionMessage")
         }
+    }
+
+    // TODO[DR]: Temp implementation, MembershipRequest needs to be replaced with data from message header.
+    // TODO[DR]: Message header data should be sufficient to create bridge, i.e. include holding identity + endpoint(s).
+    private fun authoriseUnknownSender(sessionMessage: SessionMessage): Party? {
+        if (!serviceHub.myMemberInfo.isMGM) {
+            return null
+        }
+        if (sessionMessage is InitialSessionMessage && sessionMessage.firstPayload != null) {
+            try {
+                val request = sessionMessage.firstPayload.deserialize<SignedData<MembershipRequest>>().verified()
+                return serviceHub.networkMapCache.addRegistrationRequest(request)?.also {
+                    logger.info("Membership registration request from $it")
+                }
+            } catch (ex: Exception) {
+                logger.error("Unable to deserialize InitialSessionMessage payload from unknown peer", ex)
+            }
+        }
+        return null
     }
 
     private fun onExistingSessionMessage(

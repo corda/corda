@@ -6,44 +6,27 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByService
-import net.corda.core.identity.Party
 import net.corda.core.node.MemberInfo
 import net.corda.core.node.MemberStatus
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.membership.sign
-import net.corda.node.services.network.IllegalMembershipStatusException
-
-@CordaSerializable
-data class MemberInfoSyncData(val updatedMembers: List<MemberInfo>)
 
 @InitiatingFlow
 @StartableByService
-class SyncMembershipGroupCacheFlow(private val party: Party) : MembershipGroupManagementFlow() {
+class SyncMembershipGroupCacheFlow : MembershipGroupManagementFlow() {
 
     @Suspendable
     override fun call() {
-        authorise()
+        val session = initiateFlow(membershipGroupCache.mgmInfo.party)
+        session.send(Unit)
 
-        val allMembers = getAllMembers()
-        val session = initiateFlow(party)
-        val signedMemberInfos = MemberInfoSyncData(allMembers).sign(
-                keyManagementService = serviceHub.keyManagementService,
-                key = ourIdentity.owningKey
-        )
-
-        session.sendAndReceive<Unit>(signedMemberInfos)
-    }
-
-    @Suspendable
-    private fun getAllMembers(): List<MemberInfo> {
-        when (membershipGroupCache.getMemberInfo(party)?.status) {
-            MemberStatus.PENDING ->
-                throw IllegalMembershipStatusException("$party cannot sync membership group data since it is in pending status")
-            null -> logger.warn("$party is not member of the Membership Group ID $groupId")
-            else -> {}
+        val updatedMembers = session.receive<SignedData<List<MemberInfo>>>().unwrap { it.verified() }
+        val removedMembers = membershipGroupCache.allMembers.filter { memberInfo ->
+            updatedMembers.find { it.party.name == memberInfo.party.name } == null
         }
-        return membershipGroupCache.allMembers.filterNot { it.status == MemberStatus.PENDING }
+
+        membershipGroupCache.addOrUpdateMembers(updatedMembers)
+        removedMembers.forEach { membershipGroupCache.removeMember(it) }
     }
 }
 
@@ -52,15 +35,13 @@ class SyncMembershipGroupCacheResponderFlow(private val session: FlowSession) : 
 
     @Suspendable
     override fun call() {
-        val updatedMembers = session.receive<SignedData<MemberInfoSyncData>>().unwrap { it.verified() }.updatedMembers
+        // Add check that session.counterpart is registered
+        authorise()
+        session.receive<Unit>()
 
-        val removedMembers = membershipGroupCache.allMembers.filter { memberInfo ->
-            updatedMembers.find { it.party == memberInfo.party } == null
-        }
+        val members = membershipGroupCache.allMembers.filterNot { it.status == MemberStatus.PENDING }
 
-        membershipGroupCache.addOrUpdateMembers(updatedMembers)
-        removedMembers.forEach { membershipGroupCache.removeMember(it) }
-
-        session.send(Unit)
+        val signedMembers = members.sign(serviceHub.keyManagementService, ourIdentity.owningKey)
+        session.send(signedMembers)
     }
 }

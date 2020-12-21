@@ -15,6 +15,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.network.toPartyInfo
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import java.io.NotSerializableException
 
@@ -79,8 +80,8 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             log.trace { "Sending message $deduplicationId $message to $party on behalf of $destination" }
         }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
-        val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) { "Don't know about ${party.description()}" }
-        val address = serviceHub.networkService.getAddressOfParty(partyInfo)
+        val memberInfo = requireNotNull(serviceHub.networkMapCache.getMemberInfo(party)) { "Don't know about ${party.description()}" }
+        val address = serviceHub.networkService.getAddressOfParty(memberInfo.toPartyInfo())
         val sequenceKey = when (message) {
             is InitialSessionMessage -> message.initiatorSessionId
             is ExistingSessionMessage -> message.recipientSessionId

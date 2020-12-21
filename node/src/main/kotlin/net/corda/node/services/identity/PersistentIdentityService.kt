@@ -17,7 +17,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.internal.schemas.MemberInfoSchemaV1
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.network.NotaryUpdateListener
@@ -110,9 +110,15 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             return NonInvalidatingCache(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_nameToParty",
-                    loadFunction = {
-                        val result = currentDBSession().find(NodeInfoSchemaV1.DBPartyAndCertificate::class.java, it.toString())
-                        Optional.ofNullable(result?.toLegalIdentityAndCert()?.party)
+                    loadFunction = { name ->
+                        val result = currentDBSession().createQuery(
+                                "SELECT k.publicKey FROM ${MemberInfoSchemaV1.PersistentMemberInfo::class.java.name} m INNER JOIN m.keys k"
+                                        + " WHERE m.name = :name AND k.publicKeyHash = m.publicKeyHash",
+                                ByteArray::class.java
+                        ).setParameter("name", name.toString())
+                                .resultList
+                                .singleOrNull()
+                        Optional.ofNullable(result?.let { Party(name, Crypto.decodePublicKey(it)) })
                     }
             )
         }
@@ -268,6 +274,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return registerIdentity(identity, isNewRandomIdentity)
     }
 
+    override fun registerIdentity(identity: PartyAndCertificate) {
+        registerIdentity(identity, false)
+    }
+
     private fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         log.debug { "Registering identity $identity" }
         val identityCertChain = identity.certPath.x509Certificates
@@ -337,18 +347,15 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         }
     }
 
-    private fun getAllCertificates(session: Session): List<NodeInfoSchemaV1.DBPartyAndCertificate> {
-        val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
-        criteria.select(criteria.from(NodeInfoSchemaV1.DBPartyAndCertificate::class.java))
-        return session.createQuery(criteria).resultList
+    private fun getAllParties(session: Session): List<Party> {
+        val criteria = session.criteriaBuilder.createQuery(MemberInfoSchemaV1.PersistentMemberInfo::class.java)
+        criteria.select(criteria.from(MemberInfoSchemaV1.PersistentMemberInfo::class.java))
+        return session.createQuery(criteria).resultList.map { it.toParty() }
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
-            getAllCertificates(session)
-                    .map { it.toLegalIdentityAndCert() }
-                    .filter { x500Matches(query, exactMatch, it.name) }
-                    .map { it.party }.toSet()
+            getAllParties(session).filter { x500Matches(query, exactMatch, it.name) }.toSet()
         }
     }
 

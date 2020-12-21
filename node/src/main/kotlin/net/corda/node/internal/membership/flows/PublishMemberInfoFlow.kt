@@ -2,15 +2,16 @@ package net.corda.node.internal.membership.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SignedData
-import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByService
 import net.corda.core.node.MemberInfo
+import net.corda.core.node.MemberRole
+import net.corda.core.node.MemberStatus
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.membership.sign
-import net.corda.node.services.network.MembershipNotFoundException
+import net.corda.node.services.api.MembershipRequest
 
 @InitiatingFlow
 @StartableByService
@@ -18,16 +19,11 @@ class PublishMemberInfoFlow(private val memberInfo: MemberInfo) : MembershipGrou
 
     @Suspendable
     override fun call() {
-        if (memberInfo.party != ourIdentity) {
-            throw FlowException("Initiator can only publish its own membership info")
-        }
+        val session = initiateFlow(membershipGroupCache.mgmInfo.party)
+        session.send(MembershipRequest(memberInfo).sign(serviceHub.keyManagementService, ourIdentity.owningKey))
 
-        if (membershipGroupCache.getMemberInfo(ourIdentity) == null) {
-            throw MembershipNotFoundException(ourIdentity, groupId)
-        }
-
-        val session = initiateFlow(membershipGroupCache.managerInfo.party)
-        session.sendAndReceive<Unit>(memberInfo.sign(serviceHub.keyManagementService, ourIdentity.owningKey))
+        val updatedMemberInfo = session.receive<SignedData<MemberInfo>>().unwrap { it.verified() }
+        membershipGroupCache.addOrUpdateMember(updatedMemberInfo)
     }
 }
 
@@ -38,10 +34,11 @@ class PublishMemberInfoResponderFlow(private val session: FlowSession) : Members
     override fun call() {
         authorise()
 
-        val memberInfo = session.receive<SignedData<MemberInfo>>().unwrap { it.verified() }
-
+        val request = session.receive<SignedData<MembershipRequest>>().unwrap { it }.verified()
+        val memberInfo = request.memberInfo.copy(status = MemberStatus.ACTIVE, role = MemberRole.NODE)
         membershipGroupCache.addOrUpdateMember(memberInfo)
 
-        session.send(Unit)
+        val signedMemberInfo = memberInfo.sign(serviceHub.keyManagementService, ourIdentity.owningKey)
+        session.send(signedMemberInfo)
     }
 }

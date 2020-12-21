@@ -1,13 +1,17 @@
 package net.corda.node.internal
 
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.network.MGM_KEY_ENTROPY
+import net.corda.node.services.network.MGM_NAME
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
@@ -41,6 +45,9 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
     private val _signingKeys: MutableSet<KeyAndAlias> = mutableSetOf()
     val signingKeys: Set<KeyAndAlias> get() = _signingKeys.toSet()
 
+    private lateinit var _mgmParty: Party
+    val mgmParty: Party get() = _mgmParty
+
     private lateinit var trustRoots: Set<X509Certificate>
 
     private lateinit var nodeKeyStore: CertificateStore
@@ -51,13 +58,16 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
      * @return trust root certificates
      */
     fun init(devModeKeyEntropy: BigInteger? = null): Set<X509Certificate> {
-        if (configuration.devMode) {
-            configuration.configureWithDevSSLCertificate(cryptoService, devModeKeyEntropy)
-            // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
-            // we should re-synchronise BCCryptoService with the updated keystore file.
-            if (cryptoService is BCCryptoService) {
-                cryptoService.resyncKeystore()
-            }
+        val mgmKey = Crypto.deriveKeyPairFromEntropy(Crypto.DEFAULT_SIGNATURE_SCHEME, MGM_KEY_ENTROPY)
+        _mgmParty = Party(MGM_NAME, mgmKey.public)
+
+        val entropy = MGM_KEY_ENTROPY.takeIf { configuration.myLegalName == MGM_NAME } ?: devModeKeyEntropy
+        // Create keystores with dev certificates if they are not explicitly provided.
+        configuration.configureWithDevSSLCertificate(cryptoService, entropy)
+        // configureWithDevSSLCertificate writes directly to keystore files, so
+        // we should re-synchronise BCCryptoService with the updated keystore file.
+        if (cryptoService is BCCryptoService) {
+            cryptoService.resyncKeystore()
         }
         val certStores = getCertificateStores()
         trustRoots = validateKeyStores(certStores)

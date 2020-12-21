@@ -2,13 +2,13 @@ package net.corda.core.node
 
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import java.security.Principal
 import java.security.PublicKey
+import javax.security.auth.x500.X500Principal
 
 @CordaSerializable
 data class MemberInfo(
-        val memberId: String,
         val party: Party,
+        val groupId: String,
         val keys: List<PublicKey>,
         val endpoints: List<EndpointInfo>,
         val status: MemberStatus,
@@ -25,10 +25,12 @@ data class MemberInfo(
     }
 }
 
+val MemberInfo.distributed: Boolean get() = (endpoints.size > 1 && endpoints.map { it.tlsSubjectName }.toSet().size > 1)
+
 @CordaSerializable
 data class EndpointInfo(
         val connectionURL: String,
-        val tlsSubjectName: Principal,
+        val tlsSubjectName: X500Principal,
         val protocolVersion: Int
 ) {
     init {

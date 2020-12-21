@@ -4,7 +4,6 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.EndpointInfo
 import net.corda.core.node.MemberInfo
 import net.corda.core.node.MemberRole
 import net.corda.core.node.MemberStatus
@@ -17,13 +16,11 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.FetchType
 import javax.persistence.ForeignKey
-import javax.persistence.GeneratedValue
 import javax.persistence.Id
 import javax.persistence.JoinColumn
 import javax.persistence.Lob
 import javax.persistence.OneToMany
 import javax.persistence.Table
-import javax.security.auth.x500.X500Principal
 
 object MemberInfoSchema
 
@@ -32,7 +29,6 @@ object MemberInfoSchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(
                 PersistentMemberInfo::class.java,
-                PersistentEndpointInfo::class.java,
                 PersistentKey::class.java
         )
 ) {
@@ -43,24 +39,20 @@ object MemberInfoSchemaV1 : MappedSchema(
     @Suppress("LongParameterList")
     class PersistentMemberInfo(
             @Id
-            @Column(name = "member_id", nullable = false)
-            val memberId: String,
-
-            @Column(name = "party_name", nullable = false)
-            val partyName: String,
+            @Column(name = "name", nullable = false)
+            val name: String,
 
             @Column(name = "public_key_hash", nullable = false)
             val publicKeyHash: String,
 
             @Column(name = "keys", nullable = false)
             @OneToMany(cascade = [CascadeType.ALL], fetch = FetchType.EAGER, orphanRemoval = true)
-            @JoinColumn(name = "member_id", foreignKey = ForeignKey(name = "FK__member_info_key"))
+            @JoinColumn(name = "name", foreignKey = ForeignKey(name = "FK__member_info_key"))
             val keys: Set<PersistentKey>,
 
             @Column(name = "endpoints", nullable = false)
-            @OneToMany(cascade = [CascadeType.ALL], fetch = FetchType.EAGER, orphanRemoval = true)
-            @JoinColumn(name = "member_id", foreignKey = ForeignKey(name = "FK__member_info_endpoint"))
-            val endpoints: Set<PersistentEndpointInfo>,
+            @Lob
+            val endpoints: ByteArray,
 
             @Column(name = "status", nullable = false)
             val status: MemberStatus,
@@ -81,11 +73,10 @@ object MemberInfoSchemaV1 : MappedSchema(
         companion object {
             fun fromMemberInfo(memberInfo: MemberInfo) = with(memberInfo) {
                 PersistentMemberInfo(
-                        memberId = memberId,
-                        partyName = party.name.toString(),
+                        name = party.name.toString(),
                         publicKeyHash = party.owningKey.toStringShort(),
                         keys = keys.map { PersistentKey.fromPublicKey(it) }.toSet(),
-                        endpoints = endpoints.map { PersistentEndpointInfo.fromEndpointInfo(it) }.toSet(),
+                        endpoints = endpoints.serialize().bytes,
                         status = status,
                         softwareVersion = softwareVersion,
                         platformVersion = platformVersion,
@@ -95,57 +86,21 @@ object MemberInfoSchemaV1 : MappedSchema(
             }
         }
 
-        private fun toParty(): Party {
-            val name = CordaX500Name.parse(partyName)
+        fun toParty(): Party {
             val publicKey = keys.single { it.publicKeyHash == publicKeyHash }.toPublicKey()
-            return Party(name, publicKey)
+            return Party(CordaX500Name.parse(name), publicKey)
         }
 
-        fun toMemberInfo() = MemberInfo(
-                memberId = memberId,
+        fun toMemberInfo(groupId: String) = MemberInfo(
                 party = toParty(),
+                groupId = groupId,
                 keys = keys.map { it.toPublicKey() },
-                endpoints = endpoints.map { it.toEndpointInfo() },
+                endpoints = endpoints.deserialize(),
                 status = status,
                 softwareVersion = softwareVersion,
                 platformVersion = platformVersion,
                 role = role,
                 properties = properties.deserialize()
-        )
-    }
-
-    @Entity
-    @Table(name = "member_info_endpoint")
-    class PersistentEndpointInfo(
-            @Id
-            @GeneratedValue
-            @Column(name = "endpoint_id", nullable = false)
-            val id: Int,
-
-            @Column(name = "connection_url", nullable = false)
-            val connectionURL: String,
-
-            @Column(name = "tls_subject_name", nullable = false)
-            val tlsSubjectName: String,
-
-            @Column(name = "protocol_version", nullable = false)
-            val protocolVersion: Int
-    ) {
-        companion object {
-            fun fromEndpointInfo(endpointInfo: EndpointInfo) = with(endpointInfo) {
-                PersistentEndpointInfo(
-                        id = 0,
-                        connectionURL = connectionURL,
-                        tlsSubjectName = tlsSubjectName.name,
-                        protocolVersion = protocolVersion
-                )
-            }
-        }
-
-        fun toEndpointInfo() = EndpointInfo(
-                connectionURL = connectionURL,
-                tlsSubjectName = X500Principal(tlsSubjectName),
-                protocolVersion = protocolVersion
         )
     }
 

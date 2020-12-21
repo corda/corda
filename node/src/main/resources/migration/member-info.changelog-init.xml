@@ -3,31 +3,12 @@
                    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="R3.Corda" id="MemberInfoEndpointTableCreation">
-        <createTable tableName="member_info_endpoint">
-            <column name="endpoint_id" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="member_id" type="VARCHAR(64)">
-                <constraints nullable="true"/>
-            </column>
-            <column name="connection_url" type="NVARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="tls_subject_name" type="NVARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="protocol_version" type="INT">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-    </changeSet>
     <changeSet author="R3.Corda" id="MemberInfoKeyTableCreation">
         <createTable tableName="member_info_key">
             <column name="public_key_hash" type="VARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="member_id" type="VARCHAR(64)">
+            <column name="name" type="NVARCHAR(255)">
                 <constraints nullable="true"/>
             </column>
             <column name="public_key" type="blob">
@@ -37,13 +18,13 @@
     </changeSet>
     <changeSet author="R3.Corda" id="MemberInfoTableCreation">
         <createTable tableName="member_info">
-            <column name="member_id" type="VARCHAR(64)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="party_name" type="NVARCHAR(255)">
+            <column name="name" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="public_key_hash" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="endpoints" type="BLOB">
                 <constraints nullable="false"/>
             </column>
             <column name="status" type="INT">
@@ -63,29 +44,16 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="MemberInfoEndpointPrimaryKey">
-        <addPrimaryKey columnNames="endpoint_id" constraintName="member_info_endpoint_pkey" tableName="member_info_endpoint"/>
-    </changeSet>
     <changeSet author="R3.Corda" id="MemberInfoKeyPrimaryKey">
         <addPrimaryKey columnNames="public_key_hash" constraintName="member_info_key_pkey" tableName="member_info_key"/>
     </changeSet>
     <changeSet author="R3.Corda" id="MemberInfoPrimaryKey">
-        <addPrimaryKey columnNames="member_id" constraintName="member_info_pkey" tableName="member_info"/>
+        <addPrimaryKey columnNames="name" constraintName="member_info_pkey" tableName="member_info"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="MemberInfoEndpointForeignKey">
-        <addForeignKeyConstraint baseColumnNames="member_id" baseTableName="member_info_endpoint"
-                                 constraintName="FK__member_info_endpoint"
-                                 referencedColumnNames="member_id" referencedTableName="member_info"/>
-    </changeSet>
     <changeSet author="R3.Corda" id="MemberInfoKeyForeignKey">
-        <addForeignKeyConstraint baseColumnNames="member_id" baseTableName="member_info_key"
+        <addForeignKeyConstraint baseColumnNames="name" baseTableName="member_info_key"
                                  constraintName="FK__member_info_key"
-                                 referencedColumnNames="member_id" referencedTableName="member_info"/>
-    </changeSet>
-    <changeSet author="R3.Corda" id="MemberInfoPartyNameIndex">
-        <createIndex indexName="member_info_party_name_idx" tableName="member_info" unique="true">
-            <column name="party_name"/>
-        </createIndex>
+                                 referencedColumnNames="name" referencedTableName="member_info"/>
     </changeSet>
 </databaseChangeLog>
