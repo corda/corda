@@ -53,8 +53,8 @@ class NotaryChangeTests {
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         clientA = clientNodeA.info.singleIdentity()
         oldNotaryNode = mockNet.notaryNodes[0]
-        oldNotaryParty = clientNodeA.services.networkMapCache.getParty(oldNotaryName)!!
-        newNotaryParty = clientNodeA.services.networkMapCache.getParty(newNotaryName)!!
+        oldNotaryParty = clientNodeA.services.networkMapCache.getPartyByName(oldNotaryName)!!
+        newNotaryParty = clientNodeA.services.networkMapCache.getPartyByName(newNotaryName)!!
     }
 
     @After

@@ -24,17 +24,17 @@ interface MembershipGroupCache {
 
     val allMembers: List<MemberInfo>
 
+    fun getMemberByName(name: CordaX500Name): MemberInfo?
+
+    fun getMemberByKey(key: PublicKey): MemberInfo?
+
+    fun getMemberByParty(party: Party): MemberInfo?
+
     val allParties: List<Party>
 
-    fun getParty(name: CordaX500Name): Party?
+    fun getPartyByName(name: CordaX500Name): Party?
 
-    fun getParty(key: PublicKey): Party?
-
-    fun getMemberInfo(party: Party): MemberInfo?
-
-    fun getMemberInfo(name: CordaX500Name): MemberInfo?
-
-    fun clearNetworkMapCache()
+    fun getPartyByKey(key: PublicKey): Party?
 
     // Notaries (legacy)
     val notaryIdentities: List<Party>

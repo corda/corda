@@ -55,7 +55,7 @@ class P2PMessagingTest {
             node.respondWith(node.services.myInfo)
         }
         val serviceAddress = originatingNode.services.networkMapCache.run {
-            originatingNode.internalServices.networkService.getAddressOfParty(getMemberInfo(serviceName)!!.toPartyInfo())
+            originatingNode.internalServices.networkService.getAddressOfParty(getMemberByName(serviceName)!!.toPartyInfo())
         }
         val participatingNodes = HashSet<Any>()
         // Try several times so that we can be fairly sure that any node not participating is not due to Artemis' selection

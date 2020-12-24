@@ -13,6 +13,8 @@ import net.corda.node.services.network.toMemberInfo
 data class MembershipRequest(val memberInfo: MemberInfo)
 
 interface MembershipGroupCacheInternal : MembershipGroupCache {
+    val mgmInfo: MemberInfo
+
     val nodeReady: OpenFuture<Void?>
 
     fun addOrUpdateMember(memberInfo: MemberInfo)
@@ -21,11 +23,11 @@ interface MembershipGroupCacheInternal : MembershipGroupCache {
 
     fun removeMember(memberInfo: MemberInfo)
 
-    fun getMemberInfoByKeyHash(keyHash: String): MemberInfo?
-
-    val mgmInfo: MemberInfo
+    fun getMemberByKeyHash(keyHash: String): MemberInfo?
 
     fun addRegistrationRequest(request: MembershipRequest): Party?
+
+    fun clearCache()
 
     // TODO[DR]: Legacy, remove later.
     fun addOrUpdateNode(nodeInfo: NodeInfo) = addOrUpdateMember(nodeInfo.toMemberInfo())

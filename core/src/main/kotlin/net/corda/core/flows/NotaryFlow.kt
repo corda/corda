@@ -61,7 +61,7 @@ class NotaryFlow {
             @CordaInternal
             get() {
                 val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
-                return serviceHub.networkMapCache.getMemberInfo(notaryParty)?.distributed ?: false
+                return serviceHub.networkMapCache.getMemberByParty(notaryParty)?.distributed ?: false
             }
 
         @Suspendable

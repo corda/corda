@@ -115,25 +115,36 @@ class PersistentMembershipGroupCache(
         }
     }
 
-    // TODO[DR]: Optimization needed: no need to retrieve the whole MemberInfo.
-    override fun getParty(name: CordaX500Name): Party? {
-        return getMemberInfo(name)?.party
+    override fun clearCache() {
+        logger.info("Clearing Membership Group Cache entries")
+        database.transaction {
+            val result = queryAllPersistentInfo()
+            logger.debug { "Number of member infos to be cleared: ${result.size}" }
+            for (memberInfo in result) session.remove(memberInfo)
+        }
     }
 
-    // TODO[DR]: Optimization needed: no need to retrieve the whole MemberInfo.
-    override fun getParty(key: PublicKey): Party? {
-        return getMemberInfoByKeyHash(key.toStringShort())?.party
+    override fun getPartyByName(name: CordaX500Name): Party? {
+        return getMemberByName(name)?.party
     }
 
-    override fun getMemberInfo(party: Party): MemberInfo? {
-        return getMemberInfoByKeyHash(party.owningKey.toStringShort())?.takeIf { party.name == it.party.name }
+    override fun getPartyByKey(key: PublicKey): Party? {
+        return getMemberByKey(key)?.party
     }
 
-    override fun getMemberInfo(name: CordaX500Name): MemberInfo? {
+    override fun getMemberByKey(key: PublicKey): MemberInfo? {
+        return getMemberByKeyHash(key.toStringShort())
+    }
+
+    override fun getMemberByName(name: CordaX500Name): MemberInfo? {
         return queryPersistentInfoByName(name)?.toMemberInfo(groupId)
     }
 
-    override fun getMemberInfoByKeyHash(keyHash: String): MemberInfo? {
+    override fun getMemberByParty(party: Party): MemberInfo? {
+        return getMemberByKey(party.owningKey)?.takeIf { party.name == it.party.name }
+    }
+
+    override fun getMemberByKeyHash(keyHash: String): MemberInfo? {
         return queryPersistentInfoByKeyHash(keyHash)?.toMemberInfo(groupId)
     }
 
@@ -160,15 +171,6 @@ class PersistentMembershipGroupCache(
                 "SELECT m FROM ${PersistentMemberInfo::class.java.name} m",
                 PersistentMemberInfo::class.java
         ).resultList
-    }
-
-    override fun clearNetworkMapCache() {
-        logger.info("Clearing Membership Group Cache entries")
-        database.transaction {
-            val result = queryAllPersistentInfo()
-            logger.debug { "Number of member infos to be cleared: ${result.size}" }
-            for (memberInfo in result) session.remove(memberInfo)
-        }
     }
 
     override val notaryIdentities: List<Party> get() = notaries.map { it.identity }

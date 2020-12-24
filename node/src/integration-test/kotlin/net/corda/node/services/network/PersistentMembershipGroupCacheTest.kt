@@ -48,33 +48,33 @@ class PersistentMembershipGroupCacheTest {
 
     @Test(timeout = 300_000)
     fun `insert member into database`() {
-        assertEquals(aliceInfo, membershipGroupCache.getMemberInfo(alice))
-        assertEquals(bobInfo, membershipGroupCache.getMemberInfo(bob))
-        assertNull(membershipGroupCache.getMemberInfo(charlie))
+        assertEquals(aliceInfo, membershipGroupCache.getMemberByParty(alice))
+        assertEquals(bobInfo, membershipGroupCache.getMemberByParty(bob))
+        assertNull(membershipGroupCache.getMemberByParty(charlie))
     }
 
     @Test(timeout = 300_000)
     fun `update member info`() {
         val properties = mapOf("username" to "dummy")
         membershipGroupCache.addOrUpdateMember(aliceInfo.copy(status = MemberStatus.SUSPENDED, properties = properties))
-        val updatedMember = membershipGroupCache.getMemberInfo(alice)
+        val updatedMember = membershipGroupCache.getMemberByParty(alice)
         assertEquals(MemberStatus.SUSPENDED, updatedMember?.status)
         assertEquals(properties, updatedMember?.properties)
     }
 
     @Test(timeout = 300_000)
     fun `remove member info`() {
-        assertEquals(aliceInfo, membershipGroupCache.getMemberInfo(alice))
+        assertEquals(aliceInfo, membershipGroupCache.getMemberByParty(alice))
         membershipGroupCache.removeMember(aliceInfo)
-        assertNull(membershipGroupCache.getMemberInfo(alice))
-        assertEquals(bobInfo, membershipGroupCache.getMemberInfo(bob))
+        assertNull(membershipGroupCache.getMemberByParty(alice))
+        assertEquals(bobInfo, membershipGroupCache.getMemberByParty(bob))
     }
 
     @Test(timeout = 300_000)
     fun `get member info by key hash`() {
-        assertEquals(aliceInfo, membershipGroupCache.getMemberInfoByKeyHash(alice.owningKey.toStringShort()))
-        assertEquals(bobInfo, membershipGroupCache.getMemberInfoByKeyHash(bob.owningKey.toStringShort()))
-        assertNull(membershipGroupCache.getMemberInfoByKeyHash(charlie.owningKey.toStringShort()))
+        assertEquals(aliceInfo, membershipGroupCache.getMemberByKeyHash(alice.owningKey.toStringShort()))
+        assertEquals(bobInfo, membershipGroupCache.getMemberByKeyHash(bob.owningKey.toStringShort()))
+        assertNull(membershipGroupCache.getMemberByKeyHash(charlie.owningKey.toStringShort()))
     }
 
     @Test(timeout = 300_000)

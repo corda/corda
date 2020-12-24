@@ -704,7 +704,7 @@ internal class SingleThreadedStateMachineManager(
             return
         }
         // TODO[DR]: Need a different lookup from MembershipGroupCache + check for TLS subject.
-        val sender = serviceHub.networkMapCache.getParty(peer) ?: authoriseUnknownSender(sessionMessage)
+        val sender = serviceHub.networkMapCache.getPartyByName(peer) ?: authoriseUnknownSender(sessionMessage)
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender, event)

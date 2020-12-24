@@ -441,7 +441,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Starting clearing of network map cache entries...")
         startDatabase()
         database.use {
-            networkMapCache.clearNetworkMapCache()
+            networkMapCache.clearCache()
         }
     }
 

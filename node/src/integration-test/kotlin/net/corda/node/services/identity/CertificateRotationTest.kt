@@ -173,7 +173,7 @@ class CertificateRotationTest {
         alice.services.startFlow(CashPaymentFlow(1000.DOLLARS, bob.party, false))
         mockNet.runNetwork()
 
-        bob.services.networkMapCache.clearNetworkMapCache()
+        bob.services.networkMapCache.clearCache()
 
         val bob2 = mockNet.restartNode(bob)
         val charlie = mockNet.createPartyNode(CHARLIE_NAME)

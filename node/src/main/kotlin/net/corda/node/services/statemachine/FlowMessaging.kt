@@ -80,7 +80,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             log.trace { "Sending message $deduplicationId $message to $party on behalf of $destination" }
         }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
-        val memberInfo = requireNotNull(serviceHub.networkMapCache.getMemberInfo(party)) { "Don't know about ${party.description()}" }
+        val memberInfo = requireNotNull(serviceHub.networkMapCache.getMemberByParty(party)) { "Don't know about ${party.description()}" }
         val address = serviceHub.networkService.getAddressOfParty(memberInfo.toPartyInfo())
         val sequenceKey = when (message) {
             is InitialSessionMessage -> message.initiatorSessionId

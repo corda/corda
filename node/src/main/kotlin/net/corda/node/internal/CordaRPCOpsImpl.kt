@@ -97,7 +97,7 @@ internal class CordaRPCOpsImpl(
     override val protocolVersion: Int get() = nodeInfo().platformVersion
 
     override fun networkMapSnapshot(): List<NodeInfo> {
-        return services.networkMapCache.allMembers.map { it.toNodeInfo() }
+        return services.networkMapCache.allMembers.map { it.toNodeInfo() }.toList()
     }
 
     override val networkParameters: NetworkParameters get() = services.networkParameters
@@ -313,15 +313,15 @@ internal class CordaRPCOpsImpl(
 
     // TODO[DR]: Use Party instead of AbstractParty
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
-        return services.networkMapCache.getParty(party.owningKey)?.let {
-            services.networkMapCache.getMemberInfo(it)?.toNodeInfo()
+        return services.networkMapCache.getPartyByKey(party.owningKey)?.let {
+            services.networkMapCache.getMemberByParty(it)?.toNodeInfo()
         }
     }
 
     override fun registeredFlows(): List<String> = services.rpcFlows.asSequence().map(Class<*>::getName).sorted().toList()
 
     override fun clearNetworkMapCache() {
-        services.networkMapCache.clearNetworkMapCache()
+        services.networkMapCache.clearCache()
     }
 
     override fun refreshNetworkMapCache() = throw NotImplementedError()

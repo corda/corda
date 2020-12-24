@@ -310,7 +310,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         val requiredBridges = mutableListOf<BridgeEntry>()
         fun createBridgeEntry(queueName: SimpleString) {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
-            networkMap.getMemberInfoByKeyHash(keyHash)?.let {
+            networkMap.getMemberByKeyHash(keyHash)?.let {
                 val bridge = BridgeEntry(queueName.toString(), it.addresses, listOf(it.party.name), serviceAddress = false)
                 requiredBridges += bridge
                 knownQueues += queueName.toString()
@@ -545,7 +545,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean, isServiceAddress: Boolean) {
         fun sendBridgeCreateMessage() {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
-            networkMap.getMemberInfoByKeyHash(keyHash)?.let {
+            networkMap.getMemberByKeyHash(keyHash)?.let {
                 val bridge = BridgeEntry(queueName, it.addresses, listOf(it.party.name), isServiceAddress)
                 val createBridgeMessage = BridgeControl.Create(config.myLegalName.toString(), bridge)
                 sendBridgeControl(createBridgeMessage)
