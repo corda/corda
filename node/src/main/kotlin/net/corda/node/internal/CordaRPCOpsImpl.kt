@@ -311,11 +311,9 @@ internal class CordaRPCOpsImpl(
         return services.identityService.partiesFromName(query, exactMatch)
     }
 
-    // TODO[DR]: Use Party instead of AbstractParty
+    // TODO[DR]: Use Party instead of AbstractParty and getPartyByKey()
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
-        return services.networkMapCache.getPartyByKey(party.owningKey)?.let {
-            services.networkMapCache.getMemberByParty(it)?.toNodeInfo()
-        }
+        return services.networkMapCache.getMemberByKey(party.owningKey)?.toNodeInfo()
     }
 
     override fun registeredFlows(): List<String> = services.rpcFlows.asSequence().map(Class<*>::getName).sorted().toList()

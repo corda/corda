@@ -37,6 +37,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.messaging.FlowManagerRPCOps
@@ -109,6 +110,7 @@ import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.network.MembershipGroupFileUpdater
 import net.corda.node.services.network.MembershipGroupUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentMembershipGroupCache
@@ -172,6 +174,7 @@ import java.lang.reflect.InvocationTargetException
 import java.sql.Connection
 import java.sql.Savepoint
 import java.time.Clock
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -325,7 +328,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory, DBCheckpointStorage.MAX_CLIENT_ID_LENGTH)
 	val flowOperator = FlowOperator(smm, platformClock)
     private val schedulerService = makeNodeSchedulerService()
-    private val membershipGroupUpdater = MembershipGroupUpdater(services)
+    private val membershipGroupUpdater = makeMembershipGroupUpdater()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val shutdownExecutor = Executors.newSingleThreadExecutor()
@@ -670,6 +673,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Write the node-info file even if nothing's changed, just in case the file has been deleted.
+        (configuration.baseDirectory / NODE_INFO_DIRECTORY).createDirectories()
         NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
         NodeInfoWatcher.saveToFile(configuration.baseDirectory / NODE_INFO_DIRECTORY, nodeInfoAndSigned)
 
@@ -702,6 +706,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     // Extracted into a function to allow overriding in subclasses.
     protected open fun makeFlowLogicRefFactoryImpl() = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
+
+    protected open fun makeMembershipGroupUpdater() : LifecycleSupport {
+        if (configuration.networkServices == null) {
+            return MembershipGroupFileUpdater(
+                    networkMapCache,
+                    configuration.baseDirectory,
+                    rxIoScheduler,
+                    Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec))
+        }
+        return MembershipGroupUpdater(services)
+    }
 
     protected open fun makeNodeSchedulerService() = NodeSchedulerService(
             platformClock,

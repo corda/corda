@@ -150,6 +150,8 @@ class NodeH2SecurityTests {
 
         override fun makeCryptoService(): CryptoService = mock()
 
+        override fun makeMembershipGroupUpdater(): LifecycleSupport = mock()
+
         override fun makeNodeSchedulerService(): NodeSchedulerService = mock()
 
         override fun startHikariPool() {
