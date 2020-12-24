@@ -22,8 +22,7 @@ class PublishMemberInfoFlow(private val memberInfo: MemberInfo) : MembershipGrou
         val session = initiateFlow(membershipGroupCache.mgmInfo.party)
         session.send(MembershipRequest(memberInfo).sign(serviceHub.keyManagementService, ourIdentity.owningKey))
 
-        val updatedMemberInfo = session.receive<SignedData<MemberInfo>>().unwrap { it.verified() }
-        membershipGroupCache.addOrUpdateMember(updatedMemberInfo)
+        session.receive<SignedData<MemberInfo>>().unwrap { it.verified() }
     }
 }
 
