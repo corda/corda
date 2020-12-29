@@ -45,11 +45,12 @@ class PersistentMembershipGroupCache(
 
     private lateinit var _mgmInfo: MemberInfo
     override val mgmInfo: MemberInfo get() = _mgmInfo
+
     // TODO[DR]: Use _mgmInfo.groupId
     private val groupId get() = DEFAULT_MEMBER_GROUP_ID
 
     override val allMembers: List<MemberInfo>
-        get() = queryAllPersistentInfo().map { it.toMemberInfo(groupId) }.filter { it.party != mgmInfo.party }
+        get() = queryAllPersistentInfo().map { it.toMemberInfo(groupId) }.filter { it.role != MemberRole.MANAGER }
     override val allParties: List<Party> get() = allMembers.map { it.party }
 
     private lateinit var notaries: List<NotaryInfo>
@@ -100,7 +101,7 @@ class PersistentMembershipGroupCache(
     }
 
     override fun removeMember(memberInfo: MemberInfo) {
-        if (memberInfo.isMGM) {
+        if (memberInfo.role == MemberRole.MANAGER) {
             // TODO[DR]: Fix later
             return
         }
