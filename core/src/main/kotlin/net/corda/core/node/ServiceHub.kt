@@ -183,6 +183,9 @@ interface ServiceHub : ServicesForResolution {
     /** The [MemberInfo] object which corresponds to our entry in the Membership Group. **/
     val myMemberInfo: MemberInfo
 
+    /** The [MemberInfo] object which corresponds to manager entry in the Membership Group. **/
+    val mgmInfo: MemberInfo?
+
     /**
      * Return the singleton instance of the given Corda service type. This is a class that is annotated with
      * [CordaService] and will have automatically been registered by the node.

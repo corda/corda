@@ -49,6 +49,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.MemberInfo
+import net.corda.core.node.MemberRole
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -114,7 +115,7 @@ import net.corda.node.services.network.MembershipGroupFileUpdater
 import net.corda.node.services.network.MembershipGroupUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentMembershipGroupCache
-import net.corda.node.services.network.mgmInfo
+import net.corda.node.services.network.memberInfo
 import net.corda.node.services.network.toMemberInfo
 import net.corda.node.services.persistence.AbstractPartyDescriptor
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
@@ -483,7 +484,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
                 "Node's platform version is lower than network's required minimumPlatformVersion"
             }
-            networkMapCache.start(netParams.notaries, mgmInfo(keyStoreHandler.mgmParty, configuration.networkServices?.networkMapURL))
+            networkMapCache.start(netParams.notaries)
 
             database.transaction {
                 networkParametersStorage.setCurrentParameters(signedNetParams, trustRoots)
@@ -553,10 +554,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val rpcOps = makeRPCOps(cordappLoader)
 
         identityService.start(trustRoots, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
-        networkMapCache.start(netParams.notaries, mgmInfo(keyStoreHandler.mgmParty, configuration.networkServices?.networkMapURL))
+        val mgmInfo = configuration.networkServices?.let {
+            memberInfo(keyStoreHandler.mgmParty, it.networkMapURL.toString(), MemberRole.MANAGER)
+        }
+        networkMapCache.start(netParams.notaries, mgmInfo)
 
         val nodeInfo = generateNodeInfo().nodeInfo
-        services.start(nodeInfo, netParams)
+        services.start(nodeInfo, netParams, mgmInfo)
 
         try {
             startMessagingService(rpcOps, nodeInfo, keyStoreHandler.notaryIdentity, netParams)
@@ -1018,6 +1022,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = _myInfo
         private lateinit var _myMemberInfo: MemberInfo
         override val myMemberInfo: MemberInfo get() = _myMemberInfo
+        private var _mgmInfo: MemberInfo? = null
+        override val mgmInfo: MemberInfo? get() = _mgmInfo
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
 
@@ -1025,10 +1031,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters
 
-        fun start(myInfo: NodeInfo, networkParameters: NetworkParameters) {
+        fun start(myInfo: NodeInfo, networkParameters: NetworkParameters, mgmInfo: MemberInfo?) {
             this._myInfo = myInfo
             this._networkParameters = networkParameters
             this._myMemberInfo = myInfo.toMemberInfo(versionInfo.releaseVersion)
+            this._mgmInfo = mgmInfo
         }
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {

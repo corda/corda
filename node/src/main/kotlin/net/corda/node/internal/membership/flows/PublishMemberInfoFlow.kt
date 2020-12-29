@@ -19,7 +19,7 @@ class PublishMemberInfoFlow(private val memberInfo: MemberInfo) : MembershipGrou
 
     @Suspendable
     override fun call() {
-        val session = initiateFlow(membershipGroupCache.mgmInfo.party)
+        val session = initiateFlow(serviceHub.mgmInfo!!.party)
         session.send(MembershipRequest(memberInfo).sign(serviceHub.keyManagementService, ourIdentity.owningKey))
 
         session.receive<SignedData<MemberInfo>>().unwrap { it.verified() }

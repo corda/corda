@@ -1,6 +1,5 @@
 package net.corda.node.services.api
 
-import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.node.MemberInfo
 import net.corda.core.node.NodeInfo
@@ -8,13 +7,11 @@ import net.corda.core.node.services.MembershipGroupCache
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.network.toMemberInfo
 
-// TODO[DR]: Move to a message header.
+// TODO[DR]: Move MembershipRequest to MembershipGroupManagementFlow when not needed by SingleThreadedStateMachineManager.
 @CordaSerializable
 data class MembershipRequest(val memberInfo: MemberInfo)
 
 interface MembershipGroupCacheInternal : MembershipGroupCache {
-    val mgmInfo: MemberInfo
-
     val nodeReady: OpenFuture<Void?>
 
     fun addOrUpdateMember(memberInfo: MemberInfo)
@@ -24,8 +21,6 @@ interface MembershipGroupCacheInternal : MembershipGroupCache {
     fun removeMember(memberInfo: MemberInfo)
 
     fun getMemberByKeyHash(keyHash: String): MemberInfo?
-
-    fun addRegistrationRequest(request: MembershipRequest): Party?
 
     fun clearCache()
 

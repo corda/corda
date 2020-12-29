@@ -10,7 +10,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.MemberInfo
 import net.corda.core.node.MemberRole
-import net.corda.core.node.MemberStatus
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.MembershipGroupCache
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -19,7 +18,6 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.MemberInfoSchemaV1.PersistentMemberInfo
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.MembershipGroupCacheInternal
-import net.corda.node.services.api.MembershipRequest
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -43,10 +41,7 @@ class PersistentMembershipGroupCache(
     override val changed: Observable<MembershipGroupCache.GroupChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MembershipGroupCache.GroupChange> get() = _changed.bufferUntilDatabaseCommit()
 
-    private lateinit var _mgmInfo: MemberInfo
-    override val mgmInfo: MemberInfo get() = _mgmInfo
-
-    // TODO[DR]: Use _mgmInfo.groupId
+    // TODO[DR]: Add to database
     private val groupId get() = DEFAULT_MEMBER_GROUP_ID
 
     override val allMembers: List<MemberInfo>
@@ -55,23 +50,15 @@ class PersistentMembershipGroupCache(
 
     private lateinit var notaries: List<NotaryInfo>
 
-    fun start(notaries: List<NotaryInfo>, mgmInfo: MemberInfo) {
+    fun start(notaries: List<NotaryInfo>, mgmInfo: MemberInfo? = null) {
         this.notaries = notaries
-        _mgmInfo = mgmInfo
-        addOrUpdateMember(mgmInfo)
+        mgmInfo?.let { addOrUpdateMember(mgmInfo) }
     }
 
     override fun track(): DataFeed<List<MemberInfo>, MembershipGroupCache.GroupChange> {
         synchronized(_changed) {
             return DataFeed(allMembers, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
-    }
-
-    // TODO[DR]: Look later
-    override fun addRegistrationRequest(request: MembershipRequest): Party {
-        val memberInfo = request.memberInfo.copy(status = MemberStatus.PENDING, role = MemberRole.NODE)
-        addOrUpdateMember(memberInfo)
-        return memberInfo.party
     }
 
     override fun addOrUpdateMember(memberInfo: MemberInfo) {

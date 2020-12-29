@@ -48,7 +48,7 @@ fun NodeInfo.toMemberInfo(softwareVersion: String = "UNKNOWN"): MemberInfo {
 }
 
 fun memberInfo(party: Party, connectionURL: String? = null, role: MemberRole = MemberRole.NODE): MemberInfo {
-    val url = connectionURL ?: "https://localhost:20000"
+    val url = connectionURL ?: "https://test:12345"
     return MemberInfo(
             party = party,
             groupId = DEFAULT_MEMBER_GROUP_ID,
@@ -61,8 +61,6 @@ fun memberInfo(party: Party, connectionURL: String? = null, role: MemberRole = M
             properties = emptyMap()
     )
 }
-
-fun mgmInfo(party: Party, connectionURL: URL?) = memberInfo(party, connectionURL?.toString(), role = MemberRole.MANAGER)
 
 val MemberInfo.addresses: List<NetworkHostAndPort> get() = endpoints.map { with(URL(it.connectionURL)) { NetworkHostAndPort(host, port) } }
 

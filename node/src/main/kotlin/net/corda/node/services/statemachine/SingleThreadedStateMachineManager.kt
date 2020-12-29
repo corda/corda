@@ -703,7 +703,6 @@ internal class SingleThreadedStateMachineManager(
             event.deduplicationHandler.afterDatabaseTransaction()
             return
         }
-        // TODO[DR]: Need a different lookup from MembershipGroupCache + check for TLS subject.
         val sender = serviceHub.networkMapCache.getPartyByName(peer) ?: authoriseUnknownSender(sessionMessage)
         if (sender != null) {
             when (sessionMessage) {
@@ -717,18 +716,17 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    // TODO[DR]: Temp implementation, MembershipRequest needs to be replaced with data from message header.
-    // TODO[DR]: Message header data should be sufficient to create bridge, i.e. include holding identity + endpoint(s).
+    // Authorize the initial request to MGM node for registering new holding identity when sender is not yet known to MembershipGroupCache.
     private fun authoriseUnknownSender(sessionMessage: SessionMessage): Party? {
         if (!serviceHub.myMemberInfo.isMGM) {
             return null
         }
         if (sessionMessage is InitialSessionMessage && sessionMessage.firstPayload != null) {
             try {
-                val request = sessionMessage.firstPayload.deserialize<SignedData<MembershipRequest>>().verified()
-                return serviceHub.networkMapCache.addRegistrationRequest(request)?.also {
-                    logger.info("Membership registration request from $it")
-                }
+                // TODO[DR]: Replace MembershipRequest with sender data from message header.
+                val party = sessionMessage.firstPayload.deserialize<SignedData<MembershipRequest>>().verified().memberInfo.party
+                logger.info("Request from unknown party $party")
+                return party
             } catch (ex: Exception) {
                 logger.error("Unable to deserialize InitialSessionMessage payload from unknown peer", ex)
             }
