@@ -62,30 +62,26 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
         _mgmParty = Party(MGM_NAME, mgmKey.public)
 
         val entropy = MGM_KEY_ENTROPY.takeIf { configuration.myLegalName == MGM_NAME } ?: devModeKeyEntropy
-        // Create keystores with dev certificates if they are not explicitly provided.
-        configuration.configureWithDevSSLCertificate(cryptoService, entropy)
-        // configureWithDevSSLCertificate writes directly to keystore files, so
-        // we should re-synchronise BCCryptoService with the updated keystore file.
-        if (cryptoService is BCCryptoService) {
-            cryptoService.resyncKeystore()
+        val certStores = withExceptionHandling {
+            // Creating keystores with dev certificates if they are not explicitly provided.
+            configuration.configureWithDevSSLCertificate(cryptoService, entropy)
+            // configureWithDevSSLCertificate writes directly to keystore files, so
+            // we should re-synchronise BCCryptoService with the updated keystore file.
+            if (cryptoService is BCCryptoService) {
+                cryptoService.resyncKeystore()
+            }
+            getCertificateStores()
         }
-        val certStores = getCertificateStores()
         trustRoots = validateKeyStores(certStores)
         nodeKeyStore = certStores.nodeKeyStore
         loadIdentities()
         return unmodifiableSet(trustRoots)
     }
 
-    private data class AllCertificateStores(val trustStore: CertificateStore,
-                                            val sslKeyStore: CertificateStore,
-                                            val nodeKeyStore: CertificateStore)
-
-    private fun getCertificateStores(): AllCertificateStores {
-        try {
-            val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
-            val nodeKeyStore = configuration.signingCertificateStore.get()
-            val trustStore = configuration.p2pSslOptions.trustStore.get()
-            return AllCertificateStores(trustStore, sslKeyStore, nodeKeyStore)
+    @Suppress("ThrowsCount")
+    inline fun <T> withExceptionHandling(block: () -> T): T {
+        return try {
+            block()
         } catch (e: IOException) {
             when {
                 e is NoSuchFileException -> throw IllegalArgumentException(
@@ -97,6 +93,17 @@ class KeyStoreHandler(private val configuration: NodeConfiguration, private val 
                 else -> throw e
             }
         }
+    }
+
+    private data class AllCertificateStores(val trustStore: CertificateStore,
+                                            val sslKeyStore: CertificateStore,
+                                            val nodeKeyStore: CertificateStore)
+
+    private fun getCertificateStores(): AllCertificateStores {
+        val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
+        val nodeKeyStore = configuration.signingCertificateStore.get()
+        val trustStore = configuration.p2pSslOptions.trustStore.get()
+        return AllCertificateStores(trustStore, sslKeyStore, nodeKeyStore)
     }
 
     private fun validateKeyStores(certStores: AllCertificateStores): Set<X509Certificate> {

@@ -110,15 +110,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
             return NonInvalidatingCache(
                     cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_nameToParty",
-                    loadFunction = { name ->
-                        val result = currentDBSession().createQuery(
-                                "SELECT k.publicKey FROM ${MemberInfoSchemaV1.PersistentMemberInfo::class.java.name} m INNER JOIN m.keys k"
-                                        + " WHERE m.name = :name AND k.publicKeyHash = m.publicKeyHash",
-                                ByteArray::class.java
-                        ).setParameter("name", name.toString())
-                                .resultList
-                                .singleOrNull()
-                        Optional.ofNullable(result?.let { Party(name, Crypto.decodePublicKey(it)) })
+                    loadFunction = {
+                        val result = currentDBSession().find(MemberInfoSchemaV1.PersistentMemberInfo::class.java, it.toString())
+                        Optional.ofNullable(result?.toParty())
                     }
             )
         }

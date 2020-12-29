@@ -25,6 +25,7 @@ import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
 import java.security.PublicKey
@@ -117,6 +118,7 @@ class CertificateRotationTest {
         assertEquals(1300.POUNDS, bob2.services.getCashBalance(GBP))
     }
 
+    @Ignore("MPV check for key rotation has been removed with membership groups")
     @Test(timeout = 300_000)
     fun `fail to restart with rotated key and wrong minimum platform version`() {
         mockNet = InternalMockNetwork(
