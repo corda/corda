@@ -5,7 +5,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.node.services.api.MembershipGroupCacheInternal
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.network.isMGM
 
 abstract class MembershipGroupManagementFlow : FlowLogic<Unit>() {
 
@@ -14,7 +13,7 @@ abstract class MembershipGroupManagementFlow : FlowLogic<Unit>() {
 
     @Suspendable
     protected fun authorise() {
-        if (!serviceHub.myMemberInfo.isMGM) {
+        if (!serviceHub.myMemberInfo.mgm) {
             throw FlowException("$ourIdentity is not manager of the Membership Group")
         }
     }

@@ -5,7 +5,6 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.MemberInfo
-import net.corda.core.node.MemberRole
 import net.corda.core.node.MemberStatus
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.deserialize
@@ -42,6 +41,9 @@ object MemberInfoSchemaV1 : MappedSchema(
             @Column(name = "name", nullable = false)
             val name: String,
 
+            @Column(name = "group_id", nullable = false)
+            val groupId: String,
+
             @Column(name = "public_key_hash", nullable = false)
             val publicKeyHash: String,
 
@@ -63,8 +65,8 @@ object MemberInfoSchemaV1 : MappedSchema(
             @Column(name = "platform_version", nullable = false)
             val platformVersion: Int,
 
-            @Column(name = "role", nullable = false)
-            val role: MemberRole,
+            @Column(name = "mgm", nullable = false)
+            val mgm: Boolean,
 
             @Column(name = "properties", nullable = false)
             @Lob
@@ -74,13 +76,14 @@ object MemberInfoSchemaV1 : MappedSchema(
             fun fromMemberInfo(memberInfo: MemberInfo) = with(memberInfo) {
                 PersistentMemberInfo(
                         name = party.name.toString(),
+                        groupId = groupId,
                         publicKeyHash = party.owningKey.toStringShort(),
                         keys = keys.map { PersistentKey.fromPublicKey(it) }.toSet(),
                         endpoints = endpoints.serialize().bytes,
                         status = status,
                         softwareVersion = softwareVersion,
                         platformVersion = platformVersion,
-                        role = role,
+                        mgm = mgm,
                         properties = properties.serialize().bytes
                 )
             }
@@ -91,7 +94,7 @@ object MemberInfoSchemaV1 : MappedSchema(
             return Party(CordaX500Name.parse(name), publicKey)
         }
 
-        fun toMemberInfo(groupId: String) = MemberInfo(
+        fun toMemberInfo() = MemberInfo(
                 party = toParty(),
                 groupId = groupId,
                 keys = keys.map { it.toPublicKey() },
@@ -99,7 +102,7 @@ object MemberInfoSchemaV1 : MappedSchema(
                 status = status,
                 softwareVersion = softwareVersion,
                 platformVersion = platformVersion,
-                role = role,
+                mgm = mgm,
                 properties = properties.deserialize()
         )
     }

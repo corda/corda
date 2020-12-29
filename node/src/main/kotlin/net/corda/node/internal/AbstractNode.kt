@@ -49,7 +49,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.MemberInfo
-import net.corda.core.node.MemberRole
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -547,6 +546,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
+        networkMapCache.start(netParams.notaries)
 
         startDatabase()
         // The following services need to be closed before the database, so need to be registered after it is started.
@@ -554,13 +554,18 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val rpcOps = makeRPCOps(cordappLoader)
 
         identityService.start(trustRoots, keyStoreHandler.nodeIdentity, netParams.notaries.map { it.identity }, pkToIdCache)
-        val mgmInfo = configuration.networkServices?.let {
-            memberInfo(keyStoreHandler.mgmParty, it.networkMapURL.toString(), MemberRole.MANAGER)
-        }
-        networkMapCache.start(netParams.notaries, mgmInfo)
 
         val nodeInfo = generateNodeInfo().nodeInfo
-        services.start(nodeInfo, netParams, mgmInfo)
+        val memberInfo = nodeInfo.toMemberInfo(versionInfo.releaseVersion)
+        // Using hardcoded MGM name and key. MGM URL is configured in networkMapURL.
+        val mgmInfo = configuration.networkServices?.let {
+            memberInfo(keyStoreHandler.mgmParty, it.networkMapURL.toString(), mgm = true)
+        }
+        database.transaction {
+            networkMapCache.addOrUpdateMember(memberInfo)
+            mgmInfo?.let { networkMapCache.addOrUpdateMember(it) }
+        }
+        services.start(nodeInfo, netParams, memberInfo, mgmInfo)
 
         try {
             startMessagingService(rpcOps, nodeInfo, keyStoreHandler.notaryIdentity, netParams)
@@ -1031,10 +1036,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters
 
-        fun start(myInfo: NodeInfo, networkParameters: NetworkParameters, mgmInfo: MemberInfo?) {
+        fun start(myInfo: NodeInfo, networkParameters: NetworkParameters, memberInfo: MemberInfo, mgmInfo: MemberInfo?) {
             this._myInfo = myInfo
             this._networkParameters = networkParameters
-            this._myMemberInfo = myInfo.toMemberInfo(versionInfo.releaseVersion)
+            this._myMemberInfo = memberInfo
             this._mgmInfo = mgmInfo
         }
 

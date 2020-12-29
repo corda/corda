@@ -7,7 +7,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByService
 import net.corda.core.node.MemberInfo
-import net.corda.core.node.MemberRole
 import net.corda.core.node.MemberStatus
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.membership.sign
@@ -34,7 +33,7 @@ class PublishMemberInfoResponderFlow(private val session: FlowSession) : Members
         authorise()
 
         val request = session.receive<SignedData<MembershipRequest>>().unwrap { it }.verified()
-        val memberInfo = request.memberInfo.copy(status = MemberStatus.ACTIVE, role = MemberRole.NODE)
+        val memberInfo = request.memberInfo.copy(status = MemberStatus.ACTIVE, mgm = false)
         membershipGroupCache.addOrUpdateMember(memberInfo)
 
         val signedMemberInfo = memberInfo.sign(serviceHub.keyManagementService, ourIdentity.owningKey)

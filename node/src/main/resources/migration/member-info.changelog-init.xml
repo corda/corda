@@ -21,6 +21,9 @@
             <column name="name" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
+            <column name="group_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
             <column name="public_key_hash" type="VARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
@@ -36,7 +39,7 @@
             <column name="platform_version" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="role" type="INT">
+            <column name="mgm" type="BOOLEAN">
                 <constraints nullable="false"/>
             </column>
             <column name="properties" type="BLOB">

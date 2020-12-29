@@ -14,7 +14,7 @@ data class MemberInfo(
         val status: MemberStatus,
         val softwareVersion: String,
         val platformVersion: Int,
-        val role: MemberRole,
+        val mgm: Boolean,
         val properties: Map<String, String>
 ) {
     init {
@@ -43,11 +43,4 @@ enum class MemberStatus {
     PENDING,
     ACTIVE,
     SUSPENDED
-}
-
-@CordaSerializable
-enum class MemberRole {
-    MANAGER,
-    NODE,
-    NOTARY
 }

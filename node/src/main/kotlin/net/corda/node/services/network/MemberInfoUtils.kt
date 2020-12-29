@@ -6,7 +6,6 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.EndpointInfo
 import net.corda.core.node.MemberInfo
-import net.corda.core.node.MemberRole
 import net.corda.core.node.MemberStatus
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.distributed
@@ -42,13 +41,13 @@ fun NodeInfo.toMemberInfo(softwareVersion: String = "UNKNOWN"): MemberInfo {
             status = MemberStatus.ACTIVE,
             softwareVersion = softwareVersion,
             platformVersion = platformVersion,
-            role = if (party.name == MGM_NAME) MemberRole.MANAGER else MemberRole.NODE,
+            mgm = (party.name == MGM_NAME),
             properties = emptyMap()
     )
 }
 
-fun memberInfo(party: Party, connectionURL: String? = null, role: MemberRole = MemberRole.NODE): MemberInfo {
-    val url = connectionURL ?: "https://test:12345"
+fun memberInfo(party: Party, connectionURL: String? = null, mgm: Boolean = false): MemberInfo {
+    val url = connectionURL ?: "https://test:0"
     return MemberInfo(
             party = party,
             groupId = DEFAULT_MEMBER_GROUP_ID,
@@ -57,14 +56,12 @@ fun memberInfo(party: Party, connectionURL: String? = null, role: MemberRole = M
             status = MemberStatus.ACTIVE,
             softwareVersion = CordaVersion.releaseVersion,
             platformVersion = CordaVersion.platformVersion,
-            role = role,
+            mgm = mgm,
             properties = emptyMap()
     )
 }
 
 val MemberInfo.addresses: List<NetworkHostAndPort> get() = endpoints.map { with(URL(it.connectionURL)) { NetworkHostAndPort(host, port) } }
-
-val MemberInfo.isMGM: Boolean get() = (role == MemberRole.MANAGER)
 
 fun MemberInfo.toNodeInfo(): NodeInfo {
     return NodeInfo(addresses, listOf(getTestPartyAndCertificate(party)), platformVersion, 0)

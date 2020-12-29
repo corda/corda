@@ -16,7 +16,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
-import net.corda.node.services.network.isMGM
 import net.corda.node.services.network.toPartyInfo
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import java.io.NotSerializableException
@@ -124,7 +123,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             return memberInfo.toPartyInfo()
         }
         // Allow MGM flows to bypass MembershipGroupCache authorization for registration requests.
-        if (serviceHub.myMemberInfo.isMGM) {
+        if (serviceHub.myMemberInfo.mgm) {
             return PartyInfo.SingleNode(party, listOf())
         }
         return null
