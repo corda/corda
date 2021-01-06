@@ -15,7 +15,14 @@ abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val notaryIdentityKey: PublicKey
 
     /**
-     * Interfaces for the request and result formats of queries supported by notary services. To
+     *
+     */
+    open val initiatingFlow = (
+            NotaryFlow.Client::class to ::createServiceFlow
+    )
+
+    /**
+     * Insterfaces for the request and result formats of queries supported by notary services. To
      * implement a new query, you must:
      *
      * - Define data classes which implement the [Query.Request] and [Query.Result] interfaces
