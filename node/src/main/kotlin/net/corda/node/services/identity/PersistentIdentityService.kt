@@ -11,6 +11,7 @@ import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
+import net.corda.core.internal.toSet
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -45,6 +46,7 @@ import java.security.cert.CollectionCertStoreParameters
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.util.*
+import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -337,18 +339,19 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         }
     }
 
-    private fun getAllCertificates(session: Session): List<NodeInfoSchemaV1.DBPartyAndCertificate> {
+    private fun getAllCertificates(session: Session): Stream<NodeInfoSchemaV1.DBPartyAndCertificate> {
         val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
         criteria.select(criteria.from(NodeInfoSchemaV1.DBPartyAndCertificate::class.java))
-        return session.createQuery(criteria).resultList
+        return session.createQuery(criteria).stream()
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
-            getAllCertificates(session)
-                    .map { it.toLegalIdentityAndCert() }
-                    .filter { x500Matches(query, exactMatch, it.name) }
-                    .map { it.party }.toSet()
+            getAllCertificates(session).use { stream ->
+                stream.map { it.toLegalIdentityAndCert() }
+                        .filter { x500Matches(query, exactMatch, it.name) }
+                        .map { it.party }.toSet()
+            }
         }
     }
 
