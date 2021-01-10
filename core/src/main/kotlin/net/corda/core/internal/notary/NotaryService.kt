@@ -15,7 +15,7 @@ abstract class NotaryService : SingletonSerializeAsToken() {
     abstract val notaryIdentityKey: PublicKey
 
     /**
-     * Maps initiating flow classes to factory methods than create responder flows.
+     * Mapping between @InitiatingFlow classes and factory methods that produce responder flows.
      * Can be overridden in case of advanced notary service that serves both custom and standard flows.
      */
     open val initiatingFlows = mapOf(
