@@ -168,7 +168,8 @@ data class NotaryConfig(
         /** Notary implementation-specific configuration parameters. */
         val extraConfig: Config? = null,
         val raft: RaftConfig? = null,
-        val bftSMaRt: BFTSmartConfig? = null
+        val bftSMaRt: BFTSmartConfig? = null,
+        val enableOverridableFlows: Boolean? = null
 )
 
 /**

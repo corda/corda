@@ -1026,8 +1026,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             service.run {
                 tokenize()
                 runOnStop += ::stop
-                initiatingFlows.forEach { (flow, factory) ->
-                    flowManager.registerInitiatedCoreFlowFactory(flow, factory)
+
+                if (configuration.notary?.enableOverridableFlows == true) {
+                    initiatingFlows.forEach { (flow, factory) ->
+                        flowManager.registerInitiatedCoreFlowFactory(flow, factory)
+                    }
+                } else {
+                    flowManager.registerInitiatedCoreFlowFactory(NotaryFlow.Client::class, ::createServiceFlow)
                 }
                 start()
             }
