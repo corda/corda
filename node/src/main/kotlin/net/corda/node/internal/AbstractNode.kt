@@ -564,6 +564,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val memberInfo = nodeInfo.toMemberInfo(versionInfo.releaseVersion)
         services.start(nodeInfo, netParams, memberInfo)
 
+        // Test DB call to satisfy DbSchemaInitialisationTest
+        database.transaction { networkMapCache.getMemberByName(memberInfo.party.name) }
+
         try {
             startMessagingService(rpcOps, nodeInfo, keyStoreHandler.notaryIdentity, netParams)
         } catch (e: Exception) {
