@@ -60,7 +60,6 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
-    val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
@@ -110,7 +109,6 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
         }
 
         internal val defaultAttachmentContentCacheSize: Long = 10.MB
-        internal const val defaultAttachmentCacheBound = 1024L
 
         const val cordappDirectoriesKey = "cordappDirectories"
 
