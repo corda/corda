@@ -13,6 +13,7 @@ import net.corda.core.node.services.MembershipGroupCache
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.createDevNodeCa
@@ -29,7 +30,7 @@ val MGM_NAME = CordaX500Name("MGM", "London", "GB")
 val MGM_KEY_ENTROPY: BigInteger = BigInteger.valueOf(123456789)
 val DEFAULT_MEMBER_GROUP_ID = UUID(1, 1).toString()
 
-fun NodeInfo.toMemberInfo(softwareVersion: String = "UNKNOWN"): MemberInfo {
+fun NodeInfo.toMemberInfo(softwareVersion: String = CordaVersion.releaseVersion): MemberInfo {
     val party = legalIdentities.first()
     return MemberInfo(
             party = party,
@@ -41,12 +42,11 @@ fun NodeInfo.toMemberInfo(softwareVersion: String = "UNKNOWN"): MemberInfo {
             status = MemberStatus.ACTIVE,
             softwareVersion = softwareVersion,
             platformVersion = platformVersion,
-            mgm = (party.name == MGM_NAME),
             properties = emptyMap()
     )
 }
 
-fun memberInfo(party: Party, connectionURL: String? = null, mgm: Boolean = false): MemberInfo {
+fun memberInfo(party: Party, connectionURL: String? = null): MemberInfo {
     val url = connectionURL ?: "https://test:0"
     return MemberInfo(
             party = party,
@@ -56,10 +56,11 @@ fun memberInfo(party: Party, connectionURL: String? = null, mgm: Boolean = false
             status = MemberStatus.ACTIVE,
             softwareVersion = CordaVersion.releaseVersion,
             platformVersion = CordaVersion.platformVersion,
-            mgm = mgm,
             properties = emptyMap()
     )
 }
+
+val ServiceHubInternal.mgm: Boolean get() = (myMemberInfo.party.name == MGM_NAME)
 
 val MemberInfo.addresses: List<NetworkHostAndPort> get() = endpoints.map { with(URL(it.connectionURL)) { NetworkHostAndPort(host, port) } }
 

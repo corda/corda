@@ -440,7 +440,6 @@ open class MockServices private constructor(
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
     override val myMemberInfo: MemberInfo get() = throw UnsupportedOperationException()
-    override val mgmInfo: MemberInfo get() = throw UnsupportedOperationException()
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
         it.start()
     }

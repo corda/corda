@@ -14,7 +14,6 @@ data class MemberInfo(
         val status: MemberStatus,
         val softwareVersion: String,
         val platformVersion: Int,
-        val mgm: Boolean,
         val properties: Map<String, String>
 ) {
     init {

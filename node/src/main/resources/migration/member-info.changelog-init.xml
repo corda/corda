@@ -39,9 +39,6 @@
             <column name="platform_version" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="mgm" type="BOOLEAN">
-                <constraints nullable="false"/>
-            </column>
             <column name="properties" type="BLOB">
                 <constraints nullable="false"/>
             </column>

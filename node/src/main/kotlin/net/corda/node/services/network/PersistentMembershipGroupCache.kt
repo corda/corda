@@ -41,13 +41,16 @@ class PersistentMembershipGroupCache(
     private val changePublisher: rx.Observer<MembershipGroupCache.GroupChange> get() = _changed.bufferUntilDatabaseCommit()
 
     override val allMembers: List<MemberInfo>
-        get() = queryAllPersistentInfo().map { it.toMemberInfo() }.filterNot { it.mgm }
+        get() = queryAllPersistentInfo().map { it.toMemberInfo() }
     override val allParties: List<Party> get() = allMembers.map { it.party }
 
     private lateinit var notaries: List<NotaryInfo>
+    private var _mgmInfo: MemberInfo? = null
+    override val mgmInfo: MemberInfo get() = _mgmInfo!!
 
-    fun start(notaries: List<NotaryInfo>) {
+    fun start(notaries: List<NotaryInfo>, mgmInfo: MemberInfo? = null) {
         this.notaries = notaries
+        this._mgmInfo = mgmInfo
     }
 
     override fun track(): DataFeed<List<MemberInfo>, MembershipGroupCache.GroupChange> {
@@ -83,10 +86,6 @@ class PersistentMembershipGroupCache(
     }
 
     override fun removeMember(memberInfo: MemberInfo) {
-        if (memberInfo.mgm) {
-            // TODO[DR]: Fix later
-            return
-        }
         synchronized(_changed) {
             database.transaction {
                 val dbEntry = queryPersistentInfoByName(memberInfo.party.name)
@@ -122,6 +121,7 @@ class PersistentMembershipGroupCache(
 
     override fun getMemberByName(name: CordaX500Name): MemberInfo? {
         return queryPersistentInfoByName(name)?.toMemberInfo()
+                ?: _mgmInfo?.takeIf { name == it.party.name }
     }
 
     override fun getMemberByParty(party: Party): MemberInfo? {
@@ -130,6 +130,7 @@ class PersistentMembershipGroupCache(
 
     override fun getMemberByKeyHash(keyHash: String): MemberInfo? {
         return queryPersistentInfoByKeyHash(keyHash)?.toMemberInfo()
+                ?: _mgmInfo?.takeIf { keyHash == it.party.owningKey.toStringShort() }
     }
 
     private fun queryPersistentInfoByKeyHash(keyHash: String): PersistentMemberInfo? = database.transaction {

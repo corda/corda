@@ -18,7 +18,7 @@ class PublishMemberInfoFlow(private val memberInfo: MemberInfo) : MembershipGrou
 
     @Suspendable
     override fun call() {
-        val session = initiateFlow(serviceHub.mgmInfo!!.party)
+        val session = initiateFlow(membershipGroupCache.mgmInfo.party)
         session.send(MembershipRequest(memberInfo).sign(serviceHub.keyManagementService, ourIdentity.owningKey))
 
         session.receive<SignedData<MemberInfo>>().unwrap { it.verified() }
@@ -33,7 +33,7 @@ class PublishMemberInfoResponderFlow(private val session: FlowSession) : Members
         authorise()
 
         val request = session.receive<SignedData<MembershipRequest>>().unwrap { it }.verified()
-        val memberInfo = request.memberInfo.copy(status = MemberStatus.ACTIVE, mgm = false)
+        val memberInfo = request.memberInfo.copy(status = MemberStatus.ACTIVE)
         membershipGroupCache.addOrUpdateMember(memberInfo)
 
         val signedMemberInfo = memberInfo.sign(serviceHub.keyManagementService, ourIdentity.owningKey)

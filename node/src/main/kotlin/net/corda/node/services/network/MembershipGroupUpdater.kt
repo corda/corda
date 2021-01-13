@@ -30,7 +30,7 @@ class MembershipGroupUpdater(private val serviceHub: ServiceHubInternal) : Lifec
     }
 
     override fun start() {
-        if (serviceHub.myMemberInfo.mgm) {
+        if (serviceHub.mgm) {
             logger.info("Membership Group Manager started")
             serviceHub.networkMapCache.nodeReady.set(null)
         } else {

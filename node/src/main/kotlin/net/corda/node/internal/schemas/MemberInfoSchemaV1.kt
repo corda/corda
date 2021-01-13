@@ -65,9 +65,6 @@ object MemberInfoSchemaV1 : MappedSchema(
             @Column(name = "platform_version", nullable = false)
             val platformVersion: Int,
 
-            @Column(name = "mgm", nullable = false)
-            val mgm: Boolean,
-
             @Column(name = "properties", nullable = false)
             @Lob
             val properties: ByteArray
@@ -83,7 +80,6 @@ object MemberInfoSchemaV1 : MappedSchema(
                         status = status,
                         softwareVersion = softwareVersion,
                         platformVersion = platformVersion,
-                        mgm = mgm,
                         properties = properties.serialize().bytes
                 )
             }
@@ -102,7 +98,6 @@ object MemberInfoSchemaV1 : MappedSchema(
                 status = status,
                 softwareVersion = softwareVersion,
                 platformVersion = platformVersion,
-                mgm = mgm,
                 properties = properties.deserialize()
         )
     }

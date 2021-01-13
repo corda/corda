@@ -546,7 +546,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
-        networkMapCache.start(netParams.notaries)
+
+        // Using hardcoded MGM name and key. MGM URL is configured in networkMapURL.
+        val mgmInfo = configuration.networkServices?.let {
+            memberInfo(keyStoreHandler.mgmParty, it.networkMapURL.toString())
+        }
+        networkMapCache.start(netParams.notaries, mgmInfo)
 
         startDatabase()
         // The following services need to be closed before the database, so need to be registered after it is started.
@@ -557,15 +562,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val nodeInfo = generateNodeInfo().nodeInfo
         val memberInfo = nodeInfo.toMemberInfo(versionInfo.releaseVersion)
-        // Using hardcoded MGM name and key. MGM URL is configured in networkMapURL.
-        val mgmInfo = configuration.networkServices?.let {
-            memberInfo(keyStoreHandler.mgmParty, it.networkMapURL.toString(), mgm = true)
-        }
-        database.transaction {
-            networkMapCache.addOrUpdateMember(memberInfo)
-            mgmInfo?.let { networkMapCache.addOrUpdateMember(it) }
-        }
-        services.start(nodeInfo, netParams, memberInfo, mgmInfo)
+        services.start(nodeInfo, netParams, memberInfo)
 
         try {
             startMessagingService(rpcOps, nodeInfo, keyStoreHandler.notaryIdentity, netParams)
@@ -1027,8 +1024,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val myInfo: NodeInfo get() = _myInfo
         private lateinit var _myMemberInfo: MemberInfo
         override val myMemberInfo: MemberInfo get() = _myMemberInfo
-        private var _mgmInfo: MemberInfo? = null
-        override val mgmInfo: MemberInfo? get() = _mgmInfo
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
 
@@ -1036,11 +1031,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters
 
-        fun start(myInfo: NodeInfo, networkParameters: NetworkParameters, memberInfo: MemberInfo, mgmInfo: MemberInfo?) {
+        fun start(myInfo: NodeInfo, networkParameters: NetworkParameters, memberInfo: MemberInfo) {
             this._myInfo = myInfo
             this._networkParameters = networkParameters
             this._myMemberInfo = memberInfo
-            this._mgmInfo = mgmInfo
         }
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {

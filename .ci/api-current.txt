@@ -3895,7 +3895,7 @@ public final class net.corda.core.node.EndpointInfo extends java.lang.Object
 ##
 @CordaSerializable
 public final class net.corda.core.node.MemberInfo extends java.lang.Object
-  public <init>(net.corda.core.identity.Party, String, java.util.List<? extends java.security.PublicKey>, java.util.List<net.corda.core.node.EndpointInfo>, net.corda.core.node.MemberStatus, String, int, boolean, java.util.Map<String, String>)
+  public <init>(net.corda.core.identity.Party, String, java.util.List<? extends java.security.PublicKey>, java.util.List<net.corda.core.node.EndpointInfo>, net.corda.core.node.MemberStatus, String, int, java.util.Map<String, String>)
   @NotNull
   public final net.corda.core.identity.Party component1()
   @NotNull
@@ -3909,11 +3909,10 @@ public final class net.corda.core.node.MemberInfo extends java.lang.Object
   @NotNull
   public final String component6()
   public final int component7()
-  public final boolean component8()
   @NotNull
-  public final java.util.Map<String, String> component9()
+  public final java.util.Map<String, String> component8()
   @NotNull
-  public final net.corda.core.node.MemberInfo copy(net.corda.core.identity.Party, String, java.util.List<? extends java.security.PublicKey>, java.util.List<net.corda.core.node.EndpointInfo>, net.corda.core.node.MemberStatus, String, int, boolean, java.util.Map<String, String>)
+  public final net.corda.core.node.MemberInfo copy(net.corda.core.identity.Party, String, java.util.List<? extends java.security.PublicKey>, java.util.List<net.corda.core.node.EndpointInfo>, net.corda.core.node.MemberStatus, String, int, java.util.Map<String, String>)
   public boolean equals(Object)
   @NotNull
   public final java.util.List<net.corda.core.node.EndpointInfo> getEndpoints()
@@ -3921,7 +3920,6 @@ public final class net.corda.core.node.MemberInfo extends java.lang.Object
   public final String getGroupId()
   @NotNull
   public final java.util.List<java.security.PublicKey> getKeys()
-  public final boolean getMgm()
   @NotNull
   public final net.corda.core.identity.Party getParty()
   public final int getPlatformVersion()
@@ -4089,8 +4087,6 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   public abstract net.corda.core.node.services.diagnostics.DiagnosticsService getDiagnosticsService()
   @NotNull
   public abstract net.corda.core.node.services.KeyManagementService getKeyManagementService()
-  @Nullable
-  public abstract net.corda.core.node.MemberInfo getMgmInfo()
   @NotNull
   public abstract net.corda.core.node.NodeInfo getMyInfo()
   @NotNull
@@ -9150,8 +9146,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   public net.corda.core.node.services.IdentityService getIdentityService()
   @NotNull
   public net.corda.core.node.services.KeyManagementService getKeyManagementService()
-  @NotNull
-  public net.corda.core.node.MemberInfo getMgmInfo()
   @NotNull
   public net.corda.core.node.NodeInfo getMyInfo()
   @NotNull

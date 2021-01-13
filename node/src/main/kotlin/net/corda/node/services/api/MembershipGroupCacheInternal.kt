@@ -12,6 +12,8 @@ import net.corda.node.services.network.toMemberInfo
 data class MembershipRequest(val memberInfo: MemberInfo)
 
 interface MembershipGroupCacheInternal : MembershipGroupCache {
+    val mgmInfo: MemberInfo
+
     val nodeReady: OpenFuture<Void?>
 
     fun addOrUpdateMember(memberInfo: MemberInfo)

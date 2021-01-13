@@ -17,7 +17,7 @@ class SyncMembershipGroupCacheFlow : MembershipGroupManagementFlow() {
 
     @Suspendable
     override fun call() {
-        val session = initiateFlow(serviceHub.mgmInfo!!.party)
+        val session = initiateFlow(membershipGroupCache.mgmInfo.party)
         session.send(Unit)
 
         val updatedMembers = session.receive<SignedData<List<MemberInfo>>>().unwrap { it.verified() }

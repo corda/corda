@@ -39,6 +39,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.MembershipRequest
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.network.mgm
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
@@ -717,7 +718,7 @@ internal class SingleThreadedStateMachineManager(
 
     // Authorize the initial request to MGM node for registering new holding identity when sender is not yet known to MembershipGroupCache.
     private fun authoriseUnknownSender(sessionMessage: SessionMessage): Party? {
-        if (!serviceHub.myMemberInfo.mgm) {
+        if (!serviceHub.mgm) {
             return null
         }
         if (sessionMessage is InitialSessionMessage && sessionMessage.firstPayload != null) {
