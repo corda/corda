@@ -26,7 +26,6 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.InfrequentlyMutatedCache
-import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -259,18 +258,6 @@ class NodeAttachmentService @JvmOverloads constructor(
             Token(id, checkOnLoad, uploader, signerKeys)
     }
 
-    // slightly complex 2 level approach to attachment caching:
-    // On the first level we cache attachment contents loaded from the DB by their key. This is a weight based
-    // cache (we don't want to waste too  much memory on this) and could be evicted quite aggressively. If we fail
-    // to load an attachment from the db, the loader will insert a non present optional - we invalidate this
-    // immediately as we definitely want to retry whether the attachment was just delayed.
-    // On the second level, we cache Attachment implementations that use the first cache to load their content
-    // when required. As these are fairly small, we can cache quite a lot of them, this will make checking
-    // repeatedly whether an attachment exists fairly cheap. Here as well, we evict non-existent entries immediately
-    // to force a recheck if required.
-    // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
-    // a problem somewhere else or this needs to be revisited.
-
     private val attachmentContentCache = NonInvalidatingWeightBasedCache(
             cacheFactory = cacheFactory,
             name = "NodeAttachmentService_attachmentContent",
@@ -309,27 +296,13 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
     }
 
-    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
-            cacheFactory = cacheFactory,
-            name = "NodeAttachmentService_attachmentPresence",
-            loadFunction = { key -> Optional.ofNullable(createAttachment(key)) })
-
-    private fun createAttachment(key: SecureHash): Attachment? {
-        val content = attachmentContentCache.get(key)!!
+    override fun openAttachment(id: SecureHash): Attachment? {
+        val content = attachmentContentCache.get(id)!!
         if (content.isPresent) {
             return content.get().first
         }
         // If no attachment has been found, we don't want to cache that - it might arrive later.
-        attachmentContentCache.invalidate(key)
-        return null
-    }
-
-    override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = attachmentCache.get(id)!!
-        if (attachment.isPresent) {
-            return attachment.get()
-        }
-        attachmentCache.invalidate(id)
+        attachmentContentCache.invalidate(id)
         return null
     }
 
@@ -426,7 +399,6 @@ class NodeAttachmentService @JvmOverloads constructor(
                         loadAttachmentContent(id)?.let { attachmentAndContent ->
                             // TODO: this is racey. ENT-2870
                             attachmentContentCache.put(id, Optional.of(attachmentAndContent))
-                            attachmentCache.put(id, Optional.of(attachmentAndContent.first))
                         }
                         return@withContractsInJar id
                     }

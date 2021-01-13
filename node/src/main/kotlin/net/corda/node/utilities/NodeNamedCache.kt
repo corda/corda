@@ -43,7 +43,6 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "HibernateConfiguration_sessionFactories" -> caffeine.maximumSize(database.mappedSchemaCacheSize)
                 name == "DBTransactionStorage_transactions" -> caffeine.maximumWeight(transactionCacheSizeBytes)
                 name == "NodeAttachmentService_attachmentContent" -> caffeine.maximumWeight(attachmentContentCacheSizeBytes)
-                name == "NodeAttachmentService_attachmentPresence" -> caffeine.maximumSize(attachmentCacheBound)
                 name == "NodeAttachmentService_contractAttachmentVersions" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_keyToPartyAndCert" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_nameToParty" -> caffeine.maximumSize(defaultCacheSize)

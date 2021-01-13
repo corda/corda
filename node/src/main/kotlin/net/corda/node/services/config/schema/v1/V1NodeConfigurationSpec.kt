@@ -40,7 +40,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val localShellUnsafe by boolean().optional().withDefaultValue(Defaults.localShellUnsafe)
     private val database by nested(DatabaseConfigSpec).optional()
     private val noLocalShell by boolean().optional().withDefaultValue(Defaults.noLocalShell)
-    private val attachmentCacheBound by long().optional().withDefaultValue(Defaults.attachmentCacheBound)
     private val extraNetworkMapKeys by string().mapValid(::toUUID).list().optional().withDefaultValue(Defaults.extraNetworkMapKeys)
     private val tlsCertCrlDistPoint by string().mapValid(::toURL).optional()
     private val tlsCertCrlIssuer by string().mapValid(::toPrincipal).optional()
@@ -118,7 +117,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     localShellUnsafe = config[localShellUnsafe],
                     database = database,
                     noLocalShell = config[noLocalShell],
-                    attachmentCacheBound = config[attachmentCacheBound],
                     extraNetworkMapKeys = config[extraNetworkMapKeys],
                     tlsCertCrlDistPoint = config[tlsCertCrlDistPoint],
                     tlsCertCrlIssuer = config[tlsCertCrlIssuer],
