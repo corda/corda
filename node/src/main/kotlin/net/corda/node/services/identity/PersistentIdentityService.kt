@@ -11,6 +11,7 @@ import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
+import net.corda.core.internal.toSet
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -45,6 +46,7 @@ import java.security.cert.CollectionCertStoreParameters
 import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.util.*
+import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -341,15 +343,17 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         }
     }
 
-    private fun getAllParties(session: Session): List<Party> {
+    private fun getAllParties(session: Session): Stream<Party> {
         val criteria = session.criteriaBuilder.createQuery(MemberInfoSchemaV1.PersistentMemberInfo::class.java)
         criteria.select(criteria.from(MemberInfoSchemaV1.PersistentMemberInfo::class.java))
-        return session.createQuery(criteria).resultList.map { it.toParty() }
+        return session.createQuery(criteria).stream().map { it.toParty() }
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
-            getAllParties(session).filter { x500Matches(query, exactMatch, it.name) }.toSet()
+            getAllParties(session).use { stream ->
+                stream.filter { x500Matches(query, exactMatch, it.name) }.toSet()
+            }
         }
     }
 
