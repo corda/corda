@@ -33,6 +33,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.minutes
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -242,6 +243,8 @@ internal class SingleThreadedStateMachineManager(
     private fun setFlowDefaultUncaughtExceptionHandler() {
         Fiber.setDefaultUncaughtExceptionHandler(
             FlowDefaultUncaughtExceptionHandler(
+                this,
+                innerState,
                 flowHospital,
                 checkpointStorage,
                 database,
@@ -272,15 +275,38 @@ internal class SingleThreadedStateMachineManager(
             if (stopping) throw IllegalStateException("Already stopping!")
             stopping = true
             for ((_, flow) in flows) {
-                flow.fiber.scheduleEvent(Event.SoftShutdown)
+                if (!flow.fiber.transientState.isDead) {
+                    flow.fiber.scheduleEvent(Event.SoftShutdown)
+                }
             }
         }
         // Account for any expected Fibers in a test scenario.
         liveFibers.countDown(allowedUnsuspendedFiberCount)
-        liveFibers.await()
+        awaitShutdownOfFlows()
         flowHospital.close()
         scheduledFutureExecutor.shutdown()
         scheduler.shutdown()
+    }
+
+    private fun awaitShutdownOfFlows() {
+        val shutdownLogger = StateMachineShutdownLogger(innerState)
+        var shutdown: Boolean
+        do {
+            // Manually shutdown dead flows as they can no longer process scheduled events.
+            // This needs to be repeated in this loop to prevent flows that die after shutdown is triggered from being forgotten.
+            // The mutex is not enough protection to stop race-conditions here, the removal of dead flows has to be repeated.
+            innerState.withMutex {
+                for ((id, flow) in flows) {
+                    if (flow.fiber.transientState.isDead) {
+                        removeFlow(id, FlowRemovalReason.SoftShutdown, flow.fiber.transientState)
+                    }
+                }
+            }
+            shutdown = liveFibers.await(1.minutes.toMillis())
+            if (!shutdown) {
+                shutdownLogger.log()
+            }
+        } while (!shutdown)
     }
 
     /**
@@ -365,31 +391,29 @@ internal class SingleThreadedStateMachineManager(
 
     override fun killFlow(id: StateMachineRunId): Boolean {
         val flow = innerState.withLock { flows[id] }
-        val killFlowResult = flow?.let { killInMemoryFlow(it) } ?: killOutOfMemoryFlow(id)
+        val killFlowResult = flow?.let {
+            if (flow.fiber.transientState.isDead) {
+                // We cannot rely on fiber event processing in dead flows.
+                killInMemoryDeadFlow(it)
+            } else {
+                // Healthy flows need an event in case they they are suspended.
+                killInMemoryFlow(it)
+            }
+        } ?: killOutOfMemoryFlow(id)
         return killFlowResult || flowHospital.dropSessionInit(id)
     }
 
     private fun killInMemoryFlow(flow: Flow<*>): Boolean {
         val id = flow.fiber.id
         return flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
-            if (!flow.fiber.transientState.isKilled) {
-                flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
+            if (!transientState.isKilled) {
+                transientState = transientState.copy(isKilled = true)
                 logger.info("Killing flow $id known to this node.")
-                // The checkpoint and soft locks are handled here as well as in a flow's transition. This means that we do not need to rely
-                // on the processing of the next event after setting the killed flag. This is to ensure a flow can be updated/removed from
-                // the database, even if it is stuck in a infinite loop.
-                if (flow.fiber.transientState.isAnyCheckpointPersisted) {
-                    database.transaction {
-                        if (flow.fiber.clientId != null) {
-                            checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
-                            checkpointStorage.removeFlowException(id)
-                            checkpointStorage.addFlowException(id, KilledFlowException(id))
-                        } else {
-                            checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
-                        }
-                        serviceHub.vaultService.softLockRelease(id.uuid)
-                    }
-                }
+                updateCheckpointWhenKillingFlow(
+                    id = id,
+                    clientId = transientState.checkpoint.checkpointState.invocationContext.clientId,
+                    isAnyCheckpointPersisted = transientState.isAnyCheckpointPersisted
+                )
 
                 unfinishedFibers.countDown()
                 scheduleEvent(Event.DoRemainingWork)
@@ -397,6 +421,67 @@ internal class SingleThreadedStateMachineManager(
             } else {
                 logger.info("A repeated request to kill flow $id has been made, ignoring...")
                 false
+            }
+        }
+    }
+
+    private fun killInMemoryDeadFlow(flow: Flow<*>): Boolean {
+        val id = flow.fiber.id
+        return flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
+            if (!transientState.isKilled) {
+                transientState = transientState.copy(isKilled = true)
+                logger.info("Killing dead flow $id known to this node.")
+
+                val (flowForRetry, _) = createNewFlowForRetry(transientState) ?: return false
+
+                updateCheckpointWhenKillingFlow(
+                    id = id,
+                    clientId = transientState.checkpoint.checkpointState.invocationContext.clientId,
+                    isAnyCheckpointPersisted = transientState.isAnyCheckpointPersisted
+                )
+
+                unfinishedFibers.countDown()
+
+                innerState.withLock {
+                    if (stopping) {
+                        return true
+                    }
+                    // Remove any sessions the old flow has.
+                    for (sessionId in getFlowSessionIds(transientState.checkpoint)) {
+                        sessionToFlow.remove(sessionId)
+                    }
+                    if (flowForRetry != null) {
+                        addAndStartFlow(id, flowForRetry)
+                    }
+                }
+
+                true
+            } else {
+                logger.info("A repeated request to kill flow $id has been made, ignoring...")
+                false
+            }
+        }
+    }
+
+    private fun updateCheckpointWhenKillingFlow(
+        id: StateMachineRunId,
+        clientId: String?,
+        isAnyCheckpointPersisted: Boolean,
+        exception: KilledFlowException = KilledFlowException(id)
+    ) {
+        // The checkpoint and soft locks are handled here as well as in a flow's transition. This means that we do not need to rely
+        // on the processing of the next event after setting the killed flag. This is to ensure a flow can be updated/removed from
+        // the database, even if it is stuck in a infinite loop or cannot be run (checkpoint cannot be deserialized from database).
+        if (isAnyCheckpointPersisted) {
+            database.transaction {
+                if (clientId != null) {
+                    checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.KILLED)
+                    checkpointStorage.removeFlowException(id)
+                    checkpointStorage.addFlowException(id, exception)
+                } else {
+                    checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
+                }
+                serviceHub.vaultService.softLockRelease(id.uuid)
             }
         }
     }
@@ -421,6 +506,25 @@ internal class SingleThreadedStateMachineManager(
                 else -> checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true)
             }
         }
+    }
+
+    override fun killFlowForcibly(flowId: StateMachineRunId): Boolean {
+        val flow = innerState.withLock { flows[flowId] }
+        flow?.withFlowLock(VALID_KILL_FLOW_STATUSES) {
+            logger.info("Forcibly killing flow $flowId, errors will not be propagated to the flow's sessions")
+            updateCheckpointWhenKillingFlow(
+                id = flowId,
+                clientId = transientState.checkpoint.checkpointState.invocationContext.clientId,
+                isAnyCheckpointPersisted = transientState.isAnyCheckpointPersisted
+            )
+            removeFlow(
+                flowId,
+                FlowRemovalReason.ErrorFinish(listOf(FlowError(secureRandom.nextLong(), KilledFlowException(flowId)))),
+                transientState
+            )
+            return true
+        }
+        return false
     }
 
     private fun markAllFlowsAsPaused() {
@@ -540,48 +644,8 @@ internal class SingleThreadedStateMachineManager(
             logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
             return
         }
-        // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
-        // we mirror exactly what happens when restarting the node.
-        // Ignore [isAnyCheckpointPersisted] as the checkpoint could be committed but the flag remains un-updated
-        val checkpointLoadingStatus = database.transaction {
-            val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId) ?: return@transaction CheckpointLoadingStatus.NotFound
 
-            val checkpoint = serializedCheckpoint.let {
-                tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
-                    if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                        checkpointStorage.removeFlowException(flowId)
-                        checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
-                    }
-                } ?: return@transaction CheckpointLoadingStatus.CouldNotDeserialize
-            }
-
-            CheckpointLoadingStatus.Success(checkpoint)
-        }
-
-        val (flow, numberOfCommitsFromCheckpoint) = when {
-            // Resurrect flow
-            checkpointLoadingStatus is CheckpointLoadingStatus.Success -> {
-                val numberOfCommitsFromCheckpoint = checkpointLoadingStatus.checkpoint.checkpointState.numberOfCommits
-                val flow = flowCreator.createFlowFromCheckpoint(
-                    flowId,
-                    checkpointLoadingStatus.checkpoint,
-                    currentState.reloadCheckpointAfterSuspendCount,
-                    currentState.lock,
-                    firstRestore = false,
-                    progressTracker = currentState.flowLogic.progressTracker
-                ) ?: return
-                flow to numberOfCommitsFromCheckpoint
-            }
-            checkpointLoadingStatus is CheckpointLoadingStatus.NotFound && currentState.isAnyCheckpointPersisted -> {
-                logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                return
-            }
-            checkpointLoadingStatus is CheckpointLoadingStatus.CouldNotDeserialize -> return
-            else -> {
-                // Just flow initiation message
-                null to -1
-            }
-        }
+        val (flow, numberOfCommitsFromCheckpoint) = createNewFlowForRetry(currentState) ?: return
 
         innerState.withLock {
             if (stopping) {
@@ -596,6 +660,53 @@ internal class SingleThreadedStateMachineManager(
             }
 
             extractAndScheduleEventsForRetry(oldFlowLeftOver, currentState, numberOfCommitsFromCheckpoint)
+        }
+    }
+
+    private fun createNewFlowForRetry(currentState: StateMachineState): Pair<Flow<*>?, Int>? {
+        val id = currentState.flowLogic.runId
+        // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
+        // we mirror exactly what happens when restarting the node.
+        // Ignore [isAnyCheckpointPersisted] as the checkpoint could be committed but the flag remains un-updated
+        val checkpointLoadingStatus = database.transaction {
+            val serializedCheckpoint = checkpointStorage.getCheckpoint(id) ?: return@transaction CheckpointLoadingStatus.NotFound
+
+            val checkpoint = serializedCheckpoint.let {
+                tryDeserializeCheckpoint(serializedCheckpoint, id)?.also {
+                    if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                        checkpointStorage.removeFlowException(id)
+                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
+                    }
+                } ?: return@transaction CheckpointLoadingStatus.CouldNotDeserialize
+            }
+
+            CheckpointLoadingStatus.Success(checkpoint)
+        }
+
+        return when {
+            // Resurrect flow
+            checkpointLoadingStatus is CheckpointLoadingStatus.Success -> {
+                val numberOfCommitsFromCheckpoint = checkpointLoadingStatus.checkpoint.checkpointState.numberOfCommits
+                val flow = flowCreator.createFlowFromCheckpoint(
+                    id,
+                    checkpointLoadingStatus.checkpoint,
+                    currentState.reloadCheckpointAfterSuspendCount,
+                    currentState.lock,
+                    firstRestore = false,
+                    isKilled = currentState.isKilled,
+                    progressTracker = currentState.flowLogic.progressTracker
+                ) ?: return null
+                flow to numberOfCommitsFromCheckpoint
+            }
+            checkpointLoadingStatus is CheckpointLoadingStatus.NotFound && currentState.isAnyCheckpointPersisted -> {
+                logger.error("Unable to find database checkpoint for flow $id. Something is very wrong. The flow will not retry.")
+                null
+            }
+            checkpointLoadingStatus is CheckpointLoadingStatus.CouldNotDeserialize -> return null
+            else -> {
+                // Just flow initiation message
+                null to -1
+            }
         }
     }
 
