@@ -7,12 +7,14 @@ import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ErrorSessionMessage
 import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.ExistingSessionMessagePayload
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowRemovalReason
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
+import java.util.ArrayList
 
 class KilledFlowTransition(
     override val context: TransitionContext,
@@ -101,9 +103,9 @@ class KilledFlowTransition(
             if (sessionState is SessionState.Initiating && sessionState.rejectionError == null) {
                 // *prepend* the error messages in order to error the other sessions ASAP. The other messages will
                 // be delivered all the same, they just won't trigger flow resumption because of dirtiness.
-                val errorMessagesWithDeduplication = errorMessages.map {
+                val errorMessagesWithDeduplication: ArrayList<Pair<DeduplicationId, ExistingSessionMessagePayload>> = errorMessages.map {
                     DeduplicationId.createForError(it.errorId, sourceSessionId) to it
-                }
+                }.toArrayList()
                 sessionState.copy(bufferedMessages = errorMessagesWithDeduplication + sessionState.bufferedMessages)
             } else {
                 sessionState

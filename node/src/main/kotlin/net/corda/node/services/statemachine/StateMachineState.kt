@@ -281,7 +281,7 @@ sealed class SessionState {
      * @property rejectionError if non-null the initiation failed.
      */
     data class Initiating(
-            val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
+            val bufferedMessages: ArrayList<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
             override val deduplicationSeed: String
     ) : SessionState()
@@ -298,7 +298,7 @@ sealed class SessionState {
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: List<ExistingSessionMessagePayload>,
+            val receivedMessages: ArrayList<ExistingSessionMessagePayload>,
             val otherSideErrored: Boolean,
             val peerSinkSessionId: SessionId,
             override val deduplicationSeed: String
