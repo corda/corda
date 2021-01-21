@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization
 
+import jdk.nashorn.internal.ir.annotations.Ignore
 import net.corda.core.serialization.CustomSerializationContext
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
@@ -31,8 +32,9 @@ class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializa
             throw NotSerializableException("Scheme ${customScheme::class.java} is incompatible with blob." +
                     " Magic from blob = $readMagic (Expected = $serializationSchemeMagic)")
         val withOutMagic = byteSequence.bytes.slice(serializationSchemeMagic.size .. byteSequence.size - 1).toByteArray()
-        return customScheme.deserialize(SerializedBytes<T>(withOutMagic), clazz, SerializationContextAdapter(context)) as T
-    }
+      @Suppress("UNCHECKED_CAST")
+      return customScheme.deserialize(SerializedBytes<T>(withOutMagic), clazz, SerializationContextAdapter(context)) as T
+  }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         val stream = ByteArrayOutputStream()
