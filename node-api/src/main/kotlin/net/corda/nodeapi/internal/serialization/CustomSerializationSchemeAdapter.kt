@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.serialization
 
-import jdk.nashorn.internal.ir.annotations.Ignore
 import net.corda.core.serialization.CustomSerializationContext
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
