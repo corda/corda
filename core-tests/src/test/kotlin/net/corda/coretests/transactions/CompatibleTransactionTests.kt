@@ -429,7 +429,7 @@ class CompatibleTransactionTests {
                 timeWindowGroup,
                 ComponentGroup(SIGNERS_GROUP.ordinal, twoCommandsforKey1.map { it.signers.serialize() })
         )
-        val wtx = WireTransaction(componentGroups = componentGroups, privacySalt = PrivacySalt(), digestService = DigestService.default)
+        val wtx = WireTransaction(componentGroups = componentGroups, privacySalt = PrivacySalt(), digestService = DigestService.default, leafDigestService = DigestService.default)
 
         // Filter KEY_1 commands (commands 1 and 3).
         fun filterKEY1Commands(elem: Any): Boolean {

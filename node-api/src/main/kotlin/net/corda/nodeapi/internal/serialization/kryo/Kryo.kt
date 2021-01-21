@@ -216,13 +216,15 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.componentGroups)
         kryo.writeClassAndObject(output, obj.privacySalt)
         kryo.writeClassAndObject(output, obj.digestService)
+        kryo.writeClassAndObject(output, obj.leafDigestService)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
         val componentGroups: List<ComponentGroup> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
-        val digestService = kryo.readClassAndObject(input) as? DigestService
-        return WireTransaction(componentGroups, privacySalt, digestService ?: DigestService.sha2_256)
+        val digestService = kryo.readClassAndObject(input) as? DigestService ?: DigestService.sha2_256
+        val leafDigestService = kryo.readClassAndObject(input) as? DigestService ?: DigestService.sha2_256
+        return WireTransaction(componentGroups, privacySalt, digestService, leafDigestService)
     }
 }
 

@@ -156,9 +156,10 @@ fun createWireTransaction(inputs: List<StateRef>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
                           privacySalt: PrivacySalt = PrivacySalt(),
-                          digestService: DigestService = DigestService.default): WireTransaction {
+                          digestService: DigestService = DigestService.default,
+                          leafDigestService: DigestService = DigestService.default): WireTransaction {
     val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
-    return WireTransaction(componentGroups, privacySalt, digestService)
+    return WireTransaction(componentGroups, privacySalt, digestService, leafDigestService)
 }
 
 /**

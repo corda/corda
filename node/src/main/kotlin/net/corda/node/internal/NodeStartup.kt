@@ -178,7 +178,9 @@ open class NodeStartup : NodeStartupLogging {
         // Temp Step. Enable experimental hash agility feature allowing to override default transaction hash algorithm.
         val txHashAlgoName = System.getProperty("experimental.corda.txHashAlgoName")
         val txHashAlgoClass = System.getProperty("experimental.corda.txHashAlgoClass")
-        HashAgility.init(txHashAlgoName, txHashAlgoClass)
+        val leafHashAlgoName = System.getProperty("experimental.corda.leafHashAlgoName")
+        val leafHashAlgoClass = System.getProperty("experimental.corda.leafHashAlgoClass")
+        HashAgility.init(txHashAlgoName, txHashAlgoClass, leafHashAlgoName, leafHashAlgoClass)
 
         // Step 4. Print banner and basic node info.
         val versionInfo = getVersionInfo()

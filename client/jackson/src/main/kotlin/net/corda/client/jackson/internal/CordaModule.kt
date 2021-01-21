@@ -212,6 +212,7 @@ private interface WireTransactionMixin
 private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
     override fun serialize(value: WireTransaction, gen: JsonGenerator, serializers: SerializerProvider) {
         gen.writeObject(WireTransactionJson(
+                value.leafDigestService,
                 value.digestService,
                 value.id,
                 value.notary,
@@ -240,11 +241,12 @@ private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() 
                 wrapper.references,
                 wrapper.networkParametersHash
         )
-        return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256)
+        return WireTransaction(componentGroups, wrapper.privacySalt, wrapper.digestService ?: DigestService.sha2_256,wrapper.leafDigestService ?: DigestService.sha2_256)
     }
 }
 
 private class WireTransactionJson(@get:JsonInclude(Include.NON_NULL) val digestService: DigestService?,
+                                  @get:JsonInclude(Include.NON_NULL) val leafDigestService: DigestService?,
                                   val id: SecureHash,
                                   val notary: Party?,
                                   val inputs: List<StateRef>,

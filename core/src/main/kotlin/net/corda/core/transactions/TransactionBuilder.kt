@@ -178,7 +178,8 @@ open class TransactionBuilder(
                             referenceStates,
                             services.networkParametersService.currentHash),
                     privacySalt,
-                    services.digestService
+                    services.digestService,
+                    services.leafDigestService
             )
         }
 

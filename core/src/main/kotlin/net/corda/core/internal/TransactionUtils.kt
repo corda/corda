@@ -206,8 +206,14 @@ class HashAgility {
         internal var digestService = DigestService.sha2_256
             private set
 
-        fun init(txHashAlgoName: String? = null, txHashAlgoClass: String? = null) {
+        @Volatile
+        internal var leafDigestService = DigestService.sha2_256
+            private set
+
+        fun init(txHashAlgoName: String? = null, txHashAlgoClass: String? = null,
+                 leafHashAlgoName: String? = null, leafHashAlgoClass: String? = null) {
             digestService = DigestService.sha2_256
+
             txHashAlgoName?.let {
                 // Verify that algorithm exists.
                 DigestAlgorithmFactory.create(it)
@@ -216,6 +222,18 @@ class HashAgility {
             txHashAlgoClass?.let {
                 val algorithm = DigestAlgorithmFactory.registerClass(it)
                 digestService = DigestService(algorithm)
+            }
+
+            leafDigestService = digestService
+
+            leafHashAlgoName?.let {
+                // Verify that algorithm exists.
+                DigestAlgorithmFactory.create(it)
+                leafDigestService = DigestService(it)
+            }
+            leafHashAlgoClass?.let {
+                val algorithm = DigestAlgorithmFactory.registerClass(it)
+                leafDigestService = DigestService(algorithm)
             }
         }
 
@@ -230,6 +248,7 @@ class HashAgility {
  * and as a parameter to MerkleTree.getMerkleTree(...) method. Default: SHA2_256.
  */
 val ServicesForResolution.digestService get() = HashAgility.digestService
+val ServicesForResolution.leafDigestService get() = HashAgility.leafDigestService
 
 fun ServicesForResolution.requireSupportedHashType(hash: NamedByHash) {
     require(HashAgility.isAlgorithmSupported(hash.id.algorithm)) {

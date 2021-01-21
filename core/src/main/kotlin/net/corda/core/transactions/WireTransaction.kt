@@ -49,7 +49,7 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, val digestService: DigestService, leafDigestService: DigestService) : TraversableTransaction(componentGroups, leafDigestService) {
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
@@ -57,7 +57,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * Old version of [WireTransaction] constructor for ABI compatibility.
      */
     @DeprecatedConstructorForDeserialization(1)
-    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DigestService.sha2_256)
+    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DigestService.sha2_256, DigestService.sha2_256)
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",
             ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
@@ -71,7 +71,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, DigestService.sha2_256)
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, DigestService.sha2_256, DigestService.sha2_256)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }
@@ -318,7 +318,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> leafDigestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
     }
 
     /**
@@ -327,7 +327,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> leafDigestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
     }
 
     /**
