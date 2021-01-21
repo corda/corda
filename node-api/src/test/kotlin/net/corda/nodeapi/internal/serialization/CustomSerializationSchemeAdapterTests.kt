@@ -35,7 +35,7 @@ class CustomSerializationSchemeAdapterTests {
         }
     }
 
-    class SameBytesInputAndOutputsAndScheme(): CustomSerializationScheme {
+    class SameBytesInputAndOutputsAndScheme: CustomSerializationScheme {
 
         private val expectedBytes = "123456789".toByteArray()
 
@@ -53,7 +53,7 @@ class CustomSerializationSchemeAdapterTests {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `CustomSerializationSchemeAdapter calls the correct methods in CustomSerializationScheme`() {
         val scheme = CustomSerializationSchemeAdapter(SingleInputAndOutputScheme())
         val serializedData = scheme.serialize(DummyInputClass(), serializationContext)
@@ -61,7 +61,7 @@ class CustomSerializationSchemeAdapterTests {
         assertTrue(roundTripped is DummyOutputClass)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `CustomSerializationSchemeAdapter validates the magic`() {
         val inScheme = CustomSerializationSchemeAdapter(SingleInputAndOutputScheme())
         val serializedData = inScheme.serialize(DummyInputClass(), serializationContext)
@@ -71,7 +71,7 @@ class CustomSerializationSchemeAdapterTests {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `CustomSerializationSchemeAdapter preserves the serialized bytes between deserialize and serialize`() {
         val scheme = CustomSerializationSchemeAdapter(SameBytesInputAndOutputsAndScheme())
         val serializedData = scheme.serialize(Any(), serializationContext)
