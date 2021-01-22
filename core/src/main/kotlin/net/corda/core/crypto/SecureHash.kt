@@ -221,7 +221,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
                 sha256Twice(bytes)
             } else {
                 val digest = digestFor(algorithm).get()
-                val firstHash = digest.preImageResistantDigest(bytes)
+                val firstHash = digest.componentDigest(bytes)
                 HASH(algorithm, digest.digest(firstHash))
             }
         }
@@ -239,7 +239,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
                 sha256Twice(bytes)
             } else {
                 val digest = digestFor(algorithm).get()
-                val firstHash = digest.preImageResistantDigest(bytes)
+                val firstHash = digest.nonceDigest(bytes)
                 HASH(algorithm, digest.digest(firstHash))
             }
         }
