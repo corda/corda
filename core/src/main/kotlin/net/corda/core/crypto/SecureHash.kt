@@ -216,12 +216,12 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
-        fun componentHashAs(algorithm: String, bytes: ByteArray): SecureHash {
+        fun preImageResistantDigestHashAs(algorithm: String, bytes: ByteArray): SecureHash {
             return if (algorithm == SHA2_256) {
                 sha256Twice(bytes)
             } else {
                 val digest = digestFor(algorithm).get()
-                val firstHash = digest.componentDigest(bytes)
+                val firstHash = digest.preImageResistantDigest(bytes)
                 HASH(algorithm, digest.digest(firstHash))
             }
         }
