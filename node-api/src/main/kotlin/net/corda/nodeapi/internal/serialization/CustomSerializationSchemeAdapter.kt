@@ -14,12 +14,11 @@ import java.nio.ByteBuffer
 class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializationScheme): SerializationScheme {
 
     companion object {
-        //If only this was C
-        const val SIZE_OF_INT = 4
+        const val SERIALIZATION_MAGIC_BUFFER_SIZE = 4
     }
 
     val serializationSchemeMagic = CordaSerializationMagic("CUS".toByteArray()
-            + ByteBuffer.allocate(SIZE_OF_INT).putInt(customScheme.getSerializationMagic().magicNumber).array())
+            + ByteBuffer.allocate(SERIALIZATION_MAGIC_BUFFER_SIZE).putInt(customScheme.getSchemeId()).array())
 
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
         return magic == serializationSchemeMagic
@@ -30,15 +29,14 @@ class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializa
         if (readMagic != serializationSchemeMagic)
             throw NotSerializableException("Scheme ${customScheme::class.java} is incompatible with blob." +
                     " Magic from blob = $readMagic (Expected = $serializationSchemeMagic)")
-        val withOutMagic = byteSequence.bytes.slice(serializationSchemeMagic.size .. byteSequence.size - 1).toByteArray()
-      @Suppress("UNCHECKED_CAST")
-      return customScheme.deserialize(SerializedBytes<T>(withOutMagic), clazz, SerializationContextAdapter(context)) as T
+        val withOutMagic = byteSequence.bytes.slice(serializationSchemeMagic.size until byteSequence.size).toByteArray()
+      return customScheme.deserialize(SerializedBytes(withOutMagic), clazz, SerializationContextAdapter(context))
   }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         val stream = ByteArrayOutputStream()
         stream.write(serializationSchemeMagic.bytes)
-        stream.write(customScheme.serialize(obj, SerializationContextAdapter(context)).bytes)
+        stream.write(customScheme.serialize<T>(obj, SerializationContextAdapter(context)).bytes)
         return SerializedBytes(stream.toByteArray())
     }
 

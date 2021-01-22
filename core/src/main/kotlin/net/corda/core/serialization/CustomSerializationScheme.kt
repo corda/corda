@@ -10,22 +10,20 @@ interface CustomSerializationScheme {
     /**
      * This must return a magic number used to uniquely (within a network) identify the Scheme.
      */
-    fun getSerializationMagic(): CustomSerializationMagic
+    fun getSchemeId(): Int
 
     /**
      * This method must deserialize (any) object from SerializedBytes.
      */
     @Throws(NotSerializableException::class)
-    fun deserialize(bytes: SerializedBytes<*>, clazz: Class<*>, context: CustomSerializationContext): Any
+    fun <T : Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>, context: CustomSerializationContext): T
 
     /**
      * This method must serialize (any) object into SerializedBytes.
      */
     @Throws(NotSerializableException::class)
-    fun serialize(obj: Any, context: CustomSerializationContext): SerializedBytes<*>
+    fun <T : Any> serialize(obj: T, context: CustomSerializationContext): SerializedBytes<T>
 }
-
-class CustomSerializationMagic(val magicNumber: Int)
 
 interface CustomSerializationContext {
     /**

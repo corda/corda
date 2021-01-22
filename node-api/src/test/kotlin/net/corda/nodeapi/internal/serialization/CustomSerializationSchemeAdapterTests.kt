@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.serialization.CustomSerializationContext
-import net.corda.core.serialization.CustomSerializationMagic
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
@@ -13,25 +12,26 @@ import kotlin.test.assertFailsWith
 class CustomSerializationSchemeAdapterTests {
 
     companion object {
-        const val DEFAULT_MAGIC = 7
+        const val DEFAULT_SCHEME_ID = 7
     }
 
     class DummyInputClass
     class DummyOutputClass
 
-    class SingleInputAndOutputScheme(val magic: CustomSerializationMagic = CustomSerializationMagic(DEFAULT_MAGIC)): CustomSerializationScheme {
+    class SingleInputAndOutputScheme(private val schemeId: Int = DEFAULT_SCHEME_ID): CustomSerializationScheme {
 
-        override fun getSerializationMagic(): CustomSerializationMagic {
-            return magic
+        override fun getSchemeId(): Int {
+            return schemeId
         }
 
-        override fun deserialize(bytes: SerializedBytes<*>, clazz: Class<*>, context: CustomSerializationContext): Any {
-            return DummyOutputClass()
+        override fun <T: Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>, context: CustomSerializationContext): T {
+            @Suppress("UNCHECKED_CAST")
+            return DummyOutputClass() as T
         }
 
-        override fun serialize(obj: Any, context: CustomSerializationContext): SerializedBytes<*> {
+        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): SerializedBytes<T> {
             assertTrue(obj is DummyInputClass)
-            return SerializedBytes<Any>(ByteArray(2) { 0x2 })
+            return SerializedBytes(ByteArray(2) { 0x2 })
         }
     }
 
@@ -39,17 +39,18 @@ class CustomSerializationSchemeAdapterTests {
 
         private val expectedBytes = "123456789".toByteArray()
 
-        override fun getSerializationMagic(): CustomSerializationMagic {
-            return CustomSerializationMagic(DEFAULT_MAGIC)
+        override fun getSchemeId(): Int {
+            return DEFAULT_SCHEME_ID
         }
 
-        override fun deserialize(bytes: SerializedBytes<*>, clazz: Class<*>, context: CustomSerializationContext): Any {
+        override fun <T: Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>, context: CustomSerializationContext): T {
             assertTrue(bytes.bytes.contentEquals(expectedBytes))
-            return DummyOutputClass()
+            @Suppress("UNCHECKED_CAST")
+            return DummyOutputClass() as T
         }
 
-        override fun serialize(obj: Any, context: CustomSerializationContext): SerializedBytes<*> {
-            return SerializedBytes<Any>(expectedBytes)
+        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): SerializedBytes<T> {
+            return SerializedBytes(expectedBytes)
         }
     }
 
@@ -62,10 +63,18 @@ class CustomSerializationSchemeAdapterTests {
     }
 
     @Test(timeout=300_000)
+    fun `CustomSerializationSchemeAdapter can adapt a Java implementation`() {
+        val scheme = CustomSerializationSchemeAdapter(DummyCustomSerializationSchemeInJava())
+        val serializedData = scheme.serialize(DummyInputClass(), serializationContext)
+        val roundTripped = scheme.deserialize(serializedData, Any::class.java, serializationContext)
+        assertTrue(roundTripped is DummyCustomSerializationSchemeInJava.DummyOutput)
+    }
+    
+    @Test(timeout=300_000)
     fun `CustomSerializationSchemeAdapter validates the magic`() {
         val inScheme = CustomSerializationSchemeAdapter(SingleInputAndOutputScheme())
         val serializedData = inScheme.serialize(DummyInputClass(), serializationContext)
-        val outScheme = CustomSerializationSchemeAdapter(SingleInputAndOutputScheme(CustomSerializationMagic(8)))
+        val outScheme = CustomSerializationSchemeAdapter(SingleInputAndOutputScheme(8))
         assertFailsWith<NotSerializableException> {
             outScheme.deserialize(serializedData, DummyOutputClass::class.java, serializationContext)
         }
