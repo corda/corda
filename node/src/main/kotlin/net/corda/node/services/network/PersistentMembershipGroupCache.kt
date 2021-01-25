@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -128,9 +129,19 @@ class PersistentMembershipGroupCache(
         return getMemberByKey(party.owningKey)?.takeIf { party.name == it.party.name }
     }
 
-    override fun getMemberByKeyHash(keyHash: String): MemberInfo? {
+    private fun getMemberByKeyHash(keyHash: String): MemberInfo? {
         return queryPersistentInfoByKeyHash(keyHash)?.toMemberInfo()
                 ?: _mgmInfo?.takeIf { keyHash == it.party.owningKey.toStringShort() }
+    }
+
+    override fun getMembersByKeyHash(keyHash: String): List<MemberInfo> {
+        val memberInfo = getMemberByKeyHash(keyHash) ?: return listOf()
+        val owningKey = memberInfo.party.owningKey
+        return if (owningKey is CompositeKey) {
+            owningKey.leafKeys.mapNotNull { getMemberByKey(it) }
+        } else {
+            listOf(memberInfo)
+        }
     }
 
     private fun queryPersistentInfoByKeyHash(keyHash: String): PersistentMemberInfo? = database.transaction {

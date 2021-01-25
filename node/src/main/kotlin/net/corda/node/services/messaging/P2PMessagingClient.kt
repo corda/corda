@@ -11,6 +11,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.MemberInfo
+import net.corda.core.node.distributed
 import net.corda.core.node.services.MembershipGroupCache
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SerializationDefaults
@@ -268,10 +269,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
         log.info("Updating bridge on network map change: ${change::class.simpleName} ${change.memberInfo}")
         fun gatherAddress(memberInfo: MemberInfo): BridgeEntry? {
             return state.locked {
-                with(memberInfo) {
-                    val messagingAddress = NodeAddress(party.owningKey)
-                    BridgeEntry(messagingAddress.queueName, addresses, listOf(party.name), serviceAddress = false)
-                }.takeIf { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }
+                // TODO[DR]: Implement bridge updates for workers using service queue or, alternatively, remove service queue completely.
+                memberInfo.takeIf { !it.distributed }?.let {
+                    val messagingAddress = NodeAddress(it.party.owningKey)
+                    BridgeEntry(messagingAddress.queueName, it.addresses, listOf(it.party.name), serviceAddress = false)
+                }?.takeIf { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }
             }
         }
 
@@ -295,13 +297,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 destroyBridge(change.memberInfo)
             }
             is MembershipGroupCache.GroupChange.Modified -> {
-                // Only redeploy bridges when necessary to avoid "bad certificate" on TLS handshake when registering new group member.
-                if (change.previousInfo.party != change.memberInfo.party || change.previousInfo.endpoints != change.memberInfo.endpoints) {
-                    destroyBridge(change.previousInfo)
-                    deployBridge(change.memberInfo)
-                } else {
-                    log.info("Skipping bridge update")
-                }
+                destroyBridge(change.previousInfo)
+                deployBridge(change.memberInfo)
             }
         }
     }
@@ -310,8 +307,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
         val requiredBridges = mutableListOf<BridgeEntry>()
         fun createBridgeEntry(queueName: SimpleString) {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
-            networkMap.getMemberByKeyHash(keyHash)?.let {
-                val bridge = BridgeEntry(queueName.toString(), it.addresses, listOf(it.party.name), serviceAddress = false)
+            val peers = networkMap.getMembersByKeyHash(keyHash)
+            for (node in peers) {
+                val bridge = BridgeEntry(queueName.toString(), node.addresses, listOf(node.party.name), serviceAddress = false)
                 requiredBridges += bridge
                 knownQueues += queueName.toString()
             }
@@ -545,8 +543,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean, isServiceAddress: Boolean) {
         fun sendBridgeCreateMessage() {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
-            networkMap.getMemberByKeyHash(keyHash)?.let {
-                val bridge = BridgeEntry(queueName, it.addresses, listOf(it.party.name), isServiceAddress)
+            val peers = networkMap.getMembersByKeyHash(keyHash)
+            for (node in peers) {
+                val bridge = BridgeEntry(queueName, node.addresses, listOf(node.party.name), isServiceAddress)
                 val createBridgeMessage = BridgeControl.Create(config.myLegalName.toString(), bridge)
                 sendBridgeControl(createBridgeMessage)
             }

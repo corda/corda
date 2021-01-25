@@ -1,12 +1,15 @@
 package net.corda.node.services.network
 
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.Party
 import net.corda.core.node.MemberStatus
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
@@ -71,10 +74,33 @@ class PersistentMembershipGroupCacheTest {
     }
 
     @Test(timeout = 300_000)
+    fun `get member info by key`() {
+        assertEquals(aliceInfo, membershipGroupCache.getMemberByKey(alice.owningKey))
+        assertEquals(bobInfo, membershipGroupCache.getMemberByKey(bob.owningKey))
+        assertNull(membershipGroupCache.getMemberByKey(charlie.owningKey))
+    }
+
+    @Test(timeout = 300_000)
     fun `get member info by key hash`() {
-        assertEquals(aliceInfo, membershipGroupCache.getMemberByKeyHash(alice.owningKey.toStringShort()))
-        assertEquals(bobInfo, membershipGroupCache.getMemberByKeyHash(bob.owningKey.toStringShort()))
-        assertNull(membershipGroupCache.getMemberByKeyHash(charlie.owningKey.toStringShort()))
+        assertThat(membershipGroupCache.getMembersByKeyHash(alice.owningKey.toStringShort())).containsExactlyInAnyOrder(aliceInfo)
+        assertThat(membershipGroupCache.getMembersByKeyHash(bob.owningKey.toStringShort())).containsExactlyInAnyOrder(bobInfo)
+        assertThat(membershipGroupCache.getMembersByKeyHash(charlie.owningKey.toStringShort())).isEmpty()
+    }
+
+    @Test(timeout = 300_000)
+    fun `get distributed member info by key hash`() {
+        val compositeKey = CompositeKey.Builder().addKeys(alice.owningKey, bob.owningKey).build(threshold = 1)
+        val notary = Party(DUMMY_NOTARY_NAME, compositeKey)
+        membershipGroupCache.addOrUpdateMember(memberInfo(notary))
+        assertThat(membershipGroupCache.getMembersByKeyHash(notary.owningKey.toStringShort())).containsExactlyInAnyOrder(aliceInfo, bobInfo)
+    }
+
+    @Test(timeout = 300_000)
+    fun `get distributed member info by key hash with missing component`() {
+        val compositeKey = CompositeKey.Builder().addKeys(alice.owningKey, charlie.owningKey).build(threshold = 1)
+        val notary = Party(DUMMY_NOTARY_NAME, compositeKey)
+        membershipGroupCache.addOrUpdateMember(memberInfo(notary))
+        assertThat(membershipGroupCache.getMembersByKeyHash(notary.owningKey.toStringShort())).containsExactlyInAnyOrder(aliceInfo)
     }
 
     @Test(timeout = 300_000)
