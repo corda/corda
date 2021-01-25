@@ -1,6 +1,7 @@
 package net.corda.core.serialization
 
 import net.corda.core.DoNotImplement
+import net.corda.core.utilities.ByteSequence
 import java.io.NotSerializableException
 
 /***
@@ -22,16 +23,16 @@ interface CustomSerializationScheme {
      * @param context used to pass information about how the object should be deserialized.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>, context: CustomSerializationContext): T
+    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: CustomSerializationContext): T
 
     /**
-     * This method must be able to serialize any object [T] into SerializedBytes.
+     * This method must be able to serialize any object [T] into a ByteSequence.
      *
      * @param obj the object to be serialized.
      * @param context used to pass information about how the object should be serialized.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> serialize(obj: T, context: CustomSerializationContext): SerializedBytes<T>
+    fun <T : Any> serialize(obj: T, context: CustomSerializationContext): ByteSequence
 }
 
 /**

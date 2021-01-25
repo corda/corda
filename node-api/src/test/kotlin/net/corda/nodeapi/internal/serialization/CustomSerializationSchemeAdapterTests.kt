@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.serialization
 import net.corda.core.serialization.CustomSerializationContext
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -24,14 +25,14 @@ class CustomSerializationSchemeAdapterTests {
             return schemeId
         }
 
-        override fun <T: Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>, context: CustomSerializationContext): T {
+        override fun <T: Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: CustomSerializationContext): T {
             @Suppress("UNCHECKED_CAST")
             return DummyOutputClass() as T
         }
 
-        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): SerializedBytes<T> {
+        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): ByteSequence {
             assertTrue(obj is DummyInputClass)
-            return SerializedBytes(ByteArray(2) { 0x2 })
+            return ByteSequence.of(ByteArray(2) { 0x2 })
         }
     }
 
@@ -43,14 +44,18 @@ class CustomSerializationSchemeAdapterTests {
             return DEFAULT_SCHEME_ID
         }
 
-        override fun <T: Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>, context: CustomSerializationContext): T {
-            assertTrue(bytes.bytes.contentEquals(expectedBytes))
+        override fun <T: Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: CustomSerializationContext): T {
+            bytes.open().use {
+                val data = ByteArray(expectedBytes.size) { 0 }
+                it.read(data)
+                assertTrue(data.contentEquals(expectedBytes))
+            }
             @Suppress("UNCHECKED_CAST")
             return DummyOutputClass() as T
         }
 
-        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): SerializedBytes<T> {
-            return SerializedBytes(expectedBytes)
+        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): ByteSequence {
+            return ByteSequence.of(expectedBytes)
         }
     }
 

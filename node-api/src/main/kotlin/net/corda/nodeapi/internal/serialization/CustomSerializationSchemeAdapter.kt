@@ -29,8 +29,7 @@ class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializa
         if (readMagic != serializationSchemeMagic)
             throw NotSerializableException("Scheme ${customScheme::class.java} is incompatible with blob." +
                     " Magic from blob = $readMagic (Expected = $serializationSchemeMagic)")
-        val withOutMagic = byteSequence.bytes.slice(serializationSchemeMagic.size until byteSequence.size).toByteArray()
-      return customScheme.deserialize(SerializedBytes(withOutMagic), clazz, SerializationContextAdapter(context))
+      return customScheme.deserialize(byteSequence.subSequence(serializationSchemeMagic.size, byteSequence.size - serializationSchemeMagic.size), clazz, SerializationContextAdapter(context))
   }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {

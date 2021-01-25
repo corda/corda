@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.serialization;
 import net.corda.core.serialization.CustomSerializationContext;
 import net.corda.core.serialization.CustomSerializationScheme;
 import net.corda.core.serialization.SerializedBytes;
+import net.corda.core.utilities.ByteSequence;
 
 public class DummyCustomSerializationSchemeInJava implements CustomSerializationScheme {
 
@@ -17,7 +18,7 @@ public class DummyCustomSerializationSchemeInJava implements CustomSerialization
 
         @Override
         @SuppressWarnings("unchecked")
-        public <T> T deserialize(SerializedBytes<T> bytes, Class<T> clazz, CustomSerializationContext context) {
+        public <T> T deserialize(ByteSequence bytes, Class<T> clazz, CustomSerializationContext context) {
             return (T)new DummyOutput();
         }
 
