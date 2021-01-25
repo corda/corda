@@ -14,11 +14,11 @@ import java.nio.ByteBuffer
 class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializationScheme): SerializationScheme {
 
     companion object {
-        const val SERIALIZATION_MAGIC_BUFFER_SIZE = 4
+        const val SERIALIZATION_SCHEME_ID_SIZE = 4
     }
 
     val serializationSchemeMagic = CordaSerializationMagic("CUS".toByteArray()
-            + ByteBuffer.allocate(SERIALIZATION_MAGIC_BUFFER_SIZE).putInt(customScheme.getSchemeId()).array())
+            + ByteBuffer.allocate(SERIALIZATION_SCHEME_ID_SIZE).putInt(customScheme.getSchemeId()).array())
 
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
         return magic == serializationSchemeMagic
@@ -36,7 +36,7 @@ class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializa
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         val stream = ByteArrayOutputStream()
         stream.write(serializationSchemeMagic.bytes)
-        stream.write(customScheme.serialize<T>(obj, SerializationContextAdapter(context)).bytes)
+        stream.write(customScheme.serialize(obj, SerializationContextAdapter(context)).bytes)
         return SerializedBytes(stream.toByteArray())
     }
 
