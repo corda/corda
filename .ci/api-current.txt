@@ -5935,6 +5935,20 @@ public @interface net.corda.core.serialization.CordaSerializationTransformRename
 public @interface net.corda.core.serialization.CordaSerializationTransformRenames
   public abstract net.corda.core.serialization.CordaSerializationTransformRename[] value()
 ##
+@DoNotImplement
+public interface net.corda.core.serialization.CustomSerializationContext
+  @NotNull
+  public abstract ClassLoader getDeserializationClassLoader()
+  @NotNull
+  public abstract net.corda.core.serialization.ClassWhitelist getWhitelist()
+##
+public interface net.corda.core.serialization.CustomSerializationScheme
+  @NotNull
+  public abstract T deserialize(net.corda.core.utilities.ByteSequence, Class<T>, net.corda.core.serialization.CustomSerializationContext)
+  public abstract int getSchemeId()
+  @NotNull
+  public abstract net.corda.core.utilities.ByteSequence serialize(T, net.corda.core.serialization.CustomSerializationContext)
+##
 public @interface net.corda.core.serialization.DeprecatedConstructorForDeserialization
   public abstract int version()
 ##
