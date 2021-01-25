@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.serialization
 
 import net.corda.core.serialization.CustomSerializationContext
 import net.corda.core.serialization.CustomSerializationScheme
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
 import org.junit.Test
