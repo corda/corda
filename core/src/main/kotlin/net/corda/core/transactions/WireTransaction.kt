@@ -320,8 +320,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
         if(digestService.hashAlgorithm == SecureHash.SHA2_256) {
             componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
-        }
-        else {
+        } else {
             componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, _ -> digestService.computeNonce(privacySalt, it.groupIndex, internalIndex) } }
         }
     }
