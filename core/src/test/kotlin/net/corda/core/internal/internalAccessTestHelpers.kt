@@ -18,6 +18,7 @@ fun WireTransaction.accessGroupHashes() = this.groupHashes
 
 fun WireTransaction.accessGroupMerkleRoots() = this.groupsMerkleRoots
 fun WireTransaction.accessAvailableComponentHashes() = this.availableComponentHashes
+fun WireTransaction.accessAvailableComponentNonces() = this.availableComponentNonces
 
 @Suppress("LongParameterList")
 fun createLedgerTransaction(
