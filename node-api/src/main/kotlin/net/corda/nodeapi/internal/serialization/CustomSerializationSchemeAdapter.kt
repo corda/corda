@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization
 
-import net.corda.core.serialization.CustomSerializationContext
+import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -26,24 +26,25 @@ class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializa
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
         val readMagic = byteSequence.take(serializationSchemeMagic.size)
-        if (readMagic != serializationSchemeMagic)
+        if (readMagic != serializationSchemeMagic) {
             throw NotSerializableException("Scheme ${customScheme::class.java} is incompatible with blob." +
                     " Magic from blob = $readMagic (Expected = $serializationSchemeMagic)")
+        }
         return customScheme.deserialize(
             byteSequence.subSequence(serializationSchemeMagic.size, byteSequence.size - serializationSchemeMagic.size),
             clazz,
-            SerializationContextAdapter(context)
+            SerializationSchemeContextAdapter(context)
         )
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         val stream = ByteArrayOutputStream()
         stream.write(serializationSchemeMagic.bytes)
-        stream.write(customScheme.serialize(obj, SerializationContextAdapter(context)).bytes)
+        stream.write(customScheme.serialize(obj, SerializationSchemeContextAdapter(context)).bytes)
         return SerializedBytes(stream.toByteArray())
     }
 
-    private class SerializationContextAdapter(context: SerializationContext) : CustomSerializationContext {
+    private class SerializationSchemeContextAdapter(context: SerializationContext) : SerializationSchemeContext {
         override val deserializationClassLoader = context.deserializationClassLoader
         override val whitelist = context.whitelist
     }

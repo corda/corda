@@ -1,6 +1,5 @@
 package net.corda.core.serialization
 
-import net.corda.core.DoNotImplement
 import net.corda.core.utilities.ByteSequence
 import java.io.NotSerializableException
 
@@ -23,7 +22,7 @@ interface CustomSerializationScheme {
      * @param context used to pass information about how the object should be deserialized.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: CustomSerializationContext): T
+    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationSchemeContext): T
 
     /**
      * This method must be able to serialize any object [T] into a ByteSequence.
@@ -32,21 +31,5 @@ interface CustomSerializationScheme {
      * @param context used to pass information about how the object should be serialized.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> serialize(obj: T, context: CustomSerializationContext): ByteSequence
-}
-
-/**
- * This is used to pass information about how the object should be serialized and deserialized. This context might change depending on where
- * [CustomSerializationScheme.deserialize] or [CustomSerializationScheme.serialize] are called internally.
- */
-@DoNotImplement
-interface CustomSerializationContext {
-    /**
-     * The class loader to use for deserialization.
-     */
-    val deserializationClassLoader: ClassLoader
-    /**
-     * A whitelist that contains (mostly for security purposes) which classes are authorised to be serialized and deserialized.
-     */
-    val whitelist: ClassWhitelist
+    fun <T : Any> serialize(obj: T, context: SerializationSchemeContext): ByteSequence
 }

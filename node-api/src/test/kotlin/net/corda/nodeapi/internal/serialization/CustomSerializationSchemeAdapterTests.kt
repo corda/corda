@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization
 
-import net.corda.core.serialization.CustomSerializationContext
+import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
@@ -24,12 +24,12 @@ class CustomSerializationSchemeAdapterTests {
             return schemeId
         }
 
-        override fun <T: Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: CustomSerializationContext): T {
+        override fun <T: Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationSchemeContext): T {
             @Suppress("UNCHECKED_CAST")
             return DummyOutputClass() as T
         }
 
-        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): ByteSequence {
+        override fun <T: Any> serialize(obj: T, context: SerializationSchemeContext): ByteSequence {
             assertTrue(obj is DummyInputClass)
             return ByteSequence.of(ByteArray(2) { 0x2 })
         }
@@ -43,7 +43,7 @@ class CustomSerializationSchemeAdapterTests {
             return DEFAULT_SCHEME_ID
         }
 
-        override fun <T: Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: CustomSerializationContext): T {
+        override fun <T: Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationSchemeContext): T {
             bytes.open().use {
                 val data = ByteArray(expectedBytes.size) { 0 }
                 it.read(data)
@@ -53,7 +53,7 @@ class CustomSerializationSchemeAdapterTests {
             return DummyOutputClass() as T
         }
 
-        override fun <T: Any> serialize(obj: T, context: CustomSerializationContext): ByteSequence {
+        override fun <T: Any> serialize(obj: T, context: SerializationSchemeContext): ByteSequence {
             return ByteSequence.of(expectedBytes)
         }
     }
