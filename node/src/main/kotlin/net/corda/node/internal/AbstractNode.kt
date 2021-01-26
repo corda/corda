@@ -189,7 +189,6 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
 import javax.sql.DataSource
-import kotlin.collections.ArrayList
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -1026,10 +1025,20 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             service.run {
                 tokenize()
                 runOnStop += ::stop
-                flowManager.registerInitiatedCoreFlowFactory(NotaryFlow.Client::class, ::createServiceFlow)
+                registerInitiatingFlows()
                 start()
             }
             return service
+        }
+    }
+
+    private fun NotaryService.registerInitiatingFlows() {
+        if (configuration.notary?.enableOverridableFlows == true) {
+            initiatingFlows.forEach { (flow, factory) ->
+                flowManager.registerInitiatedCoreFlowFactory(flow, factory)
+            }
+        } else {
+            flowManager.registerInitiatedCoreFlowFactory(NotaryFlow.Client::class, ::createServiceFlow)
         }
     }
 

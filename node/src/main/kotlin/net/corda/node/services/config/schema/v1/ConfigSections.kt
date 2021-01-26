@@ -208,10 +208,22 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
     private val raft by nested(RaftConfigSpec).optional()
     private val bftSMaRt by nested(BFTSmartConfigSpec).optional()
+    private val enableOverridableFlows by boolean().optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NotaryConfig> {
         val config = configuration.withOptions(options)
-        return valid(NotaryConfig(config[validating], config[serviceLegalName], config[className], config[etaMessageThresholdSeconds], config[extraConfig], config[raft], config[bftSMaRt]))
+        return valid(
+                NotaryConfig(
+                        config[validating],
+                        config[serviceLegalName],
+                        config[className],
+                        config[etaMessageThresholdSeconds],
+                        config[extraConfig],
+                        config[raft],
+                        config[bftSMaRt],
+                        config[enableOverridableFlows]
+                )
+        )
     }
 }
 
