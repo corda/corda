@@ -17,8 +17,14 @@ import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationMagic
+import net.corda.core.serialization.internal.SerializationEnvironment.Companion.getCustomSerializationMagicFromSchemeId
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
+import net.corda.core.serialization.CustomSerializationScheme
+import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -139,6 +145,23 @@ open class TransactionBuilder(
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
             .apply { checkSupportedHashType() }
+
+    /**
+     * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
+     *
+     * @param [schemeId] is used to specify the [CustomSerializationScheme] used to serialize each component of the componentGroups of the [WireTransaction].
+     * This is an experimental feature.
+     *
+     * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
+     *
+     * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
+     */
+    @Throws(MissingContractAttachments::class)
+    fun toWireTransaction(services: ServicesForResolution, schemeId: Int): WireTransaction {
+        val magic: SerializationMagic = getCustomSerializationMagicFromSchemeId(schemeId)
+        val serializationContext = SerializationDefaults.P2P_CONTEXT.withPreferredSerializationVersion(magic)
+        return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
+    }
 
     @CordaInternal
     internal fun toWireTransactionWithContext(
