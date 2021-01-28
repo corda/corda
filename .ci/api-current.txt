@@ -1851,14 +1851,14 @@ public final class net.corda.core.crypto.CryptoUtils extends java.lang.Object
 ##
 public interface net.corda.core.crypto.DigestAlgorithm
   @NotNull
-  public abstract byte[] componentDigest(byte[])
-  @NotNull
   public abstract byte[] digest(byte[])
   @NotNull
   public abstract String getAlgorithm()
   public abstract int getDigestLength()
   @NotNull
   public abstract byte[] nonceDigest(byte[])
+  @NotNull
+  public abstract byte[] preImageResistantDigest(byte[])
 ##
 @CordaSerializable
 public class net.corda.core.crypto.DigitalSignature extends net.corda.core.utilities.OpaqueBytes
