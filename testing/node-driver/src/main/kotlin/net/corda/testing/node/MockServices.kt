@@ -251,11 +251,15 @@ open class MockServices private constructor(
                 override fun jdbcSession(): Connection = persistence.createSession()
 
                 override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-                    return block(contextTransaction.entityManager)
+                    return contextTransaction.entityManager.run {
+                        block(this).also { flush () }
+                    }
                 }
 
                 override fun withEntityManager(block: Consumer<EntityManager>) {
-                    return block.accept(contextTransaction.entityManager)
+                    return contextTransaction.entityManager.run {
+                        block.accept(this).also { flush () }
+                    }
                 }
             }
         }
