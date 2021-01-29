@@ -142,6 +142,7 @@ internal interface StateMachineManagerInternal {
     fun retryFlowFromSafePoint(currentState: StateMachineState)
     fun scheduleFlowTimeout(flowId: StateMachineRunId)
     fun cancelFlowTimeout(flowId: StateMachineRunId)
+    fun killFlowForcibly(flowId: StateMachineRunId): Boolean
 }
 
 /**

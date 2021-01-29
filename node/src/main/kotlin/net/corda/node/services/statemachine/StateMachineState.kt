@@ -47,6 +47,8 @@ import java.util.concurrent.Semaphore
  *   work.
  * @param isKilled true if the flow has been marked as killed. This is used to cause a flow to move to a killed flow transition no matter
  * what event it is set to process next.
+ * @param isDead true if the flow has been marked as dead. This happens when a flow experiences an unexpected error and escapes its event loop
+ * which prevents it from processing events.
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
  * @param reloadCheckpointAfterSuspendCount The number of times a flow has been reloaded (not retried). This is [null] when
  * [NodeConfiguration.reloadCheckpointAfterSuspendCount] is not enabled.
@@ -68,6 +70,7 @@ data class StateMachineState(
     val isStartIdempotent: Boolean,
     val isRemoved: Boolean,
     val isKilled: Boolean,
+    val isDead: Boolean,
     val senderUUID: String?,
     val reloadCheckpointAfterSuspendCount: Int?,
     var numberOfCommits: Int,
@@ -278,7 +281,7 @@ sealed class SessionState {
      * @property rejectionError if non-null the initiation failed.
      */
     data class Initiating(
-            val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
+            val bufferedMessages: ArrayList<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
             override val deduplicationSeed: String
     ) : SessionState()
@@ -295,7 +298,7 @@ sealed class SessionState {
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: List<ExistingSessionMessagePayload>,
+            val receivedMessages: ArrayList<ExistingSessionMessagePayload>,
             val otherSideErrored: Boolean,
             val peerSinkSessionId: SessionId,
             override val deduplicationSeed: String
