@@ -18,6 +18,7 @@ import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.common.internal.testNetworkParameters
@@ -25,6 +26,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.rigorousMock
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
@@ -35,6 +37,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Instant
+import kotlin.test.assertFailsWith
 
 class TransactionBuilderTest {
     @Rule
@@ -298,5 +301,22 @@ class TransactionBuilderTest {
         } finally {
             HashAgility.init()
         }
+    }
+
+    @Test(timeout=300_000)
+    fun `toWireTransaction fails if no scheme is registered with schemeId`() {
+        val outputState = TransactionState(
+                data = DummyState(),
+                contract = DummyContract.PROGRAM_ID,
+                notary = notary,
+                constraint = HashAttachmentConstraint(contractAttachmentId)
+        )
+        val builder = TransactionBuilder()
+                .addOutputState(outputState)
+                .addCommand(DummyCommandData, notary.owningKey)
+
+        assertFailsWith<UnsupportedOperationException> {
+            builder.toWireTransaction(services, 7)
+       }
     }
 }
