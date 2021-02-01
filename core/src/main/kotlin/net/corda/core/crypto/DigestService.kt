@@ -91,7 +91,7 @@ data class DigestService(val hashAlgorithm: String) {
      *  otherwise it's defined by DigestAlgorithm.preImageResistantDigest(nonce || serializedComponent). */
     fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash {
         val data = nonce.bytes + opaqueBytes.bytes
-        return SecureHash.preImageResistantHashAs(hashAlgorithm, data)
+        return SecureHash.componentHashAs(hashAlgorithm, data)
     }
 
     /**
@@ -113,7 +113,7 @@ data class DigestService(val hashAlgorithm: String) {
      */
     fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) : SecureHash {
         val data = (privacySalt.bytes + ByteBuffer.allocate(NONCE_SIZE).putInt(groupIndex).putInt(internalIndex).array())
-        return SecureHash.preImageResistantHashAs(hashAlgorithm, data)
+        return SecureHash.nonceHashAs(hashAlgorithm, data)
     }
 }
 

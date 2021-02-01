@@ -216,13 +216,31 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
-        fun preImageResistantHashAs(algorithm: String, bytes: ByteArray): SecureHash {
+        fun componentHashAs(algorithm: String, bytes: ByteArray): SecureHash {
             return if (algorithm == SHA2_256) {
                 sha256Twice(bytes)
             } else {
                 val digest = digestFor(algorithm).get()
-                val firstHash = digest.preImageResistantDigest(bytes)
-                HASH(algorithm, digest.digest(firstHash))
+                val hash = digest.componentDigest(bytes)
+                HASH(algorithm, hash)
+            }
+        }
+
+        /**
+         * Computes the digest of the [ByteArray] which is resistant to pre-image attacks.
+         * It computes the hash of the hash for SHA2-256 and other algorithms loaded via JCA [MessageDigest].
+         * For custom algorithms the strategy can be modified via [DigestAlgorithm].
+         * @param algorithm The [MessageDigest] algorithm to use.
+         * @param bytes The [ByteArray] to hash.
+         */
+        @JvmStatic
+        fun nonceHashAs(algorithm: String, bytes: ByteArray): SecureHash {
+            return if (algorithm == SHA2_256) {
+                sha256Twice(bytes)
+            } else {
+                val digest = digestFor(algorithm).get()
+                val hash = digest.nonceDigest(bytes)
+                HASH(algorithm, hash)
             }
         }
 

@@ -25,8 +25,16 @@ interface DigestAlgorithm {
     fun digest(bytes: ByteArray): ByteArray
 
     /**
-     * Computes the digest of the [ByteArray] which is resistant to pre-image attacks.
+     * Computes the digest of the [ByteArray] which is resistant to pre-image attacks. Only used to calculate the hash of the leaves of the
+     * ComponentGroup Merkle tree, starting from its serialized components.
      * Default implementation provides double hashing, but can it be changed to single hashing or something else for better performance.
      */
-    fun preImageResistantDigest(bytes: ByteArray): ByteArray = digest(digest(bytes))
+    fun componentDigest(bytes: ByteArray): ByteArray = digest(digest(bytes))
+
+    /**
+     * Computes the digest of the [ByteArray] which is resistant to pre-image attacks. Only used to calculate the nonces for the leaves of
+     * the ComponentGroup Merkle tree.
+     * Default implementation provides double hashing, but can it be changed to single hashing or something else for better performance.
+     */
+    fun nonceDigest(bytes: ByteArray): ByteArray = digest(digest(bytes))
 }
