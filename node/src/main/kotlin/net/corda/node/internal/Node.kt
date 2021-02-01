@@ -652,7 +652,7 @@ open class Node(configuration: NodeConfiguration,
         if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
         val customScheme = System.getProperty("experimental.corda.customSerializationScheme")?.let {
-            scanForCustomSerializationScheme(it, classloader)
+            scanForCustomSerializationScheme(it, javaClass.classLoader)
         }
         nodeSerializationEnv = SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {

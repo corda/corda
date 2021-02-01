@@ -17,26 +17,22 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.customcheckpointserializer.TestCorDapp
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
-import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import org.assertj.core.api.Assertions
-import org.junit.After
-import org.junit.Before
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeParameters
+import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import org.objenesis.instantiator.ObjectInstantiator
 import org.objenesis.strategy.InstantiatorStrategy
@@ -44,19 +40,20 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Modifier
 import kotlin.test.assertTrue
-import net.corda.testing.node.internal.startFlow
 
-
-class MockNetworkCustomSerializationSchemeTest {
-    private lateinit var mockNetwork : InternalMockNetwork
-
+class CustomSerializationSchemeDriverTest {
 
     @Test(timeout = 300_000)
     fun `flow suspend with custom kryo serializer`() {
-        val alice = mockNetwork.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-        alice.attachments
-        val bob = mockNetwork.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
-        assertTrue { alice.services.startFlow (SendFlow(bob.info.legalIdentities.single())).resultFuture.get() }
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
+            val (alice, bob) = listOf(
+                    startNode(NodeParameters(providedName = ALICE_NAME)),
+                    startNode(NodeParameters(providedName = BOB_NAME))
+            ).transpose().getOrThrow()
+
+            val flow = alice.rpc.startFlow(::SendFlow, bob.nodeInfo.legalIdentities.single())
+            assertTrue { flow.returnValue.getOrThrow() }
+        }
     }
 
     @StartableByRPC
@@ -81,10 +78,8 @@ class MockNetworkCustomSerializationSchemeTest {
             return session.receive<Boolean>().unwrap {it}
         }
 
-        //p2pKyroContext must not be on the fibers stack when the flow checkpoints.
         fun createWireTransaction(builder: TransactionBuilder) : WireTransaction {
-            //return builder.toWireTransaction(serviceHub, MyScheme.SCHEME_ID)
-            return builder.toWireTransaction(serviceHub, 256)
+            return builder.toWireTransaction(serviceHub, KryoScheme.SCHEME_ID)
         }
 
     }
@@ -114,17 +109,7 @@ class MockNetworkCustomSerializationSchemeTest {
 
     object DummyCommandData : TypeOnlyCommandData()
 
-    @Before
-    fun setup() {
-        mockNetwork = InternalMockNetwork()
-    }
-
-    @After
-    fun shutdown() {
-        mockNetwork.stopNodes()
-    }
-
-    class KyroScheme : CustomSerializationScheme {
+    class KryoScheme : CustomSerializationScheme {
 
         companion object {
             const val SCHEME_ID = 7
@@ -160,6 +145,7 @@ class MockNetworkCustomSerializationSchemeTest {
         //Stolen from DefaultKryoCustomizer.kt
         private class CustomInstantiatorStrategy : InstantiatorStrategy {
             private val fallbackStrategy = StdInstantiatorStrategy()
+
             // Use this to allow construction of objects using a JVM backdoor that skips invoking the constructors, if there
             // is no no-arg constructor available.
             private val defaultStrategy = Kryo.DefaultInstantiatorStrategy(fallbackStrategy)
@@ -171,6 +157,4 @@ class MockNetworkCustomSerializationSchemeTest {
             }
         }
     }
-
-
 }
