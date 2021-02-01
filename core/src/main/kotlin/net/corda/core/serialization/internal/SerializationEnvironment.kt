@@ -52,7 +52,6 @@ interface SerializationEnvironment {
     val checkpointContext: CheckpointSerializationContext
 }
 
-
 @KeepForDJVM
 private class SerializationEnvironmentImpl(
         override val serializationFactory: SerializationFactory,

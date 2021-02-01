@@ -73,7 +73,6 @@ import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
-import net.corda.core.CordaRuntimeException
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -676,13 +675,17 @@ open class Node(configuration: NodeConfiguration,
         } catch (exception: ClassNotFoundException) {
             throw ConfigurationException("Custom serialization scheme $className could not be found.")
         }
-        if (!schemaClass.interfaces.contains(CustomSerializationScheme::class.java)) {
+        validateScheme(schemaClass, className)
+        return CustomSerializationSchemeAdapter(schemaClass.constructors.single().newInstance() as CustomSerializationScheme)
+    }
+
+    private fun validateScheme(clazz: Class<*>, className: String) {
+        if (!clazz.interfaces.contains(CustomSerializationScheme::class.java)) {
             throw ConfigurationException("$className does not implement ${CustomSerializationScheme::class.java.canonicalName}")
         }
-        if (schemaClass.constructors.size != 1 || schemaClass.constructors.single().parameters.isNotEmpty()) {
+        if (clazz.constructors.size != 1 || clazz.constructors.single().parameters.isNotEmpty()) {
             throw ConfigurationException("$className must have exactly one no argument constructor.")
         }
-        return CustomSerializationSchemeAdapter(schemaClass.constructors.single().newInstance() as CustomSerializationScheme)
     }
 
     /** Starts a blocking event loop for message dispatch. */

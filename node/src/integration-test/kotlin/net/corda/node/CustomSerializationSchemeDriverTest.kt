@@ -89,12 +89,7 @@ class CustomSerializationSchemeDriverTest {
         @Suspendable
         override fun call() {
             val message = session.receive<WireTransaction>().unwrap {it}
-            try {
-                message.toLedgerTransaction(serviceHub)
-            } catch (e: Exception) {
-                session.send(false)
-                return
-            }
+            message.toLedgerTransaction(serviceHub)
             session.send(true)
         }
     }
