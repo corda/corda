@@ -670,11 +670,11 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    private fun scanForCustomSerializationScheme(className: String, classLoader: ClassLoader) : SerializationScheme {
+    fun scanForCustomSerializationScheme(className: String, classLoader: ClassLoader) : SerializationScheme {
         val schemaClass = try {
             classLoader.loadClass(className)
         } catch (exception: ClassNotFoundException) {
-            throw ConfigurationException("Custom serialization scheme $className could not be found.")
+            throw ConfigurationException("$className was declared as a custom serialization scheme but could not be found.")
         }
         val constructor = validateScheme(schemaClass, className)
         return CustomSerializationSchemeAdapter(constructor.newInstance() as CustomSerializationScheme)
@@ -683,10 +683,10 @@ open class Node(configuration: NodeConfiguration,
     private fun validateScheme(clazz: Class<*>, className: String): Constructor<*> {
         if (!clazz.interfaces.contains(CustomSerializationScheme::class.java)) {
             throw ConfigurationException("$className was declared as a custom serialization scheme but does not implement" +
-                    " ${CustomSerializationScheme::class.java.canonicalName}\"")
+                    " ${CustomSerializationScheme::class.java.canonicalName}")
         }
-        return clazz.constructors.single { it.parameters.isEmpty() } ?: throw ConfigurationException("$className must have a no argument" +
-                " constructor.")
+        return clazz.constructors.singleOrNull { it.parameters.isEmpty() } ?: throw ConfigurationException("$className was declared as a " +
+                "custom serialization scheme but does not have a no argument constructor.")
     }
 
     /** Starts a blocking event loop for message dispatch. */
