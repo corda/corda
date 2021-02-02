@@ -327,8 +327,9 @@ class TransactionBuilderTest {
                 .addOutputState(outputState)
                 .addCommand(DummyCommandData, notary.owningKey)
 
-        assertFailsWith<UnsupportedOperationException> {
-            builder.toWireTransaction(services, 7)
+        val schemeId = 7
+        assertFailsWith<UnsupportedOperationException>("Could not find custom serialization scheme with SchemeId = $schemeId.") {
+            builder.toWireTransaction(services, schemeId)
        }
     }
 }

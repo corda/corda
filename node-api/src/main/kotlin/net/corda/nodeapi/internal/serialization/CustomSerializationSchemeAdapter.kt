@@ -4,7 +4,7 @@ import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.internal.SerializationEnvironment.Companion.getCustomSerializationMagicFromSchemeId
+import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getCustomSerializationMagicFromSchemeId
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationScheme

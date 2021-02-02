@@ -21,7 +21,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializationMagic
-import net.corda.core.serialization.internal.SerializationEnvironment.Companion.getCustomSerializationMagicFromSchemeId
+import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getCustomSerializationMagicFromSchemeId
 import net.corda.core.utilities.contextLogger
 import java.security.PublicKey
 import java.time.Duration

@@ -7,8 +7,6 @@ import net.corda.core.internal.SimpleToggleField
 import net.corda.core.internal.ThreadLocalToggleField
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.serialization.SerializationMagic
-import java.nio.ByteBuffer
 
 @KeepForDJVM
 interface SerializationEnvironment {
@@ -33,13 +31,6 @@ interface SerializationEnvironment {
                         optionalCheckpointContext = checkpointContext,
                         optionalCheckpointSerializer = checkpointSerializer
                 )
-
-        const val SERIALIZATION_SCHEME_ID_SIZE = 4
-
-        fun getCustomSerializationMagicFromSchemeId(schemeId: Int) : SerializationMagic {
-            return SerializationMagic.of("CUS".toByteArray()
-                + ByteBuffer.allocate(SERIALIZATION_SCHEME_ID_SIZE).putInt(schemeId).array())
-        }
     }
 
     val serializationFactory: SerializationFactory

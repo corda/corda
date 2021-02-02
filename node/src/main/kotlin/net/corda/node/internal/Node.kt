@@ -98,6 +98,7 @@ import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.lang.Long.max
 import java.lang.Long.min
+import java.lang.reflect.Constructor
 import java.net.BindException
 import java.net.InetAddress
 import java.nio.file.Files
@@ -675,17 +676,17 @@ open class Node(configuration: NodeConfiguration,
         } catch (exception: ClassNotFoundException) {
             throw ConfigurationException("Custom serialization scheme $className could not be found.")
         }
-        validateScheme(schemaClass, className)
-        return CustomSerializationSchemeAdapter(schemaClass.constructors.single().newInstance() as CustomSerializationScheme)
+        val constructor = validateScheme(schemaClass, className)
+        return CustomSerializationSchemeAdapter(constructor.newInstance() as CustomSerializationScheme)
     }
 
-    private fun validateScheme(clazz: Class<*>, className: String) {
+    private fun validateScheme(clazz: Class<*>, className: String): Constructor<*> {
         if (!clazz.interfaces.contains(CustomSerializationScheme::class.java)) {
-            throw ConfigurationException("$className does not implement ${CustomSerializationScheme::class.java.canonicalName}")
+            throw ConfigurationException("$className was declared as a custom serialization scheme but does not implement" +
+                    " ${CustomSerializationScheme::class.java.canonicalName}\"")
         }
-        if (clazz.constructors.size != 1 || clazz.constructors.single().parameters.isNotEmpty()) {
-            throw ConfigurationException("$className must have exactly one no argument constructor.")
-        }
+        return clazz.constructors.single { it.parameters.isEmpty() } ?: throw ConfigurationException("$className must have a no argument" +
+                " constructor.")
     }
 
     /** Starts a blocking event loop for message dispatch. */
