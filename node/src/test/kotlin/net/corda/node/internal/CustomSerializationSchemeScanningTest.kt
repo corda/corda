@@ -20,13 +20,15 @@ class CustomSerializationSchemeScanningTest {
         }
 
         override fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationSchemeContext): T {
-            throw RuntimeException("We should never get here.")
+            throw DummySerializationSchemeException("We should never get here.")
         }
 
         override fun <T : Any> serialize(obj: T, context: SerializationSchemeContext): ByteSequence {
-            throw RuntimeException("Tried to serialize with DummySerializationScheme")
+            throw DummySerializationSchemeException("Tried to serialize with DummySerializationScheme")
         }
     }
+
+    class DummySerializationSchemeException(override val message: String) : RuntimeException(message)
 
     class DummySerializationSchemeWithoutNoArgConstructor(val myArgument: String) : DummySerializationScheme()
 
@@ -36,7 +38,7 @@ class CustomSerializationSchemeScanningTest {
         whenever(classLoader.loadClass(DummySerializationScheme::class.java.canonicalName)).thenAnswer { DummySerializationScheme::class.java }
         val scheme = scanForCustomSerializationScheme(DummySerializationScheme::class.java.canonicalName, classLoader)
         val mockContext = Mockito.mock(SerializationContext::class.java)
-        assertFailsWith<RuntimeException>("Tried to serialize with DummySerializationScheme")  {
+        assertFailsWith<DummySerializationSchemeException>("Tried to serialize with DummySerializationScheme")  {
             scheme.serialize(Any::class.java, mockContext)
         }
     }
