@@ -73,6 +73,7 @@ import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
+import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
@@ -80,11 +81,13 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import net.corda.nodeapi.internal.serialization.CustomSerializationSchemeAdapter
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.SerializationScheme
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import org.apache.commons.lang3.SystemUtils
@@ -95,6 +98,7 @@ import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.lang.Long.max
 import java.lang.Long.min
+import java.lang.reflect.Constructor
 import java.net.BindException
 import java.net.InetAddress
 import java.nio.file.Files
@@ -647,10 +651,14 @@ open class Node(configuration: NodeConfiguration,
     private fun initialiseSerialization() {
         if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
+        val customScheme = System.getProperty("experimental.corda.customSerializationScheme")?.let {
+            scanForCustomSerializationScheme(it, javaClass.classLoader)
+        }
         nodeSerializationEnv = SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()))
                     registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()))
+                    customScheme?.let{ registerScheme(it) }
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),
@@ -660,6 +668,25 @@ open class Node(configuration: NodeConfiguration,
                 checkpointSerializer = KryoCheckpointSerializer,
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader).withCheckpointCustomSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers })
         )
+    }
+
+    fun scanForCustomSerializationScheme(className: String, classLoader: ClassLoader) : SerializationScheme {
+        val schemaClass = try {
+            classLoader.loadClass(className)
+        } catch (exception: ClassNotFoundException) {
+            throw ConfigurationException("$className was declared as a custom serialization scheme but could not be found.")
+        }
+        val constructor = validateScheme(schemaClass, className)
+        return CustomSerializationSchemeAdapter(constructor.newInstance() as CustomSerializationScheme)
+    }
+
+    private fun validateScheme(clazz: Class<*>, className: String): Constructor<*> {
+        if (!clazz.interfaces.contains(CustomSerializationScheme::class.java)) {
+            throw ConfigurationException("$className was declared as a custom serialization scheme but does not implement" +
+                    " ${CustomSerializationScheme::class.java.canonicalName}")
+        }
+        return clazz.constructors.singleOrNull { it.parameters.isEmpty() } ?: throw ConfigurationException("$className was declared as a " +
+                "custom serialization scheme but does not have a no argument constructor.")
     }
 
     /** Starts a blocking event loop for message dispatch. */
