@@ -11,10 +11,18 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.flows.CollectSignaturesFlow
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -25,6 +33,7 @@ import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getSchemeIdIfCustomSerializationMagic
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
@@ -47,6 +56,7 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Modifier
 import java.util.*
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class CustomSerializationSchemeDriverTest {
@@ -65,12 +75,81 @@ class CustomSerializationSchemeDriverTest {
     }
 
     @Test(timeout = 300_000)
+    fun `flow can write a wire transaction serialized with custom kryo serializer to the ledger`() {
+        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false, cordappsForAllNodes = listOf(enclosedCordapp()))) {
+            val (alice, bob) = listOf(
+                startNode(NodeParameters(providedName = ALICE_NAME)),
+                startNode(NodeParameters(providedName = BOB_NAME))
+            ).transpose().getOrThrow()
+
+            val flow = alice.rpc.startFlow(::WriteTxToLedgerFlow, bob.nodeInfo.legalIdentities.single(), defaultNotaryIdentity)
+            val txId = flow.returnValue.getOrThrow()
+            val transaction = alice.rpc.startFlow(::GetTxFromDBFlow, txId).returnValue.getOrThrow()
+            assertNotNull(transaction)
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `Component groups are lazily serialized by the CustomSerializationScheme`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val alice = startNode(NodeParameters(providedName = ALICE_NAME)).getOrThrow()
             //We don't need a real notary as we don't verify the transaction in this test.
             val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
             assertTrue { alice.rpc.startFlow(::CheckComponentGroupsFlow, dummyNotary.party).returnValue.getOrThrow() }
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class WriteTxToLedgerFlow(val counterparty: Party, val notary: Party) : FlowLogic<SecureHash>() {
+        @Suspendable
+        override fun call(): SecureHash {
+            val outputState = TransactionState(
+                data = DummyContract.DummyState(),
+                contract = DummyContract::class.java.name,
+                notary = notary,
+                constraint = AlwaysAcceptAttachmentConstraint
+            )
+            val builder = TransactionBuilder()
+                .addOutputState(outputState)
+                .addCommand(DummyCommandData, counterparty.owningKey)
+            val wireTx = builder.toWireTransaction(serviceHub, KryoScheme.SCHEME_ID)
+            val partSignedTx = signWireTx(wireTx)
+            val session = initiateFlow(counterparty)
+            val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, setOf(session)))
+            subFlow(FinalityFlow(fullySignedTx, setOf(session)))
+            return fullySignedTx.id
+        }
+
+        fun signWireTx(wireTx: WireTransaction) : SignedTransaction {
+            val signatureMetadata = SignatureMetadata(
+                serviceHub.myInfo.platformVersion,
+                Crypto.findSignatureScheme(serviceHub.myInfo.legalIdentitiesAndCerts.first().owningKey).schemeNumberID
+            )
+            val signableData = SignableData(wireTx.id, signatureMetadata)
+            val sig = serviceHub.keyManagementService.sign(signableData, serviceHub.myInfo.legalIdentitiesAndCerts.first().owningKey)
+            return SignedTransaction(wireTx, listOf(sig))
+        }
+    }
+
+    @InitiatedBy(WriteTxToLedgerFlow::class)
+    class SignWireTxFlow(private val session: FlowSession): FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val signTransactionFlow = object : SignTransactionFlow(session) {
+                override fun checkTransaction(stx: SignedTransaction) {
+                    return
+                }
+            }
+            val txId = subFlow(signTransactionFlow).id
+            return subFlow(ReceiveFinalityFlow(session, expectedTxId = txId))
+        }
+    }
+
+    @StartableByRPC
+    class GetTxFromDBFlow(private val txId: SecureHash): FlowLogic<SignedTransaction?>() {
+        override fun call(): SignedTransaction? {
+            return serviceHub.validatedTransactions.getTransaction(txId)
         }
     }
 
