@@ -34,7 +34,7 @@ internal class AuthenticatedRpcOpsProxy(private val delegate: InternalCordaRPCOp
     }
 
     // Need overriding to pass additional `listOf(logicType)` argument for polymorphic `startFlow` permissions.
-    @Suppress("AuthenticatedRpcOpsProxy")
+    @Suppress("SpreadOperator")
     override fun <T> startFlowDynamicWithClientId(
         clientId: String,
         logicType: Class<out FlowLogic<T>>,
