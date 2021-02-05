@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.internal.utilities.InvocationHandlerTemplate
+import net.corda.core.messaging.FlowHandleWithClientId
 import net.corda.node.services.rpc.RpcAuthContext
 import net.corda.node.services.rpc.rpcContext
 import java.lang.reflect.Method
@@ -30,6 +31,15 @@ internal class AuthenticatedRpcOpsProxy(private val delegate: InternalCordaRPCOp
     // Need overriding to pass additional `listOf(logicType)` argument for polymorphic `startFlow` permissions.
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?) = guard("startTrackedFlowDynamic", listOf(logicType), ::rpcContext) {
         delegate.startTrackedFlowDynamic(logicType, *args)
+    }
+
+    // Need overriding to pass additional `listOf(logicType)` argument for polymorphic `startFlow` permissions.
+    override fun <T> startFlowDynamicWithClientId(
+        clientId: String,
+        logicType: Class<out FlowLogic<T>>,
+        vararg args: Any?
+    ): FlowHandleWithClientId<T>  = guard("startFlowDynamic", listOf(logicType), ::rpcContext) {
+        delegate.startFlowDynamicWithClientId(clientId, logicType, *args)
     }
 
     private companion object {
