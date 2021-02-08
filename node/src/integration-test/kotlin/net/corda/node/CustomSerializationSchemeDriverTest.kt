@@ -56,7 +56,7 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Modifier
 import java.util.*
-import kotlin.test.assertNotNull
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CustomSerializationSchemeDriverTest {
@@ -76,7 +76,7 @@ class CustomSerializationSchemeDriverTest {
 
     @Test(timeout = 300_000)
     fun `flow can write a wire transaction serialized with custom kryo serializer to the ledger`() {
-        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false, cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val (alice, bob) = listOf(
                 startNode(NodeParameters(providedName = ALICE_NAME)),
                 startNode(NodeParameters(providedName = BOB_NAME))
@@ -85,7 +85,13 @@ class CustomSerializationSchemeDriverTest {
             val flow = alice.rpc.startFlow(::WriteTxToLedgerFlow, bob.nodeInfo.legalIdentities.single(), defaultNotaryIdentity)
             val txId = flow.returnValue.getOrThrow()
             val transaction = alice.rpc.startFlow(::GetTxFromDBFlow, txId).returnValue.getOrThrow()
-            assertNotNull(transaction)
+
+            for(group in transaction!!.tx.componentGroups) {
+                for (item in group.components) {
+                    val magic = CordaSerializationMagic(item.slice(end = SerializationFactoryImpl.magicSize).copyBytes())
+                    assertEquals( KryoScheme.SCHEME_ID, getSchemeIdIfCustomSerializationMagic(magic))
+                }
+            }
         }
     }
 
