@@ -62,6 +62,38 @@ class FlowWithClientIdTest {
     }
 
     @Test(timeout = 300_000)
+    fun `start flow with client id permissions`() {
+        val user = User("TonyStark", "I AM IRONMAN", setOf("StartFlow.net.corda.node.flows.FlowWithClientIdTest\$ResultFlow"))
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
+            nodeA.rpc.startFlowWithClientId(UUID.randomUUID().toString(), ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            nodeA.rpc.startFlowDynamicWithClientId(
+                UUID.randomUUID().toString(),
+                ResultFlow::class.java,
+                5
+            ).returnValue.getOrThrow(20.seconds)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `start flow with client id without permissions`() {
+        val user = User("TonyStark", "I AM IRONMAN", setOf())
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
+            assertFailsWith<PermissionException> {
+                nodeA.rpc.startFlowWithClientId(UUID.randomUUID().toString(), ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            }
+            assertFailsWith<PermissionException> {
+                nodeA.rpc.startFlowDynamicWithClientId(
+                    UUID.randomUUID().toString(),
+                    ResultFlow::class.java,
+                    5
+                ).returnValue.getOrThrow(20.seconds)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `remove client id`() {
         val clientId = UUID.randomUUID().toString()
         var counter = 0
