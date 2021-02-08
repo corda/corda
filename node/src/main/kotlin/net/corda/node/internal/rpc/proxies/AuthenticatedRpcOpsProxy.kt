@@ -27,7 +27,12 @@ internal object AuthenticatedRpcOpsProxy {
 
         private val namedInterfaces = setOf(
                 net.corda.core.messaging.CordaRPCOps::class.java)
-        private val namedMethods = setOf("startFlowDynamic", "startTrackedFlowDynamic")
+        private val namedMethods = mapOf(
+            "startFlowDynamic" to 0,
+            "startTrackedFlowDynamic" to 0,
+            "startFlowDynamicWithClientId" to 1
+        )
+
 
         override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
 
@@ -36,14 +41,17 @@ internal object AuthenticatedRpcOpsProxy {
                 return super.invoke(proxy, method, arguments)
             }
 
-            val importantArgs = if (clazz in namedInterfaces && method.name in namedMethods) {
-                // Normally list of arguments makes no difference when checking entitlements, however when starting flows
-                // first argument represents a class name of the flow to be started and special handling applies in this case with
-                // name of the class extracted and passed into `guard` method for entitlements check.
-                val nonNullArgs = requireNotNull(arguments)
-                require(nonNullArgs.isNotEmpty())
-                val firstArgClass = requireNotNull(nonNullArgs[0] as? Class<*>)
-                listOf(firstArgClass)
+            val importantArgs = if (clazz in namedInterfaces) {
+                // Normally list of arguments makes no difference when checking entitlements, however when starting flows the first or
+                // second argument (depending on whether started with a client id) represents the class name of the flow to be started
+                // and special handling applies in this case with name of the class extracted and passed into `guard` method for
+                // entitlements check.
+                namedMethods[method.name]?.let { index ->
+                    val nonNullArgs = requireNotNull(arguments)
+                    require(nonNullArgs.isNotEmpty())
+                    val className = requireNotNull(nonNullArgs[index] as? Class<*>)
+                    listOf(className)
+                } ?: emptyList()
             } else emptyList()
 
             return guard(method, importantArgs, ::rpcContext) { super.invoke(proxy, method, arguments) }
