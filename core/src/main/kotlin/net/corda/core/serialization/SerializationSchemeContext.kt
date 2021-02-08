@@ -15,9 +15,9 @@ interface SerializationSchemeContext {
     val deserializationClassLoader: ClassLoader
     /**
      * A whitelist that contains (mostly for security purposes) which classes are authorised to be deserialized.
-     * A secure implementation will not instantiate any object which is not whitelisted when deserializing.
-     * To catch classes missing from the whitelist as early as possible it is HIGHLY recommended to also check this whitelist when
-     * serializing (as well as deserialising) objects.
+     * A secure implementation will not instantiate any object which is not either whitelisted or annotated with [CordaSerializable] when
+     * deserializing. To catch classes missing from the whitelist as early as possible it is HIGHLY recommended to also check this
+     * whitelist when serializing (as well as deserialising) objects.
      */
     val whitelist: ClassWhitelist
 }
