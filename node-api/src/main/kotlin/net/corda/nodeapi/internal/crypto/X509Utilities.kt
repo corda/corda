@@ -2,10 +2,12 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.internal.cordaBouncyCastleProvider2
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
+import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -25,11 +27,13 @@ import org.bouncycastle.util.io.pem.PemReader
 import java.io.InputStream
 import java.math.BigInteger
 import java.nio.file.Path
+import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
 import java.security.cert.*
 import java.security.cert.Certificate
+import java.security.spec.X509EncodedKeySpec
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -313,7 +317,13 @@ object X509Utilities {
                 crlIssuer)
         return builder.build(signer).run {
             require(isValidOn(Date())){"Certificate is not valid at instant now"}
-            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public))){"Invalid signature"}
+            var usePublicKey: PublicKey = issuerKeyPair.public
+            if (issuerKeyPair.public is EdDSAPublicKey) {
+                val keyFactory: KeyFactory = KeyFactory.getInstance("1.3.101.112", cordaBouncyCastleProvider2)
+                usePublicKey = keyFactory.generatePublic(X509EncodedKeySpec(issuerKeyPair.public.encoded))
+            }
+
+            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(usePublicKey))){"Invalid signature"}
             toJca()
         }
     }
