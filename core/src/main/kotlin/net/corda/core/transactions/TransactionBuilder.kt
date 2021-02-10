@@ -160,6 +160,20 @@ open class TransactionBuilder(
         return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
     }
 
+    /**
+     * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
+     *
+     * @param [serializationContext] the [SerializationContext] used for serialization.
+     *
+     * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
+     *
+     * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
+     */
+    @Throws(MissingContractAttachments::class)
+    fun toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+        return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
+    }
+
     @CordaInternal
     internal fun toWireTransactionWithContext(
         services: ServicesForResolution,

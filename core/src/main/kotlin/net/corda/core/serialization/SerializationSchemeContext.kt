@@ -20,4 +20,8 @@ interface SerializationSchemeContext {
      * whitelist when serializing (as well as deserialising) objects.
      */
     val whitelist: ClassWhitelist
+    /**
+     * A map of any addition properties specific to the particular use case.
+     */
+    val properties: Map<Any, Any>
 }

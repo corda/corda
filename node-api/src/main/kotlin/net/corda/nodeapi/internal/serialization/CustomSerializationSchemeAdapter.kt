@@ -42,5 +42,6 @@ class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializa
     private class SerializationSchemeContextAdapter(context: SerializationContext) : SerializationSchemeContext {
         override val deserializationClassLoader = context.deserializationClassLoader
         override val whitelist = context.whitelist
+        override val properties = context.properties
     }
 }
