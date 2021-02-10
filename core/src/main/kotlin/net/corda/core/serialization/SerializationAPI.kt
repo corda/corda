@@ -134,7 +134,7 @@ interface SerializationContext {
      */
     val encodingWhitelist: EncodingWhitelist
     /**
-     * A map of any addition properties specific to the particular use case.
+     * A map of any additional properties specific to the particular use case.
      */
     val properties: Map<Any, Any>
     /**

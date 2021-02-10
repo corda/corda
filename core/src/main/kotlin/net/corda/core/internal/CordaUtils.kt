@@ -21,7 +21,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import org.slf4j.MDC
 import java.security.PublicKey
 import java.util.jar.JarInputStream
@@ -60,12 +59,6 @@ enum class JavaVersion(val versionString: String) {
         private val currentVersion: String = System.getProperty("java.specification.version") ?:
                                                throw IllegalStateException("Unable to retrieve system property java.specification.version")
     }
-}
-
-/** Provide access to internal method for AttachmentClassLoaderTests. */
-@DeleteForDJVM
-fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests. */
