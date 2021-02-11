@@ -30,10 +30,7 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.copyBytes
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CustomSerializationScheme
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializationMagic
 import net.corda.core.serialization.SerializationSchemeContext
-import net.corda.core.serialization.internal.CustomSerializationSchemeUtils
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getSchemeIdIfCustomSerializationMagic
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -214,11 +211,8 @@ class CustomSerializationSchemeDriverTest {
             val builder = TransactionBuilder()
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
-            val kryoSchemeWithMapMagic: SerializationMagic =
-                    CustomSerializationSchemeUtils.getCustomSerializationMagicFromSchemeId(KryoSchemeWithMap.SCHEME_ID)
-            val context = SerializationDefaults.P2P_CONTEXT.withPreferredSerializationVersion(kryoSchemeWithMapMagic).
-                withProperty(KryoSchemeWithMap.KEY, KryoSchemeWithMap.VALUE)
-            val wtx = builder.toWireTransaction(serviceHub, context)
+            val mapToCheckWhenSerializing = mapOf<Any, Any>(Pair(KryoSchemeWithMap.KEY, KryoSchemeWithMap.VALUE))
+            val wtx = builder.toWireTransaction(serviceHub, KryoSchemeWithMap.SCHEME_ID, mapToCheckWhenSerializing)
             var success = true
             for (group in wtx.componentGroups) {
                 //Component groups are lazily serialized as we iterate through.

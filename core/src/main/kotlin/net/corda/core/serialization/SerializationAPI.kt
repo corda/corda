@@ -179,6 +179,11 @@ interface SerializationContext {
     fun withProperty(property: Any, value: Any): SerializationContext
 
     /**
+     * Helper method to return a new context based on this context with the extra properties added.
+     */
+    fun withProperties(extraProperties: Map<Any, Any>): SerializationContext
+
+    /**
      * Helper method to return a new context based on this context with object references disabled.
      */
     fun withoutReferences(): SerializationContext

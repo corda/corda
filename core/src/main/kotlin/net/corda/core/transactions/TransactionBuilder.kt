@@ -21,6 +21,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializationMagic
+import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getCustomSerializationMagicFromSchemeId
 import net.corda.core.utilities.contextLogger
 import java.security.PublicKey
@@ -155,22 +156,25 @@ open class TransactionBuilder(
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution, schemeId: Int): WireTransaction {
-        val magic: SerializationMagic = getCustomSerializationMagicFromSchemeId(schemeId)
-        val serializationContext = SerializationDefaults.P2P_CONTEXT.withPreferredSerializationVersion(magic)
-        return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
+        return toWireTransaction(services, schemeId, emptyMap()).apply { checkSupportedHashType() }
     }
 
     /**
      * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
      *
-     * @param [serializationContext] the [SerializationContext] used for serialization.
+     * @param [schemeId] is used to specify the [CustomSerializationScheme] used to serialize each component of the componentGroups of the [WireTransaction].
+     * This is an experimental feature.
+     *
+     * @param [properties] a list of properties to add to the [SerializationSchemeContext].
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      *
      * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+    fun toWireTransaction(services: ServicesForResolution, schemeId: Int, properties: Map<Any, Any>): WireTransaction {
+        val magic: SerializationMagic = getCustomSerializationMagicFromSchemeId(schemeId)
+        val serializationContext = SerializationDefaults.P2P_CONTEXT.withPreferredSerializationVersion(magic).withProperties(properties)
         return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
     }
 

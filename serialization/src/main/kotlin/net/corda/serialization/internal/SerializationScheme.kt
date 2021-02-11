@@ -48,6 +48,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
         return copy(properties = properties + (property to value))
     }
 
+    override fun withProperties(extraProperties: Map<Any, Any>): SerializationContext {
+        return copy(properties = properties + extraProperties)
+    }
+
     override fun withoutReferences(): SerializationContext {
         return copy(objectReferencesEnabled = false)
     }
