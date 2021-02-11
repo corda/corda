@@ -17,11 +17,14 @@ interface SerializationSchemeContext {
      * A whitelist that contains (mostly for security purposes) which classes are authorised to be deserialized.
      * A secure implementation will not instantiate any object which is not either whitelisted or annotated with [CordaSerializable] when
      * deserializing. To catch classes missing from the whitelist as early as possible it is HIGHLY recommended to also check this
-     * whitelist when serializing (as well as deserialising) objects.
+     * whitelist when serializing (as well as deserializing) objects.
      */
     val whitelist: ClassWhitelist
     /**
-     * A map of any additional properties specific to the particular use case.
+     * A map of any additional properties specific to the particular use case. If these properties are set via
+     * [toWireTransaction][net.corda.core.transactions.TransactionBuilder.toWireTransaction] then they might not be available when
+     * deserializing. If the properties are required when deserializing, they can be added into the blob when serializing and read back
+     * when deserializing.
      */
     val properties: Map<Any, Any>
 }

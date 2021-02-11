@@ -165,7 +165,8 @@ open class TransactionBuilder(
      * @param [schemeId] is used to specify the [CustomSerializationScheme] used to serialize each component of the componentGroups of the [WireTransaction].
      * This is an experimental feature.
      *
-     * @param [properties] a list of properties to add to the [SerializationSchemeContext].
+     * @param [properties] a list of properties to add to the [SerializationSchemeContext] these properties can be accessed in [CustomSerializationScheme.serialize]
+     * when serializing the componentGroups of the wire transaction but might not be available when deserializing.
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      *
