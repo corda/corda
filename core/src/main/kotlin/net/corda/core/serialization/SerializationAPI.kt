@@ -134,7 +134,7 @@ interface SerializationContext {
      */
     val encodingWhitelist: EncodingWhitelist
     /**
-     * A map of any addition properties specific to the particular use case.
+     * A map of any additional properties specific to the particular use case.
      */
     val properties: Map<Any, Any>
     /**
@@ -177,6 +177,11 @@ interface SerializationContext {
      * Helper method to return a new context based on this context with the property added.
      */
     fun withProperty(property: Any, value: Any): SerializationContext
+
+    /**
+     * Helper method to return a new context based on this context with the extra properties added.
+     */
+    fun withProperties(extraProperties: Map<Any, Any>): SerializationContext
 
     /**
      * Helper method to return a new context based on this context with object references disabled.

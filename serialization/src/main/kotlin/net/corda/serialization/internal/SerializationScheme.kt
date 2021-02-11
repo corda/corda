@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getSchemeIdIfCustomSerializationMagic
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.slf4j.LoggerFactory
@@ -45,6 +46,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
 
     override fun withProperty(property: Any, value: Any): SerializationContext {
         return copy(properties = properties + (property to value))
+    }
+
+    override fun withProperties(extraProperties: Map<Any, Any>): SerializationContext {
+        return copy(properties = properties + extraProperties)
     }
 
     override fun withoutReferences(): SerializationContext {
@@ -106,7 +111,9 @@ open class SerializationFactoryImpl(
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
                     "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
-            throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
+            val schemeId = getSchemeIdIfCustomSerializationMagic(magic) ?: throw UnsupportedOperationException("Serialization scheme" +
+                    " $lookupKey not supported.")
+            throw UnsupportedOperationException("Could not find custom serialization scheme with SchemeId = $schemeId.")
         }) to magic
     }
 
