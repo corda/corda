@@ -105,6 +105,16 @@ class CustomSerializationSchemeDriverTest {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `Map in the serialization context can be used by lazily component group serialization`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
+            val alice = startNode(NodeParameters(providedName = ALICE_NAME)).getOrThrow()
+            //We don't need a real notary as we don't verify the transaction in this test.
+            val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+            assertTrue { alice.rpc.startFlow(::CheckComponentGroupsWithMapFlow, dummyNotary.party).returnValue.getOrThrow() }
+        }
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class WriteTxToLedgerFlow(val counterparty: Party, val notary: Party) : FlowLogic<SecureHash>() {
@@ -189,6 +199,34 @@ class CustomSerializationSchemeDriverTest {
 
     @StartableByRPC
     @InitiatingFlow
+    class CheckComponentGroupsWithMapFlow(val notary: Party) : FlowLogic<Boolean>() {
+        @Suspendable
+        override fun call(): Boolean {
+            val outputState = TransactionState(
+                    data = DummyContract.DummyState(),
+                    contract = DummyContract::class.java.name,
+                    notary = notary,
+                    constraint = AlwaysAcceptAttachmentConstraint
+            )
+            val builder = TransactionBuilder()
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, notary.owningKey)
+            val mapToCheckWhenSerializing = mapOf<Any, Any>(Pair(KryoSchemeWithMap.KEY, KryoSchemeWithMap.VALUE))
+            val wtx = builder.toWireTransaction(serviceHub, KryoSchemeWithMap.SCHEME_ID, mapToCheckWhenSerializing)
+            var success = true
+            for (group in wtx.componentGroups) {
+                //Component groups are lazily serialized as we iterate through.
+                for (item in group.components) {
+                    val magic = CordaSerializationMagic(item.slice(end = SerializationFactoryImpl.magicSize).copyBytes())
+                    success = success && (getSchemeIdIfCustomSerializationMagic(magic) == KryoSchemeWithMap.SCHEME_ID)
+                }
+            }
+            return success
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
     class SendFlow(val counterparty: Party) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
@@ -229,7 +267,7 @@ class CustomSerializationSchemeDriverTest {
 
     object DummyCommandData : TypeOnlyCommandData()
 
-    class KryoScheme : CustomSerializationScheme {
+    open class KryoScheme : CustomSerializationScheme {
 
         companion object {
             const val SCHEME_ID = 7
@@ -281,5 +319,24 @@ class CustomSerializationSchemeDriverTest {
                 return strat.newInstantiatorOf(type)
             }
         }
+    }
+
+    class KryoSchemeWithMap : KryoScheme() {
+
+        companion object {
+            const val SCHEME_ID = 8
+            const val KEY = "Key"
+            const val VALUE = "Value"
+        }
+
+        override fun getSchemeId(): Int {
+            return SCHEME_ID
+        }
+
+        override fun <T : Any> serialize(obj: T, context: SerializationSchemeContext): ByteSequence {
+            assertEquals(VALUE, context.properties[KEY])
+            return super.serialize(obj, context)
+        }
+
     }
 }
