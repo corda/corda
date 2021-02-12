@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.internal.cordaBouncyCastleProvider2
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.*
 import net.corda.core.utilities.days
@@ -18,6 +17,7 @@ import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
@@ -65,6 +65,7 @@ object X509Utilities {
     private const val KEY_ALIAS_REGEX = "[a-z0-9-]+"
     private const val KEY_ALIAS_MAX_LENGTH = 100
     private const val CERTIFICATE_SERIAL_NUMBER_LENGTH = 16
+    private val edDSAPublicKeyConverterKeyFactory = KeyFactory.getInstance("1.3.101.112", BouncyCastleProvider())
 
     /**
      * Checks if the provided key alias does not exceed maximum length and
@@ -319,8 +320,7 @@ object X509Utilities {
             require(isValidOn(Date())){"Certificate is not valid at instant now"}
             var usePublicKey: PublicKey = issuerKeyPair.public
             if (issuerKeyPair.public is EdDSAPublicKey) {
-                val keyFactory: KeyFactory = KeyFactory.getInstance("1.3.101.112", cordaBouncyCastleProvider2)
-                usePublicKey = keyFactory.generatePublic(X509EncodedKeySpec(issuerKeyPair.public.encoded))
+                usePublicKey = edDSAPublicKeyConverterKeyFactory.generatePublic(X509EncodedKeySpec(issuerKeyPair.public.encoded))
             }
 
             require(isSignatureValid(JcaContentVerifierProviderBuilder().build(usePublicKey))){"Invalid signature"}
