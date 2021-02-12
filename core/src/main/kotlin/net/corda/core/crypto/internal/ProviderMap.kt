@@ -46,7 +46,6 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
     Security.addProvider(it)
 }
-
 val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
     require(name == "BCPQC") { "Invalid PQCProvider name" }
 }.also {
