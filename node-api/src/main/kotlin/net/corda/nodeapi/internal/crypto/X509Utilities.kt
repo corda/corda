@@ -25,13 +25,11 @@ import org.bouncycastle.util.io.pem.PemReader
 import java.io.InputStream
 import java.math.BigInteger
 import java.nio.file.Path
-import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
 import java.security.cert.*
 import java.security.cert.Certificate
-import java.security.spec.X509EncodedKeySpec
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
