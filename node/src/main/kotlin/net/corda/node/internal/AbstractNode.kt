@@ -173,6 +173,7 @@ import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
 import java.lang.reflect.InvocationTargetException
+import java.net.URLConnection
 import java.sql.Connection
 import java.sql.Savepoint
 import java.time.Clock
@@ -237,6 +238,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         quasarExcludePackages(configuration)
+        disableURLConnectionCache()
 
         if (allowHibernateToManageAppSchema && !configuration.devMode) {
             throw ConfigurationException("Hibernate can only be used to manage app schema in development while using dev mode. " +
@@ -423,6 +425,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             stage2Proxy
         }
+    }
+
+    private fun disableURLConnectionCache() {
+        object : URLConnection(null) {
+            override fun connect() {
+            }
+        }.defaultUseCaches = false
     }
 
     private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
