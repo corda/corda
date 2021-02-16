@@ -11,7 +11,6 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TypeOnlyCommandData
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
@@ -30,7 +29,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.copyBytes
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationSchemeContext
@@ -42,7 +40,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.NetworkParametersReader
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.testing.core.ALICE_NAME
