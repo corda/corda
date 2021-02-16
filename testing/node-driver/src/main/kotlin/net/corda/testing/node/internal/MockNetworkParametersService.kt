@@ -20,17 +20,28 @@ import java.time.Instant
 class MockNetworkParametersStorage(private var currentParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN)) : NetworkParametersStorage {
     private val hashToParametersMap: HashMap<SecureHash, NetworkParameters> = HashMap()
     private val hashToSignedParametersMap: HashMap<SecureHash, SignedNetworkParameters> = HashMap()
+    override var currentHash = currentParameters.computeHash()
+    override val defaultHash: SecureHash get() = currentHash
     init {
         storeCurrentParameters()
     }
 
+    private fun NetworkParameters.computeHash(): SecureHash {
+        return withTestSerializationEnvIfNotSet {
+            this.serialize().hash
+        }
+    }
+
     fun setCurrentParametersUnverified(networkParameters: NetworkParameters) {
         currentParameters = networkParameters
+        currentHash = currentParameters.computeHash()
         storeCurrentParameters()
     }
 
     override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoots: Set<X509Certificate>) {
-        setCurrentParametersUnverified(currentSignedParameters.verifiedNetworkParametersCert(trustRoots))
+        currentParameters = currentSignedParameters.verifiedNetworkParametersCert(trustRoots)
+        currentHash = currentSignedParameters.raw.hash
+        storeCurrentParameters()
     }
 
     override fun lookupSigned(hash: SecureHash): SignedDataWithCert<NetworkParameters>? {
@@ -39,13 +50,6 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
 
     override fun hasParameters(hash: SecureHash): Boolean = hash in hashToParametersMap
 
-    override val currentHash: SecureHash
-        get() {
-            return withTestSerializationEnvIfNotSet {
-                currentParameters.serialize().hash
-            }
-        }
-    override val defaultHash: SecureHash get() = currentHash
     override fun lookup(hash: SecureHash): NetworkParameters? = hashToParametersMap[hash]
     override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
     override fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>) {

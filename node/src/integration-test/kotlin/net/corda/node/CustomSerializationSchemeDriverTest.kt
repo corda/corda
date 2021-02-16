@@ -11,6 +11,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
@@ -29,6 +30,8 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.copyBytes
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getSchemeIdIfCustomSerializationMagic
@@ -39,6 +42,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.internal.NetworkParametersReader
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.testing.core.ALICE_NAME
@@ -55,11 +59,27 @@ import org.objenesis.strategy.InstantiatorStrategy
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Modifier
+import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CustomSerializationSchemeDriverTest {
+
+    companion object {
+        private fun createWireTx(serviceHub: ServiceHub, notary: Party, key: PublicKey, schemeId: Int): WireTransaction {
+            val outputState = TransactionState(
+                    data = DummyContract.DummyState(),
+                    contract = DummyContract::class.java.name,
+                    notary = notary,
+                    constraint = AlwaysAcceptAttachmentConstraint
+            )
+            val builder = TransactionBuilder()
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, key)
+            return builder.toWireTransaction(serviceHub, schemeId)
+        }
+    }
 
     @Test(timeout = 300_000)
     fun `flow can send wire transaction serialized with custom kryo serializer`() {
@@ -120,16 +140,7 @@ class CustomSerializationSchemeDriverTest {
     class WriteTxToLedgerFlow(val counterparty: Party, val notary: Party) : FlowLogic<SecureHash>() {
         @Suspendable
         override fun call(): SecureHash {
-            val outputState = TransactionState(
-                data = DummyContract.DummyState(),
-                contract = DummyContract::class.java.name,
-                notary = notary,
-                constraint = AlwaysAcceptAttachmentConstraint
-            )
-            val builder = TransactionBuilder()
-                .addOutputState(outputState)
-                .addCommand(DummyCommandData, counterparty.owningKey)
-            val wireTx = builder.toWireTransaction(serviceHub, KryoScheme.SCHEME_ID)
+            val wireTx = createWireTx(serviceHub, notary, counterparty.owningKey, KryoScheme.SCHEME_ID)
             val partSignedTx = signWireTx(wireTx)
             val session = initiateFlow(counterparty)
             val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, setOf(session)))
@@ -174,17 +185,7 @@ class CustomSerializationSchemeDriverTest {
     class CheckComponentGroupsFlow(val notary: Party) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
-            val outputState = TransactionState(
-                data = DummyContract.DummyState(),
-                contract = DummyContract::class.java.name,
-                notary = notary,
-                constraint = AlwaysAcceptAttachmentConstraint
-            )
-            val builder = TransactionBuilder()
-                .addOutputState(outputState)
-                .addCommand(DummyCommandData, notary.owningKey)
-
-            val wtx = builder.toWireTransaction(serviceHub, KryoScheme.SCHEME_ID)
+            val wtx = createWireTx(serviceHub, notary, notary.owningKey, KryoScheme.SCHEME_ID)
             var success = true
             for (group in wtx.componentGroups) {
                 //Component groups are lazily serialized as we iterate through.
@@ -230,20 +231,18 @@ class CustomSerializationSchemeDriverTest {
     class SendFlow(val counterparty: Party) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
-            val outputState = TransactionState(
-                    data = DummyContract.DummyState(),
-                    contract = DummyContract::class.java.name,
-                    notary = counterparty,
-                    constraint = AlwaysAcceptAttachmentConstraint
-            )
-            val builder = TransactionBuilder()
-                    .addOutputState(outputState)
-                    .addCommand(DummyCommandData, counterparty.owningKey)
-
-            val wtx = builder.toWireTransaction(serviceHub, KryoScheme.SCHEME_ID)
+            val wtx = createWireTx(serviceHub, counterparty, counterparty.owningKey, KryoScheme.SCHEME_ID)
             val session = initiateFlow(counterparty)
             session.send(wtx)
             return session.receive<Boolean>().unwrap {it}
+        }
+    }
+
+    @StartableByRPC
+    class CreateWireTxFlow(val counterparty: Party) : FlowLogic<WireTransaction>() {
+        @Suspendable
+        override fun call(): WireTransaction {
+            return createWireTx(serviceHub, counterparty, counterparty.owningKey, KryoScheme.SCHEME_ID)
         }
     }
 
