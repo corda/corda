@@ -39,9 +39,11 @@ internal class AuthenticatedRpcOpsProxy(private val delegate: InternalCordaRPCOp
         clientId: String,
         logicType: Class<out FlowLogic<T>>,
         vararg args: Any?
-    ): FlowHandleWithClientId<T>  = guard("startFlowDynamic", listOf(logicType), ::rpcContext) {
+    ): FlowHandleWithClientId<T>  = guard("startFlowDynamicWithClientId", listOf(logicType), ::rpcContext) {
         delegate.startFlowDynamicWithClientId(clientId, logicType, *args)
     }
+
+
 
     private companion object {
         private fun proxy(delegate: InternalCordaRPCOps, context: () -> RpcAuthContext): InternalCordaRPCOps {
