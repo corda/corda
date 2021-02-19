@@ -26,6 +26,7 @@ import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
 import java.util.Collections.unmodifiableList
@@ -87,7 +88,8 @@ private constructor(
         private val serializedInputs: List<SerializedStateAndRef>?,
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
-        private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier
+        private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
+        private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
 ) : FullTransaction() {
 
     init {
@@ -124,7 +126,8 @@ private constructor(
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
-                isAttachmentTrusted: (Attachment) -> Boolean
+                isAttachmentTrusted: (Attachment) -> Boolean,
+                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
         ): LedgerTransaction {
             return LedgerTransaction(
                 inputs = inputs,
@@ -141,7 +144,8 @@ private constructor(
                 serializedInputs = protect(serializedInputs),
                 serializedReferences = protect(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
-                verifierFactory = ::BasicVerifier
+                verifierFactory = ::BasicVerifier,
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache
             )
         }
 
@@ -176,7 +180,8 @@ private constructor(
                 serializedInputs = null,
                 serializedReferences = null,
                 isAttachmentTrusted = { true },
-                verifierFactory = ::BasicVerifier
+                verifierFactory = ::BasicVerifier,
+                attachmentsClassLoaderCache = null
             )
         }
     }
@@ -218,7 +223,8 @@ private constructor(
                 txAttachments,
                 getParamsWithGoo(),
                 id,
-                isAttachmentTrusted = isAttachmentTrusted) { transactionClassLoader ->
+                isAttachmentTrusted = isAttachmentTrusted,
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache) { transactionClassLoader ->
             // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.
@@ -254,7 +260,8 @@ private constructor(
         serializedInputs = serializedInputs,
         serializedReferences = serializedReferences,
         isAttachmentTrusted = isAttachmentTrusted,
-        verifierFactory = alternateVerifier
+        verifierFactory = alternateVerifier,
+        attachmentsClassLoaderCache = attachmentsClassLoaderCache
     )
 
     // Read network parameters with backwards compatibility goo.
@@ -320,7 +327,8 @@ private constructor(
                     serializedInputs = serializedInputs,
                     serializedReferences = serializedReferences,
                     isAttachmentTrusted = isAttachmentTrusted,
-                    verifierFactory = verifierFactory
+                    verifierFactory = verifierFactory,
+                    attachmentsClassLoaderCache = attachmentsClassLoaderCache
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -704,7 +712,8 @@ private constructor(
             serializedInputs = null,
             serializedReferences = null,
             isAttachmentTrusted = { it.isUploaderTrusted() },
-            verifierFactory = ::BasicVerifier
+            verifierFactory = ::BasicVerifier,
+            attachmentsClassLoaderCache = null
     )
 
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
@@ -733,7 +742,8 @@ private constructor(
             serializedInputs = null,
             serializedReferences = null,
             isAttachmentTrusted = { it.isUploaderTrusted() },
-            verifierFactory = ::BasicVerifier
+            verifierFactory = ::BasicVerifier,
+            attachmentsClassLoaderCache = null
     )
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")
@@ -761,7 +771,8 @@ private constructor(
                 serializedInputs = serializedInputs,
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
-                verifierFactory = verifierFactory
+                verifierFactory = verifierFactory,
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache
         )
     }
 
@@ -791,7 +802,8 @@ private constructor(
                 serializedInputs = serializedInputs,
                 serializedReferences = serializedReferences,
                 isAttachmentTrusted = isAttachmentTrusted,
-                verifierFactory = verifierFactory
+                verifierFactory = verifierFactory,
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache
         )
     }
 }

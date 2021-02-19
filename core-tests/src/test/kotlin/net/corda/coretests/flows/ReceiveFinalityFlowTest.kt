@@ -53,7 +53,7 @@ class ReceiveFinalityFlowTest {
 
         val paymentReceiverId = paymentReceiverFuture.getOrThrow()
         assertThat(bob.services.vaultService.queryBy<FungibleAsset<*>>().states).isEmpty()
-        bob.assertFlowSentForObservationDueToConstraintError(paymentReceiverId)
+        bob.assertFlowSentForObservationDueToUntrustedAttachmentsException(paymentReceiverId)
 
         // Restart Bob with the contracts CorDapp so that it can recover from the error
         bob = mockNet.restartNode(bob, parameters = InternalMockNodeParameters(additionalCordapps = listOf(FINANCE_CONTRACTS_CORDAPP)))
@@ -69,7 +69,7 @@ class ReceiveFinalityFlowTest {
                 .ofType(R::class.java)
     }
 
-    private fun TestStartedNode.assertFlowSentForObservationDueToConstraintError(runId: StateMachineRunId) {
+    private fun TestStartedNode.assertFlowSentForObservationDueToUntrustedAttachmentsException(runId: StateMachineRunId) {
         val observation = medicalRecordsOfType<Flow>()
                 .filter { it.flowId == runId }
                 .toBlocking()
@@ -77,6 +77,6 @@ class ReceiveFinalityFlowTest {
         assertThat(observation.outcome).isEqualTo(Outcome.OVERNIGHT_OBSERVATION)
         assertThat(observation.by).contains(FinalityDoctor)
         val error = observation.errors.single()
-        assertThat(error).isInstanceOf(TransactionVerificationException.ContractConstraintRejection::class.java)
+        assertThat(error).isInstanceOf(TransactionVerificationException.UntrustedAttachmentsException::class.java)
     }
 }
