@@ -205,7 +205,7 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val serviceLegalName by string().mapValid(::toCordaX500Name).optional()
     private val className by string().optional()
     private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt())
-    private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
+    private val extraConfig by nestedObject(sensitive = true).map(ConfigObject::toConfig).optional()
     private val raft by nested(RaftConfigSpec).optional()
     private val bftSMaRt by nested(BFTSmartConfigSpec).optional()
     private val enableOverridableFlows by boolean().optional()
