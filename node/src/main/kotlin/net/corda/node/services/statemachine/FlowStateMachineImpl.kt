@@ -336,7 +336,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val startTime = System.nanoTime()
         serviceHub.monitoringService.metrics
                 .timer("Flows.StartupQueueTime")
-                .update(Duration.ofNanos(startTime).toMillis() - creationTime, TimeUnit.MILLISECONDS)
+                .update(System.currentTimeMillis() - creationTime, TimeUnit.MILLISECONDS)
         var initialised = false
         val resultOrError = try {
 
