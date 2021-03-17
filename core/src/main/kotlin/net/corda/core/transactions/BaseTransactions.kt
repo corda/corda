@@ -50,4 +50,9 @@ abstract class FullTransaction : BaseTransaction() {
             "The specified transaction notary must be the one specified by all inputs and input references"
         }
     }
+
+    /** Make sure the assigned notary is part of the network parameter whitelist. */
+    protected fun checkNotaryWhitelisted() {
+        checkNotaryWhitelisted(this)
+    }
 }
