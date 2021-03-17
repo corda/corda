@@ -48,7 +48,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         checkEncumbrancesValid()
         ltx.checkSupportedHashType()
         checkTransactionWithTimeWindowIsNotarised()
-        ltx.checkNotaryWhitelisted()
+        checkNotaryWhitelisted(ltx)
 
         // The following checks ensure the integrity of the current transaction and also of the future chain.
         // See: https://docs.corda.net/head/api-contract-constraints.html
