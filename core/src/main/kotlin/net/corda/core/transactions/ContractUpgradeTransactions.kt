@@ -9,6 +9,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.internal.checkNotaryWhitelisted
 import net.corda.core.internal.combinedHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -329,7 +330,7 @@ private constructor(
     }
 
     init {
-        checkNotaryWhitelisted()
+        checkNotaryWhitelisted(this)
         // TODO: relax this constraint once upgrading encumbered states is supported.
         check(inputs.all { it.state.contract == legacyContractClassName }) {
             "All input states must point to the legacy contract"
