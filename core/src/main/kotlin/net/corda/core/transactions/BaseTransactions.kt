@@ -4,7 +4,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.checkNotaryWhitelisted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 
