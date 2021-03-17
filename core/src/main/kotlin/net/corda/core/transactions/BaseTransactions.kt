@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -51,7 +52,8 @@ abstract class FullTransaction : BaseTransaction() {
     }
 
     /** Make sure the assigned notary is part of the network parameter whitelist. */
-    protected fun checkNotaryWhitelisted() {
+    @CordaInternal
+    internal fun checkNotaryWhitelisted() {
         notary?.let { notaryParty ->
             // Network parameters will never be null if the transaction is resolved from a CoreTransaction rather than constructed directly.
             networkParameters?.let { parameters ->

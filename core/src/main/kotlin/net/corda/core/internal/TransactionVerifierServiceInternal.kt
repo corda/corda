@@ -47,6 +47,8 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         checkNoNotaryChange()
         checkEncumbrancesValid()
         ltx.checkSupportedHashType()
+        checkTransactionWithTimeWindowIsNotarised()
+        ltx.checkNotaryWhitelisted()
 
         // The following checks ensure the integrity of the current transaction and also of the future chain.
         // See: https://docs.corda.net/head/api-contract-constraints.html
@@ -68,6 +70,10 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
 
         // 5. Final step is to run the contract code. After the first 4 steps we are now sure that we are running the correct code.
         verifyContracts()
+    }
+
+    private fun checkTransactionWithTimeWindowIsNotarised() {
+        if (ltx.timeWindow != null) check(ltx.notary != null) { "Transactions with time-windows must be notarised" }
     }
 
     /**
