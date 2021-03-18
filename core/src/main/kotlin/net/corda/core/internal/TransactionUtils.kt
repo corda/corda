@@ -242,3 +242,25 @@ internal fun BaseTransaction.checkSupportedHashType() {
         throw TransactionVerificationException.UnsupportedHashTypeException(id)
     }
 }
+
+/** Make sure the assigned notary is part of the network parameter whitelist. */
+internal fun checkNotaryWhitelisted(ftx: FullTransaction) {
+    ftx.notary?.let { notaryParty ->
+        // Network parameters will never be null if the transaction is resolved from a CoreTransaction rather than constructed directly.
+        ftx.networkParameters?.let { parameters ->
+            val notaryWhitelist = parameters.notaries.map { it.identity }
+            // Transaction can combine different identities of the same notary after key rotation.
+            // Each of these identities should be whitelisted.
+            val notaries = setOf(notaryParty) + (ftx.inputs + ftx.references).map { it.state.notary }
+            notaries.forEach {
+                check(it in notaryWhitelist) {
+                    "Notary [${it.description()}] specified by the transaction is not on the network parameter whitelist: " +
+                            " [${notaryWhitelist.joinToString { party -> party.description() }}]"
+                }
+            }
+        }
+    }
+}
+
+
+
