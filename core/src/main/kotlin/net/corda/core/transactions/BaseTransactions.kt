@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.checkNotaryWhitelisted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 
@@ -52,20 +53,6 @@ abstract class FullTransaction : BaseTransaction() {
 
     /** Make sure the assigned notary is part of the network parameter whitelist. */
     protected fun checkNotaryWhitelisted() {
-        notary?.let { notaryParty ->
-            // Network parameters will never be null if the transaction is resolved from a CoreTransaction rather than constructed directly.
-            networkParameters?.let { parameters ->
-                val notaryWhitelist = parameters.notaries.map { it.identity }
-                // Transaction can combine different identities of the same notary after key rotation.
-                // Each of these identities should be whitelisted.
-                val notaries = setOf(notaryParty) + (inputs + references).map { it.state.notary }
-                notaries.forEach {
-                    check(it in notaryWhitelist) {
-                        "Notary [${it.description()}] specified by the transaction is not on the network parameter whitelist: " +
-                                " [${notaryWhitelist.joinToString { party -> party.description() }}]"
-                    }
-                }
-            }
-        }
+        checkNotaryWhitelisted(this)
     }
 }

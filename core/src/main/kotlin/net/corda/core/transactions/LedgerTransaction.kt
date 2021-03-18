@@ -120,11 +120,6 @@ private constructor(
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
             isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
 
-    init {
-        if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
-        checkNotaryWhitelisted()
-    }
-
     @KeepForDJVM
     companion object {
         private val logger = contextLogger()
