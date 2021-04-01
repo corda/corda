@@ -7,4 +7,5 @@ import java.util.function.Supplier
 private class DigestSupplier(private val algorithm: String) : Supplier<DigestAlgorithm> {
     override fun get(): DigestAlgorithm = DigestAlgorithmFactory.create(algorithm)
     val digestLength: Int by lazy { get().digestLength }
+    val isHybrid: Boolean by lazy { get().isHybrid }
 }

@@ -319,9 +319,17 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
         if(digestService.hashAlgorithm == SecureHash.SHA2_256) {
-            componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
+            componentGroups.associate {
+                it.groupIndex to
+                        it.components.mapIndexed { internalIndex, internalIt ->
+                            digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex)
+                        } }
         } else {
-            componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, _ -> digestService.computeNonce(privacySalt, it.groupIndex, internalIndex) } }
+            componentGroups.associate {
+                it.groupIndex to
+                        it.components.mapIndexed { internalIndex, _ ->
+                            digestService.computeNonce(privacySalt, it.groupIndex, internalIndex)
+                        } }
         }
     }
 
@@ -331,7 +339,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
+        componentGroups.associate {
+            it.groupIndex to
+                    it.components.mapIndexed { internalIndex, internalIt ->
+                        digestService.componentHash(
+                                availableComponentNonces[it.groupIndex]!![internalIndex], internalIt)
+                    } }
     }
 
     /**

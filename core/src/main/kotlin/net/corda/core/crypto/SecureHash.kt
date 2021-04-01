@@ -193,6 +193,10 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             return digestFor(algorithm).digestLength
         }
 
+        fun isHybrid(algorithm: String): Boolean {
+            return digestFor(algorithm).isHybrid
+        }
+
         /**
          * Computes the hash value of the [ByteArray].
          * @param algorithm Java provider name of the digest algorithm.
@@ -385,6 +389,7 @@ private class DigestSupplier(algorithm: String) : Supplier<DigestAlgorithm> {
     private val threadLocalMessageDigest = LocalDigest(algorithm)
     override fun get(): DigestAlgorithm = threadLocalMessageDigest.get()
     val digestLength: Int = get().digestLength
+    val isHybrid: Boolean = get().isHybrid
 }
 
 // Declaring this as "object : FastThreadLocal<>" would have

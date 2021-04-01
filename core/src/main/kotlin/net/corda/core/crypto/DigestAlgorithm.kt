@@ -18,6 +18,16 @@ interface DigestAlgorithm {
     val digestLength: Int
 
     /**
+     * ENT-6225 raises a question in relation to zero hash padding in the case of a single leaf in a component group.
+     * No padding for the single leaf case becomes an issue when a transaction has a mixed condition of multiple and
+     * single components' component groups, and a hybrid digest algorithm is used, resulting in component groups roots
+     * hashed with different hash functions.
+     * A hybrid digest algorithm is a [DigestAlgorithm] implementation where [componentDigest] and [nonceDigest] hash
+     * function differs from the [digest] hash function.
+     */
+    val isHybrid: Boolean get() = false
+
+    /**
      * Computes the digest of the [ByteArray].
      *
      * @param bytes The [ByteArray] to hash.

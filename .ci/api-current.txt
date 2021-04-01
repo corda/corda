@@ -1857,6 +1857,7 @@ public interface net.corda.core.crypto.DigestAlgorithm
   @NotNull
   public abstract String getAlgorithm()
   public abstract int getDigestLength()
+  public abstract boolean isHybrid()
   @NotNull
   public abstract byte[] nonceDigest(byte[])
 ##

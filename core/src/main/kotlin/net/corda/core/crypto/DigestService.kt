@@ -50,6 +50,12 @@ data class DigestService(val hashAlgorithm: String) {
         get() = SecureHash.digestLengthFor(hashAlgorithm)
 
     /**
+     * Indicates whether [computeNonce] and [componentHash] hash function differs from the [hash] hash function.
+     */
+    val isHybrid: Boolean
+        get() = SecureHash.isHybrid(hashAlgorithm)
+
+    /**
      * Computes the digest of the [ByteArray].
      *
      * @param bytes The [ByteArray] to hash.
