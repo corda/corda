@@ -37,19 +37,19 @@ sealed class MerkleTree {
             require(algorithms.size == 1) {
                 "Cannot build Merkle tree with multiple hash algorithms: $algorithms"
             }
-            val leaves = padWithZeros(allLeavesHashes).map { Leaf(it) }
+            val leaves = padWithZeros(allLeavesHashes, nodeDigestService.hashAlgorithm == SecureHash.SHA2_256).map { Leaf(it) }
             return buildMerkleTree(leaves, nodeDigestService)
         }
 
         // If number of leaves in the tree is not a power of 2, we need to pad it with zero hashes.
-        private fun padWithZeros(allLeavesHashes: List<SecureHash>): List<SecureHash> {
+        private fun padWithZeros(allLeavesHashes: List<SecureHash>, singleLeafWithoutPadding: Boolean): List<SecureHash> {
             var n = allLeavesHashes.size
-            if (isPow2(n)) return allLeavesHashes
+            if (isPow2(n) && (n > 1 || singleLeafWithoutPadding)) return allLeavesHashes
             val paddedHashes = ArrayList(allLeavesHashes)
             val zeroHash = SecureHash.zeroHashFor(paddedHashes[0].algorithm)
-            while (!isPow2(n++)) {
+            do {
                 paddedHashes.add(zeroHash)
-            }
+            } while (!isPow2(++n))
             return paddedHashes
         }
 
