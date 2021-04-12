@@ -140,7 +140,7 @@ class PartialMerkleTreeWithNamedHashTest {
     fun `building Merkle tree one node`() {
         val node = 'a'.serialize().sha2_384()
         val mt = MerkleTree.getMerkleTree(listOf(node), DigestService.sha2_384)
-        assertEquals(node, mt.hash)
+        assertNotEquals(node, mt.hash)
     }
 
     @Test(timeout=300_000)
