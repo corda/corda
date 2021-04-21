@@ -62,8 +62,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.toFuture
-import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
-import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
