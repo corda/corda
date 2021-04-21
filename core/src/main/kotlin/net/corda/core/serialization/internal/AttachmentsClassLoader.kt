@@ -466,5 +466,3 @@ private class AttachmentURLConnection(url: URL, private val attachment: Attachme
         connected = true
     }
 }
-
-
