@@ -49,7 +49,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
             url = new URL("https://docs.oracle.com/javafx/2/api/")
         }
         externalDocumentationLink {
-            url = new URL("http://www.bouncycastle.org/docs/docs1.5on/")
+            url = new URL("https://www.bouncycastle.org/docs/docs1.5on/")
         }
         internalPackagePrefixes.collect { packagePrefix ->
             packageOptions {
