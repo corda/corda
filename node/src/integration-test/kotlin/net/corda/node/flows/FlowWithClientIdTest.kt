@@ -62,7 +62,7 @@ class FlowWithClientIdTest {
     }
 
     @Test(timeout = 300_000)
-    fun `start flow with client id permissions`() {
+    fun `start flow with client id permissions - StartFlow`() {
         val user = User("TonyStark", "I AM IRONMAN", setOf("StartFlow.net.corda.node.flows.FlowWithClientIdTest\$ResultFlow"))
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
@@ -76,8 +76,36 @@ class FlowWithClientIdTest {
     }
 
     @Test(timeout = 300_000)
+    fun `start flow with client id permissions - InvokeRpc-startFlowWithClientId`() {
+        val user = User("TonyStark", "I AM IRONMAN", setOf("InvokeRpc.startFlowWithClientId"))
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
+            nodeA.rpc.startFlowWithClientId(UUID.randomUUID().toString(), ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            nodeA.rpc.startFlowDynamicWithClientId(
+                UUID.randomUUID().toString(),
+                ResultFlow::class.java,
+                5
+            ).returnValue.getOrThrow(20.seconds)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `start flow with client id permissions - InvokeRpc-startFlowDynamicWithClientId`() {
+        val user = User("TonyStark", "I AM IRONMAN", setOf("InvokeRpc.startFlowDynamicWithClientId"))
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
+            nodeA.rpc.startFlowWithClientId(UUID.randomUUID().toString(), ::ResultFlow, 5).returnValue.getOrThrow(20.seconds)
+            nodeA.rpc.startFlowDynamicWithClientId(
+                UUID.randomUUID().toString(),
+                ResultFlow::class.java,
+                5
+            ).returnValue.getOrThrow(20.seconds)
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `start flow with client id without permissions`() {
-        val user = User("TonyStark", "I AM IRONMAN", setOf())
+        val user = User("TonyStark", "I AM IRONMAN", setOf("InvokeRpc.startFlow"))
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
             assertFailsWith<PermissionException> {
