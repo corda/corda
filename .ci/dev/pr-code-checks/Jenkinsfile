@@ -4,27 +4,16 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'standard' }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
-    environment {
-        PR_CONTEXT_STRING = "PR Code Checks"
-    }
-
     stages {
         stage('Detekt check') {
             steps {
-                script {
-                    pullRequest.createStatus(
-                            status: 'pending',
-                            context: "${PR_CONTEXT_STRING}",
-                            description: "Running code checks",
-                            targetUrl: "${env.BUILD_URL}")
-                }
                 sh "./gradlew --no-daemon clean detekt"
             }
         }
@@ -50,25 +39,6 @@ pipeline {
     }
 
     post {
-        success {
-            script {
-                pullRequest.createStatus(
-                        status: 'success',
-                        context: "${PR_CONTEXT_STRING}",
-                        description: 'Code checks passed',
-                        targetUrl: "${env.BUILD_URL}")
-            }
-        }
-
-        failure {
-            script {
-                pullRequest.createStatus(
-                        status: 'failure',
-                        context: "${PR_CONTEXT_STRING}",
-                        description: 'Code checks failed',
-                        targetUrl: "${env.BUILD_URL}")
-            }
-        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
