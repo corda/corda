@@ -104,15 +104,6 @@ pipeline {
                                 ].join(' ')
                             }
                         }
-                        stage('Proxy Integration Test') {
-                            steps {
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'proxyIntegrationTest'
-                                ].join(' ')
-                            }
-                        }
                         stage('Smoke Test') {
                             steps {
                                 sh script: [
