@@ -1,7 +1,6 @@
 package net.corda.irs
 
 import com.palantir.docker.compose.DockerComposeRule
-import com.palantir.docker.compose.ImmutableDockerComposeRule
 import com.palantir.docker.compose.configuration.DockerComposeFiles
 import com.palantir.docker.compose.connection.waiting.HealthChecks
 import org.junit.ClassRule
@@ -30,7 +29,7 @@ class IRSDemoDockerTest {
 
         @ClassRule
         @JvmField
-        var docker: ImmutableDockerComposeRule = DockerComposeRule.builder()
+        var docker: DockerComposeRule = DockerComposeRule.builder()
                 .files(DockerComposeFiles.from(
                         System.getProperty("CORDAPP_DOCKER_COMPOSE"),
                         System.getProperty("WEB_DOCKER_COMPOSE")))
