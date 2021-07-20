@@ -44,11 +44,6 @@ configurations {
     systemTestCompile.extendsFrom testCompile
 }
 
-repositories {
-    maven {
-        url 'https://dl.bintray.com/palantir/releases' // docker-compose-rule is published on bintray
-    }
-}
 
 dependencies {
     compile "commons-io:commons-io:$commons_io_version"
