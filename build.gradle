@@ -175,9 +175,6 @@ buildscript {
             mavenCentral()
             jcenter()
             maven {
-                url 'https://kotlin.bintray.com/kotlinx'
-            }
-            maven {
                 url "${artifactory_contextUrl}/corda-dependencies-dev"
             }
             maven {
