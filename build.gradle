@@ -187,12 +187,6 @@ buildscript {
             }
             mavenCentral()
             jcenter()
-            maven {
-                url 'https://kotlin.bintray.com/kotlinx'
-                content {
-                    includeGroup 'org.jetbrains.kotlin'
-                }
-            }
         }
     }
     dependencies {
