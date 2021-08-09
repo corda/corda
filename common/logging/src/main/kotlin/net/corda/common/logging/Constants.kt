@@ -9,4 +9,4 @@ package net.corda.common.logging
  * (originally added to source control for ease of use)
  */
 
-internal const val CURRENT_MAJOR_RELEASE = "4.8-SNAPSHOT"
+internal const val CURRENT_MAJOR_RELEASE = "4.8.1"
