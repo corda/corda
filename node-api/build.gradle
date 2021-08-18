@@ -20,6 +20,8 @@ dependencies {
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
     compile "org.apache.activemq:artemis-commons:${artemis_version}"
 
+    implementation "com.google.code.gson:gson:2.8.7"
+
     compile "io.netty:netty-handler-proxy:$netty_version"
 
     // TypeSafe Config: for simple and human friendly config files.

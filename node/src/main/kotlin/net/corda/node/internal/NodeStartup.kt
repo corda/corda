@@ -26,14 +26,11 @@ import net.corda.node.internal.subcommands.*
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.shouldStartLocalShell
-import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
-import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
@@ -241,20 +238,6 @@ open class NodeStartup : NodeStartupLogging {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
-
-            // Don't start the shell if there's no console attached.
-            if (node.configuration.shouldStartLocalShell()) {
-                node.startupComplete.then {
-                    try {
-                        InteractiveShell.runLocalShell(node::stop)
-                    } catch (e: Exception) {
-                        logger.error("Shell failed to start", e)
-                    }
-                }
-            }
-            if (node.configuration.shouldStartSSHDaemon()) {
-                Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
-            }
         },
                 { th ->
                     logger.error("Unexpected exception during registration", th)

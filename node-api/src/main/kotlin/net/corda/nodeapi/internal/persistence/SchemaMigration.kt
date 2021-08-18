@@ -148,6 +148,7 @@ open class SchemaMigration(
 
                 // Transform it to json.
                 val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
+//                val includeAllFilesJson = Gson
 
                 // Return the json as a stream.
                 return setOf(ByteArrayInputStream(includeAllFilesJson))

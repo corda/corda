@@ -39,12 +39,6 @@ interface FlowStateMachine<FLOWRETURN> : FlowStateMachineHandle<FLOWRETURN> {
     @Suspendable
     fun <SUBFLOWRETURN> subFlow(currentFlow: FlowLogic<*>, subFlow: FlowLogic<SUBFLOWRETURN>): SUBFLOWRETURN
 
-    @Suspendable
-    fun flowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot?
-
-    @Suspendable
-    fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>)
-
     fun updateTimedFlowTimeout(timeoutSeconds: Long)
 
     val serviceHub: ServiceHub

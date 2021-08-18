@@ -71,7 +71,6 @@ import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.apache.sshd.common.util.security.SecurityUtils
 import rx.Observable
 import rx.Scheduler
 import rx.internal.schedulers.CachedThreadScheduler
@@ -182,7 +181,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
         // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
-        SecurityUtils.setAPrioriDisabledProvider("BC", true) // XXX: Why isn't this static?
         require(initialNetworkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
     }
 
@@ -410,10 +408,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
             return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
-        }
-
-        override fun startShell() {
-            //No mock shell
         }
 
         override fun initKeyStores() = keyStoreHandler.init(entropyCounter.updateAndGet { it.add(BigInteger.ONE) })

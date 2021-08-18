@@ -529,7 +529,7 @@ abstract class FlowLogic<out T> {
      * Therefore the default implementation does nothing.
      */
     @Suspendable
-    fun flowStackSnapshot(): FlowStackSnapshot? = stateMachine.flowStackSnapshot(this::class.java)
+    fun flowStackSnapshot(): FlowStackSnapshot? = throw UnsupportedOperationException("not supported on this fork")
 
     /**
      * Persists a shallow copy of the Quasar stack frames at the time of call to [persistFlowStackSnapshot].
@@ -543,7 +543,7 @@ abstract class FlowLogic<out T> {
      * Therefore the default implementation does nothing.
      */
     @Suspendable
-    fun persistFlowStackSnapshot() = stateMachine.persistFlowStackSnapshot(this::class.java)
+    fun persistFlowStackSnapshot(): Unit = throw UnsupportedOperationException("not supported on this fork")
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

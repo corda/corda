@@ -506,15 +506,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         serviceHub.auditService.recordAuditEvent(flowAuditEvent)
     }
 
-    @Suspendable
-    override fun flowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot? {
-        return FlowStackSnapshotFactory.instance.getFlowStackSnapshot(flowClass)
-    }
-
-    override fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>) {
-        FlowStackSnapshotFactory.instance.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id)
-    }
-
     override fun serialize(payloads: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
         val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
 

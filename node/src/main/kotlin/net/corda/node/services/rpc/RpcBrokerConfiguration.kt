@@ -21,7 +21,7 @@ import java.nio.file.Path
 
 internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean,
                                       address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: BrokerRpcSslOptions?,
-                                      useSsl: Boolean, nodeConfiguration: MutualSslConfiguration, shouldStartLocalShell: Boolean) : SecureArtemisConfiguration() {
+                                      useSsl: Boolean, nodeConfiguration: MutualSslConfiguration) : SecureArtemisConfiguration() {
     val loginListener: (String) -> Unit
 
     init {
@@ -53,7 +53,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true, true, true)
 
-        val addRPCRoleToUsers = if (shouldStartLocalShell) listOf(INTERNAL_SHELL_USER) else emptyList()
+        val addRPCRoleToUsers = emptyList<String>()
         val rolesAdderOnLogin = RolesAdderOnLogin(addRPCRoleToUsers) { username ->
             "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#" to setOf(nodeInternalRole, restrictedRole(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",

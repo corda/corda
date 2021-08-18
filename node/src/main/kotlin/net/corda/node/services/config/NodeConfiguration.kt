@@ -17,7 +17,6 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
-import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -53,7 +52,6 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val useTestClock: Boolean get() = false
     val lazyBridgeStart: Boolean
     val detectPublicIp: Boolean get() = false
-    val sshd: SSHDConfiguration?
     val localShellAllowExitInSafeMode: Boolean
     val localShellUnsafe: Boolean
     val database: DatabaseConfig
@@ -145,10 +143,6 @@ data class DJVMOptions(
    val bootstrapSource: String?,
    val cordaSource: List<String>
 )
-
-fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
-fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
-fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
 data class NotaryConfig(
         /** Specifies whether the notary validates transactions or not. */

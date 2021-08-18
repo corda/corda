@@ -35,7 +35,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val useTestClock by boolean().optional().withDefaultValue(Defaults.useTestClock)
     private val lazyBridgeStart by boolean().optional().withDefaultValue(Defaults.lazyBridgeStart)
     private val detectPublicIp by boolean().optional().withDefaultValue(Defaults.detectPublicIp)
-    private val sshd by nested(SSHDConfigurationSpec).optional()
     private val localShellAllowExitInSafeMode by boolean().optional().withDefaultValue(Defaults.localShellAllowExitInSafeMode)
     private val localShellUnsafe by boolean().optional().withDefaultValue(Defaults.localShellUnsafe)
     private val database by nested(DatabaseConfigSpec).optional()
@@ -112,7 +111,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     useTestClock = config[useTestClock],
                     lazyBridgeStart = config[lazyBridgeStart],
                     detectPublicIp = config[detectPublicIp],
-                    sshd = config[sshd],
                     localShellAllowExitInSafeMode = config[localShellAllowExitInSafeMode],
                     localShellUnsafe = config[localShellUnsafe],
                     database = database,

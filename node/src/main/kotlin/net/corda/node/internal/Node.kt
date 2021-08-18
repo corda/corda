@@ -56,8 +56,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.shell.INTERNAL_SHELL_USER
 import net.corda.node.services.config.shell.internalShellPassword
-import net.corda.node.services.config.shouldInitCrashShell
-import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.P2PMessagingClient
@@ -358,8 +356,7 @@ open class Node(configuration: NodeConfiguration,
                 ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig, cacheFactory)) {
-            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this,
-                User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
+            this
         }
 
         val messageBroker = if (!configuration.messagingServerExternal) {
@@ -441,10 +438,10 @@ open class Node(configuration: NodeConfiguration,
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
                         ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE,
-                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     } else {
                         ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE,
-                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     }
                 }
                 rpcBroker!!.addresses
@@ -659,7 +656,7 @@ open class Node(configuration: NodeConfiguration,
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),
-                rpcClientContext = if (configuration.shouldInitCrashShell()) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null, //even Shell embeded in the node connects via RPC to the node
+                rpcClientContext = null,
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
 
                 checkpointSerializer = KryoCheckpointSerializer,

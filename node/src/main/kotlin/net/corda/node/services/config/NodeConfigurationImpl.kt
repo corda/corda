@@ -15,7 +15,6 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -59,7 +58,6 @@ data class NodeConfigurationImpl(
         override val detectPublicIp: Boolean = Defaults.detectPublicIp,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = Defaults.additionalNodeInfoPollingFrequencyMsec,
-        override val sshd: SSHDConfiguration? = Defaults.sshd,
         override val localShellAllowExitInSafeMode: Boolean = Defaults.localShellAllowExitInSafeMode,
         override val localShellUnsafe: Boolean = Defaults.localShellUnsafe,
         override val database: DatabaseConfig = Defaults.database(devMode),
@@ -106,7 +104,6 @@ data class NodeConfigurationImpl(
         const val lazyBridgeStart: Boolean = true
         const val detectPublicIp: Boolean = false
         val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
-        val sshd: SSHDConfiguration? = null
         const val localShellAllowExitInSafeMode: Boolean = true
         const val localShellUnsafe: Boolean = false
         val transactionCacheSizeMegaBytes: Int? = null
