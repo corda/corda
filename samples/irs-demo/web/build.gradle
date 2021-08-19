@@ -70,7 +70,7 @@ dependencies {
     }
     compile('org.springframework.boot:spring-boot-starter-log4j2')
     runtimeOnly("org.apache.logging.log4j:log4j-web:$log4j_version")
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
+    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
     compile project(":client:rpc")
     compile project(":client:jackson")
     compile project(":finance:workflows")
