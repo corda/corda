@@ -1,12 +1,10 @@
 package net.corda.testing.node
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.*
 import net.corda.core.internal.div
 import net.corda.core.internal.list
-import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
@@ -18,7 +16,6 @@ import java.nio.file.Path
 import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @CordaSerializable
 data class StackSnapshotFrame(val method: String, val clazz: String, val dataTypes: List<String?>, val flowId: String? = null)
@@ -200,13 +197,6 @@ class DummyFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
     }
 }
 
-fun readFlowStackSnapshotFromDir(baseDir: Path, flowId: StateMachineRunId): FlowStackSnapshot {
-    val snapshotFile = flowSnapshotDir(baseDir, flowId) / "flowStackSnapshot.json"
-    return snapshotFile.read {
-        JacksonSupport.createNonRpcMapper().readValue(it, FlowStackSnapshot::class.java)
-    }
-}
-
 private fun flowSnapshotDir(baseDir: Path, flowId: StateMachineRunId): Path {
     return baseDir / "flowStackSnapshots" / LocalDate.now().toString() / flowId.uuid.toString()
 }
@@ -255,22 +245,6 @@ class FlowStackSnapshotTest {
     }
 
     @Test(timeout=300_000)
-	fun `persistFlowStackSnapshot persists empty frames to a file when methods with no side effects are called`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
-            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingNoSideEffectFlow>())))).get()
-            CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
-                val flowId = connection.proxy.startFlow(::PersistingNoSideEffectFlow).returnValue.get()
-                val snapshotFromFile = readFlowStackSnapshotFromDir(a.baseDirectory, flowId)
-                val stackSnapshotFrames = convertToStackSnapshotFrames(snapshotFromFile)
-                val iterator = stackSnapshotFrames.listIterator()
-                assertFrame("call", true, iterator.next())
-                assertFrame("persist", true, iterator.next())
-                assertFrame("persistFlowStackSnapshot", false, iterator.next())
-            }
-        }
-    }
-
-    @Test(timeout=300_000)
 	fun `persistFlowStackSnapshot persists multiple snapshots in different files`() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<MultiplePersistingSideEffectFlow>())))).get()
@@ -299,36 +273,5 @@ class FlowStackSnapshotTest {
             exception
         }
         assertNull(thrown)
-    }
-
-    @Test(timeout=300_000)
-	fun `persistFlowStackSnapshot stack traces are aligned with stack objects`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
-            val a = startNode(rpcUsers = listOf(User(Constants.USER, Constants.PASSWORD, setOf(startFlow<PersistingSideEffectFlow>())))).get()
-
-            CordaRPCClient(a.rpcAddress).use(Constants.USER, Constants.PASSWORD) { connection ->
-                val flowId = connection.proxy.startFlow(::PersistingSideEffectFlow).returnValue.get()
-                val snapshotFromFile = readFlowStackSnapshotFromDir(a.baseDirectory, flowId)
-                var inCallCount = 0
-                var inPersistCount = 0
-                snapshotFromFile.stackFrames.forEach {
-                    val trace = it.stackTraceElement
-                    it.stackObjects.forEach {
-                        when (it) {
-                            Constants.IN_CALL_VALUE -> {
-                                assertEquals(PersistingSideEffectFlow::call.name, trace.methodName)
-                                inCallCount++
-                            }
-                            Constants.IN_PERSIST_VALUE -> {
-                                assertEquals(PersistingSideEffectFlow::persist.name, trace.methodName)
-                                inPersistCount++
-                            }
-                        }
-                    }
-                }
-                assertTrue(inCallCount > 0)
-                assertTrue(inPersistCount > 0)
-            }
-        }
     }
 }

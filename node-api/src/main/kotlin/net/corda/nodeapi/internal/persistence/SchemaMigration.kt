@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.GsonBuilder
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
@@ -12,7 +12,6 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
 import java.sql.Connection
@@ -147,11 +146,10 @@ open class SchemaMigration(
                         to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
 
                 // Transform it to json.
-                val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
-//                val includeAllFilesJson = Gson
+                val includeAllFilesJson = GsonBuilder().create().toJson(includeAllFiles)
 
                 // Return the json as a stream.
-                return setOf(ByteArrayInputStream(includeAllFilesJson))
+                return setOf(includeAllFilesJson.byteInputStream())
             }
             return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
         }

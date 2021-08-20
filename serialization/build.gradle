@@ -45,7 +45,6 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.mockito:mockito-core:$mockito_version"
     testCompile 'org.hamcrest:hamcrest-library:2.1'
-    testCompile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 }
 
 configurations {
