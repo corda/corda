@@ -13,7 +13,6 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
@@ -58,18 +57,6 @@ class NodeConfigurationImplTest {
         assertTrue { configValidationResult.isNotEmpty() }
         assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint")
         assertThat(configValidationResult.first()).contains("crlCheckSoftFail")
-    }
-
-    @Test(timeout=6_000)
-	fun `check crashShell flags helper`() {
-        assertFalse { testConfiguration.copy(sshd = null).shouldStartSSHDaemon() }
-        assertTrue { testConfiguration.copy(sshd = SSHDConfiguration(1234)).shouldStartSSHDaemon() }
-        assertFalse { testConfiguration.copy(noLocalShell = true).shouldStartLocalShell() }
-        assertFalse { testConfiguration.copy(noLocalShell = false, devMode = false).shouldStartLocalShell() }
-        assertFalse { testConfiguration.copy(noLocalShell = false, devMode = true).shouldStartLocalShell() }
-        assertFalse { testConfiguration.copy(noLocalShell = true).shouldInitCrashShell() }
-        assertFalse { testConfiguration.copy(sshd = null).shouldInitCrashShell() }
-        assertFalse { testConfiguration.copy(noLocalShell = true, sshd = null).shouldInitCrashShell() }
     }
 
     @Test(timeout=6_000)
