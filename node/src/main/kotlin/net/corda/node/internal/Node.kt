@@ -42,11 +42,9 @@ import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
-import net.corda.node.services.Permissions
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
@@ -54,8 +52,6 @@ import net.corda.node.services.config.JmxReporterType
 import net.corda.node.services.config.MB
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.shell.INTERNAL_SHELL_USER
-import net.corda.node.services.config.shell.internalShellPassword
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.P2PMessagingClient
@@ -75,12 +71,10 @@ import net.corda.node.internal.classloading.scanForCustomSerializationScheme
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
-import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl

@@ -4,7 +4,6 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.SecureArtemisConfiguration
-import net.corda.node.services.config.shell.INTERNAL_SHELL_USER
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent

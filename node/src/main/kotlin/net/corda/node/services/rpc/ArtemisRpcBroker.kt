@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.security.KeyStoreException
 import javax.security.auth.login.AppConfigurationEntry
 
+@Suppress("LongParameterList")
 class ArtemisRpcBroker internal constructor(
         address: NetworkHostAndPort,
         private val adminAddressOptional: NetworkHostAndPort?,

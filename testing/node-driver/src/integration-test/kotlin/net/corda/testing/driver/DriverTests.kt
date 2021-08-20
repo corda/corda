@@ -17,14 +17,12 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
-import org.json.simple.JSONObject
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -102,17 +100,6 @@ class DriverTests {
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(DriverParameters(jmxPolicy = JmxPolicy.defaultEnabled(), startNodesInProcess = false, notarySpecs = emptyList())) {
-            val node = startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
-            // request access to some JMX metrics via Jolokia HTTP/JSON
-            val api = HttpApi.fromHostAndPort(node.jmxAddress!!, "/jolokia/")
-            val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")
-            assertThat(versionAsJson.getValue("status")).isEqualTo(200)
         }
     }
 

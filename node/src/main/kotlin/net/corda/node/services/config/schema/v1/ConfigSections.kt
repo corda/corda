@@ -31,7 +31,6 @@ import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.Valid
-import net.corda.node.services.config.schema.parsers.attempt
 import net.corda.node.services.config.schema.parsers.badValue
 import net.corda.node.services.config.schema.parsers.toCordaX500Name
 import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort

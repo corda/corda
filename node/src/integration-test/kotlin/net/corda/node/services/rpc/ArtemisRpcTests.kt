@@ -108,9 +108,9 @@ class ArtemisRpcTests {
         val jmxEnabled = false
 
         val artemisBroker: ArtemisBroker = if (useSslForBroker) {
-            ArtemisRpcBroker.withSsl(nodeSSlconfig, address, adminAddress, brokerSslOptions!!, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false)
+            ArtemisRpcBroker.withSsl(nodeSSlconfig, address, adminAddress, brokerSslOptions!!, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory)
         } else {
-            ArtemisRpcBroker.withoutSsl(nodeSSlconfig, address, adminAddress, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false)
+            ArtemisRpcBroker.withoutSsl(nodeSSlconfig, address, adminAddress, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory)
         }
         artemisBroker.use { broker ->
             broker.start()
