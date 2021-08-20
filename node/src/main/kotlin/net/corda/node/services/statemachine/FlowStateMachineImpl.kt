@@ -18,7 +18,6 @@ import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.FlowStackSnapshot
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.KilledFlowException
 import net.corda.core.flows.StateMachineRunId
