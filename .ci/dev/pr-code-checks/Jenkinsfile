@@ -20,7 +20,7 @@ pipeline {
 
         stage('Compilation warnings check') {
             steps {
-                sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=true compileAll"
+                sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=false compileAll"
             }
         }
 
