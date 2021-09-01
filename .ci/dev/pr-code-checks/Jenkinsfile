@@ -23,19 +23,6 @@ pipeline {
                 sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=true compileAll"
             }
         }
-
-        stage('No API change check') {
-            steps {
-                sh "./gradlew --no-daemon generateApi"
-                sh ".ci/check-api-changes.sh"
-            }
-        }
-
-        stage('Deploy Nodes') {
-            steps {
-                sh "./gradlew --no-daemon jar deployNodes"
-            }
-        }
     }
 
     post {

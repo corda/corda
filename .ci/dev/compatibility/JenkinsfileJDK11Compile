@@ -29,11 +29,6 @@ pipeline {
                 "-Ptests.ignoreFailures=true clean compileAll --stacktrace"
             }
         }
-        stage('Deploy nodes') {
-            steps {
-                sh "./gradlew --no-daemon deployNodes"
-            }
-        }
     }
 
     post {
