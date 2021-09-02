@@ -133,7 +133,7 @@ pipeline {
                             failBuildOnNetworkError: false,
                             iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
                             iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
-                            iqStage: params.nexusIqStage
+                            iqStage: "source"
                     )
                 }
             }
