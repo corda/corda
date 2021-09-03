@@ -8,25 +8,55 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
+/**
+ * Common Gradle arguments for all Gradle executions
+ */
+String COMMON_GRADLE_PARAMS = [
+        '--no-daemon',
+        '--stacktrace',
+        '--info',
+        '-Pcompilation.warningsAsErrors=false',
+        '-Ptests.failFast=true',
+].join(' ')
+
+/**
+ * The name of subfolders to run tests previously on Another Agent and Same Agent
+ */
+String sameAgentFolder = 'sameAgent'
+String anotherAgentFolder = 'anotherAgent'
+
 pipeline {
     agent {
         dockerfile {
             label 'standard'
             additionalBuildArgs '--build-arg USER="${USER}"' // DON'T change quotation - USER variable is substituted by SHELL!!!!
-            filename '.ci/dev/compatibility/DockerfileJDK11'
+            filename "${sameAgentFolder}/.ci/dev/compatibility/DockerfileJDK11"
         }
     }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        checkoutToSubdirectory "${sameAgentFolder}"
     }
 
     stages {
-        stage('JDK 11 Compile') {
+        stage('Compile') {
             steps {
-                sh "./gradlew --no-daemon -Pcompilation.allWarningsAsErrors=true -Ptests.failFast=false " +
-                "-Ptests.ignoreFailures=true clean compileAll jar --stacktrace"
+                dir(sameAgentFolder) {
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'clean',
+                            'jar'
+                    ].join(' ')
+                }
+            }
+        }
+
+        stage('Copy') {
+            steps {
+                sh "rm -rf ${anotherAgentFolder} && mkdir -p ${anotherAgentFolder} &&  cd ${sameAgentFolder} && cp -aR . ../${anotherAgentFolder}"
             }
         }
 
