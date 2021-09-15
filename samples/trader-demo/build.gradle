@@ -50,11 +50,7 @@ dependencies {
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
-    testCompile(project(':node-driver')) {
-        // We already have a SLF4J implementation on our runtime classpath,
-        // and we don't need another one.
-        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
-    }
+    testCompile(project(':node-driver'))
     
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
