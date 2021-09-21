@@ -180,13 +180,10 @@ abstract class AbstractStateReplacementFlow {
         protected abstract fun verifyProposal(stx: SignedTransaction, proposal: Proposal<T>)
 
         private fun checkMySignatureRequired(stx: SignedTransaction) {
-            // TODO: use keys from the keyManagementService instead
-            // TODO Check the set of multiple identities?
-            val myKey = ourIdentity.owningKey
+            val requiredKeys =
+                    serviceHub.keyManagementService.filterMyKeys(stx.resolveTransactionWithSignatures(serviceHub).requiredSigningKeys)
 
-            val requiredKeys = stx.resolveTransactionWithSignatures(serviceHub).requiredSigningKeys
-
-            require(myKey in requiredKeys) { "Party is not a participant for any of the input states of transaction ${stx.id}" }
+            require(requiredKeys.any()) { "Party is not a participant for any of the input states of transaction ${stx.id}" }
         }
 
         private fun sign(stx: SignedTransaction): TransactionSignature {
