@@ -9,19 +9,35 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
-import net.corda.core.internal.*
+import net.corda.core.internal.JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.PlatformVersionSwitches
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.targetPlatformVersion
+import net.corda.core.internal.createInstancesOfClassesImplementing
+import net.corda.core.internal.createSimpleCache
+import net.corda.core.internal.toSynchronised
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationWhitelist
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
+import net.corda.core.serialization.withWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.WeakReference
-import java.net.*
+import java.net.URL
+import java.net.URLClassLoader
+import java.net.URLConnection
+import java.net.URLStreamHandler
+import java.net.URLStreamHandlerFactory
+import java.security.MessageDigest
 import java.security.Permission
 import java.util.*
 import java.util.function.Function
@@ -58,6 +74,16 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
         private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
 
+
+        private fun hash(inputStream : InputStream, buffer : ByteArray = ByteArray(DEFAULT_BUFFER_SIZE)) : SecureHash.SHA256 {
+            val md = MessageDigest.getInstance(SecureHash.SHA2_256)
+            while(true) {
+                val read = inputStream.read(buffer)
+                if(read <= 0) break
+                md.update(buffer, 0, read)
+            }
+            return SecureHash.SHA256(md.digest())
+        }
         /**
          * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
          * or use a decorator and reflection to bypass the single-call-per-JVM restriction otherwise.
@@ -208,8 +234,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                 // perceived correctness of the signatures or package ownership already, that would be too late.
                 attachment.openAsJAR().use { JarSignatureCollector.collectSigners(it) }
             }
+
             // Now open it again to compute the overlap and package ownership data.
             attachment.openAsJAR().use { jar ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                 while (true) {
                     val entry = jar.nextJarEntry ?: break
@@ -250,13 +278,9 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     if (!shouldCheckForNoOverlap(path, targetPlatformVersion)) continue
 
                     // This calculates the hash of the current entry because the JarInputStream returns only the current entry.
-                    fun entryHash() = ByteArrayOutputStream().use {
-                        jar.copyTo(it)
-                        it.toByteArray()
-                    }.sha256()
+                    val currentHash = hash(jar, buffer)
 
                     // If 2 entries are identical, it means the same file is present in both attachments, so that is ok.
-                    val currentHash = entryHash()
                     val previousFileHash = classLoaderEntries[path]
                     when {
                         previousFileHash == null -> {
