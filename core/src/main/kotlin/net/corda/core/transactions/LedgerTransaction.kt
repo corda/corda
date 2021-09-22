@@ -324,6 +324,7 @@ private constructor(
      *
      * This method needs to run in the special transaction attachments classloader context.
      */
+    @Suppress("ComplexMethod")
     private fun createLtxForVerification(): List<LedgerTransaction> {
         val serializedInputs = this.serializedInputs
         val serializedReferences = this.serializedReferences

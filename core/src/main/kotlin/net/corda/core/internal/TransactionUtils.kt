@@ -97,6 +97,7 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
     }
 }
 
+@Suppress("LongParameterList")
 fun <T : Any> deserialiseComponentGroupN(componentGroups: List<ComponentGroup>,
                                         clazz: KClass<T>,
                                         groupEnum: ComponentGroupEnum,
@@ -177,6 +178,7 @@ fun deserialiseCommands(
     }
 }
 
+@Suppress("LongParameterList")
 fun deserialiseCommandsN(
         componentGroups: List<ComponentGroup>,
         forceDeserialize: Boolean = false,
