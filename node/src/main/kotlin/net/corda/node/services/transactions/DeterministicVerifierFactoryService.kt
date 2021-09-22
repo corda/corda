@@ -83,10 +83,10 @@ class DeterministicVerifierFactoryService(
         return ledgerTransaction.specialise(::specialise)
     }
 
-    private fun specialise(ltx: LedgerTransaction, classLoader: ClassLoader): Verifier {
+    private fun specialise(ltxs: List<LedgerTransaction>, classLoader: ClassLoader): Verifier {
         return (classLoader as? URLClassLoader)?.run {
-            DeterministicVerifier(ltx, classLoader, createSandbox(classLoader.urLs))
-        } ?: BasicVerifier(ltx, classLoader)
+            DeterministicVerifier(ltxs, classLoader, createSandbox(classLoader.urLs))
+        } ?: BasicVerifier(ltxs, classLoader)
     }
 
     private fun createSandbox(userSource: Array<URL>): SandboxConfiguration {

@@ -97,6 +97,41 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
     }
 }
 
+fun <T : Any> deserialiseComponentGroupN(componentGroups: List<ComponentGroup>,
+                                        clazz: KClass<T>,
+                                        groupEnum: ComponentGroupEnum,
+                                        forceDeserialize: Boolean = false,
+                                        factory: SerializationFactory = SerializationFactory.defaultFactory,
+                                        context: SerializationContext = factory.defaultContext,
+                                        numCopies: Int): List<List<T>> {
+    val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
+
+    if (group == null || group.components.isEmpty()) {
+        return emptyList()
+    }
+
+    // If the componentGroup is a [LazyMappedList] it means that the original deserialized version is already available.
+    val components = group.components
+    if (!forceDeserialize && components is LazyMappedList<*, OpaqueBytes>) {
+        return uncheckedCast(components.originalList)
+    }
+
+    return components.lazyMapped { component, internalIndex ->
+        try {
+            factory.deserializeN(component, clazz.java, context, numCopies)
+        } catch (e: MissingAttachmentsException) {
+            /**
+             * [ServiceHub.signInitialTransaction] forgets to declare that
+             * it may throw any checked exceptions. Wrap this one inside
+             * an unchecked version to avoid breaking Java CorDapps.
+             */
+            throw MissingAttachmentsRuntimeException(e.ids, e.message, e)
+        } catch (e: Exception) {
+            throw TransactionDeserialisationException(groupEnum, internalIndex, e)
+        }
+    }
+}
+
 /**
  * Exception raised if an error was encountered while attempting to deserialise a component group in a transaction.
  */
@@ -142,6 +177,48 @@ fun deserialiseCommands(
     }
 }
 
+fun deserialiseCommandsN(
+        componentGroups: List<ComponentGroup>,
+        forceDeserialize: Boolean = false,
+        factory: SerializationFactory = SerializationFactory.defaultFactory,
+        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext,
+        digestService: DigestService = DigestService.sha2_256,
+        numCopies: Int
+): List<List<Command<*>>> {
+    // TODO: we could avoid deserialising unrelated signers.
+    //      However, current approach ensures the transaction is not malformed
+    //      and it will throw if any of the signers objects is not List of public keys).
+    val signersList: List<List<List<PublicKey>>> = uncheckedCast(deserialiseComponentGroupN(componentGroups, List::class, ComponentGroupEnum.SIGNERS_GROUP, forceDeserialize, numCopies = numCopies))
+    val commandDataList: List<List<CommandData>> = deserialiseComponentGroupN(componentGroups, CommandData::class, ComponentGroupEnum.COMMANDS_GROUP, forceDeserialize, numCopies = numCopies)
+    val group = componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.COMMANDS_GROUP.ordinal }
+    return if (group is FilteredComponentGroup) {
+        check(commandDataList.size <= signersList.size) {
+            "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
+        }
+        val componentHashes = group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }
+        val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
+        if (leafIndices.isNotEmpty())
+            check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
+
+        commandDataList.lazyMapped { commandData, index ->
+            (0 until numCopies).map { i ->
+                Command(commandData[i], signersList[leafIndices[index]][i])
+            }
+        }
+    } else {
+        // It is a WireTransaction
+        // or a FilteredTransaction with no Commands (in which case group is null).
+        check(commandDataList.size == signersList.size) {
+            "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
+        }
+        commandDataList.lazyMapped { commandData, index ->
+            (0 until numCopies).map { i ->
+                Command(commandData[i], signersList[index][i])
+            }
+        }
+    }
+}
+
 /**
  * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
  * for backwards compatibility purposes.
@@ -179,6 +256,8 @@ fun createComponentGroups(inputs: List<StateRef>,
 @KeepForDJVM
 data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef) {
     fun toStateAndRef(): StateAndRef<ContractState> = StateAndRef(serializedState.deserialize(), ref)
+
+    fun toStateAndRefN(numCopies: Int): List<StateAndRef<ContractState>> = serializedState.deserializeN(numCopies = numCopies).map { StateAndRef(it, ref) }
 }
 
 /** Check that network parameters hash on this transaction is the current hash for the network. */

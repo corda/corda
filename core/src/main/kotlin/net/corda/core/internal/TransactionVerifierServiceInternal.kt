@@ -26,7 +26,8 @@ fun LedgerTransaction.prepareVerify(attachments: List<Attachment>) = internalPre
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
  */
-abstract class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) {
+abstract class Verifier(val ltxList: List<LedgerTransaction>, protected val transactionClassLoader: ClassLoader) {
+    private val ltx = ltxList[0]
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
 
@@ -374,7 +375,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     abstract fun verifyContracts()
 }
 
-class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader) : Verifier(ltx, transactionClassLoader) {
+class BasicVerifier(ltxList: List<LedgerTransaction>, transactionClassLoader: ClassLoader) : Verifier(ltxList, transactionClassLoader) {
     /**
      * Check the transaction is contract-valid by running the verify() for each input and output state contract.
      * If any contract fails to verify, the whole transaction is considered to be invalid.
@@ -383,9 +384,9 @@ class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader)
      */
     override fun verifyContracts() {
         try {
-            ContractVerifier(transactionClassLoader).apply(ltx)
+            ContractVerifier(transactionClassLoader).apply(ltxList)
         } catch (e: TransactionVerificationException.ContractRejection) {
-            logger.error("Error validating transaction ${ltx.id}.", e.cause)
+            logger.error("Error validating transaction ${ltxList[0].id}.", e.cause)
             throw e
         }
     }
@@ -396,7 +397,7 @@ class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader)
  */
 @Suppress("TooGenericExceptionCaught")
 @KeepForDJVM
-class ContractVerifier(private val transactionClassLoader: ClassLoader) : Function<LedgerTransaction, Unit> {
+class ContractVerifier(private val transactionClassLoader: ClassLoader) : Function<List<LedgerTransaction>, Unit> {
     // This constructor is used inside the DJVM's sandbox.
     @Suppress("unused")
     constructor() : this(ClassLoader.getSystemClassLoader())
@@ -410,7 +411,8 @@ class ContractVerifier(private val transactionClassLoader: ClassLoader) : Functi
         }
     }
 
-    override fun apply(ltx: LedgerTransaction) {
+    override fun apply(ltxList: List<LedgerTransaction>) {
+        val ltx = ltxList[0]
         val contractClassNames = (ltx.inputs.map(StateAndRef<ContractState>::state) + ltx.outputs)
             .mapTo(LinkedHashSet(), TransactionState<*>::contract)
 
@@ -429,9 +431,9 @@ class ContractVerifier(private val transactionClassLoader: ClassLoader) : Functi
             } catch (e: Exception) {
                 throw TransactionVerificationException.ContractCreationError(ltx.id, contractClassName, e)
             }
-        }.forEach { contract ->
+        }.forEachIndexed { index, contract ->
             try {
-                contract.verify(ltx)
+                contract.verify(ltxList[index])
             } catch (e: Exception) {
                 throw TransactionVerificationException.ContractRejection(ltx.id, contract, e)
             }

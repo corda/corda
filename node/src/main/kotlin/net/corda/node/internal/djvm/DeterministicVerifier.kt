@@ -26,10 +26,12 @@ import java.util.function.Function
 import kotlin.collections.LinkedHashSet
 
 class DeterministicVerifier(
-    ltx: LedgerTransaction,
+    ltxList: List<LedgerTransaction>,
     transactionClassLoader: ClassLoader,
     private val sandboxConfiguration: SandboxConfiguration
-) : Verifier(ltx, transactionClassLoader) {
+) : Verifier(ltxList, transactionClassLoader) {
+
+    private val ltx = ltxList[0]
     /**
      * Read the whitelisted classes without using the [java.util.ServiceLoader] mechanism
      * because the whitelists themselves are untrusted.

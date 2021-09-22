@@ -123,6 +123,11 @@ open class SerializationFactoryImpl(
     }
 
     @Throws(NotSerializableException::class)
+    override fun <T : Any> deserializeN(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext, numCopies: Int): List<T> {
+        return asCurrent { withCurrentContext(context) { schemeFor(byteSequence, context.useCase).first.deserializeN(byteSequence, clazz, context, numCopies) } }
+    }
+
+    @Throws(NotSerializableException::class)
     override fun <T : Any> deserializeWithCompatibleContext(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithCompatibleContext<T> {
         return asCurrent {
             withCurrentContext(context) {
@@ -158,6 +163,9 @@ interface SerializationScheme {
     fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
+
+    @Throws(NotSerializableException::class)
+    fun <T : Any> deserializeN(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext, numCopies: Int): List<T> = throw UnsupportedOperationException()
 
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T>

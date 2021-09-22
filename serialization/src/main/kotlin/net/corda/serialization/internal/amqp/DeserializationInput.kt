@@ -126,6 +126,14 @@ class DeserializationInput constructor(
             }
 
     @Throws(NotSerializableException::class)
+    fun <T : Any> deserializeN(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext, numCopies: Int): List<T> =
+            des {
+                val envelope = getEnvelope(bytes, context.encodingWhitelist)
+                logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
+                doReadObjectN(envelope, clazz, context, numCopies)
+            }
+
+    @Throws(NotSerializableException::class)
     fun <T : Any> deserializeAndReturnEnvelope(
             bytes: SerializedBytes<T>,
             clazz: Class<T>,
@@ -143,6 +151,22 @@ class DeserializationInput constructor(
             type = clazz,
             context = context
         ))
+    }
+
+    private fun <T: Any> doReadObjectN(envelope: Envelope, clazz: Class<T>, context: SerializationContext, numCopies: Int): List<T> {
+        val objs = ArrayList<T>()
+        val schema = SerializationSchemas(envelope.schema, envelope.transformsSchema)
+        for (i in 1..numCopies) {
+            val obj = clazz.cast(readObjectOrNull(
+                    obj = redescribe(envelope.obj, clazz),
+                    schema = schema,
+                    type = clazz,
+                    context = context
+            ))
+            objs.add(obj)
+            objectHistory.clear()
+       }
+       return objs
     }
 
     fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext

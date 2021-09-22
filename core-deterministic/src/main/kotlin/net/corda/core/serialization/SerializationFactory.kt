@@ -20,6 +20,16 @@ abstract class SerializationFactory {
     abstract fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
 
     /**
+     * Deserialize the bytes in to an object, and make a number of copies of the object, using the prefixed bytes to determine the format.
+     *
+     * @param byteSequence The bytes to deserialize, including a format header prefix.
+     * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
+     * @param context A context that configures various parameters to deserialization.
+     * @param numCopies Number of copies of the object required.
+     */
+    abstract fun <T : Any> deserializeN(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext, numCopies: Int): List<T>
+
+    /**
      * Deserialize the bytes in to an object, using the prefixed bytes to determine the format.
      *
      * @param byteSequence The bytes to deserialize, including a format header prefix.

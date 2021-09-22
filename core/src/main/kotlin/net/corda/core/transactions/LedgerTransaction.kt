@@ -22,8 +22,9 @@ import net.corda.core.internal.BasicVerifier
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.Verifier
 import net.corda.core.internal.castIfPossible
-import net.corda.core.internal.deserialiseCommands
+import net.corda.core.internal.deserialiseCommandsN
 import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.deserialiseComponentGroupN
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
@@ -90,7 +91,7 @@ private constructor(
         private val serializedInputs: List<SerializedStateAndRef>?,
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
-        private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
+        private val verifierFactory: (List<LedgerTransaction>, ClassLoader) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
         val digestService: DigestService
 ) : FullTransaction() {
@@ -114,7 +115,7 @@ private constructor(
                 serializedInputs: List<SerializedStateAndRef>?,
                 serializedReferences: List<SerializedStateAndRef>?,
                 isAttachmentTrusted: (Attachment) -> Boolean,
-                verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
+                verifierFactory: (List<LedgerTransaction>, ClassLoader) -> Verifier,
                 attachmentsClassLoaderCache: AttachmentsClassLoaderCache?) : this(
             inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
@@ -272,7 +273,7 @@ private constructor(
      * Node without changing either the wire format or any public APIs.
      */
     @CordaInternal
-    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier): LedgerTransaction = LedgerTransaction(
+    fun specialise(alternateVerifier: (List<LedgerTransaction>, ClassLoader) -> Verifier): LedgerTransaction = LedgerTransaction(
         inputs = inputs,
         outputs = outputs,
         commands = commands,
@@ -323,54 +324,67 @@ private constructor(
      *
      * This method needs to run in the special transaction attachments classloader context.
      */
-    private fun createLtxForVerification(): LedgerTransaction {
+    private fun createLtxForVerification(): List<LedgerTransaction> {
         val serializedInputs = this.serializedInputs
         val serializedReferences = this.serializedReferences
         val componentGroups = this.componentGroups
 
-        val transaction= if (serializedInputs != null && serializedReferences != null && componentGroups != null) {
+        val transactions: List<LedgerTransaction> = if (serializedInputs != null && serializedReferences != null && componentGroups != null) {
             // Deserialize all relevant classes in the transaction classloader.
             val deserializedInputs = serializedInputs.map { it.toStateAndRef() }
-            val deserializedReferences = serializedReferences.map { it.toStateAndRef() }
             val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
-            val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = digestService)
-            val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
-                @Suppress("DEPRECATION")   // Deprecated feature.
-                val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
-                CommandWithParties(cmd.signers, parties, cmd.value)
+
+            val numLtxNeeded = (deserializedInputs.map(StateAndRef<ContractState>::state) + deserializedOutputs).map {TransactionState<*>::contract}.toSet().size
+
+            var deserializedInputsList: List<List<StateAndRef<ContractState>>> = emptyList()
+            var deserializedOutputsList: List<List<TransactionState<ContractState>>> = emptyList()
+
+            if (numLtxNeeded > 1) {
+                deserializedInputsList = serializedInputs.map { it.toStateAndRefN(numLtxNeeded-1) }
+                deserializedOutputsList = deserialiseComponentGroupN(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true, numCopies = numLtxNeeded-1)
+            }
+            val deserializedReferencesList = serializedReferences.map { it.toStateAndRefN(numLtxNeeded) }
+            val deserializedCommandsList = deserialiseCommandsN(componentGroups, forceDeserialize = true, digestService = digestService, numCopies = numLtxNeeded)
+            val authenticatedDeserializedCommandsList = deserializedCommandsList.map {
+                it.map { cmd ->
+                    @Suppress("DEPRECATION")   // Deprecated feature.
+                    val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
+                    CommandWithParties(cmd.signers, parties, cmd.value)
+                }
             }
 
-            LedgerTransaction(
-                    inputs = deserializedInputs,
-                    outputs = deserializedOutputs,
-                    commands = authenticatedDeserializedCommands,
-                    attachments = this.attachments,
-                    id = this.id,
-                    notary = this.notary,
-                    timeWindow = this.timeWindow,
-                    privacySalt = this.privacySalt,
-                    networkParameters = this.networkParameters,
-                    references = deserializedReferences,
-                    componentGroups = componentGroups,
-                    serializedInputs = serializedInputs,
-                    serializedReferences = serializedReferences,
-                    isAttachmentTrusted = isAttachmentTrusted,
-                    verifierFactory = verifierFactory,
-                    attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                    digestService = digestService
-            )
+            (0 until numLtxNeeded).map { i ->
+                LedgerTransaction(
+                        inputs = if (i == 0) deserializedInputs else if (deserializedInputsList.isNotEmpty()) deserializedInputsList.map{it[i-1]} else emptyList(),
+                        outputs = if (i == 0) deserializedOutputs else if (deserializedOutputsList.isNotEmpty()) deserializedOutputsList.map{it[i-1]} else emptyList(),
+                        commands = if (authenticatedDeserializedCommandsList.isNotEmpty()) authenticatedDeserializedCommandsList.map{it[i]} else emptyList(),
+                        attachments = this.attachments,
+                        id = this.id,
+                        notary = this.notary,
+                        timeWindow = this.timeWindow,
+                        privacySalt = this.privacySalt,
+                        networkParameters = this.networkParameters,
+                        references = if (deserializedReferencesList.isNotEmpty()) deserializedReferencesList.map{it[i]} else emptyList(),
+                        componentGroups = componentGroups,
+                        serializedInputs = serializedInputs,
+                        serializedReferences = serializedReferences,
+                        isAttachmentTrusted = isAttachmentTrusted,
+                        verifierFactory = verifierFactory,
+                        attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                        digestService = digestService
+                )
+            }
         } else {
             // This branch is only present for backwards compatibility.
             logger.warn("The LedgerTransaction should not be instantiated directly from client code. Please use WireTransaction.toLedgerTransaction." +
                     "The result of the verify method might not be accurate.")
-            this
+            listOf(this)
         }
-
         // This check accesses input states and must be run in this context.
         // It must run on the instance that is verified, not on the outer LedgerTransaction shell.
-        transaction.checkBaseInvariants()
+        transactions[0].checkBaseInvariants()
 
-        return transaction
+        return transactions
     }
 
     /**
