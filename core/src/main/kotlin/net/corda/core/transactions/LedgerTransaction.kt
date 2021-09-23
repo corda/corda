@@ -335,7 +335,7 @@ private constructor(
             val deserializedInputs = serializedInputs.map { it.toStateAndRef() }
             val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
 
-            val numLtxNeeded = (deserializedInputs.map(StateAndRef<ContractState>::state) + deserializedOutputs).map {TransactionState<*>::contract}.toSet().size
+            val numLtxNeeded = (deserializedInputs.map(StateAndRef<ContractState>::state) + deserializedOutputs).map(TransactionState<*>::contract).toSet().size
 
             var deserializedInputsList: List<List<StateAndRef<ContractState>>> = emptyList()
             var deserializedOutputsList: List<List<TransactionState<ContractState>>> = emptyList()
