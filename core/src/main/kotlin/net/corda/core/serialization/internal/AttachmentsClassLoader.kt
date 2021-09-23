@@ -339,7 +339,7 @@ object AttachmentsClassLoaderBuilder {
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-                                              block: (ClassLoader) -> T): T {
+                                              block: (SerializationContext) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
 
         val cache = attachmentsClassLoaderCache ?: fallBackCache
@@ -370,7 +370,7 @@ object AttachmentsClassLoaderBuilder {
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            block(serializationContext.deserializationClassLoader)
+            block(serializationContext)
         }
     }
 }

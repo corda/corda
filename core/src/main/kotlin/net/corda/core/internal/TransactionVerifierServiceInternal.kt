@@ -3,14 +3,45 @@ package net.corda.core.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.SignatureAttachmentConstraint
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.BrokenTransactionException
+import net.corda.core.contracts.TransactionVerificationException.ConflictingAttachmentsRejection
+import net.corda.core.contracts.TransactionVerificationException.ConstraintPropagationRejection
+import net.corda.core.contracts.TransactionVerificationException.ContractCreationError
+import net.corda.core.contracts.TransactionVerificationException.ContractRejection
+import net.corda.core.contracts.TransactionVerificationException.ContractConstraintRejection
+import net.corda.core.contracts.TransactionVerificationException.Direction
+import net.corda.core.contracts.TransactionVerificationException.DuplicateAttachmentsRejection
+import net.corda.core.contracts.TransactionVerificationException.InvalidConstraintRejection
+import net.corda.core.contracts.TransactionVerificationException.MissingAttachmentRejection
+import net.corda.core.contracts.TransactionVerificationException.NotaryChangeInWrongTransactionType
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
+import net.corda.core.contracts.TransactionVerificationException.TransactionDuplicateEncumbranceException
+import net.corda.core.contracts.TransactionVerificationException.TransactionMissingEncumbranceException
+import net.corda.core.contracts.TransactionVerificationException.TransactionNonMatchingEncumbranceException
+import net.corda.core.contracts.TransactionVerificationException.TransactionNotaryMismatchEncumbranceException
+import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
 import java.util.function.Function
+import java.util.function.Supplier
 
 @DeleteForDJVM
 interface TransactionVerifierServiceInternal {
@@ -85,7 +116,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         val contractClasses = allStates.map { it.contract }.toSet()
 
         // Check that there are no duplicate attachments added.
-        if (ltx.attachments.size != ltx.attachments.toSet().size) throw TransactionVerificationException.DuplicateAttachmentsRejection(ltx.id, ltx.attachments.groupBy { it }.filterValues { it.size > 1 }.keys.first())
+        if (ltx.attachments.size != ltx.attachments.toSet().size) throw DuplicateAttachmentsRejection(ltx.id, ltx.attachments.groupBy { it }.filterValues { it.size > 1 }.keys.first())
 
         // For each attachment this finds all the relevant state contracts that it provides.
         // And then maps them to the attachment.
@@ -103,12 +134,12 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                 .groupBy { it.first }  // Group by contract.
                 .filter { (_, attachments) -> attachments.size > 1 } // And only keep contracts that are in multiple attachments. It's guaranteed that attachments were unique by a previous check.
                 .keys.firstOrNull() // keep the first one - if any - to throw a meaningful exception.
-        if (contractWithMultipleAttachments != null) throw TransactionVerificationException.ConflictingAttachmentsRejection(ltx.id, contractWithMultipleAttachments)
+        if (contractWithMultipleAttachments != null) throw ConflictingAttachmentsRejection(ltx.id, contractWithMultipleAttachments)
 
         val result = contractAttachmentsPerContract.toMap()
 
         // Check that there is an attachment for each contract.
-        if (result.keys != contractClasses) throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, contractClasses.minus(result.keys).first())
+        if (result.keys != contractClasses) throw MissingAttachmentRejection(ltx.id, contractClasses.minus(result.keys).first())
 
         return result
     }
@@ -124,7 +155,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         if (ltx.notary != null && (ltx.inputs.isNotEmpty() || ltx.references.isNotEmpty())) {
             ltx.outputs.forEach {
                 if (it.notary != ltx.notary) {
-                    throw TransactionVerificationException.NotaryChangeInWrongTransactionType(ltx.id, ltx.notary, it.notary)
+                    throw NotaryChangeInWrongTransactionType(ltx.id, ltx.notary, it.notary)
                 }
             }
         }
@@ -156,10 +187,10 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
             it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
         }
         if (!encumbranceStateExists) {
-            throw TransactionVerificationException.TransactionMissingEncumbranceException(
+            throw TransactionMissingEncumbranceException(
                     ltx.id,
                     state.encumbrance!!,
-                    TransactionVerificationException.Direction.INPUT
+                    Direction.INPUT
             )
         }
     }
@@ -194,15 +225,15 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         statesAndEncumbrance.forEach { (statePosition, encumbrance) ->
             // Check it does not refer to itself.
             if (statePosition == encumbrance || encumbrance >= ltx.outputs.size) {
-                throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                throw TransactionMissingEncumbranceException(
                         ltx.id,
                         encumbrance,
-                        TransactionVerificationException.Direction.OUTPUT
+                        Direction.OUTPUT
                 )
             } else {
                 encumberedSet.add(statePosition) // Guaranteed to have unique elements.
                 if (!encumbranceSet.add(encumbrance)) {
-                    throw TransactionVerificationException.TransactionDuplicateEncumbranceException(ltx.id, encumbrance)
+                    throw TransactionDuplicateEncumbranceException(ltx.id, encumbrance)
                 }
             }
         }
@@ -211,7 +242,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         val symmetricDifference = (encumberedSet union encumbranceSet).subtract(encumberedSet intersect encumbranceSet)
         if (symmetricDifference.isNotEmpty()) {
             // At least one encumbered state is not in the [encumbranceSet] and vice versa.
-            throw TransactionVerificationException.TransactionNonMatchingEncumbranceException(ltx.id, symmetricDifference)
+            throw TransactionNonMatchingEncumbranceException(ltx.id, symmetricDifference)
         }
     }
 
@@ -235,7 +266,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         if (indicesAlreadyChecked.add(index)) {
             val encumbranceIndex = ltx.outputs[index].encumbrance!!
             if (ltx.outputs[index].notary != ltx.outputs[encumbranceIndex].notary) {
-                throw TransactionVerificationException.TransactionNotaryMismatchEncumbranceException(
+                throw TransactionNotaryMismatchEncumbranceException(
                         ltx.id,
                         index,
                         encumbranceIndex,
@@ -263,7 +294,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         val shouldEnforce = StateContractValidationEnforcementRule.shouldEnforce(state.data)
 
         val requiredContractClassName = state.data.requiredContractClassName
-                ?: if (shouldEnforce) throw TransactionVerificationException.TransactionRequiredContractUnspecifiedException(ltx.id, state) else return
+                ?: if (shouldEnforce) throw TransactionRequiredContractUnspecifiedException(ltx.id, state) else return
 
         if (state.contract != requiredContractClassName)
             if (shouldEnforce) {
@@ -310,7 +341,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
             outputConstraints.forEach { outputConstraint ->
                 inputConstraints.forEach { inputConstraint ->
                     if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachment))) {
-                        throw TransactionVerificationException.ConstraintPropagationRejection(
+                        throw ConstraintPropagationRejection(
                                 ltx.id,
                                 contractClassName,
                                 inputConstraint,
@@ -346,9 +377,9 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                         "Signature constraints"
                 )
                 val constraintKey = constraint.key
-                if (ltx.networkParameters?.minimumPlatformVersion ?: 1 >= PlatformVersionSwitches.LIMIT_KEYS_IN_SIGNATURE_CONSTRAINTS) {
+                if ((ltx.networkParameters?.minimumPlatformVersion ?: 1) >= PlatformVersionSwitches.LIMIT_KEYS_IN_SIGNATURE_CONSTRAINTS) {
                     if (constraintKey is CompositeKey && constraintKey.leafKeys.size > MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT) {
-                        throw TransactionVerificationException.InvalidConstraintRejection(ltx.id, contract,
+                        throw InvalidConstraintRejection(ltx.id, contract,
                                 "Signature constraint contains composite key with ${constraintKey.leafKeys.size} leaf keys, " +
                                         "which is more than the maximum allowed number of keys " +
                                         "($MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT).")
@@ -364,7 +395,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
             if (HashAttachmentConstraint.disableHashConstraints && constraint is HashAttachmentConstraint)
                 logger.warnOnce("Skipping hash constraints verification.")
             else if (!constraint.isSatisfiedBy(constraintAttachment))
-                throw TransactionVerificationException.ContractConstraintRejection(ltx.id, contract)
+                throw ContractConstraintRejection(ltx.id, contract)
         }
     }
 
@@ -374,17 +405,68 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     abstract fun verifyContracts()
 }
 
-class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader) : Verifier(ltx, transactionClassLoader) {
+class BasicVerifier(
+    ltx: LedgerTransaction,
+    private val serializationContext: SerializationContext
+) : Verifier(ltx, serializationContext.deserializationClassLoader) {
+
+    init {
+        // This is a sanity check: We should only instantiate this
+        // class from [LedgerTransaction.internalPrepareVerify].
+        require(serializationContext === SerializationFactory.defaultFactory.currentContext) {
+            "BasicVerifier for TX ${ltx.id} created outside its SerializationContext"
+        }
+
+        // Fetch these commands' signing parties from the database.
+        // Corda forbids database access during contract verification,
+        // and so we must load the commands here eagerly instead.
+        ltx.commands.eagerDeserialise()
+    }
+
+    private fun createTransaction(): LedgerTransaction {
+        // Deserialize all relevant classes using the serializationContext.
+        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+            ltx.transform { componentGroups, serializedInputs, serializedReferences ->
+                val deserializedInputs = serializedInputs.map(SerializedStateAndRef::toStateAndRef)
+                val deserializedReferences = serializedReferences.map(SerializedStateAndRef::toStateAndRef)
+                val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
+                val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = ltx.digestService)
+                val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
+                    @Suppress("DEPRECATION")   // Deprecated feature.
+                    val parties = ltx.commands.find { cwp ->
+                        // Requires ltx.commands to have been deserialized already.
+                        cwp.value.javaClass.name == cmd.value.javaClass.name
+                    }?.signingParties ?: throw BrokenTransactionException(ltx.id, "Command ${cmd.value.javaClass.name} is missing")
+                    CommandWithParties(cmd.signers, parties, cmd.value)
+                }
+
+                LedgerTransaction.createForContractVerify(
+                    inputs = deserializedInputs,
+                    outputs = deserializedOutputs,
+                    commands = authenticatedDeserializedCommands,
+                    attachments = ltx.attachments,
+                    id = ltx.id,
+                    notary = ltx.notary,
+                    timeWindow = ltx.timeWindow,
+                    privacySalt = ltx.privacySalt,
+                    networkParameters = ltx.networkParameters,
+                    references = deserializedReferences,
+                    digestService = ltx.digestService
+                )
+            }
+        }
+    }
+
     /**
-     * Check the transaction is contract-valid by running the verify() for each input and output state contract.
+     * Check the transaction is contract-valid by running verify() for each input and output state contract.
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      *
      * Note: Reference states are not verified.
      */
     override fun verifyContracts() {
         try {
-            ContractVerifier(transactionClassLoader).apply(ltx)
-        } catch (e: TransactionVerificationException.ContractRejection) {
+            ContractVerifier(transactionClassLoader).apply(Supplier(::createTransaction))
+        } catch (e: TransactionVerificationException) {
             logger.error("Error validating transaction ${ltx.id}.", e.cause)
             throw e
         }
@@ -396,7 +478,7 @@ class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader)
  */
 @Suppress("TooGenericExceptionCaught")
 @KeepForDJVM
-class ContractVerifier(private val transactionClassLoader: ClassLoader) : Function<LedgerTransaction, Unit> {
+class ContractVerifier(private val transactionClassLoader: ClassLoader) : Function<Supplier<LedgerTransaction>, Unit> {
     // This constructor is used inside the DJVM's sandbox.
     @Suppress("unused")
     constructor() : this(ClassLoader.getSystemClassLoader())
@@ -406,34 +488,45 @@ class ContractVerifier(private val transactionClassLoader: ClassLoader) : Functi
         return try {
             Class.forName(contractClassName, false, transactionClassLoader).asSubclass(Contract::class.java)
         } catch (e: Exception) {
-            throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
+            throw ContractCreationError(id, contractClassName, e)
         }
     }
 
-    override fun apply(ltx: LedgerTransaction) {
-        val contractClassNames = (ltx.inputs.map(StateAndRef<ContractState>::state) + ltx.outputs)
+    private fun generateContracts(ltx: LedgerTransaction): List<Contract> {
+        return (ltx.inputs.map(StateAndRef<ContractState>::state) + ltx.outputs)
             .mapTo(LinkedHashSet(), TransactionState<*>::contract)
-
-        contractClassNames.associateBy(
-            { it }, { createContractClass(ltx.id, it) }
-        ).map { (contractClassName, contractClass) ->
-            try {
-                /**
-                 * This function must execute with the DJVM's sandbox, which does not
-                 * permit user code to invoke [java.lang.Class.getDeclaredConstructor].
-                 *
-                 * [Class.newInstance] is deprecated as of Java 9.
-                 */
-                @Suppress("deprecation")
-                contractClass.newInstance()
-            } catch (e: Exception) {
-                throw TransactionVerificationException.ContractCreationError(ltx.id, contractClassName, e)
+            .map { contractClassName ->
+                createContractClass(ltx.id, contractClassName)
+            }.map { contractClass ->
+                try {
+                    /**
+                     * This function must execute within the DJVM's sandbox, which does not
+                     * permit user code to invoke [java.lang.reflect.Constructor.newInstance].
+                     * (This would be fixable now, provided the constructor is public.)
+                     *
+                     * [Class.newInstance] is deprecated as of Java 9.
+                     */
+                    @Suppress("deprecation")
+                    contractClass.newInstance()
+                } catch (e: Exception) {
+                    throw ContractCreationError(ltx.id, contractClass.name, e)
+                }
             }
+    }
+
+    override fun apply(transactionFactory: Supplier<LedgerTransaction>) {
+        var firstLtx: LedgerTransaction? = null
+
+        transactionFactory.get().let { ltx ->
+            firstLtx = ltx
+            generateContracts(ltx)
         }.forEach { contract ->
+            val ltx = firstLtx ?: transactionFactory.get()
+            firstLtx = null
             try {
                 contract.verify(ltx)
             } catch (e: Exception) {
-                throw TransactionVerificationException.ContractRejection(ltx.id, contract, e)
+                throw ContractRejection(ltx.id, contract, e)
             }
         }
     }

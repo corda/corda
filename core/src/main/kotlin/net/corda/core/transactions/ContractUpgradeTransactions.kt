@@ -166,9 +166,9 @@ data class ContractUpgradeWireTransaction(
                 params,
                 id,
                 { (services as ServiceHubCoreInternal).attachmentTrustCalculator.calculate(it) },
-                attachmentsClassLoaderCache = (services as ServiceHubCoreInternal).attachmentsClassLoaderCache) { transactionClassLoader ->
+                attachmentsClassLoaderCache = (services as ServiceHubCoreInternal).attachmentsClassLoaderCache) { serializationContext ->
             val resolvedInput = binaryInput.deserialize()
-            val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
+            val upgradedContract = upgradedContract(upgradedContractClassName, serializationContext.deserializationClassLoader)
             val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)
             outputState.serialize()
         }

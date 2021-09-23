@@ -3,7 +3,9 @@ plugins {
 }
 
 configurations {
-    testData
+    testData {
+        canBeResolved = false
+    }
 }
 
 dependencies {

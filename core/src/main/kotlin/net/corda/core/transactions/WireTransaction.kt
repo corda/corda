@@ -154,7 +154,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
-                { it.isUploaderTrusted() },
+                Attachment::isUploaderTrusted,
                 null
         )
     }

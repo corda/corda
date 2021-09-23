@@ -28,8 +28,9 @@ class Serializer(
     /**
      * Convert a list of [SerializedStateAndRef] objects into arrays
      * of deserialized sandbox objects. We will pass this array into
-     * [net.corda.node.djvm.LtxFactory] to be transformed finally to
-     * a list of [net.corda.core.contracts.StateAndRef] objects,
+     * [LtxSupplierFactory][net.corda.node.djvm.LtxSupplierFactory]
+     * to be transformed finally to a list of
+     * [StateAndRef][net.corda.core.contracts.StateAndRef] objects,
      */
     fun deserialize(stateRefs: List<SerializedStateAndRef>): Array<Array<out Any?>> {
         return stateRefs.map {

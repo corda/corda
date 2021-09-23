@@ -9,6 +9,7 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
 import net.corda.core.serialization.CordaSerializationTransformRenames
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.djvm.SandboxConfiguration
@@ -83,10 +84,11 @@ class DeterministicVerifierFactoryService(
         return ledgerTransaction.specialise(::specialise)
     }
 
-    private fun specialise(ltx: LedgerTransaction, classLoader: ClassLoader): Verifier {
+    private fun specialise(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+        val classLoader = serializationContext.deserializationClassLoader
         return (classLoader as? URLClassLoader)?.run {
             DeterministicVerifier(ltx, classLoader, createSandbox(classLoader.urLs))
-        } ?: BasicVerifier(ltx, classLoader)
+        } ?: BasicVerifier(ltx, serializationContext)
     }
 
     private fun createSandbox(userSource: Array<URL>): SandboxConfiguration {
