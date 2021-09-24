@@ -74,16 +74,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
         private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
 
-
-        private fun hash(inputStream : InputStream, buffer : ByteArray = ByteArray(DEFAULT_BUFFER_SIZE)) : SecureHash.SHA256 {
-            val md = MessageDigest.getInstance(SecureHash.SHA2_256)
-            while(true) {
-                val read = inputStream.read(buffer)
-                if(read <= 0) break
-                md.update(buffer, 0, read)
-            }
-            return SecureHash.SHA256(md.digest())
-        }
         /**
          * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
          * or use a decorator and reflection to bypass the single-call-per-JVM restriction otherwise.
@@ -154,6 +144,25 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         checkAttachments(attachments)
     }
 
+    private class AttachmentHashContext(
+            val txId: SecureHash,
+            val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE),
+            var totalAttachmentSize : Long = 0)
+
+    private fun hash(inputStream : InputStream, ctx : AttachmentHashContext) : SecureHash.SHA256 {
+        val md = MessageDigest.getInstance(SecureHash.SHA2_256)
+        while(true) {
+            val read = inputStream.read(ctx.buffer)
+            if(read <= 0) break
+            ctx.totalAttachmentSize += read.toLong()
+            if(ctx.totalAttachmentSize >= params.maxTransactionSize) {
+                throw TransactionVerificationException.AttachmentTooBigException(ctx.txId)
+            }
+            md.update(ctx.buffer, 0, read)
+        }
+        return SecureHash.SHA256(md.digest())
+    }
+
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
         jar.nextEntry != null
     }
@@ -215,6 +224,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // claim their parts of the Java package namespace via registration with the zone operator.
 
         val classLoaderEntries = mutableMapOf<String, SecureHash.SHA256>()
+        val ctx = AttachmentHashContext(sampleTxId)
         for (attachment in attachments) {
             // We may have been given an attachment loaded from the database in which case, important info like
             // signers is already calculated.
@@ -237,7 +247,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
             // Now open it again to compute the overlap and package ownership data.
             attachment.openAsJAR().use { jar ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+
                 val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                 while (true) {
                     val entry = jar.nextJarEntry ?: break
@@ -278,7 +288,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     if (!shouldCheckForNoOverlap(path, targetPlatformVersion)) continue
 
                     // This calculates the hash of the current entry because the JarInputStream returns only the current entry.
-                    val currentHash = hash(jar, buffer)
+                    val currentHash = hash(jar, ctx)
 
                     // If 2 entries are identical, it means the same file is present in both attachments, so that is ok.
                     val previousFileHash = classLoaderEntries[path]
