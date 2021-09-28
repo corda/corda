@@ -4,8 +4,6 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.CommandWithParties
-import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
@@ -15,8 +13,6 @@ import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.contracts.TransactionVerificationException.BrokenTransactionException
 import net.corda.core.contracts.TransactionVerificationException.ConflictingAttachmentsRejection
 import net.corda.core.contracts.TransactionVerificationException.ConstraintPropagationRejection
 import net.corda.core.contracts.TransactionVerificationException.ContractCreationError
@@ -36,8 +32,6 @@ import net.corda.core.contracts.TransactionVerificationException.TransactionRequ
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
 import java.util.function.Function
@@ -58,8 +52,8 @@ fun LedgerTransaction.prepareVerify(attachments: List<Attachment>) = internalPre
  * wrong object instance. This class helps avoid that.
  */
 abstract class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) {
-    private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
-    private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
+    private val inputStates: List<TransactionState<*>> = ltx.inputs.map(StateAndRef<ContractState>::state)
+    private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map(StateAndRef<ContractState>::state) + ltx.outputs
 
     companion object {
         val logger = contextLogger()
@@ -70,7 +64,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      *
      * It is a critical piece of the security of the platform.
      *
-     * @throws TransactionVerificationException
+     * @throws net.corda.core.contracts.TransactionVerificationException
      */
     fun verify() {
         // checkNoNotaryChange and checkEncumbrancesValid are called here, and not in the c'tor, as they need access to the "outputs"
@@ -113,7 +107,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      *  This is an important piece of the security of transactions.
      */
     private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
-        val contractClasses = allStates.map { it.contract }.toSet()
+        val contractClasses = allStates.mapTo(HashSet(), TransactionState<*>::contract)
 
         // Check that there are no duplicate attachments added.
         if (ltx.attachments.size != ltx.attachments.toSet().size) throw DuplicateAttachmentsRejection(ltx.id, ltx.attachments.groupBy { it }.filterValues { it.size > 1 }.keys.first())
@@ -403,74 +397,6 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      * Placeholder function for the contract verification logic.
      */
     abstract fun verifyContracts()
-}
-
-class BasicVerifier(
-    ltx: LedgerTransaction,
-    private val serializationContext: SerializationContext
-) : Verifier(ltx, serializationContext.deserializationClassLoader) {
-
-    init {
-        // This is a sanity check: We should only instantiate this
-        // class from [LedgerTransaction.internalPrepareVerify].
-        require(serializationContext === SerializationFactory.defaultFactory.currentContext) {
-            "BasicVerifier for TX ${ltx.id} created outside its SerializationContext"
-        }
-
-        // Fetch these commands' signing parties from the database.
-        // Corda forbids database access during contract verification,
-        // and so we must load the commands here eagerly instead.
-        ltx.commands.eagerDeserialise()
-    }
-
-    private fun createTransaction(): LedgerTransaction {
-        // Deserialize all relevant classes using the serializationContext.
-        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            ltx.transform { componentGroups, serializedInputs, serializedReferences ->
-                val deserializedInputs = serializedInputs.map(SerializedStateAndRef::toStateAndRef)
-                val deserializedReferences = serializedReferences.map(SerializedStateAndRef::toStateAndRef)
-                val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
-                val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = ltx.digestService)
-                val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
-                    @Suppress("DEPRECATION")   // Deprecated feature.
-                    val parties = ltx.commands.find { cwp ->
-                        // Requires ltx.commands to have been deserialized already.
-                        cwp.value.javaClass.name == cmd.value.javaClass.name
-                    }?.signingParties ?: throw BrokenTransactionException(ltx.id, "Command ${cmd.value.javaClass.name} is missing")
-                    CommandWithParties(cmd.signers, parties, cmd.value)
-                }
-
-                LedgerTransaction.createForContractVerify(
-                    inputs = deserializedInputs,
-                    outputs = deserializedOutputs,
-                    commands = authenticatedDeserializedCommands,
-                    attachments = ltx.attachments,
-                    id = ltx.id,
-                    notary = ltx.notary,
-                    timeWindow = ltx.timeWindow,
-                    privacySalt = ltx.privacySalt,
-                    networkParameters = ltx.networkParameters,
-                    references = deserializedReferences,
-                    digestService = ltx.digestService
-                )
-            }
-        }
-    }
-
-    /**
-     * Check the transaction is contract-valid by running verify() for each input and output state contract.
-     * If any contract fails to verify, the whole transaction is considered to be invalid.
-     *
-     * Note: Reference states are not verified.
-     */
-    override fun verifyContracts() {
-        try {
-            ContractVerifier(transactionClassLoader).apply(Supplier(::createTransaction))
-        } catch (e: TransactionVerificationException) {
-            logger.error("Error validating transaction ${ltx.id}.", e.cause)
-            throw e
-        }
-    }
 }
 
 /**

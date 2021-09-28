@@ -7,6 +7,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
@@ -17,20 +18,25 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.BasicVerifier
+import net.corda.core.internal.ContractVerifier
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.Verifier
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.deserialiseCommands
+import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.eagerDeserialise
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
 import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
+import java.util.function.Supplier
 
 /**
  * A LedgerTransaction is derived from a [WireTransaction]. It is the result of doing the following operations:
@@ -177,8 +183,7 @@ private constructor(
 
         /**
          * This factory function will create an instance of [LedgerTransaction]
-         * that will be used for contract verification.
-         * See [BasicVerifier][net.corda.core.internal.BasicVerifier] and
+         * that will be used for contract verification. See [BasicVerifier] and
          * [DeterministicVerifier][net.corda.node.internal.djvm.DeterministicVerifier].
          */
         @CordaInternal
@@ -299,7 +304,11 @@ private constructor(
         serializedInputs = serializedInputs,
         serializedReferences = serializedReferences,
         isAttachmentTrusted = isAttachmentTrusted,
-        verifierFactory = alternateVerifier,
+        verifierFactory = if (verifierFactory == ::NoOpVerifier) {
+            throw IllegalStateException("Cannot specialise transaction while verifying contracts")
+        } else {
+            alternateVerifier
+        },
         attachmentsClassLoaderCache = attachmentsClassLoaderCache,
         digestService = digestService
     )
@@ -805,8 +814,90 @@ private constructor(
     }
 }
 
+/**
+ * This is the default [Verifier] that configures Corda
+ * to execute [Contract.verify(LedgerTransaction)].
+ *
+ * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
+ */
+@CordaInternal
+private class BasicVerifier(
+    ltx: LedgerTransaction,
+    private val serializationContext: SerializationContext
+) : Verifier(ltx, serializationContext.deserializationClassLoader) {
+
+    init {
+        // This is a sanity check: We should only instantiate this
+        // class from [LedgerTransaction.internalPrepareVerify].
+        require(serializationContext === SerializationFactory.defaultFactory.currentContext) {
+            "BasicVerifier for TX ${ltx.id} created outside its SerializationContext"
+        }
+
+        // Fetch these commands' signing parties from the database.
+        // Corda forbids database access during contract verification,
+        // and so we must load the commands here eagerly instead.
+        ltx.commands.eagerDeserialise()
+    }
+
+    private fun createTransaction(): LedgerTransaction {
+        // Deserialize all relevant classes using the serializationContext.
+        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+            ltx.transform { componentGroups, serializedInputs, serializedReferences ->
+                val deserializedInputs = serializedInputs.map(SerializedStateAndRef::toStateAndRef)
+                val deserializedReferences = serializedReferences.map(SerializedStateAndRef::toStateAndRef)
+                val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
+                val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = ltx.digestService)
+                val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
+                    @Suppress("DEPRECATION")   // Deprecated feature.
+                    val parties = ltx.commands.find { cwp ->
+                        // Requires ltx.commands to have been deserialized already.
+                        cwp.value.javaClass.name == cmd.value.javaClass.name
+                    }?.signingParties ?: throw TransactionVerificationException.BrokenTransactionException(ltx.id, "Command ${cmd.value.javaClass.name} is missing")
+                    CommandWithParties(cmd.signers, parties, cmd.value)
+                }
+
+                LedgerTransaction.createForContractVerify(
+                    inputs = deserializedInputs,
+                    outputs = deserializedOutputs,
+                    commands = authenticatedDeserializedCommands,
+                    attachments = ltx.attachments,
+                    id = ltx.id,
+                    notary = ltx.notary,
+                    timeWindow = ltx.timeWindow,
+                    privacySalt = ltx.privacySalt,
+                    networkParameters = ltx.networkParameters,
+                    references = deserializedReferences,
+                    digestService = ltx.digestService
+                )
+            }
+        }
+    }
+
+    /**
+     * Check the transaction is contract-valid by running verify() for each input and output state contract.
+     * If any contract fails to verify, the whole transaction is considered to be invalid.
+     *
+     * Note: Reference states are not verified.
+     */
+    override fun verifyContracts() {
+        try {
+            ContractVerifier(transactionClassLoader).apply(Supplier(::createTransaction))
+        } catch (e: TransactionVerificationException) {
+            logger.error("Error validating transaction ${ltx.id}.", e.cause)
+            throw e
+        }
+    }
+}
+
+/**
+ * A "do nothing" [Verifier] installed for contract verification.
+ *
+ * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
+ */
+@CordaInternal
 private class NoOpVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext)
     : Verifier(ltx, serializationContext.deserializationClassLoader) {
-    // It should be IMPOSSIBLE for Corda to invoke this method!
-    override fun verifyContracts() = throw UnsupportedOperationException("Impossible method invoked!")
+    // Invoking LedgerTransaction.verify() from Contract.verify(LedgerTransaction)
+    // will execute this function. But why would anyone do that?!
+    override fun verifyContracts() {}
 }

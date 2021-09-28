@@ -1,6 +1,5 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.internal.BasicVerifier
 import net.corda.core.internal.Verifier
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
@@ -81,14 +80,13 @@ class DeterministicVerifierFactoryService(
     override fun apply(ledgerTransaction: LedgerTransaction): LedgerTransaction {
         // Specialise the LedgerTransaction here so that
         // contracts are verified inside the DJVM!
-        return ledgerTransaction.specialise(::specialise)
+        return ledgerTransaction.specialise(::createDeterministicVerifier)
     }
 
-    private fun specialise(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
-        val classLoader = serializationContext.deserializationClassLoader
-        return (classLoader as? URLClassLoader)?.run {
+    private fun createDeterministicVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+        return (serializationContext.deserializationClassLoader as? URLClassLoader)?.let { classLoader ->
             DeterministicVerifier(ltx, classLoader, createSandbox(classLoader.urLs))
-        } ?: BasicVerifier(ltx, serializationContext)
+        } ?: throw IllegalStateException("Unsupported deserialization classloader type")
     }
 
     private fun createSandbox(userSource: Array<URL>): SandboxConfiguration {

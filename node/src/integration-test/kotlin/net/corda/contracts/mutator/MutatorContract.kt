@@ -8,6 +8,8 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.Verifier
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.LedgerTransaction
 
 class MutatorContract : Contract {
@@ -26,6 +28,7 @@ class MutatorContract : Contract {
             "Cannot add/remove commands" using failToMutateCommands(tx)
             "Cannot add/remove references" using tx.references.isImmutable()
             "Cannot add/remove attachments" using tx.attachments.isImmutableAnd(isEmpty = false)
+            "Cannot specialise transaction" using failToSpecialise(tx)
         }
 
         requireNotNull(tx.networkParameters).also { networkParameters ->
@@ -81,6 +84,20 @@ class MutatorContract : Contract {
         } catch (e: UnsupportedOperationException) {
             true
         }
+    }
+
+    private fun failToSpecialise(ltx: LedgerTransaction): Boolean {
+        return try {
+            ltx.specialise(::ExtraSpecialise)
+            false
+        } catch (e: IllegalStateException) {
+            true
+        }
+    }
+
+    private class ExtraSpecialise(ltx: LedgerTransaction, ctx: SerializationContext)
+        : Verifier(ltx, ctx.deserializationClassLoader) {
+        override fun verifyContracts() {}
     }
 
     class MutateState(val owner: AbstractParty) : ContractState {
