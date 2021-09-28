@@ -41,6 +41,7 @@ class LtxSupplierFactory : Function<Array<out Any?>, Supplier<LedgerTransaction>
         val referencesProvider = (txArgs[TX_REFERENCES] as Function<in Any?, Array<Array<out Any?>>>)
                 .andThen(Function(Array<Array<out Any?>>::toContractStatesAndRef))
                 .toSupplier()
+        val networkParameters = (txArgs[TX_NETWORK_PARAMETERS] as? NetworkParameters)?.toImmutable()
         return Supplier {
             LedgerTransaction.createForContractVerify(
                 inputs = inputProvider.get(),
@@ -51,7 +52,7 @@ class LtxSupplierFactory : Function<Array<out Any?>, Supplier<LedgerTransaction>
                 notary = txArgs[TX_NOTARY] as? Party,
                 timeWindow = txArgs[TX_TIME_WINDOW] as? TimeWindow,
                 privacySalt = txArgs[TX_PRIVACY_SALT] as PrivacySalt,
-                networkParameters = txArgs[TX_NETWORK_PARAMETERS] as? NetworkParameters,
+                networkParameters = networkParameters,
                 references = referencesProvider.get(),
                 digestService = txArgs[TX_DIGEST_SERVICE] as DigestService
             )

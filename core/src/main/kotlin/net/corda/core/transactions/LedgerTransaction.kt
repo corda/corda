@@ -123,8 +123,8 @@ private constructor(
     companion object {
         private val logger = contextLogger()
 
-        private fun <T> protect(list: List<T>?): List<T>? {
-            return list?.run {
+        private fun <T> protect(list: List<T>): List<T> {
+            return list.run {
                 if (isEmpty()) {
                     emptyList()
                 } else {
@@ -132,6 +132,8 @@ private constructor(
                 }
             }
         }
+
+        private fun <T> protectOrNull(list: List<T>?): List<T>? = list?.let(::protect)
 
         @CordaInternal
         internal fun create(
@@ -163,9 +165,9 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
-                componentGroups = protect(componentGroups),
-                serializedInputs = protect(serializedInputs),
-                serializedReferences = protect(serializedReferences),
+                componentGroups = protectOrNull(componentGroups),
+                serializedInputs = protectOrNull(serializedInputs),
+                serializedReferences = protectOrNull(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = ::BasicVerifier,
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
@@ -193,16 +195,16 @@ private constructor(
                 references: List<StateAndRef<ContractState>>,
                 digestService: DigestService): LedgerTransaction {
             return LedgerTransaction(
-                inputs = inputs,
-                outputs = outputs,
-                commands = commands,
-                attachments = attachments,
+                inputs = protect(inputs),
+                outputs = protect(outputs),
+                commands = protect(commands),
+                attachments = protect(attachments),
                 id = id,
                 notary = notary,
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references,
+                references = protect(references),
                 componentGroups = null,
                 serializedInputs = null,
                 serializedReferences = null,

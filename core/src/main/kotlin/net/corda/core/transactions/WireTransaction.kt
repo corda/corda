@@ -214,7 +214,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 notary,
                 timeWindow,
                 privacySalt,
-                resolvedNetworkParameters,
+                resolvedNetworkParameters.toImmutable(),
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
