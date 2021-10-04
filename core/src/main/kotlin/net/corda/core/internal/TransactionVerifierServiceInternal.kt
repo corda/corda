@@ -107,7 +107,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      *  This is an important piece of the security of transactions.
      */
     private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
-        val contractClasses = allStates.mapTo(HashSet(), TransactionState<*>::contract)
+        val contractClasses = allStates.mapTo(LinkedHashSet(), TransactionState<*>::contract)
 
         // Check that there are no duplicate attachments added.
         if (ltx.attachments.size != ltx.attachments.toSet().size) throw DuplicateAttachmentsRejection(ltx.id, ltx.attachments.groupBy { it }.filterValues { it.size > 1 }.keys.first())

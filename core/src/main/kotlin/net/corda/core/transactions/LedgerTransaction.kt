@@ -847,12 +847,10 @@ private class BasicVerifier(
                 val deserializedReferences = serializedReferences.map(SerializedStateAndRef::toStateAndRef)
                 val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
                 val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = ltx.digestService)
-                val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
+                val authenticatedDeserializedCommands = deserializedCommands.mapIndexed { idx, cmd ->
+                    // Requires ltx.commands to have been deserialized already.
                     @Suppress("DEPRECATION")   // Deprecated feature.
-                    val parties = ltx.commands.find { cwp ->
-                        // Requires ltx.commands to have been deserialized already.
-                        cwp.value.javaClass.name == cmd.value.javaClass.name
-                    }?.signingParties ?: throw TransactionVerificationException.BrokenTransactionException(ltx.id, "Command ${cmd.value.javaClass.name} is missing")
+                    val parties = ltx.commands[idx].signingParties
                     CommandWithParties(cmd.signers, parties, cmd.value)
                 }
 
