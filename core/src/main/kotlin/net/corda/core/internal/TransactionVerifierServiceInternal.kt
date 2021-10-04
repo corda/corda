@@ -356,7 +356,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     @Suppress("NestedBlockDepth", "MagicNumber")
     private fun verifyConstraints(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         // For each contract/constraint pair check that the relevant attachment is valid.
-        allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
+        allStates.mapTo(LinkedHashSet()) { it.contract to it.constraint }.forEach { (contract, constraint) ->
             if (constraint is SignatureAttachmentConstraint) {
                 /**
                  * Support for signature constraints has been added on
