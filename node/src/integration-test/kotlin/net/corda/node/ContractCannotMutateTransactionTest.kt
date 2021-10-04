@@ -27,7 +27,7 @@ class ContractCannotMutateTransactionTest {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = runInProcess,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 cordappsForAllNodes = listOf(mutatorContractCorDapp, mutatorFlowCorDapp)
             )
         }
