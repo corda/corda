@@ -29,6 +29,7 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.t
 import net.corda.core.serialization.withWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.WeakReference
@@ -41,6 +42,7 @@ import java.security.MessageDigest
 import java.security.Permission
 import java.util.*
 import java.util.function.Function
+import java.util.jar.JarInputStream
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -63,6 +65,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
     companion object {
         private val log = contextLogger()
+        private val compressionRatioLimit : Float = 10.0f
 
         init {
             // Apply our own URLStreamHandlerFactory to resolve attachments
@@ -147,15 +150,19 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     private class AttachmentHashContext(
             val txId: SecureHash,
             val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE),
-            var totalAttachmentSize : Long = 0)
+            var totalCompressedAttachmentSize : Long = 0,
+            var totalUncompressedAttachmentSize : Long = 0) {
+        val compressionRatio : Float
+        get() = totalUncompressedAttachmentSize.toFloat() / totalCompressedAttachmentSize.toFloat()
+    }
 
     private fun hash(inputStream : InputStream, ctx : AttachmentHashContext) : SecureHash.SHA256 {
         val md = MessageDigest.getInstance(SecureHash.SHA2_256)
         while(true) {
             val read = inputStream.read(ctx.buffer)
             if(read <= 0) break
-            ctx.totalAttachmentSize += read.toLong()
-            if(ctx.totalAttachmentSize >= params.maxTransactionSize) {
+            ctx.totalUncompressedAttachmentSize += read.toLong()
+            if(ctx.totalUncompressedAttachmentSize >= params.maxTransactionSize && ctx.compressionRatio > compressionRatioLimit) {
                 throw TransactionVerificationException.AttachmentTooBigException(ctx.txId)
             }
             md.update(ctx.buffer, 0, read)
@@ -246,7 +253,25 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             }
 
             // Now open it again to compute the overlap and package ownership data.
-            attachment.openAsJAR().use { jar ->
+            object : FilterInputStream(attachment.open()) {
+                override fun read(): Int {
+                    return super.read().also { byte ->
+                        if(byte > 0) ctx.totalCompressedAttachmentSize += 1
+                    }
+                }
+
+                override fun read(b: ByteArray): Int {
+                    return super.read(b).also { bytesRead ->
+                        if(bytesRead > 0) ctx.totalCompressedAttachmentSize += bytesRead
+                    }
+                }
+
+                override fun read(b: ByteArray, off: Int, len: Int): Int {
+                    return super.read(b, off, len).also { bytesRead ->
+                        if(bytesRead > 0) ctx.totalCompressedAttachmentSize += bytesRead
+                    }
+                }
+            }.let(::JarInputStream).use { jar ->
 
                 val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                 while (true) {
