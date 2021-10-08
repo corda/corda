@@ -347,7 +347,7 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
 
     @KeepForDJVM
     class AttachmentTooBigException(txId: SecureHash) : TransactionVerificationException(
-            txId, "The transaction attachments are too large and exceed both max transaction size and the maximum allowed compression ration", null)
+            txId, "The transaction attachments are too large and exceed both max transaction size and the maximum allowed compression ratio", null)
 
     /*
     If you add a new class extending [TransactionVerificationException], please add a test in `TransactionVerificationExceptionSerializationTests`

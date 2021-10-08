@@ -16,6 +16,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.Version
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.utilities.ZipBombDetector
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
@@ -33,6 +34,7 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
 import org.hibernate.query.Query
+import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -367,6 +369,9 @@ class NodeAttachmentService @JvmOverloads constructor(
                 // set the hash field of the new attachment record.
 
                 val bytes = inputStream.readFully()
+                require(!ZipBombDetector.scanZip(ByteArrayInputStream(bytes), servicesForResolution.networkParameters.maxTransactionSize.toLong())) {
+                    "The attachment is too large and exceeds both max transaction size and the maximum allowed compression ratio"
+                }
                 val id = bytes.sha256()
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())

@@ -19,6 +19,7 @@ import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.toSynchronised
+import net.corda.core.internal.utilities.ZipBombDetector
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -29,7 +30,6 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.t
 import net.corda.core.serialization.withWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.WeakReference
@@ -42,7 +42,6 @@ import java.security.MessageDigest
 import java.security.Permission
 import java.util.*
 import java.util.function.Function
-import java.util.jar.JarInputStream
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -65,7 +64,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
     companion object {
         private val log = contextLogger()
-        private val compressionRatioLimit : Float = 10.0f
 
         init {
             // Apply our own URLStreamHandlerFactory to resolve attachments
@@ -149,22 +147,13 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
     private class AttachmentHashContext(
             val txId: SecureHash,
-            val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE),
-            var totalCompressedAttachmentSize : Long = 0,
-            var totalUncompressedAttachmentSize : Long = 0) {
-        val compressionRatio : Float
-        get() = totalUncompressedAttachmentSize.toFloat() / totalCompressedAttachmentSize.toFloat()
-    }
+            val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE))
 
     private fun hash(inputStream : InputStream, ctx : AttachmentHashContext) : SecureHash.SHA256 {
         val md = MessageDigest.getInstance(SecureHash.SHA2_256)
         while(true) {
             val read = inputStream.read(ctx.buffer)
             if(read <= 0) break
-            ctx.totalUncompressedAttachmentSize += read.toLong()
-            if(ctx.totalUncompressedAttachmentSize >= params.maxTransactionSize && ctx.compressionRatio > compressionRatioLimit) {
-                throw TransactionVerificationException.AttachmentTooBigException(ctx.txId)
-            }
             md.update(ctx.buffer, 0, read)
         }
         return SecureHash.SHA256(md.digest())
@@ -202,6 +191,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         }
     }
 
+    @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
     private fun checkAttachments(attachments: List<Attachment>) {
         require(attachments.isNotEmpty()) { "attachments list is empty" }
 
@@ -233,6 +223,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         val classLoaderEntries = mutableMapOf<String, SecureHash.SHA256>()
         val ctx = AttachmentHashContext(sampleTxId)
         for (attachment in attachments) {
+            //Read the zip first to check it is safe to pass to JarInputStream's constructor
+            // as that reads the whole manifest file in memory
+            if(ZipBombDetector.scanZip(attachment.open(), params.maxTransactionSize.toLong())) {
+                throw TransactionVerificationException.AttachmentTooBigException(ctx.txId)
+            }
             // We may have been given an attachment loaded from the database in which case, important info like
             // signers is already calculated.
             val signers = if (attachment is ContractAttachment) {
@@ -253,25 +248,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             }
 
             // Now open it again to compute the overlap and package ownership data.
-            object : FilterInputStream(attachment.open()) {
-                override fun read(): Int {
-                    return super.read().also { byte ->
-                        if(byte > 0) ctx.totalCompressedAttachmentSize += 1
-                    }
-                }
-
-                override fun read(b: ByteArray): Int {
-                    return super.read(b).also { bytesRead ->
-                        if(bytesRead > 0) ctx.totalCompressedAttachmentSize += bytesRead
-                    }
-                }
-
-                override fun read(b: ByteArray, off: Int, len: Int): Int {
-                    return super.read(b, off, len).also { bytesRead ->
-                        if(bytesRead > 0) ctx.totalCompressedAttachmentSize += bytesRead
-                    }
-                }
-            }.let(::JarInputStream).use { jar ->
+            attachment.openAsJAR().use { jar ->
 
                 val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                 while (true) {
