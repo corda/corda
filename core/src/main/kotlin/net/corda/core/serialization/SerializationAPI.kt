@@ -13,6 +13,8 @@ import net.corda.core.utilities.sequence
 import java.io.NotSerializableException
 import java.sql.Blob
 
+const val DESERIALIZATION_CACHE_PROPERTY = "DESERIALIZATION_CACHE"
+
 data class ObjectWithCompatibleContext<out T : Any>(val obj: T, val context: SerializationContext)
 
 /**

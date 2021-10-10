@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp.custom
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
@@ -34,6 +35,10 @@ object PublicKeySerializer
                             context: SerializationContext
     ): PublicKey {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
-        return Crypto.decodePublicKey(bits)
+        @Suppress("unchecked_cast")
+        return (context.properties[DESERIALIZATION_CACHE_PROPERTY] as? MutableMap<CacheKey, PublicKey>)
+            ?.computeIfAbsent(CacheKey(bits)) { key ->
+                Crypto.decodePublicKey(key.bytes)
+            } ?: Crypto.decodePublicKey(bits)
     }
 }

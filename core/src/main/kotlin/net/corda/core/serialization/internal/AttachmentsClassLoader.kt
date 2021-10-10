@@ -20,6 +20,7 @@ import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.toSynchronised
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationFactory
@@ -361,6 +362,7 @@ object AttachmentsClassLoaderBuilder {
             // that app logic doesn't ignore newly added fields or accidentally downgrade data from newer state
             // schemas to older schemas by discarding fields.
             SerializationFactory.defaultFactory.defaultContext
+                    .withProperty(DESERIALIZATION_CACHE_PROPERTY, HashMap<Any, Any>())
                     .withPreventDataLoss()
                     .withClassLoader(transactionClassLoader)
                     .withWhitelist(whitelistedClasses)

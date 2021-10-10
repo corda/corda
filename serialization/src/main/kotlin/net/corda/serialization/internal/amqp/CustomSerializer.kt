@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.FingerprintWriter
 import net.corda.serialization.internal.model.TypeIdentifier
@@ -52,7 +51,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                              context: SerializationContext, debugIndent: Int
     ) {
         data.withDescribed(descriptor) {
-            writeDescribedObject(uncheckedCast(obj), data, type, output, context)
+            @Suppress("unchecked_cast")
+            writeDescribedObject(obj as T, data, type, output, context)
         }
     }
 
@@ -178,6 +178,15 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         protected abstract fun fromProxy(proxy: P): T
 
+        /**
+         * Read the proxy object from the serialized input.
+         */
+        protected fun readProxy(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                                context: SerializationContext): P {
+            @Suppress("unchecked_cast")
+            return proxySerializer.readObject(obj, schemas, input, context) as P
+        }
+
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
                                           context: SerializationContext
         ) {
@@ -192,8 +201,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                                 context: SerializationContext
         ): T {
-            val proxy: P = uncheckedCast(proxySerializer.readObject(obj, schemas, input, context))
-            return fromProxy(proxy)
+            return fromProxy(readProxy(obj, schemas, input, context))
         }
     }
 
