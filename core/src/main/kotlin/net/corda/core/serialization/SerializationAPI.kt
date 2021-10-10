@@ -65,12 +65,16 @@ abstract class SerializationFactory {
      * Change the current context inside the block to that supplied.
      */
     fun <T> withCurrentContext(context: SerializationContext?, block: () -> T): T {
-        val priorContext = _currentContext.get()
-        if (context != null) _currentContext.set(context)
-        try {
-            return block()
-        } finally {
-            if (context != null) _currentContext.set(priorContext)
+        return if (context == null) {
+            block()
+        } else {
+            val priorContext = _currentContext.get()
+            _currentContext.set(context)
+            try {
+                block()
+            } finally {
+                _currentContext.set(priorContext)
+            }
         }
     }
 
