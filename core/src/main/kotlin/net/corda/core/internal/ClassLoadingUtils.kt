@@ -23,7 +23,7 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
                                                   classVersionRange: IntRange? = null): Set<T> {
     return getNamesOfClassesImplementing(classloader, clazz, classVersionRange)
-        .map { classloader.loadClass(it).asSubclass(clazz) }
+        .map { Class.forName(it, false, classloader).asSubclass(clazz) }
         .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
 }
 
