@@ -58,8 +58,17 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             verifyTransaction(requestPayload)
 
             val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
-            if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
-                otherSideSession.send(WaitTimeUpdate(eta))
+            if (counterpartyCanHandleBackPressure()) {
+                if (eta > etaThreshold) {
+                    otherSideSession.send(WaitTimeUpdate(eta))
+                } else if (stateMachine.ourSenderUUID == null) {
+                    // This implies we are handling a flow retry. As we may have already responded
+                    // with an ETA message on a previous attempt, we must ensure a new unique
+                    // message id is used to prevent the actual response from being de-duplicated
+                    // by the client. This sleep forces an increment of the suspend component of
+                    // the message id. See Jira NAAS-295 for full details.
+                    sleep(Duration.ZERO)
+                }
             }
 
             service.commitInputStates(
