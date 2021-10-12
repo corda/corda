@@ -19,7 +19,6 @@ import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.toSynchronised
-import net.corda.core.internal.utilities.ZipBombDetector
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -223,11 +222,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         val classLoaderEntries = mutableMapOf<String, SecureHash.SHA256>()
         val ctx = AttachmentHashContext(sampleTxId)
         for (attachment in attachments) {
-            //Read the zip first to check it is safe to pass to JarInputStream's constructor
-            // as that reads the whole manifest file in memory
-            if(ZipBombDetector.scanZip(attachment.open(), params.maxTransactionSize.toLong())) {
-                throw TransactionVerificationException.AttachmentTooBigException(ctx.txId)
-            }
             // We may have been given an attachment loaded from the database in which case, important info like
             // signers is already calculated.
             val signers = if (attachment is ContractAttachment) {
