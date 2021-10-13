@@ -10,9 +10,11 @@ import java.util.Arrays;
  */
 final class CacheKey {
     private final byte[] bytes;
+    private final int hashValue;
 
     CacheKey(@NotNull byte[] bytes) {
         this.bytes = bytes;
+        this.hashValue = Arrays.hashCode(bytes);
     }
 
     @NotNull
@@ -28,6 +30,6 @@ final class CacheKey {
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(bytes);
+        return hashValue;
     }
 }
