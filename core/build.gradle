@@ -110,7 +110,16 @@ configurations {
 }
 
 
-test{
+processTestResources {
+    inputs.files(jar)
+    into("zip") {
+        from(jar) {
+            rename { "core.jar" }
+        }
+    }
+}
+
+test {
     maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
 }
 
