@@ -40,7 +40,9 @@ import java.net.URLStreamHandler
 import java.net.URLStreamHandlerFactory
 import java.security.MessageDigest
 import java.security.Permission
-import java.util.*
+import java.util.Locale
+import java.util.ServiceLoader
+import java.util.WeakHashMap
 import java.util.function.Function
 
 /**
@@ -68,12 +70,15 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         init {
             // Apply our own URLStreamHandlerFactory to resolve attachments
             setOrDecorateURLStreamHandlerFactory()
+
+            // Allow AttachmentsClassLoader to be used concurrently.
+            registerAsParallelCapable()
         }
 
         // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
         // In the AttachmentsClassLoader we just block any class in those 2 packages.
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
-        private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
+        private val ignorePackages = ignoreDirectories.map { it.replace('/', '.') }
 
         /**
          * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
@@ -177,10 +182,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     // TODO - investigate potential exploits.
     private fun shouldCheckForNoOverlap(path: String, targetPlatformVersion: Int): Boolean {
         require(path.toLowerCase() == path)
-        require(!path.contains("\\"))
+        require(!path.contains('\\'))
 
         return when {
-            path.endsWith("/") -> false                     // Directories (packages) can overlap.
+            path.endsWith('/') -> false                     // Directories (packages) can overlap.
             targetPlatformVersion < PlatformVersionSwitches.IGNORE_JOLOKIA_JSON_SIMPLE_IN_CORDAPPS &&
                     ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
             path.endsWith(".class") -> true                 // All class files need to be unique.
@@ -220,7 +225,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // attacks on externally connected systems that only consider type names, we allow people to formally
         // claim their parts of the Java package namespace via registration with the zone operator.
 
-        val classLoaderEntries = mutableMapOf<String, SecureHash.SHA256>()
+        val classLoaderEntries = mutableMapOf<String, SecureHash>()
         val ctx = AttachmentHashContext(sampleTxId)
         for (attachment in attachments) {
             // We may have been given an attachment loaded from the database in which case, important info like
@@ -239,7 +244,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                 // signed by the owners of the packages, even if it's not. We'd eventually discover that fact
                 // when trying to read the class file to use it, but if we'd made any decisions based on
                 // perceived correctness of the signatures or package ownership already, that would be too late.
-                attachment.openAsJAR().use { JarSignatureCollector.collectSigners(it) }
+                attachment.openAsJAR().use(JarSignatureCollector::collectSigners)
             }
 
             // Now open it again to compute the overlap and package ownership data.
@@ -310,11 +315,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
      * Required to prevent classes that were excluded from the no-overlap check from being loaded by contract code.
      * As it can lead to non-determinism.
      */
-    override fun loadClass(name: String?): Class<*> {
-        if (ignorePackages.any { name!!.startsWith(it) }) {
+    override fun loadClass(name: String, resolve: Boolean): Class<*>? {
+        if (ignorePackages.any { name.startsWith(it) }) {
             throw ClassNotFoundException(name)
         }
-        return super.loadClass(name)
+        return super.loadClass(name, resolve)
     }
 }
 
@@ -324,7 +329,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
  */
 @VisibleForTesting
 object AttachmentsClassLoaderBuilder {
-    const val CACHE_SIZE = 16
+    private const val CACHE_SIZE = 16
 
     private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl(CACHE_SIZE)
 

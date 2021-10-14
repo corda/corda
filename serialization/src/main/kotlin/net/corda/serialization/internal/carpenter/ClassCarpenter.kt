@@ -30,7 +30,7 @@ interface SimpleFieldAccess {
 class CarpenterClassLoader(private val parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
     @Throws(ClassNotFoundException::class)
-    override fun loadClass(name: String, resolve: Boolean): Class<*> {
+    override fun loadClass(name: String?, resolve: Boolean): Class<*>? {
         return synchronized(getClassLoadingLock(name)) {
             /**
              * Search parent classloaders using lock-less [Class.forName],
