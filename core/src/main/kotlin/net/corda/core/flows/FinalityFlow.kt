@@ -3,17 +3,23 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.InvalidCoreTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
+import java.security.PublicKey
 
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
@@ -292,3 +298,21 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         })
     }
 }
+
+@Suspendable
+fun cancelPeerReceiveTransactionFlows(sessions: Collection<FlowSession>, owningKey: PublicKey) {
+    for (session in sessions) {
+        session.send(SignedTransaction(
+            txBits = InvalidCoreTransaction().serialize(),
+            sigs = listOf(
+                TransactionSignature(
+                    byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0),
+                    owningKey,
+                    SignatureMetadata(PLATFORM_VERSION, 1)
+                )
+            )
+        ))
+    }
+}
+
+class CancelPeerReceiveTransactionFlowException(peer: Party) : FlowException("A peer: $peer has cancelled of the receipt of a transaction")

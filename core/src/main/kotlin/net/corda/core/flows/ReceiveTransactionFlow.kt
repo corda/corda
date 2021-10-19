@@ -6,6 +6,7 @@ import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
+import net.corda.core.transactions.InvalidCoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
@@ -45,6 +46,11 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
         }
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
             it.pushToLoggingContext()
+
+            if (it.coreTransaction is InvalidCoreTransaction) {
+                throw CancelPeerReceiveTransactionFlowException(otherSideSession.counterparty)
+            }
+
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(it.networkParametersHash)
             subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord))

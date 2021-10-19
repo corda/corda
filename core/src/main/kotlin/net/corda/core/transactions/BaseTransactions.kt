@@ -3,7 +3,9 @@ package net.corda.core.transactions
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.internal.checkNotaryWhitelisted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
@@ -55,4 +57,13 @@ abstract class FullTransaction : BaseTransaction() {
     protected fun checkNotaryWhitelisted() {
         checkNotaryWhitelisted(this)
     }
+}
+
+internal class InvalidCoreTransaction : CoreTransaction() {
+    override val id: SecureHash = SecureHash.zeroHash
+    override val notary: Party? = null
+    override val outputs: List<TransactionState<ContractState>> = emptyList()
+    override val inputs: List<StateRef> = emptyList()
+    override val networkParametersHash: SecureHash = SecureHash.zeroHash
+    override val references: List<StateRef> = emptyList()
 }

@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.flows.CancelPeerReceiveTransactionFlowException
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.NotaryError
@@ -485,13 +486,17 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                         "the flow by re-starting the node. State machine state: $currentState", newError)
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else if (isFromReceiveFinalityFlow(newError)) {
-                if (isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveFinality(newError)) {
-                    // no need to keep around the flow, since notarisation has already failed at the counterparty.
-                    Diagnosis.NOT_MY_SPECIALTY
-                } else {
-                    log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                            "the flow by re-starting the node. State machine state: $currentState", newError)
-                    Diagnosis.OVERNIGHT_OBSERVATION
+                when {
+                    isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveFinality(newError) -> {
+                        // no need to keep around the flow, since notarisation has already failed at the counterparty.
+                        Diagnosis.NOT_MY_SPECIALTY
+                    }
+                    newError is CancelPeerReceiveTransactionFlowException -> Diagnosis.NOT_MY_SPECIALTY
+                    else -> {
+                        log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
+                                "the flow by re-starting the node. State machine state: $currentState", newError)
+                        Diagnosis.OVERNIGHT_OBSERVATION
+                    }
                 }
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
