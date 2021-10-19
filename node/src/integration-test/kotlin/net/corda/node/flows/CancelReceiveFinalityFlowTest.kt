@@ -16,6 +16,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.cancelPeerReceiveTransactionFlows
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -30,6 +31,8 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.cordappWithPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.time.Duration
 import java.time.temporal.ChronoUnit
@@ -41,10 +44,17 @@ import kotlin.test.assertTrue
 
 class CancelReceiveFinalityFlowTest {
 
+    @Suppress("DEPRECATION")
     @Test(timeout = 300_000)
     fun `cancelling peers in receive finality flow`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(isDebug = false, startNodesInProcess = true)) {
+        driver(
+            DriverParameters(
+                isDebug = false,
+                startNodesInProcess = true,
+                cordappsForAllNodes = listOf(enclosedCordapp(), cordappWithPackages(DummyContract::class.packageName))
+            )
+        ) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
