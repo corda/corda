@@ -54,7 +54,7 @@ fun combinedHash(components: Iterable<SecureHash>, digestService: DigestService)
     components.forEach {
         stream.write(it.bytes)
     }
-    return digestService.hash(stream.toByteArray());
+    return digestService.hash(stream.toByteArray())
 }
 
 /**

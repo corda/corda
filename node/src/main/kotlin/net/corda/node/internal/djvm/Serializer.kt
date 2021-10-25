@@ -1,6 +1,8 @@
 package net.corda.node.internal.djvm
 
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
 import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
@@ -23,7 +25,12 @@ class Serializer(
     init {
         val env = createSandboxSerializationEnv(classLoader, customSerializerNames, serializationWhitelists)
         factory = env.serializationFactory
-        context = env.p2pContext.withProperty(DESERIALIZATION_CACHE_PROPERTY, HashMap<Any, Any>())
+        context = env.p2pContext.withProperties(mapOf<Any, Any>(
+            // Duplicate the P2P SerializationContext and give it
+            // these extra properties, just for this transaction.
+            AMQP_ENVELOPE_CACHE_PROPERTY to HashMap<Any, Any>(AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY),
+            DESERIALIZATION_CACHE_PROPERTY to HashMap<Any, Any>()
+        ))
     }
 
     /**

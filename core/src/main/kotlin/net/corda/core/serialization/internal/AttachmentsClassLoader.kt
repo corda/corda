@@ -20,6 +20,8 @@ import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.toSynchronised
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
 import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -346,12 +348,12 @@ object AttachmentsClassLoaderBuilder {
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
                                               block: (SerializationContext) -> T): T {
-        val attachmentIds = attachments.map(Attachment::id).toSet()
+        val attachmentIds = attachments.mapTo(LinkedHashSet(), Attachment::id)
 
         val cache = attachmentsClassLoaderCache ?: fallBackCache
-        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function {
+        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
                         JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
@@ -367,13 +369,17 @@ object AttachmentsClassLoaderBuilder {
             // that app logic doesn't ignore newly added fields or accidentally downgrade data from newer state
             // schemas to older schemas by discarding fields.
             SerializationFactory.defaultFactory.defaultContext
-                    .withProperty(DESERIALIZATION_CACHE_PROPERTY, HashMap<Any, Any>())
                     .withPreventDataLoss()
                     .withClassLoader(transactionClassLoader)
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        })
+        }).withProperties(mapOf<Any, Any>(
+            // Duplicate the SerializationContext from the cache and give
+            // it these extra properties, just for this transaction.
+            AMQP_ENVELOPE_CACHE_PROPERTY to HashMap<Any, Any>(AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY),
+            DESERIALIZATION_CACHE_PROPERTY to HashMap<Any, Any>()
+        ))
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {

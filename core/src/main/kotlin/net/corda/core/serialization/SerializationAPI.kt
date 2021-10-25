@@ -14,6 +14,8 @@ import java.io.NotSerializableException
 import java.sql.Blob
 
 const val DESERIALIZATION_CACHE_PROPERTY = "DESERIALIZATION_CACHE"
+const val AMQP_ENVELOPE_CACHE_PROPERTY = "AMQP_ENVELOPE_CACHE"
+const val AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY = 256
 
 data class ObjectWithCompatibleContext<out T : Any>(val obj: T, val context: SerializationContext)
 
