@@ -6,8 +6,6 @@ import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.serialization.djvm.deserializers.CertPathDeserializer
 import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.CustomSerializer
-import net.corda.serialization.internal.amqp.DeserializationInput
-import net.corda.serialization.internal.amqp.SerializationSchemas
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.CertPathSerializer.CertPathProxy
 import java.security.cert.CertPath
@@ -32,10 +30,7 @@ class SandboxCertPathSerializer(
         return task.apply(proxy)!!
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                            context: SerializationContext
-    ): Any {
-        val proxy = readProxy(obj, schemas, input, context)
+    override fun fromProxy(proxy: Any, context: SerializationContext): Any {
         // This requires [CertPathProxy] to have correct
         // implementations for [equals] and [hashCode].
         @Suppress("unchecked_cast")

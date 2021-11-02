@@ -4,8 +4,6 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.amqp.CustomSerializer
-import net.corda.serialization.internal.amqp.DeserializationInput
-import net.corda.serialization.internal.amqp.SerializationSchemas
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.io.NotSerializableException
 import java.security.cert.CertPath
@@ -32,10 +30,7 @@ class CertPathSerializer(
         }
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                            context: SerializationContext
-    ): CertPath {
-        val proxy = readProxy(obj, schemas, input, context)
+    override fun fromProxy(proxy: CertPathProxy, context: SerializationContext): CertPath {
         // This requires [CertPathProxy] to have correct
         // implementations for [equals] and [hashCode].
         @Suppress("unchecked_cast")
