@@ -1,6 +1,9 @@
 package net.corda.node.internal.djvm
 
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
@@ -22,14 +25,20 @@ class Serializer(
     init {
         val env = createSandboxSerializationEnv(classLoader, customSerializerNames, serializationWhitelists)
         factory = env.serializationFactory
-        context = env.p2pContext
+        context = env.p2pContext.withProperties(mapOf<Any, Any>(
+            // Duplicate the P2P SerializationContext and give it
+            // these extra properties, just for this transaction.
+            AMQP_ENVELOPE_CACHE_PROPERTY to HashMap<Any, Any>(AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY),
+            DESERIALIZATION_CACHE_PROPERTY to HashMap<Any, Any>()
+        ))
     }
 
     /**
      * Convert a list of [SerializedStateAndRef] objects into arrays
      * of deserialized sandbox objects. We will pass this array into
-     * [net.corda.node.djvm.LtxFactory] to be transformed finally to
-     * a list of [net.corda.core.contracts.StateAndRef] objects,
+     * [LtxSupplierFactory][net.corda.node.djvm.LtxSupplierFactory]
+     * to be transformed finally to a list of
+     * [StateAndRef][net.corda.core.contracts.StateAndRef] objects,
      */
     fun deserialize(stateRefs: List<SerializedStateAndRef>): Array<Array<out Any?>> {
         return stateRefs.map {

@@ -145,7 +145,7 @@ data class ContractUpgradeWireTransaction(
 
     private fun upgradedContract(className: ContractClassName, classLoader: ClassLoader): UpgradedContract<ContractState, ContractState> = try {
         @Suppress("UNCHECKED_CAST")
-        classLoader.loadClass(className).asSubclass(UpgradedContract::class.java).getDeclaredConstructor().newInstance() as UpgradedContract<ContractState, ContractState>
+        Class.forName(className, false, classLoader).asSubclass(UpgradedContract::class.java).getDeclaredConstructor().newInstance() as UpgradedContract<ContractState, ContractState>
     } catch (e: Exception) {
         throw TransactionVerificationException.ContractCreationError(id, className, e)
     }
@@ -166,9 +166,9 @@ data class ContractUpgradeWireTransaction(
                 params,
                 id,
                 { (services as ServiceHubCoreInternal).attachmentTrustCalculator.calculate(it) },
-                attachmentsClassLoaderCache = (services as ServiceHubCoreInternal).attachmentsClassLoaderCache) { transactionClassLoader ->
+                attachmentsClassLoaderCache = (services as ServiceHubCoreInternal).attachmentsClassLoaderCache) { serializationContext ->
             val resolvedInput = binaryInput.deserialize()
-            val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
+            val upgradedContract = upgradedContract(upgradedContractClassName, serializationContext.deserializationClassLoader)
             val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)
             outputState.serialize()
         }
@@ -311,8 +311,7 @@ private constructor(
         @CordaInternal
         internal fun loadUpgradedContract(upgradedContractClassName: ContractClassName, classLoader: ClassLoader): UpgradedContract<ContractState, *> {
             @Suppress("UNCHECKED_CAST")
-            return classLoader
-                    .loadClass(upgradedContractClassName)
+            return Class.forName(upgradedContractClassName, false, classLoader)
                     .asSubclass(Contract::class.java)
                     .getConstructor()
                     .newInstance() as UpgradedContract<ContractState, *>

@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.FingerprintWriter
 import net.corda.serialization.internal.model.TypeIdentifier
@@ -52,7 +51,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                              context: SerializationContext, debugIndent: Int
     ) {
         data.withDescribed(descriptor) {
-            writeDescribedObject(uncheckedCast(obj), data, type, output, context)
+            @Suppress("unchecked_cast")
+            writeDescribedObject(obj as T, data, type, output, context)
         }
     }
 
@@ -178,10 +178,13 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         protected abstract fun fromProxy(proxy: P): T
 
+        protected open fun toProxy(obj: T, context: SerializationContext): P = toProxy(obj)
+        protected open fun fromProxy(proxy: P, context: SerializationContext): T = fromProxy(proxy)
+
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
                                           context: SerializationContext
         ) {
-            val proxy = toProxy(obj)
+            val proxy = toProxy(obj, context)
             data.withList {
                 proxySerializer.propertySerializers.forEach { (_, serializer) ->
                     serializer.writeProperty(proxy, this, output, context, 0)
@@ -192,8 +195,9 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                                 context: SerializationContext
         ): T {
-            val proxy: P = uncheckedCast(proxySerializer.readObject(obj, schemas, input, context))
-            return fromProxy(proxy)
+            @Suppress("unchecked_cast")
+            val proxy = proxySerializer.readObject(obj, schemas, input, context) as P
+            return fromProxy(proxy, context)
         }
     }
 

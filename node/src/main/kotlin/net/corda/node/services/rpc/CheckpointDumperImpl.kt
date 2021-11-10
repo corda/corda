@@ -315,7 +315,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
      * the checkpoint agent source code
      */
     private fun checkpointAgentRunning() = try {
-        javaClass.classLoader.loadClass("net.corda.tools.CheckpointAgent").kotlin.companionObject
+        Class.forName("net.corda.tools.CheckpointAgent", false, javaClass.classLoader).kotlin.companionObject
     } catch (e: ClassNotFoundException) {
         null
     }?.let { cls ->
