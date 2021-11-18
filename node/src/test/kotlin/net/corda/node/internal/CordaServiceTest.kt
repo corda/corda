@@ -123,7 +123,10 @@ class CordaServiceTest {
         val identityService = makeTestIdentityService(dummyNotary.identity)
 
         Assertions.assertThatThrownBy { MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, bankOfCorda.keyPair) }
-                .isInstanceOf(ClassNotFoundException::class.java).hasMessage("Could not create jar file as the given package is not found on the classpath: com.r3.corda.sdk.tokens.money")
+                .isInstanceOf(ClassNotFoundException::class.java)
+                .hasMessageStartingWith("Could not create jar file as ")
+                .hasMessageContaining("com.r3.corda.sdk.tokens.money")
+                .hasMessageEndingWith(" not found on the classpath")
     }
     
     @StartableByService
