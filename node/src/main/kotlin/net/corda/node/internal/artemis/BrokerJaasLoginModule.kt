@@ -119,9 +119,8 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
 
     // The Main authentication logic, responsible for running all the configured checks for each user type
     // and return the actual User and principals
-    @Suppress("DEPRECATION")    // should use java.security.cert.X509Certificate
-    private fun authenticateAndAuthorise(username: String, certificates: Array<javax.security.cert.X509Certificate>?, password: String): Pair<String, List<RolePrincipal>> {
-        fun requireTls(certificates: Array<javax.security.cert.X509Certificate>?) = requireNotNull(certificates) { "No client certificates presented." }
+    private fun authenticateAndAuthorise(username: String, certificates: Array<java.security.cert.X509Certificate>, password: String): Pair<String, List<RolePrincipal>> {
+        fun requireTls(certificates: Array<java.security.cert.X509Certificate>?) = requireNotNull(certificates) { "No client certificates presented." }
 
         return when (username) {
             ArtemisMessagingComponent.NODE_P2P_USER -> {
@@ -176,8 +175,7 @@ abstract class BaseBrokerJaasLoginModule : LoginModule {
     protected lateinit var callbackHandler: CallbackHandler
     protected val principals = ArrayList<Principal>()
 
-    @Suppress("DEPRECATION")    // should use java.security.cert.X509Certificate
-    protected fun getUsernamePasswordAndCerts(): Triple<String, String, Array<javax.security.cert.X509Certificate>?> {
+    protected fun getUsernamePasswordAndCerts(): Triple<String, String, Array<java.security.cert.X509Certificate>> {
         val nameCallback = NameCallback("Username: ")
         val passwordCallback = PasswordCallback("Password: ", false)
         val certificateCallback = CertificateCallback()

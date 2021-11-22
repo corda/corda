@@ -1364,7 +1364,6 @@
     <ID>ThrowsCount:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser$// Make sure our inputs aren't designed to blow things up. private fun validate(typeString: String)</ID>
     <ID>ThrowsCount:AbstractNode.kt$AbstractNode$private fun installCordaServices()</ID>
     <ID>ThrowsCount:ArtemisMessagingServer.kt$ArtemisMessagingServer$// TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from // Artemis IO errors @Throws(IOException::class, AddressBindingException::class, KeyStoreException::class) private fun configureAndStartServer()</ID>
-    <ID>ThrowsCount:BrokerJaasLoginModule.kt$BaseBrokerJaasLoginModule$@Suppress("DEPRECATION") // should use java.security.cert.X509Certificate protected fun getUsernamePasswordAndCerts(): Triple&lt;String, String, Array&lt;javax.security.cert.X509Certificate&gt;?&gt;</ID>
     <ID>ThrowsCount:CheckpointVerifier.kt$CheckpointVerifier$ fun verifyCheckpointsCompatible( checkpointStorage: CheckpointStorage, currentCordapps: List&lt;Cordapp&gt;, platformVersion: Int, serviceHub: ServiceHub, tokenizableServices: List&lt;Any&gt; )</ID>
     <ID>ThrowsCount:CheckpointVerifier.kt$CheckpointVerifier$// Throws exception when the flow is incompatible private fun checkFlowCompatible(subFlow: SubFlow, currentCordappsByHash: Map&lt;SecureHash.SHA256, Cordapp&gt;, platformVersion: Int)</ID>
     <ID>ThrowsCount:ClassCarpenter.kt$ClassCarpenterImpl$ private fun validateSchema(schema: Schema)</ID>
