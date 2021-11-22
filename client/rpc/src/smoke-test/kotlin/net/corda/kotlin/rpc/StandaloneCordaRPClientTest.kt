@@ -41,6 +41,7 @@ import net.corda.sleeping.SleepingFlow
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
+import org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM
 import org.hamcrest.text.MatchesPattern
 import org.junit.After
 import org.junit.Before
@@ -117,7 +118,7 @@ class StandaloneCordaRPClientTest {
         assertEquals(attachment.sha256, id, "Attachment has incorrect SHA256 hash")
 
         val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
-            it.copyTo(NullOutputStream())
+            it.copyTo(NULL_OUTPUT_STREAM)
             SecureHash.SHA256(it.hash().asBytes())
         }
         assertEquals(attachment.sha256, hash)
@@ -132,7 +133,7 @@ class StandaloneCordaRPClientTest {
         assertEquals(attachment.sha256, id, "Attachment has incorrect SHA256 hash")
 
         val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
-            it.copyTo(NullOutputStream())
+            it.copyTo(NULL_OUTPUT_STREAM)
             SecureHash.SHA256(it.hash().asBytes())
         }
         assertEquals(attachment.sha256, hash)

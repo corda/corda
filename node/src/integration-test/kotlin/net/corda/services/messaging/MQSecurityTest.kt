@@ -28,6 +28,7 @@ import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -130,7 +131,11 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun assertTempQueueCreationAttackFails(queue: String) {
         assertAttackFails(queue, "CREATE_NON_DURABLE_QUEUE") {
-            attacker.session.createTemporaryQueue(queue, RoutingType.MULTICAST, queue)
+            attacker.session.createQueue(QueueConfiguration(queue).apply {
+                address = SimpleString(queue)
+                routingType = RoutingType.MULTICAST
+                isTemporary = true
+            })
         }
         // Double-check
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {
@@ -147,7 +152,11 @@ abstract class MQSecurityTest : NodeBasedTest() {
     fun assertNonTempQueueCreationAttackFails(queue: String, durable: Boolean) {
         val permission = if (durable) "CREATE_DURABLE_QUEUE" else "CREATE_NON_DURABLE_QUEUE"
         assertAttackFails(queue, permission) {
-            attacker.session.createQueue(queue, RoutingType.MULTICAST, queue, durable)
+            attacker.session.createQueue(QueueConfiguration(queue).apply {
+                address = SimpleString(queue)
+                routingType = RoutingType.MULTICAST
+                isDurable = durable
+            })
         }
         // Double-check
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {

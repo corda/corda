@@ -35,6 +35,7 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -42,7 +43,6 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BA
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.Configuration
-import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
@@ -201,22 +201,19 @@ data class RPCDriverDSL(
             journalBufferSize_NIO = maxFileSize
             journalBufferSize_AIO = maxFileSize
             journalFileSize = maxFileSize
-            queueConfigurations = listOf(
-                    CoreQueueConfiguration().apply {
-                        name = RPCApi.RPC_SERVER_QUEUE_NAME
-                        address = RPCApi.RPC_SERVER_QUEUE_NAME
+            queueConfigs = listOf(
+                    QueueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME).apply {
+                        address = SimpleString(RPCApi.RPC_SERVER_QUEUE_NAME)
                         isDurable = false
                     },
-                    CoreQueueConfiguration().apply {
-                        name = RPCApi.RPC_CLIENT_BINDING_REMOVALS
-                        address = notificationAddress
-                        filterString = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_REMOVALS).apply {
+                        address = SimpleString(notificationAddress)
+                        filterString = SimpleString(RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION)
                         isDurable = false
                     },
-                    CoreQueueConfiguration().apply {
-                        name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS
-                        address = notificationAddress
-                        filterString = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).apply {
+                        address = SimpleString(notificationAddress)
+                        filterString = SimpleString(RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION)
                         isDurable = false
                     }
             )
@@ -224,7 +221,7 @@ data class RPCDriverDSL(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                         maxSizeBytes = maxBufferedBytesPerClient
                         addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
-                        pageSizeBytes = maxSizeBytes / 10
+                        pageSizeBytes = maxSizeBytes.toInt() / 10
                     }
             )
         }

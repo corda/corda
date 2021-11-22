@@ -7,10 +7,11 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.client.impl.ClientMessageImpl
+import org.apache.activemq.artemis.core.persistence.impl.nullpm.NullStorageManager
 import org.apache.activemq.artemis.core.server.ServerSession
-import org.apache.activemq.artemis.protocol.amqp.broker.AMQPMessage
 import org.apache.activemq.artemis.protocol.amqp.converter.AMQPConverter
 import org.assertj.core.api.Assertions
 import org.junit.Test
@@ -18,7 +19,8 @@ import org.junit.Test
 class UserValidationPluginTest {
     private val plugin = UserValidationPlugin()
     private val coreMessage = ClientMessageImpl(0, false, 0, System.currentTimeMillis(), 4.toByte(), 1024)
-    private val amqpMessage get() = AMQPConverter.getInstance().fromCore(coreMessage)
+    private val storageManager = NullStorageManager()
+    private val amqpMessage get() = AMQPConverter.getInstance().fromCore(coreMessage, storageManager)
     private val session = rigorousMock<ServerSession>().also {
         doReturn(ArtemisMessagingComponent.PEER_USER).whenever(it).username
         doReturn(ALICE_NAME.toString()).whenever(it).validatedUser
@@ -63,7 +65,7 @@ class UserValidationPluginTest {
     @Test(timeout = 300_000)
     fun `reject message with exception`() {
         coreMessage.putStringProperty("_AMQ_VALIDATED_USER", BOB_NAME.toString())
-        val messageWithException = object : AMQPMessage(0, amqpMessage.buffer.array(), null) {
+        val messageWithException = object : Message by amqpMessage {
             override fun getStringProperty(key: SimpleString?): String {
                 throw IllegalStateException("My exception")
             }
@@ -77,7 +79,7 @@ class UserValidationPluginTest {
     @Test(timeout = 300_000)
     fun `reject message with security exception`() {
         coreMessage.putStringProperty("_AMQ_VALIDATED_USER", BOB_NAME.toString())
-        val messageWithException = object : AMQPMessage(0, amqpMessage.buffer.array(), null) {
+        val messageWithException = object : Message by amqpMessage {
             override fun getStringProperty(key: SimpleString?): String {
                 throw ActiveMQSecurityException("My security exception")
             }

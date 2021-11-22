@@ -32,7 +32,9 @@ import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
+import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
@@ -663,7 +665,12 @@ class CertificateRevocationListNodeTests {
         val queueName = P2P_PREFIX + "Test"
         val (artemisServer, artemisClient) = createArtemisServerAndClient(serverPort, crlCheckSoftFail, crlCheckArtemisServer)
         artemisServer.use {
-            artemisClient.started!!.session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+            artemisClient.started!!.session.createQueue(QueueConfiguration(queueName).apply
+            {
+                routingType = RoutingType.ANYCAST
+                address = SimpleString(queueName)
+                isDurable = true
+            })
 
             val (amqpClient, nodeCert) = createClient(serverPort, true, nodeCrlDistPoint)
             if (revokedNodeCert) {
