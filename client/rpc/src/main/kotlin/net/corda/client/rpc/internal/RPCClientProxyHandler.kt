@@ -39,6 +39,7 @@ import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.nodeapi.internal.rpc.client.RpcObservableMap
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -632,7 +633,8 @@ internal class RPCClientProxyHandler(
         consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, 16384)
         clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$rpcUsername.${random63BitValue()}")
         log.debug { "Client address: $clientAddress" }
-        consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
+        consumerSession!!.createQueue(QueueConfiguration(clientAddress).setAddress(clientAddress).setRoutingType(RoutingType.ANYCAST)
+                .setTemporary(true))
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
     }
