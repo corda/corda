@@ -176,6 +176,7 @@ abstract class BaseBrokerJaasLoginModule : LoginModule {
     protected lateinit var callbackHandler: CallbackHandler
     protected val principals = ArrayList<Principal>()
 
+    @Suppress("ThrowsCount")
     protected fun getUsernamePasswordAndCerts(): Triple<String, String, Array<X509Certificate>> {
         val nameCallback = NameCallback("Username: ")
         val passwordCallback = PasswordCallback("Password: ", false)
