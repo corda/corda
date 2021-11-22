@@ -132,6 +132,8 @@ class ArtemisTcpTransport {
                 (keyStore to trustStore).addToTransportOptions(options)
                 options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
                 keyStoreProvider?.let { options.put(TransportConstants.KEYSTORE_PROVIDER_PROP_NAME, keyStoreProvider) }
+                // This is required to stop Client checking URL address vs. Server provided certificate
+                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
             }
             return TransportConfiguration(connectorFactoryClassName, options)
         }
@@ -159,6 +161,8 @@ class ArtemisTcpTransport {
                 config.trustStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
                 options.putAll(defaultSSLOptions)
+                // This is required to stop Client checking URL address vs. Server provided certificate
+                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
             }
             return TransportConfiguration(connectorFactoryClassName, options)
         }
@@ -168,7 +172,13 @@ class ArtemisTcpTransport {
         }
 
         fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreProvider: String? = null): TransportConfiguration {
-            return TransportConfiguration(connectorFactoryClassName, defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS) + defaultSSLOptions + config.toTransportOptions() + asMap(keyStoreProvider))
+            val options = defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS).toMutableMap()
+            options.putAll(defaultSSLOptions)
+            options.putAll(config.toTransportOptions())
+            options.putAll(asMap(keyStoreProvider))
+            // This is required to stop Client checking URL address vs. Server provided certificate
+            options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
+            return TransportConfiguration(connectorFactoryClassName, options)
         }
 
         fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreProvider: String? = null): TransportConfiguration {
