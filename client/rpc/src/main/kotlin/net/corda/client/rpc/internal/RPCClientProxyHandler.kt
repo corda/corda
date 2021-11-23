@@ -634,7 +634,7 @@ internal class RPCClientProxyHandler(
         clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$rpcUsername.${random63BitValue()}")
         log.debug { "Client address: $clientAddress" }
         consumerSession!!.createQueue(QueueConfiguration(clientAddress).setAddress(clientAddress).setRoutingType(RoutingType.ANYCAST)
-                .setTemporary(true))
+                .setTemporary(true).setDurable(false))
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
     }

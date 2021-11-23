@@ -117,7 +117,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
         try {
             artemisSession.createQueue(
                     QueueConfiguration(bridgeControlQueue).setAddress(BRIDGE_CONTROL).setRoutingType(RoutingType.MULTICAST)
-                            .setTemporary(true))
+                            .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
         }
@@ -139,7 +139,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
         try {
             artemisSession.createQueue(
                     QueueConfiguration(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
-                            .setTemporary(true))
+                            .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
         }

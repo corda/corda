@@ -236,7 +236,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         val bridgeNotifyQueue = "$BRIDGE_NOTIFY.${myIdentity.toStringShort()}"
         if (!session.queueQuery(SimpleString(bridgeNotifyQueue)).isExists) {
             session.createQueue(QueueConfiguration(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
-                    .setTemporary(true))
+                    .setTemporary(true).setDurable(false))
         }
         val bridgeConsumer = session.createConsumer(bridgeNotifyQueue)
         bridgeNotifyConsumer = bridgeConsumer

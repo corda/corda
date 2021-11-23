@@ -131,11 +131,11 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun assertTempQueueCreationAttackFails(queue: String) {
         assertAttackFails(queue, "CREATE_NON_DURABLE_QUEUE") {
-            attacker.session.createQueue(QueueConfiguration(queue).apply {
-                address = SimpleString(queue)
-                routingType = RoutingType.MULTICAST
-                isTemporary = true
-            })
+            attacker.session.createQueue(QueueConfiguration(queue)
+                    .setRoutingType(RoutingType.MULTICAST)
+                    .setAddress(queue)
+                    .setTemporary(true)
+                    .setDurable(false))
         }
         // Double-check
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {

@@ -552,11 +552,11 @@ class RPCStabilityTests {
             // Construct an RPC session manually so that we can hang in the message handler
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createQueue(QueueConfiguration(myQueue).apply {
-                isTemporary = true
-                routingType = ActiveMQDefaultConfiguration.getDefaultRoutingType()
-                address = SimpleString(myQueue)
-            })
+            session.createQueue(QueueConfiguration(myQueue)
+                    .setRoutingType(ActiveMQDefaultConfiguration.getDefaultRoutingType())
+                    .setAddress(myQueue)
+                    .setTemporary(true)
+                    .setDurable(false))
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {
                 Thread.sleep(5000) // Needs to be slower than one per second to get kicked.
@@ -593,11 +593,11 @@ class RPCStabilityTests {
             // Construct an RPC client session manually
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createQueue(QueueConfiguration(myQueue).apply {
-                isTemporary = true
-                routingType = ActiveMQDefaultConfiguration.getDefaultRoutingType()
-                address = SimpleString(myQueue)
-            })
+            session.createQueue(QueueConfiguration(myQueue)
+                    .setRoutingType(ActiveMQDefaultConfiguration.getDefaultRoutingType())
+                    .setAddress(myQueue)
+                    .setTemporary(true)
+                    .setDurable(false))
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             val replies = ArrayList<Any>()
             consumer.setMessageHandler {
