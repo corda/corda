@@ -158,19 +158,16 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
     }
 
     @Test(timeout=300_000)
-	fun `Add new users dynamically`() {
-        assertFailsWith(
-                ActiveMQSecurityException::class,
-                "Login with incorrect password should fail") {
-            client.start("user2", "bar").close()
-        }
-
-        db.insert(UserAndRoles(
+    fun `Add new users dynamically`() {
+        with(UserAndRoles(
                 username = "user2",
-                password = encodePassword("bar"),
-                roles = listOf("default")))
+                password = "bar",
+                roles = listOf("default"))) {
 
-        client.start("user2", "bar").close()
+            db.insert(copy(password = encodePassword(password)))
+
+            client.start(username, password).close()
+        }
     }
 
     @Test(timeout=300_000)
