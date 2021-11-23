@@ -36,7 +36,6 @@ import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
-import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
@@ -273,12 +272,8 @@ class ProtonWrapperTests {
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
         val sendAddress = P2P_PREFIX + "Test"
-        artemis.session.createQueue(QueueConfiguration("queue").apply
-        {
-            routingType = RoutingType.ANYCAST
-            address = SimpleString(sendAddress)
-            isDurable = true
-        })
+        artemis.session.createQueue(QueueConfiguration("queue")
+                .setRoutingType(RoutingType.ANYCAST).setAddress(sendAddress).setDurable(true))
         val consumer = artemis.session.createConsumer("queue")
         val testData = "Test".toByteArray()
         val testProperty = mutableMapOf<String, Any?>()
@@ -305,19 +300,16 @@ class ProtonWrapperTests {
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val artemis = artemisClient.started!!
         val sendAddress = P2P_PREFIX + "Test"
-        artemis.session.createQueue(QueueConfiguration("queue").apply
-        {
-            routingType = RoutingType.ANYCAST
-            address = SimpleString(sendAddress)
-            isDurable = true
-        })
+        artemis.session.createQueue(QueueConfiguration("queue")
+                .setRoutingType(RoutingType.ANYCAST).setAddress(sendAddress).setDurable(true))
         val consumer = artemis.session.createConsumer("queue")
 
         val testProperty = mutableMapOf<String, Any?>()
         testProperty["TestProp"] = "1"
 
         // Send normal message.
-        val testData = ByteArray(maxMessageSize)
+        val headerPadBytes = 200
+        val testData = ByteArray(maxMessageSize - headerPadBytes)
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)
         assertEquals(MessageStatus.Acknowledged, message.onComplete.get())
@@ -325,7 +317,7 @@ class ProtonWrapperTests {
         assertEquals("1", received.getStringProperty("TestProp"))
         assertArrayEquals(testData, ByteArray(received.bodySize).apply { received.bodyBuffer.readBytes(this) })
 
-        // Send message larger then max message size.
+        // Send message larger than max message size.
         val largeData = ByteArray(maxMessageSize + 1)
         // Create message will fail.
         assertThatThrownBy {
