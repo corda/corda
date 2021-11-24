@@ -308,8 +308,7 @@ class ProtonWrapperTests {
         testProperty["TestProp"] = "1"
 
         // Send normal message.
-        val headerPadBytes = 200
-        val testData = ByteArray(maxMessageSize - headerPadBytes)
+        val testData = ByteArray(maxMessageSize)
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)
         assertEquals(MessageStatus.Acknowledged, message.onComplete.get())
