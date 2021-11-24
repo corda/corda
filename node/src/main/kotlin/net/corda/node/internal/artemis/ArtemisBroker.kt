@@ -19,6 +19,9 @@ data class BrokerAddresses(val primary: NetworkHostAndPort, private val adminArg
 
 fun Throwable.isBindingError(): Boolean {
     val addressAlreadyUsedMsg = "Address already in use"
+    // This is not an exact science here.
+    // Depending on the underlying OS it can be either [Errors.NativeIoException] on Linux or [BindException] on Windows
+    // and of course this is dependent on the version of Artemis library used.
     return this is BindException ||
-            this is IllegalStateException && cause.let { it is BindException && it.message?.contains(addressAlreadyUsedMsg) == true }
+            this is IllegalStateException && cause.let { it is BindException || it?.message?.contains(addressAlreadyUsedMsg) == true }
 }
