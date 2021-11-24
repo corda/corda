@@ -51,11 +51,19 @@ import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientProducer
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
+import org.apache.activemq.artemis.api.core.client.FailoverEventType
+import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -81,7 +89,9 @@ import kotlin.concurrent.timer
  * @param serverAddress The host and port of the Artemis broker.
  * @param nodeExecutor The received messages are marshalled onto the server executor to prevent Netty buffers leaking during fiber suspends.
  * @param database The node's database, which is used to deduplicate messages.
+ * @param terminateOnConnectionError whether the process should be terminated forcibly if connection with the broker fails.
  */
+@Suppress("LongParameterList")
 @ThreadSafe
 class P2PMessagingClient(val config: NodeConfiguration,
                          private val versionInfo: VersionInfo,
@@ -94,7 +104,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          cacheFactory: NamedCacheFactory,
                          private val isDrainingModeOn: () -> Boolean,
                          private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>,
-                         private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)
+                         private val stateHelper: ServiceStateHelper = ServiceStateHelper(log),
+                         private val terminateOnConnectionError: Boolean = true,
+                         private val timeoutConfig: TimeoutConfig = TimeoutConfig.default()
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
@@ -125,6 +137,21 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var sessionFactory: ClientSessionFactory? = null
 
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
+    }
+
+    /**
+     * @property callTimeout the time a blocking call (e.g. message send) from a client waits for a response until it times out.
+     * @property serverConnectionTtl the time the server waits for a packet/heartbeat from a client before it announces the connection dead and cleans it up.
+     * @property clientConnectionTtl the time the client waits for a packet/heartbeat from a client before it announces the connection dead and cleans it up.
+     */
+    data class TimeoutConfig(val callTimeout: Duration, val serverConnectionTtl: Duration, val clientConnectionTtl: Duration) {
+        companion object {
+            /**
+             * Some sensible defaults, aligned with defaults of Artemis
+             */
+            @Suppress("MagicNumber")
+            fun default() = TimeoutConfig(30.seconds, 60.seconds, 30.seconds)
+        }
     }
 
     /** A registration to handle messages of different types */
@@ -169,12 +196,18 @@ class P2PMessagingClient(val config: NodeConfiguration,
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
-                connectionTTL = 60000
-                clientFailureCheckPeriod = 30000
+                callTimeout = timeoutConfig.callTimeout.toMillis()
+                connectionTTL = timeoutConfig.serverConnectionTtl.toMillis()
+                clientFailureCheckPeriod = timeoutConfig.clientConnectionTtl.toMillis()
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
-            sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
+
+            sessionFactory = if (terminateOnConnectionError) {
+                locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
+            } else {
+                locator!!.createSessionFactory()
+            }
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artemis journal until the default buffer
@@ -405,7 +438,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         override fun toString() = "$topic#$data"
     }
 
-    private fun deliver(artemisMessage: ClientMessage) {
+    internal fun deliver(artemisMessage: ClientMessage) {
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
             if (!deduplicator.isDuplicate(cordaMessage)) {
                 deduplicator.signalMessageProcessStart(cordaMessage)
