@@ -34,7 +34,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
-import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
@@ -489,7 +488,7 @@ class CertificateRevocationListNodeTests {
         @Path("node.crl")
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
-            return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
+            return Response.ok(createRevocationList(
                     server,
                     SIGNATURE_ALGORITHM,
                     INTERMEDIATE_CA.certificate,
