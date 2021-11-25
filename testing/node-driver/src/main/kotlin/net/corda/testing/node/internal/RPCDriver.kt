@@ -202,20 +202,11 @@ data class RPCDriverDSL(
             journalBufferSize_AIO = maxFileSize
             journalFileSize = maxFileSize
             queueConfigs = listOf(
-                    QueueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME).apply {
-                        address = SimpleString(RPCApi.RPC_SERVER_QUEUE_NAME)
-                        isDurable = false
-                    },
-                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_REMOVALS).apply {
-                        address = SimpleString(notificationAddress)
-                        filterString = SimpleString(RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION)
-                        isDurable = false
-                    },
-                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).apply {
-                        address = SimpleString(notificationAddress)
-                        filterString = SimpleString(RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION)
-                        isDurable = false
-                    }
+                    QueueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME).setAddress(RPCApi.RPC_SERVER_QUEUE_NAME).setDurable(false),
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_REMOVALS).setAddress(notificationAddress)
+                            .setFilterString(RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION).setDurable(false),
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).setAddress(notificationAddress)
+                            .setFilterString(RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION).setDurable(false)
             )
             addressesSettings = mapOf(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
@@ -256,7 +247,7 @@ data class RPCDriverDSL(
      * Starts an In-VM RPC server. Note that only a single one may be started.
      *
      * @param rpcUser The single user who can access the server through RPC, and their permissions.
-     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
+     * @param nodeLegalName The legal name of the node to check against to authenticate a superuser.
      * @param configuration The RPC server configuration.
      * @param ops The server-side implementation of the RPC interface.
      */
@@ -335,7 +326,7 @@ data class RPCDriverDSL(
      *
      * @param serverName The name of the server, to be used for the folder created for Artemis files.
      * @param rpcUser The single user who can access the server through RPC, and their permissions.
-     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
+     * @param nodeLegalName The legal name of the node to check against to authenticate a superuser.
      * @param configuration The RPC server configuration.
      * @param listOps The server-side implementation of the RPC interfaces.
      */

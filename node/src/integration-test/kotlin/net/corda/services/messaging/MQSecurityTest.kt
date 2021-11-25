@@ -152,11 +152,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
     fun assertNonTempQueueCreationAttackFails(queue: String, durable: Boolean) {
         val permission = if (durable) "CREATE_DURABLE_QUEUE" else "CREATE_NON_DURABLE_QUEUE"
         assertAttackFails(queue, permission) {
-            attacker.session.createQueue(QueueConfiguration(queue).apply {
-                address = SimpleString(queue)
-                routingType = RoutingType.MULTICAST
-                isDurable = durable
-            })
+            attacker.session.createQueue(
+                    QueueConfiguration(queue).setAddress(queue).setRoutingType(RoutingType.MULTICAST).setDurable(durable))
         }
         // Double-check
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {

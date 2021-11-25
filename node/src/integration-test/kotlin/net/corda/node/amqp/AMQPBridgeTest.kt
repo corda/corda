@@ -223,12 +223,8 @@ class AMQPBridgeTest {
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
             // Local queue for outgoing messages
-            artemis.session.createQueue(QueueConfiguration(sourceQueueName).apply
-            {
-                routingType = RoutingType.ANYCAST
-                address = SimpleString(sourceQueueName)
-                isDurable = true
-            })
+            artemis.session.createQueue(
+                    QueueConfiguration(sourceQueueName).setRoutingType(RoutingType.ANYCAST).setAddress(sourceQueueName).setDurable(true))
             bridgeManager.deployBridge(ALICE_NAME.toString(), sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
         }
         return Triple(artemisServer, artemisClient, bridgeManager)

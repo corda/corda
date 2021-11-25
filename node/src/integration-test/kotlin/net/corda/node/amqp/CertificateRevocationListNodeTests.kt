@@ -665,12 +665,8 @@ class CertificateRevocationListNodeTests {
         val queueName = P2P_PREFIX + "Test"
         val (artemisServer, artemisClient) = createArtemisServerAndClient(serverPort, crlCheckSoftFail, crlCheckArtemisServer)
         artemisServer.use {
-            artemisClient.started!!.session.createQueue(QueueConfiguration(queueName).apply
-            {
-                routingType = RoutingType.ANYCAST
-                address = SimpleString(queueName)
-                isDurable = true
-            })
+            artemisClient.started!!.session.createQueue(
+                    QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true))
 
             val (amqpClient, nodeCert) = createClient(serverPort, true, nodeCrlDistPoint)
             if (revokedNodeCert) {
