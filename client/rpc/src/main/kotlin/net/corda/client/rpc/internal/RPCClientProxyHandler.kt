@@ -61,6 +61,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -381,11 +382,18 @@ internal class RPCClientProxyHandler(
         targetLegalIdentity?.let {
             artemisMessage.putStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY, it.toString())
         }
-        sendExecutor!!.submit {
+        val future: Future<*> = sendExecutor!!.submit {
             artemisMessage.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, deduplicationSequenceNumber.getAndIncrement())
             log.debug { "-> RPC -> $message" }
-            rpcProducer!!.send(artemisMessage)
+            rpcProducer!!.let {
+                if (!it.isClosed) {
+                    it.send(artemisMessage)
+                } else {
+                    throw IllegalStateException("Produced is already closed. Not sending: $message")
+                }
+            }
         }
+        future.getOrThrow()
     }
 
     // The handler for Artemis messages.
@@ -571,7 +579,12 @@ internal class RPCClientProxyHandler(
         }
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
-            sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
+            } catch(ex: Exception) {
+                log.warn("Unable to close observables", ex)
+            }
         }
     }
 
