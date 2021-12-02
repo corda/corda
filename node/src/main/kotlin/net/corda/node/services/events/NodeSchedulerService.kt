@@ -146,7 +146,7 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
     // from the database
-    private val startingStateRefs = ConcurrentHashMap.newKeySet<ScheduledStateRef>()
+    private val startingStateRefs: MutableSet<ScheduledStateRef> = ConcurrentHashMap.newKeySet<ScheduledStateRef>()
     private val mutex = ThreadBox(InnerState())
     private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
 
