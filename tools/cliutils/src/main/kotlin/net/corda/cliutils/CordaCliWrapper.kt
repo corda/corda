@@ -163,6 +163,9 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
  * As versionProvider information from the MANIFEST file is used. It can be overwritten by custom version providers (see: Node)
  * Picocli will prioritise versionProvider from the `@Command` annotation on the subclass, see: https://picocli.info/#_reuse_combinations
  */
+// Used by [NodeStartup] and a few other tools.
+// Seems like a few tools will need to point to the moved shell and therefore might need to be moved out of this repository as well if we are
+// to get vericode to pass successfully.
 abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperBase(alias, description) {
     companion object {
         private val logger by lazy { contextLogger() }

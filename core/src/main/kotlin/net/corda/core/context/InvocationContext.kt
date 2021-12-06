@@ -181,6 +181,7 @@ sealed class InvocationOrigin {
         override fun principal() = Principal { "Scheduler" }
     }
 
+    // Should probably be refactored out but it won't be worth the effort. Therefore leave this in because it doesn't bring in shell code itself.
     // TODO When proper ssh access enabled, add username/use RPC?
     /**
      * Origin was the Shell.

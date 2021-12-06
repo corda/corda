@@ -32,6 +32,7 @@ fun main(args: Array<String>) {
     BlobInspector().start(args)
 }
 
+// needs to be taken to its own repo. Shouldn't be the biggest issue because it's a standalone tool.
 class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised binary blobs to text") {
     @Parameters(index = "0", paramLabel = "SOURCE", description = ["URL or file path to the blob"], converter = [SourceConverter::class])
     var source: URL? = null

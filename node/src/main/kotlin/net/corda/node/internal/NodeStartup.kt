@@ -65,6 +65,12 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
     val cmdLineOptions = SharedNodeCmdLineOptions()
 }
 
+// We would need to implement a version of [NodeStartup] that doesn't depend on this class, or make the shell always disabled when starting
+// a node up. Then require SSH access to use it, however this would harm the developer experience.
+// Can there be a version of [NodeStartup] that exists in the other repo, and then in the cordformation code, use the version with the shell
+// rather than the version in the OS codebase.
+// Fixing [NodeStartup] might be a pain in the ass to do, need to look into the implementation more. Will require publishing [:node] so that
+// the other repo can access it.
 /** Main corda entry point. */
 open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     open val startup = NodeStartup()

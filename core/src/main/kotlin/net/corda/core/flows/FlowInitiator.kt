@@ -40,6 +40,7 @@ sealed class FlowInitiator : Principal {
         override fun getName(): String = "Scheduler"
     }
 
+    // Should probably be refactored out but it won't be worth the effort. Therefore leave this in because it doesn't bring in shell code itself.
     // TODO When proper ssh access enabled, add username/use RPC?
     object Shell : FlowInitiator() {
         override fun getName(): String = "Shell User"

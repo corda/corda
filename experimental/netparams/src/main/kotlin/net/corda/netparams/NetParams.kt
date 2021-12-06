@@ -76,6 +76,7 @@ fun main(args: Array<String>) {
     NetParamsSigner().start(args)
 }
 
+// Will need to go to a new repo. Requires us to publish [:node-api] if we are not already doing so, even if its just internally published.
 class NetParamsSigner : CordaCliWrapper("netparams-signer", "Sign network parameters") {
 
     @Option(names = ["--config"], paramLabel = "file", description = ["Network Parameters config."])

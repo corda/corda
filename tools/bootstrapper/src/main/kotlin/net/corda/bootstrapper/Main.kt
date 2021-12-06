@@ -19,6 +19,8 @@ fun main(args: Array<String>) {
     NetworkBootstrapperRunner().start(args)
 }
 
+// Do we still document that people use the Network bootstrapper as a standalone shell? Does Cordformation use this?
+// If the answers to these questions are no, can we argue that we remove this code completely?
 class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWithOverridableParameters = NetworkBootstrapper()) : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
     @Option(names = ["--dir"],
             description = [ "Root directory containing the node configuration files and CorDapp JARs that will form the test network.",

@@ -18,6 +18,7 @@ import java.util.*
  *
  * In the event that the file already exists, the tool will report an error and exit.
  */
+// Not sure if this really being used by anything. Possibly could be removed altogether.
 class DocsTableCLI : CordaCliWrapper("build-docs", "Builds the error table for the error codes page") {
 
     @CommandLine.Parameters(

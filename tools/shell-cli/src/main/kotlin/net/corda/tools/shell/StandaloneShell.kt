@@ -24,6 +24,7 @@ fun main(args: Array<String>) {
     StandaloneShell().start(args)
 }
 
+// Obviously needs to go to the shell repo
 class StandaloneShell : CordaCliWrapper("corda-shell", "The Corda standalone shell.") {
     @Mixin
     var cmdLineOptions = ShellCmdLineOptions()
