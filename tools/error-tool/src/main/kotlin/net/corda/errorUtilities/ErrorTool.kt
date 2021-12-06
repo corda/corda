@@ -14,7 +14,6 @@ fun main(args: Array<String>) = ErrorTool().start(args)
  *
  * By itself, this doesn't do anything - instead one of the subcommands should be invoked.
  */
-// Not sure if this really being used by anything. Possibly could be removed altogether.
 class ErrorTool : CordaCliWrapper("error-utils", "Utilities for working with error codes and error reporting") {
 
     private val errorPageBuilder = DocsTableCLI()

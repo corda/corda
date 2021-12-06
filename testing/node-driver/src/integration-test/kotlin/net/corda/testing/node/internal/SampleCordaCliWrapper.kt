@@ -5,7 +5,6 @@ import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.start
 import picocli.CommandLine
 
-// Remove this code, doesn't seem to be referenced anywhere and doesn't look useful + its in [integration-test]
 class SampleCordaCliWrapperException(message: String) : Exception(message)
 class SampleCordaCliWrapper: CordaCliWrapper("sampleCliWrapper", "Sample corda cliWrapper app") {
 

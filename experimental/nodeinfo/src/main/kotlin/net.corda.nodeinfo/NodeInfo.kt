@@ -60,7 +60,6 @@ class NetworkHostAndPortConverter : ITypeConverter<NetworkHostAndPort> {
     }
 }
 
-// This is in the experimental folder so we should remove it to make things easier.
 class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate nodeinfos") {
 
     @Option(names = ["--display"], paramLabel = "nodeinfo-file", description = ["Path to NodeInfo"])

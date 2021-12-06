@@ -17,7 +17,6 @@ import java.util.*
  * existing resource bundles. From this, it generates any missing resource files with the properties specified. The data under these
  * properties should then be filled in by hand.
  */
-// Not sure if this really being used by anything. Possibly could be removed altogether.
 class ResourceGeneratorCLI : CordaCliWrapper(
         "generate-resources",
         "Generate any missing resource files for a set of error codes"
