@@ -184,6 +184,9 @@ pipeline {
                             }
                         }
                         stage('Slow Integration Test') {
+                            when {
+                              expression { return false }
+                            }
                             steps {
                                 sh script: [
                                         './gradlew',
