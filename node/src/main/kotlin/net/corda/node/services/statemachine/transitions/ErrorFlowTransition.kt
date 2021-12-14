@@ -63,7 +63,12 @@ class ErrorFlowTransition(
                     status = Checkpoint.FlowStatus.FAILED,
                     flowState = FlowState.Finished,
                     checkpointState = startingState.checkpoint.checkpointState.copy(
-                        numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1
+                        numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1,
+                        invocationContext = if (startingState.checkpoint.checkpointState.invocationContext.arguments!!.isNotEmpty()) {
+                            startingState.checkpoint.checkpointState.invocationContext.copy(arguments = emptyList())
+                        } else {
+                            startingState.checkpoint.checkpointState.invocationContext
+                        }
                     )
                 )
                 currentState = currentState.copy(
