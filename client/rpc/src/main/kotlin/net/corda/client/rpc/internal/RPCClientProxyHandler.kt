@@ -389,7 +389,7 @@ internal class RPCClientProxyHandler(
                 if (!it.isClosed) {
                     it.send(artemisMessage)
                 } else {
-                    throw IllegalStateException("Produced is already closed. Not sending: $message")
+                    log.info("Producer is already closed. Not sending: $message")
                 }
             }
         }
