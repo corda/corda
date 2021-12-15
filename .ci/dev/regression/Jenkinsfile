@@ -115,6 +115,9 @@ pipeline {
         }
 
         stage('All Tests') {
+            when {
+                expression { return false }
+            }
             parallel {
                 stage('Another agent') {
                     agent {
