@@ -69,7 +69,7 @@ buildscript {
     ext.servlet_version = '4.0.1'
     ext.assertj_version = '3.12.2'
     ext.slf4j_version = '1.7.30'
-    ext.log4j_version = '2.15.0'
+    ext.log4j_version = '2.16.0'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
