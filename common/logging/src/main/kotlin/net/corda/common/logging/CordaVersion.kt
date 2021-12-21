@@ -1,6 +1,6 @@
 package net.corda.common.logging
 
-import net.corda.common.logging.manifest.Manifests
+import com.jcabi.manifests.Manifests
 
 class CordaVersion  {
     companion object {
