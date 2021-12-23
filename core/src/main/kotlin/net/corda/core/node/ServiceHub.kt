@@ -233,6 +233,12 @@ interface ServiceHub : ServicesForResolution {
     }
 
     /**
+     * Stores the given [SignedTransaction] in the local transaction storage as unverified without sending it to the vault.
+     * This way we can recover that transaction if finality flow gets aborted.
+     */
+    fun recordUnverifiedTransaction(tx: SignedTransaction)
+
+    /**
      * Converts the given [StateRef] into a [StateAndRef] object.
      *
      * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.

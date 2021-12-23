@@ -1,7 +1,10 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.pushToLoggingContext
@@ -64,6 +67,15 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
             logger.info("Successfully received fully signed tx. Sending it to the vault for processing.")
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Successfully recorded received transaction locally.")
+        } else {
+            logger.info("Successfully received non final tx. Recording it as unverified to let us recover from denial of state scenarios.")
+            serviceHub.recordUnverifiedTransaction(stx)
+
+            // Force checkpoint to ensure that all data is flushed to the database.
+            val fiber = (Strand.currentStrand() as? FlowStateMachine<*>)
+            fiber!!.suspend(FlowIORequest.ForceCheckpoint, false)
+
+            logger.info("Successfully recorded non final tx as unverified.")
         }
         return stx
     }

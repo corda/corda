@@ -35,6 +35,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     @Suppress("MagicNumber") // database column width
     @Entity
+    @NamedQueries(
+        NamedQuery(
+            name = "DBTransaction.findUnverifiedTransactions",
+            query = "select it.txId FROM net.corda.node.services.persistence.DBTransactionStorage\$DBTransaction it " +
+                    "WHERE it.timestamp <=:olderThanTimestamp and it.timestamp >= :youngerThanTimestamp and it.status='U' ORDER BY it.timestamp ASC"
+        )
+    )
+
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
     class DBTransaction(
             @Id
@@ -148,12 +156,13 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     private val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
 
-    private fun updateTransaction(txId: SecureHash): Boolean {
+    private fun updateTransaction(txId: SecureHash, cachedTransaction: TxCacheValue): Boolean {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
         criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+        criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::transaction.name), cachedTransaction.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
         criteriaUpdate.where(criteriaBuilder.and(
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
                 criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
@@ -168,7 +177,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         return database.transaction {
             txStorage.locked {
                 val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED)
-                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateTransaction(k) }
+                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, v -> updateTransaction(k, v) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
                     onNewTx(transaction)
