@@ -22,6 +22,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.*
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
+import net.corda.node.internal.shell.InteractiveShell
 import net.corda.node.internal.subcommands.*
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
@@ -247,23 +248,7 @@ open class NodeStartup : NodeStartupLogging {
                 // Don't start the shell if there's no console attached.
                 // Look for shell here??
                 if (node.configuration.shouldStartLocalShell()) {
-                    val uriToShellJar = Paths.get("${cmdLineOptions.baseDirectory}/drivers/corda-shell-cli-4.8.jar").toUri()
-                    if (File(uriToShellJar).exists()) {
-                        try {
-                            // use File to check that the jar exists then create the classloader etc if it does
-                            // then don't swallow the class not found as that now indicates an error
-                            // need to use the right release version?
-                            val classloader = URLClassLoader(arrayOf(uriToShellJar.toURL()), javaClass.classLoader)
-                            val clazz = classloader.loadClass("net.corda.tools.shell.InteractiveShell")
-                            val instance = clazz.getDeclaredConstructor()
-                                .apply { this.isAccessible = true }
-                                .newInstance()
-                            clazz.getDeclaredMethod("runLocalShell", Function0::class.java).invoke(instance, node::stop)
-                            logger.info("INTERACTIVE SHELL STARTED")
-                        } catch (e: Exception) {
-                            logger.error("Shell failed to start", e)
-                        }
-                    }
+                    InteractiveShell.runLocalShellIfInstalled(node.configuration.baseDirectory, node::stop)
                 }
                 if (node.configuration.shouldStartSSHDaemon()) {
                     Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
