@@ -8,6 +8,8 @@ import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
 import net.corda.common.logging.errorReporting.CordaErrorContextProvider
 import net.corda.common.logging.errorReporting.ErrorCode
+import net.corda.common.logging.errorReporting.ErrorReporting
+import net.corda.common.logging.errorReporting.report
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
@@ -18,8 +20,6 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.common.logging.errorReporting.ErrorReporting
-import net.corda.common.logging.errorReporting.report
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.internal.subcommands.*
@@ -33,17 +33,18 @@ import net.corda.nodeapi.internal.JVMAgentUtilities
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
-import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
+import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.lang.NullPointerException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
+import java.net.URLClassLoader
 import java.nio.channels.UnresolvedAddressException
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import java.util.function.Consumer
@@ -236,29 +237,41 @@ open class NodeStartup : NodeStartupLogging {
         val loadedCodapps = node.services.cordappProvider.cordapps.filter { it.isLoaded }
         logLoadedCorDapps(loadedCodapps)
 
-        node.nodeReadyFuture.thenMatch({
-            // Elapsed time in seconds. We used 10 / 100.0 and not directly / 1000.0 to only keep two decimal digits.
-            val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
-            Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
+        node.nodeReadyFuture.thenMatch(
+            {
+                // Elapsed time in seconds. We used 10 / 100.0 and not directly / 1000.0 to only keep two decimal digits.
+                val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
+                val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
+                Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
-            // Don't start the shell if there's no console attached.
-            if (node.configuration.shouldStartLocalShell()) {
-                node.startupComplete.then {
-                    try {
-                        InteractiveShell.runLocalShell(node::stop)
-                    } catch (e: Exception) {
-                        logger.error("Shell failed to start", e)
+                // Don't start the shell if there's no console attached.
+                // Look for shell here??
+                if (node.configuration.shouldStartLocalShell()) {
+                    val uriToShellJar = Paths.get("${cmdLineOptions.baseDirectory}/drivers/corda-shell-cli-4.8.jar").toUri()
+                    if (File(uriToShellJar).exists()) {
+                        try {
+                            // use File to check that the jar exists then create the classloader etc if it does
+                            // then don't swallow the class not found as that now indicates an error
+                            // need to use the right release version?
+                            val classloader = URLClassLoader(arrayOf(uriToShellJar.toURL()), javaClass.classLoader)
+                            val clazz = classloader.loadClass("net.corda.tools.shell.InteractiveShell")
+                            val instance = clazz.getDeclaredConstructor()
+                                .apply { this.isAccessible = true }
+                                .newInstance()
+                            clazz.getDeclaredMethod("runLocalShell", Function0::class.java).invoke(instance, node::stop)
+                            logger.info("INTERACTIVE SHELL STARTED")
+                        } catch (e: Exception) {
+                            logger.error("Shell failed to start", e)
+                        }
                     }
                 }
-            }
-            if (node.configuration.shouldStartSSHDaemon()) {
-                Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
-            }
-        },
-                { th ->
-                    logger.error("Unexpected exception during registration", th)
-                })
+                if (node.configuration.shouldStartSSHDaemon()) {
+                    Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
+                }
+            },
+            { th ->
+                logger.error("Unexpected exception during registration", th)
+            })
         node.run()
     }
 
