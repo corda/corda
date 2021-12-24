@@ -13,11 +13,13 @@ object InteractiveShell {
 
     private val log = LoggerFactory.getLogger(InteractiveShell::class.java)
 
+    // need to use the right release version?
     private const val SHELL_JAR_PATH = "drivers/corda-shell-4.8.jar"
 
     private const val INTERACTIVE_SHELL_CLASS = "net.corda.tools.shell.InteractiveShell"
     private const val CRASH_COMMAND_CLASS = "org.crsh.ssh.term.CRaSHCommand"
 
+    private const val START_SHELL_METHOD = "startShell"
     private const val RUN_LOCAL_SHELL_METHOD = "runLocalShell"
     private const val SET_USER_INFO_METHOD = "setUserInfo"
 
@@ -25,7 +27,6 @@ object InteractiveShell {
         val uriToShellJar = Paths.get("${configuration.baseDirectory}/$SHELL_JAR_PATH").toUri()
         if (File(uriToShellJar).exists()) {
             try {
-                // need to use the right release version?
                 val classLoader = URLClassLoader(arrayOf(uriToShellJar.toURL()), javaClass.classLoader)
                 setUnsafeUsers(classLoader, configuration)
                 startShell(classLoader, shellConfiguration, cordappLoader)
@@ -35,13 +36,14 @@ object InteractiveShell {
         }
     }
 
+    /**
+     * Only call this after [startShellIfInstalled] has been called or the required classes will not be loaded into the current classloader.
+     */
     fun runLocalShellIfInstalled(baseDirectory: Path, onExit: () -> Unit = {}) {
         val uriToShellJar = Paths.get("$baseDirectory/$SHELL_JAR_PATH").toUri()
         if (File(uriToShellJar).exists()) {
             try {
-                // need to use the right release version?
-                val classLoader = URLClassLoader(arrayOf(uriToShellJar.toURL()), javaClass.classLoader)
-                runLocalShell(classLoader, onExit)
+                runLocalShell(javaClass.classLoader, onExit)
             } catch (e: Exception) {
                 log.error("Shell failed to start", e)
             }
@@ -49,9 +51,9 @@ object InteractiveShell {
     }
 
     private fun setUnsafeUsers(classLoader: ClassLoader, configuration: NodeConfiguration) {
-        val clazz1 = classLoader.loadClass(CRASH_COMMAND_CLASS)
         val unsafeUsers = determineUnsafeUsers(configuration)
-        clazz1.getDeclaredMethod(SET_USER_INFO_METHOD, Set::class.java, Boolean::class.java, Boolean::class.java)
+        val clazz = classLoader.loadClass(CRASH_COMMAND_CLASS)
+        clazz.getDeclaredMethod(SET_USER_INFO_METHOD, Set::class.java, Boolean::class.java, Boolean::class.java)
             .invoke(null, unsafeUsers, true, false)
         log.info("Setting unsafe users as: $unsafeUsers")
     }
@@ -61,13 +63,14 @@ object InteractiveShell {
         val instance = clazz.getDeclaredConstructor()
             .apply { this.isAccessible = true }
             .newInstance()
-        clazz.getDeclaredMethod("startShell", Map::class.java, ClassLoader::class.java, Boolean::class.java)
+        clazz.getDeclaredMethod(START_SHELL_METHOD, Map::class.java, ClassLoader::class.java, Boolean::class.java)
             .invoke(instance, shellConfiguration, cordappLoader.appClassLoader, false)
         log.info("INTERACTIVE SHELL STARTED ABSTRACT NODE")
     }
 
     private fun runLocalShell(classLoader: ClassLoader, onExit: () -> Unit = {}) {
         val clazz = classLoader.loadClass(INTERACTIVE_SHELL_CLASS)
+        // Gets the existing instance created by [startShell] as [InteractiveShell] is a static instance
         val instance = clazz.getDeclaredConstructor()
             .apply { this.isAccessible = true }
             .newInstance()
