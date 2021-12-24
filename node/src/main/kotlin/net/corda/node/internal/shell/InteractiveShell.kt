@@ -13,7 +13,7 @@ object InteractiveShell {
 
     private val log = LoggerFactory.getLogger(InteractiveShell::class.java)
 
-    private const val SHELL_JAR_PATH = "drivers/corda-shell-cli-4.8.jar"
+    private const val SHELL_JAR_PATH = "drivers/corda-shell-4.8.jar"
 
     private const val INTERACTIVE_SHELL_CLASS = "net.corda.tools.shell.InteractiveShell"
     private const val CRASH_COMMAND_CLASS = "org.crsh.ssh.term.CRaSHCommand"
