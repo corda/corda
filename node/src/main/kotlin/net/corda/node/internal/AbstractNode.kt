@@ -100,7 +100,7 @@ import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shell.determineUnsafeUsers
-import net.corda.node.services.config.shell.toShellConfig
+import net.corda.node.services.config.shell.toShellConfigMap
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.diagnostics.NodeDiagnosticsService
 import net.corda.node.services.events.NodeSchedulerService
@@ -166,14 +166,16 @@ import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
-import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
+import java.io.File
 import java.lang.reflect.InvocationTargetException
+import java.net.URLClassLoader
 import java.net.URLConnection
+import java.nio.file.Paths
 import java.sql.Connection
 import java.sql.Savepoint
 import java.time.Clock
@@ -689,16 +691,35 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
-            val shellConfiguration = configuration.toShellConfig()
-            shellConfiguration.sshdPort?.let {
+            val shellConfiguration = configuration.toShellConfigMap()
+            shellConfiguration["sshdPort"]?.let {
                 log.info("Binding Shell SSHD server on port $it.")
             }
+            val uriToShellJar = Paths.get("${configuration.baseDirectory}/drivers/corda-shell-cli-4.8.jar").toUri()
+            if (File(uriToShellJar).exists()) {
+                try {
+                    // use File to check that the jar exists then create the classloader etc if it does
+                    // then don't swallow the class not found as that now indicates an error
+                    // need to use the right release version?
+                    val classloader = URLClassLoader(arrayOf(uriToShellJar.toURL()), javaClass.classLoader)
 
-            val unsafeUsers = determineUnsafeUsers(configuration)
-            org.crsh.ssh.term.CRaSHCommand.setUserInfo(unsafeUsers, true, false)
-            log.info("Setting unsafe users as: ${unsafeUsers}")
+                    val clazz1 = classloader.loadClass("org.crsh.ssh.term.CRaSHCommand")
+                    val unsafeUsers = determineUnsafeUsers(configuration)
+                    clazz1.getDeclaredMethod("setUserInfo", Set::class.java, Boolean::class.java, Boolean::class.java)
+                        .invoke(null, unsafeUsers, true, false)
+                    log.info("Setting unsafe users as: $unsafeUsers")
 
-            InteractiveShell.startShell(shellConfiguration, cordappLoader.appClassLoader)
+                    val clazz = classloader.loadClass("net.corda.tools.shell.InteractiveShell")
+                    val instance = clazz.getDeclaredConstructor()
+                        .apply { this.isAccessible = true }
+                        .newInstance()
+                    clazz.getDeclaredMethod("startShell", Map::class.java, ClassLoader::class.java, Boolean::class.java)
+                        .invoke(instance, shellConfiguration, cordappLoader.appClassLoader, false)
+                    log.info("INTERACTIVE SHELL STARTED ABSTRACT NODE")
+                } catch (e: Exception) {
+                    log.error("Shell failed to start", e)
+                }
+            }
         }
     }
 

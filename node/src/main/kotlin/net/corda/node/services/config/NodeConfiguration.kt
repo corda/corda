@@ -11,17 +11,18 @@ import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
+import net.corda.node.services.config.shell.SSHDConfiguration
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
-import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
-import java.util.*
+import java.util.Properties
+import java.util.UUID
 import javax.security.auth.x500.X500Principal
 
 val Int.MB: Long get() = this * 1024L * 1024L
