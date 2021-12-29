@@ -10,10 +10,10 @@ import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.node.services.config.shell.SSHDConfiguration
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
