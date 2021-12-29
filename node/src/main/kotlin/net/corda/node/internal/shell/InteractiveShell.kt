@@ -13,9 +13,6 @@ object InteractiveShell {
 
     private val log = LoggerFactory.getLogger(InteractiveShell::class.java)
 
-    // need to use the right release version?
-    private const val SHELL_JAR_PATH = "drivers/corda-shell-4.8.jar"
-
     private const val INTERACTIVE_SHELL_CLASS = "net.corda.tools.shell.InteractiveShell"
     private const val CRASH_COMMAND_CLASS = "org.crsh.ssh.term.CRaSHCommand"
 
@@ -24,10 +21,10 @@ object InteractiveShell {
     private const val SET_USER_INFO_METHOD = "setUserInfo"
 
     fun startShellIfInstalled(configuration: NodeConfiguration, shellConfiguration: Map<String, Any?>, cordappLoader: CordappLoader) {
-        val uriToShellJar = Paths.get("${configuration.baseDirectory}/$SHELL_JAR_PATH").toUri()
-        if (File(uriToShellJar).exists()) {
+        val shellJar = getSingleShellJarInDriversDirectory(configuration.baseDirectory)
+        if (shellJar != null) {
             try {
-                val classLoader = URLClassLoader(arrayOf(uriToShellJar.toURL()), javaClass.classLoader)
+                val classLoader = URLClassLoader(arrayOf(shellJar.toPath().toUri().toURL()), javaClass.classLoader)
                 setUnsafeUsers(classLoader, configuration)
                 startShell(classLoader, shellConfiguration, cordappLoader)
             } catch (e: Exception) {
@@ -40,13 +37,34 @@ object InteractiveShell {
      * Only call this after [startShellIfInstalled] has been called or the required classes will not be loaded into the current classloader.
      */
     fun runLocalShellIfInstalled(baseDirectory: Path, onExit: () -> Unit = {}) {
-        val uriToShellJar = Paths.get("$baseDirectory/$SHELL_JAR_PATH").toUri()
-        if (File(uriToShellJar).exists()) {
+        val shellJar = getSingleShellJarInDriversDirectory(baseDirectory)
+        if (shellJar != null) {
             try {
                 runLocalShell(javaClass.classLoader, onExit)
             } catch (e: Exception) {
                 log.error("Shell failed to start", e)
             }
+        }
+    }
+
+    private fun getSingleShellJarInDriversDirectory(baseDirectory: Path): File? {
+        val uriToDriversDirectory = Paths.get("${baseDirectory}/drivers").toUri()
+        val files = File(uriToDriversDirectory)
+            .listFiles()
+            ?.filter { "corda-shell" in it.name }
+            ?.filter { "jar" == it.extension }
+            ?: emptyList()
+
+        return if (files.isNotEmpty()) {
+            check(files.size == 1) {
+                ("More than one corda-shell jar installed in /drivers directory. " +
+                        "Remove all corda-shell jars except for the one that should be used").also {
+                    log.error(it)
+                }
+            }
+            files.single()
+        } else {
+            null
         }
     }
 
