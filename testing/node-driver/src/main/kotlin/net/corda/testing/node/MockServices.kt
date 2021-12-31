@@ -430,6 +430,9 @@ open class MockServices private constructor(
             (validatedTransactions as WritableTransactionStorage).addTransaction(it)
         }
     }
+    override fun recordUnverifiedTransaction(tx: SignedTransaction) {
+        (validatedTransactions as WritableTransactionStorage).addUnverifiedTransaction(tx)
+    }
 
     override val networkParameters: NetworkParameters
         get() = networkParametersService.run { lookup(currentHash)!! }
