@@ -166,8 +166,10 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 database
         )
     }
-    override fun recordUnverifiedTransaction(tx: SignedTransaction) {
-        validatedTransactions.addUnverifiedTransaction(tx)
+    override fun recordUnverifiedTransactions(txs: Iterable<SignedTransaction>) {
+        txs.forEach {
+            validatedTransactions.addUnverifiedTransaction(it)
+        }
     }
 
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)

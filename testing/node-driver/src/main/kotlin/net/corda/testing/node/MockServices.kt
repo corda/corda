@@ -430,8 +430,10 @@ open class MockServices private constructor(
             (validatedTransactions as WritableTransactionStorage).addTransaction(it)
         }
     }
-    override fun recordUnverifiedTransaction(tx: SignedTransaction) {
-        (validatedTransactions as WritableTransactionStorage).addUnverifiedTransaction(tx)
+    override fun recordUnverifiedTransactions(txs: Iterable<SignedTransaction>) {
+        txs.forEach {
+            (validatedTransactions as WritableTransactionStorage).addUnverifiedTransaction(it)
+        }
     }
 
     override val networkParameters: NetworkParameters
