@@ -64,18 +64,18 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
             // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
             // there are no missing signatures. We don't want partly signed stuff in the vault.
             checkBeforeRecording(stx)
-            logger.info("Successfully received fully signed tx. Sending it to the vault for processing.")
+            logger.info("Successfully received fully signed transaction. Sending it to the vault for processing.")
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Successfully recorded received transaction locally.")
         } else {
-            logger.info("Successfully received non final tx. Recording it as unverified to let us recover from denial of state scenarios.")
-            serviceHub.recordUnverifiedTransaction(stx)
+            logger.info("Successfully received partially signed transaction. Recording it as unverified to let us recover from denial of state scenarios.")
+            serviceHub.recordUnverifiedTransactions(stx)
 
             // Force checkpoint to ensure that all data is flushed to the database.
             val fiber = (Strand.currentStrand() as? FlowStateMachine<*>)
             fiber!!.suspend(FlowIORequest.ForceCheckpoint, false)
 
-            logger.info("Successfully recorded non final tx as unverified.")
+            logger.info("Successfully recorded partially signed transaction as unverified.")
         }
         return stx
     }
