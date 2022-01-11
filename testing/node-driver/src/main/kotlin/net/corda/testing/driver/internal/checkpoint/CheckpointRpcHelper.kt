@@ -1,6 +1,6 @@
 package net.corda.testing.driver.internal.checkpoint
 
-import net.corda.core.internal.messaging.FlowManagerRPCOps
+import net.corda.core.messaging.flows.FlowManagerRPCOps
 import net.corda.testing.driver.NodeHandle
 
 object CheckpointRpcHelper {

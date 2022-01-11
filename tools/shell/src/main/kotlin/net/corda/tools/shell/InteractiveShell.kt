@@ -25,7 +25,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
-import net.corda.core.internal.messaging.FlowManagerRPCOps
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.rootCause
 import net.corda.core.internal.uncheckedCast
@@ -33,6 +32,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.flows.FlowManagerRPCOps
 import net.corda.core.messaging.pendingFlowsCount
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
