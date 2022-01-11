@@ -47,6 +47,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     companion object {
         private const val CORDA_AMQP_FRAME_SIZE_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpMaxFrameSize"
         private const val CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpIdleTimeout"
+        private const val CREATE_ADDRESS_PERMISSION_ERROR = "AMQ119032"
 
         private val MAX_FRAME_SIZE = Integer.getInteger(CORDA_AMQP_FRAME_SIZE_PROP_NAME, 128 * 1024)
         private val IDLE_TIMEOUT = Integer.getInteger(CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME, 10 * 1000)
@@ -350,8 +351,18 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
 
     override fun onLinkRemoteClose(e: Event) {
         val link = e.link
-        if(link.remoteCondition != null) {
-            logWarnWithMDC("Connection closed due to error on remote side: `${link.remoteCondition.description}`")
+        if (link.remoteCondition != null) {
+            val remoteConditionDescription = link.remoteCondition.description
+            logWarnWithMDC("Connection closed due to error on remote side: `$remoteConditionDescription`")
+            if (remoteConditionDescription.contains(CREATE_ADDRESS_PERMISSION_ERROR)) {
+                val remoteP2PAddress = e.sender.source.address
+                logWarnWithMDC("Address does not exist on peer: $remoteP2PAddress. Marking messages sent to this address as Acknowledged.")
+                messageQueues[remoteP2PAddress]?.apply {
+                    forEach { it.doComplete(MessageStatus.Acknowledged) }
+                    clear()
+                }
+            }
+
             transport.condition = link.condition
             transport.close_tail()
             transport.pop(Math.max(0, transport.pending())) // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
