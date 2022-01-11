@@ -39,13 +39,13 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
-import net.corda.core.internal.messaging.FlowManagerRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
+import net.corda.core.messaging.flows.FlowManagerRPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -179,7 +179,8 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.ArrayList
+import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -404,23 +405,21 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [RPCOps] interfaces used by this node. */
+    @Suppress("DEPRECATION")
     open fun makeRPCOps(cordappLoader: CordappLoader): List<RPCOps> {
-        val cordaRPCOpsImpl = Pair(CordaRPCOps::class.java, CordaRPCOpsImpl(
-                services,
-                smm,
-                flowStarter
-        ) {
-            shutdownExecutor.submit(::stop)
-        }.also { it.closeOnStop() })
+        val cordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit(::stop) }
+        cordaRPCOps.closeOnStop()
+        val flowManagerRPCOps = FlowManagerRPCOpsImpl(checkpointDumper)
+        val attachmentTrustInfoRPCOps = AttachmentTrustInfoRPCOpsImpl(services.attachmentTrustCalculator)
 
-        val checkpointRPCOpsImpl = Pair(FlowManagerRPCOps::class.java, FlowManagerRPCOpsImpl(checkpointDumper))
-
-        val attachmentTrustInfoRPCOps = Pair(AttachmentTrustInfoRPCOps::class.java, AttachmentTrustInfoRPCOpsImpl(services.attachmentTrustCalculator))
-
-        return listOf(cordaRPCOpsImpl, checkpointRPCOpsImpl, attachmentTrustInfoRPCOps).map { rpcOpsImplPair ->
+        return listOf(
+            CordaRPCOps::class.java to cordaRPCOps,
+            FlowManagerRPCOps::class.java to flowManagerRPCOps,
+            net.corda.core.internal.messaging.FlowManagerRPCOps::class.java to flowManagerRPCOps,
+            AttachmentTrustInfoRPCOps::class.java to attachmentTrustInfoRPCOps
+        ).map { (targetInterface, implementation) ->
             // Mind that order of proxies is important
-            val targetInterface = rpcOpsImplPair.first
-            val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(rpcOpsImplPair.second, targetInterface)
+            val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(implementation, targetInterface)
             val stage2Proxy = ThreadContextAdjustingRpcOpsProxy.proxy(stage1Proxy, targetInterface, cordappLoader.appClassLoader)
 
             stage2Proxy

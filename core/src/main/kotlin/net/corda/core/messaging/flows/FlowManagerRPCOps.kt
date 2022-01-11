@@ -1,14 +1,10 @@
-package net.corda.core.internal.messaging
+package net.corda.core.messaging.flows
 
 import net.corda.core.messaging.RPCOps
 
 /**
  * RPC operations to perform operations related to flows including management of associated persistent states like checkpoints.
  */
-@Deprecated(
-    "A public version of this interface has been exposed that should be interacted with using the MultiRPCClient",
-    ReplaceWith("net.corda.core.messaging.flows.FlowManagerRPCOps")
-)
 interface FlowManagerRPCOps : RPCOps {
 
     /**
