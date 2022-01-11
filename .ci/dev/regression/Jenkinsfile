@@ -65,6 +65,7 @@ pipeline {
 
     parameters {
         choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
+        booleanParam defaultValue: true, description: 'Run tests during this build?', name: 'DO_TEST'
     }
 
     /*
@@ -91,6 +92,9 @@ pipeline {
         }
 
         stage('Stash') {
+            when {
+                expression { params.DO_TEST }
+            }
             steps {
                 stash name: 'compiled', useDefaultExcludes: false
             }
@@ -115,6 +119,10 @@ pipeline {
         }
 
         stage('All Tests') {
+            when {
+                expression { params.DO_TEST }
+                beforeAgent true
+            }
             parallel {
                 stage('Another agent') {
                     agent {
@@ -297,10 +305,12 @@ pipeline {
         always {
             script {
                 try {
-                    unstash 'allure-input'
-                    allure includeProperties: false,
-                            jdk: '',
-                            results: [[path: '**/allure-input']]
+                    if (params.DO_TEST) {
+                        unstash 'allure-input'
+                        allure includeProperties: false,
+                                jdk: '',
+                                results: [[path: '**/allure-input']]
+                    }
                 } catch (err) {
                     echo("Allure report generation failed: $err")
 
