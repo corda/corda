@@ -392,7 +392,7 @@ class ProtonWrapperTests {
     }
 
     @Test(timeout=300_000)
-    fun `Message sent from AMQP to non-existent Artemis inbox is acknowledged and client disconnects`() {
+    fun `Message sent from AMQP to non-existent Artemis inbox is marked as acknowledged to avoid infinite retries`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
         // AmqpClient is set to auto-reconnect, there might be multiple connect/disconnect rounds
