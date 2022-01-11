@@ -115,7 +115,10 @@ pipeline {
         }
 
         stage('All Tests') {
-            parallel {
+             when {
+                expression { return false }
+            	}
+	    parallel {
                 stage('Another agent') {
                     agent {
                         label 'standard'
