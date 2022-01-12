@@ -355,17 +355,26 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
             val remoteConditionDescription = link.remoteCondition.description
             logWarnWithMDC("Connection closed due to error on remote side: `$remoteConditionDescription`")
             if (remoteConditionDescription.contains(CREATE_ADDRESS_PERMISSION_ERROR)) {
-                val remoteP2PAddress = e.sender.source.address
-                logWarnWithMDC("Address does not exist on peer: $remoteP2PAddress. Marking messages sent to this address as Acknowledged.")
-                messageQueues[remoteP2PAddress]?.apply {
-                    forEach { it.doComplete(MessageStatus.Acknowledged) }
-                    clear()
-                }
+                handleRemoteCreatePermissionError(e)
             }
 
             transport.condition = link.condition
             transport.close_tail()
             transport.pop(Math.max(0, transport.pending())) // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
+        }
+    }
+
+    /**
+     * If an the artemis channel does not exist on the counterparty, then a create permission error is returned in the [event].
+     * Do not retry messages to this channel as it will result in an infinite loop of retries.
+     * Log the error, mark the messages as acknowledged and clear them from the message queue.
+     */
+    private fun handleRemoteCreatePermissionError(event: Event) {
+        val remoteP2PAddress = event.sender.source.address
+        logWarnWithMDC("Address does not exist on peer: $remoteP2PAddress. Marking messages sent to this address as Acknowledged.")
+        messageQueues[remoteP2PAddress]?.apply {
+            forEach { it.doComplete(MessageStatus.Acknowledged) }
+            clear()
         }
     }
 
