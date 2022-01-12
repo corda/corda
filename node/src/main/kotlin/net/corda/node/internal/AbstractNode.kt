@@ -83,6 +83,7 @@ import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
+import net.corda.node.internal.shell.InteractiveShell
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
@@ -99,8 +100,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.node.services.config.shell.determineUnsafeUsers
-import net.corda.node.services.config.shell.toShellConfig
+import net.corda.node.services.config.shell.toShellConfigMap
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.diagnostics.NodeDiagnosticsService
 import net.corda.node.services.events.NodeSchedulerService
@@ -166,7 +166,6 @@ import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
-import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
@@ -689,16 +688,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
-            val shellConfiguration = configuration.toShellConfig()
-            shellConfiguration.sshdPort?.let {
+            val shellConfiguration = configuration.toShellConfigMap()
+            shellConfiguration["sshdPort"]?.let {
                 log.info("Binding Shell SSHD server on port $it.")
             }
-
-            val unsafeUsers = determineUnsafeUsers(configuration)
-            org.crsh.ssh.term.CRaSHCommand.setUserInfo(unsafeUsers, true, false)
-            log.info("Setting unsafe users as: ${unsafeUsers}")
-
-            InteractiveShell.startShell(shellConfiguration, cordappLoader.appClassLoader)
+            InteractiveShell.startShellIfInstalled(configuration, shellConfiguration, cordappLoader)
         }
     }
 

@@ -1,4 +1,4 @@
-package net.corda.tools.shell
+package net.corda.node.services.config.shell
 
 data class SSHDConfiguration(val port: Int) {
     companion object {
@@ -11,7 +11,7 @@ data class SSHDConfiguration(val port: Int) {
          */
         @JvmStatic
         fun parse(str: String): SSHDConfiguration {
-            require(!str.isBlank()) { SSHDConfiguration.MISSING_PORT_FORMAT.format(str) }
+            require(str.isNotBlank()) { MISSING_PORT_FORMAT.format(str) }
             val port = try {
                 str.toInt()
             } catch (ex: NumberFormatException) {
