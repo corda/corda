@@ -31,6 +31,7 @@ import java.security.PublicKey
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.test.assertNotNull
 
 class CertificateRotationTest {
     private val ref = OpaqueBytes.of(0x01)
@@ -180,7 +181,7 @@ class CertificateRotationTest {
 
         advertiseNodesToNetwork(mockNet.defaultNotaryNode, bob2, charlie)
 
-        assertNull(bob2.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME))
+        assertNotNull(bob2.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME))
         assertNull(charlie.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME))
 
         bob2.services.startFlow(CashPaymentFlow(1000.DOLLARS, charlie.party, false))

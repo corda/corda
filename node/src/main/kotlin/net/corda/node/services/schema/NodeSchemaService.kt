@@ -14,6 +14,7 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.messaging.P2PMessageDeduplicator
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -50,6 +51,7 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
                     DBNetworkParametersStorage.PersistentNetworkParameters::class.java,
                     PublicKeyHashToExternalId::class.java
+                    PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java
             )) {
         override val migrationResource = "node-core.changelog-master"
     }
