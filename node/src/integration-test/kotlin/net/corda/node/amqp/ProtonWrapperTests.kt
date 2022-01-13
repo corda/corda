@@ -414,6 +414,7 @@ class ProtonWrapperTests {
         amqpClient.write(message)
         assertEquals(MessageStatus.Acknowledged, message.onComplete.get())
         assertTrue(connectedStack.contains(true))
+        assertEquals(1, connectedStack.size)
         amqpClient.stop()
         artemisClient.stop()
         server.stop()
