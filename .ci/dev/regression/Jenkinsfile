@@ -10,12 +10,7 @@
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
-String getBuildEdition() {
-    if (isReleaseTag || isReleaseCandidate) {
-        return "Corda Community Edition, built by R3"
-    } else {
-        return "Corda Open Source"
-    }
+def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Edition, built by R3" : "Corda Open Source"
 }
 
 /*
@@ -83,7 +78,7 @@ pipeline {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
-        CORDA_BUILD_EDITION = getBuildEdition()
+        CORDA_BUILD_EDITION = "${getBuildEdition}"
         DOCKER_URL = "https://index.docker.io/v1/"
     }
 
