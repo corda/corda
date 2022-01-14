@@ -11,10 +11,10 @@ boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
 String getBuildEdition() {
-    return if (isReleaseTag || isReleaseCandidate) {
-        "Corda Community Edition, built by R3"
+    if (isReleaseTag || isReleaseCandidate) {
+        return "Corda Community Edition, built by R3"
     } else {
-        "Corda Open Sauce"
+        return "Corda Open Source"
     }
 }
 
@@ -272,7 +272,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'corda-releases'
+                        repo: 'corda-dev'
                 )
                 rtGradleRun(
                         usesPlugin: true,
