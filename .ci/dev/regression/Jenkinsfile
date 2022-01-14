@@ -11,7 +11,6 @@ boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
 def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Edition, built by R3" : "Corda Open Source"
-}
 
 /*
 ** calculate the stage for NexusIQ evaluation
