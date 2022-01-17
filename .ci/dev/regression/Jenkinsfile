@@ -102,6 +102,7 @@ pipeline {
             }
         }
         stage('Sonatype Check') {
+        when { expression { false} }
             steps {
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
@@ -122,8 +123,9 @@ pipeline {
 
         stage('All Tests') {
             when {
-                expression { params.DO_TEST }
-                beforeAgent true
+                expression { false }
+//                 expression { params.DO_TEST }
+//                 beforeAgent true
             }
             parallel {
                 stage('Another agent') {
@@ -285,7 +287,8 @@ pipeline {
 
         stage('Publish Release Candidate to Internal Repository') {
             when {
-                expression { isReleaseCandidate }
+                expression { false }
+//                 expression { isReleaseCandidate }
             }
             steps {
                 withCredentials([
@@ -307,7 +310,8 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+                expression { false }
+//                 expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
             }
             steps {
                 withCredentials([
