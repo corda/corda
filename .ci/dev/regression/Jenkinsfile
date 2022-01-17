@@ -10,7 +10,7 @@
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
-def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Edition, built by R3" : "Corda Open Source"
+def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Edition" : "Corda Open Source"
 
 /*
 ** calculate the stage for NexusIQ evaluation
@@ -102,7 +102,6 @@ pipeline {
             }
         }
         stage('Sonatype Check') {
-        when { expression { false} }
             steps {
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
@@ -123,9 +122,8 @@ pipeline {
 
         stage('All Tests') {
             when {
-                expression { false }
-//                 expression { params.DO_TEST }
-//                 beforeAgent true
+                expression { params.DO_TEST }
+                beforeAgent true
             }
             parallel {
                 stage('Another agent') {
@@ -268,7 +266,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'corda-dev'
+                        repo: 'corda-releases'
                 )
                 rtGradleRun(
                         usesPlugin: true,
@@ -287,8 +285,7 @@ pipeline {
 
         stage('Publish Release Candidate to Internal Repository') {
             when {
-                expression { false }
-//                 expression { isReleaseCandidate }
+                expression { isReleaseCandidate }
             }
             steps {
                 withCredentials([
@@ -310,8 +307,7 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { false }
-//                 expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
             }
             steps {
                 withCredentials([
