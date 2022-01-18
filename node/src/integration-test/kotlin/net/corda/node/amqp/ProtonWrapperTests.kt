@@ -392,7 +392,7 @@ class ProtonWrapperTests {
     }
 
     @Test(timeout=300_000)
-	fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
+    fun `Message sent from AMQP to non-existent Artemis inbox is marked as acknowledged to avoid infinite retries`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
         // AmqpClient is set to auto-reconnect, there might be multiple connect/disconnect rounds
@@ -412,8 +412,9 @@ class ProtonWrapperTests {
         testProperty["TestProp"] = "1"
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)
-        assertEquals(MessageStatus.Rejected, message.onComplete.get())
-        assertTrue(connectedStack.contains(false))
+        assertEquals(MessageStatus.Acknowledged, message.onComplete.get())
+        assertTrue(connectedStack.contains(true))
+        assertEquals(1, connectedStack.size)
         amqpClient.stop()
         artemisClient.stop()
         server.stop()
