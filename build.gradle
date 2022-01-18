@@ -13,6 +13,7 @@ buildscript {
     ext.baseVersion = constants.getProperty("cordaVersion")
     ext.versionSuffix = constants.getProperty("versionSuffix")
 
+    ext.corda_build_edition = System.getenv("CORDA_BUILD_EDITION")?.trim() ?: "Corda Open Source"
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
@@ -329,7 +330,7 @@ allprojects {
             attributes('Corda-Release-Version': corda_release_version)
             attributes('Corda-Platform-Version': corda_platform_version)
             attributes('Corda-Revision': corda_revision)
-            attributes('Corda-Vendor': 'Corda Open Source')
+            attributes('Corda-Vendor': corda_build_edition)
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
             attributes('Corda-Docs-Link': corda_docs_link)
         }

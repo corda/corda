@@ -10,6 +10,7 @@
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
+def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Edition" : "Corda Open Source"
 
 /*
 ** calculate the stage for NexusIQ evaluation
@@ -76,6 +77,7 @@ pipeline {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_BUILD_EDITION = "${buildEdition}"
         DOCKER_URL = "https://index.docker.io/v1/"
     }
 
