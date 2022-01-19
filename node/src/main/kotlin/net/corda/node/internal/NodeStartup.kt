@@ -263,9 +263,8 @@ open class NodeStartup : NodeStartupLogging {
                 Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
                 // Don't start the shell if there's no console attached.
-                // Look for shell here??
                 if (node.configuration.shouldStartLocalShell()) {
-                    InteractiveShell.runLocalShellIfInstalled(node.configuration.baseDirectory, node::stop)
+                    InteractiveShell.runLocalShellIfInstalled(node::stop)
                 }
                 if (node.configuration.shouldStartSSHDaemon()) {
                     Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
