@@ -33,47 +33,34 @@ shadowJar {
 }
 
 enum ImageVariant {
-    UBUNTU_ZULU("zulu", "Dockerfile", "1.8"),
-    UBUNTU_ZULU_11("zulu", "Dockerfile11", "11"),
-    AL_CORRETTO("corretto", "DockerfileAL", "1.8"),
+    UBUNTU_ZULU("Dockerfile", "1.8", "zulu-openjdk8"),
+    UBUNTU_ZULU_11("Dockerfile11", "11", "zulu-openjdk11"),
+    AL_CORRETTO("DockerfileAL", "1.8", "amazonlinux2"),
     OFFICIAL(UBUNTU_ZULU)
 
-    String knownAs
     String dockerFile
     String javaVersion
-
-    String versionString(String baseTag, String version) {
-        return "${baseTag}-${knownAs}" +
-                (knownAs.isEmpty() ? "" : "-") +
-                "java${javaVersion}-" + version
-    }
+    String baseImgaeFullName
 
     ImageVariant(ImageVariant other) {
-        this.knownAs = other.knownAs
         this.dockerFile = other.dockerFile
         this.javaVersion = other.javaVersion
+        this.baseImgaeFullName = other.baseImgaeFullName
     }
 
-    ImageVariant(String knownAs, String dockerFile, String javaVersion) {
-        this.knownAs = knownAs
+    ImageVariant(String dockerFile, String javaVersion, String baseImgaeFullName) {
         this.dockerFile = dockerFile
         this.javaVersion = javaVersion
+        this.baseImgaeFullName = baseImgaeFullName
     }
 
     static final String getRepository(Project project) {
         return project.properties.getOrDefault("docker.image.repository", "corda/corda")
     }
 
-    static private final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-
-    def getName(Project project) {
-        return versionString(getRepository(project), project.version.toString().toLowerCase())
-    }
-
     Set<Identifier> buildTags(Project project) {
-        final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
-        return [suffix, "latest"].stream().map {
-            toAppend -> "${getName(project)}:${toAppend}".toString()
+        return ["${project.version.toString().toLowerCase()}-${baseImgaeFullName}"].stream().map {
+            toAppend -> "${getRepository(project)}:${toAppend}".toString()
         }.map(Identifier.&fromCompoundString).collect(Collectors.toSet())
     }
 
