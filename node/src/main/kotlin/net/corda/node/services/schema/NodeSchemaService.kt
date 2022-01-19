@@ -50,7 +50,7 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     PersistentIdentityService.PersistentHashToPublicKey::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
                     DBNetworkParametersStorage.PersistentNetworkParameters::class.java,
-                    PublicKeyHashToExternalId::class.java
+                    PublicKeyHashToExternalId::class.java,
                     PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java
             )) {
         override val migrationResource = "node-core.changelog-master"
