@@ -8,7 +8,6 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.utilities.seconds
