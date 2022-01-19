@@ -19,7 +19,7 @@ class ContractUpgradeServiceImpl(cacheFactory: NamedCacheFactory) : ContractUpgr
     @Table(name = "${NODE_DATABASE_PREFIX}contract_upgrades")
     class DBContractUpgrade(
             @Id
-            @Column(name = "state_ref", length = 96, nullable = false)
+            @Column(name = "state_ref", length = 176, nullable = false)
             var stateRef: String = "",
 
             /** refers to the UpgradedContract class name*/

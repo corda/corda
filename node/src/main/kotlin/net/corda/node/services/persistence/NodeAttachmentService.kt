@@ -16,6 +16,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.Version
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.utilities.ZipBombDetector
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
@@ -26,7 +27,6 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.InfrequentlyMutatedCache
-import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -34,6 +34,7 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
 import org.hibernate.query.Query
+import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -102,7 +103,7 @@ class NodeAttachmentService @JvmOverloads constructor(
                     throw SecurityException("Signed jar has been tampered with. Files ${allManifestEntries} have been removed.")
                 }
                 val extraSignableFiles = extraFilesNotFoundInEntries.filterNot { JarSignatureCollector.isNotSignable(it) }
-                if (extraSignableFiles.size > 0) {
+                if (extraSignableFiles.isNotEmpty()) {
                     throw SecurityException("Signed jar has been tampered with. Files ${extraSignableFiles} have been added to the JAR.")
                 }
             }
@@ -173,7 +174,7 @@ class NodeAttachmentService @JvmOverloads constructor(
      * this will provide an additional safety check against user error.
      */
     @VisibleForTesting
-    class HashCheckingStream(val expected: SecureHash.SHA256,
+    class HashCheckingStream(val expected: SecureHash,
                              val expectedSize: Int,
                              input: InputStream,
                              private val counter: CountingInputStream = CountingInputStream(input),
@@ -259,18 +260,6 @@ class NodeAttachmentService @JvmOverloads constructor(
             Token(id, checkOnLoad, uploader, signerKeys)
     }
 
-    // slightly complex 2 level approach to attachment caching:
-    // On the first level we cache attachment contents loaded from the DB by their key. This is a weight based
-    // cache (we don't want to waste too  much memory on this) and could be evicted quite aggressively. If we fail
-    // to load an attachment from the db, the loader will insert a non present optional - we invalidate this
-    // immediately as we definitely want to retry whether the attachment was just delayed.
-    // On the second level, we cache Attachment implementations that use the first cache to load their content
-    // when required. As these are fairly small, we can cache quite a lot of them, this will make checking
-    // repeatedly whether an attachment exists fairly cheap. Here as well, we evict non-existent entries immediately
-    // to force a recheck if required.
-    // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
-    // a problem somewhere else or this needs to be revisited.
-
     private val attachmentContentCache = NonInvalidatingWeightBasedCache(
             cacheFactory = cacheFactory,
             name = "NodeAttachmentService_attachmentContent",
@@ -288,7 +277,7 @@ class NodeAttachmentService @JvmOverloads constructor(
 
     private fun createAttachmentFromDatabase(attachment: DBAttachment): Attachment {
         val attachmentImpl = AttachmentImpl(
-            id = SecureHash.parse(attachment.attId),
+            id = SecureHash.create(attachment.attId),
             dataLoader = { attachment.content },
             checkOnLoad = checkAttachmentsOnLoad,
             uploader = attachment.uploader,
@@ -309,27 +298,13 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
     }
 
-    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
-            cacheFactory = cacheFactory,
-            name = "NodeAttachmentService_attachmentPresence",
-            loadFunction = { key -> Optional.ofNullable(createAttachment(key)) })
-
-    private fun createAttachment(key: SecureHash): Attachment? {
-        val content = attachmentContentCache.get(key)!!
+    override fun openAttachment(id: SecureHash): Attachment? {
+        val content = attachmentContentCache.get(id)!!
         if (content.isPresent) {
             return content.get().first
         }
         // If no attachment has been found, we don't want to cache that - it might arrive later.
-        attachmentContentCache.invalidate(key)
-        return null
-    }
-
-    override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = attachmentCache.get(id)!!
-        if (attachment.isPresent) {
-            return attachment.get()
-        }
-        attachmentCache.invalidate(id)
+        attachmentContentCache.invalidate(id)
         return null
     }
 
@@ -358,7 +333,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         return try {
             import(jar, uploader, filename)
         } catch (faee: java.nio.file.FileAlreadyExistsException) {
-            AttachmentId.parse(faee.message!!)
+            AttachmentId.create(faee.message!!)
         }
     }
 
@@ -394,6 +369,9 @@ class NodeAttachmentService @JvmOverloads constructor(
                 // set the hash field of the new attachment record.
 
                 val bytes = inputStream.readFully()
+                require(!ZipBombDetector.scanZip(ByteArrayInputStream(bytes), servicesForResolution.networkParameters.maxTransactionSize.toLong())) {
+                    "The attachment is too large and exceeds both max transaction size and the maximum allowed compression ratio"
+                }
                 val id = bytes.sha256()
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
@@ -426,7 +404,6 @@ class NodeAttachmentService @JvmOverloads constructor(
                         loadAttachmentContent(id)?.let { attachmentAndContent ->
                             // TODO: this is racey. ENT-2870
                             attachmentContentCache.put(id, Optional.of(attachmentAndContent))
-                            attachmentCache.put(id, Optional.of(attachmentAndContent.first))
                         }
                         return@withContractsInJar id
                     }
@@ -454,19 +431,40 @@ class NodeAttachmentService @JvmOverloads constructor(
         return try {
             import(jar, UNKNOWN_UPLOADER, null)
         } catch (faee: java.nio.file.FileAlreadyExistsException) {
-            AttachmentId.parse(faee.message!!)
+            AttachmentId.create(faee.message!!)
         }
     }
 
-    // TODO do not retrieve whole attachments only to return ids - https://r3-cev.atlassian.net/browse/CORDA-3191 raised to address this
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
         return database.transaction {
-            createAttachmentsQuery(
+            createAttachmentsIdsQuery(
                 criteria,
                 sorting
-            ).resultList.map { AttachmentId.parse(it.attId) }
+            ).resultList.map { AttachmentId.create(it) }
         }
+    }
+
+    private fun createAttachmentsIdsQuery(
+            criteria: AttachmentQueryCriteria,
+            sorting: AttachmentSort?
+    ): Query<String> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+
+        val criteriaQuery = criteriaBuilder.createQuery(String::class.java)
+        val root = criteriaQuery.from(DBAttachment::class.java)
+        criteriaQuery.select(root.get(DBAttachment::attId.name))
+
+        val criteriaParser = HibernateAttachmentQueryCriteriaParser<DBAttachment,String>(
+                criteriaBuilder,
+                criteriaQuery,
+                root
+        )
+        // parse criteria and build where predicates
+        criteriaParser.parse(criteria, sorting)
+        // prepare query for execution
+        return session.createQuery(criteriaQuery)
     }
 
     private fun createAttachmentsQuery(
@@ -477,11 +475,13 @@ class NodeAttachmentService @JvmOverloads constructor(
         val criteriaBuilder = session.criteriaBuilder
 
         val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+        val root = criteriaQuery.from(DBAttachment::class.java)
+        criteriaQuery.select(root)
 
-        val criteriaParser = HibernateAttachmentQueryCriteriaParser(
+        val criteriaParser = HibernateAttachmentQueryCriteriaParser<DBAttachment,DBAttachment>(
             criteriaBuilder,
             criteriaQuery,
-            criteriaQuery.from(DBAttachment::class.java)
+            root
         )
 
         // parse criteria and build where predicates
@@ -539,12 +539,12 @@ class NodeAttachmentService @JvmOverloads constructor(
     }
 
     private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>, contractClassName: String): Pair<Version, AttachmentIds> {
-        val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
+        val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.create(it.attId) }
         if (!devMode)
             check(signed.size <= 1) //sanity check
         else
             log.warn("(Dev Mode) Multiple signed attachments ${signed.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
-        val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
+        val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.create(it.attId) }
         if (unsigned.size > 1)
             log.warn("Selecting attachment ${unsigned.first()} from duplicated, unsigned attachments ${unsigned.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
         return it.key to AttachmentIds(signed.firstOrNull(), unsigned.firstOrNull())

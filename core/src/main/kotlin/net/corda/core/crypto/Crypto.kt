@@ -3,7 +3,6 @@ package net.corda.core.crypto
 import net.corda.core.CordaOID
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.StubOutForDJVM
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.internal.Instances.withSignature
 import net.corda.core.crypto.internal.`id-Curve25519ph`
@@ -36,6 +35,8 @@ import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.crypto.CryptoServicesRegistrar
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
@@ -108,7 +109,7 @@ object Crypto {
             AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256k1),
             listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256k1)),
             cordaBouncyCastleProvider.name,
-            "ECDSA",
+            "EC",
             "SHA256withECDSA",
             ECNamedCurveTable.getParameterSpec("secp256k1"),
             256,
@@ -123,7 +124,7 @@ object Crypto {
             AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256r1),
             listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256r1)),
             cordaBouncyCastleProvider.name,
-            "ECDSA",
+            "EC",
             "SHA256withECDSA",
             ECNamedCurveTable.getParameterSpec("secp256r1"),
             256,
@@ -220,11 +221,12 @@ object Crypto {
      * Map of supported digital signature schemes associated by [SignatureScheme.schemeNumberID].
      * SchemeNumberID is the scheme identifier attached to [SignatureMetadata].
      */
-    private val signatureSchemeNumberIDMap: Map<Int, SignatureScheme> = Crypto.supportedSignatureSchemes().associateBy { it.schemeNumberID }
+    private val signatureSchemeNumberIDMap: Map<Int, SignatureScheme> = supportedSignatureSchemes().associateBy { it.schemeNumberID }
 
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
 
+    @DeleteForDJVM
     @JvmStatic
     fun findProvider(name: String): Provider {
         return providerMap[name] ?: throw IllegalArgumentException("Unrecognised provider: $name")
@@ -303,17 +305,19 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
+    @DeleteForDJVM
     @JvmStatic
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
         if (keyInfo.privateKeyAlgorithm.algorithm == ASN1ObjectIdentifier(CordaOID.ALIAS_PRIVATE_KEY)) {
-            return decodeAliasPrivateKey(keyInfo)
+            return convertIfBCEdDSAPrivateKey(decodeAliasPrivateKey(keyInfo))
         }
         val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
         val keyFactory = keyFactory(signatureScheme)
-        return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+        return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
     }
 
+    @DeleteForDJVM
     private fun decodeAliasPrivateKey(keyInfo: PrivateKeyInfo): PrivateKey {
         val encodable = keyInfo.parsePrivateKey() as DLSequence
         val derutF8String = encodable.getObjectAt(0)
@@ -329,6 +333,7 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
+    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeySpecException::class)
     fun decodePrivateKey(schemeCodeName: String, encodedKey: ByteArray): PrivateKey {
@@ -351,7 +356,7 @@ object Crypto {
         }
         try {
             val keyFactory = keyFactory(signatureScheme)
-            return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+            return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that " +
                     "it corresponds to the input scheme's code name.", ikse)
@@ -370,7 +375,7 @@ object Crypto {
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
         val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
         val keyFactory = keyFactory(signatureScheme)
-        return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
+        return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
     }
 
     /**
@@ -405,9 +410,9 @@ object Crypto {
         }
         try {
             val keyFactory = keyFactory(signatureScheme)
-            return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
+            return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
         } catch (ikse: InvalidKeySpecException) {
-            throw throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and " +
+            throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and " +
                     "that it corresponds to the input scheme's code name.", ikse)
         }
     }
@@ -499,14 +504,14 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
-        val sigKey: SignatureScheme = Crypto.findSignatureScheme(keyPair.private)
-        val sigMetaData: SignatureScheme = Crypto.findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
+        val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
+        val sigMetaData: SignatureScheme = findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
         // Special handling if the advertised SignatureScheme is CompositeKey.
         // TODO fix notaries that advertise [CompositeKey] in their signature Metadata. Currently, clustered notary nodes
         //      mention Crypto.COMPOSITE_KEY in their SignatureMetadata, but they are actually signing with a leaf-key
         //      (and if they refer to it as a Composite key, then we lose info about the actual type of their signing key).
         //      In short, their metadata should be the leaf key-type, until we support CompositeKey signatures.
-        require(sigKey == sigMetaData || sigMetaData == Crypto.COMPOSITE_KEY) {
+        require(sigKey == sigMetaData || sigMetaData == COMPOSITE_KEY) {
             "Metadata schemeCodeName: ${sigMetaData.schemeCodeName} is not aligned with the key type: ${sigKey.schemeCodeName}."
         }
         val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, signableData.serialize().bytes)
@@ -601,7 +606,7 @@ object Crypto {
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
         val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
-        return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+        return doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
     /**
@@ -975,15 +980,6 @@ object Crypto {
     @JvmStatic
     fun validatePublicKey(key: PublicKey): Boolean = validatePublicKey(findSignatureScheme(key), key)
 
-    // Validate a key, by checking its algorithmic params.
-    private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
-        return when (key) {
-            is PublicKey -> validatePublicKey(signatureScheme, key)
-            is PrivateKey -> validatePrivateKey(signatureScheme, key)
-            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
-        }
-    }
-
     // Check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
         return when (key) {
@@ -994,13 +990,17 @@ object Crypto {
         }
     }
 
-    // Check if a private key satisfies algorithm specs.
-    private fun validatePrivateKey(signatureScheme: SignatureScheme, key: PrivateKey): Boolean {
+    private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
         return when (key) {
-            is BCECPrivateKey -> key.parameters == signatureScheme.algSpec
-            is EdDSAPrivateKey -> key.params == signatureScheme.algSpec
-            is BCRSAPrivateKey, is BCSphincs256PrivateKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
-            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
+            is BCEdDSAPublicKey -> EdDSAPublicKey(X509EncodedKeySpec(key.encoded))
+            else -> key
+        }
+    }
+
+    private fun convertIfBCEdDSAPrivateKey(key: PrivateKey): PrivateKey {
+        return when (key) {
+            is BCEdDSAPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
+            else -> key
         }
     }
 
@@ -1031,6 +1031,7 @@ object Crypto {
             is BCSphincs256PublicKey -> key
             is EdDSAPublicKey -> key
             is CompositeKey -> key
+            is BCEdDSAPublicKey -> convertIfBCEdDSAPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }
     }
@@ -1043,6 +1044,7 @@ object Crypto {
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for a supported key factory to produce a private key.
      */
+    @DeleteForDJVM
     @JvmStatic
     fun toSupportedPrivateKey(key: PrivateKey): PrivateKey {
         return when (key) {
@@ -1050,6 +1052,7 @@ object Crypto {
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
             is EdDSAPrivateKey -> key
+            is BCEdDSAPrivateKey -> convertIfBCEdDSAPrivateKey(key)
             else -> decodePrivateKey(key.encoded)
         }
     }
@@ -1064,7 +1067,7 @@ object Crypto {
         return if (partialMerkleTree != null) {
             val usedHashes = mutableListOf<SecureHash>()
             val root = PartialMerkleTree.rootAndUsedHashes(partialMerkleTree.root, usedHashes)
-            require(txId.sha256() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
+            require(txId.reHash() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
             root
         } else {
             txId
@@ -1078,6 +1081,7 @@ object Crypto {
      * CRL & CSR checks etc.).
      */
     // TODO: perform all cryptographic operations via Crypto.
+    @DeleteForDJVM
     @JvmStatic
     fun registerProviders() {
         providerMap
@@ -1088,7 +1092,7 @@ object Crypto {
         setBouncyCastleRNG()
     }
 
-    @StubOutForDJVM
+    @DeleteForDJVM
     private fun setBouncyCastleRNG() {
         CryptoServicesRegistrar.setSecureRandom(newSecureRandom())
     }

@@ -5,8 +5,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -19,6 +17,8 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.testing.node.InMemoryMessagingNetwork
 import java.time.Instant
 import java.util.*
@@ -28,7 +28,9 @@ import kotlin.concurrent.thread
 
 @ThreadSafe
 class MockNodeMessagingService(private val configuration: NodeConfiguration,
-                               private val executor: AffinityExecutor) : SingletonSerializeAsToken(), MessagingService {
+                               private val executor: AffinityExecutor,
+                               private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : SingletonSerializeAsToken(),
+        MessagingService, ServiceStateSupport by stateHelper {
     private companion object {
         private val log = contextLogger()
     }
@@ -37,8 +39,6 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
 
     @Volatile
     private var running = true
-
-    override val ready: OpenFuture<Void?> = openFuture()
 
     private inner class InnerState {
         val handlers: MutableList<Handler> = ArrayList()
@@ -57,6 +57,14 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     private var backgroundThread: Thread? = null
 
     var spy: MessagingServiceSpy? = null
+
+    override fun start() {
+        throw IllegalAccessException()
+    }
+
+    override fun stop() {
+        throw IllegalAccessException()
+    }
 
     /**
      * @param manuallyPumped if set to true, then you are expected to call [MockNodeMessagingService.pumpReceive]
@@ -89,7 +97,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         }
 
         network.addNotaryIdentity(this, notaryService)
-        ready.set(null)
+        stateHelper.active = true
     }
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
@@ -153,7 +161,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         }
     }
 
-    override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
+    override fun sendAll(addressedMessages: List<MessagingService.AddressedMessage>) {
         for ((message, target, sequenceKey) in addressedMessages) {
             send(message, target, sequenceKey)
         }
@@ -165,6 +173,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
             it.join()
         }
         running = false
+        stateHelper.active = false
         network.netNodeHasShutdown(myAddress)
     }
 

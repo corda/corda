@@ -3,7 +3,7 @@ package net.corda.node.internal
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
@@ -78,7 +78,7 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic.track()?.updates ?: Observable.empty()
+                progress = stateMachine.logic?.track()?.updates ?: Observable.empty()
         )
     }
 
@@ -95,7 +95,7 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
         }
     }
 
-    private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachine<T> {
+    private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachineHandle<T> {
         val logicType = flow.javaClass
         require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
         // TODO check service permissions

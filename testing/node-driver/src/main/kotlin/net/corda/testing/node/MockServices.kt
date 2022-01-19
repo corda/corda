@@ -6,12 +6,13 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -41,13 +42,15 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.ByteArrayOutputStream
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
@@ -99,9 +102,17 @@ open class MockServices private constructor(
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+            val dbDir = Paths.get("","build", "mocknetworktestdb", nodeName)
+                    .toAbsolutePath()
+            val dbPath = dbDir.resolve("persistence")
+            try {
+                DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
+            } catch (ex: java.nio.file.FileAlreadyExistsException) {
+                DriverDSLImpl.log.warn("Database already exists on disk, not attempting to pre-migrate database.")
+            }
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+            props.setProperty("dataSource.url", "jdbc:h2:file:$dbPath;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
             props.setProperty("dataSource.user", "sa")
             props.setProperty("dataSource.password", "")
             return props
@@ -127,7 +138,7 @@ open class MockServices private constructor(
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
+            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas)
             val keyManagementService = MockKeyManagementService(
                     identityService,
                     *arrayOf(initialIdentity.keyPair) + moreKeys
@@ -170,17 +181,20 @@ open class MockServices private constructor(
                     wellKnownPartyFromX500Name = identityService::wellKnownPartyFromX500Name,
                     wellKnownPartyFromAnonymous = identityService::wellKnownPartyFromAnonymous,
                     schemaService = schemaService,
-                    internalSchemas = schemaService.internalSchemas()
+                    internalSchemas = schemaService.internalSchemas
             )
 
             val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(persistence, cacheFactory)
 
             // Create a persistent identity service and add all the supplied identities.
             identityService.apply {
-                ourNames = setOf(initialIdentity.name)
                 database = persistence
-                start(DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
+                start(setOf(DEV_ROOT_CA.certificate), initialIdentity.identity, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
+            }
+            val networkMapCache = PersistentNetworkMapCache(cacheFactory, persistence, identityService)
+            (moreIdentities + initialIdentity.identity).forEach {
+                networkMapCache.addOrUpdateNode(NodeInfo(listOf(NetworkHostAndPort("localhost", 0)), listOf(it), PLATFORM_VERSION, 0))
             }
 
             // Create a persistent key management service and add the key pair which was created for the TestIdentity.
@@ -190,11 +204,11 @@ open class MockServices private constructor(
             val aliasedMoreKeys = moreKeys.mapIndexed { index, keyPair ->
                 val alias = "Extra key $index"
                 aliasKeyMap[alias] = keyPair
-                KeyPair(keyPair.public, AliasPrivateKey(alias))
-            }.toSet()
+                keyPair.public to alias
+            }
             val identityAlias = "${initialIdentity.name} private key"
             aliasKeyMap[identityAlias] = initialIdentity.keyPair
-            val aliasedIdentityKey = KeyPair(initialIdentity.publicKey, AliasPrivateKey(identityAlias))
+            val aliasedIdentityKey = initialIdentity.publicKey to identityAlias
             val keyManagementService = BasicHSMKeyManagementService(
                     TestingNamedCacheFactory(),
                     identityService,
@@ -223,6 +237,7 @@ open class MockServices private constructor(
                 override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                 override val vaultService: VaultService = makeVaultService(schemaService, persistence, cordappLoader)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+                    txs.forEach { requireSupportedHashType(it) }
                     ServiceHubInternal.recordTransactions(
                             statesToRecord,
                             txs as? Collection ?: txs.toList(),
@@ -236,11 +251,15 @@ open class MockServices private constructor(
                 override fun jdbcSession(): Connection = persistence.createSession()
 
                 override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-                    return block(contextTransaction.entityManager)
+                    return contextTransaction.entityManager.run {
+                        block(this).also { flush () }
+                    }
                 }
 
                 override fun withEntityManager(block: Consumer<EntityManager>) {
-                    return block.accept(contextTransaction.entityManager)
+                    return contextTransaction.entityManager.run {
+                        block.accept(this).also { flush () }
+                    }
                 }
             }
         }
@@ -357,7 +376,6 @@ open class MockServices private constructor(
     constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters)
             : this(cordappPackages, TestIdentity(initialIdentityName), identityService, networkParameters)
 
-
     constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters, key: KeyPair)
             : this(cordappPackages, TestIdentity(initialIdentityName, key), identityService, networkParameters)
 
@@ -428,11 +446,12 @@ open class MockServices private constructor(
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
         it.start()
     }
-    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(
-        numberOfWorkers = 2,
-        cordappProvider = mockCordappProvider,
-        attachments = attachments
-    )
+    override val transactionVerifierService: TransactionVerifierService
+        get() = InMemoryTransactionVerifierService(
+                numberOfWorkers = 2,
+                cordappProvider = mockCordappProvider,
+                attachments = attachments
+        )
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()

@@ -16,12 +16,12 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
-import net.corda.node.serialization.kryo.CordaClassResolver
-import net.corda.node.serialization.kryo.CordaKryo
+import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
+import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule

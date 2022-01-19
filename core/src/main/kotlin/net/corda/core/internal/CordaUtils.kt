@@ -28,7 +28,7 @@ import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
-const val PLATFORM_VERSION = 6
+const val PLATFORM_VERSION = 10
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
@@ -47,6 +47,20 @@ fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatform
 // JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)
 @Throws(NumberFormatException::class)
 fun getJavaUpdateVersion(javaVersion: String): Long = javaVersion.substringAfter("_").substringBefore("-").toLong()
+
+enum class JavaVersion(val versionString: String) {
+    Java_1_8("1.8"),
+    Java_11("11");
+
+    companion object {
+        fun isVersionAtLeast(version: JavaVersion): Boolean {
+            return currentVersion.toFloat() >= version.versionString.toFloat()
+        }
+
+        private val currentVersion: String = System.getProperty("java.specification.version") ?:
+                                               throw IllegalStateException("Unable to retrieve system property java.specification.version")
+    }
+}
 
 /** Provide access to internal method for AttachmentClassLoaderTests. */
 @DeleteForDJVM

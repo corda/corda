@@ -46,7 +46,7 @@ abstract class Transform : DescribedType {
          * descendants of this class
          */
         override fun newInstance(obj: Any?): Transform {
-            val described = Transform.checkDescribed(obj) as List<*>
+            val described = checkDescribed(obj) as List<*>
             return when (described[0]) {
                 EnumDefaultSchemaTransform.typeName -> EnumDefaultSchemaTransform.newInstance(described)
                 RenameSchemaTransform.typeName -> RenameSchemaTransform.newInstance(described)
@@ -195,18 +195,24 @@ object TransformsAnnotationProcessor {
      * Obtain all of the transforms applied for the given [Class].
      */
     fun getTransformsSchema(type: Class<*>): TransformsMap {
-        val result = TransformsMap(TransformTypes::class.java)
-        // We only have transforms for enums at present.
-        if (!type.isEnum) return result
+        return when {
+            // This only detects Enum classes that are outside the DJVM sandbox.
+            type.isEnum -> getEnumTransformsSchema(type)
 
+            // We only have transforms for enums at present.
+            else -> TransformsMap(TransformTypes::class.java)
+        }
+    }
+
+    fun getEnumTransformsSchema(type: Class<*>): TransformsMap {
+        val result = TransformsMap(TransformTypes::class.java)
         supportedTransforms.forEach { supportedTransform ->
             val annotationContainer = type.getAnnotation(supportedTransform.type) ?: return@forEach
             result.processAnnotations(
-                    type,
-                    supportedTransform.enum,
-                    supportedTransform.getAnnotations(annotationContainer))
+                type,
+                supportedTransform.enum,
+                supportedTransform.getAnnotations(annotationContainer))
         }
-
         return result
     }
 

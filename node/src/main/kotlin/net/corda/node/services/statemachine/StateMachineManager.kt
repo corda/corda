@@ -5,12 +5,14 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowHandleWithClientId
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
-import java.util.concurrent.Future
+import java.security.Principal
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -30,12 +32,18 @@ import java.util.concurrent.Future
  * TODO: Don't store all active flows in memory, load from the database on demand.
  */
 interface StateMachineManager {
+
+    enum class StartMode {
+        ExcludingPaused, // Resume all flows except paused flows.
+        Safe // Mark all flows as paused.
+    }
+
     /**
      * Starts the state machine manager, loading and starting the state machines in storage.
      *
      * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>) : CordaFuture<Unit>
+    fun start(tokenizableServices: List<Any>, startMode: StartMode = StartMode.ExcludingPaused) : () -> Unit
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
@@ -92,18 +100,49 @@ interface StateMachineManager {
      * Returns a snapshot of all [FlowStateMachineImpl]s currently managed.
      */
     fun snapshot(): Set<FlowStateMachineImpl<*>>
+
+    /**
+     * Reattach to an existing flow that was started with [startFlowDynamicWithClientId] and has a [clientId].
+     *
+     * If there is a flow matching the [clientId] then its result or exception is returned.
+     *
+     * When there is no flow matching the [clientId] then [null] is returned directly (not a future/[FlowHandleWithClientId]).
+     *
+     * Calling [reattachFlowWithClientId] after [removeClientId] with the same [clientId] will cause the function to return [null] as
+     * the result/exception of the flow will no longer be available.
+     *
+     * @param clientId The client id relating to an existing flow
+     */
+    fun <T> reattachFlowWithClientId(clientId: String, user: Principal): FlowStateMachineHandle<T>?
+
+    /**
+     * Removes a flow's [clientId] to result/ exception mapping.
+     *
+     * @return whether the mapping was removed.
+     */
+    fun removeClientId(clientId: String, user: Principal, isAdmin: Boolean): Boolean
+
+    /**
+     * Returns all finished flows that were started with a client id.
+     *
+     * @return A [Map] containing client ids for finished flows, mapped to [true] if finished successfully,
+     * [false] if completed exceptionally.
+     */
+    fun finishedFlowsWithClientIds(user: Principal, isAdmin: Boolean): Map<String, Boolean>
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
 // these functions again
-interface StateMachineManagerInternal {
+internal interface StateMachineManagerInternal {
     fun signalFlowHasStarted(flowId: StateMachineRunId)
     fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
     fun removeSessionBindings(sessionIds: Set<SessionId>)
     fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState)
+    fun moveFlowToPaused(currentState: StateMachineState)
     fun retryFlowFromSafePoint(currentState: StateMachineState)
     fun scheduleFlowTimeout(flowId: StateMachineRunId)
     fun cancelFlowTimeout(flowId: StateMachineRunId)
+    fun killFlowForcibly(flowId: StateMachineRunId): Boolean
 }
 
 /**
@@ -132,11 +171,11 @@ interface ExternalEvent {
         /**
          * A callback for the state machine to pass back the [CordaFuture] associated with the flow start to the submitter.
          */
-        fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>)
+        fun wireUpFuture(flowFuture: CordaFuture<out FlowStateMachineHandle<T>>)
 
         /**
          * The future representing the flow start, passed back from the state machine to the submitter of this event.
          */
-        val future: CordaFuture<FlowStateMachine<T>>
+        val future: CordaFuture<out FlowStateMachineHandle<T>>
     }
 }

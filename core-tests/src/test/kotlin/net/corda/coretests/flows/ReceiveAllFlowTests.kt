@@ -11,7 +11,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.flows.from
 import net.corda.testing.flows.receiveAll
 import net.corda.testing.flows.registerCordappFlowFactory
-import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willReturn
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import org.junit.AfterClass

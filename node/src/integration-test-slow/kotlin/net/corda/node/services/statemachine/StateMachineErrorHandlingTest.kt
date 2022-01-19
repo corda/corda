@@ -62,30 +62,49 @@ abstract class StateMachineErrorHandlingTest {
         }
     }
 
-    internal fun DriverDSL.createBytemanNode(
-        providedName: CordaX500Name,
+    internal fun DriverDSL.createBytemanNode(nodeProvidedName: CordaX500Name): Pair<NodeHandle, Int> {
+        val port = nextPort()
+        val bytemanNodeHandle = (this as InternalDriverDSL).startNode(
+            NodeParameters(
+                providedName = nodeProvidedName,
+                rpcUsers = listOf(rpcUser)
+            ),
+            bytemanPort = port
+        )
+        return bytemanNodeHandle.getOrThrow() to port
+    }
+
+    internal fun DriverDSL.createNode(nodeProvidedName: CordaX500Name): NodeHandle {
+        return (this as InternalDriverDSL).startNode(
+            NodeParameters(
+                providedName = nodeProvidedName,
+                rpcUsers = listOf(rpcUser)
+            )
+        ).getOrThrow()
+    }
+
+    internal fun DriverDSL.createNodeAndBytemanNode(
+        nodeProvidedName: CordaX500Name,
+        bytemanNodeProvidedName: CordaX500Name,
         additionalCordapps: Collection<TestCordapp> = emptyList()
-    ): Pair<NodeHandle, Int> {
+    ): Triple<NodeHandle, NodeHandle, Int> {
         val port = nextPort()
         val nodeHandle = (this as InternalDriverDSL).startNode(
             NodeParameters(
-                providedName = providedName,
+                providedName = nodeProvidedName,
+                rpcUsers = listOf(rpcUser),
+                additionalCordapps = additionalCordapps
+            )
+        )
+        val bytemanNodeHandle = startNode(
+            NodeParameters(
+                providedName = bytemanNodeProvidedName,
                 rpcUsers = listOf(rpcUser),
                 additionalCordapps = additionalCordapps
             ),
             bytemanPort = port
-        ).getOrThrow()
-        return nodeHandle to port
-    }
-
-    internal fun DriverDSL.createNode(providedName: CordaX500Name, additionalCordapps: Collection<TestCordapp> = emptyList()): NodeHandle {
-        return startNode(
-            NodeParameters(
-                providedName = providedName,
-                rpcUsers = listOf(rpcUser),
-                additionalCordapps = additionalCordapps
-            )
-        ).getOrThrow()
+        )
+        return Triple(nodeHandle.getOrThrow(), bytemanNodeHandle.getOrThrow(), port)
     }
 
     internal fun submitBytemanRules(rules: String, port: Int) {
@@ -93,11 +112,10 @@ abstract class StateMachineErrorHandlingTest {
         submit.addScripts(listOf(ScriptText("Test script", rules)))
     }
 
-    internal fun getBytemanOutput(nodeHandle: NodeHandle): List<String> {
-        return nodeHandle.baseDirectory
-            .list()
-            .first { it.toString().contains("net.corda.node.Corda") && it.toString().contains("stdout.log") }
-            .readAllLines()
+    private fun NodeHandle.getBytemanOutput(): List<String> {
+        return baseDirectory.list()
+            .filter { "net.corda.node.Corda" in it.toString() && "stdout.log" in it.toString() }
+            .flatMap { it.readAllLines() }
     }
 
     internal fun OutOfProcessImpl.stop(timeout: Duration): Boolean {
@@ -105,6 +123,10 @@ abstract class StateMachineErrorHandlingTest {
             destroy()
             waitFor(timeout.seconds, TimeUnit.SECONDS)
         }.also { onStopCallback() }
+    }
+
+    internal fun NodeHandle.assertBytemanOutput(string: String, count: Int) {
+        assertEquals(count, getBytemanOutput().filter { string in it }.size, "Expected message \"$string\" to be in byteman output")
     }
 
     @Suppress("LongParameterList")
@@ -127,9 +149,22 @@ abstract class StateMachineErrorHandlingTest {
 
     internal fun CordaRPCOps.assertHospitalCountsAllZero() = assertHospitalCounts()
 
-    internal fun CordaRPCOps.assertNumberOfCheckpoints(number: Long) {
-        assertEquals(number, startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+    internal fun CordaRPCOps.assertNumberOfCheckpoints(
+        runnable: Int = 0,
+        failed: Int = 0,
+        completed: Int = 0,
+        hospitalized: Int = 0,
+        killed: Int = 0
+    ) {
+        val counts = startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+        assertEquals(runnable, counts.runnable, "There should be $runnable runnable checkpoints")
+        assertEquals(failed, counts.failed, "There should be $failed failed checkpoints")
+        assertEquals(completed, counts.completed, "There should be $completed completed checkpoints")
+        assertEquals(hospitalized, counts.hospitalized, "There should be $hospitalized hospitalized checkpoints")
+        assertEquals(killed, counts.killed, "There should be $killed killed checkpoints")
     }
+
+    internal fun CordaRPCOps.assertNumberOfCheckpointsAllZero() = assertNumberOfCheckpoints()
 
     @StartableByRPC
     @InitiatingFlow
@@ -156,6 +191,7 @@ abstract class StateMachineErrorHandlingTest {
     class ThrowAnErrorFlow : FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
+            sleep(1.seconds)
             throwException()
             return "cant get here"
         }
@@ -181,22 +217,44 @@ abstract class StateMachineErrorHandlingTest {
     }
 
     @StartableByRPC
-    class GetNumberOfCheckpointsFlow : FlowLogic<Long>() {
-        override fun call(): Long {
-            return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints where checkpoint_id != ?")
-                .apply { setString(1, runId.uuid.toString()) }
+    class GetNumberOfCheckpointsFlow : FlowLogic<NumberOfCheckpoints>() {
+        override fun call() = NumberOfCheckpoints(
+            runnable = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.RUNNABLE),
+            failed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.FAILED),
+            completed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.COMPLETED),
+            hospitalized = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.HOSPITALIZED),
+            killed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.KILLED)
+        )
+
+        private fun getNumberOfCheckpointsWithStatus(status: Checkpoint.FlowStatus): Int {
+            return serviceHub.jdbcSession()
+                .prepareStatement("select count(*) from node_checkpoints where status = ? and flow_id != ?")
+                .apply {
+                    setInt(1, status.ordinal)
+                    setString(2, runId.uuid.toString())
+                }
                 .use { ps ->
                     ps.executeQuery().use { rs ->
                         rs.next()
                         rs.getLong(1)
                     }
-                }
+                }.toInt()
         }
     }
+
+    @CordaSerializable
+    data class NumberOfCheckpoints(
+        val runnable: Int = 0,
+        val failed: Int = 0,
+        val completed: Int = 0,
+        val hospitalized: Int = 0,
+        val killed: Int = 0
+    )
 
     // Internal use for testing only!!
     @StartableByRPC
     class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
+        @Suspendable
         override fun call(): HospitalCounts =
             HospitalCounts(
                 serviceHub.cordaService(HospitalCounter::class.java).dischargedCounter,
@@ -246,5 +304,13 @@ abstract class StateMachineErrorHandlingTest {
                 }
             }
         }
+    }
+
+    internal val actionExecutorClassName: String by lazy {
+        Class.forName("net.corda.node.services.statemachine.ActionExecutorImpl").name
+    }
+
+    internal val stateMachineManagerClassName: String by lazy {
+        Class.forName("net.corda.node.services.statemachine.SingleThreadedStateMachineManager").name
     }
 }

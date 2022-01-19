@@ -65,6 +65,9 @@ processSmokeTestResources {
     from(project(':finance:contracts').tasks['jar']) {
         rename '.*finance-contracts-.*', 'cordapp-finance-contracts.jar'
     }
+    from(project(':testing:cordapps:sleeping').tasks['jar']) {
+        rename 'testing-sleeping-cordapp-*', 'cordapp-sleeping.jar'
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -94,6 +97,7 @@ dependencies {
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile project(':finance:contracts')
     smokeTestCompile project(':finance:workflows')
+    smokeTestCompile project(':testing:cordapps:sleeping')
     smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
     smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
@@ -103,7 +107,7 @@ dependencies {
     smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // JDK11: required by Quasar at run-time
-    smokeTestRuntimeOnly "com.esotericsoftware:kryo:4.0.2"
+    smokeTestRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
 }
 
 task integrationTest(type: Test) {

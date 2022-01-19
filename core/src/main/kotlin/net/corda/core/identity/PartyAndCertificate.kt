@@ -42,8 +42,11 @@ class PartyAndCertificate(val certPath: CertPath) {
     override fun toString(): String = party.toString()
 
     /** Verify the certificate path is valid. */
-    fun verify(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult {
-        val result = certPath.validate(trustAnchor)
+    fun verify(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult = verify(setOf(trustAnchor))
+
+    /** Verify the certificate path is valid against one of the specified trust anchors. */
+    fun verify(trustAnchors: Set<TrustAnchor>): PKIXCertPathValidatorResult {
+        val result = certPath.validate(trustAnchors)
         // Apply Corda-specific validity rules to the chain. This only applies to chains with any roles present, so
         // an all-null chain is in theory valid.
         var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)

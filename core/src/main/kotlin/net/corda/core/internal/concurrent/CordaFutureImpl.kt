@@ -27,6 +27,12 @@ fun <V, W, X> CordaFuture<out V>.thenMatch(success: (V) -> W, failure: (Throwabl
 /** When this future is done and the outcome is failure, log the throwable. */
 fun CordaFuture<*>.andForget(log: Logger) = thenMatch({}, { log.error("Background task failed:", it) })
 
+/**
+ * Returns a future that will also apply the passed closure when it completes.
+ *
+ * @param accept A function to execute when completing the original future.
+ * @return A future returning the same result as the original future that this function was executed on.
+ */
 fun <RESULT> CordaFuture<out RESULT>.doOnComplete(accept: (RESULT) -> Unit): CordaFuture<RESULT> {
     return CordaFutureImpl<RESULT>().also { result ->
         thenMatch({
@@ -78,6 +84,7 @@ fun <ELEMENT> CordaFuture<out ELEMENT>.mapError(transform: (Throwable) -> Throwa
  * But if this future or the transform fails, the returned future's outcome is the same throwable.
  * In the case where this future fails, the transform is not invoked.
  */
+@Suppress("TooGenericExceptionCaught")
 fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): CordaFuture<W> = CordaFutureImpl<W>().also { result ->
     thenMatch(success@ {
         result.captureLater(try {
@@ -85,6 +92,9 @@ fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): Cor
         } catch (e: Exception) {
             result.setException(e)
             return@success
+        } catch (t: Throwable) {
+            result.setException(t)
+            throw t
         })
     }, {
         result.setException(it)
@@ -136,11 +146,15 @@ interface ValueOrException<in V> {
     fun captureLater(f: CordaFuture<out V>) = f.then { capture { f.getOrThrow() } }
 
     /** Run the given block (in the foreground) and set this future to its outcome. */
+    @Suppress("TooGenericExceptionCaught")
     fun capture(block: () -> V): Boolean {
         return set(try {
             block()
         } catch (e: Exception) {
             return setException(e)
+        } catch (t: Throwable) {
+            setException(t)
+            throw t
         })
     }
 }
@@ -160,12 +174,16 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
     override fun setException(t: Throwable) = impl.completeExceptionally(t)
     override fun <W> then(callback: (CordaFuture<V>) -> W) = thenImpl(defaultLog, callback)
     /** For testing only. */
+    @Suppress("TooGenericExceptionCaught")
     internal fun <W> thenImpl(log: Logger, callback: (CordaFuture<V>) -> W) {
         impl.whenComplete { _, _ ->
             try {
                 callback(this)
             } catch (e: Exception) {
                 log.error(listenerFailedMessage, e)
+            } catch (t: Throwable) {
+                log.error(listenerFailedMessage, t)
+                throw t
             }
         }
     }

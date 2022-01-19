@@ -3,32 +3,53 @@ package net.corda.coretests.transactions
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.SignatureAttachmentConstraint
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.digestService
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.core.*
-import net.corda.testing.internal.rigorousMock
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DummyCommandData
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
+import java.time.Instant
+import kotlin.test.assertFailsWith
 
 class TransactionBuilderTest {
     @Rule
@@ -50,6 +71,7 @@ class TransactionBuilderTest {
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         doReturn(networkParameters).whenever(services).networkParameters
+        doReturn(mock<IdentityService>()).whenever(services).identityService
 
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
@@ -150,4 +172,164 @@ class TransactionBuilderTest {
 
         override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }
     }, DummyContract.PROGRAM_ID, signerKeys = parties.map { it.owningKey })
+
+    @Test(timeout=300_000)
+    fun `list accessors are mutable copies`() {
+        val inputState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef1 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef1 = StateRef(SecureHash.randomSHA256(), 1)
+        val builder = TransactionBuilder(notary)
+                .addInputState(StateAndRef(inputState1, inputStateRef1))
+                .addAttachment(SecureHash.allOnesHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .addReferenceState(StateAndRef(referenceState1, referenceStateRef1).referenced())
+        val inputStateRef2 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceStateRef2 = StateRef(SecureHash.randomSHA256(), 1)
+
+        // List accessors are mutable.
+        assertThat((builder.inputStates() as ArrayList).also { it.add(inputStateRef2) }).hasSize(2)
+        assertThat((builder.attachments() as ArrayList).also { it.add(SecureHash.zeroHash) }).hasSize(2)
+        assertThat((builder.outputStates() as ArrayList).also { it.add(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)) }).hasSize(2)
+        assertThat((builder.commands() as ArrayList).also { it.add(Command(DummyCommandData, notary.owningKey)) }).hasSize(2)
+        assertThat((builder.referenceStates() as ArrayList).also { it.add(referenceStateRef2) }).hasSize(2)
+
+        // List accessors are copies.
+        assertThat(builder.inputStates()).hasSize(1)
+        assertThat(builder.attachments()).hasSize(1)
+        assertThat(builder.outputStates()).hasSize(1)
+        assertThat(builder.commands()).hasSize(1)
+        assertThat(builder.referenceStates()).hasSize(1)
+    }
+
+    @Test(timeout=300_000)
+    fun `copy makes copy except lockId`() {
+        val inputState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef = StateRef(SecureHash.randomSHA256(), 1)
+        val timeWindow = TimeWindow.untilOnly(Instant.now())
+        val builder = TransactionBuilder(notary)
+                .addInputState(StateAndRef(inputState, inputStateRef))
+                .addAttachment(SecureHash.allOnesHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .setTimeWindow(timeWindow)
+                .setPrivacySalt(PrivacySalt())
+                .addReferenceState(StateAndRef(referenceState, referenceStateRef).referenced())
+        val copy = builder.copy()
+
+        assertThat(builder.notary).isEqualTo(copy.notary)
+        assertThat(builder.lockId).isNotEqualTo(copy.lockId)
+        assertThat(builder.inputStates()).isEqualTo(copy.inputStates())
+        assertThat(builder.attachments()).isEqualTo(copy.attachments())
+        assertThat(builder.outputStates()).isEqualTo(copy.outputStates())
+        assertThat(builder.commands()).isEqualTo(copy.commands())
+//        assertThat(builder.timeWindow()).isEqualTo(copy.timeWindow())
+//        assertThat(builder.privacySalt()).isEqualTo(copy.privacySalt())
+        assertThat(builder.referenceStates()).isEqualTo(copy.referenceStates())
+    }
+
+    @Test(timeout=300_000)
+    fun `copy makes deep copy of lists`() {
+        val inputState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef1 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef1 = StateRef(SecureHash.randomSHA256(), 1)
+        val builder = TransactionBuilder(notary)
+                .addInputState(StateAndRef(inputState1, inputStateRef1))
+                .addAttachment(SecureHash.allOnesHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .addReferenceState(StateAndRef(referenceState1, referenceStateRef1).referenced())
+        val inputState2 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef2 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState2 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef2 = StateRef(SecureHash.randomSHA256(), 1)
+        val copy = builder.copy()
+                .addInputState(StateAndRef(inputState2, inputStateRef2))
+                .addAttachment(SecureHash.zeroHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .addReferenceState(StateAndRef(referenceState2, referenceStateRef2).referenced())
+
+        // Lists on the copy are longer
+        assertThat(copy.inputStates()).hasSize(2)
+        assertThat(copy.attachments()).hasSize(2)
+        assertThat(copy.outputStates()).hasSize(2)
+        assertThat(copy.commands()).hasSize(2)
+        assertThat(copy.referenceStates()).hasSize(2)
+
+        // Lists on the original are unchanged
+        assertThat(builder.inputStates()).hasSize(1)
+        assertThat(builder.attachments()).hasSize(1)
+        assertThat(builder.outputStates()).hasSize(1)
+        assertThat(builder.commands()).hasSize(1)
+        assertThat(builder.referenceStates()).hasSize(1)
+    }
+
+    @Ignore
+    @Test(timeout=300_000, expected = TransactionVerificationException.UnsupportedHashTypeException::class)
+    fun `throws with non-default hash algorithm`() {
+        HashAgility.init()
+        try {
+            val outputState = TransactionState(
+                    data = DummyState(),
+                    contract = DummyContract.PROGRAM_ID,
+                    notary = notary,
+                    constraint = HashAttachmentConstraint(contractAttachmentId)
+            )
+            val builder = TransactionBuilder(
+                    //privacySalt = DigestService.sha2_384.privacySalt,
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm))
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, notary.owningKey)
+
+            builder.toWireTransaction(services)
+        } finally {
+            HashAgility.init()
+        }
+    }
+
+    @Test(timeout=300_000, expected = Test.None::class)
+    fun `allows non-default hash algorithm`() {
+        HashAgility.init(txHashAlgoName = DigestService.sha2_384.hashAlgorithm)
+        assertThat(services.digestService).isEqualTo(DigestService.sha2_384)
+        try {
+            val outputState = TransactionState(
+                    data = DummyState(),
+                    contract = DummyContract.PROGRAM_ID,
+                    notary = notary,
+                    constraint = HashAttachmentConstraint(contractAttachmentId)
+            )
+            val builder = TransactionBuilder(
+                    //privacySalt = DigestService.sha2_384.privacySalt,
+                    privacySalt = PrivacySalt.createFor(DigestService.sha2_384.hashAlgorithm))
+                    .addOutputState(outputState)
+                    .addCommand(DummyCommandData, notary.owningKey)
+
+            assertThat(builder.toWireTransaction(services).digestService).isEqualTo(DigestService.sha2_384)
+        } finally {
+            HashAgility.init()
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `toWireTransaction fails if no scheme is registered with schemeId`() {
+        val outputState = TransactionState(
+                data = DummyState(),
+                contract = DummyContract.PROGRAM_ID,
+                notary = notary,
+                constraint = HashAttachmentConstraint(contractAttachmentId)
+        )
+        val builder = TransactionBuilder()
+                .addOutputState(outputState)
+                .addCommand(DummyCommandData, notary.owningKey)
+
+        val schemeId = 7
+        assertFailsWith<UnsupportedOperationException>("Could not find custom serialization scheme with SchemeId = $schemeId.") {
+            builder.toWireTransaction(services, schemeId)
+       }
+    }
 }

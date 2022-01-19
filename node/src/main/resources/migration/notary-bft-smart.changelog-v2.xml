@@ -1,0 +1,43 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="node_bft_transaction_id_size">
+        <dropPrimaryKey tableName="node_bft_committed_states" constraintName="node_bft_states_pkey"/>
+        <dropPrimaryKey tableName="node_bft_committed_txs" constraintName="node_bft_transactions_pkey"/>
+
+        <dropNotNullConstraint tableName="node_bft_committed_states" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="node_bft_committed_states" columnName="consuming_transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="node_notary_request_log" columnName="consuming_transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="node_bft_committed_txs" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+
+        <modifyDataType tableName="node_bft_committed_states"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="node_bft_committed_states"
+                        columnName="consuming_transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="node_notary_request_log"
+                        columnName="consuming_transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="node_bft_committed_txs"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+
+        <addNotNullConstraint tableName="node_bft_committed_states" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="node_bft_committed_states" columnName="consuming_transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="node_notary_request_log" columnName="consuming_transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="node_bft_committed_txs" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_bft_states_pkey"
+                       tableName="node_bft_committed_states"/>
+        <addPrimaryKey columnNames="transaction_id" constraintName="node_bft_transactions_pkey" tableName="node_bft_committed_txs"/>
+    </changeSet>
+
+    <changeSet id="node_bft_transaction_id_size-non-clustered_pk" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_bft_committed_states" constraintName="node_bft_states_pkey"/>
+        <addPrimaryKey tableName="node_bft_committed_states" columnNames="output_index, transaction_id"
+                       constraintName="node_bft_states_pkey" clustered="false"/>
+    </changeSet>
+</databaseChangeLog>

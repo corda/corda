@@ -36,6 +36,12 @@ class RejectedCommandException(message: String) :
         @Suppress("DEPRECATION") net.corda.core.ClientRelevantError
 
 /**
+ * Thrown to indicate that the command was rejected by the node, typically due to a special temporary mode.
+ */
+class MissingAttachmentException(message: String) :
+        CordaRuntimeException(message)
+
+/**
  * Allows an implementing [Throwable] to be propagated to RPC clients.
  */
 @Deprecated("Use ClientRelevantError instead.", replaceWith = ReplaceWith("ClientRelevantError"))

@@ -27,16 +27,17 @@ processResources {
 }
 
 shadowJar {
+    archiveClassifier = jdkClassifier
     mergeServiceFiles()
 }
 
-task buildShellCli(dependsOn: shadowJar)
-assemble.dependsOn buildShellCli
+tasks.register('buildShellCli') {
+    dependsOn shadowJar
+}
 
 artifacts {
-    publish shadowJar {
-        archiveClassifier = jdkClassifier
-    }
+    archives shadowJar
+    publish shadowJar
 }
 
 jar {

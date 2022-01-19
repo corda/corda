@@ -1,0 +1,37 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+    <changeSet author="R3.Corda" id="node_raft_transaction_id_size">
+        <dropPrimaryKey tableName="node_raft_committed_txs" constraintName="node_raft_transactions_pkey"/>
+
+        <dropNotNullConstraint tableName="node_raft_committed_txs" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="node_notary_request_log" columnName="consuming_transaction_id" columnDataType="NVARCHAR(64)" />
+
+        <modifyDataType tableName="node_raft_committed_txs"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="node_notary_request_log"
+                        columnName="consuming_transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+
+        <addNotNullConstraint tableName="node_raft_committed_txs" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="node_notary_request_log" columnName="consuming_transaction_id" columnDataType="NVARCHAR(144)"/>
+
+        <addPrimaryKey columnNames="transaction_id" constraintName="node_raft_transactions_pkey" tableName="node_raft_committed_txs"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_raft_committed_states_id_size">
+        <dropPrimaryKey tableName="node_raft_committed_states" constraintName="node_raft_state_pkey"/>
+        <dropNotNullConstraint tableName="node_raft_committed_states" columnName="id" columnDataType="NVARCHAR(128)"/>
+
+        <modifyDataType tableName="node_raft_committed_states"
+                        columnName="id"
+                        newDataType="NVARCHAR(208)"/>
+
+        <addNotNullConstraint tableName="node_raft_committed_states" columnName="id" columnDataType="NVARCHAR(208)"/>
+        <addPrimaryKey columnNames="id" constraintName="node_raft_state_pkey" tableName="node_raft_committed_states"/>
+    </changeSet>
+</databaseChangeLog>

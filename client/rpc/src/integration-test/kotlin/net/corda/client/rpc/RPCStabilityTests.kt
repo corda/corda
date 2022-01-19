@@ -14,13 +14,13 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.succeeds
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.RpcBrokerHandle
 import net.corda.testing.node.internal.RpcServerHandle
@@ -70,12 +70,16 @@ class RPCStabilityTests {
     private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Map<Thread, List<StackTraceElement>> {
         val values = ConcurrentLinkedQueue<Map<Thread, List<StackTraceElement>>>()
         return poll(executorService, "number of threads to become stable", 250.millis) {
-            values.add(Thread.getAllStackTraces().mapValues { it.value.toList() })
+            // Exclude threads which we don't use for timing our tests
+            val map: Map<Thread, List<StackTraceElement>> = Thread.getAllStackTraces()
+                .filterKeys { !it.name.contains("ForkJoinPool.commonPool") }
+                .mapValues { it.value.toList() }
+            values.add(map)
             if (values.size > 5) {
                 values.poll()
             }
             val first = values.peek()
-            if (values.size == 5 && values.all { it.keys.size == first.keys.size }) {
+            if (values.size == 5 && values.all { it.keys == first.keys }) {
                 first
             } else {
                 null

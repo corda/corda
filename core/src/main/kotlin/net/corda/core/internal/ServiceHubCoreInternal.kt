@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
+import net.corda.core.internal.notary.NotaryService
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
@@ -14,6 +15,11 @@ interface ServiceHubCoreInternal : ServiceHub {
     val externalOperationExecutor: ExecutorService
 
     val attachmentTrustCalculator: AttachmentTrustCalculator
+
+    /**
+     * Optional `NotaryService` which will be `null` for all non-Notary nodes.
+     */
+    val notaryService: NotaryService?
 
     fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver
 

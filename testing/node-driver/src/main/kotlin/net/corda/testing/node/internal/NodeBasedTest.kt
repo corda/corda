@@ -22,7 +22,7 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.testThreadFactory
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.testing.node.User
 import org.apache.commons.lang3.SystemUtils
 import org.apache.logging.log4j.Level
@@ -39,9 +39,10 @@ import kotlin.test.assertFalse
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
 // using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
 // support this, and it's a property of the Corda JAR)
-abstract class NodeBasedTest
-@JvmOverloads
-constructor(private val cordappPackages: List<String> = emptyList(), private val notaries: List<CordaX500Name> = emptyList()) {
+abstract class NodeBasedTest @JvmOverloads constructor(
+    private val cordappPackages: Set<TestCordappInternal> = emptySet(),
+    private val notaries: List<CordaX500Name> = emptyList()
+) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
     }
@@ -120,7 +121,11 @@ constructor(private val cordappPackages: List<String> = emptyList(), private val
                 ) + configOverrides
         )
 
-        val customCordapps = cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { cordappPackages + it } ?: cordappPackages)
+        val customCordapps = if (cordappPackages.isNotEmpty()) {
+            cordappPackages
+        } else {
+            cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { listOf(it) } ?: emptyList())
+        }
         TestCordappInternal.installCordapps(baseDirectory, emptySet(), customCordapps)
 
         val parsedConfig = config.parseAsNodeConfiguration().value()
@@ -152,11 +157,19 @@ constructor(private val cordappPackages: List<String> = emptyList(), private val
     }
 }
 
-class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo, flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides)) : Node(configuration, versionInfo, false, flowManager = flowManager) {
+class InProcessNode(
+        configuration: NodeConfiguration,
+        versionInfo: VersionInfo,
+        flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
+        allowHibernateToManageAppSchema: Boolean = true) : Node(configuration, versionInfo, false, flowManager = flowManager, allowHibernateToManageAppSchema = allowHibernateToManageAppSchema) {
+    override val runMigrationScripts: Boolean = true
     override fun start(): NodeInfo {
         assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
         return super.start()
     }
 
     override val rxIoScheduler get() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
+
+    // Switch journal buffering off or else for many nodes it is possible to receive OOM in un-managed heap space
+    override val journalBufferTimeout = 0
 }

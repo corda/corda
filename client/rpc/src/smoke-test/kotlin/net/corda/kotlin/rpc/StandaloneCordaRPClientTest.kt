@@ -8,35 +8,52 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.workflows.getCashBalance
-import net.corda.finance.workflows.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.workflows.getCashBalance
+import net.corda.finance.workflows.getCashBalances
 import net.corda.java.rpc.StandaloneCordaRPCJavaClientTest
 import net.corda.nodeapi.internal.config.User
+import net.corda.sleeping.SleepingFlow
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
-import org.junit.*
+import org.hamcrest.text.MatchesPattern
+import org.junit.After
+import org.junit.Before
+import org.junit.Ignore
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.ExpectedException
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.util.*
+import java.util.Currency
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.regex.Pattern
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -238,9 +255,9 @@ class StandaloneCordaRPClientTest {
     @Test(timeout=300_000)
 	fun `test kill flow without killFlow permission`() {
         exception.expect(PermissionException::class.java)
-        exception.expectMessage("User not authorized to perform RPC call killFlow")
+        exception.expectMessage(MatchesPattern(Pattern.compile("User not authorized to perform RPC call .*killFlow.*")))
 
-        val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity)
+        val flowHandle = rpcProxy.startFlow(::SleepingFlow, 1.minutes)
         notary.connect(nonUser).use { connection ->
             val rpcProxy = connection.proxy
             rpcProxy.killFlow(flowHandle.id)
@@ -249,7 +266,7 @@ class StandaloneCordaRPClientTest {
 
     @Test(timeout=300_000)
 	fun `test kill flow with killFlow permission`() {
-        val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 83.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity)
+        val flowHandle = rpcProxy.startFlow(::SleepingFlow, 1.minutes)
         notary.connect(rpcUser).use { connection ->
             val rpcProxy = connection.proxy
             assertTrue(rpcProxy.killFlow(flowHandle.id))

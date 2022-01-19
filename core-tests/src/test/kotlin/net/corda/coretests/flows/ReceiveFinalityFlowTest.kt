@@ -56,7 +56,9 @@ class ReceiveFinalityFlowTest {
         bob.assertFlowSentForObservationDueToUntrustedAttachmentsException(paymentReceiverId)
 
         // Restart Bob with the contracts CorDapp so that it can recover from the error
-        bob = mockNet.restartNode(bob, parameters = InternalMockNodeParameters(additionalCordapps = listOf(FINANCE_CONTRACTS_CORDAPP)))
+        bob = mockNet.restartNode(bob,
+                parameters = InternalMockNodeParameters(additionalCordapps = listOf(FINANCE_CONTRACTS_CORDAPP)),
+                nodeFactory = { args -> InternalMockNetwork.MockNode(args, allowAppSchemaUpgradeWithCheckpoints = true) })
         mockNet.runNetwork()
         assertThat(bob.services.getCashBalance(GBP)).isEqualTo(100.POUNDS)
     }

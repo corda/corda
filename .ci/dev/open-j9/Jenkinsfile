@@ -1,0 +1,97 @@
+#!groovy
+/**
+ * Jenkins pipeline to build Corda OS release branches and tags.
+ * PLEASE NOTE: we DO want to run a build for each commit!!!
+ */
+
+/**
+ * Sense environment
+ */
+boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*JDK11$/)
+boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*JDK11$/)
+boolean isReleaseCandidate = (env.TAG_NAME =~ /^release-.*(RC|HC).*JDK11$/)
+
+/**
+ * Common Gradle arguments for all Gradle executions
+ */
+String COMMON_GRADLE_PARAMS = [
+        '--no-daemon',
+        '--stacktrace',
+        '--info',
+        '-Pcompilation.warningsAsErrors=false',
+        '-Ptests.failFast=true',
+].join(' ')
+
+pipeline {
+    agent { label 'open-j9 && os' }
+
+    /*
+     * List options in alphabetical order
+     */
+    options {
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        timeout(time: 10, unit: 'HOURS')
+        timestamps()
+    }
+
+    /*
+     * List environment variables in alphabetical order
+     */
+    environment {
+        ARTIFACTORY_BUILD_NAME = "Corda OS OpenJ9 :: Publish :: Publish Release to Artifactory :: ${env.BRANCH_NAME}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+    }
+
+    stages {
+        stage('Unit Tests') {
+            steps {
+                sh "./gradlew clean --continue test --info -Ptests.failFast=true"
+            }
+        }
+        stage('Integration Tests') {
+            steps {
+                sh "./gradlew clean --continue integrationTest --info -Ptests.failFast=true"
+            }
+        }
+        stage('Smoke Tests') {
+            steps {
+                sh "./gradlew clean --continue smokeTest --info -Ptests.failFast=true"
+            }
+        }
+        stage('Slow Integration Tests') {
+            steps {
+                sh "./gradlew clean --continue slowIntegrationTest --info -Ptests.failFast=true"
+            }
+        }
+
+        stage('Publish Release to Docker Hub') {
+            when {
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+            }
+            steps {
+                withCredentials([
+                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD')
+                ]) {
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'docker:buildAndPushDockerhubImages'
+                            ].join(' ')
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            junit '**/build/test-results/**/*.xml'
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}

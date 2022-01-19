@@ -1,0 +1,20 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.quasar-utils'
+
+description 'NodeAPI tests that require node etc'
+
+dependencies {
+    testCompile project(":node-api")
+    testCompile project(path: ':node-api', configuration:'testArtifacts')
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+    // Unit testing helpers.
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile project(':node-driver')
+    testCompile project(':test-utils')
+}

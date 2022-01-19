@@ -37,11 +37,6 @@ data class CustomCordapp(
         val signingInfo: SigningInfo? = null,
         override val config: Map<String, Any> = emptyMap()
 ) : TestCordappInternal() {
-    init {
-        require(packages.isNotEmpty() || classes.isNotEmpty() || fixups.isNotEmpty()) {
-            "At least one package or class must be specified"
-        }
-    }
 
     override val jarFile: Path get() = getJarFile(this)
 
@@ -56,14 +51,20 @@ data class CustomCordapp(
     internal fun packageAsJar(file: Path) {
         val classGraph = ClassGraph()
         if (packages.isNotEmpty()) {
-            classGraph.whitelistPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
+            classGraph.acceptPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
         }
         if (classes.isNotEmpty()) {
             classes.forEach { classGraph.addClassLoader(it.classLoader) }
-            classGraph.whitelistClasses(*classes.map { it.name }.toTypedArray())
+            classGraph.acceptClasses(*classes.map { it.name }.toTypedArray())
         }
 
         classGraph.enableClassInfo().pooledScan().use { scanResult ->
+            if (scanResult.allResources.isEmpty()) {
+                throw ClassNotFoundException(
+                    "Could not create jar file as the given classes(${classes.joinToString()}) / packages(${packages.joinToString()}) were not found on the classpath"
+                )
+            }
+
             val whitelistService = SerializationWhitelist::class.java.name
             val whitelists = scanResult.getClassesImplementing(whitelistService)
 
@@ -80,7 +81,7 @@ data class CustomCordapp(
 
                 // The same resource may be found in different locations (this will happen when running from gradle) so just
                 // pick the first one found.
-                scanResult.allResources.asMap().forEach { path, resourceList ->
+                scanResult.allResourcesAsMap.forEach { (path, resourceList) ->
                     jos.addEntry(testEntry(path), resourceList[0].open())
                 }
             }
@@ -178,8 +179,8 @@ data class CustomCordapp(
                 val jarFile = cordappsDirectory.createDirectories() / filename
                 if (it.fixups.isNotEmpty()) {
                     it.createFixupJar(jarFile)
-                } else {
-                    it.packageAsJar(jarFile)
+                } else if(it.packages.isNotEmpty() || it.classes.isNotEmpty() || it.fixups.isNotEmpty()) {
+                        it.packageAsJar(jarFile)
                 }
                 it.signJar(jarFile)
                 logger.debug { "$it packaged into $jarFile" }

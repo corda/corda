@@ -86,7 +86,10 @@ public class SharedMemoryIncremental extends PortAllocation {
 
     private boolean isLocalPortAvailable(Long portToTest) {
         try (ServerSocket serverSocket = new ServerSocket(Math.toIntExact(portToTest))) {
-        } catch (Exception e) {
+        } catch (IOException e) {
+            // Don't catch anything other than IOException here in case we
+            // accidentally create an infinite loop. For example, installing
+            // a SecurityManager could throw AccessControlException.
             return false;
         }
         return true;

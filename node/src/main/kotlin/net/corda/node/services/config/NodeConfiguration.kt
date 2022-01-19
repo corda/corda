@@ -60,7 +60,6 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
-    val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
@@ -70,6 +69,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
     val crlCheckSoftFail: Boolean
+    val crlCheckArtemisServer: Boolean
     val jmxReporterType: JmxReporterType? get() = defaultJmxReporterType
 
     val baseDirectory: Path
@@ -86,9 +86,15 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings?
 
+    val networkParametersPath: Path
+
     val blacklistedAttachmentSigningKeys: List<String>
 
     val flowExternalOperationThreadPoolSize: Int
+
+    val quasarExcludePackages: List<String>
+
+    val reloadCheckpointAfterSuspend: Boolean
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -103,7 +109,6 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
         }
 
         internal val defaultAttachmentContentCacheSize: Long = 10.MB
-        internal const val defaultAttachmentCacheBound = 1024L
 
         const val cordappDirectoriesKey = "cordappDirectories"
 
@@ -122,9 +127,13 @@ enum class JmxReporterType {
 }
 
 data class DevModeOptions(
-        val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker,
-        val allowCompatibilityZone: Boolean = Defaults.allowCompatibilityZone,
-        val djvm: DJVMOptions? = null
+    @Deprecated(
+        "The checkpoint checker has been replaced by the ability to reload a checkpoint from the database after every suspend" +
+                "Use [NodeConfiguration.disableReloadCheckpointAfterSuspend] instead."
+    )
+    val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker,
+    val allowCompatibilityZone: Boolean = Defaults.allowCompatibilityZone,
+    val djvm: DJVMOptions? = null
 ) {
     internal object Defaults {
         val disableCheckpointChecker = false
@@ -137,10 +146,6 @@ data class DJVMOptions(
    val cordaSource: List<String>
 )
 
-fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
-    return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
-}
-
 fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
 fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
 fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
@@ -148,7 +153,7 @@ fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || should
 data class NotaryConfig(
         /** Specifies whether the notary validates transactions or not. */
         val validating: Boolean,
-        /** The legal name of cluster in case of a distributed notary service. */
+        /** The legal name of the notary service identity. */
         val serviceLegalName: CordaX500Name? = null,
         /** The name of the notary service class to load. */
         val className: String? = null,
@@ -161,7 +166,8 @@ data class NotaryConfig(
         /** Notary implementation-specific configuration parameters. */
         val extraConfig: Config? = null,
         val raft: RaftConfig? = null,
-        val bftSMaRt: BFTSmartConfig? = null
+        val bftSMaRt: BFTSmartConfig? = null,
+        val enableOverridableFlows: Boolean? = null
 )
 
 /**
@@ -215,7 +221,7 @@ data class FlowTimeoutConfiguration(
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
-fun Config.parseAsNodeConfiguration(options: Configuration.Validation.Options = Configuration.Validation.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
+fun Config.parseAsNodeConfiguration(options: Configuration.Options = Configuration.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
 
 data class NodeH2Settings(
         val address: NetworkHostAndPort?

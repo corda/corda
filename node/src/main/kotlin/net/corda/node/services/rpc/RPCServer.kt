@@ -14,17 +14,20 @@ import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.*
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.days
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.trace
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
@@ -34,20 +37,32 @@ import net.corda.nodeapi.internal.DeduplicationChecker
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextDatabaseOrNull
+import net.corda.nodeapi.internal.rpc.ObservableContextInterface
+import net.corda.nodeapi.internal.rpc.ObservableSubscription
+import net.corda.nodeapi.internal.serialization.amqp.RpcServerObservableSerializer
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientProducer
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
+import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.slf4j.MDC
-import rx.Subscription
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.time.Duration
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 private typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
@@ -161,10 +176,10 @@ class RPCServer(
                 val groupedMethods = with(interfaceClass) {
                     /*
                      * Until version 4.3, rpc calls did not include class names.
-                     * Up to this version, only CordaRPCOps and InternalCordaRPCOps were supported.
+                     * Up to this version, only CordaRPCOps was supported.
                      * So, for these classes methods are registered without their class name as well to preserve backwards compatibility.
                      */
-                    if(interfaceClass == CordaRPCOps::class.java || interfaceClass == InternalCordaRPCOps::class.java) {
+                    if (interfaceClass == CordaRPCOps::class.java) {
                         methods.groupBy { it.name }
                     } else {
                         methods.groupBy { interfaceClass.name + CLASS_METHOD_DIVIDER + it.name }
@@ -372,10 +387,11 @@ class RPCServer(
                     val arguments = Try.on {
                         clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                     }
-                    val context = artemisMessage.context(clientToServer.sessionId)
-                    context.invocation.pushToLoggingContext()
+                    val context: RpcAuthContext
                     when (arguments) {
                         is Try.Success -> {
+                            context = artemisMessage.context(clientToServer.sessionId, arguments.value)
+                            context.invocation.pushToLoggingContext()
                             log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
                             rpcExecutor!!.submit {
                                 val result = invokeRpc(context, clientToServer.methodName, arguments.value)
@@ -383,6 +399,8 @@ class RPCServer(
                             }
                         }
                         is Try.Failure -> {
+                            context = artemisMessage.context(clientToServer.sessionId, emptyList())
+                            context.invocation.pushToLoggingContext()
                             // We failed to deserialise the arguments, route back the error
                             log.warn("Inbound RPC failed", arguments.exception)
                             sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
@@ -460,12 +478,12 @@ class RPCServer(
         observableMap.cleanUp()
     }
 
-    private fun ClientMessage.context(sessionId: Trace.SessionId): RpcAuthContext {
+    private fun ClientMessage.context(sessionId: Trace.SessionId, arguments: List<Any?>): RpcAuthContext {
         val trace = Trace.newInstance(sessionId = sessionId)
         val externalTrace = externalTrace()
         val rpcActor = actorFrom(this)
         val impersonatedActor = impersonatedActor()
-        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor), rpcActor.second)
+        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor, arguments), rpcActor.second)
     }
 
     private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {
@@ -546,9 +564,3 @@ internal fun context(): InvocationContext = rpcContext().invocation
  * The [RpcAuthContext] includes permissions.
  */
 fun rpcContext(): RpcAuthContext = CURRENT_RPC_CONTEXT.get()
-
-class ObservableSubscription(
-        val subscription: Subscription
-)
-
-

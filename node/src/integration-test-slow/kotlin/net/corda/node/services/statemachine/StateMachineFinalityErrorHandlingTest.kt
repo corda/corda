@@ -35,8 +35,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
-            val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
+            val (alice, charlie, port) = createNodeAndBytemanNode(ALICE_NAME, CHARLIE_NAME, FINANCE_CORDAPPS)
 
             // could not get rule for FinalityDoctor + observation counter to work
             val rules = """
@@ -77,11 +76,11 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(observation = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie.rpc.assertNumberOfCheckpoints(1)
         }
     }
 
@@ -97,8 +96,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error resolving a transaction's dependencies inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
-            val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
+            val (alice, charlie, port) = createNodeAndBytemanNode(ALICE_NAME, CHARLIE_NAME, FINANCE_CORDAPPS)
 
             // could not get rule for FinalityDoctor + observation counter to work
             val rules = """
@@ -139,11 +137,11 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(observation = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie.rpc.assertNumberOfCheckpoints(1)
         }
     }
 
@@ -161,12 +159,11 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and complete successfully`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
-            val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
+            val (alice, charlie, port) = createNodeAndBytemanNode(ALICE_NAME, CHARLIE_NAME, FINANCE_CORDAPPS)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -182,7 +179,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("finality_flag") && readCounter("counter") < 3
@@ -201,11 +198,14 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
+            // This sleep is a bit suspect...
+            Thread.sleep(1000)
+
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpointsAllZero()
             charlie.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(0, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -226,12 +226,11 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and be kept for observation is error persists`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
-            val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
+            val (alice, charlie, port) = createNodeAndBytemanNode(ALICE_NAME, CHARLIE_NAME, FINANCE_CORDAPPS)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -247,7 +246,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("finality_flag") && readCounter("counter") < 4
@@ -268,14 +267,14 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ).returnValue.getOrThrow(30.seconds)
             }
 
+            alice.rpc.assertNumberOfCheckpoints(runnable = 1)
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(1)
-            charlie.rpc.assertNumberOfCheckpoints(1)
         }
     }
 }

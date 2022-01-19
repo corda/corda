@@ -2,25 +2,33 @@ package net.corda.node.internal
 
 import net.corda.cliutils.CommonCliConstants
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions
 import org.junit.BeforeClass
+import org.junit.Ignore
 import org.junit.Test
+import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 import picocli.CommandLine
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class NodeStartupCliTest {
     private val startup = NodeStartupCli()
 
     companion object {
         private lateinit var workingDirectory: Path
-
+        private lateinit var rootDirectory: Path
+        private var customNodeConf = "custom_node.conf"
         @BeforeClass
         @JvmStatic
         fun initDirectories() {
             workingDirectory = Paths.get(".").normalize().toAbsolutePath()
+            rootDirectory = Paths.get("/").normalize().toAbsolutePath()
         }
     }
 
@@ -48,5 +56,31 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
+    }
+
+    @Test(timeout=300_000)
+    fun `--nodeconf using relative path will be changed to absolute path`() {
+        CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, customNodeConf)
+        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / customNodeConf)
+    }
+
+    @Test(timeout=300_000)
+    fun `--nodeconf using absolute path will not be changed`() {
+        CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, (rootDirectory / customNodeConf).toString())
+        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(rootDirectory / customNodeConf)
+    }
+
+    @Test(timeout=3_000)
+    @Ignore
+    fun `test logs are written to correct location correctly if verbose flag set`() {
+        val node = NodeStartupCli()
+        val dir = Files.createTempDirectory("verboseLoggingTest")
+        node.verbose = true
+        // With verbose set, initLogging can accidentally attempt to access a logger before all required system properties are set. This
+        // causes the logging config to be parsed too early, resulting in logs being written to the wrong directory
+        node.initLogging(dir)
+        LoggerFactory.getLogger("").debug("Test message")
+        assertTrue(dir.resolve("logs").exists())
+        assertFalse(Paths.get("./logs").exists())
     }
 }

@@ -3,6 +3,8 @@ package net.corda.core.internal
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.WrappedFlowExternalAsyncOperation
+import net.corda.core.flows.WrappedFlowExternalOperation
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -31,3 +33,14 @@ fun <T, R : Any> FlowLogic<T>.executeAsync(operation: FlowAsyncOperation<R>, may
     val request = FlowIORequest.ExecuteAsyncOperation(operation)
     return stateMachine.suspend(request, maySkipCheckpoint)
 }
+
+/**
+ * Returns a name of the external operation implementation considering that it can wrapped
+ * by WrappedFlowExternalAsyncOperation<T> or WrappedFlowExternalOperation<T>
+ */
+val FlowAsyncOperation<*>.externalOperationImplName: String
+    get() = when (this) {
+        is WrappedFlowExternalAsyncOperation<*> -> operation.javaClass.canonicalName
+        is WrappedFlowExternalOperation<*> -> operation.javaClass.canonicalName
+        else -> javaClass.canonicalName
+    }

@@ -5,7 +5,7 @@ plugins {
     id 'java-library'
     id 'idea'
 }
-apply from: '../../deterministic.gradle'
+apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Deserializers for the DJVM'
 
@@ -17,6 +17,7 @@ dependencies {
 
 jar {
     archiveBaseName = 'corda-deserializers-djvm'
+    archiveClassifier = ''
     manifest {
         attributes('Automatic-Module-Name': 'net.corda.serialization.djvm.deserializers')
         attributes('Sealed': true)
@@ -31,5 +32,9 @@ idea {
     module {
         downloadJavadoc = true
         downloadSources = true
+
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
     }
 }

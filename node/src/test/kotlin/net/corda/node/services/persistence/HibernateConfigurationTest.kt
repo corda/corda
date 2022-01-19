@@ -48,6 +48,7 @@ import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.`in`
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.SessionFactory
@@ -952,7 +953,7 @@ class HibernateConfigurationTest {
             // DOCEND JdbcSession
             var count = 0
             while (rs.next()) {
-                val stateRef = StateRef(SecureHash.parse(rs.getString(1)), rs.getInt(2))
+                val stateRef = StateRef(SecureHash.create(rs.getString(1)), rs.getInt(2))
                 Assert.assertTrue(cashStates.map { it.ref }.contains(stateRef))
                 count++
             }
@@ -961,7 +962,7 @@ class HibernateConfigurationTest {
     }
 
     private fun toStateRef(pStateRef: PersistentStateRef): StateRef {
-        return StateRef(SecureHash.parse(pStateRef.txId), pStateRef.index)
+        return StateRef(SecureHash.create(pStateRef.txId), pStateRef.index)
     }
 
     @Test(timeout=300_000)
@@ -976,7 +977,7 @@ class HibernateConfigurationTest {
                     doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
                 }
             }
-            database = configureDatabase(dataSourceProps, DatabaseConfig(initialiseSchema = initialiseSchema), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+            database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, runMigrationScripts = initialiseSchema, allowHibernateToManageAppSchema = initialiseSchema)
             return database
         }
 

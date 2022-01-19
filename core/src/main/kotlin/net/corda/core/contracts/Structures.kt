@@ -89,6 +89,7 @@ interface OwnableState : ContractState {
 // DOCEND 3
 
 /** Something which is scheduled to happen at a point in time. */
+@KeepForDJVM
 interface Scheduled {
     val scheduledAt: Instant
 }
@@ -101,6 +102,7 @@ interface Scheduled {
  * lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.
  */
 @CordaSerializable
+@KeepForDJVM
 data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instant) : Scheduled
 
 /**
@@ -115,7 +117,7 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
  * for a particular [ContractState] have been processed/fired etc.  If the activity is not "on ledger" then the
  * scheduled activity shouldn't be either.
  */
-@DeleteForDJVM
+@KeepForDJVM
 data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledAt: Instant) : Scheduled
 
 // DOCSTART 2
@@ -134,7 +136,7 @@ interface LinearState : ContractState {
     val linearId: UniqueIdentifier
 }
 // DOCEND 2
-@DeleteForDJVM
+@KeepForDJVM
 interface SchedulableState : ContractState {
     /**
      * Indicate whether there is some activity to be performed at some future point in time with respect to this
@@ -150,6 +152,9 @@ interface SchedulableState : ContractState {
 
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
+
+/** Returns the hash of the serialised contents of this state (not cached!) */
+fun ContractState.hash(algorithm: String): SecureHash = SecureHash.hashAs(algorithm, serialize().bytes)
 
 /**
  * A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
@@ -322,13 +327,27 @@ interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out 
 @CordaSerializable
 @KeepForDJVM
 class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+    /** Constructs a salt with a randomly-generated saltLength byte value. */
+    @DeleteForDJVM
+    constructor(saltLength: Int) : this(secureRandomBytes(saltLength))
+
     /** Constructs a salt with a randomly-generated 32 byte value. */
     @DeleteForDJVM
-    constructor() : this(secureRandomBytes(32))
+    constructor() : this(MINIMUM_SIZE)
 
     init {
-        require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
         require(bytes.any { it != 0.toByte() }) { "Privacy salt should not be all zeros." }
+        require(bytes.size >= MINIMUM_SIZE) { "Privacy salt should be at least $MINIMUM_SIZE bytes." }
+    }
+
+    companion object {
+        private const val MINIMUM_SIZE = 32
+
+        @DeleteForDJVM
+        @JvmStatic
+        fun createFor(algorithm: String): PrivacySalt {
+            return PrivacySalt(SecureHash.digestLengthFor(algorithm))
+        }
     }
 }
 

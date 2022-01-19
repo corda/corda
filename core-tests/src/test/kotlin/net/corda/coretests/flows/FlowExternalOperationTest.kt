@@ -5,18 +5,13 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
-import net.corda.coretests.flows.AbstractFlowExternalOperationTest.CustomTableEntity
-import net.corda.coretests.flows.AbstractFlowExternalOperationTest.DirectlyAccessedServiceHubException
-import net.corda.coretests.flows.AbstractFlowExternalOperationTest.ExternalOperation
-import net.corda.coretests.flows.AbstractFlowExternalOperationTest.FlowWithExternalProcess
-import net.corda.coretests.flows.AbstractFlowExternalOperationTest.FutureService
-import net.corda.coretests.flows.AbstractFlowExternalOperationTest.MyCordaException
+import net.corda.core.utilities.minutes
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -26,148 +21,145 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.Test
-import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
-import java.util.concurrent.TimeoutException
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
-    @Test(timeout=300_000)
-	fun `external operation`() {
+    @Test(timeout = 300_000)
+    fun `external operation`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             alice.rpc.startFlow(::FlowWithExternalOperation, bob.nodeInfo.singleIdentity())
-                .returnValue.getOrThrow(20.seconds)
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(0, discharged)
-            assertEquals(0, observation)
+                .returnValue.getOrThrow(1.minutes)
+            assertHospitalCounters(0, 0)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external operation that checks deduplicationId is not rerun when flow is retried`() {
+    @Test(timeout = 300_000)
+    fun `external operation that checks deduplicationId is not rerun when flow is retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             assertFailsWith<DuplicatedProcessException> {
                 alice.rpc.startFlow(
                     ::FlowWithExternalOperationWithDeduplication,
                     bob.nodeInfo.singleIdentity()
-                ).returnValue.getOrThrow(20.seconds)
+                ).returnValue.getOrThrow(1.minutes)
             }
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(1, discharged)
-            assertEquals(0, observation)
+            assertHospitalCounters(1, 0)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external operation propagates exception to calling flow`() {
+    @Test(timeout = 300_000)
+    fun `external operation propagates exception to calling flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             assertFailsWith<MyCordaException> {
                 alice.rpc.startFlow(
                     ::FlowWithExternalOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     MyCordaException::class.java
-                ).returnValue.getOrThrow(20.seconds)
+                ).returnValue.getOrThrow(1.minutes)
             }
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(0, discharged)
-            assertEquals(0, observation)
+            assertHospitalCounters(0, 0)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external operation exception can be caught in flow`() {
+    @Test(timeout = 300_000)
+    fun `external operation exception can be caught in flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             alice.rpc.startFlow(::FlowWithExternalOperationThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
-                .returnValue.getOrThrow(20.seconds)
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(0, discharged)
-            assertEquals(0, observation)
+                .returnValue.getOrThrow(1.minutes)
+            assertHospitalCounters(0, 0)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external operation with exception that hospital keeps for observation does not fail`() {
+    @Test(timeout = 300_000)
+    fun `external operation with exception that hospital keeps for observation does not fail`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            assertFailsWith<TimeoutException> {
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
+            blockUntilFlowKeptInForObservation {
                 alice.rpc.startFlow(
                     ::FlowWithExternalOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     HospitalizeFlowException::class.java
-                ).returnValue.getOrThrow(20.seconds)
+                )
             }
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(0, discharged)
-            assertEquals(1, observation)
+            assertHospitalCounters(0, 1)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external operation with exception that hospital discharges is retried and runs the external operation again`() {
+    @Test(timeout = 300_000)
+    fun `external operation with exception that hospital discharges is retried and runs the external operation again`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            assertFailsWith<TimeoutException> {
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
+            blockUntilFlowKeptInForObservation {
                 alice.rpc.startFlow(
                     ::FlowWithExternalOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     SQLTransientConnectionException::class.java
-                ).returnValue.getOrThrow(20.seconds)
+                )
             }
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(3, discharged)
-            assertEquals(1, observation)
+            assertHospitalCounters(3, 1)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external async operation that passes serviceHub into process can be retried`() {
+    @Test(timeout = 300_000)
+    fun `external async operation that passes serviceHub into process can be retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            assertFailsWith<TimeoutException> {
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
+            blockUntilFlowKeptInForObservation {
                 alice.rpc.startFlow(
                     ::FlowWithExternalOperationThatPassesInServiceHubCanRetry,
                     bob.nodeInfo.singleIdentity()
-                ).returnValue.getOrThrow(20.seconds)
+                )
             }
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(3, discharged)
-            assertEquals(1, observation)
+            assertHospitalCounters(3, 1)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external async operation that accesses serviceHub from flow directly will fail when retried`() {
+    @Test(timeout = 300_000)
+    fun `external async operation that accesses serviceHub from flow directly will fail when retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             assertFailsWith<DirectlyAccessedServiceHubException> {
                 alice.rpc.startFlow(
                     ::FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry,
                     bob.nodeInfo.singleIdentity()
-                ).returnValue.getOrThrow(20.seconds)
+                ).returnValue.getOrThrow(1.minutes)
             }
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(1, discharged)
-            assertEquals(0, observation)
+            assertHospitalCounters(1, 0)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `vault can be queried`() {
+    @Test(timeout = 300_000)
+    fun `vault can be queried`() {
         driver(
             DriverParameters(
                 cordappsForAllNodes = cordappsForPackages(DummyState::class.packageName),
@@ -176,64 +168,64 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         ) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithWithExternalOperationThatQueriesVault)
-                .returnValue.getOrThrow(20.seconds)
+                .returnValue.getOrThrow(1.minutes)
             assertTrue(success)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `data can be persisted to node database via entity manager`() {
+    @Test(timeout = 300_000)
+    fun `data can be persisted to node database via entity manager`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaEntityManager)
-                .returnValue.getOrThrow(20.seconds)
+                .returnValue.getOrThrow(1.minutes)
             assertTrue(success)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `data can be persisted to node database via jdbc session`() {
+    @Test(timeout = 300_000)
+    fun `data can be persisted to node database via jdbc session`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaJdbcSession)
-                .returnValue.getOrThrow(20.seconds)
+                .returnValue.getOrThrow(1.minutes)
             assertTrue(success)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `data can be persisted to node database via servicehub database transaction`() {
+    @Test(timeout = 300_000)
+    fun `data can be persisted to node database via servicehub database transaction`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaDatabaseTransaction)
-                .returnValue.getOrThrow(20.seconds)
+                .returnValue.getOrThrow(1.minutes)
             assertTrue(success)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `data can be persisted to node database in external operation and read from another process once finished`() {
+    @Test(timeout = 300_000)
+    fun `data can be persisted to node database in external operation and read from another process once finished`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsToDatabaseAndReadsFromExternalOperation)
-                .returnValue.getOrThrow(20.seconds)
+                .returnValue.getOrThrow(1.minutes)
             assertTrue(success)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `external operation can be retried when an error occurs inside of database transaction`() {
+    @Test(timeout = 300_000)
+    fun `external operation can be retried when an error occurs inside of database transaction`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             val success = alice.rpc.startFlow(
                 ::FlowWithExternalOperationThatErrorsInsideOfDatabaseTransaction,
                 bob.nodeInfo.singleIdentity()
-            ).returnValue.getOrThrow(20.seconds)
+            ).returnValue.getOrThrow(1.minutes)
             assertTrue(success as Boolean)
-            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
-            assertEquals(1, discharged)
-            assertEquals(0, observation)
+            assertHospitalCounters(1, 0)
         }
     }
 

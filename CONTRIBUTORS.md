@@ -13,9 +13,11 @@ see changes to this list.
 * agoldvarg
 * Ajitha Thayaharan (BCS Technology International)
 * Alberto Arri (R3)
+* Alex Karnezis
 * amiracam
 * Amol Pednekar
 * Andras Slemmer (R3)
+* André Lopes
 * Andrius Dagys (R3)
 * Andrzej Cichocki (R3)
 * Andrzej Grzesik (R3)
@@ -221,4 +223,5 @@ see changes to this list.
 * Vitalij Reicherdt (Commerzbank AG)
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
+* Xavier Leprêtre
 * Zabrina Smith (Northern Trust)

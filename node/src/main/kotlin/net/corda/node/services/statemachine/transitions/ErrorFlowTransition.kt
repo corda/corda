@@ -40,13 +40,16 @@ class ErrorFlowTransition(
         return builder {
             // If we're errored and propagating do the actual propagation and update the index.
             if (remainingErrorsToPropagate.isNotEmpty() && errorState.propagating) {
-                val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(startingState.checkpoint.sessions, errorMessages)
+                val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(
+                        startingState.checkpoint.checkpointState.sessions,
+                        errorMessages
+                )
                 val newCheckpoint = startingState.checkpoint.copy(
                         errorState = errorState.copy(propagatedIndex = allErrors.size),
-                        sessions = newSessions
+                        checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessions)
                 )
                 currentState = currentState.copy(checkpoint = newCheckpoint)
-                actions.add(Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID))
+                actions += Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID)
             }
 
             // If we're errored but not propagating keep processing events.
@@ -56,25 +59,43 @@ class ErrorFlowTransition(
 
             // If we haven't been removed yet remove the flow.
             if (!currentState.isRemoved) {
-                actions.add(Action.CreateTransaction)
-                if (currentState.isAnyCheckpointPersisted) {
-                    actions.add(Action.RemoveCheckpoint(context.id))
-                }
-                actions.addAll(arrayOf(
-                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                        Action.ReleaseSoftLocks(context.id.uuid),
-                        Action.CommitTransaction,
-                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                        Action.RemoveSessionBindings(currentState.checkpoint.sessions.keys)
-                ))
-
+                val newCheckpoint = startingState.checkpoint.copy(
+                    status = Checkpoint.FlowStatus.FAILED,
+                    flowState = FlowState.Finished,
+                    checkpointState = startingState.checkpoint.checkpointState.copy(
+                        numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1,
+                        invocationContext = if (startingState.checkpoint.checkpointState.invocationContext.arguments!!.isNotEmpty()) {
+                            startingState.checkpoint.checkpointState.invocationContext.copy(arguments = emptyList())
+                        } else {
+                            startingState.checkpoint.checkpointState.invocationContext
+                        }
+                    )
+                )
                 currentState = currentState.copy(
-                        pendingDeduplicationHandlers = emptyList(),
-                        isRemoved = true
+                    checkpoint = newCheckpoint,
+                    pendingDeduplicationHandlers = emptyList(),
+                    isRemoved = true
                 )
 
-                val removalReason = FlowRemovalReason.ErrorFinish(allErrors)
-                actions.add(Action.RemoveFlow(context.id, removalReason, currentState))
+                val removeOrPersistCheckpoint = if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
+                    Action.RemoveCheckpoint(context.id)
+                } else {
+                    Action.PersistCheckpoint(
+                        context.id,
+                        newCheckpoint,
+                        isCheckpointUpdate = currentState.isAnyCheckpointPersisted
+                    )
+                }
+
+                actions += Action.CreateTransaction
+                actions += removeOrPersistCheckpoint
+                actions += Action.PersistDeduplicationFacts(startingState.pendingDeduplicationHandlers)
+                actions += Action.ReleaseSoftLocks(context.id.uuid)
+                actions += Action.CommitTransaction(currentState)
+                actions += Action.AcknowledgeMessages(startingState.pendingDeduplicationHandlers)
+                actions += Action.RemoveSessionBindings(startingState.checkpoint.checkpointState.sessions.keys)
+                actions += Action.RemoveFlow(context.id, FlowRemovalReason.ErrorFinish(allErrors), currentState)
+
                 FlowContinuation.Abort
             } else {
                 // Otherwise keep processing events. This branch happens when there are some outstanding initiating
@@ -105,16 +126,17 @@ class ErrorFlowTransition(
             if (sessionState is SessionState.Initiating && sessionState.rejectionError == null) {
                 // *prepend* the error messages in order to error the other sessions ASAP. The other messages will
                 // be delivered all the same, they just won't trigger flow resumption because of dirtiness.
-                val errorMessagesWithDeduplication = errorMessages.map {
+                val errorMessagesWithDeduplication: ArrayList<Pair<DeduplicationId, ExistingSessionMessagePayload>> = errorMessages.map {
                     DeduplicationId.createForError(it.errorId, sourceSessionId) to it
-                }
+                }.toArrayList()
                 sessionState.copy(bufferedMessages = errorMessagesWithDeduplication + sessionState.bufferedMessages)
             } else {
                 sessionState
             }
         }
+        // if we have already received error message from the other side, we don't include that session in the list to avoid propagating errors.
         val initiatedSessions = sessions.values.mapNotNull { session ->
-            if (session is SessionState.Initiated && session.errors.isEmpty()) {
+            if (session is SessionState.Initiated && !session.otherSideErrored) {
                 session
             } else {
                 null

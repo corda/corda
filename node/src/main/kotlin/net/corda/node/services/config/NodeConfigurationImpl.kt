@@ -15,7 +15,6 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -32,6 +31,7 @@ data class NodeConfigurationImpl(
         private val keyStorePassword: String,
         private val trustStorePassword: String,
         override val crlCheckSoftFail: Boolean,
+        override val crlCheckArtemisServer: Boolean = Defaults.crlCheckArtemisServer,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = Defaults.compatibilityZoneURL,
         override var networkServices: NetworkServicesConfig? = Defaults.networkServices,
@@ -65,7 +65,6 @@ data class NodeConfigurationImpl(
         override val database: DatabaseConfig = Defaults.database(devMode),
         private val transactionCacheSizeMegaBytes: Int? = Defaults.transactionCacheSizeMegaBytes,
         private val attachmentContentCacheSizeMegaBytes: Int? = Defaults.attachmentContentCacheSizeMegaBytes,
-        override val attachmentCacheBound: Long = Defaults.attachmentCacheBound,
         override val extraNetworkMapKeys: List<UUID> = Defaults.extraNetworkMapKeys,
         // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
         private val h2port: Int? = Defaults.h2port,
@@ -82,7 +81,11 @@ data class NodeConfigurationImpl(
                 Defaults.networkParameterAcceptanceSettings,
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
         override val configurationWithOptions: ConfigurationWithOptions,
-        override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize
+        override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize,
+        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages,
+        override val reloadCheckpointAfterSuspend: Boolean = Defaults.reloadCheckpointAfterSuspend,
+        override val networkParametersPath: Path = baseDirectory
+
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -90,6 +93,7 @@ data class NodeConfigurationImpl(
         val networkServices: NetworkServicesConfig? = null
         val tlsCertCrlDistPoint: URL? = null
         val tlsCertCrlIssuer: X500Principal? = null
+        const val crlCheckArtemisServer: Boolean = false
         val security: SecurityConfiguration? = null
         val additionalP2PAddresses: List<NetworkHostAndPort> = emptyList()
         val rpcAddress: NetworkHostAndPort? = null
@@ -107,7 +111,6 @@ data class NodeConfigurationImpl(
         const val localShellUnsafe: Boolean = false
         val transactionCacheSizeMegaBytes: Int? = null
         val attachmentContentCacheSizeMegaBytes: Int? = null
-        const val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
         val extraNetworkMapKeys: List<UUID> = emptyList()
         val h2port: Int? = null
         val h2Settings: NodeH2Settings? = null
@@ -119,14 +122,14 @@ data class NodeConfigurationImpl(
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1
+        val quasarExcludePackages: List<String> = emptyList()
+        val reloadCheckpointAfterSuspend: Boolean = System.getProperty("reloadCheckpointAfterSuspend", "false")!!.toBoolean()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
         fun messagingServerExternal(messagingServerAddress: NetworkHostAndPort?) = messagingServerAddress != null
 
         fun database(devMode: Boolean) = DatabaseConfig(
-                initialiseSchema = devMode,
-                initialiseAppSchema = if(devMode) SchemaInitializationType.UPDATE else SchemaInitializationType.VALIDATE,
                 exportHibernateJMXStatistics = devMode
         )
     }

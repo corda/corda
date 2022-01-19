@@ -1,6 +1,7 @@
 package net.corda.core.internal.rules
 
 import net.corda.core.contracts.ContractState
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.warnOnce
 import org.slf4j.LoggerFactory
@@ -32,8 +33,6 @@ object StateContractValidationEnforcementRule {
                 Unable to determine JAR location for contract state class ${state::class.java.name},
                 and consequently unable to determine target platform version.
                 Enforcing state/contract agreement validation by default.
-
-                For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent().replace("\n", " "))
             return true
         }
@@ -44,6 +43,6 @@ object StateContractValidationEnforcementRule {
             }
         }
 
-        return targetVersion >= 4
+        return targetVersion >= PlatformVersionSwitches.BELONGS_TO_CONTRACT_ENFORCEMENT
     }
 }

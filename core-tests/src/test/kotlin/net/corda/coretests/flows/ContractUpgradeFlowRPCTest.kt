@@ -18,8 +18,8 @@ import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.internal.matchers.rpc.willReturn
-import net.corda.testing.internal.matchers.rpc.willThrow
+import net.corda.coretesting.internal.matchers.rpc.willReturn
+import net.corda.coretesting.internal.matchers.rpc.willThrow
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
 import org.junit.AfterClass
@@ -86,7 +86,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = node.rpcOps
+                        ops = node.cordaRPCOps
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password

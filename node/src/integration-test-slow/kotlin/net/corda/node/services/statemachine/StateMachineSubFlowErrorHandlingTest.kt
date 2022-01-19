@@ -40,12 +40,11 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `initiating subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -69,7 +68,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("suspend_flag") && flagged("commit_flag") && readCounter("counter") < 3
@@ -77,7 +76,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Set flag when executing first commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("suspend_flag") && !flagged("commit_flag")
@@ -94,9 +93,9 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -119,12 +118,11 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `initiating subflow - error during transition with CommitTransaction action that occurs after the first receive will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -148,7 +146,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("suspend_flag") && readCounter("counter") < 3
@@ -165,9 +163,9 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -190,12 +188,11 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `inline subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -211,7 +208,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && readCounter("counter") < 3
@@ -228,9 +225,9 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -253,12 +250,11 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `inline subflow - error during transition with CommitTransaction action that occurs during the first receive will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -274,7 +270,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("commit_flag") && readCounter("counter") < 3
@@ -282,7 +278,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Set flag when executing first commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && !flagged("commit_flag")
@@ -299,9 +295,9 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 

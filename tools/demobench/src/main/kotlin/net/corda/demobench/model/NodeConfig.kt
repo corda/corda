@@ -19,7 +19,7 @@ import java.nio.file.StandardCopyOption
 import java.util.Properties
 
 /**
- * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses reference.conf
+ * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses corda-reference.conf
  * to fill in the defaults so we're not required to specify them here.
  */
 data class NodeConfig(

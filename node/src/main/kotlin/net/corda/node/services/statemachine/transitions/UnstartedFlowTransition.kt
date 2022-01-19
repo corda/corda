@@ -6,9 +6,9 @@ import net.corda.node.services.statemachine.ConfirmSessionMessage
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.ExistingSessionMessagePayload
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.FlowState
-import net.corda.node.services.statemachine.InitiatedSessionState
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
@@ -28,14 +28,14 @@ class UnstartedFlowTransition(
                 createInitialCheckpoint()
             }
 
-            actions.add(Action.SignalFlowHasStarted(context.id))
+            actions += Action.SignalFlowHasStarted(context.id)
 
             if (unstarted.flowStart is FlowStart.Initiated) {
                 initialiseInitiatedSession(unstarted.flowStart)
             }
 
             currentState = currentState.copy(isFlowResumed = true)
-            actions.add(Action.CreateTransaction)
+            actions += Action.CreateTransaction
             FlowContinuation.Resume(null)
         }
     }
@@ -45,25 +45,23 @@ class UnstartedFlowTransition(
         val initiatingMessage = flowStart.initiatingMessage
         val initiatedState = SessionState.Initiated(
                 peerParty = flowStart.peerSession.counterparty,
-                initiatedState = InitiatedSessionState.Live(initiatingMessage.initiatorSessionId),
+                peerSinkSessionId = initiatingMessage.initiatorSessionId,
                 peerFlowInfo = FlowInfo(
                         flowVersion = flowStart.senderCoreFlowVersion ?: initiatingMessage.flowVersion,
                         appName = initiatingMessage.appName
                 ),
                 receivedMessages = if (initiatingMessage.firstPayload == null) {
-                    emptyList()
+                    arrayListOf()
                 } else {
-                    listOf(DataSessionMessage(initiatingMessage.firstPayload))
+                    arrayListOf<ExistingSessionMessagePayload>(DataSessionMessage(initiatingMessage.firstPayload))
                 },
-                errors = emptyList(),
-                deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}"
+                deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}",
+                otherSideErrored = false
         )
         val confirmationMessage = ConfirmSessionMessage(flowStart.initiatedSessionId, flowStart.initiatedFlowInfo)
         val sessionMessage = ExistingSessionMessage(initiatingMessage.initiatorSessionId, confirmationMessage)
         currentState = currentState.copy(
-                checkpoint = currentState.checkpoint.copy(
-                        sessions = mapOf(flowStart.initiatedSessionId to initiatedState)
-                )
+                checkpoint = currentState.checkpoint.setSessions(mapOf(flowStart.initiatedSessionId to initiatedState))
         )
         actions.add(
                 Action.SendExisting(
@@ -76,16 +74,14 @@ class UnstartedFlowTransition(
 
     // Create initial checkpoint and acknowledge triggering messages.
     private fun TransitionBuilder.createInitialCheckpoint() {
-        actions.addAll(arrayOf(
-                Action.CreateTransaction,
-                Action.PersistCheckpoint(context.id, currentState.checkpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
-                Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                Action.CommitTransaction,
-                Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
-        ))
-        currentState = currentState.copy(
-                pendingDeduplicationHandlers = emptyList(),
-                isAnyCheckpointPersisted = true
+        currentState = startingState.copy(
+            pendingDeduplicationHandlers = emptyList(),
+            isAnyCheckpointPersisted = true
         )
+        actions += Action.CreateTransaction
+        actions += Action.PersistCheckpoint(context.id, startingState.checkpoint, isCheckpointUpdate = startingState.isAnyCheckpointPersisted)
+        actions += Action.PersistDeduplicationFacts(startingState.pendingDeduplicationHandlers)
+        actions += Action.CommitTransaction(currentState)
+        actions += Action.AcknowledgeMessages(startingState.pendingDeduplicationHandlers)
     }
 }

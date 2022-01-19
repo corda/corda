@@ -41,7 +41,7 @@ configurations {
 
 dependencies {
     compile "com.microsoft.azure:azure:1.22.0"
-    compile "com.github.docker-java:docker-java:3.0.6"
+    compile "com.github.docker-java:docker-java:$docker_java_version"
 
     testCompile "org.jetbrains.kotlin:kotlin-test"
     testCompile "org.jetbrains.kotlin:kotlin-test-junit"
@@ -62,7 +62,7 @@ dependencies {
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'
 }
@@ -78,13 +78,13 @@ shadowJar {
     zip64 true
 }
 
-task buildNetworkBuilder(dependsOn: shadowJar)
-assemble.dependsOn buildNetworkBuilder
+tasks.register('buildNetworkBuilder') {
+    dependsOn shadowJar
+}
 
 artifacts {
-    publish shadowJar {
-        archiveClassifier = jdkClassifier
-    }
+    archives shadowJar
+    publish shadowJar
 }
 
 jar {

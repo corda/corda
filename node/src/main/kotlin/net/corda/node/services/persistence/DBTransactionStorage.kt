@@ -38,7 +38,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
     class DBTransaction(
             @Id
-            @Column(name = "tx_id", length = 64, nullable = false)
+            @Column(name = "tx_id", length = 144, nullable = false)
             val txId: String,
 
             @Column(name = "state_machine_run_id", length = 36, nullable = true)
@@ -120,7 +120,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = SecureHash::toString,
                     fromPersistentEntity = {
-                        SecureHash.parse(it.txId) to TxCacheValue(
+                        SecureHash.create(it.txId) to TxCacheValue(
                                 it.transaction.deserialize(context = contextToUse()),
                                 it.status)
                     },
@@ -247,7 +247,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             txStorage.locked {
                 val existingTransaction = getTransaction(id)
                 if (existingTransaction == null) {
-                    updates.filter { it.id == id }.toFuture()
                     updateFuture
                 } else {
                     updateFuture.cancel(false)

@@ -6,14 +6,14 @@ import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.SimpleClock
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.persistence.*
+import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
@@ -60,10 +60,8 @@ abstract class CordaMigration : CustomTaskChange {
         _cordaDB = createDatabase(url, cacheFactory, identityService, schema)
         cordaDB.start(dataSource)
         identityService.database = cordaDB
-        val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
 
         cordaDB.transaction {
-            identityService.ourNames = setOf(ourName)
              val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory, SimpleClock(Clock.systemUTC()))
              val attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
             _servicesForResolution = MigrationServicesForResolution(identityService, attachmentsService, dbTransactions, cordaDB, cacheFactory)
@@ -74,7 +72,6 @@ abstract class CordaMigration : CustomTaskChange {
                                cacheFactory: MigrationNamedCacheFactory,
                                identityService: PersistentIdentityService,
                                schema: Set<MappedSchema>): CordaPersistence {
-        val configDefaults = DatabaseConfig()
         val attributeConverters = listOf(
                 PublicKeyToTextConverter(),
                 AbstractPartyToX500NameAsStringConverter(
@@ -83,7 +80,7 @@ abstract class CordaMigration : CustomTaskChange {
         )
         // Liquibase handles closing the database connection when migrations are finished. If the connection is closed here, then further
         // migrations may fail.
-        return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
+        return CordaPersistence(false, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
     }
 
     override fun validate(database: Database?): ValidationErrors? {

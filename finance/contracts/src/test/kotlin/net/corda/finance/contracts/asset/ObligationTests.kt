@@ -24,7 +24,7 @@ import net.corda.finance.workflows.asset.ObligationUtils
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.dsl.*
-import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.node.MockServices
@@ -324,7 +324,6 @@ class ObligationTests {
     private inline fun <reified T : ContractState> getStateAndRef(state: T, contractClassName: ContractClassName): StateAndRef<T> {
         val txState = TransactionState(state, contractClassName, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
         return StateAndRef(txState, StateRef(SecureHash.randomSHA256(), 0))
-
     }
 
     /** Test generating a transaction to mark outputs as having defaulted. */

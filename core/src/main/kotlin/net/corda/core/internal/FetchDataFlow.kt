@@ -288,7 +288,8 @@ class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSessi
 
 /**
  * Given a set of hashes either loads from local network parameters storage or requests them from the other peer. Downloaded
- * network parameters are saved to local parameters storage automatically. This flow can be used only if the minimumPlatformVersion is >= 4.
+ * network parameters are saved to local parameters storage automatically. This flow can be used only if the minimumPlatformVersion
+ * is >= [PlatformVersionSwitches.FETCH_MISSING_NETWORK_PARAMETERS].
  * Nodes on lower versions won't respond to this flow.
  */
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,

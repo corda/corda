@@ -229,8 +229,6 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         """
             State of class ${state.data ::class.java.typeName} belongs to contract $requiredContractClassName, but
             is bundled in TransactionState with ${state.contract}.
-
-            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent().replace('\n', ' '))
     }
 
@@ -243,8 +241,6 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             State of class ${state.data::class.java.typeName} does not have a specified owning contract.
             Add the @BelongsToContract annotation to this class to ensure that it can only be bundled in a TransactionState
             with the correct contract.
-
-            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent())
     }
 
@@ -331,11 +327,12 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      */
     class PackageOwnershipException(txId: SecureHash, @Suppress("unused") val attachmentHash: AttachmentId, @Suppress("unused") val invalidClassName: String, val packageName: String) : TransactionVerificationException(txId,
             """The attachment JAR: $attachmentHash containing the class: $invalidClassName is not signed by the owner of package $packageName specified in the network parameters.
-           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
-           For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
+           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.""".trimIndent(), null)
 
     class InvalidAttachmentException(txId: SecureHash, @Suppress("unused") val attachmentHash: AttachmentId) : TransactionVerificationException(txId,
             "The attachment $attachmentHash is not a valid ZIP or JAR file.".trimIndent(), null)
+
+    class UnsupportedClassVersionError(txId: SecureHash, message: String, cause: Throwable) : TransactionVerificationException(txId, message, cause)
 
     // TODO: Make this descend from TransactionVerificationException so that untrusted attachments cause flows to be hospitalized.
     /** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
@@ -343,8 +340,14 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class UntrustedAttachmentsException(val txId: SecureHash, val ids: List<SecureHash>) :
             CordaException("Attempting to load untrusted transaction attachments: $ids. " +
                     "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +
-                    "You will need to manually install the CorDapp to whitelist it for use. " +
-                    "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
+                    "You will need to manually install the CorDapp to whitelist it for use.")
+
+    @KeepForDJVM
+    class UnsupportedHashTypeException(txId: SecureHash) : TransactionVerificationException(txId, "The transaction Id is defined by an unsupported hash type", null)
+
+    @KeepForDJVM
+    class AttachmentTooBigException(txId: SecureHash) : TransactionVerificationException(
+            txId, "The transaction attachments are too large and exceed both max transaction size and the maximum allowed compression ratio", null)
 
     /*
     If you add a new class extending [TransactionVerificationException], please add a test in `TransactionVerificationExceptionSerializationTests`

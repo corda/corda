@@ -7,10 +7,11 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
+import net.corda.core.internal.readText
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.AttachmentFixup
@@ -23,11 +24,12 @@ import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
-import net.corda.testing.internal.createTestSerializationEnv
-import net.corda.testing.internal.inVMExecutors
+import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.inVMExecutors
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
@@ -40,8 +42,10 @@ import rx.subjects.AsyncSubject
 import java.io.InputStream
 import java.net.Socket
 import java.net.SocketException
+import java.nio.file.Path
 import java.sql.DriverManager
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarOutputStream
@@ -77,6 +81,8 @@ val FINANCE_CORDAPPS: Set<TestCordappImpl> = setOf(FINANCE_CONTRACTS_CORDAPP, FI
  */
 @JvmField
 val DUMMY_CONTRACTS_CORDAPP: CustomCordapp = cordappWithPackages("net.corda.testing.contracts")
+
+private const val SECONDS_TO_WAIT_FOR_P2P: Long = 20
 
 fun cordappsForPackages(vararg packageNames: String): Set<CustomCordapp> = cordappsForPackages(packageNames.asList())
 
@@ -171,20 +177,28 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
 }
 
 fun nodeMustBeStartedFuture(
-    executorService: ScheduledExecutorService,
-    hostAndPort: NetworkHostAndPort,
-    listenProcess: Process? = null,
-    exception: () -> NodeListenProcessDeathException
+        executorService: ScheduledExecutorService,
+        logFile: Path,
+        listenProcess: Process,
+        exception: () -> NodeListenProcessDeathException
 ): CordaFuture<Unit> {
-    return poll(executorService, "address $hostAndPort to bind") {
-        if (listenProcess != null && !listenProcess.isAlive) {
+    val stopPolling = Instant.now().plusSeconds(SECONDS_TO_WAIT_FOR_P2P)
+    return poll(executorService, "process $listenProcess is running") {
+        if (!listenProcess.isAlive) {
             throw exception()
         }
-        try {
-            Socket(hostAndPort.host, hostAndPort.port).close()
-            Unit
-        } catch (_exception: SocketException) {
-            null
+        when {
+            logFile.readText().contains("Running P2PMessaging loop") -> {
+                Unit
+            }
+            Instant.now().isAfter(stopPolling) -> {
+                // Waited for 20 seconds and the log file did not indicate that the PWP loop is running.
+                // This could be because the log is disabled, so lets try to create a client anyway.
+                Unit
+            }
+            else -> {
+                null
+            }
         }
     }
 }
@@ -209,6 +223,10 @@ fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostA
     }
 }
 
+/**
+ * @param pollInterval the interval running the background task.
+ * @param warnCount number of iterations to poll before printing a warning message.
+ */
 fun <A> poll(
         executorService: ScheduledExecutorService,
         pollName: String,
@@ -251,7 +269,10 @@ class NodeListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenPro
         """.trimIndent()
     )
 
-fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
+fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachineHandle<T> = startFlow(logic, newContext()).getOrThrow()
+
+fun <T> StartedNodeServices.startFlowWithClientId(clientId: String, logic: FlowLogic<T>): FlowStateMachineHandle<T> =
+    startFlow(logic, newContext().copy(clientId = clientId)).getOrThrow()
 
 fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
 
@@ -273,9 +294,10 @@ fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
     return completable
 }
 
-fun DriverDSL.assertCheckpoints(name: CordaX500Name, expected: Long) {
+fun DriverDSL.assertUncompletedCheckpoints(name: CordaX500Name, expected: Long) {
+    val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
     DriverManager.getConnection("jdbc:h2:file:${baseDirectory(name) / "persistence"}", "sa", "").use { connection ->
-        connection.createStatement().executeQuery("select count(*) from NODE_CHECKPOINTS").use { rs ->
+        connection.createStatement().executeQuery(sqlStatement).use { rs ->
             rs.next()
             assertThat(rs.getLong(1)).isEqualTo(expected)
         }

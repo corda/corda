@@ -30,11 +30,11 @@ class SandboxEnumSerializer(
     private val localFactory: LocalSerializerFactory
 ) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Enum::class.java)) {
     @Suppress("unchecked_cast")
-    private val describeEnum: Function<Class<*>, Array<Any>>
-        = taskFactory.apply(DescribeEnum::class.java) as Function<Class<*>, Array<Any>>
+    private val describeEnum: Function<Class<*>, Array<out Any>>
+        = taskFactory.apply(DescribeEnum::class.java) as Function<Class<*>, Array<out Any>>
     @Suppress("unchecked_cast")
-    private val getEnumNames: Function<Array<Any>, List<String>>
-        = (taskFactory.apply(GetEnumNames::class.java) as Function<Array<Any>, Array<Any>>)
+    private val getEnumNames: Function<Array<out Any>, List<String>>
+        = (taskFactory.apply(GetEnumNames::class.java) as Function<Array<out Any>, Array<out Any>>)
             .andThen { it.map(Any::toString) }
     @Suppress("unchecked_cast")
     private val isEnum: Predicate<Class<*>>
@@ -70,7 +70,7 @@ class SandboxEnumSerializer(
 
 private class ConcreteEnumSerializer(
     declaredType: Class<*>,
-    private val members: Array<Any>,
+    private val members: Array<out Any>,
     private val memberNames: List<String>,
     factory: LocalSerializerFactory
 ) : AMQPSerializer<Any> {

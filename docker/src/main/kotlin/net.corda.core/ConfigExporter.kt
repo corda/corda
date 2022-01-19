@@ -11,7 +11,6 @@ import net.corda.common.validation.internal.Validated
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.toConfig
-import net.corda.nodeapi.internal.config.toConfigValue
 import java.io.File
 
 class ConfigExporter {
@@ -52,7 +51,7 @@ class ConfigExporter {
 }
 
 fun Config.parseAsNodeConfigWithFallback(): Validated<NodeConfiguration, Configuration.Validation.Error> {
-    val referenceConfig = ConfigFactory.parseResources("reference.conf")
+    val referenceConfig = ConfigFactory.parseResources("corda-reference.conf")
     val nodeConfig = this
             .withValue("baseDirectory", ConfigValueFactory.fromAnyRef("/opt/corda"))
             .withFallback(referenceConfig)

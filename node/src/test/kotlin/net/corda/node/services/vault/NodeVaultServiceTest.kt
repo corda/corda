@@ -35,6 +35,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
+import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
@@ -46,9 +47,6 @@ import org.mockito.Mockito.doReturn
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
 import java.security.PublicKey
-import java.security.cert.CertStore
-import java.security.cert.TrustAnchor
-import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -410,6 +408,47 @@ class NodeVaultServiceTest {
     }
 
     @Test(timeout=300_000)
+    fun `softLockRelease - correctly releases n locked states`() {
+        fun queryStates(softLockingType: SoftLockingType) =
+            vaultService.queryBy<Cash.State>(VaultQueryCriteria(softLockingCondition = SoftLockingCondition(softLockingType))).states
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 100, DUMMY_CASH_ISSUER)
+        }
+
+        val softLockId = UUID.randomUUID()
+        val lockCount = NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE * 2
+        database.transaction {
+            assertEquals(100, queryStates(SoftLockingType.UNLOCKED_ONLY).size)
+            val unconsumedStates = vaultService.queryBy<Cash.State>().states
+
+            val lockSet = mutableListOf<StateRef>()
+            for (i in 0 until lockCount) {
+                lockSet.add(unconsumedStates[i].ref)
+            }
+            vaultService.softLockReserve(softLockId, NonEmptySet.copyOf(lockSet))
+            assertEquals(lockCount, queryStates(SoftLockingType.LOCKED_ONLY).size)
+
+            val unlockSet0 = mutableSetOf<StateRef>()
+            for (i in 0 until NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE + 1) {
+                unlockSet0.add(lockSet[i])
+            }
+            vaultService.softLockRelease(softLockId, NonEmptySet.copyOf(unlockSet0))
+            assertEquals(NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE - 1, queryStates(SoftLockingType.LOCKED_ONLY).size)
+
+            val unlockSet1 = mutableSetOf<StateRef>()
+            for (i in NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE + 1 until NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE + 3) {
+                unlockSet1.add(lockSet[i])
+            }
+            vaultService.softLockRelease(softLockId, NonEmptySet.copyOf(unlockSet1))
+            assertEquals(NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE - 1 - 2, queryStates(SoftLockingType.LOCKED_ONLY).size)
+
+            vaultService.softLockRelease(softLockId) // release the rest
+            assertEquals(100, queryStates(SoftLockingType.UNLOCKED_ONLY).size)
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `unconsumedStatesForSpending exact amount`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
@@ -430,6 +469,7 @@ class NodeVaultServiceTest {
 
     @Test(timeout=300_000)
 	fun `unconsumedStatesForSpending from two issuer parties`() {
+        Assume.assumeTrue(!IS_OPENJ9) // openj9 OOM issue
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, bocServices, 1, BOC.ref(1))

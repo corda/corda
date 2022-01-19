@@ -14,6 +14,8 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.serialize
@@ -48,9 +50,15 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt = PrivacySalt()) : TraversableTransaction(componentGroups) {
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
+
+    /**
+     * Old version of [WireTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, DigestService.sha2_256)
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",
             ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
@@ -64,7 +72,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt)
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt, DigestService.sha2_256)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }
@@ -147,7 +155,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
-                { it.isUploaderTrusted() },
+                Attachment::isUploaderTrusted,
                 null
         )
     }
@@ -180,19 +188,26 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
-            val parties = cmd.signers.mapNotNull { pk -> resolveIdentity(pk) }
+            val parties = cmd.signers.mapNotNull(resolveIdentity)
             CommandWithParties(cmd.signers, parties, cmd.value)
+        }
+
+        // Ensure that the lazy mappings will use the correct SerializationContext.
+        val serializationFactory = SerializationFactory.defaultFactory
+        val serializationContext = serializationFactory.defaultContext
+        val toStateAndRef = { ssar: SerializedStateAndRef, _: Int ->
+            ssar.toStateAndRef(serializationFactory, serializationContext)
         }
 
         val serializedResolvedInputs = inputs.map { ref ->
             SerializedStateAndRef(resolveStateRefAsSerialized(ref) ?: throw TransactionResolutionException(ref.txhash), ref)
         }
-        val resolvedInputs = serializedResolvedInputs.lazyMapped { star, _ -> star.toStateAndRef() }
+        val resolvedInputs = serializedResolvedInputs.lazyMapped(toStateAndRef)
 
         val serializedResolvedReferences = references.map { ref ->
             SerializedStateAndRef(resolveStateRefAsSerialized(ref) ?: throw TransactionResolutionException(ref.txhash), ref)
         }
-        val resolvedReferences = serializedResolvedReferences.lazyMapped { star, _ -> star.toStateAndRef() }
+        val resolvedReferences = serializedResolvedReferences.lazyMapped(toStateAndRef)
 
         val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
 
@@ -207,13 +222,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 notary,
                 timeWindow,
                 privacySalt,
-                resolvedNetworkParameters,
+                resolvedNetworkParameters.toImmutable(),
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
                 isAttachmentTrusted,
-                attachmentsClassLoaderCache
+                attachmentsClassLoaderCache,
+                digestService
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -269,7 +285,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * If any of the groups is an empty list or a null object, then [SecureHash.allOnesHash] is used as its hash.
      * Also, [privacySalt] is not a Merkle tree leaf, because it is already "inherently" included via the component nonces.
      */
-    val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(groupHashes) }
+    val merkleTree: MerkleTree by lazy { MerkleTree.getMerkleTree(groupHashes, digestService) }
 
     /**
      * The leaves (group hashes) of the top level Merkle tree.
@@ -280,8 +296,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val listOfLeaves = mutableListOf<SecureHash>()
         // Even if empty and not used, we should at least send oneHashes for each known
         // or received but unknown (thus, bigger than known ordinal) component groups.
+        val allOnesHash = digestService.allOnesHash
         for (i in 0..componentGroups.map { it.groupIndex }.max()!!) {
-            val root = groupsMerkleRoots[i] ?: SecureHash.allOnesHash
+            val root = groupsMerkleRoots[i] ?: allOnesHash
             listOfLeaves.add(root)
         }
         listOfLeaves
@@ -296,7 +313,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val groupsMerkleRoots: Map<Int, SecureHash> by lazy {
-        availableComponentHashes.map { Pair(it.key, MerkleTree.getMerkleTree(it.value).hash) }.toMap()
+        availableComponentHashes.entries.associate { it.key to MerkleTree.getMerkleTree(it.value, digestService).hash }
     }
 
     /**
@@ -309,7 +326,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.map { Pair(it.groupIndex, it.components.mapIndexed { internalIndex, internalIt -> componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) }) }.toMap()
+        if(digestService.hashAlgorithm == SecureHash.SHA2_256) {
+            componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
+        } else {
+            componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, _ -> digestService.computeNonce(privacySalt, it.groupIndex, internalIndex) } }
+        }
     }
 
     /**
@@ -318,13 +339,13 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.map { Pair(it.groupIndex, it.components.mapIndexed { internalIndex, internalIt -> componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) }) }.toMap()
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
     }
 
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
      *
-     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws [SignatureException] if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkSignature(sig: TransactionSignature) {
@@ -362,7 +383,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
                     is WireTransaction -> coreTransaction.componentGroups
-                            .firstOrNull { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }
+                            .firstOrNull { it.groupIndex == OUTPUTS_GROUP.ordinal }
                             ?.components
                             ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
                     is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)

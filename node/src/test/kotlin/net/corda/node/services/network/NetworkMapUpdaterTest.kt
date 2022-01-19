@@ -3,6 +3,7 @@ package net.corda.node.services.network
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.atLeast
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.times
@@ -10,6 +11,7 @@ import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -17,6 +19,7 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.createDirectory
 import net.corda.core.internal.delete
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -28,6 +31,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.TestNodeInfoBuilder
+import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
@@ -39,9 +45,6 @@ import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestNodeInfoBuilder
-import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -49,7 +52,6 @@ import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
 import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
@@ -79,7 +81,6 @@ class NetworkMapUpdaterTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
-
     private val cacheExpiryMs = 1000
     private val privateNetUUID = UUID.randomUUID()
     private lateinit var fs: FileSystem
@@ -112,7 +113,7 @@ class NetworkMapUpdaterTest {
         server = NetworkMapServer(cacheExpiryMs.millis)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"),
-                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(setOf(DEV_ROOT_CA.certificate)) }
     }
 
     @After
@@ -130,12 +131,13 @@ class NetworkMapUpdaterTest {
                              networkParameters: NetworkParameters = server.networkParameters,
                              autoAcceptNetworkParameters: Boolean = true,
                              excludedAutoAcceptNetworkParameters: Set<String> = emptySet()) {
-        updater!!.start(DEV_ROOT_CA.certificate,
+
+        updater!!.start(setOf(DEV_ROOT_CA.certificate),
                 server.networkParameters.serialize().hash,
                 ourNodeInfo,
                 networkParameters,
                 MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
-                NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters))
+                NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters), null)
     }
 
     @Test(timeout=300_000)
@@ -291,6 +293,40 @@ class NetworkMapUpdaterTest {
     }
 
     @Test(timeout=300_000)
+	fun `receive node infos from directory after an error due to missing additional-node-infos directory`() {
+        setUpdater(netMapClient = null)
+        val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
+
+        // Not subscribed yet
+        verify(networkMapCache, times(0)).addOrUpdateNode(any())
+
+        nodeInfoDir.delete()
+        assertFalse(nodeInfoDir.exists())
+
+        // Observable will get a NoSuchFileException and log it
+        startUpdater()
+        // Updater will resubscribe to observable with delayed retry. We should see one log warning message despite two retries.
+        advanceTime()
+        advanceTime()
+
+        // no changes will be made to networkMapCache at this point
+        verify(networkMapCache, times(0)).addOrUpdateNode(any())
+
+        nodeInfoDir.createDirectory()
+        assertTrue(nodeInfoDir.exists())
+
+        // Now that directory has been created, save a nodeInfo and assert that the file polling watcher behaves as expected
+        NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned)
+        assertThat(nodeReadyFuture).isNotDone
+        advanceTime()
+
+        verify(networkMapCache, times(1)).addOrUpdateNode(fileNodeInfoAndSigned.nodeInfo)
+        assertThat(nodeReadyFuture).isDone
+
+        assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
+    }
+
+    @Test(timeout=300_000)
 	fun `emit new parameters update info on parameters update from network map`() {
         setUpdater()
         val paramsFeed = updater!!.trackParametersUpdate()
@@ -327,7 +363,7 @@ class NetworkMapUpdaterTest {
         updater!!.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         verify(networkParametersStorage, times(1)).saveParameters(any())
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }
@@ -345,7 +381,7 @@ class NetworkMapUpdaterTest {
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }
@@ -393,6 +429,75 @@ class NetworkMapUpdaterTest {
         assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(bobInfo.serialize().hash)
         assertThat(networkMapClient.getNetworkMap(privateNetUUID).payload.nodeInfoHashes).containsExactly(aliceHash)
         assertEquals(aliceInfo, networkMapClient.getNodeInfo(aliceHash))
+    }
+
+    @Test(timeout=300_000)
+    fun `update nodes is successful for network map supporting bulk operations but with only a few nodes requested`() {
+        server.version = "2"
+        setUpdater()
+        // on first update, bulk request is used
+        val (nodeInfo1, signedNodeInfo1) = createNodeInfoAndSigned("info1")
+        val nodeInfoHash1 = nodeInfo1.serialize().sha256()
+        val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("info2")
+        val nodeInfoHash2 = nodeInfo2.serialize().sha256()
+        networkMapClient.publish(signedNodeInfo1)
+        networkMapClient.publish(signedNodeInfo2)
+
+        startUpdater()
+
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo1, nodeInfo2))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(nodeInfoHash1, nodeInfoHash2)
+
+        // on subsequent updates, single requests are used
+        val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("info3")
+        val nodeInfoHash3 = nodeInfo3.serialize().sha256()
+        val (nodeInfo4, signedNodeInfo4) = createNodeInfoAndSigned("info4")
+        val nodeInfoHash4 = nodeInfo4.serialize().sha256()
+        networkMapClient.publish(signedNodeInfo3)
+        networkMapClient.publish(signedNodeInfo4)
+
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo3))
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo4))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(nodeInfoHash1, nodeInfoHash2, nodeInfoHash3, nodeInfoHash4)
+    }
+
+    @Test(timeout=300_000)
+    @SuppressWarnings("SpreadOperator")
+    fun `update nodes is successful for network map supporting bulk operations when high number of nodes is requested`() {
+        server.version = "2"
+        setUpdater()
+        val nodeInfos = (1..51).map { createNodeInfoAndSigned("info$it")
+                .also { nodeInfoAndSigned ->  networkMapClient.publish(nodeInfoAndSigned.signed) }
+                .nodeInfo
+        }
+        val nodeInfoHashes = nodeInfos.map { it.serialize().sha256() }
+
+        startUpdater()
+        Thread.sleep(2L * cacheExpiryMs)
+
+        verify(networkMapCache, times(1)).addOrUpdateNodes(nodeInfos)
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(*(nodeInfoHashes.toTypedArray()))
+    }
+
+    @Test(timeout=300_000)
+    @SuppressWarnings("SpreadOperator")
+    fun `update nodes is successful for network map not supporting bulk operations`() {
+        setUpdater()
+        val nodeInfos = (1..51).map { createNodeInfoAndSigned("info$it")
+                .also { nodeInfoAndSigned ->  networkMapClient.publish(nodeInfoAndSigned.signed) }
+                .nodeInfo
+        }
+        val nodeInfoHashes = nodeInfos.map { it.serialize().sha256() }
+
+        startUpdater()
+        Thread.sleep(2L * cacheExpiryMs)
+
+        // we can't be sure about the number of requests (and updates), as it depends on the machine and the threads created
+        // but if they are more than 1 it's enough to deduct that the parallel way was favored
+        verify(networkMapCache, atLeast(2)).addOrUpdateNodes(any())
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(*(nodeInfoHashes.toTypedArray()))
     }
 
     @Test(timeout=300_000)

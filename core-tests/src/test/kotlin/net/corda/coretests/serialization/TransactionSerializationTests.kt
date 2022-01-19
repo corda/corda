@@ -19,8 +19,8 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.TEST_TX_TIME
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule
@@ -80,7 +80,7 @@ class TransactionSerializationTests {
         //override mock implementation with a real one
         override fun loadContractAttachment(stateRef: StateRef): Attachment = servicesForResolution.loadContractAttachment(stateRef)
     }
-    val notaryServices = MockServices(listOf("net.corda.coretests.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
+    val notaryServices = MockServices(listOf("net.corda.coretests.serialization"), DUMMY_NOTARY.name, key = DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before

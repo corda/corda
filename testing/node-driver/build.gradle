@@ -73,9 +73,17 @@ jar {
     }
 }
 
+
+tasks.named('javadocJar', Jar) {
+    from 'README.md'
+    include 'README.md'
+}
+
+tasks.named('javadoc', Javadoc) {
+    enabled = false
+}
+
 publish {
-    publishSources = false
-    publishJavadoc = false
     name jar.baseName
 }
 

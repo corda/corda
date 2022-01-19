@@ -20,6 +20,9 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
     }
 }
 
@@ -50,6 +53,7 @@ dependencies {
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
+    testCompile "org.slf4j:slf4j-simple:$slf4j_version"
     testCompile(project(':node-driver')) {
         // We already have a SLF4J implementation on our runtime classpath,
         // and we don't need another one.
@@ -81,10 +85,13 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
         cordapp project(':samples:trader-demo:workflows-trader')
+        runSchemaMigration = true
     }
     node {
-        name "O=Notary Service,L=Zurich,C=CH"
-        notary = [validating : true]
+        name "O=Notary Node,L=Zurich,C=CH"
+        notary = [validating : true,
+                  serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
+        ]
         p2pPort 10002
         rpcSettings {
             address "localhost:10003"

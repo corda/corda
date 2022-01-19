@@ -5,11 +5,11 @@ package net.corda.node.services.config.schema.v1
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
 import net.corda.common.configuration.parsing.internal.Configuration
-import net.corda.common.configuration.parsing.internal.get
 import net.corda.common.configuration.parsing.internal.listOrEmpty
 import net.corda.common.configuration.parsing.internal.map
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
+import net.corda.common.configuration.parsing.internal.withOptions
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
@@ -44,7 +44,6 @@ import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
-import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.tools.shell.SSHDConfiguration
@@ -55,11 +54,12 @@ internal object UserSpec : Configuration.Specification<User>("User") {
     private val password by string(sensitive = true)
     private val permissions by string().listOrEmpty()
 
-    override fun parseValid(configuration: Config): Valid<User> {
-        val username = configuration[username] ?: configuration[user]
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<User> {
+        val config = configuration.withOptions(options)
+        val username = config[username] ?: config[user]
         return when (username) {
             null -> invalid(Configuration.Validation.Error.MissingValue.forKey("username"))
-            else -> valid(User(username, configuration[password], configuration[permissions].toSet()))
+            else -> valid(User(username, config[password], config[permissions].toSet()))
         }
     }
 }
@@ -72,11 +72,12 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
             private val connection by nestedObject(sensitive = true).map(::toProperties).optional()
             private val users by nested(UserSpec).list().optional()
 
-            override fun parseValid(configuration: Config): Valid<SecurityConfiguration.AuthService.DataSource> {
-                val type = configuration[type]
-                val passwordEncryption = configuration[passwordEncryption]
-                val connection = configuration[connection]
-                val users = configuration[users]
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration.AuthService.DataSource> {
+                val config = configuration.withOptions(options)
+                val type = config[type]
+                val passwordEncryption = config[passwordEncryption]
+                val connection = config[connection]
+                val users = config[users]
 
                 return when {
                     type == AuthDataSourceType.INMEMORY && (users == null || connection != null) -> badValue("\"INMEMORY\" data source type requires \"users\" and cannot specify \"connection\"")
@@ -91,15 +92,17 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
                 private val expireAfterSecs by long().mapValid { value -> if (value >= 0) validValue(value) else badValue("cannot be less than 0'") }
                 private val maxEntries by long().mapValid { value -> if (value >= 0) validValue(value) else badValue("cannot be less than 0'") }
 
-                override fun parseValid(configuration: Config): Valid<SecurityConfiguration.AuthService.Options.Cache> {
-                    return valid(SecurityConfiguration.AuthService.Options.Cache(configuration[expireAfterSecs], configuration[maxEntries]))
+                override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration.AuthService.Options.Cache> {
+                    val config = configuration.withOptions(options)
+                    return valid(SecurityConfiguration.AuthService.Options.Cache(config[expireAfterSecs], config[maxEntries]))
                 }
             }
 
             private val cache by nested(CacheSpec).optional()
 
-            override fun parseValid(configuration: Config): Valid<SecurityConfiguration.AuthService.Options> {
-                return valid(SecurityConfiguration.AuthService.Options(configuration[cache]))
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration.AuthService.Options> {
+                val config = configuration.withOptions(options)
+                return valid(SecurityConfiguration.AuthService.Options(config[cache]))
             }
         }
 
@@ -107,21 +110,23 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
         private val id by string().map(::AuthServiceId).optional()
         val options by nested(OptionsSpec).optional()
 
-        override fun parseValid(configuration: Config): Valid<SecurityConfiguration.AuthService> {
-            val dataSource = configuration[dataSource]
-            val id = configuration[id] ?: defaultAuthServiceId(dataSource.type)
-            val options = configuration[options]
+        override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration.AuthService> {
+            val config = configuration.withOptions(options)
+            val dataSource = config[dataSource]
+            val id = config[id] ?: defaultAuthServiceId(dataSource.type)
+            val authServiceOptions = config[this.options]
             return when {
-                dataSource.type == AuthDataSourceType.INMEMORY && options?.cache != null -> badValue("no cache supported for \"INMEMORY\" data provider")
-                else -> valid(SecurityConfiguration.AuthService(dataSource, id, options))
+                dataSource.type == AuthDataSourceType.INMEMORY && authServiceOptions?.cache != null -> badValue("no cache supported for \"INMEMORY\" data provider")
+                else -> valid(SecurityConfiguration.AuthService(dataSource, id, authServiceOptions))
             }
         }
     }
 
     private val authService by nested(AuthServiceSpec)
 
-    override fun parseValid(configuration: Config): Valid<SecurityConfiguration> {
-        return valid(SecurityConfiguration(configuration[authService]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SecurityConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(SecurityConfiguration(config[authService]))
     }
 }
 
@@ -134,13 +139,15 @@ internal object DevModeOptionsSpec : Configuration.Specification<DevModeOptions>
         private val bootstrapSource by string().optional()
         private val cordaSource by string().list()
 
-        override fun parseValid(configuration: Config): Valid<DJVMOptions> {
-            return valid(DJVMOptions(configuration[bootstrapSource], configuration[cordaSource]))
+        override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DJVMOptions> {
+            val config = configuration.withOptions(options)
+            return valid(DJVMOptions(config[bootstrapSource], config[cordaSource]))
         }
     }
 
-    override fun parseValid(configuration: Config): Valid<DevModeOptions> {
-        return valid(DevModeOptions(configuration[disableCheckpointChecker], configuration[allowCompatibilityZone], configuration[djvm]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DevModeOptions> {
+        val config = configuration.withOptions(options)
+        return valid(DevModeOptions(config[disableCheckpointChecker], config[allowCompatibilityZone], config[djvm]))
     }
 }
 
@@ -151,8 +158,9 @@ internal object NetworkServicesConfigSpec : Configuration.Specification<NetworkS
     private val inferred by boolean().optional().withDefaultValue(false)
     private val csrToken by string(sensitive = true).optional()
 
-    override fun parseValid(configuration: Config): Valid<NetworkServicesConfig> {
-        return valid(NetworkServicesConfig(configuration[doormanURL], configuration[networkMapURL], configuration[pnm], configuration[inferred], configuration[csrToken]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NetworkServicesConfig> {
+        val config = configuration.withOptions(options)
+        return valid(NetworkServicesConfig(config[doormanURL], config[networkMapURL], config[pnm], config[inferred], config[csrToken]))
     }
 }
 
@@ -160,13 +168,14 @@ internal object NetworkParameterAcceptanceSettingsSpec :
         Configuration.Specification<NetworkParameterAcceptanceSettings>("NetworkParameterAcceptanceSettings") {
     private val autoAcceptEnabled by boolean().optional().withDefaultValue(true)
     private val excludedAutoAcceptableParameters by string().listOrEmpty()
-    override fun parseValid(configuration: Config): Valid<NetworkParameterAcceptanceSettings> {
-        return valid(NetworkParameterAcceptanceSettings(configuration[autoAcceptEnabled],
-                configuration[excludedAutoAcceptableParameters].toSet())
+    override fun parseValid(configuration: Config, options: Configuration.Options):
+            Valid<NetworkParameterAcceptanceSettings> {
+        val config = configuration.withOptions(options)
+        return valid(NetworkParameterAcceptanceSettings(config[autoAcceptEnabled],
+                config[excludedAutoAcceptableParameters].toSet())
         )
     }
 }
-
 
 @Suppress("DEPRECATION")
 internal object CertChainPolicyConfigSpec : Configuration.Specification<CertChainPolicyConfig>("CertChainPolicyConfig") {
@@ -174,8 +183,9 @@ internal object CertChainPolicyConfigSpec : Configuration.Specification<CertChai
     private val policy by enum(CertChainPolicyType::class)
     private val trustedAliases by string().listOrEmpty()
 
-    override fun parseValid(configuration: Config): Valid<CertChainPolicyConfig> {
-        return valid(CertChainPolicyConfig(configuration[role], configuration[policy], configuration[trustedAliases].toSet()))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<CertChainPolicyConfig> {
+        val config = configuration.withOptions(options)
+        return valid(CertChainPolicyConfig(config[role], config[policy], config[trustedAliases].toSet()))
     }
 }
 
@@ -184,8 +194,9 @@ internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowT
     private val maxRestartCount by int()
     private val backoffBase by double()
 
-    override fun parseValid(configuration: Config): Valid<FlowTimeoutConfiguration> {
-        return valid(FlowTimeoutConfiguration(configuration[timeout], configuration[maxRestartCount], configuration[backoffBase]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<FlowTimeoutConfiguration> {
+        val config = configuration.withOptions(options)
+        return valid(FlowTimeoutConfiguration(config[timeout], config[maxRestartCount], config[backoffBase]))
     }
 }
 
@@ -194,12 +205,25 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val serviceLegalName by string().mapValid(::toCordaX500Name).optional()
     private val className by string().optional()
     private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt())
-    private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
+    private val extraConfig by nestedObject(sensitive = true).map(ConfigObject::toConfig).optional()
     private val raft by nested(RaftConfigSpec).optional()
     private val bftSMaRt by nested(BFTSmartConfigSpec).optional()
+    private val enableOverridableFlows by boolean().optional()
 
-    override fun parseValid(configuration: Config): Valid<NotaryConfig> {
-        return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[etaMessageThresholdSeconds], configuration[extraConfig], configuration[raft], configuration[bftSMaRt]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NotaryConfig> {
+        val config = configuration.withOptions(options)
+        return valid(
+                NotaryConfig(
+                        config[validating],
+                        config[serviceLegalName],
+                        config[className],
+                        config[etaMessageThresholdSeconds],
+                        config[extraConfig],
+                        config[raft],
+                        config[bftSMaRt],
+                        config[enableOverridableFlows]
+                )
+        )
     }
 }
 
@@ -207,8 +231,9 @@ internal object RaftConfigSpec : Configuration.Specification<RaftConfig>("RaftCo
     private val nodeAddress by string().mapValid(::toNetworkHostAndPort)
     private val clusterAddresses by string().mapValid(::toNetworkHostAndPort).listOrEmpty()
 
-    override fun parseValid(configuration: Config): Valid<RaftConfig> {
-        return valid(RaftConfig(configuration[nodeAddress], configuration[clusterAddresses]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RaftConfig> {
+        val config = configuration.withOptions(options)
+        return valid(RaftConfig(config[nodeAddress], config[clusterAddresses]))
     }
 }
 
@@ -218,19 +243,20 @@ internal object BFTSmartConfigSpec : Configuration.Specification<BFTSmartConfig>
     private val debug by boolean().optional().withDefaultValue(false)
     private val exposeRaces by boolean().optional().withDefaultValue(false)
 
-    override fun parseValid(configuration: Config): Valid<BFTSmartConfig> {
-        return valid(BFTSmartConfig(configuration[replicaId], configuration[clusterAddresses], configuration[debug], configuration[exposeRaces]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<BFTSmartConfig> {
+        val config = configuration.withOptions(options)
+        return valid(BFTSmartConfig(config[replicaId], config[clusterAddresses], config[debug], config[exposeRaces]))
     }
 }
-
 
 internal object NodeRpcSettingsSpec : Configuration.Specification<NodeRpcSettings>("NodeRpcSettings") {
     internal object BrokerRpcSslOptionsSpec : Configuration.Specification<BrokerRpcSslOptions>("BrokerRpcSslOptions") {
         private val keyStorePath by string().mapValid(::toPath)
         private val keyStorePassword by string(sensitive = true)
 
-        override fun parseValid(configuration: Config): Valid<BrokerRpcSslOptions> {
-            return valid(BrokerRpcSslOptions(configuration[keyStorePath], configuration[keyStorePassword]))
+        override fun parseValid(configuration: Config, options: Configuration.Options): Valid<BrokerRpcSslOptions> {
+            val config = configuration.withOptions(options)
+            return valid(BrokerRpcSslOptions(config[keyStorePath], config[keyStorePassword]))
         }
     }
 
@@ -240,35 +266,62 @@ internal object NodeRpcSettingsSpec : Configuration.Specification<NodeRpcSetting
     private val useSsl by boolean().optional().withDefaultValue(NodeRpcSettings.Defaults.useSsl)
     private val ssl by nested(BrokerRpcSslOptionsSpec).optional()
 
-    override fun parseValid(configuration: Config): Valid<NodeRpcSettings> {
-        return valid(NodeRpcSettings(configuration[address], configuration[adminAddress], configuration[standAloneBroker], configuration[useSsl], configuration[ssl]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NodeRpcSettings> {
+        val config = configuration.withOptions(options)
+        return valid(NodeRpcSettings(config[address], config[adminAddress], config[standAloneBroker], config[useSsl], config[ssl]))
     }
 }
 
 internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfiguration>("SSHDConfiguration") {
     private val port by int()
 
-    override fun parseValid(configuration: Config): Valid<SSHDConfiguration> = attempt<SSHDConfiguration, IllegalArgumentException> { SSHDConfiguration(configuration[port]) }
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SSHDConfiguration> = attempt<SSHDConfiguration, IllegalArgumentException> { SSHDConfiguration(configuration.withOptions(options)[port]) }
 }
 
+enum class SchemaInitializationType{
+    NONE,
+    VALIDATE,
+    UPDATE
+}
 
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
-    private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)
-    private val initialiseAppSchema by enum(SchemaInitializationType::class).optional().withDefaultValue(DatabaseConfig.Defaults.initialiseAppSchema)
-    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
+    private val initialiseSchema by boolean().optional()
+    private val initialiseAppSchema by enum(SchemaInitializationType::class).optional()
+    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional()
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
-    override fun parseValid(configuration: Config): Valid<DatabaseConfig> {
-        return valid(DatabaseConfig(configuration[initialiseSchema], configuration[initialiseAppSchema], configuration[transactionIsolationLevel], configuration[exportHibernateJMXStatistics], configuration[mappedSchemaCacheSize]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
+        if (initialiseSchema.isSpecifiedBy(configuration)) {
+            return invalid(Configuration.Validation.Error.BadPath.of(
+                    "Unsupported configuration database/initialiseSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas",
+                    "initialiseSchema",
+                    "Boolean"))
+        }
+        if (initialiseAppSchema.isSpecifiedBy(configuration)) {
+            return invalid(Configuration.Validation.Error.BadPath.of(
+                    "Unsupported configuration database/initialiseAppSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas",
+                    "initialiseAppSchema",
+                    SchemaInitializationType::class.qualifiedName!!))
+        }
+        if (transactionIsolationLevel.isSpecifiedBy(configuration)) {
+            return invalid(Configuration.Validation.Error.BadPath.of(
+                    "Unsupported configuration database/transactionIsolationLevel - this option has been removed and cannot be changed",
+                    "transactionIsolationLevel",
+                    TransactionIsolationLevel::class.qualifiedName!!))
+        }
+
+        val config = configuration.withOptions(options)
+        return valid(DatabaseConfig(config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
     }
 }
 
 internal object NodeH2SettingsSpec : Configuration.Specification<NodeH2Settings>("NodeH2Settings") {
     private val address by string().mapValid(::toNetworkHostAndPort).optional()
 
-    override fun parseValid(configuration: Config): Valid<NodeH2Settings> {
-        return valid(NodeH2Settings(configuration[address]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NodeH2Settings> {
+        val config = configuration.withOptions(options)
+        return valid(NodeH2Settings(config[address]))
     }
 }
 
@@ -277,14 +330,16 @@ internal object FlowOverridesConfigSpec : Configuration.Specification<FlowOverri
         private val initiator by string()
         private val responder by string()
 
-        override fun parseValid(configuration: Config): Valid<FlowOverride> {
-            return valid(FlowOverride(configuration[initiator], configuration[responder]))
+        override fun parseValid(configuration: Config, options: Configuration.Options): Valid<FlowOverride> {
+            val config = configuration.withOptions(options)
+            return valid(FlowOverride(config[initiator], config[responder]))
         }
     }
 
     private val overrides by nested(FlowOverridesConfigSpec.SingleSpec).listOrEmpty()
 
-    override fun parseValid(configuration: Config): Valid<FlowOverrideConfig> {
-        return valid(FlowOverrideConfig(configuration[overrides]))
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<FlowOverrideConfig> {
+        val config = configuration.withOptions(options)
+        return valid(FlowOverrideConfig(config[overrides]))
     }
 }

@@ -5,14 +5,16 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
-import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.node.services.api.CheckpointStorage
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.SubFlow
 import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 
 object CheckpointVerifier {
+
+    private val statusToVerify = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.HOSPITALIZED, Checkpoint.FlowStatus.PAUSED)
 
     /**
      * Verifies that all Checkpoints stored in the db can be safely loaded with the currently installed version.
@@ -36,10 +38,10 @@ object CheckpointVerifier {
 
         val cordappsByHash = currentCordapps.associateBy { it.jarHash }
 
-        checkpointStorage.getAllCheckpoints().use {
+        checkpointStorage.getCheckpoints(statusToVerify).use {
             it.forEach { (_, serializedCheckpoint) ->
                 val checkpoint = try {
-                    serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                    serializedCheckpoint.deserialize(checkpointSerializationContext)
                 } catch (e: ClassNotFoundException) {
                     val message = e.message
                     if (message != null) {
@@ -52,7 +54,7 @@ object CheckpointVerifier {
                 }
 
                 // For each Subflow, compare the checkpointed version to the current version.
-                checkpoint.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
+                checkpoint.checkpointState.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
             }
         }
     }
@@ -84,19 +86,18 @@ object CheckpointVerifier {
 sealed class CheckpointIncompatibleException(override val message: String) : Exception() {
     class CannotBeDeserialisedException(val e: Exception) : CheckpointIncompatibleException(
             "Found checkpoint that cannot be deserialised using the current Corda version. Please revert to the previous version of Corda, " +
-                    "drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again. Cause: ${e.message}")
+                    "drain your node, and try again. Cause: ${e.message}")
 
     class SubFlowCoreVersionIncompatibleException(val flowClass: Class<out FlowLogic<*>>, oldVersion: Int) : CheckpointIncompatibleException(
             "Found checkpoint for flow: $flowClass that is incompatible with the current Corda platform. Please revert to the previous " +
-                    "version of Corda (version $oldVersion), drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
+                    "version of Corda (version $oldVersion), drain your node, and try again.")
 
     class FlowVersionIncompatibleException(val flowClass: Class<out FlowLogic<*>>, val cordapp: Cordapp, oldHash: SecureHash) : CheckpointIncompatibleException(
             "Found checkpoint for flow: $flowClass that is incompatible with the current installed version of ${cordapp.name}. " +
-                    "Please reinstall the previous version of the CorDapp (with hash: $oldHash), drain your node " +
-                    "(see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
+                    "Please reinstall the previous version of the CorDapp (with hash: $oldHash), drain your node, and try again.")
 
     class CordappNotInstalledException(classNotFound: String) : CheckpointIncompatibleException(
             "Found checkpoint for CorDapp that is no longer installed. Specifically, could not find class $classNotFound. Please install the " +
-                    "missing CorDapp, drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
+                    "missing CorDapp, drain your node, and try again.")
 }
 

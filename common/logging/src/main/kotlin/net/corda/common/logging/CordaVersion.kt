@@ -13,6 +13,7 @@ class CordaVersion  {
         val revision: String by lazy { manifestValue("Corda-Revision") ?: UNKNOWN }
         val vendor: String by lazy { manifestValue("Corda-Vendor") ?: UNKNOWN }
         val platformVersion: Int by lazy { manifestValue("Corda-Platform-Version")?.toInt() ?: 1 }
+        val docsLink: String by lazy { manifestValue("Corda-Docs-Link") ?: UNKNOWN }
 
         internal val semanticVersion: String by lazy { if(releaseVersion == UNKNOWN) CURRENT_MAJOR_RELEASE else releaseVersion }
     }

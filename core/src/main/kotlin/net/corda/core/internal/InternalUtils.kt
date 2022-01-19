@@ -4,6 +4,7 @@ package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
@@ -32,6 +33,7 @@ import java.lang.reflect.Member
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_MOVED_PERM
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.Proxy
 import java.net.URI
@@ -54,7 +56,9 @@ import java.security.cert.TrustAnchor
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
-import java.util.*
+import java.util.Collections
+import java.util.PrimitiveIterator
+import java.util.Spliterator
 import java.util.Spliterator.DISTINCT
 import java.util.Spliterator.IMMUTABLE
 import java.util.Spliterator.NONNULL
@@ -62,6 +66,7 @@ import java.util.Spliterator.ORDERED
 import java.util.Spliterator.SIZED
 import java.util.Spliterator.SORTED
 import java.util.Spliterator.SUBSIZED
+import java.util.Spliterators
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
@@ -417,6 +422,7 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Returns the location of this class. */
+@get:StubOutForDJVM
 val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
 /** Convenience method to get the package name of a class literal. */
@@ -476,7 +482,11 @@ fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String
 @DeleteForDJVM
 fun HttpURLConnection.checkOkResponse() {
     if (responseCode != HTTP_OK) {
-        throw IOException("Response Code $responseCode: $errorMessage")
+        if(responseCode == HTTP_MOVED_PERM) {
+            throw IOException("Response Code $responseCode Moved Permanently cannot be used here. We only accept $HTTP_OK responses.")
+        } else {
+            throw IOException("Response Code $responseCode: $errorMessage")
+        }
     }
 }
 
@@ -499,8 +509,8 @@ fun ExecutorService.join() {
 }
 
 // TODO: Currently the certificate revocation status is not handled here. Nowhere in the code the second parameter is used. Consider adding the support in the future.
-fun CertPath.validate(trustAnchor: TrustAnchor, checkRevocation: Boolean = false): PKIXCertPathValidatorResult {
-    val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = checkRevocation }
+fun CertPath.validate(trustAnchors: Set<TrustAnchor>, checkRevocation: Boolean = false): PKIXCertPathValidatorResult {
+    val parameters = PKIXParameters(trustAnchors).apply { isRevocationEnabled = checkRevocation }
     try {
         return CertPathValidator.getInstance("PKIX").validate(this, parameters) as PKIXCertPathValidatorResult
     } catch (e: CertPathValidatorException) {
@@ -510,8 +520,8 @@ Reason: ${e.reason}
 Offending cert index: ${e.index}
 Cert path: $this
 
-Trust anchor:
-$trustAnchor""", e, this, e.index)
+Trust anchors:
+$trustAnchors""", e, this, e.index)
     }
 }
 
@@ -634,3 +644,6 @@ fun Logger.warnOnce(warning: String) {
         this.warn(warning)
     }
 }
+
+const val JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
+const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52

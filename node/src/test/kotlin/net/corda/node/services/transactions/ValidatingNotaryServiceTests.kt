@@ -274,8 +274,8 @@ class ValidatingNotaryServiceTests {
         assertEquals(notaryError.txId, doubleSpendTx.id)
         with(notaryError) {
             assertEquals(consumedStates.size, 2)
-            assertEquals(consumedStates[firstState.ref]!!.hashOfTransactionId, firstSpendTx.id.sha256())
-            assertEquals(consumedStates[secondState.ref]!!.hashOfTransactionId, secondSpendTx.id.sha256())
+            assertEquals(consumedStates[firstState.ref]!!.hashOfTransactionId, firstSpendTx.id.reHash())
+            assertEquals(consumedStates[secondState.ref]!!.hashOfTransactionId, secondSpendTx.id.reHash())
         }
     }
 

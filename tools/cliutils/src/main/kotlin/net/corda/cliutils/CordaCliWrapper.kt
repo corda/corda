@@ -1,6 +1,5 @@
 package net.corda.cliutils
 
-import net.corda.cliutils.ExitCodes
 import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole
@@ -64,15 +63,33 @@ fun CordaCliWrapper.start(args: Array<String>) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
-    try {
         val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
             Help.Ansi.ON
         } else {
             Help.Ansi.AUTO
         }
+
+        val exceptionHandler = object : DefaultExceptionHandler<List<Any>>() {
+
+            override fun handleParseException(ex: ParameterException?, args: Array<out String>?): List<Any> {
+                super.handleParseException(ex, args)
+                return listOf(ExitCodes.FAILURE)
+            }
+            override fun handleExecutionException(ex: ExecutionException, parseResult: ParseResult?): List<Any> {
+
+                val throwable = ex.cause ?: ex
+                if (this@start.verbose || this@start.subCommands.any { it.verbose }) {
+                    throwable.printStackTrace()
+                }
+                printError(throwable.rootMessage ?: "Use --verbose for more details")
+                return listOf(ExitCodes.FAILURE)
+            }
+        }
+        @Suppress("SpreadOperator")
         val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode).andExit(ExitCodes.FAILURE),
-                *args)
+                exceptionHandler.useErr(System.err).useAnsi(defaultAnsiMode), *args)
+
+
         // If an error code has been returned, use this and exit
         results?.firstOrNull()?.let {
             if (it is Int) {
@@ -81,17 +98,10 @@ fun CordaCliWrapper.start(args: Array<String>) {
                 exitProcess(ExitCodes.FAILURE)
             }
         }
+
         // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
         exitProcess(ExitCodes.SUCCESS)
-    } catch (e: ExecutionException) {
-        val throwable = e.cause ?: e
-        if (this.verbose || this.subCommands.any { it.verbose }) {
-            throwable.printStackTrace()
-        } else {
-        }
-        printError(throwable.rootMessage ?: "Use --verbose for more details")
-        exitProcess(ExitCodes.FAILURE)
-    }
+
 }
 
 @Command(mixinStandardHelpOptions = true,
@@ -201,6 +211,7 @@ fun printError(message: String) = System.err.println("${ShellConstants.RED}$mess
  */
 object CommonCliConstants {
     const val BASE_DIR = "--base-directory"
+    const val CONFIG_FILE = "--config-file"
 }
 
 /**

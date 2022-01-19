@@ -5,10 +5,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
-import net.corda.nodeapi.internal.KeyOwningIdentity
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -44,8 +41,8 @@ class MockKeyManagementService(
 
     override fun getSigner(publicKey: PublicKey): ContentSigner = net.corda.node.services.keys.getSigner(getSigningKeyPair(publicKey))
 
-    override fun start(initialKeyPairs: Set<KeyPair>) {
-        initialKeyPairs.forEach { keyStore[it.public] = it.private }
+    override fun start(initialKeysAndAliases: Iterable<Pair<PublicKey, String>>) {
+        throw NotImplementedError()
     }
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {

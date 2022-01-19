@@ -4,14 +4,15 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -33,8 +34,22 @@ data class NotaryChangeWireTransaction(
          * This is used for calculating the transaction id in a deterministic fashion, since re-serializing properties
          * may result in a different byte sequence depending on the serialization context.
          */
-        val serializedComponents: List<OpaqueBytes>
+        val serializedComponents: List<OpaqueBytes>,
+        val digestService: DigestService
 ) : CoreTransaction() {
+    /**
+     * Old version of [NotaryChangeWireTransaction] constructor for ABI compatibility.
+     */
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(serializedComponents: List<OpaqueBytes>) : this(serializedComponents, DigestService.sha2_256)
+
+    /**
+     * Old version of [NotaryChangeWireTransaction.copy] for ABI compatibility.
+     */
+    fun copy(serializedComponents: List<OpaqueBytes>): NotaryChangeWireTransaction {
+        return NotaryChangeWireTransaction(serializedComponents, DigestService.sha2_256)
+    }
+
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val references: List<StateRef> = emptyList()
     override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()
@@ -68,9 +83,9 @@ data class NotaryChangeWireTransaction(
      */
     override val id: SecureHash by lazy {
         serializedComponents.map { component ->
-            component.bytes.sha256()
+            digestService.hash(component.bytes)
         }.reduce { combinedHash, componentHash ->
-            combinedHash.hashConcat(componentHash)
+            combinedHash.concatenate(componentHash)
         }
     }
 
@@ -156,7 +171,7 @@ private constructor(
         networkParameters?.let { parameters ->
             val notaryWhitelist = parameters.notaries.map { it.identity }
             check(newNotary in notaryWhitelist) {
-                "The output notary $newNotary is not whitelisted in the attached network parameters."
+                "The output notary ${newNotary.description()} is not whitelisted in the attached network parameters."
             }
         }
     }

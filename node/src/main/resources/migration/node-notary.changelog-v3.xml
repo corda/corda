@@ -1,0 +1,48 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="create-notary-committed-transactions-table" logicalFilePath="migration/node-notary.changelog-committed-transactions-table.xml">
+        <createTable tableName="node_notary_committed_txs">
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey columnNames="transaction_id" constraintName="node_notary_transactions_pkey" tableName="node_notary_committed_txs"/>
+    </changeSet>
+
+    <changeSet id="notary-request-log-change-id-type-oracle" author="R3.Corda">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="oracle"/>
+        </preConditions>
+        <!--
+        For Oracle it's not possible to modify the data type for a column with existing values.
+        So we create a new column with the right type, copy over the values, drop the original one and rename the new one.
+        -->
+        <addColumn tableName="node_notary_request_log">
+            <column name="id_temp" type="NVARCHAR(76)"/>
+        </addColumn>
+        <!-- Copy old values from the table to the new column -->
+        <sql>
+            UPDATE node_notary_request_log SET id_temp = id
+        </sql>
+        <dropPrimaryKey tableName="node_notary_request_log" constraintName="node_notary_request_log_pkey"/>
+        <dropColumn tableName="node_notary_request_log" columnName="id"/>
+        <renameColumn tableName="node_notary_request_log" oldColumnName="id_temp" newColumnName="id"/>
+        <addNotNullConstraint tableName="node_notary_request_log" columnName="id" columnDataType="NVARCHAR(76)"/>
+        <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey" tableName="node_notary_request_log"/>
+    </changeSet>
+
+    <changeSet id="notary-request-log-change-id-type-others" author="R3.Corda">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <dbms type="oracle"/>
+            </not>
+        </preConditions>
+        <dropPrimaryKey tableName="node_notary_request_log" constraintName="node_notary_request_log_pkey"/>
+        <modifyDataType tableName="node_notary_request_log" columnName="id" newDataType="NVARCHAR(76) NOT NULL"/>
+        <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey" tableName="node_notary_request_log"/>
+    </changeSet>
+
+</databaseChangeLog>

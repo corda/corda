@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.DoNotImplement
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
@@ -12,8 +11,15 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.deleteIfExists
+import net.corda.core.internal.div
 import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -26,6 +32,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
@@ -33,7 +42,11 @@ import net.corda.node.internal.NodeFlowManager
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.*
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
@@ -46,28 +59,30 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.stubs.CertificateStoreStubs
-import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.node.*
+import net.corda.testing.node.DatabaseSnapshot
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.TestClock
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.Observable
 import rx.Scheduler
 import rx.internal.schedulers.CachedThreadScheduler
 import java.math.BigInteger
+import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -108,7 +123,7 @@ interface TestStartedNode {
     val services: StartedNodeServices
     val smm: StateMachineManager
     val attachments: NodeAttachmentService
-    val rpcOps: CordaRPCOps
+    val rpcOpsList: List<RPCOps>
     val network: MockNodeMessagingService
     val database: CordaPersistence
     val notaryService: NotaryService?
@@ -134,6 +149,9 @@ interface TestStartedNode {
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
+
+    val cordaRPCOps: CordaRPCOps
+        get() = rpcOpsList.mapNotNull { it as? CordaRPCOps }.single()
 }
 
 open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
@@ -148,6 +166,14 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
                                cordappsForAllNodes: Collection<TestCordappInternal> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
+    companion object {
+        fun createCordappClassLoader(cordapps: Collection<TestCordappInternal>?): URLClassLoader? {
+            if (cordapps == null || cordapps.isEmpty()) {
+                return null
+            }
+            return URLClassLoader(cordapps.map { it.jarFile.toUri().toURL() }.toTypedArray())
+        }
+    }
 
     var networkParameters: NetworkParameters = initialNetworkParameters
         private set
@@ -168,9 +194,12 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     private val networkId = random63BitValue()
     private val networkParametersCopier: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = checkNotNull(setDriverSerialization()) { "Using more than one mock network simultaneously is not supported." }
     private val sharedUserCount = AtomicInteger(0)
     private val combinedCordappsForAllNodes = cordappsForPackages(cordappPackages) + cordappsForAllNodes
+    private val cordappClassLoader = createCordappClassLoader(combinedCordappsForAllNodes)
+    private val serializationEnv = checkNotNull(setDriverSerialization(cordappClassLoader)) {
+        "Using more than one mock network simultaneously is not supported."
+    }
 
     /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
@@ -267,14 +296,19 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
     }
 
-    open class MockNode(args: MockNodeArgs, private val mockFlowManager: MockNodeFlowManager = args.flowManager) : AbstractNode<TestStartedNode>(
+    open class MockNode(
+            args: MockNodeArgs,
+            private val mockFlowManager: MockNodeFlowManager = args.flowManager,
+            allowAppSchemaUpgradeWithCheckpoints: Boolean = false) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
             DefaultNamedCacheFactory(),
             args.version,
             mockFlowManager,
             args.network.getServerThread(args.id),
-            args.network.busyLatch
+            args.network.busyLatch,
+            allowHibernateToManageAppSchema = true,
+            allowAppSchemaUpgradeWithCheckpoints = allowAppSchemaUpgradeWithCheckpoints
     ) {
         companion object {
             private val staticLog = contextLogger()
@@ -289,7 +323,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                 override val info: NodeInfo,
                 override val smm: StateMachineManager,
                 override val database: CordaPersistence,
-                override val rpcOps: CordaRPCOps,
+                override val rpcOpsList: List<RPCOps>,
                 override val notaryService: NotaryService?) : TestStartedNode {
 
             override fun dispose() = internals.stop()
@@ -305,6 +339,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             }
         }
 
+        override val runMigrationScripts: Boolean = true
+
         val mockNet = args.network
         val id = args.id
 
@@ -312,8 +348,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
         }
 
-        private val entropyRoot = args.entropyRoot
-        var counter = entropyRoot
+        private val entropyCounter = AtomicReference(args.entropyRoot)
         override val log get() = staticLog
         override val transactionVerifierWorkerCount: Int get() = 1
 
@@ -328,7 +363,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         override val started: TestStartedNode? get() = super.started
 
-        override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): TestStartedNode {
+        override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: List<RPCOps>, notaryService: NotaryService?): TestStartedNode {
             return TestStartedNodeImpl(
                     this,
                     attachments,
@@ -358,10 +393,10 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         override fun makeMessagingService(): MockNodeMessagingService {
-            return MockNodeMessagingService(configuration, serverThread).closeOnStop()
+            return MockNodeMessagingService(configuration, serverThread).closeOnStop(usesDatabase = false)
         }
 
-        override fun startMessagingService(rpcOps: RPCOps,
+        override fun startMessagingService(rpcOps: List<RPCOps>,
                                            nodeInfo: NodeInfo,
                                            myNotaryIdentity: PartyAndCertificate?,
                                            networkParameters: NetworkParameters) {
@@ -381,15 +416,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             //No mock shell
         }
 
-        // This is not thread safe, but node construction is done on a single thread, so that should always be fine
-        override fun generateKeyPair(alias: String): PublicKey {
-            require(cryptoService is BCCryptoService) { "MockNode supports BCCryptoService only, but it is ${cryptoService.javaClass.name}" }
-            counter = counter.add(BigInteger.ONE)
-            // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
-            val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
-            (cryptoService as BCCryptoService).importKey(alias, keyPair)
-            return keyPair.public
-        }
+        override fun initKeyStores() = keyStoreHandler.init(entropyCounter.updateAndGet { it.add(BigInteger.ONE) })
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
         // The non-empty addresses check is important to have and so we tolerate the ugliness here.
@@ -457,10 +484,12 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         certificatesDirectory.createDirectories()
         val config = mockNodeConfiguration(certificatesDirectory).also {
             doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).networkParametersPath
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
+            doReturn(emptyList<String>()).whenever(it).quasarExcludePackages
             parameters.configOverrides(it)
         }
 
@@ -516,7 +545,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     }
 
     private fun pumpAll(): Boolean {
-        val transferredMessages = messagingNetwork.endpoints.map { it.pumpReceive(false) }
+        val transferredMessages = messagingNetwork.endpoints.filter { it.active }
+                .map { it.pumpReceive(false) }
         return transferredMessages.any { it != null }
     }
 
@@ -537,7 +567,11 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         return allActiveFlows.any {
             val flowState = it.snapshot().checkpoint.flowState
-            flowState is FlowState.Started && flowState.flowIORequest is FlowIORequest.ExecuteAsyncOperation
+            flowState is FlowState.Started && when (flowState.flowIORequest) {
+                is FlowIORequest.ExecuteAsyncOperation -> true
+                is FlowIORequest.Sleep -> true
+                else -> false
+            }
         }
     }
 
@@ -564,11 +598,16 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     }
 
     fun stopNodes() {
-        // Serialization env must be unset even if other parts of this method fail.
-        serializationEnv.use {
-            nodes.forEach { it.started?.dispose() }
+        cordappClassLoader.use { _ ->
+            // Serialization env must be unset even if other parts of this method fail.
+            serializationEnv.use {
+                nodes.forEach { node ->
+                    node.started?.dispose()
+                    DatabaseSnapshot.databaseFilename(node.configuration.baseDirectory).deleteIfExists()
+                }
+            }
+            messagingNetwork.stop()
         }
-        messagingNetwork.stop()
     }
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
@@ -619,6 +658,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
         doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
         doReturn(2).whenever(it).flowExternalOperationThreadPoolSize
+        doReturn(false).whenever(it).reloadCheckpointAfterSuspend
     }
 }
 

@@ -1,0 +1,32 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="add_new_checkpoint_schema_primary_keys" dbms="mssql,azure">
+        <addPrimaryKey columnNames="flow_id" constraintName="node_checkpoints_pk" tableName="node_checkpoints" clustered="false"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="add_new_checkpoint_schema_primary_keys-h2_postgres_oracle" dbms="h2,postgresql,oracle">
+        <addPrimaryKey columnNames="flow_id" constraintName="node_checkpoints_pk" tableName="node_checkpoints"/>
+    </changeSet>
+
+    <!-- TODO: add indexes for Exceptions table as well -->
+    <!-- TODO: the following only add indexes so maybe also align name of file?   -->
+    <changeSet author="R3.Corda" id="add_new_checkpoint_schema_indexes">
+        <createIndex indexName="node_checkpoint_blobs_idx" tableName="node_checkpoint_blobs" clustered="false" unique="true">
+            <column name="flow_id"/>
+        </createIndex>
+        <createIndex indexName="node_flow_results_idx" tableName="node_flow_results" clustered="false" unique="true">
+            <column name="flow_id"/>
+        </createIndex>
+        <createIndex indexName="node_flow_exceptions_idx" tableName="node_flow_exceptions" clustered="false" unique="true">
+            <column name="flow_id"/>
+        </createIndex>
+        <createIndex indexName="node_flow_metadata_idx" tableName="node_flow_metadata" clustered="false" unique="true">
+            <column name="flow_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

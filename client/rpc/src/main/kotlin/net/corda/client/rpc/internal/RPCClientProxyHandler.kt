@@ -1,6 +1,5 @@
 package net.corda.client.rpc.internal
 
-import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
@@ -11,16 +10,16 @@ import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
+import net.corda.client.rpc.internal.RPCUtils.isShutdownCmd
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -33,6 +32,11 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
 import net.corda.nodeapi.internal.DeduplicationChecker
+import net.corda.nodeapi.internal.rpc.client.CallSite
+import net.corda.nodeapi.internal.rpc.client.CallSiteMap
+import net.corda.nodeapi.internal.rpc.client.ObservableContext
+import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
+import net.corda.nodeapi.internal.rpc.client.RpcObservableMap
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -43,10 +47,12 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
+import org.apache.activemq.artemis.api.core.client.FailoverEventListener
 import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
+import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -73,10 +79,10 @@ import kotlin.reflect.jvm.javaMethod
  * forwarded to the [UnicastSubject]. Note that the observations themselves may contain further [Observable]s, which are
  * handled in the same way.
  *
- * To do the above we take advantage of Kryo's datastructure traversal. When the client is deserialising a message from
- * the server that may contain Observables it is supplied with an [ObservableContext] that exposes the map used to demux
- * the observations. When an [Observable] is encountered during traversal a new [UnicastSubject] is added to the map and
- * we carry on. Each observation later contains the corresponding Observable ID, and we just forward that to the
+ * To do the above we take advantage of serialisation data structure traversal. When the client is deserialising a message from
+ * the server that may contain [Observable]s, it is supplied with an [ObservableContext] that exposes the map used to demux
+ * the observations. When a new [Observable] is encountered during traversal a new [UnicastSubject] is added to the map and
+ * we carry on. Each observation later contains the corresponding [Observable] ID, and we just forward that to the
  * associated [UnicastSubject].
  *
  * The client may signal that it no longer consumes a particular [Observable]. This may be done explicitly by
@@ -85,23 +91,23 @@ import kotlin.reflect.jvm.javaMethod
  * The cleanup happens in batches using a dedicated reaper, scheduled on [reaperExecutor].
  *
  * The client will attempt to failover in case the server become unreachable. Depending on the [ServerLocator] instance
- * passed in the constructor, failover is either handle at Artemis level or client level. If only one transport
+ * passed in the constructor, failover is either handled at Artemis level or client level. If only one transport
  * was used to create the [ServerLocator], failover is handled by Artemis (retrying based on [CordaRPCClientConfiguration].
  * If a list of transport configurations was used, failover is handled locally. Artemis is able to do it, however the
  * brokers on server side need to be configured in HA mode and the [ServerLocator] needs to be created with HA as well.
  */
-class RPCClientProxyHandler(
+internal class RPCClientProxyHandler(
         private val rpcConfiguration: CordaRPCClientConfiguration,
         private val rpcUsername: String,
         private val rpcPassword: String,
         private val serverLocator: ServerLocator,
-        private val clientAddress: SimpleString,
         private val rpcOpsClass: Class<out RPCOps>,
         serializationContext: SerializationContext,
         private val sessionId: Trace.SessionId,
         private val externalTrace: Trace?,
         private val impersonatedActor: Actor?,
         private val targetLegalIdentity: CordaX500Name?,
+        private val notificationDistributionMux: DistributionMux<out RPCOps>,
         private val cacheFactory: NamedCacheFactory = ClientCacheFactory()
 ) : InvocationHandler {
 
@@ -120,7 +126,7 @@ class RPCClientProxyHandler(
         val toStringMethod: Method = Object::toString.javaMethod!!
         val equalsMethod: Method = Object::equals.javaMethod!!
         val hashCodeMethod: Method = Object::hashCode.javaMethod!!
-
+        var terminating  = false
         private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: CallSite) {
             var currentThrowable = throwable
             while (true) {
@@ -137,6 +143,19 @@ class RPCClientProxyHandler(
                 } else {
                     currentThrowable = cause
                 }
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun closeObservable(observable: UnicastSubject<Notification<*>>) {
+            // Notify listeners of the observables that the connection is being terminated.
+            try {
+                observable.onError(ConnectionFailureException())
+            } catch (ex: OnErrorNotImplementedException) {
+                // Indicates the observer does not have any error handling.
+                log.debug { "Closed connection on observable whose observers have no error handling." }
+            } catch (ex: Exception) {
+                log.error("Unexpected exception when RPC connection failure handling", ex)
             }
         }
     }
@@ -200,10 +219,11 @@ class RPCClientProxyHandler(
                         .weakValues()
                         .removalListener(onObservableRemove)
                         .executor(MoreExecutors.directExecutor()),
-        "RpcClientProxyHandler_rpcObservable"
+                "RpcClientProxyHandler_rpcObservable"
         )
     }
 
+    private var clientAddress: SimpleString? = null
     private var sessionFactory: ClientSessionFactory? = null
     private var producerSession: ClientSession? = null
     private var consumerSession: ClientSession? = null
@@ -216,6 +236,22 @@ class RPCClientProxyHandler(
     private val sendingEnabled = AtomicBoolean(true)
     // Used to interrupt failover thread (i.e. client is closed while failing over).
     private var haFailoverThread: Thread? = null
+    private val haFailoverHandler: FailoverHandler = FailoverHandler(
+            detected = { log.warn("Connection failure. Attempting to reconnect using back-up addresses.")
+                cleanUpOnConnectionLoss()
+                sessionFactory?.apply {
+                    connection.destroy()
+                    cleanup()
+                    close()
+                }
+                haFailoverThread = Thread.currentThread()
+                attemptReconnect()
+            })
+    private val defaultFailoverHandler: FailoverHandler = FailoverHandler(
+            detected = { cleanUpOnConnectionLoss() },
+            completed = { sendingEnabled.set(true)
+                log.info("RPC server available.")},
+            failed = { log.error("Could not reconnect to the RPC server.")})
 
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
@@ -244,21 +280,30 @@ class RPCClientProxyHandler(
         try {
             sessionFactory = serverLocator.createSessionFactory()
         } catch (e: ActiveMQNotConnectedException) {
-            throw (RPCException("Cannot connect to server(s). Tried with all available servers.", e))
+            throw RPCException("Cannot connect to server(s). Tried with all available servers.", e)
         }
         // Depending on how the client is constructed, connection failure is treated differently
         if (serverLocator.staticTransportConfigurations.size == 1) {
-            sessionFactory!!.addFailoverListener(this::failoverHandler)
+            sessionFactory!!.addFailoverListener(defaultFailoverHandler)
         } else {
-            sessionFactory!!.addFailoverListener(this::haFailoverHandler)
+            sessionFactory!!.addFailoverListener(haFailoverHandler)
         }
         initSessions()
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         startSessions()
     }
 
-    /** A throwable that doesn't represent a real error - it's just here to wrap a stack trace. */
-    class CallSite(val rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
+    class FailoverHandler(private val detected: () -> Unit = {},
+                          private val completed: () -> Unit = {},
+                          private val failed: () -> Unit = {}): FailoverEventListener {
+        override fun failoverEvent(eventType: FailoverEventType?) {
+            when (eventType) {
+                FailoverEventType.FAILURE_DETECTED -> { detected() }
+                FailoverEventType.FAILOVER_COMPLETED -> { completed() }
+                FailoverEventType.FAILOVER_FAILED -> { if (!terminating) failed() }
+            }
+        }
+    }
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
@@ -286,7 +331,7 @@ class RPCClientProxyHandler(
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
             val request = RPCApi.ClientToServer.RpcRequest(
-                    clientAddress,
+                    clientAddress!!,
                     methodFqn,
                     serialisedArguments,
                     replyId,
@@ -297,6 +342,10 @@ class RPCClientProxyHandler(
             val replyFuture = SettableFuture.create<Any>()
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
                 "Generated several RPC requests with same ID $replyId"
+            }
+
+            if (request.isShutdownCmd()){
+                terminating = true
             }
 
             sendMessage(request)
@@ -315,10 +364,10 @@ class RPCClientProxyHandler(
     private fun produceMethodFullyQualifiedName(method: Method) : String {
         /*
          * Until version 4.3, rpc calls did not include class names.
-         * Up to this version, only CordaRPCOps and InternalCordaRPCOps were supported.
+         * Up to this version, only CordaRPCOps was supported.
          * So, for these classes only methods are sent across the wire to preserve backwards compatibility.
          */
-        return if (CordaRPCOps::class.java == rpcOpsClass || InternalCordaRPCOps::class.java == rpcOpsClass) {
+        return if (CordaRPCOps::class.java == rpcOpsClass) {
             method.name
         } else {
             rpcOpsClass.name + CLASS_METHOD_DIVIDER + method.name
@@ -380,9 +429,11 @@ class RPCClientProxyHandler(
                 is RPCApi.ServerToClient.Observation -> {
                     val observable: UnicastSubject<Notification<*>>? = observableContext.observableMap.getIfPresent(serverToClient.id)
                     if (observable == null) {
-                        log.debug("Observation ${serverToClient.content} arrived to unknown Observable with ID ${serverToClient.id}. " +
-                                "This may be due to an observation arriving before the server was " +
-                                "notified of observable shutdown")
+                        log.debug {
+                            "Observation ${serverToClient.content} arrived to unknown Observable with ID ${serverToClient.id}. " +
+                                    "This may be due to an observation arriving before the server was " +
+                                    "notified of observable shutdown"
+                        }
                     } else {
                         // We schedule the onNext() on an executor sticky-pooled based on the Observable ID.
                         observationExecutorPool.run(serverToClient.id) { executor ->
@@ -450,18 +501,13 @@ class RPCClientProxyHandler(
         }
 
         reaperScheduledFuture?.cancel(false)
-        val observablesMap = observableContext.observableMap.asMap()
-        observablesMap.keys.forEach { key ->
+        observableContext.observableMap.asMap().forEach { (key, observable) ->
             observationExecutorPool.run(key) {
-                try {
-                    observablesMap[key]?.onError(ConnectionFailureException())
-                } catch (e: Exception) {
-                    log.error("Unexpected exception when RPC connection failure handling", e)
-                }
+                observable?.also(Companion::closeObservable)
             }
         }
         observableContext.observableMap.invalidateAll()
-        rpcReplyMap.forEach { _, replyFuture ->
+        rpcReplyMap.forEach { (_, replyFuture) ->
             replyFuture.setException(ConnectionFailureException())
         }
 
@@ -475,6 +521,7 @@ class RPCClientProxyHandler(
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()
         observationExecutors.forEach { it.shutdownNow() }
+        notificationDistributionMux.onDisconnect(null)
         lifeCycle.justTransition(State.FINISHED)
     }
 
@@ -528,23 +575,26 @@ class RPCClientProxyHandler(
     }
 
     private fun attemptReconnect() {
-        var reconnectAttempts = rpcConfiguration.maxReconnectAttempts.times(serverLocator.staticTransportConfigurations.size)
+        // This can be a negative number as `rpcConfiguration.maxReconnectAttempts = -1` means infinite number of re-connects
+        val maxReconnectCount = rpcConfiguration.maxReconnectAttempts.times(serverLocator.staticTransportConfigurations.size)
+        log.debug { "maxReconnectCount = $maxReconnectCount" }
+        var reconnectAttempt = 1
         var retryInterval = rpcConfiguration.connectionRetryInterval
         val maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval
 
-        var transportIterator = serverLocator.staticTransportConfigurations.iterator()
-        while (transportIterator.hasNext() && reconnectAttempts != 0) {
-            val transport = transportIterator.next()
-            if (!transportIterator.hasNext())
-                transportIterator = serverLocator.staticTransportConfigurations.iterator()
+        fun shouldRetry(reconnectAttempt: Int) =
+                if (maxReconnectCount < 0) true else reconnectAttempt <= maxReconnectCount
 
-            log.debug("Trying to connect using ${transport.params}")
+        while (shouldRetry(reconnectAttempt)) {
+            val transport = serverLocator.staticTransportConfigurations.let { it[(reconnectAttempt - 1) % it.size] }
+
+            log.debug { "Trying to connect using ${transport.params}" }
             try {
                 if (!serverLocator.isClosed) {
                     sessionFactory = serverLocator.createSessionFactory(transport)
                 } else {
                     log.warn("Stopping reconnect attempts.")
-                    log.debug("Server locator is closed or garbage collected. Proxy may have been closed during reconnect.")
+                    log.debug { "Server locator is closed or garbage collected. Proxy may have been closed during reconnect." }
                     break
                 }
             } catch (e: ActiveMQException) {
@@ -552,28 +602,36 @@ class RPCClientProxyHandler(
                     Thread.sleep(retryInterval.toMillis())
                 } catch (e: InterruptedException) {}
                 // Could not connect, try with next server transport.
-                reconnectAttempts--
+                reconnectAttempt++
                 retryInterval = minOf(maxRetryInterval, retryInterval.times(rpcConfiguration.connectionRetryIntervalMultiplier.toLong()))
                 continue
             }
 
-            log.debug("Connected successfully after $reconnectAttempts attempts using ${transport.params}.")
+            log.debug { "Connected successfully after $reconnectAttempt attempts using ${transport.params}." }
             log.info("RPC server available.")
-            sessionFactory!!.addFailoverListener(this::haFailoverHandler)
+            sessionFactory!!.addFailoverListener(haFailoverHandler)
             initSessions()
             startSessions()
             sendingEnabled.set(true)
+            notificationDistributionMux.onConnect()
             break
         }
 
-        if (reconnectAttempts == 0 || sessionFactory == null)
-            log.error("Could not reconnect to the RPC server.")
+        val maxReconnectReached = !shouldRetry(reconnectAttempt)
+        if (maxReconnectReached || sessionFactory == null) {
+            val errMessage = "Could not reconnect to the RPC server after trying $reconnectAttempt times." +
+                    if (sessionFactory != null) "" else " It was never possible to to establish connection with any of the endpoints."
+            log.error(errMessage)
+            notificationDistributionMux.onPermanentFailure(IllegalStateException(errMessage))
+        }
     }
 
     private fun initSessions() {
         producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
         consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, 16384)
+        clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$rpcUsername.${random63BitValue()}")
+        log.debug { "Client address: $clientAddress" }
         consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
@@ -584,46 +642,15 @@ class RPCClientProxyHandler(
         producerSession!!.start()
     }
 
-    private fun haFailoverHandler(event: FailoverEventType) {
-        if (event == FailoverEventType.FAILURE_DETECTED) {
-            log.warn("Connection failure. Attempting to reconnect using back-up addresses.")
-            cleanUpOnConnectionLoss()
-            sessionFactory?.apply {
-                connection.destroy()
-                cleanup()
-                close()
-            }
-            haFailoverThread = Thread.currentThread()
-            attemptReconnect()
-        }
-        // Other events are not considered as reconnection is not done by Artemis.
-    }
-
-    private fun failoverHandler(event: FailoverEventType) {
-        when (event) {
-            FailoverEventType.FAILURE_DETECTED -> {
-               cleanUpOnConnectionLoss()
-            }
-
-            FailoverEventType.FAILOVER_COMPLETED -> {
-                sendingEnabled.set(true)
-                log.info("RPC server available.")
-            }
-
-            FailoverEventType.FAILOVER_FAILED -> {
-                log.error("Could not reconnect to the RPC server.")
-            }
-        }
-    }
-
     private fun cleanUpOnConnectionLoss() {
         sendingEnabled.set(false)
         log.warn("Terminating observables.")
         val m = observableContext.observableMap.asMap()
+        val connectionFailureException = ConnectionFailureException()
         m.keys.forEach { k ->
             observationExecutorPool.run(k) {
                 try {
-                    m[k]?.onError(ConnectionFailureException())
+                    m[k]?.onError(connectionFailureException)
                 } catch (e: Exception) {
                     log.error("Unexpected exception when RPC connection failure handling", e)
                 }
@@ -631,12 +658,15 @@ class RPCClientProxyHandler(
         }
         observableContext.observableMap.invalidateAll()
 
-        rpcReplyMap.forEach { _, replyFuture ->
-            replyFuture.setException(ConnectionFailureException())
+        rpcReplyMap.forEach { (_, replyFuture) ->
+            replyFuture.setException(connectionFailureException)
         }
 
+        log.debug { "rpcReplyMap size before clear: ${rpcReplyMap.size}" }
         rpcReplyMap.clear()
+        log.debug { "callSiteMap size before clear: ${callSiteMap?.size}" }
         callSiteMap?.clear()
+        notificationDistributionMux.onDisconnect(connectionFailureException)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -646,7 +676,6 @@ class RPCClientProxyHandler(
         other as RPCClientProxyHandler
 
         if (rpcUsername != other.rpcUsername) return false
-        if (clientAddress != other.clientAddress) return false
         if (sessionId != other.sessionId) return false
         if (targetLegalIdentity != other.targetLegalIdentity) return false
 
@@ -655,7 +684,6 @@ class RPCClientProxyHandler(
 
     override fun hashCode(): Int {
         var result = rpcUsername.hashCode()
-        result = 31 * result + clientAddress.hashCode()
         result = 31 * result + sessionId.hashCode()
         result = 31 * result + (targetLegalIdentity?.hashCode() ?: 0)
         return result
@@ -666,20 +694,5 @@ class RPCClientProxyHandler(
     }
 }
 
-private typealias RpcObservableMap = Cache<InvocationId, UnicastSubject<Notification<*>>>
 private typealias RpcReplyMap = ConcurrentHashMap<InvocationId, SettableFuture<Any?>>
-private typealias CallSiteMap = ConcurrentHashMap<InvocationId, RPCClientProxyHandler.CallSite?>
-
-/**
- * Holds a context available during de-serialisation of messages that are expected to contain Observables.
- *
- * @property observableMap holds the Observables that are ultimately exposed to the user.
- * @property hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
- * @property callSiteMap keeps stack traces captured when an RPC was invoked, useful for debugging when an observable leaks.
- */
-data class ObservableContext(
-        val callSiteMap: CallSiteMap?,
-        val observableMap: RpcObservableMap,
-        val hardReferenceStore: MutableSet<Observable<*>>
-)
 

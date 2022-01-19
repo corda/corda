@@ -21,6 +21,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
@@ -34,7 +35,7 @@ class NodeConfigurationImplTest {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `can't have dev mode options if not in dev mode`() {
         val debugOptions = DevModeOptions()
         configDebugOptions(true, debugOptions)
@@ -43,7 +44,7 @@ class NodeConfigurationImplTest {
         configDebugOptions(false, null)
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `can't have tlsCertCrlDistPoint null when tlsCertCrlIssuer is given`() {
         val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
         assertTrue { configValidationResult.isNotEmpty() }
@@ -51,7 +52,7 @@ class NodeConfigurationImplTest {
         assertThat(configValidationResult.first()).contains("tlsCertCrlIssuer")
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `can't have tlsCertCrlDistPoint null when crlCheckSoftFail is false`() {
         val configValidationResult = configTlsCertCrlOptions(null, null, false).validate()
         assertTrue { configValidationResult.isNotEmpty() }
@@ -59,15 +60,7 @@ class NodeConfigurationImplTest {
         assertThat(configValidationResult.first()).contains("crlCheckSoftFail")
     }
 
-    @Test(timeout=300_000)
-	fun `check devModeOptions flag helper`() {
-        assertTrue { configDebugOptions(true, null).shouldCheckCheckpoints() }
-        assertTrue { configDebugOptions(true, DevModeOptions()).shouldCheckCheckpoints() }
-        assertTrue { configDebugOptions(true, DevModeOptions(false)).shouldCheckCheckpoints() }
-        assertFalse { configDebugOptions(true, DevModeOptions(true)).shouldCheckCheckpoints() }
-    }
-
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `check crashShell flags helper`() {
         assertFalse { testConfiguration.copy(sshd = null).shouldStartSSHDaemon() }
         assertTrue { testConfiguration.copy(sshd = SSHDConfiguration(1234)).shouldStartSSHDaemon() }
@@ -79,7 +72,7 @@ class NodeConfigurationImplTest {
         assertFalse { testConfiguration.copy(noLocalShell = true, sshd = null).shouldInitCrashShell() }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `Dev mode is autodetected correctly`() {
         val os = System.getProperty("os.name")
 
@@ -102,20 +95,20 @@ class NodeConfigurationImplTest {
         System.setProperty("os.name", os)
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `Dev mode is read from the config over the autodetect logic`() {
         assertTrue(getConfig("test-config-DevMode.conf").getBooleanCaseInsensitive("devMode"))
         assertFalse(getConfig("test-config-noDevMode.conf").getBooleanCaseInsensitive("devMode"))
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `Dev mode is true if overriden`() {
         assertTrue(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBooleanCaseInsensitive("devMode"))
         assertTrue(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBooleanCaseInsensitive("devMode"))
         assertTrue(getConfig("test-config-empty.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBooleanCaseInsensitive("devMode"))
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `Dev mode is false if overriden`() {
         assertFalse(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBooleanCaseInsensitive("devMode"))
         assertFalse(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBooleanCaseInsensitive("devMode"))
@@ -131,7 +124,7 @@ class NodeConfigurationImplTest {
         )
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `validation has error when compatibilityZoneURL is present and devMode is true`() {
         val configuration = testConfiguration.copy(
                 devMode = true,
@@ -142,7 +135,7 @@ class NodeConfigurationImplTest {
         assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `validation succeeds when compatibilityZoneURL is present and devMode is true and allowCompatibilityZoneURL is set`() {
         val configuration = testConfiguration.copy(
                 devMode = true,
@@ -153,19 +146,18 @@ class NodeConfigurationImplTest {
         assertThat(errors).isEmpty()
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `errors for nested config keys contain path`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         val missingPropertyPath = "rpcSettings.address"
-        rawConfig = rawConfig.withoutPath(missingPropertyPath)
+        val config = rawConfig.withoutPath(missingPropertyPath)
 
-        assertThat(rawConfig.parseAsNodeConfiguration().errors.single()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
+        assertThat(config.parseAsNodeConfiguration().errors.single()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
             assertThat(error.message).contains(missingPropertyPath)
             assertThat(error.typeName).isEqualTo(NodeConfiguration::class.java.simpleName)
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `validation has error when compatibilityZone is present and devMode is true`() {
         val configuration = testConfiguration.copy(devMode = true, networkServices = NetworkServicesConfig(
                 URL("https://r3.com.doorman"),
@@ -176,7 +168,7 @@ class NodeConfigurationImplTest {
         assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("networkServices") && error.contains("devMode") }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `validation has error when both compatibilityZoneURL and networkServices are configured`() {
         val configuration = testConfiguration.copy(
                 devMode = false,
@@ -192,19 +184,16 @@ class NodeConfigurationImplTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `rpcAddress and rpcSettings_address are equivalent`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-        rawConfig = rawConfig.withoutPath("rpcSettings.address")
-        rawConfig = rawConfig.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
+        var config = rawConfig.withoutPath("rpcSettings.address")
+        config = config.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
 
-        assertThat(rawConfig.parseAsNodeConfiguration().isValid).isTrue()
+        assertThat(config.parseAsNodeConfiguration().isValid).isTrue()
     }
 
-    @Test(timeout=300_000)
-	fun `relative path correctly parsed`() {
-        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-
+    @Test(timeout=6_000)
+	fun `absolute base directory leads to correct cordapp directories`() {
         // Override base directory to have predictable experience on diff OSes
         val finalConfig = configOf(
                 // Add substitution values here
@@ -213,25 +202,74 @@ class NodeConfigurationImplTest {
                 .resolve()
 
         val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
-        assertThat(nodeConfiguration.isValid).isTrue()
+        assertTrue(nodeConfiguration.isValid)
 
         val baseDirPath = tempFolder.root.toPath()
         assertEquals(listOf(baseDirPath / "./myCorDapps1", baseDirPath / "./myCorDapps2"), nodeConfiguration.value().cordappDirectories)
     }
 
-    @Test(timeout=300_000)
-	fun `missing rpcSettings_adminAddress cause a graceful failure`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-        rawConfig = rawConfig.withoutPath("rpcSettings.adminAddress")
+    @Test(timeout=6_000)
+    fun `absolute base directory leads to correct default cordapp directory`() {
+        // Override base directory to have predictable experience on diff OSes
+        val finalConfig = configOf(
+                // Add substitution values here
+                "baseDirectory" to tempFolder.root.canonicalPath)
+                .withFallback(rawConfigNoCordapps)
+                .resolve()
 
-        val config = rawConfig.parseAsNodeConfiguration()
+        val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
+        assertTrue(nodeConfiguration.isValid)
 
-        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
+        val baseDirPath = tempFolder.root.toPath()
+        assertEquals(listOf(baseDirPath / "cordapps"), nodeConfiguration.value().cordappDirectories)
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
+    fun `relative base dir leads to correct cordapp directories`() {
+        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
+        val fullPath = File(".").resolve(path).toString()
+        // Override base directory to have predictable experience on diff OSes
+        val finalConfig = configOf(
+                // Add substitution values here
+                "baseDirectory" to fullPath)
+                .withFallback(rawConfig)
+                .resolve()
+
+        val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
+        assertTrue(nodeConfiguration.isValid)
+
+        assertEquals(listOf(fullPath / "./myCorDapps1", fullPath / "./myCorDapps2"), nodeConfiguration.value().cordappDirectories)
+    }
+
+    @Test(timeout=6_000)
+    fun `relative base dir leads to correct default cordapp directory`() {
+        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
+        val fullPath = File(".").resolve(path).toString()
+        // Override base directory to have predictable experience on diff OSes
+        val finalConfig = configOf(
+                // Add substitution values here
+                "baseDirectory" to fullPath)
+                .withFallback(rawConfigNoCordapps)
+                .resolve()
+
+        val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
+        assertTrue(nodeConfiguration.isValid)
+
+        assertEquals(listOf(fullPath / "cordapps"), nodeConfiguration.value().cordappDirectories)
+    }
+
+    @Test(timeout=6_000)
+	fun `missing rpcSettings_adminAddress cause a graceful failure`() {
+        val config = rawConfig.withoutPath("rpcSettings.adminAddress")
+
+        val nodeConfiguration = config.parseAsNodeConfiguration()
+
+        assertThat(nodeConfiguration.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
+    }
+
+    @Test(timeout=6_000)
 	fun `compatibilityZoneURL populates NetworkServices`() {
-        val compatibilityZoneURL = URI.create("https://r3.com").toURL()
+        val compatibilityZoneURL = URI.create("https://r3.example.com").toURL()
         val configuration = testConfiguration.copy(
                 devMode = false,
                 compatibilityZoneURL = compatibilityZoneURL)
@@ -241,14 +279,14 @@ class NodeConfigurationImplTest {
         assertEquals(compatibilityZoneURL, configuration.networkServices!!.networkMapURL)
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `jmxReporterType is null and defaults to Jokolia`() {
         val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `jmxReporterType is not null and is set to New Relic`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("NEW_RELIC"))
@@ -256,7 +294,7 @@ class NodeConfigurationImplTest {
         assertEquals(JmxReporterType.NEW_RELIC.toString(), nodeConfig.jmxReporterType.toString())
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `jmxReporterType is not null and set to Jokolia`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("JOLOKIA"))
@@ -264,7 +302,7 @@ class NodeConfigurationImplTest {
         assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=6_000)
 	fun `network services`() {
         val rawConfig = getConfig("test-config-with-networkservices.conf")
         val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
@@ -276,6 +314,54 @@ class NodeConfigurationImplTest {
         }
     }
 
+    @Test(timeout=6_000)
+    fun `check crlCheckArtemisServer flag`() {
+        assertFalse(getConfig("working-config.conf").parseAsNodeConfiguration().value().crlCheckArtemisServer)
+        val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("crlCheckArtemisServer" to true)))
+        assertTrue(rawConfig.parseAsNodeConfiguration().value().crlCheckArtemisServer)
+    }
+
+    @Test(timeout=6_000)
+    fun `absolute network parameters path is set as specified by node config`() {
+        val nodeConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("networkParametersPath" to tempFolder.root.canonicalPath))).parseAsNodeConfiguration().value()
+        assertEquals(nodeConfig.networkParametersPath, tempFolder.root.toPath())
+    }
+
+    @Test(timeout=6_000)
+    fun `relative network parameters path is set as specified by node config`() {
+        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
+        val fullPath = File(".").resolve(path).toString()
+        val nodeConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("networkParametersPath" to fullPath))).parseAsNodeConfiguration().value()
+        assertEquals(nodeConfig.networkParametersPath, nodeConfig.baseDirectory.resolve(fullPath))
+    }
+
+    @Test(timeout=6_000)
+    fun `network parameters path is set as specified by node config with overridden base directory`() {
+        val finalConfig = configOf(
+                "baseDirectory" to "/path-to-base-directory",
+                "networkParametersPath" to "/network")
+                .withFallback(rawConfig)
+                .resolve()
+        val nodeConfig = finalConfig.parseAsNodeConfiguration().value()
+        assertEquals(nodeConfig.networkParametersPath, Paths.get("/network"))
+    }
+
+    @Test(timeout=6_000)
+    fun `network parameters path defaults to base directory`() {
+        val nodeConfig = getConfig("working-config.conf").parseAsNodeConfiguration().value()
+        assertEquals(nodeConfig.networkParametersPath, nodeConfig.baseDirectory)
+    }
+
+    @Test(timeout=6_000)
+    fun `network parameters path defaults to overridden base directory`() {
+        val finalConfig = configOf(
+                "baseDirectory" to "/path-to-base-directory")
+                .withFallback(rawConfig)
+                .resolve()
+        val nodeConfig = finalConfig.parseAsNodeConfiguration().value()
+        assertEquals(nodeConfig.networkParametersPath, Paths.get("/path-to-base-directory"))
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
@@ -285,6 +371,9 @@ class NodeConfigurationImplTest {
     }
 
     private val testConfiguration = testNodeConfiguration()
+
+    private val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+    private val rawConfigNoCordapps = ConfigFactory.parseResources("working-config-no-cordapps.conf", ConfigParseOptions.defaults().setAllowMissing(false))
 
     private fun testNodeConfiguration(): NodeConfigurationImpl {
         val baseDirectory = Paths.get(".")

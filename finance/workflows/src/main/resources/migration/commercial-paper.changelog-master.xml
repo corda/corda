@@ -6,5 +6,6 @@
 
     <include file="migration/commercial-paper.changelog-init.xml"/>
     <include file="migration/commercial-paper.changelog-v1.xml"/>
+    <include file="migration/commercial-paper.changelog-v2.xml"/>
 
 </databaseChangeLog>

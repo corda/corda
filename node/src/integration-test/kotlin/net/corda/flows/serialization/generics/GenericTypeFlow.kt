@@ -12,14 +12,14 @@ import net.corda.core.transactions.TransactionBuilder
 import java.util.Optional
 
 @StartableByRPC
-class GenericTypeFlow(private val purchase: DataObject) : FlowLogic<SecureHash>() {
+class GenericTypeFlow(private val purchase: DataObject?) : FlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
         val stx = serviceHub.signInitialTransaction(
             TransactionBuilder(notary)
                 .addOutputState(State(ourIdentity, purchase))
-                .addCommand(Command(Purchase(Optional.of(purchase)), ourIdentity.owningKey))
+                .addCommand(Command(Purchase(Optional.ofNullable(purchase)), ourIdentity.owningKey))
         )
         stx.verify(serviceHub, checkSufficientSignatures = false)
         return stx.id

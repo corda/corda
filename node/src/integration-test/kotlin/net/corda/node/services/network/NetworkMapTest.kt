@@ -1,8 +1,10 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
@@ -11,6 +13,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.testing.common.internal.addNotary
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
@@ -28,13 +31,10 @@ import org.junit.Assert.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import java.net.URL
 import java.time.Instant
 
-@RunWith(Parameterized::class)
-class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneParams) {
+class NetworkMapTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -45,41 +45,18 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
 
-    companion object {
-        @JvmStatic
-        @Parameterized.Parameters(name = "{0}")
-        fun runParams() = listOf(
-                {
-                    addr: URL,
-                    nms: NetworkMapServer -> SharedCompatibilityZoneParams(
-                            addr,
-                            pnm = null,
-                            publishNotaries = {
-                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
-                            }
-                    )
-                },
-                {
-                    addr: URL,
-                    nms: NetworkMapServer -> SplitCompatibilityZoneParams (
-                            doormanURL = URL("http://I/Don't/Exist"),
-                            networkMapURL = addr,
-                            pnm = null,
-                            publishNotaries = {
-                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
-                            }
-                    )
-                }
-
-        )
-    }
-
-
     @Before
     fun start() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
-        compatibilityZone = initFunc(URL("http://$address"), networkMapServer)
+        compatibilityZone = SplitCompatibilityZoneParams(
+                doormanURL = URL("https://example.org/does/not/exist"),
+                networkMapURL = URL("http://$address"),
+                pnm = null,
+                publishNotaries = {
+                    networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
+                }
+        )
     }
 
     @After
@@ -87,12 +64,13 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         networkMapServer.close()
     }
 
-    @Test(timeout=300_000)
-	fun `parameters update test`() {
+    @Test(timeout = 300_000)
+    fun `parameters update test`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
             val nextParams = networkMapServer.networkParameters.copy(
@@ -141,60 +119,146 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test(timeout=300_000)
-	fun `nodes process additions and removals from the network map correctly (and also download the network parameters)`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
-        ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-            assertDownloadedNetworkParameters(aliceNode)
-            aliceNode.onlySees(aliceNode.nodeInfo)
-
-            val bobNode = startNode(providedName = BOB_NAME, devMode = false).getOrThrow()
-
-            // Wait for network map client to poll for the next update.
-            Thread.sleep(cacheTimeout.toMillis() * 2)
-
-            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-
-            networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
-
-            // Wait for network map client to poll for the next update.
-            Thread.sleep(cacheTimeout.toMillis() * 2)
-
-            bobNode.onlySees(bobNode.nodeInfo)
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `test node heartbeat`() {
+    @Test(timeout = 300_000)
+    fun `Can hotload parameters if the notary changes`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 notarySpecs = emptyList(),
-                systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
+                allowHibernateToManageAppSchema = false
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-            val aliceNodeInfo = aliceNode.nodeInfo.serialize().hash
-            assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
-            networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
 
-            var maxRemoveRetries = 5
+            val notary: Party = TestIdentity.fresh("test notary").party
+            val oldParams = networkMapServer.networkParameters
+            val paramsWithNewNotary = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue())).addNotary(notary)
 
-            // Try to remove multiple times in case the network map republishes just in between the removal and the check.
-            while (aliceNodeInfo in networkMapServer.networkMapHashes()) {
-                networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
-                if (maxRemoveRetries-- == 0) {
-                    throw AssertionError("Could not remove Node info.")
-                }
+            startNodeAndRunFlagDay(paramsWithNewNotary).use { alice ->
+                eventually { assertEquals(paramsWithNewNotary, alice.rpc.networkParameters) }
             }
 
-            // Wait until the node info is republished.
-            Thread.sleep(2000)
-            assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `If only the notary changes but parameters were not accepted, the node will still shut down on the flag day`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
+        ) {
+
+            val notary: Party = TestIdentity.fresh("test notary").party
+            val oldParams = networkMapServer.networkParameters
+            val paramsWithNewNotary = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue())).addNotary(notary)
+
+            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
+            networkMapServer.scheduleParametersUpdate(paramsWithNewNotary, "Next parameters", Instant.ofEpochMilli(random63BitValue()))
+            // Wait for network map client to poll for the next update.
+            Thread.sleep(cacheTimeout.toMillis() * 2)
+            networkMapServer.advertiseNewParameters()
+            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Can not hotload parameters if non-hotloadable parameter changes and the node will shut down`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
+        ) {
+
+            val oldParams = networkMapServer.networkParameters
+            val paramsWithUpdatedMaxMessageSize = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = oldParams.maxMessageSize + 1)
+            startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSize).use { alice ->
+                eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+            }
+        }
+    }
+
+    private fun DriverDSLImpl.startNodeAndRunFlagDay(newParams: NetworkParameters): NodeHandleInternal {
+
+        val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
+        val nextHash = newParams.serialize().hash
+
+        networkMapServer.scheduleParametersUpdate(newParams, "Next parameters", Instant.ofEpochMilli(random63BitValue()))
+        // Wait for network map client to poll for the next update.
+        Thread.sleep(cacheTimeout.toMillis() * 2)
+        alice.rpc.acceptNewNetworkParameters(nextHash)
+        assertEquals(nextHash, networkMapServer.latestParametersAccepted(alice.nodeInfo.legalIdentities.first().owningKey))
+        assertEquals(networkMapServer.networkParameters, alice.rpc.networkParameters)
+        networkMapServer.advertiseNewParameters()
+        return alice
+    }
+
+    @Test(timeout = 300_000)
+    fun `nodes process additions and removals from the network map correctly (and also download the network parameters)`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
+        ) {
+            startNode(providedName = ALICE_NAME, devMode = false).getOrThrow().use { aliceNode ->
+                assertDownloadedNetworkParameters(aliceNode)
+                aliceNode.onlySees(aliceNode.nodeInfo)
+
+                // Wait for network map client to poll for the next update.
+                Thread.sleep(cacheTimeout.toMillis() * 2)
+
+                startNode(providedName = BOB_NAME, devMode = false).getOrThrow().use { bobNode ->
+                    bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
+                    aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
+
+                    networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+
+                    // Wait for network map client to poll for the next update.
+                    Thread.sleep(cacheTimeout.toMillis() * 2)
+
+                    bobNode.onlySees(bobNode.nodeInfo)
+                }
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `test node heartbeat`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList(),
+                systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString()),
+                allowHibernateToManageAppSchema = false
+        ) {
+            startNode(providedName = ALICE_NAME, devMode = false).getOrThrow().use { aliceNode ->
+                val aliceNodeInfo = aliceNode.nodeInfo.serialize().hash
+                assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
+                networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+
+                var maxRemoveRetries = 5
+
+                // Try to remove multiple times in case the network map republishes just in between the removal and the check.
+                while (aliceNodeInfo in networkMapServer.networkMapHashes()) {
+                    networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+                    if (maxRemoveRetries-- == 0) {
+                        throw AssertionError("Could not remove Node info.")
+                    }
+                }
+
+                // Wait until the node info is republished.
+                Thread.sleep(2000)
+                assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
+            }
         }
     }
 
@@ -212,7 +276,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         val nodeInfosDir = baseDirectory / NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
             assertThat(nodeInfosDir.list().size, `is`(1))
-            assertThat(nodeInfosDir.list().single().readObject<SignedNodeInfo>().verified().legalIdentities.first(), `is`( this.nodeInfo.legalIdentities.first()))
+            assertThat(nodeInfosDir.list().single().readObject<SignedNodeInfo>()
+                    .verified().legalIdentities.first(), `is`(this.nodeInfo.legalIdentities.first()))
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }

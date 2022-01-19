@@ -2,7 +2,7 @@
 package net.corda.node.internal.djvm
 
 import net.corda.core.contracts.ComponentGroupEnum
-import net.corda.core.crypto.componentHash
+import net.corda.core.crypto.DigestService
 import net.corda.core.transactions.ComponentGroup
 import net.corda.core.transactions.FilteredComponentGroup
 import net.corda.djvm.rewiring.SandboxClassLoader
@@ -29,10 +29,10 @@ class ComponentFactory(
         ))
     }
 
-    fun calculateLeafIndicesFor(groupType: ComponentGroupEnum): IntArray? {
+    fun calculateLeafIndicesFor(groupType: ComponentGroupEnum, digestService: DigestService): IntArray? {
         val componentGroup = componentGroups.firstOrNull(groupType::isSameType) as? FilteredComponentGroup ?: return null
         val componentHashes = componentGroup.components.mapIndexed { index, component ->
-            componentHash(componentGroup.nonces[index], component)
+            digestService.componentHash(componentGroup.nonces[index], component)
         }
         return componentHashes.map { componentGroup.partialMerkleTree.leafIndex(it) }.toIntArray()
     }

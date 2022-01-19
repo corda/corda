@@ -17,7 +17,7 @@ sealed class Action {
     /**
      * Track a transaction hash and notify the state machine once the corresponding transaction has committed.
      */
-    data class TrackTransaction(val hash: SecureHash) : Action()
+    data class TrackTransaction(val hash: SecureHash, val currentState: StateMachineState) : Action()
 
     /**
      * Send an initial session message to [destination].
@@ -38,14 +38,51 @@ sealed class Action {
     ) : Action()
 
     /**
+     * Send session messages to multiple destinations.
+     *
+     * @property sendInitial session messages to send in order to establish a session.
+     * @property sendExisting session messages to send to existing sessions.
+     */
+    data class SendMultiple(
+            val sendInitial: List<SendInitial>,
+            val sendExisting: List<SendExisting>
+    ): Action() {
+        init {
+            check(sendInitial.isNotEmpty() || sendExisting.isNotEmpty()) { "At least one of the lists with initial or existing session messages should contain items." }
+        }
+    }
+
+    /**
      * Persist the specified [checkpoint].
      */
     data class PersistCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint, val isCheckpointUpdate: Boolean) : Action()
 
     /**
-     * Remove the checkpoint corresponding to [id].
+     * Update only the [status] of the checkpoint with [id].
      */
-    data class RemoveCheckpoint(val id: StateMachineRunId) : Action()
+    data class UpdateFlowStatus(val id: StateMachineRunId, val status: Checkpoint.FlowStatus): Action()
+
+    /**
+     * Remove the checkpoint corresponding to [id]. [mayHavePersistentResults] denotes that at the time of injecting a [RemoveCheckpoint]
+     * the flow could have persisted its database result or exception.
+     * For more information see [CheckpointStorage.removeCheckpoint].
+     */
+    data class RemoveCheckpoint(val id: StateMachineRunId, val mayHavePersistentResults: Boolean = false) : Action()
+
+    /**
+     * Remove a flow's exception from the database.
+     *
+     * @param id The id of the flow
+     */
+    data class RemoveFlowException(val id: StateMachineRunId) : Action()
+
+    /**
+     * Persist an exception to the database for the related flow.
+     *
+     * @param id The id of the flow
+     * @param exception The exception to persist
+     */
+    data class AddFlowException(val id: StateMachineRunId, val exception: Throwable) : Action()
 
     /**
      * Persist the deduplication facts of [deduplicationHandlers].
@@ -92,6 +129,11 @@ sealed class Action {
     ) : Action()
 
     /**
+     * Move the flow corresponding to [flowId] to paused.
+     */
+    data class MoveFlowToPaused(val currentState: StateMachineState) : Action()
+
+    /**
      * Schedule [event] to self.
      */
     data class ScheduleEvent(val event: Event) : Action()
@@ -99,7 +141,7 @@ sealed class Action {
     /**
      * Sleep until [time].
      */
-    data class SleepUntil(val time: Instant) : Action()
+    data class SleepUntil(val currentState: StateMachineState, val time: Instant) : Action()
 
     /**
      * Create a new database transaction.
@@ -118,14 +160,18 @@ sealed class Action {
     /**
      * Commit the current database transaction.
      */
-    object CommitTransaction : Action() {
+    data class CommitTransaction(val currentState: StateMachineState) : Action() {
         override fun toString() = "CommitTransaction"
     }
 
     /**
      * Execute the specified [operation].
      */
-    data class ExecuteAsyncOperation(val deduplicationId: String, val operation: FlowAsyncOperation<*>) : Action()
+    data class ExecuteAsyncOperation(
+        val deduplicationId: String,
+        val operation: FlowAsyncOperation<*>,
+        val currentState: StateMachineState
+    ) : Action()
 
     /**
      * Release soft locks associated with given ID (currently the flow ID).

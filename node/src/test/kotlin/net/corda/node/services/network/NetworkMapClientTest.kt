@@ -11,10 +11,10 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestNodeInfoBuilder
-import net.corda.testing.internal.createNodeInfoAndSigned
-import net.corda.testing.internal.signWith
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.TestNodeInfoBuilder
+import net.corda.coretesting.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.signWith
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -43,7 +43,7 @@ class NetworkMapClientTest {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"),
-                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(setOf(DEV_ROOT_CA.certificate)) }
     }
 
     @After
@@ -70,6 +70,29 @@ class NetworkMapClientTest {
         assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
         assertEquals(cacheTimeout, networkMapClient.getNetworkMap().cacheMaxAge)
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
+    }
+
+    @Test(timeout=300_000)
+    fun `registered node is added to the network map v2`() {
+        server.version = "2"
+        val (nodeInfo, signedNodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
+
+        networkMapClient.publish(signedNodeInfo)
+
+        val nodeInfoHash = nodeInfo.serialize().sha256()
+
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash)
+        assertEquals(nodeInfo, networkMapClient.getNodeInfos().single())
+
+        val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned(BOB_NAME)
+
+        networkMapClient.publish(signedNodeInfo2)
+
+        val nodeInfoHash2 = nodeInfo2.serialize().sha256()
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
+        assertEquals(cacheTimeout, networkMapClient.getNetworkMap().cacheMaxAge)
+        assertEquals("2", networkMapClient.getNetworkMap().serverVersion)
+        assertThat(networkMapClient.getNodeInfos()).containsExactlyInAnyOrder(nodeInfo, nodeInfo2)
     }
 
     @Test(timeout=300_000)

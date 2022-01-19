@@ -13,16 +13,15 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -32,15 +31,18 @@ import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.security.cert.CertPathValidatorException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.PersistenceException
 
 /** Database-based network map cache. */
 @ThreadSafe
+@Suppress("TooManyFunctions")
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
+                                     private val identityService: IdentityServiceInternal
+) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -53,9 +55,16 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override val nodeReady: OpenFuture<Void?> = openFuture()
 
+    @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
+    @Volatile
+    private lateinit var rotatedNotaries: Set<CordaX500Name>
+
+    // Notary whitelist may contain multiple identities with the same X.500 name after certificate rotation.
+    // Exclude duplicated entries, which are not present in the network map.
     override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
+            .filterNot { it.name in rotatedNotaries && it != getPeerCertificateByLegalName(it.name)?.party }
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -66,12 +75,12 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                         select(get<String>(NodeInfoSchemaV1.PersistentNodeInfo::hash.name))
                     }
                 }
-                session.createQuery(query).resultList.map { SecureHash.parse(it) }
+                session.createQuery(query).resultList.map { SecureHash.create(it) }
             }
         }
 
     fun start(notaries: List<NotaryInfo>) {
-        this.notaries = notaries
+        onNewNotaryList(notaries)
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
@@ -94,6 +103,8 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             session.createQuery(query).resultList.singleOrNull()?.toNodeInfo()
         }
     }
+
+    override fun isNotary(party: Party): Boolean = notaries.any { it.identity == party }
 
     override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 
@@ -159,12 +170,15 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
+    private fun NodeInfo.printWithKey() = "$this, owningKey=${legalIdentities.first().owningKey.toStringShort()}"
+
     override fun addOrUpdateNodes(nodes: List<NodeInfo>) {
         synchronized(_changed) {
             val newNodes = mutableListOf<NodeInfo>()
             val updatedNodes = mutableListOf<Pair<NodeInfo, NodeInfo>>()
-            nodes.map { it to getNodesByLegalIdentityKey(it.legalIdentities.first().owningKey).firstOrNull() }
+            nodes.map { it to getNodeInfo(it.legalIdentities.first()) }
                     .forEach { (node, previousNode) ->
+                        logger.info("Adding node with info: ${node.printWithKey()}")
                         when {
                             previousNode == null -> {
                                 logger.info("No previous node found for ${node.legalIdentities.first().name}")
@@ -176,9 +190,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                 logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
                             }
                             previousNode != node -> {
-                                logger.info("Previous node was found for ${node.legalIdentities.first().name} as: $previousNode")
-                                // TODO We should be adding any new identities as well
-                                if (verifyIdentities(node)) {
+                                logger.info("Previous node was found for ${node.legalIdentities.first().name} as: ${previousNode.printWithKey()}")
+                                // Register new identities for rotated certificates
+                                if (verifyAndRegisterIdentities(node)) {
                                     updatedNodes.add(node to previousNode)
                                 }
                             }
@@ -193,6 +207,23 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
              */
             recursivelyUpdateNodes(newNodes.map { nodeInfo -> Pair(nodeInfo, MapChange.Added(nodeInfo)) } +
                     updatedNodes.map { (nodeInfo, previousNodeInfo) -> Pair(nodeInfo, MapChange.Modified(nodeInfo, previousNodeInfo)) })
+        }
+        logger.debug { "Done adding nodes with info: $nodes" }
+    }
+
+    // Obtain node info by its legal identity key or, if the key was rotated, by name.
+    private fun getNodeInfo(party: Party): NodeInfo? {
+        val infoByKey = getNodesByLegalIdentityKey(party.owningKey).firstOrNull()
+        return infoByKey ?: getPeerCertificateByLegalName(party.name)?.let {
+            getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+        }
+    }
+
+    // Obtain node info by its legal identity key or, if the key was rotated, by name.
+    private fun getPersistentNodeInfo(session: Session, party: Party): NodeInfoSchemaV1.PersistentNodeInfo? {
+        val infoByKey = findByIdentityKey(session, party.owningKey).firstOrNull()
+        return infoByKey ?: queryIdentityByLegalName(session, party.name)?.let {
+            findByIdentityKey(session, it.owningKey).firstOrNull()
         }
     }
 
@@ -220,25 +251,30 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private fun persistNodeUpdates(nodeUpdates: List<Pair<NodeInfo, MapChange>>) {
         database.transaction {
             nodeUpdates.forEach { (nodeInfo, change) ->
-                updateInfoDB(nodeInfo, session)
+                updateInfoDB(nodeInfo, session, change)
                 changePublisher.onNext(change)
             }
+        }
+        // Invalidate caches outside database transaction to prevent reloading of uncommitted values.
+        nodeUpdates.forEach { (nodeInfo, _) ->
+            invalidateIdentityServiceCaches(nodeInfo)
         }
     }
 
     override fun addOrUpdateNode(node: NodeInfo) {
-        logger.info("Adding node with info: $node")
         addOrUpdateNodes(listOf(node))
-        logger.debug { "Done adding node with info: $node" }
     }
 
     private fun verifyIdentities(node: NodeInfo): Boolean {
-        val failures = node.legalIdentitiesAndCerts.mapNotNull { Try.on { it.verify(identityService.trustAnchor) } as? Try.Failure }
-        if (failures.isNotEmpty()) {
-            logger.warn("$node has ${failures.size} invalid identities:")
-            failures.forEach { logger.warn("", it) }
+        for (identity in node.legalIdentitiesAndCerts) {
+            try {
+                identity.verify(identityService.trustAnchors)
+            } catch (e: CertPathValidatorException) {
+                logger.warn("$node has invalid identity:\nError:$e\nIdentity:${identity.certPath}")
+                return false
+            }
         }
-        return failures.isEmpty()
+        return true
     }
 
     private fun verifyAndRegisterIdentities(node: NodeInfo): Boolean {
@@ -254,13 +290,15 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun removeNode(node: NodeInfo) {
-        logger.info("Removing node with info: $node")
+        logger.info("Removing node with info: ${node.printWithKey()}")
         synchronized(_changed) {
             database.transaction {
                 removeInfoDB(session, node)
                 changePublisher.onNext(MapChange.Removed(node))
             }
         }
+        // Invalidate caches outside database transaction to prevent reloading of uncommitted values.
+        invalidateIdentityServiceCaches(node)
         logger.debug { "Done removing node with info: $node" }
     }
 
@@ -277,17 +315,20 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         return session.createQuery(criteria).resultList
     }
 
-    private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
-        // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
-        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey)
+    private fun updateInfoDB(nodeInfo: NodeInfo, session: Session, change: MapChange) {
+        val info = getPersistentNodeInfo(session, nodeInfo.legalIdentitiesAndCerts.first().party)
         val nodeInfoEntry = generateMappedObject(nodeInfo)
-        if (info.isNotEmpty()) {
-            nodeInfoEntry.id = info.first().id
+        if (info != null) {
+            nodeInfoEntry.id = info.id
         }
         session.merge(nodeInfoEntry)
         // invalidate cache last - this way, we might serve up the wrong info for a short time, but it will get refreshed
         // on the next load
         invalidateCaches(nodeInfo)
+        // invalidate cache for previous key on rotated certificate
+        if (change is MapChange.Modified) {
+            invalidateCaches(change.previousNode)
+        }
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
@@ -372,6 +413,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         identityByLegalNameCache.invalidateAll(nodeInfo.legalIdentities.map { it.name })
     }
 
+    private fun invalidateIdentityServiceCaches(nodeInfo: NodeInfo) {
+        nodeInfo.legalIdentities.forEach { identityService.invalidateCaches(it.name) }
+    }
+
     private fun invalidateCaches() {
         nodesByKeyCache.invalidateAll()
         identityByLegalNameCache.invalidateAll()
@@ -385,5 +430,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }
+    }
+
+    override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+        this.notaries = notaries
+        this.rotatedNotaries = notaries.groupBy { it.identity.name }.filter { it.value.size > 1 }.keys
     }
 }

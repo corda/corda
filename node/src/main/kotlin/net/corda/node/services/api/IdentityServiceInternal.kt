@@ -1,22 +1,18 @@
 package net.corda.node.services.api
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException
+import java.security.cert.TrustAnchor
 
 interface IdentityServiceInternal : IdentityService {
-    private companion object {
-        val log = contextLogger()
-    }
-
-    /** This method exists so it can be mocked with doNothing, rather than having to make up a possibly invalid return value. */
-    fun justVerifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false) {
-        verifyAndRegisterIdentity(identity, isNewRandomIdentity)
-    }
+    val trustAnchors: Set<TrustAnchor>
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate?
+    fun verifyAndRegisterNewRandomIdentity(identity: PartyAndCertificate)
+
+    fun invalidateCaches(name: CordaX500Name) {}
 }

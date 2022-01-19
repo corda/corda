@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.checkNotaryWhitelisted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 
@@ -42,21 +43,16 @@ abstract class FullTransaction : BaseTransaction() {
 
     private fun checkInputsAndReferencesHaveSameNotary() {
         if (inputs.isEmpty() && references.isEmpty()) return
-        val notaries = (inputs + references).map { it.state.notary }.toHashSet()
+        // Transaction can combine different identities of the same notary after key rotation.
+        val notaries = (inputs + references).map { it.state.notary.name }.toHashSet()
         check(notaries.size == 1) { "All inputs and reference inputs must point to the same notary" }
-        check(notaries.single() == notary) { "The specified notary must be the one specified by all inputs and input references" }
+        check(notaries.single() == notary?.name) {
+            "The specified transaction notary must be the one specified by all inputs and input references"
+        }
     }
 
     /** Make sure the assigned notary is part of the network parameter whitelist. */
     protected fun checkNotaryWhitelisted() {
-        notary?.let { notaryParty ->
-            // Network parameters will never be null if the transaction is resolved from a CoreTransaction rather than constructed directly.
-            networkParameters?.let { parameters ->
-                val notaryWhitelist = parameters.notaries.map { it.identity }
-                check(notaryParty in notaryWhitelist) {
-                    "Notary ($notaryParty) specified by the transaction is not on the network parameter whitelist: [${notaryWhitelist.joinToString()}]"
-                }
-            }
-        }
+        checkNotaryWhitelisted(this)
     }
 }

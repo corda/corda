@@ -23,6 +23,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
+import java.io.Closeable
 import java.sql.SQLException
 import java.sql.SQLTransientConnectionException
 import java.time.Clock
@@ -38,9 +39,10 @@ import kotlin.math.pow
 /**
  * This hospital consults "staff" to see if they can automatically diagnose and treat flows.
  */
+@Suppress("TooManyFunctions")
 class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                           private val clock: Clock,
-                          private val ourSenderUUID: String) {
+                          private val ourSenderUUID: String) : Closeable {
     companion object {
         private val log = contextLogger()
         private val staff = listOf(
@@ -102,6 +104,16 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      */
     private val flowsInHospital = ConcurrentHashMap<StateMachineRunId, FlowFiber>()
 
+    /**
+     * Returns true if the flow is currently being treated in the hospital.
+     * The differs to flows with a medical history (which can accessed via [StaffedFlowHospital.contains]).
+     */
+    @VisibleForTesting
+    internal fun flowInHospital(runId: StateMachineRunId): Boolean {
+        // The .keys avoids https://youtrack.jetbrains.com/issue/KT-18053
+        return runId in flowsInHospital.keys
+    }
+
     private val mutex = ThreadBox(object {
         /**
          * Contains medical history of every flow (a patient) that has entered the hospital. A flow can leave the hospital,
@@ -155,6 +167,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         val payload = RejectSessionMessage(message, secureRandom.nextLong())
         val replyError = ExistingSessionMessage(sessionMessage.initiatorSessionId, payload)
 
+        log.info("Sending session initiation error back to $sender", error)
+
         flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(DeduplicationId.createRandom(secureRandom), ourSenderUUID))
         event.deduplicationHandler.afterDatabaseTransaction()
     }
@@ -172,6 +186,33 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         sendBackError(publicRecord.error, sessionMessage, publicRecord.sender, event)
         return true
     }
+
+    /**
+     * Forces the flow to be kept in for overnight observation by the hospital.
+     *
+     * @param currentState The [StateMachineState] of the flow that is being forced into observation
+     * @param errors The errors to include in the new medical record
+     */
+    fun forceIntoOvernightObservation(currentState: StateMachineState, errors: List<Throwable>) {
+        mutex.locked {
+            val id = currentState.flowLogic.runId
+            val medicalHistory = flowPatients.computeIfAbsent(id) { FlowMedicalHistory() }
+            val record = MedicalRecord.Flow(
+                time = clock.instant(),
+                flowId = id,
+                suspendCount = currentState.checkpoint.checkpointState.numberOfSuspends,
+                errors = errors,
+                by = listOf(TransitionErrorGeneralPractitioner),
+                outcome = Outcome.OVERNIGHT_OBSERVATION
+            )
+
+            medicalHistory.records += record
+
+            onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(id, record.by.map { it.toString() }) }
+            recordsPublisher.onNext(record)
+        }
+    }
+
 
     /**
      * Request treatment for the [flowFiber].
@@ -205,7 +246,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
                     onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
-                    Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
+                    Triple(Outcome.OVERNIGHT_OBSERVATION, Event.OvernightObservation, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
                     // None of the staff care for these errors, or someone decided it is a terminal condition, so we let them propagate
@@ -224,20 +265,19 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 }
             }
 
-            val record = MedicalRecord.Flow(time, flowFiber.id, currentState.checkpoint.numberOfSuspends, errors, report.by, outcome)
+            val numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends
+            val record = MedicalRecord.Flow(time, flowFiber.id, numberOfSuspends, errors, report.by, outcome)
             medicalHistory.records += record
             recordsPublisher.onNext(record)
             Pair(event, backOffForChronicCondition)
         }
 
-        if (event != null) {
-            if (backOffForChronicCondition.isZero) {
+        if (backOffForChronicCondition.isZero) {
+            flowFiber.scheduleEvent(event)
+        } else {
+            hospitalJobTimer.schedule(timerTask {
                 flowFiber.scheduleEvent(event)
-            } else {
-                hospitalJobTimer.schedule(timerTask {
-                    flowFiber.scheduleEvent(event)
-                }, backOffForChronicCondition.toMillis())
-            }
+            }, backOffForChronicCondition.toMillis())
         }
     }
 
@@ -309,6 +349,10 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
     operator fun contains(flowId: StateMachineRunId) = mutex.locked { flowId in flowPatients }
 
+    override fun close() {
+        hospitalJobTimer.cancel()
+    }
+
     class FlowMedicalHistory {
         internal val records: MutableList<MedicalRecord.Flow> = mutableListOf()
 
@@ -317,12 +361,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         fun timesDischargedForTheSameThing(by: Staff, currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
+            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
             return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
         fun timesResuscitated(currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
+            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
             return records.count { ResuscitationSpecialist in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
@@ -359,9 +403,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
-    enum class Outcome(val event: Event?) {
+    enum class Outcome(val event: Event) {
         DISCHARGE(Event.RetryFlowFromSafePoint),
-        OVERNIGHT_OBSERVATION(null),
+        OVERNIGHT_OBSERVATION(Event.OvernightObservation),
         UNTREATABLE(Event.StartErrorPropagation)
     }
 
@@ -555,6 +599,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
                 when {
                     newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
+                    newError.mentionsThrowable(ReloadFlowFromCheckpointException::class.java) -> Diagnosis.OVERNIGHT_OBSERVATION
                     newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION

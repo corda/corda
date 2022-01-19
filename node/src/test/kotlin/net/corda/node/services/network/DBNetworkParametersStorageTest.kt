@@ -15,8 +15,8 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.DEV_INTERMEDIATE_CA
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
@@ -61,7 +61,7 @@ class DBNetworkParametersStorageTest {
         networkMapClient = createMockNetworkMapClient()
         networkParametersService = DBNetworkParametersStorage(TestingNamedCacheFactory(), database, networkMapClient).apply {
             database.transaction {
-                setCurrentParameters(netParams1, DEV_ROOT_CA.certificate)
+                setCurrentParameters(netParams1, setOf(DEV_ROOT_CA.certificate))
             }
         }
     }

@@ -8,6 +8,6 @@ class CordaDisconnectPlugin : CRaSHPlugin<DisconnectPlugin>(), DisconnectPlugin 
     override fun getImplementation() = this
 
     override fun onDisconnect(userName: String?, authInfo: AuthInfo?) {
-        (authInfo as? CordaSSHAuthInfo)?.rpcConn?.forceClose()
+        (authInfo as? CordaSSHAuthInfo)?.cleanUp()
     }
 }

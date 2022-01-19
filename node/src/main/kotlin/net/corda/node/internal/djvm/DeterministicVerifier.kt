@@ -21,7 +21,7 @@ import net.corda.djvm.execution.SandboxException
 import net.corda.djvm.messages.Message
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.source.ClassSource
-import net.corda.node.djvm.LtxFactory
+import net.corda.node.djvm.LtxSupplierFactory
 import java.util.function.Function
 import kotlin.collections.LinkedHashSet
 
@@ -91,15 +91,16 @@ class DeterministicVerifier(
                 val timeWindowData = ltx.timeWindow?.serialize()
                 val privacySaltData = ltx.privacySalt.serialize()
                 val networkingParametersData = ltx.networkParameters?.serialize()
+                val digestServiceData = ltx.digestService.serialize()
 
-                val createSandboxTx = taskFactory.apply(LtxFactory::class.java)
+                val createSandboxTx = taskFactory.apply(LtxSupplierFactory::class.java)
                 createSandboxTx.apply(arrayOf(
-                    serializer.deserialize(serializedInputs),
+                    classLoader.createForImport(Function { serializer.deserialize(serializedInputs) }),
                     componentFactory.toSandbox(OUTPUTS_GROUP, TransactionState::class.java),
                     CommandFactory(taskFactory).toSandbox(
                         componentFactory.toSandbox(SIGNERS_GROUP, List::class.java),
                         componentFactory.toSandbox(COMMANDS_GROUP, CommandData::class.java),
-                        componentFactory.calculateLeafIndicesFor(COMMANDS_GROUP)
+                        componentFactory.calculateLeafIndicesFor(COMMANDS_GROUP, ltx.digestService)
                     ),
                     attachmentFactory.toSandbox(ltx.attachments),
                     serializer.deserialize(idData),
@@ -107,7 +108,8 @@ class DeterministicVerifier(
                     serializer.deserialize(timeWindowData),
                     serializer.deserialize(privacySaltData),
                     serializer.deserialize(networkingParametersData),
-                    serializer.deserialize(serializedReferences)
+                    classLoader.createForImport(Function { serializer.deserialize(serializedReferences) }),
+                    serializer.deserialize(digestServiceData)
                 ))
             }
 

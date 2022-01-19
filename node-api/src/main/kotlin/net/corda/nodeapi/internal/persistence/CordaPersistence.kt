@@ -4,10 +4,12 @@ import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.pool.HikariPool
 import com.zaxxer.hikari.util.ConcurrentBag
+import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import org.hibernate.tool.schema.spi.SchemaManagementException
 import rx.Observable
 import rx.Subscriber
@@ -29,24 +31,12 @@ import javax.sql.DataSource
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
-enum class SchemaInitializationType{
-    NONE,
-    VALIDATE,
-    UPDATE
-}
-
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val initialiseSchema: Boolean = Defaults.initialiseSchema,
-        val initialiseAppSchema: SchemaInitializationType = Defaults.initialiseAppSchema,
-        val transactionIsolationLevel: TransactionIsolationLevel = Defaults.transactionIsolationLevel,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
         val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
 ) {
     object Defaults {
-        val initialiseSchema = true
-        val initialiseAppSchema = SchemaInitializationType.UPDATE
-        val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L
     }
@@ -65,6 +55,10 @@ enum class TransactionIsolationLevel {
      */
     val jdbcString = "TRANSACTION_$name"
     val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
+
+    companion object{
+        val default = READ_COMMITTED
+    }
 }
 
 internal val _prohibitDatabaseAccess = ThreadLocal.withInitial { false }
@@ -94,27 +88,28 @@ fun <T> withoutDatabaseAccess(block: () -> T): T {
 val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
 class CordaPersistence(
-        databaseConfig: DatabaseConfig,
+        exportHibernateJMXStatistics: Boolean,
         schemas: Set<MappedSchema>,
         val jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
-        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {}
+        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {},
+        allowHibernateToManageAppSchema: Boolean = false
 ) : Closeable {
     companion object {
         private val log = contextLogger()
     }
 
-    private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
+    private val defaultIsolationLevel = TransactionIsolationLevel.default
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             try {
-                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
+                HibernateConfiguration(schemas, exportHibernateJMXStatistics, attributeConverters, jdbcUrl, cacheFactory, customClassLoader, allowHibernateToManageAppSchema)
             } catch (e: Exception) {
                 when (e) {
-                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)
+                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: ${e.message}", e)
                     else -> throw HibernateConfigException("Could not create Hibernate configuration: ${e.message}", e)
                 }
             }
@@ -298,7 +293,13 @@ class CordaPersistence(
 
     override fun close() {
         // DataSource doesn't implement AutoCloseable so we just have to hope that the implementation does so that we can close it
-        (_dataSource as? AutoCloseable)?.close()
+        val mayBeAutoClosableDataSource = _dataSource as? AutoCloseable
+        if(mayBeAutoClosableDataSource != null) {
+            log.info("Closing $mayBeAutoClosableDataSource")
+            mayBeAutoClosableDataSource.close()
+        } else {
+            log.warn("$_dataSource has not been properly closed")
+        }
     }
 
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
@@ -414,7 +415,10 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
             else -> cause?.hasSQLExceptionCause() ?: false
         }
 
-class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
+class CouldNotCreateDataSourceException(override val message: String?,
+                                        override val code: NodeDatabaseErrors,
+                                        override val parameters: List<Any> = listOf(),
+                                        override val cause: Throwable? = null) : ErrorCode<NodeDatabaseErrors>, Exception()
 
 class HibernateSchemaChangeException(override val message: String?, override val cause: Throwable? = null): Exception()
 

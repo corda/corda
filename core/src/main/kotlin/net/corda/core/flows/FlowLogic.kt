@@ -4,29 +4,25 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.WaitForStateConsumption
 import net.corda.core.internal.abbreviate
 import net.corda.core.internal.checkPayloadIs
-import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
@@ -35,8 +31,6 @@ import org.slf4j.Logger
 import java.time.Duration
 import java.util.HashMap
 import java.util.LinkedHashMap
-import java.util.concurrent.CompletableFuture
-import java.util.function.Supplier
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -128,6 +122,32 @@ abstract class FlowLogic<out T> {
      * access this lazily or from inside [call].
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
+
+    /**
+     * Returns `true` when the current [FlowLogic] has been killed (has received a command to halt its progress and terminate).
+     *
+     * Check this property in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * while (!isKilled) {
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Ideal usage would include throwing a [KilledFlowException] which will lead to the termination of the flow:
+     * ```
+     * for (item in list) {
+     *   if (isKilled) {
+     *     throw KilledFlowException(runId)
+     *   }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Note, once the [isKilled] flag is set to `true` the flow may terminate once it reaches the next API function marked with the
+     * @[Suspendable] annotation. Therefore, it is possible to write a flow that does not interact with the [isKilled] flag while still
+     * terminating correctly.
+     */
+    val isKilled: Boolean get() = stateMachine.isKilled
 
     /**
      * Creates a communication session with [destination]. Subsequently you may send/receive using this session object. How the messaging
@@ -266,7 +286,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
         val request = FlowIORequest.SendAndReceive(
-                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                sessionToMessage = stateMachine.serialize(mapOf(this to payload)),
                 shouldRetrySend = true
         )
         return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
@@ -318,6 +338,59 @@ abstract class FlowLogic<out T> {
     }
 
     /**
+     * Queues the given [payload] for sending to the provided [sessions] and continues without suspending.
+     *
+     * Note that the other parties may receive the message at some arbitrary later point or not at all: if one of the provided [sessions]
+     * is offline then message delivery will be retried until the corresponding node comes back or until the message is older than the
+     * network's event horizon time.
+     *
+     * @param payload the payload to send.
+     * @param sessions the sessions to send the provided payload to.
+     * @param maySkipCheckpoint whether checkpointing should be skipped.
+     */
+    @Suspendable
+    @JvmOverloads
+    fun sendAll(payload: Any, sessions: Set<FlowSession>, maySkipCheckpoint: Boolean = false) {
+        val sessionToPayload = sessions.map { it to payload }.toMap()
+        return sendAllMap(sessionToPayload, maySkipCheckpoint)
+    }
+
+    /**
+     * Queues the given payloads for sending to the provided sessions and continues without suspending.
+     *
+     * Note that the other parties may receive the message at some arbitrary later point or not at all: if one of the provided [sessions]
+     * is offline then message delivery will be retried until the corresponding node comes back or until the message is older than the
+     * network's event horizon time.
+     *
+     * @param payloadsPerSession a mapping that contains the payload to be sent to each session.
+     * @param maySkipCheckpoint whether checkpointing should be skipped.
+     */
+    @Suspendable
+    @JvmOverloads
+    fun sendAllMap(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
+        val request = FlowIORequest.Send(
+                sessionToMessage = stateMachine.serialize(payloadsPerSession)
+        )
+        stateMachine.suspend(request, maySkipCheckpoint)
+    }
+
+    /**
+     * Closes the provided sessions and performs cleanup of any resources tied to these sessions.
+     *
+     * Note that sessions are closed automatically when the corresponding top-level flow terminates.
+     * So, it's beneficial to eagerly close them in long-lived flows that might have many open sessions that are not needed anymore and consume resources (e.g. memory, disk etc.).
+     * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the provided sessions are not going to be used anymore.
+     * As a result, any operations on a closed session will fail with an [UnexpectedFlowEndException].
+     * When a session is closed, the other side is informed and the session is closed there too eventually.
+     * To prevent misuse of the API, if there is an attempt to close an uninitialised session the invocation will fail with an [IllegalStateException].
+     */
+    @Suspendable
+    fun close(sessions: NonEmptySet<FlowSession>) {
+        val request = FlowIORequest.CloseSessions(sessions)
+        stateMachine.suspend(request, false)
+    }
+
+    /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result
      * returned by that subflow's [call] method. If the subflow has a progress tracker, it is attached to the
      * current step in this flow's progress tracker.
@@ -332,10 +405,8 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @Throws(FlowException::class)
     open fun <R> subFlow(subLogic: FlowLogic<R>): R {
-        subLogic.stateMachine = stateMachine
-        maybeWireUpProgressTracking(subLogic)
         logger.debug { "Calling subflow: $subLogic" }
-        val result = stateMachine.subFlow(subLogic)
+        val result = stateMachine.subFlow(this, subLogic)
         logger.debug { "Subflow finished with result ${result.toString().abbreviate(300)}" }
         return result
     }
@@ -492,18 +563,6 @@ abstract class FlowLogic<out T> {
             _stateMachine = value
         }
 
-    private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
-        val ours = progressTracker
-        val theirs = subLogic.progressTracker
-        if (ours != null && theirs != null && ours != theirs) {
-            if (ours.currentStep == ProgressTracker.UNSTARTED) {
-                logger.debug { "Initializing the progress tracker for flow: ${this::class.java.name}." }
-                ours.nextStep()
-            }
-            ours.setChildProgressTracker(ours.currentStep, theirs)
-        }
-    }
-
     private fun enforceNoDuplicates(sessions: List<FlowSession>) {
         require(sessions.size == sessions.toSet().size) { "A flow session can only appear once as argument." }
     }
@@ -549,37 +608,45 @@ abstract class FlowLogic<out T> {
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
     }
-}
 
-/**
- * [WrappedFlowExternalAsyncOperation] is added to allow jackson to properly reference the data stored within the wrapped
- * [FlowExternalAsyncOperation].
- */
-private class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExternalAsyncOperation<R>) : FlowAsyncOperation<R> {
-    override fun execute(deduplicationId: String): CordaFuture<R> {
-        return operation.execute(deduplicationId).asCordaFuture()
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed.
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled()
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled() {
+        if (isKilled) {
+            throw KilledFlowException(runId)
+        }
     }
-}
 
-/**
- * [WrappedFlowExternalOperation] is added to allow jackson to properly reference the data stored within the wrapped
- * [FlowExternalOperation].
- *
- * The reference to [ServiceHub] is also needed by Kryo to properly keep a reference to [ServiceHub] so that
- * [FlowExternalOperation] can be run from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a
- * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
- */
-private class WrappedFlowExternalOperation<R : Any>(
-    val serviceHub: ServiceHubCoreInternal,
-    val operation: FlowExternalOperation<R>
-) : FlowAsyncOperation<R> {
-    override fun execute(deduplicationId: String): CordaFuture<R> {
-        // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
-        // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
-        return CompletableFuture.supplyAsync(
-            Supplier { this.operation.execute(deduplicationId) },
-            serviceHub.externalOperationExecutor
-        ).asCordaFuture()
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed. The provided message is added to the
+     * thrown [KilledFlowException].
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled { "The flow $runId was killed while iterating through the list of items" }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled(lazyMessage: () -> Any) {
+        if (isKilled) {
+            val message = lazyMessage()
+            throw KilledFlowException(runId, message.toString())
+        }
     }
 }
 

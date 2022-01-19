@@ -9,14 +9,21 @@ import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.UnrecoverableRPCException
+import net.corda.client.rpc.internal.RPCUtils.isShutdown
+import net.corda.client.rpc.internal.RPCUtils.isStartFlow
+import net.corda.client.rpc.internal.RPCUtils.isStartFlowWithClientId
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CLOSED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTING
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.DIED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.UNCONNECTED
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.min
 import net.corda.core.internal.times
 import net.corda.core.internal.uncheckedCast
@@ -24,6 +31,8 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleWithClientId
+import net.corda.core.messaging.FlowHandleWithClientIdImpl
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -62,7 +71,7 @@ import java.util.concurrent.TimeUnit
 //  ReconnectingObservables and other things can attach themselves as listeners for reconnect events.
 class ReconnectingCordaRPCOps private constructor(
         val reconnectingRPCConnection: ReconnectingRPCConnection
-) : InternalCordaRPCOps by proxy(reconnectingRPCConnection) {
+) : CordaRPCOps by proxy(reconnectingRPCConnection) {
     constructor(
             nodeHostAndPorts: List<NetworkHostAndPort>,
             username: String,
@@ -83,11 +92,11 @@ class ReconnectingCordaRPCOps private constructor(
             observersPool))
     private companion object {
         private val log = contextLogger()
-        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection): InternalCordaRPCOps {
+        private fun proxy(reconnectingRPCConnection: ReconnectingRPCConnection): CordaRPCOps {
             return Proxy.newProxyInstance(
                     this::class.java.classLoader,
-                    arrayOf(InternalCordaRPCOps::class.java),
-                    ErrorInterceptingHandler(reconnectingRPCConnection)) as InternalCordaRPCOps
+                    arrayOf(CordaRPCOps::class.java),
+                    ErrorInterceptingHandler(reconnectingRPCConnection)) as CordaRPCOps
         }
     }
     private val retryFlowsPool = Executors.newScheduledThreadPool(1)
@@ -211,7 +220,7 @@ class ReconnectingCordaRPCOps private constructor(
          * Establishes a connection by automatically retrying if the attempt to establish a connection fails.
          *
          * @param retryInterval the interval between retries.
-         * @param roundRobinIndex index of the address that will be used for the connection.
+         * @param roundRobinIndex the index of the address that will be used for the connection.
          * @param retries the number of retries remaining. A negative value implies infinite retries.
          */
         private tailrec fun establishConnectionWithRetry(
@@ -240,7 +249,7 @@ class ReconnectingCordaRPCOps private constructor(
                 }
             } catch (ex: Exception) {
                 when (ex) {
-                    is ActiveMQSecurityException -> {
+                    is UnrecoverableRPCException, is ActiveMQSecurityException -> {
                         log.error("Failed to login to node.", ex)
                         throw ex
                     }
@@ -291,11 +300,10 @@ class ReconnectingCordaRPCOps private constructor(
         fun isClosed(): Boolean = currentState == CLOSED
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
-        private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
-
         private fun checkIfIsStartFlow(method: Method, e: InvocationTargetException) {
-            if (method.isStartFlow()) {
-                // Don't retry flows
+            if (method.isStartFlow() && !method.isStartFlowWithClientId()) {
+                // Only retry flows that have started with a client id. For such flows alone it is safe to recall them since,
+                // on recalling trying to reconnect they will not start a new flow but re-hook to an existing one ,that matches the client id, instead.
                 throw CouldNotStartFlowException(e.targetException)
             }
         }
@@ -306,12 +314,12 @@ class ReconnectingCordaRPCOps private constructor(
          *
          * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
-        @Suppress("ThrowsCount", "ComplexMethod")
+        @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
         private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
             checkIfClosed()
             var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
-            while (remainingAttempts != 0) {
+            loop@ while (remainingAttempts != 0 && !reconnectingRPCConnection.isClosed()) {
                 try {
                     log.debug { "Invoking RPC $method..." }
                     return method.invoke(reconnectingRPCConnection.proxy, *(args ?: emptyArray())).also {
@@ -320,13 +328,18 @@ class ReconnectingCordaRPCOps private constructor(
                 } catch (e: InvocationTargetException) {
                     when (e.targetException) {
                         is RejectedCommandException -> {
-                            log.warn("Node is being shutdown. Operation ${method.name} rejected. Retrying when node is up...", e)
-                            reconnectingRPCConnection.reconnectOnError(e)
+                            log.warn("Node is being shutdown. Operation ${method.name} rejected. Shutting down...", e)
+                            throw e.targetException
                         }
                         is ConnectionFailureException -> {
-                            log.warn("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
-                            reconnectingRPCConnection.reconnectOnError(e)
-                            checkIfIsStartFlow(method, e)
+                            if (method.isShutdown()) {
+                                log.debug("Shutdown invoked, stop reconnecting.", e)
+                                reconnectingRPCConnection.notifyServerAndClose()
+                            } else {
+                                log.warn("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
+                                reconnectingRPCConnection.reconnectOnError(e)
+                                checkIfIsStartFlow(method, e)
+                            }
                         }
                         is RPCException -> {
                             rethrowIfUnrecoverable(e.targetException as RPCException)
@@ -349,6 +362,7 @@ class ReconnectingCordaRPCOps private constructor(
                 }
             }
 
+            if (reconnectingRPCConnection.isClosed()) return null
             throw MaxRpcRetryException(maxNumberOfAttempts, method, lastException)
         }
 
@@ -376,10 +390,44 @@ class ReconnectingCordaRPCOps private constructor(
                     }
                     initialFeed.copy(updates = observable)
                 }
+                FlowHandleWithClientId::class.java -> {
+                    val initialHandle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args,
+                            reconnectingRPCConnection.gracefulReconnect.maxAttempts))
+
+                    val initialFuture = initialHandle.returnValue
+                    // This is the future that is returned to the client. It will get carried until we reconnect to the node.
+                    val returnFuture = openFuture<Any?>()
+
+                    tryConnect(initialFuture, returnFuture) {
+                        val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts))
+                        handle.returnValue
+                    }
+
+                    return (initialHandle as FlowHandleWithClientIdImpl<Any?>).copy(returnValue = returnFuture)
+                }
                 // TODO - add handlers for Observable return types.
                 else -> doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts)
             }
         }
+
+        private fun tryConnect(currentFuture: CordaFuture<*>, returnFuture: OpenFuture<Any?>, doInvoke: () -> CordaFuture<*>) {
+            currentFuture.thenMatch(
+                    success = {
+                        returnFuture.set(it)
+                    } ,
+                    failure = {
+                        if (it is ConnectionFailureException) {
+                            reconnectingRPCConnection.observersPool.execute {
+                                val reconnectedFuture = doInvoke()
+                                tryConnect(reconnectedFuture, returnFuture, doInvoke)
+                            }
+                        } else {
+                            returnFuture.setException(it)
+                        }
+                    }
+            )
+        }
+
     }
 
     fun close() {
@@ -387,3 +435,4 @@ class ReconnectingCordaRPCOps private constructor(
         reconnectingRPCConnection.forceClose()
     }
 }
+

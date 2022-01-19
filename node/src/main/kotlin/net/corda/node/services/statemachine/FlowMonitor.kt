@@ -15,7 +15,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 internal class FlowMonitor(
-    private val smm: StateMachineManager,
+    private val flowOperator: FlowOperator,
     private val monitoringPeriod: Duration,
     private val suspensionLoggingThreshold: Duration,
     private var scheduler: ScheduledExecutorService? = null
@@ -62,9 +62,7 @@ internal class FlowMonitor(
     @VisibleForTesting
     fun waitingFlowDurations(suspensionLoggingThreshold: Duration): Sequence<Pair<FlowStateMachineImpl<*>, Duration>> {
         val now = Instant.now()
-        return smm.snapshot()
-                .asSequence()
-                .filter { flow -> flow !in smm.flowHospital && flow.isStarted() && flow.isSuspended() }
+        return flowOperator.getAllWaitingFlows()
                 .map { flow -> flow to flow.ongoingDuration(now) }
                 .filter { (_, suspensionDuration) -> suspensionDuration >= suspensionLoggingThreshold }
     }
@@ -78,10 +76,11 @@ internal class FlowMonitor(
                 is FlowIORequest.Send -> "to send a message to parties ${request.sessionToMessage.keys.partiesInvolved()}"
                 is FlowIORequest.Receive -> "to receive messages from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.SendAndReceive -> "to send and receive messages from parties ${request.sessionToMessage.keys.partiesInvolved()}"
+                is FlowIORequest.CloseSessions -> "to close sessions: ${request.sessions}"
                 is FlowIORequest.WaitForLedgerCommit -> "for the ledger to commit transaction with hash ${request.hash}"
                 is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
-                FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
+                is FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
                 is FlowIORequest.ExecuteAsyncOperation -> "for asynchronous operation of type ${request.operation::javaClass} to complete"
                 FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
             }
@@ -91,16 +90,6 @@ internal class FlowMonitor(
     }
 
     private fun Iterable<FlowSession>.partiesInvolved() = map { it.counterparty }.joinToString(", ", "[", "]")
-
-    private fun FlowStateMachineImpl<*>.ioRequest() = (snapshot().checkpoint.flowState as? FlowState.Started)?.flowIORequest
-
-    private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant): Duration {
-        return transientState?.value?.checkpoint?.timestamp?.let { Duration.between(it, now) } ?: Duration.ZERO
-    }
-
-    private fun FlowStateMachineImpl<*>.isSuspended() = !snapshot().isFlowResumed
-
-    private fun FlowStateMachineImpl<*>.isStarted() = transientState?.value?.checkpoint?.flowState is FlowState.Started
 
     private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = contains(flow.id)
 }

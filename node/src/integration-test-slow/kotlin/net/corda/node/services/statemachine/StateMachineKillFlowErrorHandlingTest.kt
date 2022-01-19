@@ -2,8 +2,10 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.KilledFlowException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
@@ -30,21 +32,9 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
      * No pass through the hospital is recorded. As the flow is marked as `isRemoved`.
      */
     @Test(timeout = 300_000)
-    fun `error during transition due to an InterruptedException (killFlow) will terminate the flow`() {
+    fun `error during transition due to killing a flow will terminate the flow`() {
         startDriver {
-            val (alice, port) = createBytemanNode(ALICE_NAME)
-
-            val rules = """
-                RULE Increment terminal counter
-                CLASS ${StaffedFlowHospital.TransitionErrorGeneralPractitioner::class.java.name}
-                METHOD consult
-                AT READ TERMINAL
-                IF true
-                DO traceln("Byteman test - terminal")
-                ENDRULE
-            """.trimIndent()
-
-            submitBytemanRules(rules, port)
+            val alice = createNode(ALICE_NAME)
 
             val flow = alice.rpc.startTrackedFlow(StateMachineKillFlowErrorHandlingTest::SleepFlow)
 
@@ -56,16 +46,12 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 }
             }
 
-            assertFailsWith<TimeoutException> { flow.returnValue.getOrThrow(20.seconds) }
-
-            val output = getBytemanOutput(alice)
+            assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(20.seconds) }
 
             assertTrue(flowKilled)
-            val numberOfTerminalDiagnoses = output.filter { it.contains("Byteman test - terminal") }.size
-            assertEquals(1, numberOfTerminalDiagnoses)
-            alice.rpc.assertHospitalCounts(propagated = 1)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            alice.rpc.assertHospitalCountsAllZero()
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -97,12 +83,12 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 }
             }
 
-            assertFailsWith<TimeoutException> { flow.returnValue.getOrThrow(30.seconds) }
+            assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(30.seconds) }
 
             assertTrue(flowKilled)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCountsAllZero()
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -118,21 +104,20 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `flow killed when it is in the flow hospital for observation is removed correctly`() {
         startDriver {
-            val (alice, port) = createBytemanNode(ALICE_NAME)
-            val charlie = createNode(CHARLIE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                CLASS $actionExecutorClassName
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSendInitial action
-                CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                RULE Throw exception on executeSendMultiple action
+                CLASS $actionExecutorClassName
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 4
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
@@ -147,12 +132,174 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.killFlow(flow.id)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
+        }
+    }
+
+    /**
+     * Throws an exception when calling [FlowStateMachineImpl.logFlowError] to cause an unexpected error after the flow has properly
+     * initialised, placing the flow into a dead state.
+     *
+     * The flow is then manually killed which triggers the flow to go through the normal kill flow process.
+     */
+    @Test(timeout = 300_000)
+    fun `a dead flow can be killed`() {
+        startDriver {
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val rules = """
+                RULE Throw exception
+                CLASS ${FlowStateMachineImpl::class.java.name}
+                METHOD logFlowError
+                AT ENTRY
+                IF readCounter("counter") < 1
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            val handle = alice.rpc.startFlow(::ThrowAnErrorFlow)
+            val id = handle.id
+
+            assertFailsWith<TimeoutException> {
+                handle.returnValue.getOrThrow(20.seconds)
+            }
+
+            val (discharge, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.get()
+            assertEquals(0, discharge)
+            assertEquals(1, observation)
+            assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
+            alice.rpc.assertNumberOfCheckpoints(hospitalized = 1)
+
+            val killed = alice.rpc.killFlow(id)
+
+            assertTrue(killed)
+
+            Thread.sleep(20.seconds.toMillis())
+
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+        }
+    }
+
+    /**
+     * Throws an exception when calling [FlowStateMachineImpl.logFlowError] to cause an unexpected error after the flow has properly
+     * initialised, placing the flow into a dead state.
+     *
+     * The flow is then manually killed which triggers the flow to go through the normal kill flow process.
+     *
+     * Since the flow was started with a client id, record of the [KilledFlowException] should exists in the database.
+     */
+    @Test(timeout = 300_000)
+    fun `a dead flow that was started with a client id can be killed`() {
+        startDriver {
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val rules = """
+                RULE Throw exception
+                CLASS ${FlowStateMachineImpl::class.java.name}
+                METHOD logFlowError
+                AT ENTRY
+                IF readCounter("counter") < 1
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            val handle = alice.rpc.startFlowWithClientId("my id", ::ThrowAnErrorFlow)
+            val id = handle.id
+
+            assertFailsWith<TimeoutException> {
+                handle.returnValue.getOrThrow(20.seconds)
+            }
+
+            val (discharge, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.get()
+            assertEquals(0, discharge)
+            assertEquals(1, observation)
+            assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
+            alice.rpc.assertNumberOfCheckpoints(hospitalized = 1)
+
+            val killed = alice.rpc.killFlow(id)
+
+            assertTrue(killed)
+
+            Thread.sleep(20.seconds.toMillis())
+
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+            alice.rpc.assertNumberOfCheckpoints(killed = 1)
+            // Exception thrown by flow
+            assertFailsWith<KilledFlowException> {
+                alice.rpc.reattachFlowWithClientId<String>("my id")?.returnValue?.getOrThrow(20.seconds)
+            }
+        }
+    }
+
+    /**
+     * Throws an exception when calling [FlowStateMachineImpl.logFlowError] to cause an unexpected error after the flow has properly
+     * initialised, placing the flow into a dead state.
+     *
+     * The flow is then manually killed which triggers the flow to go through the normal kill flow process.
+     */
+    @Test(timeout = 300_000)
+    fun `a dead flow that is killed and fails again will forcibly kill itself`() {
+        startDriver {
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val rules = """
+                RULE Throw exception
+                CLASS ${FlowStateMachineImpl::class.java.name}
+                METHOD logFlowError
+                AT ENTRY
+                IF readCounter("counter") == 0
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
+                ENDRULE
+                
+                RULE Throw exception 2
+                CLASS ${TransitionExecutorImpl::class.java.name}
+                METHOD executeTransition
+                AT ENTRY
+                IF readCounter("counter") == 1
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die again")
+                ENDRULE
+                
+                RULE Log that removeFlow is called
+                CLASS $stateMachineManagerClassName
+                METHOD removeFlow
+                AT EXIT
+                IF true
+                DO traceln("removeFlow called")
+                ENDRULE
+                
+                RULE Log that killFlowForcibly is called
+                CLASS $stateMachineManagerClassName
+                METHOD killFlowForcibly
+                AT EXIT
+                IF true
+                DO traceln("killFlowForcibly called")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            val handle = alice.rpc.startFlow(::ThrowAnErrorFlow)
+            val id = handle.id
+
+            assertFailsWith<TimeoutException> {
+                handle.returnValue.getOrThrow(20.seconds)
+            }
+
+            assertTrue(alice.rpc.killFlow(id))
+
+            Thread.sleep(20.seconds.toMillis())
+
+            alice.assertBytemanOutput("removeFlow called", 1)
+            alice.assertBytemanOutput("killFlowForcibly called", 1)
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
         }
     }
 

@@ -1,5 +1,7 @@
 package net.corda.serialization.djvm.serializers
 
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
+import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.serialization.djvm.deserializers.CertPathDeserializer
 import net.corda.serialization.djvm.toSandboxAnyClass
@@ -26,5 +28,14 @@ class SandboxCertPathSerializer(
 
     override fun fromProxy(proxy: Any): Any {
         return task.apply(proxy)!!
+    }
+
+    override fun fromProxy(proxy: Any, context: SerializationContext): Any {
+        // This requires [CertPathProxy] to have correct
+        // implementations for [equals] and [hashCode].
+        @Suppress("unchecked_cast")
+        return (context.properties[DESERIALIZATION_CACHE_PROPERTY] as? MutableMap<Any, Any>)
+            ?.computeIfAbsent(proxy, ::fromProxy)
+            ?: fromProxy(proxy)
     }
 }

@@ -16,7 +16,10 @@ object DockerUtils {
 
     fun createLocalDockerClient(): DockerClient {
         return if (SystemUtils.IS_OS_WINDOWS) {
-            DockerClientBuilder.getInstance("tcp://127.0.0.1:2375").build()
+            val cfg = DefaultDockerClientConfig.createDefaultConfigBuilder()
+                .withDockerHost("tcp://127.0.0.1:2375")
+                .build()
+            DockerClientBuilder.getInstance(cfg).build()
         } else {
             DockerClientBuilder.getInstance().build()
         }

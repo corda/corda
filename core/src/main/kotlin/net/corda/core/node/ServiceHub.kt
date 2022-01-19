@@ -381,7 +381,7 @@ interface ServiceHub : ServicesForResolution {
      * and thus queryable data will include everything committed as of the last checkpoint.
      *
      * We want to make sure users have a restricted access to administrative functions, this function will return a [RestrictedConnection] instance.
-     * The blocked methods are the following:
+     * The following methods are blocked:
      * - abort(executor: Executor?)
      * - clearWarnings()
      * - close()

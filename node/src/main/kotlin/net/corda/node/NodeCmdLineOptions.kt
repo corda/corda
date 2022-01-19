@@ -34,7 +34,7 @@ open class SharedNodeCmdLineOptions {
             description = ["The path to the config file. By default this is node.conf in the base directory."]
     )
     private var _configFile: Path? = null
-    val configFile: Path get() = _configFile ?: (baseDirectory / "node.conf")
+    val configFile: Path get() = if (_configFile != null) baseDirectory.resolve(_configFile) else (baseDirectory / "node.conf")
 
     @Option(
             names = ["--on-unknown-config-keys"],
@@ -48,8 +48,16 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
+    @Option(
+            names = ["--allow-hibernate-to-manage-app-schema"],
+            description = ["Allows hibernate to create/modify app schema for CorDapps based on their mapped schema.",
+                "Use this for rapid app development or for compatibility with pre-4.6 CorDapps.",
+                "Only available in dev mode."]
+    )
+    var allowHibernateToManageAppSchema: Boolean = false
+
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
-        val option = Configuration.Validation.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
+        val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
         return configuration.parseAsNodeConfiguration(option)
     }
 
@@ -84,8 +92,9 @@ open class SharedNodeCmdLineOptions {
         return """
                 Unable to load the node config file from '$configFile'.
                 ${cause?.message?.let { "Cause: $it" } ?: ""}
-
-                Try setting the --base-directory flag to change which directory the node
+                
+                Ensure that the [COMMAND] precedes all options. Alternatively, try
+                setting the --base-directory flag to change which directory the node
                 is looking in, or use the --config-file flag to specify it explicitly.
             """.trimIndent()
     }
@@ -165,6 +174,13 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
             hidden = true
     )
     var networkRootTrustStorePassword: String? = null
+
+    @Option(
+            names = ["-s", "--skip-schema-creation"],
+            description = ["DEPRECATED. Prevent database migration scripts to run during initial node registration."],
+            hidden = true
+    )
+    var skipSchemaCreation: Boolean = false
 
     override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         return super.parseConfiguration(configuration).doIfValid { config ->

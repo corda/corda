@@ -21,8 +21,8 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.createNodeInfoAndSigned
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
@@ -70,6 +70,15 @@ class NodeTest {
             val node = Node(configuration, info, initialiseSerialization = false)
             assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }
+    }
+
+    @Test(timeout=300_000)
+    fun `check node service availability`() {
+        val configuration = createConfig(ALICE_NAME)
+        val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
+        val node = Node(configuration, info, initialiseSerialization = false)
+        // Regular nodes must not have internal access to the notary service
+        assertNull(node.services.notaryService)
     }
 
     @Test(timeout=300_000)

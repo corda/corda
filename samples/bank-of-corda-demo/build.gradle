@@ -48,10 +48,13 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     nodeDefaults {
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
+        runSchemaMigration = true
     }
     node {
-        name "O=Notary Service,L=Zurich,C=CH"
-        notary = [validating: true]
+        name "O=Notary Node,L=Zurich,C=CH"
+        notary = [validating: true,
+                  serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
+        ]
         p2pPort 10002
         rpcSettings {
             address "localhost:10003"
@@ -106,6 +109,12 @@ task runRPCCashIssue(type: JavaExec) {
     args 20000
     args '--currency'
     args 'USD'
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.time=ALL-UNNAMED'
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.io=ALL-UNNAMED'
+    }
 }
 
 task runWebCashIssue(type: JavaExec) {
@@ -117,6 +126,12 @@ task runWebCashIssue(type: JavaExec) {
     args 30000
     args '--currency'
     args 'GBP'
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.time=ALL-UNNAMED'
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.io=ALL-UNNAMED'
+    }
 }
 
 jar {

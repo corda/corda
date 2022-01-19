@@ -16,14 +16,18 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationMagic
+import net.corda.core.serialization.SerializationSchemeContext
+import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getCustomSerializationMagicFromSchemeId
 import net.corda.core.utilities.contextLogger
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.ArrayDeque
-import java.util.UUID
+import java.util.*
 import java.util.regex.Pattern
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
@@ -100,7 +104,7 @@ open class TransactionBuilder(
                 commands = ArrayList(commands),
                 window = window,
                 privacySalt = privacySalt,
-                references = references,
+                references = ArrayList(references),
                 serviceHub = serviceHub
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
@@ -134,10 +138,46 @@ open class TransactionBuilder(
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      *
-     * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
+     * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
+            .apply { checkSupportedHashType() }
+
+    /**
+     * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
+     *
+     * @param [schemeId] is used to specify the [CustomSerializationScheme] used to serialize each component of the componentGroups of the [WireTransaction].
+     * This is an experimental feature.
+     *
+     * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
+     *
+     * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
+     */
+    @Throws(MissingContractAttachments::class)
+    fun toWireTransaction(services: ServicesForResolution, schemeId: Int): WireTransaction {
+        return toWireTransaction(services, schemeId, emptyMap()).apply { checkSupportedHashType() }
+    }
+
+    /**
+     * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
+     *
+     * @param [schemeId] is used to specify the [CustomSerializationScheme] used to serialize each component of the componentGroups of the [WireTransaction].
+     * This is an experimental feature.
+     *
+     * @param [properties] a list of properties to add to the [SerializationSchemeContext] these properties can be accessed in [CustomSerializationScheme.serialize]
+     * when serializing the componentGroups of the wire transaction but might not be available when deserializing.
+     *
+     * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
+     *
+     * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
+     */
+    @Throws(MissingContractAttachments::class)
+    fun toWireTransaction(services: ServicesForResolution, schemeId: Int, properties: Map<Any, Any>): WireTransaction {
+        val magic: SerializationMagic = getCustomSerializationMagicFromSchemeId(schemeId)
+        val serializationContext = SerializationDefaults.P2P_CONTEXT.withPreferredSerializationVersion(magic).withProperties(properties)
+        return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
+    }
 
     @CordaInternal
     internal fun toWireTransactionWithContext(
@@ -154,6 +194,7 @@ open class TransactionBuilder(
         if (referenceStates.isNotEmpty()) {
             services.ensureMinimumPlatformVersion(4, "Reference states")
         }
+        resolveNotary(services)
 
         val (allContractAttachments: Collection<AttachmentId>, resolvedOutputs: List<TransactionState<ContractState>>)
                 = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
@@ -175,7 +216,8 @@ open class TransactionBuilder(
                             window,
                             referenceStates,
                             services.networkParametersService.currentHash),
-                    privacySalt
+                    privacySalt,
+                    services.digestService
             )
         }
 
@@ -516,7 +558,7 @@ open class TransactionBuilder(
             services: ServicesForResolution
     ): Boolean {
         return HashAttachmentConstraint.disableHashConstraints
-                && services.networkParameters.minimumPlatformVersion >= 4
+                && services.networkParameters.minimumPlatformVersion >= PlatformVersionSwitches.MIGRATE_HASH_TO_SIGNATURE_CONSTRAINTS
                 // `disableHashConstraints == true` therefore it does not matter if there are
                 // multiple input states with different hash constraints
                 && inputStates?.any { it.constraint is HashAttachmentConstraint } == true
@@ -534,8 +576,8 @@ open class TransactionBuilder(
             attachmentToUse: ContractAttachment,
             services: ServicesForResolution): AttachmentConstraint = when {
         inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse, services)
-        attachmentToUse.signerKeys.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
-            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParameters.minimumPlatformVersion}.")
+        attachmentToUse.signerKeys.isNotEmpty() && services.networkParameters.minimumPlatformVersion < PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS -> {
+            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of ${PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS}. Current is: ${services.networkParameters.minimumPlatformVersion}.")
             if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters)) {
                 log.warnOnce("Reverting back to using whitelisted zone constraints for contract $contractClassName")
                 WhitelistedByZoneAttachmentConstraint
@@ -583,7 +625,10 @@ open class TransactionBuilder(
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
         // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
-        constraints.any { it is WhitelistedByZoneAttachmentConstraint } && attachmentToUse.isSigned && services.networkParameters.minimumPlatformVersion >= 4 -> transitionToSignatureConstraint(constraints, attachmentToUse)
+        constraints.any { it is WhitelistedByZoneAttachmentConstraint } &&
+                attachmentToUse.isSigned &&
+                services.networkParameters.minimumPlatformVersion >= PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS ->
+            transitionToSignatureConstraint(constraints, attachmentToUse)
 
         // This condition is hit when the current node has not installed the latest signed version but has already received states that have been migrated
         constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->
@@ -632,8 +677,10 @@ open class TransactionBuilder(
 
     private fun checkNotary(stateAndRef: StateAndRef<*>) {
         val notary = stateAndRef.state.notary
-        require(notary == this.notary) {
-            "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"."
+        // Transaction can combine different identities of the same notary after key rotation.
+        require(notary.name == this.notary?.name) {
+            "Input state requires notary \"${notary.description()}\" which does not match" +
+                    " the transaction notary \"${this.notary?.description()}\"."
         }
     }
 
@@ -645,7 +692,25 @@ open class TransactionBuilder(
         }
     }
 
-    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
+    // Transaction can combine different identities of the same notary after key rotation.
+    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary.name }.toSet().size == 1
+
+    // Automatically correct notary after its key rotation
+    private fun resolveNotary(services: ServicesForResolution) {
+        notary?.let {
+            val activeNotary = services.identityService.wellKnownPartyFromX500Name(it.name)
+            if (activeNotary != null && activeNotary != it) {
+                log.warn("Replacing notary on the transaction '${it.description()}' with '${activeNotary.description()}'.")
+                notary = activeNotary
+            }
+            outputs.forEachIndexed { index, transactionState ->
+                if (activeNotary != null && activeNotary != transactionState.notary) {
+                    log.warn("Replacing notary on the transaction output '${it.description()}' with '${activeNotary.description()}'.")
+                    outputs[index] = transactionState.copy(notary = activeNotary)
+                }
+            }
+        }
+    }
 
     /**
      * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method is used

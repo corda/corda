@@ -29,7 +29,7 @@ class SchemaTest {
         val fooConfigSchema = Configuration.Schema.withProperties(name = "Foo") { setOf(boolean("prop4"), double("prop5")) }
         val barConfigSchema = Configuration.Schema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val result = barConfigSchema.validate(configuration)
+        val result = barConfigSchema.validate(configuration, Configuration.Options.defaults)
         println(barConfigSchema.description())
 
         assertThat(result.isValid).isTrue()
@@ -59,17 +59,17 @@ class SchemaTest {
         val fooConfigSchema = Configuration.Schema.withProperties { setOf(boolean("prop4"), double("prop5")) }
         val barConfigSchema = Configuration.Schema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val strictErrors = barConfigSchema.validate(configuration, Configuration.Validation.Options(strict = true)).errors
+        val strictErrors = barConfigSchema.validate(configuration, Configuration.Options(strict = true)).errors
 
         assertThat(strictErrors).hasSize(2)
         assertThat(strictErrors.filter { error -> error.keyName == "prop4" }).hasSize(1)
         assertThat(strictErrors.filter { error -> error.keyName == "prop6" }).hasSize(1)
 
-        val errors = barConfigSchema.validate(configuration, Configuration.Validation.Options(strict = false)).errors
+        val errors = barConfigSchema.validate(configuration, Configuration.Options(strict = false)).errors
 
         assertThat(errors).isEmpty()
 
-        val errorsWithDefaultOptions = barConfigSchema.validate(configuration).errors
+        val errorsWithDefaultOptions = barConfigSchema.validate(configuration, Configuration.Options.defaults).errors
 
         assertThat(errorsWithDefaultOptions).isEmpty()
     }
@@ -98,7 +98,7 @@ class SchemaTest {
         val fooConfigSchema = Configuration.Schema.withProperties { setOf(boolean("prop4"), double("prop5")) }
         val barConfigSchema = Configuration.Schema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val result = barConfigSchema.validate(configuration)
+        val result = barConfigSchema.validate(configuration, Configuration.Options.defaults)
 
         assertThat(result.isValid).isTrue()
     }
@@ -127,7 +127,7 @@ class SchemaTest {
         val fooConfigSchema = Configuration.Schema.withProperties { setOf(boolean("prop4"), double("prop5")) }
         val barConfigSchema = Configuration.Schema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val errors = barConfigSchema.validate(configuration).errors
+        val errors = barConfigSchema.validate(configuration, Configuration.Options.defaults).errors
         errors.forEach(::println)
 
         assertThat(errors).hasSize(2)
@@ -154,7 +154,7 @@ class SchemaTest {
         val fooConfigSchema = Configuration.Schema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
         val barConfigSchema = Configuration.Schema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val printedConfiguration = barConfigSchema.describe(configuration)
+        val printedConfiguration = barConfigSchema.describe(configuration, options = Configuration.Options.defaults)
 
         val description = printedConfiguration.serialize().also { println(it) }
 
@@ -185,7 +185,7 @@ class SchemaTest {
         val fooConfigSchema = Configuration.Schema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
         val barConfigSchema = Configuration.Schema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema).list()) }
 
-        val printedConfiguration = barConfigSchema.describe(configuration)
+        val printedConfiguration = barConfigSchema.describe(configuration, options = Configuration.Options.defaults)
 
         val description = printedConfiguration.serialize().also { println(it) }
 

@@ -3,6 +3,7 @@ package net.corda.contracts.serialization.generics
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 import java.util.Optional
@@ -10,14 +11,23 @@ import java.util.Optional
 @Suppress("unused")
 class GenericTypeContract : Contract {
     override fun verify(tx: LedgerTransaction) {
-        val state = tx.outputsOfType<State>()
-        require(state.isNotEmpty()) {
-            "Requires at least one data state"
+        val states = tx.outputsOfType<State>()
+        requireThat {
+            "Requires at least one data state" using states.isNotEmpty()
+        }
+        val purchases = tx.commandsOfType<Purchase>()
+        requireThat {
+            "Requires at least one purchase" using purchases.isNotEmpty()
+        }
+        for (purchase in purchases) {
+            requireThat {
+                "Purchase has a price" using purchase.value.price.isPresent
+            }
         }
     }
 
     @Suppress("CanBeParameter", "MemberVisibilityCanBePrivate")
-    class State(val owner: AbstractParty, val data: DataObject) : ContractState {
+    class State(val owner: AbstractParty, val data: DataObject?) : ContractState {
         override val participants: List<AbstractParty> = listOf(owner)
 
         @Override

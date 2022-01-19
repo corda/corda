@@ -44,6 +44,9 @@ configurations {
     systemTestCompile.extendsFrom testCompile
 }
 
+evaluationDependsOn("cordapp")
+evaluationDependsOn("web")
+
 dependencies {
     compile "commons-io:commons-io:$commons_io_version"
     compile project(":samples:irs-demo:web")
@@ -69,15 +72,6 @@ dependencies {
     testCompile "com.github.detro:ghostdriver:$ghostdriver_version"
 }
 
-repositories {
-    maven {
-        url 'https://maven.scijava.org/content/repositories/public/'
-        content {
-            includeGroup 'com.github.detro'
-        }
-    }
-}
-
 bootRepackage {
     enabled = false
 }
@@ -86,9 +80,6 @@ task slowIntegrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
     classpath = sourceSets.slowIntegrationTest.runtimeClasspath
 }
-
-evaluationDependsOn("cordapp")
-evaluationDependsOn("web")
 
 task systemTest(type: Test, dependsOn: ["cordapp:prepareDockerNodes", "web:generateDockerCompose"]) {
     testClassesDirs = sourceSets.systemTest.output.classesDirs

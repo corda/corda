@@ -15,8 +15,15 @@ String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
         '--stacktrace',
         '--info',
+        /*
+        ** revert default behavour for `ignoreFailures` and
+        ** do not ignore test failures in PR builds
+        */
+        '-Ptests.ignoreFailures=false',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
+        '-Ddependx.branch.origin="${GIT_COMMIT}"',    // DON'T change quotation - GIT_COMMIT variable is substituted by SHELL!!!!
+        '-Ddependx.branch.target="${CHANGE_TARGET}"', // DON'T change quotation - CHANGE_TARGET variable is substituted by SHELL!!!!
 ].join(' ')
 
 pipeline {
@@ -38,6 +45,8 @@ pipeline {
      */
     environment {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
     }
 
     stages {

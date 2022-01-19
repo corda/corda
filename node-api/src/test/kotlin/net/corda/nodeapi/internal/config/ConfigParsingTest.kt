@@ -9,7 +9,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import org.assertj.core.api.Assertions.*
-import org.hibernate.exception.DataException
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -267,7 +266,7 @@ class ConfigParsingTest {
 
     data class TestObjects(val values: List<TestObject>)
 
-    @CustomConfigParser(TestParser::class)
+    @CustomConfigParser(parser = TestParser::class)
     sealed class TestObject {
         data class Type1(val value: String) : TestObject()
         data class Type2(val value: String) : TestObject()

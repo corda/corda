@@ -14,10 +14,13 @@ import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.internal.NodeBasedTest
+import net.corda.testing.node.internal.cordappForClasses
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,7 +28,6 @@ import org.junit.runners.Parameterized
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
-import javax.sql.DataSource
 import kotlin.test.assertFailsWith
 
 /*
@@ -33,7 +35,7 @@ import kotlin.test.assertFailsWith
  * check authentication/authorization of RPC connections.
  */
 @RunWith(Parameterized::class)
-class AuthDBTests : NodeBasedTest() {
+class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
     private var node: NodeWithInfo? = null
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB
@@ -44,6 +46,9 @@ class AuthDBTests : NodeBasedTest() {
         @JvmStatic
         @Parameterized.Parameters(name = "password encryption format = {0}")
         fun encFormats() = arrayOf(PasswordEncryption.NONE, PasswordEncryption.SHIRO_1_CRYPT)
+
+        @Suppress("SpreadOperator")
+        private val CORDAPPS = setOf(cordappForClasses(*AuthDBTests::class.nestedClasses.map { it.java }.toTypedArray()))
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
@@ -170,6 +175,7 @@ class AuthDBTests : NodeBasedTest() {
 
     @Test(timeout=300_000)
 	fun `Modify user permissions during RPC session`() {
+        Assume.assumeFalse(IS_S390X)
         db.insert(UserAndRoles(
                 username = "user3",
                 password = encodePassword("bar"),

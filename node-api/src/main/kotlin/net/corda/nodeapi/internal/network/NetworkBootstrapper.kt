@@ -54,7 +54,7 @@ import kotlin.streams.toList
 // TODO Move this to tools:bootstrapper
 class NetworkBootstrapper
 @VisibleForTesting
-internal constructor(private val initSerEnv: Boolean,
+constructor(private val initSerEnv: Boolean,
                      private val embeddedCordaJar: () -> URL,
                      private val nodeInfosGenerator: (List<Path>) -> List<Path>,
                      private val contractsJarConverter: (Path) -> ContractsJar) : NetworkBootstrapperWithOverridableParameters {
@@ -75,6 +75,15 @@ internal constructor(private val initSerEnv: Boolean,
                 "generate-node-info"
         )
 
+        private val createSchemasCmd = listOf(
+                Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
+                "-jar",
+                "corda.jar",
+                "run-migration-scripts",
+                "--core-schemas",
+                "--app-schemas"
+        )
+
         private const val LOGS_DIR_NAME = "logs"
 
         private val jarsThatArentCordapps = setOf("corda.jar", "runnodes.jar")
@@ -92,7 +101,9 @@ internal constructor(private val initSerEnv: Boolean,
             }
             val executor = Executors.newFixedThreadPool(numParallelProcesses)
             return try {
-                nodeDirs.map { executor.fork { generateNodeInfo(it) } }.transpose().getOrThrow()
+                nodeDirs.map { executor.fork {
+                    createDbSchemas(it)
+                    generateNodeInfo(it) } }.transpose().getOrThrow()
             } finally {
                 warningTimer.cancel()
                 executor.shutdownNow()
@@ -100,23 +111,31 @@ internal constructor(private val initSerEnv: Boolean,
         }
 
         private fun generateNodeInfo(nodeDir: Path): Path {
+            runNodeJob(nodeInfoGenCmd, nodeDir, "node-info-gen.log")
+            return nodeDir.list { paths ->
+                paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
+            }
+        }
+
+        private fun createDbSchemas(nodeDir: Path) {
+            runNodeJob(createSchemasCmd, nodeDir, "node-run-migration.log")
+        }
+
+        private fun runNodeJob(command: List<String>, nodeDir: Path, logfileName: String) {
             val logsDir = (nodeDir / LOGS_DIR_NAME).createDirectories()
-            val nodeInfoGenFile = (logsDir / "node-info-gen.log").toFile()
-            val process = ProcessBuilder(nodeInfoGenCmd)
+            val nodeRedirectFile = (logsDir / logfileName).toFile()
+            val process = ProcessBuilder(command)
                     .directory(nodeDir.toFile())
                     .redirectErrorStream(true)
-                    .redirectOutput(nodeInfoGenFile)
+                    .redirectOutput(nodeRedirectFile)
                     .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
                     .start()
             try {
                 if (!process.waitFor(3, TimeUnit.MINUTES)) {
                     process.destroyForcibly()
-                    printNodeInfoGenLogToConsole(nodeInfoGenFile)
+                    printNodeOutputToConsoleAndThrow(nodeRedirectFile)
                 }
-                printNodeInfoGenLogToConsole(nodeInfoGenFile) { process.exitValue() == 0 }
-                return nodeDir.list { paths ->
-                    paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
-                }
+                if (process.exitValue() != 0) printNodeOutputToConsoleAndThrow(nodeRedirectFile)
             } catch (e: InterruptedException) {
                 // Don't leave this process dangling if the thread is interrupted.
                 process.destroyForcibly()
@@ -124,18 +143,16 @@ internal constructor(private val initSerEnv: Boolean,
             }
         }
 
-        private fun printNodeInfoGenLogToConsole(nodeInfoGenFile: File, check: (() -> Boolean) = { true }) {
-            if (!check.invoke()) {
-                val nodeDir = nodeInfoGenFile.parent
-                val nodeIdentifier = try {
-                    ConfigFactory.parseFile((nodeDir / "node.conf").toFile()).getString("myLegalName")
-                } catch (e: ConfigException) {
-                    nodeDir
-                }
-                System.err.println("#### Error while generating node info file $nodeIdentifier ####")
-                nodeInfoGenFile.inputStream().copyTo(System.err)
-                throw IllegalStateException("Error while generating node info file. Please check the logs in $nodeDir.")
+        private fun printNodeOutputToConsoleAndThrow(stdoutFile: File) {
+            val nodeDir = stdoutFile.parent
+            val nodeIdentifier = try {
+                ConfigFactory.parseFile((nodeDir / "node.conf").toFile()).getString("myLegalName")
+            } catch (e: ConfigException) {
+                nodeDir
             }
+            System.err.println("#### Error while generating node info file $nodeIdentifier ####")
+            stdoutFile.inputStream().copyTo(System.err)
+            throw IllegalStateException("Error while generating node info file. Please check the logs in $nodeDir.")
         }
 
         const val DEFAULT_MAX_MESSAGE_SIZE: Int = 10485760
@@ -382,7 +399,7 @@ internal constructor(private val initSerEnv: Boolean,
 
         when (netParamsFilesGrouped.size) {
             0 -> return null
-            1 -> return netParamsFilesGrouped.keys.first().deserialize().verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+            1 -> return netParamsFilesGrouped.keys.first().deserialize().verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate))
         }
 
         val msg = StringBuilder("Differing sets of network parameters were found. Make sure all the nodes have the same " +
@@ -392,7 +409,7 @@ internal constructor(private val initSerEnv: Boolean,
             netParamsFiles.map { it.parent.fileName }.joinTo(msg, ", ")
             msg.append(":\n")
             val netParamsString = try {
-                bytes.deserialize().verifiedNetworkParametersCert(DEV_ROOT_CA.certificate).toString()
+                bytes.deserialize().verifiedNetworkParametersCert(setOf(DEV_ROOT_CA.certificate)).toString()
             } catch (e: Exception) {
                 "Invalid network parameters file: $e"
             }

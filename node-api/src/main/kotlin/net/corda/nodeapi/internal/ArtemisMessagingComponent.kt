@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup
@@ -34,6 +33,10 @@ class ArtemisMessagingComponent {
         // This is a rough guess on the extra space needed on top of maxMessageSize to store the journal.
         // TODO: we might want to make this value configurable.
         const val JOURNAL_HEADER_SIZE = 1024
+        // Time interval after which every connected client is re-authenticated using BrokerJaasLoginModule.
+        // Setting it to 1 hour (instead of default value of 10 seconds) to avoid frequent expensive checks, e.g. CRL check.
+        const val SECURITY_INVALIDATION_INTERVAL = 3600 * 1000L
+
         object P2PMessagingHeaders {
             // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
             // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
@@ -122,6 +125,11 @@ class ArtemisMessagingComponent {
             fun translateLocalQueueToInboxAddress(address: String): String {
                 require(address.startsWith(PEERS_PREFIX)) { "Failed to map address: $address to a remote topic as it is not in the $PEERS_PREFIX namespace" }
                 return P2P_PREFIX + address.substring(PEERS_PREFIX.length)
+            }
+
+            fun translateInboxAddressToLocalQueue(address: String): String {
+                require(address.startsWith(P2P_PREFIX)) { "Failed to map topic: $address to a local address as it is not in the $P2P_PREFIX namespace" }
+                return PEERS_PREFIX + address.substring(P2P_PREFIX.length)
             }
         }
 

@@ -25,11 +25,14 @@ class DoRemainingWorkTransition(
     }
 
     // If the flow is clean check the FlowState
+    @Suppress("ThrowsCount")
     private fun cleanTransition(): TransitionResult {
-        val checkpoint = startingState.checkpoint
-        return when (checkpoint.flowState) {
-            is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, checkpoint.flowState).transition()
-            is FlowState.Started -> StartedFlowTransition(context, startingState, checkpoint.flowState).transition()
+        val flowState = startingState.checkpoint.flowState
+        return when (flowState) {
+            is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, flowState).transition()
+            is FlowState.Started -> StartedFlowTransition(context, startingState, flowState).transition()
+            is FlowState.Finished -> throw IllegalStateException("Cannot transition a state with finished flow state.")
+            is FlowState.Paused -> throw IllegalStateException("Cannot transition a state with paused flow state.")
         }
     }
 

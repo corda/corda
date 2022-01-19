@@ -11,4 +11,5 @@ interface ApplicationMessage {
     val destinationLegalName: String
     val destinationLink: NetworkHostAndPort
     val applicationProperties: Map<String, Any?>
+    fun release()
 }

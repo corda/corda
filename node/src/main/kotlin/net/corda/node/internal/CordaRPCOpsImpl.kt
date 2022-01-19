@@ -17,15 +17,16 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.AttachmentTrustInfo
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.sign
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowHandleWithClientId
+import net.corda.core.messaging.FlowHandleWithClientIdImpl
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -51,9 +52,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.nodeapi.exceptions.MissingAttachmentException
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import rx.Observable
@@ -72,9 +73,8 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
-        private val checkpointDumper: CheckpointDumperImpl,
         private val shutdownNode: () -> Unit
-) : InternalCordaRPCOps, AutoCloseable {
+) : CordaRPCOps, AutoCloseable {
 
     private companion object {
         private val logger = loggerFor<CordaRPCOpsImpl>()
@@ -154,20 +154,27 @@ internal class CordaRPCOpsImpl(
         return services.validatedTransactions.track()
     }
 
-    override fun dumpCheckpoints() = checkpointDumper.dumpCheckpoints()
-
-    override val attachmentTrustInfos: List<AttachmentTrustInfo>
-        get() {
-            return services.attachmentTrustCalculator.calculateAllTrustInfo()
-        }
-
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         val (snapshot, updates) = stateMachinesFeed()
         updates.notUsed()
         return snapshot
     }
 
-    override fun killFlow(id: StateMachineRunId): Boolean = if (smm.killFlow(id)) true else smm.flowHospital.dropSessionInit(id)
+    override fun killFlow(id: StateMachineRunId): Boolean = smm.killFlow(id)
+
+    override fun <T> reattachFlowWithClientId(clientId: String): FlowHandleWithClientId<T>? {
+        return smm.reattachFlowWithClientId<T>(clientId, context().principal())?.run {
+            FlowHandleWithClientIdImpl(id = id, returnValue = resultFuture, clientId = clientId)
+        }
+    }
+
+    override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId, context().principal(), false)
+
+    override fun removeClientIdAsAdmin(clientId: String): Boolean = smm.removeClientId(clientId, context().principal(), true)
+
+    override fun finishedFlowsWithClientIds(): Map<String, Boolean> = smm.finishedFlowsWithClientIds(context().principal(), false)
+
+    override fun finishedFlowsWithClientIdsAsAdmin(): Map<String, Boolean> = smm.finishedFlowsWithClientIds(context().principal(), true)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
 
@@ -235,27 +242,39 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
-        val stateMachine = startFlow(logicType, args)
+        val stateMachine = startFlow(logicType, context(), args)
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic.track()?.updates?.filter { !it.startsWith(STRUCTURAL_STEP_PREFIX) } ?: Observable.empty(),
-                stepsTreeIndexFeed = stateMachine.logic.trackStepsTreeIndex(),
-                stepsTreeFeed = stateMachine.logic.trackStepsTree()
+                progress = stateMachine.logic?.track()?.updates?.filter { !it.startsWith(STRUCTURAL_STEP_PREFIX) } ?: Observable.empty(),
+                stepsTreeIndexFeed = stateMachine.logic?.trackStepsTreeIndex(),
+                stepsTreeFeed = stateMachine.logic?.trackStepsTree()
         )
     }
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        val stateMachine = startFlow(logicType, args)
+        val stateMachine = startFlow(logicType, context(), args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
+    override fun <T> startFlowDynamicWithClientId(
+        clientId: String,
+        logicType: Class<out FlowLogic<T>>,
+        vararg args: Any?
+    ): FlowHandleWithClientId<T> {
+        return startFlow(logicType, context().withClientId(clientId), args).run {
+            FlowHandleWithClientIdImpl(id = id, returnValue = resultFuture, clientId = clientId)
+        }
+    }
+
+    @Suppress("SpreadOperator")
+    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, context: InvocationContext, args: Array<out Any?>): FlowStateMachineHandle<T> {
         if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
         if (isFlowsDrainingModeEnabled()) {
-            throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
+            return context.clientId?.let { smm.reattachFlowWithClientId<T>(it, context.principal()) }
+                ?: throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
-        return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
+        return flowStarter.invokeFlowAsync(logicType, context, *args).getOrThrow()
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -263,7 +282,8 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun openAttachment(id: SecureHash): InputStream {
-        return services.attachments.openAttachment(id)!!.open()
+        return services.attachments.openAttachment(id)?.open() ?:
+            throw MissingAttachmentException("Unable to open attachment with id: $id")
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
@@ -462,4 +482,6 @@ internal class CordaRPCOpsImpl(
     private inline fun <reified TARGET> Class<*>.checkIsA() {
         require(TARGET::class.java.isAssignableFrom(this)) { "$name is not a ${TARGET::class.java.name}" }
     }
+
+    private fun InvocationContext.withClientId(clientId: String) = copy(clientId = clientId)
 }

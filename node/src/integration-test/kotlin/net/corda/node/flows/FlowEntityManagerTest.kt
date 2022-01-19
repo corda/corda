@@ -12,6 +12,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
@@ -29,7 +30,9 @@ import net.corda.testing.core.DummyCommandData
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import org.apache.commons.lang3.SystemUtils
 import org.hibernate.exception.ConstraintViolationException
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import java.lang.RuntimeException
@@ -314,12 +317,16 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation that is caught inside an entity manager should allow a flow to continue processing as normal`() {
+        // This test is generating JDK11 contract code on JDK11
+        Assume.assumeTrue(!SystemUtils.IS_JAVA_11)
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
         driver(DriverParameters(startNodesInProcess = true)) {
 
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
 
             val txId =
                 alice.rpc.startFlow(::EntityManagerWithFlushCatchAndInteractWithOtherPartyFlow, bob.nodeInfo.singleIdentity())

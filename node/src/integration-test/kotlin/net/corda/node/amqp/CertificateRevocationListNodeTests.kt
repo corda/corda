@@ -25,10 +25,14 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.DEV_INTERMEDIATE_CA
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
@@ -305,7 +309,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test(timeout=300_000)
-	fun `Revocation status chceck fails when the CRL distribution point is not set and soft fail is disabled`() {
+	fun `Revocation status check fails when the CRL distribution point is not set and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -380,7 +384,6 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPClient(
@@ -404,7 +407,6 @@ class CertificateRevocationListNodeTests {
             doReturn(name).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
@@ -412,7 +414,7 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val revocationConfig = crlCheckSoftFail.toRevocationConfig()
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPServer(
@@ -626,5 +628,92 @@ class CertificateRevocationListNodeTests {
                 assertEquals(true, serverConnect.connected)
             }
         }
+    }
+
+    private fun createArtemisServerAndClient(port: Int, crlCheckSoftFail: Boolean, crlCheckArtemisServer: Boolean):
+            Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+        val baseDirectory = temporaryFolder.root.toPath() / "artemis"
+        val certificatesDirectory = baseDirectory / "certificates"
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
+            doReturn(CHARLIE_NAME).whenever(it).myLegalName
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
+            doReturn(NetworkHostAndPort("0.0.0.0", port)).whenever(it).p2pAddress
+            doReturn(null).whenever(it).jmxMonitoringHttpPort
+            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
+            doReturn(crlCheckArtemisServer).whenever(it).crlCheckArtemisServer
+        }
+        artemisConfig.configureWithDevSSLCertificate()
+        val server = ArtemisMessagingServer(artemisConfig, artemisConfig.p2pAddress, MAX_MESSAGE_SIZE, null)
+        val client = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisConfig.p2pAddress, MAX_MESSAGE_SIZE)
+        server.start()
+        client.start()
+        return server to client
+    }
+
+    private fun verifyMessageToArtemis(crlCheckSoftFail: Boolean,
+                                       crlCheckArtemisServer: Boolean,
+                                       expectedStatus: MessageStatus,
+                                       revokedNodeCert: Boolean = false,
+                                       nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl") {
+        val queueName = P2P_PREFIX + "Test"
+        val (artemisServer, artemisClient) = createArtemisServerAndClient(serverPort, crlCheckSoftFail, crlCheckArtemisServer)
+        artemisServer.use {
+            artemisClient.started!!.session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+
+            val (amqpClient, nodeCert) = createClient(serverPort, true, nodeCrlDistPoint)
+            if (revokedNodeCert) {
+                revokedNodeCerts.add(nodeCert.serialNumber)
+            }
+            amqpClient.use {
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val clientConnect = clientConnected.get()
+                assertEquals(true, clientConnect.connected)
+
+                val msg = amqpClient.createMessage("Test".toByteArray(), queueName, CHARLIE_NAME.toString(), emptyMap())
+                amqpClient.write(msg)
+                assertEquals(expectedStatus, msg.onComplete.get())
+            }
+            artemisClient.stop()
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with soft fail CRL check`() {
+        verifyMessageToArtemis(crlCheckSoftFail = true, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Acknowledged)
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with hard fail CRL check`() {
+        verifyMessageToArtemis(crlCheckSoftFail = false, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Acknowledged)
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with soft fail CRL check on unavailable URL`() {
+        verifyMessageToArtemis(crlCheckSoftFail = true, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Acknowledged,
+                nodeCrlDistPoint = "http://${server.hostAndPort}/crl/$FORBIDDEN_CRL")
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection fails with hard fail CRL check on unavailable URL`() {
+        verifyMessageToArtemis(crlCheckSoftFail = false, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Rejected,
+                nodeCrlDistPoint = "http://${server.hostAndPort}/crl/$FORBIDDEN_CRL")
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection fails with soft fail CRL check on revoked node certificate`() {
+        verifyMessageToArtemis(crlCheckSoftFail = true, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Rejected,
+                revokedNodeCert = true)
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with disabled CRL check on revoked node certificate`() {
+        verifyMessageToArtemis(crlCheckSoftFail = false, crlCheckArtemisServer = false, expectedStatus = MessageStatus.Acknowledged,
+                revokedNodeCert = true)
     }
 }

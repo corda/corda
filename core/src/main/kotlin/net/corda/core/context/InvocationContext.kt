@@ -18,21 +18,55 @@ import java.security.Principal
  * @property impersonatedActor Optional impersonated actor, used for logging but not for authorisation.
  */
 @CordaSerializable
-data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val actor: Actor?, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
+data class InvocationContext(
+    val origin: InvocationOrigin,
+    val trace: Trace,
+    val actor: Actor?,
+    val externalTrace: Trace? = null,
+    val impersonatedActor: Actor? = null,
+    val arguments: List<Any?>? = emptyList(), // 'arguments' is nullable so that a - >= 4.6 version - RPC client can be backwards compatible against - < 4.6 version - nodes
+    val clientId: String? = null
+) {
+
+    constructor(
+        origin: InvocationOrigin,
+        trace: Trace,
+        actor: Actor?,
+        externalTrace: Trace? = null,
+        impersonatedActor: Actor? = null
+    ) : this(origin, trace, actor, externalTrace, impersonatedActor, emptyList())
+
     companion object {
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
         @DeleteForDJVM
         @JvmStatic
-        fun newInstance(origin: InvocationOrigin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
+        @JvmOverloads
+        @Suppress("LongParameterList")
+        fun newInstance(
+            origin: InvocationOrigin,
+            trace: Trace = Trace.newInstance(),
+            actor: Actor? = null,
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null,
+            arguments: List<Any?> = emptyList(),
+            clientId: String? = null
+        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments, clientId)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
          */
         @DeleteForDJVM
         @JvmStatic
-        fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
+        @JvmOverloads
+        fun rpc(
+            actor: Actor,
+            trace: Trace = Trace.newInstance(),
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null,
+            arguments: List<Any?> = emptyList()
+        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, arguments)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.
@@ -67,6 +101,24 @@ data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val
      * Associated security principal.
      */
     fun principal(): Principal = origin.principal()
+
+    fun copy(
+        origin: InvocationOrigin = this.origin,
+        trace: Trace = this.trace,
+        actor: Actor? = this.actor,
+        externalTrace: Trace? = this.externalTrace,
+        impersonatedActor: Actor? = this.impersonatedActor
+    ): InvocationContext {
+        return copy(
+            origin = origin,
+            trace = trace,
+            actor = actor,
+            externalTrace = externalTrace,
+            impersonatedActor = impersonatedActor,
+            arguments = arguments,
+            clientId = clientId
+        )
+    }
 }
 
 /**

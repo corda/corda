@@ -1,15 +1,18 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.internal.BasicVerifier
 import net.corda.core.internal.Verifier
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.CordaSerializationTransformEnumDefault
+import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
+import net.corda.core.serialization.CordaSerializationTransformRename
+import net.corda.core.serialization.CordaSerializationTransformRenames
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisConfiguration
-import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.execution.ExecutionProfile
 import net.corda.djvm.rewiring.ByteCode
 import net.corda.djvm.rewiring.ByteCodeKey
@@ -35,13 +38,29 @@ class DeterministicVerifierFactoryService(
     init {
         val baseAnalysisConfiguration = AnalysisConfiguration.createRoot(
             userSource = cordaSource,
-            whitelist = Whitelist.MINIMAL,
             visibleAnnotations = setOf(
                 CordaSerializable::class.java,
+                CordaSerializationTransformEnumDefault::class.java,
+                CordaSerializationTransformEnumDefaults::class.java,
+                CordaSerializationTransformRename::class.java,
+                CordaSerializationTransformRenames::class.java,
                 ConstructorForDeserialization::class.java,
                 DeprecatedConstructorForDeserialization::class.java
             ),
-            bootstrapSource = bootstrapSource
+            bootstrapSource = bootstrapSource,
+            overrideClasses = setOf(
+                /**
+                 * These classes are all duplicated into the sandbox
+                 * without the DJVM modifying their byte-code first.
+                 * The goal is to delegate cryptographic operations
+                 * out to the Node rather than perform them inside
+                 * the sandbox, because this is MUCH FASTER.
+                 */
+                sandbox.net.corda.core.crypto.Crypto::class.java.name,
+                "sandbox.net.corda.core.crypto.DJVM",
+                "sandbox.net.corda.core.crypto.DJVMPublicKey",
+                "sandbox.net.corda.core.crypto.internal.ProviderMapKt"
+            )
         )
 
         baseSandboxConfiguration = SandboxConfiguration.createFor(
@@ -61,13 +80,13 @@ class DeterministicVerifierFactoryService(
     override fun apply(ledgerTransaction: LedgerTransaction): LedgerTransaction {
         // Specialise the LedgerTransaction here so that
         // contracts are verified inside the DJVM!
-        return ledgerTransaction.specialise(::specialise)
+        return ledgerTransaction.specialise(::createDeterministicVerifier)
     }
 
-    private fun specialise(ltx: LedgerTransaction, classLoader: ClassLoader): Verifier {
-        return (classLoader as? URLClassLoader)?.run {
+    private fun createDeterministicVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+        return (serializationContext.deserializationClassLoader as? URLClassLoader)?.let { classLoader ->
             DeterministicVerifier(ltx, classLoader, createSandbox(classLoader.urLs))
-        } ?: BasicVerifier(ltx, classLoader)
+        } ?: throw IllegalStateException("Unsupported deserialization classloader type")
     }
 
     private fun createSandbox(userSource: Array<URL>): SandboxConfiguration {

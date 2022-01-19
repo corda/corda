@@ -1,0 +1,21 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="identity_service_key_rotation">
+        <addColumn tableName="node_identities_no_cert">
+            <column name="owning_pk_hash" type="NVARCHAR(130)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <sql>
+            UPDATE node_identities_no_cert SET owning_pk_hash =
+            (SELECT pk_hash FROM node_named_identities WHERE node_named_identities.name = node_identities_no_cert.name)
+        </sql>
+        <sql>UPDATE node_identities_no_cert SET owning_pk_hash = 'unresolved' WHERE owning_pk_hash IS NULL</sql>
+        <addNotNullConstraint tableName="node_identities_no_cert" columnName="owning_pk_hash" columnDataType="NVARCHAR(130)"/>
+        <dropTable tableName="node_named_identities"/>
+    </changeSet>
+</databaseChangeLog>

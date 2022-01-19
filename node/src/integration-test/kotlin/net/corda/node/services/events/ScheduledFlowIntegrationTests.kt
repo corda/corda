@@ -22,10 +22,13 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IS_S390X
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.enclosedCordapp
+import org.junit.Ignore
+import org.junit.Assume
 import org.junit.Test
 import java.time.Instant
 import java.util.*
@@ -89,18 +92,17 @@ class ScheduledFlowIntegrationTests {
 
     private fun MutableList<CordaFuture<*>>.getOrThrowAll() {
         forEach {
-            try {
-                it.getOrThrow()
-            } catch (ex: Exception) {
-            }
+            it.getOrThrow()
         }
     }
 
+    @Ignore("ENT-5891: Unstable test we're not addressing in Corda 4.x")
     @Test(timeout=300_000)
 	fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
+        Assume.assumeFalse(IS_S390X)
         driver(DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testMessage"), enclosedCordapp())
+                startNodesInProcess = false,
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testMessage", "net.corda.testing.core"), enclosedCordapp())
         )) {
             val N = 23
             val rpcUser = User("admin", "admin", setOf("ALL"))
@@ -127,6 +129,7 @@ class ScheduledFlowIntegrationTests {
                         scheduledFor
                 ).returnValue)
             }
+
             initialiseFutures.getOrThrowAll()
 
             val spendAttemptFutures = mutableListOf<CordaFuture<*>>()
@@ -134,6 +137,7 @@ class ScheduledFlowIntegrationTests {
                 spendAttemptFutures.add(aliceClient.proxy.startFlow(::AnotherFlow, (i).toString()).returnValue)
                 spendAttemptFutures.add(bobClient.proxy.startFlow(::AnotherFlow, (i + 100).toString()).returnValue)
             }
+
             spendAttemptFutures.getOrThrowAll()
 
             // TODO: the queries below are not atomic so we need to allow enough time for the scheduler to finish.  Would be better to query scheduler.
@@ -144,7 +148,7 @@ class ScheduledFlowIntegrationTests {
 
             val bobStates = bobClient.proxy.vaultQuery(ScheduledState::class.java).states.filter { it.state.data.processed }
             val bobSpentStates = bobClient.proxy.vaultQuery(SpentState::class.java).states
-
+            
             assertEquals(aliceStates.count() + aliceSpentStates.count(), N * 2)
             assertEquals(bobStates.count() + bobSpentStates.count(), N * 2)
             assertEquals(aliceSpentStates.count(), bobSpentStates.count())

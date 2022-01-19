@@ -77,6 +77,16 @@ fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Certific
     return CertificateAndKeyPair(cert, keyPair)
 }
 
+fun createDevNetworkParametersCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {
+    val keyPair = generateKeyPair()
+    val cert = X509Utilities.createCertificate(
+            CertificateType.NETWORK_PARAMETERS,
+            rootCa.certificate,
+            rootCa.keyPair,
+            X500Principal("CN=Network Parameters,O=R3 Ltd,L=London,C=GB"),
+            keyPair.public)
+    return CertificateAndKeyPair(cert, keyPair)
+}
 /**
  * Create a dev node CA cert, as a sub-cert of the given [intermediateCa], and matching key pair using the given
  * [CordaX500Name] as the cert subject.
@@ -95,6 +105,17 @@ fun createDevNodeCa(intermediateCa: CertificateAndKeyPair,
     return CertificateAndKeyPair(cert, nodeKeyPair)
 }
 
+fun createDevNodeIdentity(nodeCa: CertificateAndKeyPair, legalName: CordaX500Name): CertificateAndKeyPair {
+    val keyPair = generateKeyPair()
+    val cert = X509Utilities.createCertificate(
+            CertificateType.LEGAL_IDENTITY,
+            nodeCa.certificate,
+            nodeCa.keyPair,
+            legalName.x500Principal,
+            keyPair.public)
+    return CertificateAndKeyPair(cert, keyPair)
+}
+
 val DEV_INTERMEDIATE_CA: CertificateAndKeyPair get() = DevCaHelper.loadDevCa(X509Utilities.CORDA_INTERMEDIATE_CA)
 val DEV_ROOT_CA: CertificateAndKeyPair get() = DevCaHelper.loadDevCa(X509Utilities.CORDA_ROOT_CA)
 const val DEV_CA_PRIVATE_KEY_PASS: String = "cordacadevkeypass"
@@ -109,7 +130,7 @@ const val DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS: String = "trustpasskeypass"
 // https://github.com/corda/corda-gradle-plugins/blob/master/cordapp/src/main/resources/certificates/cordadevcodesign.jks
 const val DEV_CORDAPP_CODE_SIGNING_STR = "AA59D829F2CA8FDDF5ABEA40D815F937E3E54E572B65B93B5C216AE6594E7D6B"
 
-val DEV_PUB_KEY_HASHES: List<SecureHash.SHA256> get() = listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate).map { it.publicKey.hash.sha256() } + SecureHash.parse(DEV_CORDAPP_CODE_SIGNING_STR).sha256()
+val DEV_PUB_KEY_HASHES: List<SecureHash> get() = listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate).map { it.publicKey.hash.sha256() } + SecureHash.create(DEV_CORDAPP_CODE_SIGNING_STR).sha256()
 
 // We need a class so that we can get hold of the class loader
 internal object DevCaHelper {

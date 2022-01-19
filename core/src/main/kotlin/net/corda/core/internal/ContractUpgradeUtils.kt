@@ -31,7 +31,8 @@ object ContractUpgradeUtils {
                 upgradedContractClass.name,
                 upgradedContractAttachmentId,
                 privacySalt,
-                networkParametersHash
+                networkParametersHash,
+                services.digestService
         ).build()
     }
 

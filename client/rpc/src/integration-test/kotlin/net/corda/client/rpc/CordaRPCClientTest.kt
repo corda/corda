@@ -40,6 +40,7 @@ import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.ProcessUtilities
 import net.corda.testing.node.internal.poll
@@ -62,7 +63,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class CordaRPCClientTest : NodeBasedTest(FINANCE_CORDAPPS, notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
         val log = contextLogger()

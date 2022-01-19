@@ -60,6 +60,7 @@ object X509Utilities {
     const val TLS_CERTIFICATE_DAYS_TO_EXPIRY_WARNING_THRESHOLD = 30
     private const val KEY_ALIAS_REGEX = "[a-z0-9-]+"
     private const val KEY_ALIAS_MAX_LENGTH = 100
+    private const val CERTIFICATE_SERIAL_NUMBER_LENGTH = 16
 
     /**
      * Checks if the provided key alias does not exceed maximum length and
@@ -76,8 +77,6 @@ object X509Utilities {
     fun invalidKeyAliasErrorMessage(alias: String): String {
         return "Alias '$alias' must contain only lowercase alphanumeric characters and not exceed 100 characters length."
     }
-
-    private const val CERTIFICATE_SERIAL_NUMBER_LENGTH = 16
 
     val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
 
@@ -125,17 +124,17 @@ object X509Utilities {
         return createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
     }
 
-    fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: X509Certificate) {
-        validateCertificateChain(trustedRoot, certificates.asList())
+    fun validateCertificateChain(trustedRoots: Set<X509Certificate>, vararg certificates: X509Certificate) {
+        validateCertificateChain(trustedRoots, certificates.asList())
     }
 
-    fun validateCertificateChain(trustedRoot: X509Certificate, certificates: List<X509Certificate>) {
+    fun validateCertificateChain(trustedRoots: Set<X509Certificate>, certificates: List<X509Certificate>) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
-        validateCertPath(trustedRoot, buildCertPath(certificates))
+        validateCertPath(trustedRoots, buildCertPath(certificates))
     }
 
-    fun validateCertPath(trustedRoot: X509Certificate, certPath: CertPath) {
-        certPath.validate(TrustAnchor(trustedRoot, null))
+    fun validateCertPath(trustedRoots: Set<X509Certificate>, certPath: CertPath) {
+        certPath.validate(trustedRoots.map { TrustAnchor(it, null) }.toSet())
     }
 
     /**

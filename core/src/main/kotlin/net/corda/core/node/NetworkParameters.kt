@@ -13,6 +13,8 @@ import net.corda.core.utilities.days
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
+import java.util.Collections.unmodifiableList
+import java.util.Collections.unmodifiableMap
 
 // DOCSTART 1
 /**
@@ -21,7 +23,7 @@ import java.time.Instant
  *
  * @property minimumPlatformVersion Minimum version of Corda platform that is required for nodes in the network.
  * @property notaries List of well known and trusted notary identities with information on validation type.
- * @property maxMessageSize This is currently ignored. However, it will be wired up in a future release.
+ * @property maxMessageSize Maximum allowed size in bytes of an individual message sent over the wire.
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
  * @property modifiedTime ([AutoAcceptable]) Last modification time of network parameters set.
  * @property epoch ([AutoAcceptable]) Version number of the network parameters. Starting from 1, this will always increment on each new set
@@ -165,6 +167,38 @@ data class NetworkParameters(
       modifiedTime=$modifiedTime
       epoch=$epoch
   }"""
+    }
+
+    fun toImmutable(): NetworkParameters {
+        return NetworkParameters(
+            minimumPlatformVersion = minimumPlatformVersion,
+            notaries = unmodifiable(notaries),
+            maxMessageSize = maxMessageSize,
+            maxTransactionSize = maxTransactionSize,
+            modifiedTime = modifiedTime,
+            epoch = epoch,
+            whitelistedContractImplementations = unmodifiable(whitelistedContractImplementations) { entry ->
+                unmodifiableList(entry.value)
+            },
+            eventHorizon = eventHorizon,
+            packageOwnership = unmodifiable(packageOwnership)
+        )
+    }
+}
+
+private fun <T> unmodifiable(list: List<T>): List<T> {
+    return if (list.isEmpty()) {
+        emptyList()
+    } else {
+        unmodifiableList(list)
+    }
+}
+
+private inline fun <K, V> unmodifiable(map: Map<K, V>, transform: (Map.Entry<K, V>) -> V = Map.Entry<K, V>::value): Map<K, V> {
+    return if (map.isEmpty()) {
+        emptyMap()
+    } else {
+        unmodifiableMap(map.mapValues(transform))
     }
 }
 

@@ -52,8 +52,13 @@ configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
 }
 
+tasks.withType(Javadoc).configureEach {
+    // We have no public or protected Java classes to document.
+    enabled = false
+}
+
 task testJar(type: Jar) {
-    classifier "tests"
+    archiveClassifier = 'tests'
     from sourceSets.test.output
 }
 
@@ -63,9 +68,10 @@ artifacts {
 }
 
 jar {
-    baseName 'corda-serialization'
+    archiveBaseName = 'corda-serialization'
+    archiveClassifier = ''
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

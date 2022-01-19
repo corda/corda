@@ -1,10 +1,18 @@
-description 'Corda core (deterministic)'
+import net.corda.gradle.jarfilter.JarFilterTask
+import net.corda.gradle.jarfilter.MetaFixerTask
+import proguard.gradle.ProGuardTask
+import static org.gradle.api.JavaVersion.VERSION_1_8
 
-apply from: '../deterministic.gradle'
-apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'java-library'
-apply plugin: 'idea'
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
+    id 'java-library'
+    id 'idea'
+}
+apply from: "${rootProject.projectDir}/deterministic.gradle"
+
+description 'Corda core (deterministic)'
 
 evaluationDependsOn(":core")
 
@@ -15,7 +23,10 @@ def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 
 configurations {
-    deterministicLibraries.extendsFrom api
+    deterministicLibraries {
+        canBeConsumed = false
+        extendsFrom api
+    }
     deterministicArtifacts.extendsFrom deterministicLibraries
 }
 
@@ -39,18 +50,19 @@ dependencies {
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
 }
 
-jar {
+tasks.named('jar', Jar) {
     archiveBaseName = 'DOES-NOT-EXIST'
     // Don't build a jar here because it would be the wrong one.
     // The jar we really want will be built by the metafix task.
     enabled = false
 }
 
-def coreJarTask = tasks.getByPath(':core:jar')
-def originalJar = coreJarTask.outputs.files.singleFile
+def coreJarTask = project(':core').tasks.named('jar', Jar)
+def originalJar = coreJarTask.map { it.outputs.files.singleFile }
 
-task patchCore(type: Zip, dependsOn: coreJarTask) {
-    destinationDirectory = file("$buildDir/source-libs")
+def patchCore = tasks.register('patchCore', Zip) {
+    dependsOn coreJarTask
+    destinationDirectory = layout.buildDirectory.dir('source-libs')
     metadataCharset 'UTF-8'
     archiveClassifier = 'transient'
     archiveExtension = 'jar'
@@ -59,7 +71,7 @@ task patchCore(type: Zip, dependsOn: coreJarTask) {
     from(processResources)
     from(zipTree(originalJar)) {
         exclude 'net/corda/core/crypto/DelegatingSecureRandomService*.class'
-        exclude 'net/corda/core/crypto/SHA256DigestSupplier.class'
+        exclude 'net/corda/core/crypto/DigestSupplier.class'
         exclude 'net/corda/core/internal/*ToggleField*.class'
         exclude 'net/corda/core/serialization/*SerializationFactory*.class'
         exclude 'net/corda/core/serialization/internal/AttachmentsHolderImpl.class'
@@ -71,8 +83,7 @@ task patchCore(type: Zip, dependsOn: coreJarTask) {
     includeEmptyDirs = false
 }
 
-import proguard.gradle.ProGuardTask
-task predeterminise(type: ProGuardTask) {
+def predeterminise = tasks.register('predeterminise', ProGuardTask) {
     injars patchCore
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
@@ -105,8 +116,7 @@ task predeterminise(type: ProGuardTask) {
     keepclassmembers 'class net.corda.core.** { public synthetic <methods>; }'
 }
 
-import net.corda.gradle.jarfilter.JarFilterTask
-task jarFilter(type: JarFilterTask) {
+def jarFilter = tasks.register('jarFilter', JarFilterTask) {
     jars predeterminise
     annotations {
         forDelete = [
@@ -125,7 +135,7 @@ task jarFilter(type: JarFilterTask) {
     }
 }
 
-task determinise(type: ProGuardTask) {
+def determinise = tasks.register('determinise', ProGuardTask) {
     injars jarFilter
     outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
 
@@ -159,20 +169,21 @@ task determinise(type: ProGuardTask) {
     keepclassmembers 'class net.corda.core.** { public synthetic <methods>; }'
 }
 
-import net.corda.gradle.jarfilter.MetaFixerTask
-import static org.gradle.api.JavaVersion.VERSION_1_8
+def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask)
 
-task metafix(type: MetaFixerTask) {
-    outputDir file("$buildDir/libs")
+def metafix = tasks.register('metafix', MetaFixerTask) {
+    outputDir = layout.buildDirectory.dir('libs')
     jars determinise
     suffix ""
 
     // Strip timestamps from the JAR to make it reproducible.
     preserveTimestamps = false
+    finalizedBy checkDeterminism
 }
 
 // DOCSTART 01
-task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
+checkDeterminism.configure {
+    dependsOn jdkTask
     injars metafix
 
     libraryjars deterministic_rt_jar
@@ -192,20 +203,31 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 // DOCEND 01
 
 defaultTasks "determinise"
-determinise.finalizedBy metafix
-metafix.finalizedBy checkDeterminism
-assemble.dependsOn checkDeterminism
+determinise.configure {
+    finalizedBy metafix
+}
+tasks.named('assemble') {
+    dependsOn checkDeterminism
+}
 
-def deterministicJar = metafix.outputs.files.singleFile
+def deterministicJar = metafix.map { it.outputs.files.singleFile }
 artifacts {
-    deterministicArtifacts file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
-    publish file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
+    deterministicArtifacts deterministicJar
+    publish deterministicJar
+}
+
+tasks.named('sourceJar', Jar) {
+    from 'README.md'
+    include 'README.md'
+}
+
+tasks.named('javadocJar', Jar) {
+    from 'README.md'
+    include 'README.md'
 }
 
 publish {
     dependenciesFrom configurations.deterministicArtifacts
-    publishSources = false
-    publishJavadoc = false
     name jarBaseName
 }
 

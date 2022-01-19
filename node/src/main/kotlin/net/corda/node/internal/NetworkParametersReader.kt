@@ -1,7 +1,11 @@
 package net.corda.node.internal
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.*
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.moveTo
+import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -14,9 +18,9 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 
-class NetworkParametersReader(private val trustRoot: X509Certificate,
+class NetworkParametersReader(private val trustRoots: Set<X509Certificate>,
                               private val networkMapClient: NetworkMapClient?,
-                              private val baseDirectory: Path) {
+                              private val networkParamsPath: Path) {
     companion object {
         private val logger = contextLogger()
     }
@@ -28,13 +32,13 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
                 "Both network parameters and network parameters update files don't match" +
                         "parameters advertised by network map. Please update node to use correct network parameters file."
         )
-        class OldParams(previousParametersHash: SecureHash, advertisedParametersHash: SecureHash) : Error(
-                "Node uses parameters with hash: $previousParametersHash but network map is advertising: " +
-                        "$advertisedParametersHash. Please update node to use correct network parameters file."
+        class OldParams(previousParametersHash: SecureHash, advertisedParametersHash: SecureHash, path: Path) : Error(
+                """Node is using network parameters with hash $previousParametersHash but the network map is advertising $advertisedParametersHash.
+                To resolve this mismatch, and move to the current parameters, delete the network-parameters file at location $path and restart."""
         )
     }
 
-    private val networkParamsFile = baseDirectory / NETWORK_PARAMS_FILE_NAME
+    private val networkParamsFile = networkParamsPath / NETWORK_PARAMS_FILE_NAME
 
     fun read(): NetworkParametersAndSigned {
         val advertisedParametersHash = try {
@@ -64,13 +68,13 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             signedParametersFromFile ?: throw Error.ParamsNotConfigured()
         }
 
-        return NetworkParametersAndSigned(signedParameters, trustRoot)
+        return NetworkParametersAndSigned(signedParameters, trustRoots)
     }
 
     private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
-        val parametersUpdateFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+        val parametersUpdateFile = networkParamsPath / NETWORK_PARAMS_UPDATE_FILE_NAME
         if (!parametersUpdateFile.exists()) {
-            throw Error.OldParams(previousParametersHash, advertisedParametersHash)
+            throw Error.OldParams(previousParametersHash, advertisedParametersHash, networkParamsPath)
         }
         val signedUpdatedParameters = parametersUpdateFile.readObject<SignedNetworkParameters>()
         if (signedUpdatedParameters.raw.hash != advertisedParametersHash) {
@@ -86,16 +90,19 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         logger.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
         networkMapClient ?: throw Error.NetworkMapNotConfigured()
         val signedParams = networkMapClient.getNetworkParameters(parametersHash)
-        signedParams.serialize().open().copyTo(baseDirectory / NETWORK_PARAMS_FILE_NAME)
+        signedParams.verifiedNetworkParametersCert(trustRoots)
+        networkParamsFile.parent.toFile().mkdirs()
+        signedParams.serialize().open().copyTo(networkParamsFile)
+        logger.info("Saved network parameters into: $networkParamsFile")
         return signedParams
     }
 
     // By passing in just the SignedNetworkParameters object, this class guarantees that the networkParameters property
     // could have only been derived from it.
-    class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoot: X509Certificate) {
+    class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoots: Set<X509Certificate>) {
         // for backwards compatibility we allow netparams to be signed with the networkmap cert,
         // but going forwards we also accept the distinct netparams cert as well
-        val networkParameters: NetworkParameters = signed.verifiedNetworkParametersCert(trustRoot)
+        val networkParameters: NetworkParameters = signed.verifiedNetworkParametersCert(trustRoots)
         operator fun component1() = networkParameters
         operator fun component2() = signed
     }

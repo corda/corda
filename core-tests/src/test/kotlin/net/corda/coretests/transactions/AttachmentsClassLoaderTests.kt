@@ -40,8 +40,11 @@ import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -52,6 +55,7 @@ import java.net.URL
 import java.nio.file.Path
 import java.security.PublicKey
 import kotlin.test.assertFailsWith
+import kotlin.test.fail
 
 class AttachmentsClassLoaderTests {
     companion object {
@@ -79,7 +83,7 @@ class AttachmentsClassLoaderTests {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule(true)
+    val testSerialization = SerializationEnvironmentRule()
 
     private lateinit var storage: MockAttachmentStorage
     private lateinit var internalStorage: InternalMockAttachmentStorage
@@ -121,13 +125,28 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test(timeout=300_000)
+    fun `test contracts have no permissions for protection domain`() {
+        val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
+        assertNull(System.getSecurityManager())
+
+        createClassloader(isolatedId).use { classLoader ->
+            val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
+            val protectionDomain = contractClass.protectionDomain ?: fail("Protection Domain missing")
+            val permissions = protectionDomain.permissions ?: fail("Protection domain has no permissions")
+            assertThat(permissions.elements().toList()).isEmpty()
+            assertTrue(permissions.isReadOnly)
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `Dynamically load AnotherDummyContract from isolated contracts jar using the AttachmentsClassLoader`() {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
 
-        val classloader = createClassloader(isolatedId)
-        val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classloader)
-        val contract = contractClass.getDeclaredConstructor().newInstance() as Contract
-        assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
+        createClassloader(isolatedId).use { classloader ->
+            val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classloader)
+            val contract = contractClass.getDeclaredConstructor().newInstance() as Contract
+            assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
+        }
     }
 
     @Test(timeout=300_000)
@@ -136,7 +155,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH_V4.openStream(), "app", "isolated-4.0.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            createClassloader(listOf(att1, att2))
+            createClassloader(listOf(att1, att2)).use {}
         }
     }
 
@@ -147,7 +166,7 @@ class AttachmentsClassLoaderTests {
         val isolatedSignedId = importAttachment(signedJar.first.toUri().toURL().openStream(), "app", "isolated-signed.jar")
 
         // does not throw OverlappingAttachments exception
-        createClassloader(listOf(isolatedId, isolatedSignedId))
+        createClassloader(listOf(isolatedId, isolatedSignedId)).use {}
     }
 
     @Test(timeout=300_000)
@@ -156,7 +175,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(FINANCE_CONTRACTS_CORDAPP.jarFile.inputStream(), "app", "finance.jar")
 
         // does not throw OverlappingAttachments exception
-        createClassloader(listOf(att1, att2))
+        createClassloader(listOf(att1, att2)).use {}
     }
 
     @Test(timeout=300_000)
@@ -164,12 +183,13 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
-        val cl = createClassloader(listOf(att1, att2))
-        val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
-        assertEquals("some data", txt)
+        createClassloader(listOf(att1, att2)).use { cl ->
+            val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
+            assertEquals("some data", txt)
 
-        val txt1 = IOUtils.toString(cl.getResourceAsStream("file2.txt"), Charsets.UTF_8.name())
-        assertEquals("some other data", txt1)
+            val txt1 = IOUtils.toString(cl.getResourceAsStream("file2.txt"), Charsets.UTF_8.name())
+            assertEquals("some other data", txt1)
+        }
     }
 
     @Test(timeout=300_000)
@@ -177,9 +197,10 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("file1.txt", "same data", "file2.txt", "same other data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file1.txt", "same data", "file3.txt", "same totally different").inputStream(), "app", "file2.jar")
 
-        val cl = createClassloader(listOf(att1, att2))
-        val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
-        assertEquals("same data", txt)
+        createClassloader(listOf(att1, att2)).use { cl ->
+            val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
+            assertEquals("same data", txt)
+        }
     }
 
     @Test(timeout=300_000)
@@ -188,7 +209,7 @@ class AttachmentsClassLoaderTests {
             val att1 = importAttachment(fakeAttachment(path, "some data").inputStream(), "app", "file1.jar")
             val att2 = importAttachment(fakeAttachment(path, "some other data").inputStream(), "app", "file2.jar")
 
-            createClassloader(listOf(att1, att2))
+            createClassloader(listOf(att1, att2)).use {}
         }
     }
 
@@ -197,7 +218,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some other data").inputStream(), "app", "file2.jar")
 
-        createClassloader(listOf(att1, att2))
+        createClassloader(listOf(att1, att2)).use {}
     }
 
     @Test(timeout=300_000)
@@ -206,7 +227,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some other data").inputStream(), "app", "file2.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            createClassloader(listOf(att1, att2))
+            createClassloader(listOf(att1, att2)).use {}
         }
     }
 
@@ -216,7 +237,7 @@ class AttachmentsClassLoaderTests {
         val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            createClassloader(listOf(att1, att2))
+            createClassloader(listOf(att1, att2)).use {}
         }
     }
 
@@ -227,7 +248,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", ISOLATED_CONTRACTS_JAR_PATH.file)
         val att2 = importAttachment(fakeAttachment("net/corda/finance/contracts/isolated/AnotherDummyContract\$State.class", "some attackdata").inputStream(), "app", "file2.jar")
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            createClassloader(listOf(att1, att2))
+            createClassloader(listOf(att1, att2)).use {}
         }
     }
 
@@ -256,10 +277,10 @@ class AttachmentsClassLoaderTests {
         val untrustedClassJar = importAttachment(fakeAttachment("/com/example/something/MaliciousClass.class", "some malicious data").inputStream(), "untrusted", "file2.jar")
         val trustedClassJar = importAttachment(fakeAttachment("/com/example/something/VirtuousClass.class", "some other data").inputStream(), "app", "file3.jar")
 
-        createClassloader(listOf(trustedResourceJar, untrustedResourceJar, trustedClassJar))
-
-        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            createClassloader(listOf(trustedResourceJar, untrustedResourceJar, trustedClassJar, untrustedClassJar))
+        createClassloader(listOf(trustedResourceJar, untrustedResourceJar, trustedClassJar)).use {
+            assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+                createClassloader(listOf(trustedResourceJar, untrustedResourceJar, trustedClassJar, untrustedClassJar)).use {}
+            }
         }
     }
 
@@ -293,7 +314,7 @@ class AttachmentsClassLoaderTests {
             signers = listOf(keyPairA.public, keyPairB.public)
         )
 
-        createClassloader(untrustedAttachment)
+        createClassloader(untrustedAttachment).use {}
     }
 
     @Test(timeout=300_000)
@@ -323,7 +344,7 @@ class AttachmentsClassLoaderTests {
             signers = listOf(keyPairA.public, keyPairB.public)
         )
 
-        createClassloader(untrustedAttachment)
+        createClassloader(untrustedAttachment).use {}
     }
 
     @Test(timeout=300_000)
@@ -342,7 +363,7 @@ class AttachmentsClassLoaderTests {
         )
 
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            createClassloader(untrustedAttachment)
+            createClassloader(untrustedAttachment).use {}
         }
     }
 
@@ -373,7 +394,7 @@ class AttachmentsClassLoaderTests {
         )
 
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            createClassloader(untrustedAttachment)
+            createClassloader(untrustedAttachment).use {}
         }
     }
 
@@ -416,10 +437,10 @@ class AttachmentsClassLoaderTests {
         )
 
         // pass the inherited trust attachment through the classloader first to ensure it does not affect the next loaded attachment
-        createClassloader(inheritedTrustAttachment)
-
-        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            createClassloader(untrustedAttachment)
+        createClassloader(inheritedTrustAttachment).use {
+            assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+                createClassloader(untrustedAttachment).use {}
+            }
         }
     }
 
@@ -457,7 +478,7 @@ class AttachmentsClassLoaderTests {
         )
 
         assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
-            createClassloader(untrustedAttachment)
+            createClassloader(untrustedAttachment).use {}
         }
     }
 
@@ -482,7 +503,7 @@ class AttachmentsClassLoaderTests {
             signers = listOf(keyPairA.public)
         )
 
-        createClassloader(trustedAttachment)
+        createClassloader(trustedAttachment).use {}
     }
 
     @Test(timeout=300_000)

@@ -1,15 +1,12 @@
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.cryptoservice.SignOnlyCryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -23,7 +20,7 @@ import javax.persistence.*
 import kotlin.collections.LinkedHashSet
 
 /**
- * A persistent re-implementation of [E2ETestKeyManagementService] to support CryptoService for initial keys and
+ * A persistent implementation of [KeyManagementServiceInternal] to support CryptoService for initial keys and
  * database storage for anonymous fresh keys.
  *
  * This is not the long-term implementation.  See the list of items in the above class.
@@ -40,6 +37,7 @@ class BasicHSMKeyManagementService(
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
+            @Suppress("Unused")
             @Id
             @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String,
@@ -76,10 +74,9 @@ class BasicHSMKeyManagementService(
     // A map for anonymous keys.
     private val keysMap = createKeyMap(cacheFactory)
 
-    override fun start(initialKeyPairs: Set<KeyPair>) {
-        initialKeyPairs.forEach {
-            require(it.private is AliasPrivateKey) { "${this.javaClass.name} supports AliasPrivateKeys only, but ${it.private.algorithm} key was found" }
-            originalKeysMap[Crypto.toSupportedPublicKey(it.public)] = (it.private as AliasPrivateKey).alias
+    override fun start(initialKeysAndAliases: Iterable<Pair<PublicKey, String>>) {
+        initialKeysAndAliases.forEach {
+            originalKeysMap[Crypto.toSupportedPublicKey(it.first)] = it.second
         }
     }
 
@@ -105,10 +102,8 @@ class BasicHSMKeyManagementService(
         database.transaction {
             keysMap[keyPair.public] = keyPair.private
             // Register the key to our identity.
-            val ourIdentity = identityService.wellKnownPartyFromX500Name(identityService.ourNames.first())
-                    ?: throw IllegalStateException("Could not lookup node Identity.")
             // No checks performed here as entries for the new key couldn't have existed before in the maps.
-            identityService.registerKeyToParty(keyPair.public, ourIdentity)
+            identityService.registerKeyToParty(keyPair.public)
             if (externalId != null) {
                 identityService.registerKeyToExternalId(keyPair.public, externalId)
             }

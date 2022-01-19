@@ -1,9 +1,14 @@
 package net.corda.testing.internal
 
 import net.corda.core.context.AuthServiceId
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -17,6 +22,10 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
+import net.corda.coretesting.internal.asTestContextEnv
+import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.node.internal.checkOrUpdate
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.startHikariPool
@@ -30,19 +39,17 @@ import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.stubs.CertificateStoreStubs
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.ServerSocket
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
@@ -63,19 +70,6 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
     function()
 } else {
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
-}
-
-fun configureTestSSL(legalName: CordaX500Name): MutualSslConfiguration {
-
-    val certificatesDirectory = Files.createTempDirectory("certs")
-    val config = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
-    if (config.trustStore.getOptional() == null) {
-        loadDevCaTrustStore().copyTo(config.trustStore.get(true))
-    }
-    if (config.keyStore.getOptional() == null) {
-        config.keyStore.get(true).registerDevP2pCertificates(legalName)
-    }
-    return config
 }
 
 private val defaultRootCaName = X500Principal("CN=Corda Root CA,O=R3 Ltd,L=London,C=GB")
@@ -154,15 +148,17 @@ fun p2pSslOptions(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "L
 }
 
 /** This is the same as the deprecated [WireTransaction] c'tor but avoids the deprecation warning. */
+@SuppressWarnings("LongParameterList")
 fun createWireTransaction(inputs: List<StateRef>,
                           attachments: List<SecureHash>,
                           outputs: List<TransactionState<*>>,
                           commands: List<Command<*>>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
-                          privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
+                          privacySalt: PrivacySalt = PrivacySalt(),
+                          digestService: DigestService = DigestService.default): WireTransaction {
     val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
-    return WireTransaction(componentGroups, privacySalt)
+    return WireTransaction(componentGroups, privacySalt, digestService)
 }
 
 /**
@@ -174,16 +170,30 @@ fun RPCSecurityManagerImpl.Companion.fromUserList(id: AuthServiceId, users: List
 /**
  * Convenience method for configuring a database for some tests.
  */
+@Suppress("LongParameterList")
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
-                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
+                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas,
                       cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
-                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties, cacheFactory, null)
-    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas, ourName = ourName)
+                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name,
+                      runMigrationScripts: Boolean = true,
+                      allowHibernateToManageAppSchema: Boolean = true): CordaPersistence {
+    val persistence = createCordaPersistence(
+            databaseConfig,
+            wellKnownPartyFromX500Name,
+            wellKnownPartyFromAnonymous,
+            schemaService,
+            hikariProperties,
+            cacheFactory,
+            null,
+            allowHibernateToManageAppSchema)
+    persistence.startHikariPool(hikariProperties) { dataSource, haveCheckpoints ->
+        SchemaMigration(dataSource, null, null, ourName)
+                .checkOrUpdate(internalSchemas, runMigrationScripts, haveCheckpoints, false)
+    }
     return persistence
 }
 
@@ -246,3 +256,9 @@ fun isLocalPortBound(port: Int): Boolean {
         true
     }
 }
+
+@JvmField
+val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
+
+@JvmField
+val IS_S390X = System.getProperty("os.arch") == "s390x"

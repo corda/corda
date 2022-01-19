@@ -45,7 +45,11 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
                                       userName: String?,
                                       password: String?) : BaseHandler() {
     companion object {
-        private const val IDLE_TIMEOUT = 10000
+        private const val CORDA_AMQP_FRAME_SIZE_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpMaxFrameSize"
+        private const val CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpIdleTimeout"
+
+        private val MAX_FRAME_SIZE = Integer.getInteger(CORDA_AMQP_FRAME_SIZE_PROP_NAME, 128 * 1024)
+        private val IDLE_TIMEOUT = Integer.getInteger(CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME, 10 * 1000)
         private val log = contextLogger()
     }
 
@@ -77,7 +81,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     val connection: Connection
     private val transport: Transport
     private val id = UUID.randomUUID().toString()
-    private var session: Session? = null
+    private val sessionState = SessionState()
     /**
      * Key is message topic and value is the list of messages
      */
@@ -102,6 +106,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         transport.context = connection
         @Suppress("UsePropertyAccessSyntax")
         transport.setEmitFlowEventOnSend(true)
+        transport.maxFrameSize = MAX_FRAME_SIZE
         connection.collect(collector)
         val sasl = transport.sasl()
         if (userName != null) {
@@ -139,7 +144,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         logInfoWithMDC("Connection local open ${connection.prettyPrint}")
         val session = connection.session()
         session.open()
-        this.session = session
+        sessionState.init(session)
         for (target in messageQueues.keys) {
             getSender(target)
         }
@@ -201,7 +206,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
             }
             // shouldn't happen, but cleanup any stranded items
             transport.context = null
-            session = null
+            sessionState.close()
             receivers.clear()
             senders.clear()
         } else {
@@ -224,12 +229,17 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     }
 
     override fun onTransportClosed(event: Event) {
-        val transport = event.transport
-        logDebugWithMDC { "Transport Closed ${transport.prettyPrint}" }
-        if (transport == this.transport) {
+        doTransportClose(event.transport) { "Transport Closed ${transport.prettyPrint}" }
+    }
+
+    private fun doTransportClose(transport: Transport?, msg: () -> String) {
+        if (transport != null && transport == this.transport && transport.context != null) {
+            logDebugWithMDC(msg)
             transport.unbind()
             transport.free()
             transport.context = null
+        } else {
+            logDebugWithMDC { "Nothing to do in case of: ${msg()}" }
         }
     }
 
@@ -259,6 +269,9 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
                 val channel = connection?.context as? Channel
                 channel?.writeAndFlush(transport)
             }
+        } else {
+            logDebugWithMDC { "Transport is already closed: ${transport.prettyPrint}" }
+            doTransportClose(transport) { "Freeing-up resources associated with transport" }
         }
     }
 
@@ -274,7 +287,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
 
     private fun getSender(target: String): Sender {
         if (!senders.containsKey(target)) {
-            val sender = session!!.sender(UUID.randomUUID().toString())
+            val sender = sessionState.session!!.sender(UUID.randomUUID().toString())
             sender.source = Source().apply {
                 address = target
                 dynamic = false
@@ -302,20 +315,14 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
 
     override fun onSessionFinal(event: Event) {
         val session = event.session
-        logDebugWithMDC { "Session final $session" }
-        if (session == this.session) {
-            this.session = null
+        logDebugWithMDC { "Session final for: $session" }
+        if (session == sessionState.session) {
+            sessionState.close()
 
             // If TRANSPORT_CLOSED event was already processed, the 'transport' in all subsequent events is set to null.
             // There is, however, a chance of missing TRANSPORT_CLOSED event, e.g. when disconnect occurs before opening remote session.
             // In such cases we must explicitly cleanup the 'transport' in order to guarantee the delivery of CONNECTION_FINAL event.
-            val transport = event.transport
-            if (transport == this.transport) {
-                logDebugWithMDC { "Missed TRANSPORT_CLOSED: force cleanup ${transport.prettyPrint}" }
-                transport.unbind()
-                transport.free()
-                transport.context = null
-            }
+            doTransportClose(event.transport) { "Missed TRANSPORT_CLOSED in onSessionFinal: force cleanup ${transport.prettyPrint}" }
         }
     }
 
@@ -444,8 +451,15 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
             logDebugWithMDC { "Sender delivery confirmed tag ${delivery.tag.toHexString()}" }
             val ok = delivery.remotelySettled() && delivery.remoteState == Accepted.getInstance()
             val sourceMessage = delivery.context as? SendableMessageImpl
-            unackedQueue.remove(sourceMessage)
-            sourceMessage?.doComplete(if (ok) MessageStatus.Acknowledged else MessageStatus.Rejected)
+            if (sourceMessage != null) {
+                unackedQueue.remove(sourceMessage)
+                val status = if (ok) MessageStatus.Acknowledged else MessageStatus.Rejected
+                logDebugWithMDC { "Setting status as: $status to message with wire uuid: " +
+                        "${sourceMessage.applicationProperties[MESSAGE_ID_KEY]}" }
+                sourceMessage.doComplete(status)
+            } else {
+                logDebugWithMDC { "Source message not found on delivery context" }
+            }
             delivery.settle()
         }
     }
@@ -488,14 +502,27 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     }
 
     fun transportWriteMessage(msg: SendableMessageImpl) {
-        msg.buf = encodePayloadBytes(msg)
+        val encoded = encodePayloadBytes(msg)
+        msg.release()
+        msg.buf = encoded
         val messageQueue = messageQueues.getOrPut(msg.topic, { LinkedList() })
         messageQueue.offer(msg)
-        if (session != null) {
-            val sender = getSender(msg.topic)
-            transmitMessages(sender)
-        } else {
-            logInfoWithMDC("Session been closed already")
+        when (sessionState.value) {
+            SessionState.Value.ACTIVE -> {
+                val sender = getSender(msg.topic)
+                transmitMessages(sender)
+            }
+            SessionState.Value.UNINITIALIZED -> {
+                // This is pretty normal as on Connection Local may not have been received yet
+                // Once it will be received the messages will be sent from the `messageQueues`
+                logDebugWithMDC { "Session has not been open yet" }
+            }
+            SessionState.Value.CLOSED -> {
+                logInfoWithMDC("Session been closed already")
+                // If session been closed then it is too late to send a message, so we flag it as rejected.
+                logDebugWithMDC { "Setting Rejected status to message with wire uuid: ${msg.applicationProperties[MESSAGE_ID_KEY]}" }
+                msg.doComplete(MessageStatus.Rejected)
+            }
         }
     }
 

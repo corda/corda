@@ -1,0 +1,48 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="node_transaction_id_size">
+        <dropPrimaryKey tableName="node_transactions" constraintName="node_transactions_pkey"/>
+        <dropPrimaryKey tableName="node_scheduled_states" constraintName="node_scheduled_states_pkey"/>
+
+        <dropNotNullConstraint tableName="node_transactions" columnName="tx_id" columnDataType="NVARCHAR(64)" />
+        <dropNotNullConstraint tableName="node_scheduled_states" columnName="transaction_id" columnDataType="NVARCHAR(64)" />
+
+        <modifyDataType tableName="node_transactions"
+                        columnName="tx_id"
+                        newDataType="NVARCHAR(144)"/>
+        <modifyDataType tableName="node_scheduled_states"
+                        columnName="transaction_id"
+                        newDataType="NVARCHAR(144)"/>
+
+        <addNotNullConstraint tableName="node_transactions" columnName="tx_id" columnDataType="NVARCHAR(144)"/>
+        <addNotNullConstraint tableName="node_scheduled_states" columnName="transaction_id" columnDataType="NVARCHAR(144)"/>
+
+        <addPrimaryKey columnNames="tx_id" constraintName="node_transactions_pkey" tableName="node_transactions"/>
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_scheduled_states_pkey"
+                       tableName="node_scheduled_states"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_transaction_id_size_non-clustered_pk" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_transactions" constraintName="node_transactions_pkey"/>
+        <addPrimaryKey tableName="node_transactions" columnNames="tx_id" constraintName="node_transactions_pkey"
+                       clustered="false"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_contract_upgrades_state_ref_size">
+        <dropPrimaryKey tableName="node_contract_upgrades" constraintName="node_contract_upgrades_pkey"/>
+
+        <dropNotNullConstraint tableName="node_contract_upgrades" columnName="state_ref" columnDataType="NVARCHAR(96)" />
+
+        <modifyDataType tableName="node_contract_upgrades"
+                        columnName="state_ref"
+                        newDataType="NVARCHAR(176)"/>
+
+        <addNotNullConstraint tableName="node_contract_upgrades" columnName="state_ref" columnDataType="NVARCHAR(176)"/>
+
+        <addPrimaryKey columnNames="state_ref" constraintName="node_contract_upgrades_pkey"
+                       tableName="node_contract_upgrades"/>
+    </changeSet>
+</databaseChangeLog>

@@ -1,17 +1,21 @@
-apply plugin: 'kotlin'
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
 
 configurations {
-    testData
+    testData {
+        canBeResolved = false
+    }
 }
 
 dependencies {
-    testCompile project(':core')
-    testCompile project(':finance:workflows')
-    testCompile project(':node-driver')
-    testCompile project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
+    testImplementation project(':core')
+    testImplementation project(':finance:workflows')
+    testImplementation project(':node-driver')
+    testImplementation project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
 
-    testCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    testCompile "org.jetbrains.kotlin:kotlin-reflect"
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect"
 
     testImplementation "junit:junit:$junit_version"
 
@@ -19,12 +23,11 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 }
 
-jar.enabled = false
+tasks.named('jar', Jar) {
+    enabled = false
+}
 
-test {
-    ext {
-        ignoreForDistribution = true
-    }
+def test = tasks.named('test', Test) {
     filter {
         // Running this class is the whole point, so include it explicitly.
         includeTestsMatching "net.corda.deterministic.data.GenerateData"
@@ -33,8 +36,9 @@ test {
     // note: required by Gradle Build Cache.
     outputs.upToDateWhen { false }
 }
-assemble.finalizedBy test
 
+def testDataJar = file("$buildDir/test-data.jar")
 artifacts {
-    testData file: file("$buildDir/test-data.jar"), type: 'jar', builtBy: test
+    archives file: testDataJar, type: 'jar', builtBy: test
+    testData file: testDataJar, type: 'jar', builtBy: test
 }

@@ -33,14 +33,18 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     object NodeCore
 
     object NodeCoreV1 : MappedSchema(schemaFamily = NodeCore.javaClass, version = 1,
-            mappedTypes = listOf(DBCheckpointStorage.DBCheckpoint::class.java,
+            mappedTypes = listOf(DBCheckpointStorage.DBFlowCheckpoint::class.java,
+                    DBCheckpointStorage.DBFlowCheckpointBlob::class.java,
+                    DBCheckpointStorage.DBFlowResult::class.java,
+                    DBCheckpointStorage.DBFlowException::class.java,
+                    DBCheckpointStorage.DBFlowMetadata::class.java,
+
                     DBTransactionStorage.DBTransaction::class.java,
                     BasicHSMKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
                     P2PMessageDeduplicator.ProcessedMessage::class.java,
                     PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
-                    PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
                     PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                     PersistentIdentityService.PersistentHashToPublicKey::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
@@ -57,13 +61,11 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     NodeInfoSchemaV1,
                     NodeCoreV1)
 
-    fun internalSchemas() = requiredSchemas + extraSchemas.filter { schema ->
-        // when mapped schemas from the finance module are present, they are considered as internal ones
-        schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||
-                schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1" ||
-                schema::class.qualifiedName == "net.corda.node.services.transactions.NodeNotarySchemaV1" ||
+    val internalSchemas = requiredSchemas + extraSchemas.filter { schema ->
                 schema::class.qualifiedName?.startsWith("net.corda.notary.") ?: false
     }
+
+    val appSchemas = extraSchemas - internalSchemas
 
     override val schemas: Set<MappedSchema> = requiredSchemas + extraSchemas
 

@@ -156,6 +156,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val cacheFactory: NamedCacheFactory
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+        txs.forEach { requireSupportedHashType(it) }
         recordTransactions(
                 statesToRecord,
                 txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
@@ -215,13 +216,13 @@ interface FlowStarter {
      * just synthesizes an [ExternalEvent.ExternalStartFlowEvent] and calls the method below.
      * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<out FlowStateMachineHandle<T>>
 
     /**
      * Starts a flow as described by an [ExternalEvent.ExternalStartFlowEvent].  If a transient error
      * occurs during invocation, it will re-attempt to start the flow.
      */
-    fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<out FlowStateMachineHandle<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -232,9 +233,10 @@ interface FlowStarter {
      * [logicType] or [args].
      */
     fun <T> invokeFlowAsync(
-            logicType: Class<out FlowLogic<T>>,
-            context: InvocationContext,
-            vararg args: Any?): CordaFuture<FlowStateMachine<T>>
+        logicType: Class<out FlowLogic<T>>,
+        context: InvocationContext,
+        vararg args: Any?
+    ): CordaFuture<out FlowStateMachineHandle<T>>
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter
@@ -246,7 +248,7 @@ interface WritableTransactionStorage : TransactionStorage {
     /**
      * Add a new *verified* transaction to the store, or convert the existing unverified transaction into a verified one.
      * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded as a *new verified* transcation, false if the transaction already exists.
+     * @return true if the transaction was recorded as a *new verified* transaction, false if the transaction already exists.
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean

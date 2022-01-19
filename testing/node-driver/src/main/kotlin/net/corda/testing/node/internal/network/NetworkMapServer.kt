@@ -49,6 +49,8 @@ class NetworkMapServer(private val pollInterval: Duration,
     private val service = InMemoryNetworkMapService()
     private var parametersUpdate: ParametersUpdate? = null
     private var nextNetworkParameters: NetworkParameters? = null
+    // version toggle allowing to easily test behaviour of different version without spinning up a whole new server
+    var version: String = "1"
 
     init {
         server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
@@ -115,7 +117,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         // Mapping from the UUID of the network (null for global one) to hashes of the nodes in network
         private val networkMaps = mutableMapOf<UUID?, MutableSet<SecureHash>>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
-        private val signedNetParams by lazy { networkMapCertAndKeyPair.sign(networkParameters) }
+        private val signedNetParams get() = networkMapCertAndKeyPair.sign(networkParameters)
 
         @POST
         @Path("publish")
@@ -171,7 +173,10 @@ class NetworkMapServer(private val pollInterval: Duration,
         private fun networkMapResponse(nodeInfoHashes: List<SecureHash>): Response {
             val networkMap = NetworkMap(nodeInfoHashes, signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
-            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
+            return Response.ok(signedNetworkMap.serialize().bytes)
+                    .header("Cache-Control", "max-age=${pollInterval.seconds}")
+                    .apply { if (version != "1") this.header("X-Corda-Server-Version", version)}
+                    .build()
         }
 
         // Remove nodeInfo for testing.
@@ -196,7 +201,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @Path("node-info/{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
-            val hash = SecureHash.parse(nodeInfoHash)
+            val hash = SecureHash.create(nodeInfoHash)
             val signedNodeInfo = nodeInfoMap[hash]
             return if (signedNodeInfo != null) {
                 Response.ok(signedNodeInfo.serialize().bytes)
@@ -206,10 +211,19 @@ class NetworkMapServer(private val pollInterval: Duration,
         }
 
         @GET
+        @Path("node-infos")
+        @Produces(MediaType.APPLICATION_OCTET_STREAM)
+        fun getNodeInfos(): Response {
+            val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
+            val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
+            return Response.ok(Pair(signedNetworkMap, nodeInfoMap.values.toList()).serialize().bytes).build()
+        }
+
+        @GET
         @Path("network-parameters/{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNetworkParameter(@PathParam("var") hash: String): Response {
-            val requestedHash = SecureHash.parse(hash)
+            val requestedHash = SecureHash.create(hash)
             val requestedParameters = if (requestedHash == signedNetParams.raw.hash) {
                 signedNetParams
             } else if (requestedHash == nextNetworkParameters?.serialize()?.hash) {

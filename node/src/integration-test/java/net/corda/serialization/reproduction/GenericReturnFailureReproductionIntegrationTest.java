@@ -19,7 +19,7 @@ public class GenericReturnFailureReproductionIntegrationTest {
     public void flowShouldReturnGenericList() {
         User user = new User("yes", "yes", Collections.singleton(Permissions.startFlow(SuperSimpleGenericFlow.class)));
         DriverParameters defaultParameters = new DriverParameters();
-        Driver.<Void>driver(defaultParameters, (driver) -> {
+        Driver.<Void>driver(defaultParameters.withStartNodesInProcess(true), (driver) -> {
             NodeHandle startedNode = getOrThrow(driver.startNode(new NodeParameters().withRpcUsers(Collections.singletonList(user)).withStartInSameProcess(true)));
             (new CordaRPCClient(startedNode.getRpcAddress())).<Void>use("yes", "yes", (cordaRPCConnection -> {
                 getOrThrow(cordaRPCConnection.getProxy().startFlowDynamic(SuperSimpleGenericFlow.class).getReturnValue());

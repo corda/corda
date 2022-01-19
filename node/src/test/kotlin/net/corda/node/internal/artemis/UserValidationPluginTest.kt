@@ -2,10 +2,10 @@ package net.corda.node.internal.artemis
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.client.impl.ClientMessageImpl

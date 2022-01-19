@@ -1,16 +1,32 @@
 package net.corda.node.services.statemachine
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoSerializable
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
+import java.lang.IllegalStateException
+import java.security.Principal
 import java.time.Instant
+import java.util.concurrent.Future
+import java.util.concurrent.Semaphore
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -22,14 +38,24 @@ import java.time.Instant
  * @param isFlowResumed true if the control is returned (or being returned) to "user-space" flow code. This is used
  *   to make [Event.DoRemainingWork] idempotent.
  * @param isWaitingForFuture true if the flow is waiting for the completion of a future triggered by one of the statemachine's actions
- *   [FlowIORequest.WaitForLedgerCommit]. This used is to make tracking idempotent.
+ * @param future If the flow is relying on a [Future] completing, then this field will be set otherwise it remains null
  * @param isAnyCheckpointPersisted true if at least a single checkpoint has been persisted. This is used to determine
  *   whether we should DELETE the checkpoint at the end of the flow.
  * @param isStartIdempotent true if the start of the flow is idempotent, making the skipping of the initial checkpoint
  *   possible.
  * @param isRemoved true if the flow has been removed from the state machine manager. This is used to avoid any further
  *   work.
+ * @param isKilled true if the flow has been marked as killed. This is used to cause a flow to move to a killed flow transition no matter
+ * what event it is set to process next.
+ * @param isDead true if the flow has been marked as dead. This happens when a flow experiences an unexpected error and escapes its event loop
+ * which prevents it from processing events.
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
+ * @param reloadCheckpointAfterSuspendCount The number of times a flow has been reloaded (not retried). This is [null] when
+ * [NodeConfiguration.reloadCheckpointAfterSuspendCount] is not enabled.
+ * @param numberOfCommits The number of times the flow's checkpoint has been successfully committed. This field is a var so that it can be
+ * updated after committing a database transaction that contained a checkpoint insert/update.
+ * @param lock The flow's lock, used to prevent the flow performing a transition while being interacted with from external threads, and
+ * vise-versa.
  */
 // TODO perhaps add a read-only environment to the state machine for things that don't change over time?
 // TODO evaluate persistent datastructure libraries to replace the inefficient copying we currently do.
@@ -39,32 +65,57 @@ data class StateMachineState(
     val pendingDeduplicationHandlers: List<DeduplicationHandler>,
     val isFlowResumed: Boolean,
     val isWaitingForFuture: Boolean,
+    var future: Future<*>?,
     val isAnyCheckpointPersisted: Boolean,
     val isStartIdempotent: Boolean,
     val isRemoved: Boolean,
-    val senderUUID: String?
-)
+    val isKilled: Boolean,
+    val isDead: Boolean,
+    val senderUUID: String?,
+    val reloadCheckpointAfterSuspendCount: Int?,
+    var numberOfCommits: Int,
+    val lock: Semaphore
+) : KryoSerializable {
+    override fun write(kryo: Kryo?, output: Output?) {
+        throw IllegalStateException("${StateMachineState::class.qualifiedName} should never be serialized")
+    }
+
+    override fun read(kryo: Kryo?, input: Input?) {
+        throw IllegalStateException("${StateMachineState::class.qualifiedName} should never be deserialized")
+    }
+}
 
 /**
- * @param invocationContext the initiator of the flow.
- * @param ourIdentity the identity the flow is run as.
- * @param sessions map of source session ID to session state.
- * @param subFlowStack the stack of currently executing subflows.
+ * @param checkpointState the state of the checkpoint
  * @param flowState the state of the flow itself, including the frozen fiber/FlowLogic.
  * @param errorState the "dirtiness" state including the involved errors and their propagation status.
- * @param numberOfSuspends the number of flow suspends due to IO API calls.
  */
 data class Checkpoint(
-        val invocationContext: InvocationContext,
-        val ourIdentity: Party,
-        val sessions: SessionMap, // This must preserve the insertion order!
-        val subFlowStack: List<SubFlow>,
+        val checkpointState: CheckpointState,
         val flowState: FlowState,
         val errorState: ErrorState,
-        val numberOfSuspends: Int
+        val result: Any? = null,
+        val status: FlowStatus = FlowStatus.RUNNABLE,
+        val progressStep: String? = null,
+        val flowIoRequest: String? = null,
+        val compatible: Boolean = true
 ) {
+    @CordaSerializable
+    enum class FlowStatus {
+        RUNNABLE,
+        FAILED,
+        COMPLETED,
+        HOSPITALIZED,
+        KILLED,
+        PAUSED
+    }
 
-    val timestamp: Instant = Instant.now() // This will get updated every time a Checkpoint object is created/ created by copy.
+    /**
+     * [timestamp] will get updated every time a [Checkpoint] object is created/ created by copy.
+     * It will be updated, therefore, for example when a flow is being suspended or whenever a flow
+     * is being loaded from [Checkpoint] through [Serialized.deserialize].
+     */
+    val timestamp: Instant = Instant.now()
 
     companion object {
 
@@ -79,18 +130,132 @@ data class Checkpoint(
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion, isEnabledTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
-                        invocationContext = invocationContext,
-                        ourIdentity = ourIdentity,
-                        sessions = emptyMap(),
-                        subFlowStack = listOf(topLevelSubFlow),
-                        flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
-                        errorState = ErrorState.Clean,
-                        numberOfSuspends = 0
+                    checkpointState = CheckpointState(
+                        invocationContext,
+                        ourIdentity,
+                        emptyMap(),
+                        emptySet(),
+                        listOf(topLevelSubFlow),
+                        numberOfSuspends = 0,
+                        // We set this to 1 here to avoid an extra copy and increment in UnstartedFlowTransition.createInitialCheckpoint
+                        numberOfCommits = 1
+                    ),
+                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
+                    errorState = ErrorState.Clean
                 )
             }
         }
     }
+
+    /**
+     * Returns a copy of the Checkpoint with a new session map.
+     * @param sessions the new map of session ID to session state.
+     */
+    fun setSessions(sessions: SessionMap) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = sessions))
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with an extra session added to the session map.
+     * @param session the extra session to add.
+     */
+    fun addSession(session: Pair<SessionId, SessionState>) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions + session))
+    }
+
+    fun addSessionsToBeClosed(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessionsToBeClosed = checkpointState.sessionsToBeClosed + sessionIds))
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with the specified session removed from the session map.
+     * @param sessionIds the sessions to remove.
+     */
+    fun removeSessions(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(
+            checkpointState = checkpointState.copy(
+                sessions = checkpointState.sessions - sessionIds,
+                sessionsToBeClosed = checkpointState.sessionsToBeClosed - sessionIds
+            )
+        )
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with a new subFlow stack.
+     * @param subFlows the new List of subFlows.
+     */
+    fun setSubflows(subFlows: List<SubFlow>) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(subFlowStack = subFlows))
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with an extra subflow added to the subFlow Stack.
+     * @param subFlow the subFlow to add to the stack of subFlows
+     */
+    fun addSubflow(subFlow: SubFlow) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(subFlowStack = checkpointState.subFlowStack + subFlow))
+    }
+
+    /**
+     * A partially serialized form of [Checkpoint].
+     *
+     * [Checkpoint.Serialized] contains the same fields as [Checkpoint] except that some of its fields are still serialized. The checkpoint
+     * can then be deserialized as needed.
+     */
+    data class Serialized(
+        val serializedCheckpointState: SerializedBytes<CheckpointState>,
+        val serializedFlowState: SerializedBytes<FlowState>?,
+        val errorState: ErrorState,
+        val result: SerializedBytes<Any>?,
+        val status: FlowStatus,
+        val progressStep: String?,
+        val flowIoRequest: String?,
+        val compatible: Boolean
+    ) {
+        /**
+         * Deserializes the serialized fields contained in [Checkpoint.Serialized].
+         *
+         * @return A [Checkpoint] with all its fields filled in from [Checkpoint.Serialized]
+         */
+        fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
+            val flowState = when(status) {
+                FlowStatus.PAUSED -> FlowState.Paused
+                FlowStatus.COMPLETED, FlowStatus.FAILED -> FlowState.Finished
+                else -> serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
+            }
+            return Checkpoint(
+                checkpointState = serializedCheckpointState.checkpointDeserialize(checkpointSerializationContext),
+                flowState = flowState,
+                errorState = errorState,
+                result = result?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
+                status = status,
+                progressStep = progressStep,
+                flowIoRequest = flowIoRequest,
+                compatible = compatible
+            )
+        }
+    }
 }
+
+/**
+ * @param invocationContext The initiator of the flow.
+ * @param ourIdentity The identity the flow is run as.
+ * @param sessions Map of source session ID to session state.
+ * @param sessionsToBeClosed The sessions that have pending session end messages and need to be closed. This is available to avoid scanning all the sessions.
+ * @param subFlowStack The stack of currently executing subflows.
+ * @param numberOfSuspends The number of flow suspends due to IO API calls.
+ * @param numberOfCommits The number of times this checkpoint has been persisted.
+ */
+@CordaSerializable
+data class CheckpointState(
+    val invocationContext: InvocationContext,
+    val ourIdentity: Party,
+    val sessions: SessionMap, // This must preserve the insertion order!
+    val sessionsToBeClosed: Set<SessionId>,
+    val subFlowStack: List<SubFlow>,
+    val numberOfSuspends: Int,
+    val numberOfCommits: Int
+)
 
 /**
  * The state of a session.
@@ -116,36 +281,31 @@ sealed class SessionState {
      * @property rejectionError if non-null the initiation failed.
      */
     data class Initiating(
-            val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
+            val bufferedMessages: ArrayList<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
             override val deduplicationSeed: String
     ) : SessionState()
 
     /**
      * We have received a confirmation, the peer party and session id is resolved.
-     * @property errors if not empty the session is in an errored state.
+     * @property receivedMessages the messages that have been received and are pending processing.
+     *   this could be any [ExistingSessionMessagePayload] type in theory, but it in practice it can only be one of the following types now:
+     *   * [DataSessionMessage]
+     *   * [ErrorSessionMessage]
+     *   * [EndSessionMessage]
+     * @property otherSideErrored whether the session has received an error from the other side.
      */
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: List<DataSessionMessage>,
-            val initiatedState: InitiatedSessionState,
-            val errors: List<FlowError>,
+            val receivedMessages: ArrayList<ExistingSessionMessagePayload>,
+            val otherSideErrored: Boolean,
+            val peerSinkSessionId: SessionId,
             override val deduplicationSeed: String
     ) : SessionState()
 }
 
 typealias SessionMap = Map<SessionId, SessionState>
-
-/**
- * Tracks whether an initiated session state is live or has ended. This is a separate state, as we still need the rest
- * of [SessionState.Initiated], even when the session has ended, for un-drained session messages and potential future
- * [FlowInfo] requests.
- */
-sealed class InitiatedSessionState {
-    data class Live(val peerSinkSessionId: SessionId) : InitiatedSessionState()
-    object Ended : InitiatedSessionState() { override fun toString() = "Ended" }
-}
 
 /**
  * Represents the way the flow has started.
@@ -198,6 +358,17 @@ sealed class FlowState {
     ) : FlowState() {
         override fun toString() = "Started(flowIORequest=$flowIORequest, frozenFiber=${frozenFiber.hash})"
     }
+
+    /**
+     * The flow is paused. To save memory we don't store the FlowState
+     */
+    object Paused: FlowState()
+
+    /**
+     * The flow has finished. It does not have a running fiber that needs to be serialized and checkpointed.
+     */
+    object Finished : FlowState()
+
 }
 
 /**
@@ -206,17 +377,20 @@ sealed class FlowState {
  * @param exception the exception itself. Note that this may not contain information about the source error depending
  *   on whether the source error was a FlowException or otherwise.
  */
+@CordaSerializable
 data class FlowError(val errorId: Long, val exception: Throwable)
 
 /**
  * The flow's error state.
  */
+@CordaSerializable
 sealed class ErrorState {
     abstract fun addErrors(newErrors: List<FlowError>): ErrorState
 
     /**
      * The flow is in a clean state.
      */
+    @CordaSerializable
     object Clean : ErrorState() {
         override fun addErrors(newErrors: List<FlowError>): ErrorState {
             return Errored(newErrors, 0, false)
@@ -233,6 +407,7 @@ sealed class ErrorState {
      * @param propagating true if error propagation was triggered. If this is set the dirtiness is permanent as the
      *   sessions associated with the flow have been (or about to be) dirtied in counter-flows.
      */
+    @CordaSerializable
     data class Errored(
             val errors: List<FlowError>,
             val propagatedIndex: Int,
@@ -252,3 +427,22 @@ sealed class SubFlowVersion {
     data class CoreFlow(override val platformVersion: Int) : SubFlowVersion()
     data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }
+
+sealed class FlowWithClientIdStatus(val flowId: StateMachineRunId, val user: Principal) {
+
+    fun isPermitted(user: Principal): Boolean = user.name == this.user.name
+
+    class Active(
+        flowId: StateMachineRunId,
+        user: Principal,
+        val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>
+    ) : FlowWithClientIdStatus(flowId, user)
+
+    class Removed(flowId: StateMachineRunId, user: Principal, val succeeded: Boolean) : FlowWithClientIdStatus(flowId, user)
+}
+
+data class FlowResultMetadata(
+    val status: Checkpoint.FlowStatus,
+    val clientId: String?,
+    val user: Principal
+)

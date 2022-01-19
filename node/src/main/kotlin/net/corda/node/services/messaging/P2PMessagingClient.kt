@@ -7,8 +7,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -42,6 +40,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREF
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -92,8 +92,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          private val metricRegistry: MetricRegistry,
                          cacheFactory: NamedCacheFactory,
                          private val isDrainingModeOn: () -> Boolean,
-                         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>
-) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver {
+                         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>,
+                         private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)
+) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
     }
@@ -120,6 +121,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var bridgeSession: ClientSession? = null
         var bridgeNotifyConsumer: ClientConsumer? = null
         var networkChangeSubscription: Subscription? = null
+        var sessionFactory: ClientSessionFactory? = null
 
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
@@ -140,12 +142,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val delayStartQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
-    private val handlersChangedSignal = java.lang.Object()
+    private val handlersChangedSignal = Object()
 
     private val deduplicator = P2PMessageDeduplicator(cacheFactory, database)
     internal var messagingExecutor: MessagingExecutor? = null
-
-    override val ready: OpenFuture<Void?> = openFuture()
 
     /**
      * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
@@ -173,7 +173,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
-            val sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
+            sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
@@ -198,7 +198,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 inboxes += RemoteInboxAddress(it).queueName
             }
 
-            inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true) }
+            inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true, isServiceAddress = false) }
 
             p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents, metricRegistry)
 
@@ -263,12 +263,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     private fun updateBridgesOnNetworkChange(change: NetworkMapCache.MapChange) {
-        log.info("Updating bridges on network map change: ${change.node}")
+        log.info("Updating bridges on network map change: ${change::class.simpleName} ${change.node}")
         fun gatherAddresses(node: NodeInfo): Sequence<BridgeEntry> {
             return state.locked {
                 node.legalIdentitiesAndCerts.map {
                     val messagingAddress = NodeAddress(it.party.owningKey)
-                    BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map { it.name })
+                    BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map { it.name }, serviceAddress = false)
                 }.filter { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }.asSequence()
             }
         }
@@ -307,7 +307,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val keyHash = queueName.substring(PEERS_PREFIX.length)
             val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
             for (node in peers) {
-                val bridge = BridgeEntry(queueName.toString(), node.addresses, node.legalIdentities.map { it.name })
+                val bridge = BridgeEntry(queueName.toString(), node.addresses, node.legalIdentities.map { it.name }, serviceAddress = false)
                 requiredBridges += bridge
                 knownQueues += queueName.toString()
             }
@@ -332,7 +332,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     /**
      * Starts the p2p event loop: this method only returns once [stop] has been called.
      */
-    fun run() {
+    override fun start() {
         val latch = CountDownLatch(1)
         try {
             synchronized(handlersChangedSignal) {
@@ -355,8 +355,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 p2pConsumer!!
             }
             consumer.start()
-            log.debug("Signalling ready")
-            ready.set(null)
+            log.debug("Signalling active")
+            stateHelper.active = true
             log.debug("Awaiting on latch")
             latch.await()
         } finally {
@@ -456,12 +456,13 @@ class P2PMessagingClient(val config: NodeConfiguration,
      * from a thread that's a part of the [net.corda.node.utilities.AffinityExecutor] given to the constructor,
      * it returns immediately and shutdown is asynchronous.
      */
-    fun stop() {
+    override fun stop() {
         val running = state.locked {
             // We allow stop() to be called without a run() in between, but it must have at least been started.
             check(started)
             val prevRunning = running
             running = false
+            stateHelper.active = false
             networkChangeSubscription?.unsubscribe()
             require(p2pConsumer != null, { "stop can't be called twice" })
             require(producer != null, { "stop can't be called twice" })
@@ -490,8 +491,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // Wait for the main loop to notice the consumer has gone and finish up.
             shutdownLatch.await()
         }
+
         // Only first caller to gets running true to protect against double stop, which seems to happen in some integration tests.
         state.locked {
+            sessionFactory?.close()
             locator?.close()
         }
     }
@@ -504,8 +507,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
-    override fun close() = stop()
-
     @Suspendable
     override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
         requireMessageSize(message.data.size, maxMessageSize)
@@ -513,7 +514,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     @Suspendable
-    override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
+    override fun sendAll(addressedMessages: List<MessagingService.AddressedMessage>) {
         for ((message, target, sequenceKey) in addressedMessages) {
             send(message, target, sequenceKey)
         }
@@ -529,19 +530,20 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val internalTargetQueue = (address as? ArtemisAddress)?.queueName
                     ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
-                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = address !is ServiceAddress)
+                val serviceAddress = address is ServiceAddress
+                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = !serviceAddress, isServiceAddress = serviceAddress)
             }
             internalTargetQueue
         }
     }
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
-    private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean) {
+    private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean, isServiceAddress: Boolean) {
         fun sendBridgeCreateMessage() {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
             val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
             for (node in peers) {
-                val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
+                val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name }, isServiceAddress)
                 val createBridgeMessage = BridgeControl.Create(config.myLegalName.toString(), bridge)
                 sendBridgeControl(createBridgeMessage)
             }

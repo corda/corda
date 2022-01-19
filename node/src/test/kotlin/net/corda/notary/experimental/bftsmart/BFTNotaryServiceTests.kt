@@ -141,7 +141,7 @@ class BFTNotaryServiceTests {
                     assertEquals(tx.id, error.txId)
                     val (stateRef, cause) = error.consumedStates.entries.single()
                     assertEquals(StateRef(issueTx.id, 0), stateRef)
-                    assertEquals(spendTxs[successfulIndex].id.sha256(), cause.hashOfTransactionId)
+                    assertEquals(spendTxs[successfulIndex].id.reHash(), cause.hashOfTransactionId)
                 }
             }
         }

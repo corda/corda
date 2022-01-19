@@ -13,23 +13,54 @@ import net.corda.testing.driver.VerifierType
  * @property rpcUsers A list of users able to instigate RPC for this node or cluster of nodes.
  * @property verifierType How the notary will verify transactions.
  * @property cluster [ClusterSpec] if this is a distributed cluster notary. If null then this is a single-node notary.
+ * @property startInProcess Should the notary be started in process.
  */
 data class NotarySpec(
         val name: CordaX500Name,
         val validating: Boolean = true,
         val rpcUsers: List<User> = emptyList(),
         val verifierType: VerifierType = VerifierType.InMemory,
-        val cluster: ClusterSpec? = null
+        val cluster: ClusterSpec? = null,
+        val startInProcess: Boolean = true
 ) {
+    constructor(name: CordaX500Name,
+                validating: Boolean = true,
+                rpcUsers: List<User> = emptyList(),
+                verifierType: VerifierType = VerifierType.InMemory,
+                cluster: ClusterSpec? = null): this(name, validating, rpcUsers, verifierType, cluster, "512m", true)
+
+    constructor(name: CordaX500Name,
+                validating: Boolean = true,
+                rpcUsers: List<User> = emptyList(),
+                verifierType: VerifierType = VerifierType.InMemory,
+                cluster: ClusterSpec? = null,
+                maximumHeapSize: String): this(name, validating, rpcUsers, verifierType, cluster, maximumHeapSize, true)
+
     // These extra fields are handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
     constructor(name: CordaX500Name,
                 validating: Boolean = true,
                 rpcUsers: List<User> = emptyList(),
                 verifierType: VerifierType = VerifierType.InMemory,
                 cluster: ClusterSpec? = null,
-                maximumHeapSize: String = "512m"): this(name, validating, rpcUsers, verifierType, cluster) {
+                maximumHeapSize: String = "512m",
+                startInProcess: Boolean = true): this(name, validating, rpcUsers, verifierType, cluster, startInProcess) {
         this.maximumHeapSize = maximumHeapSize
     }
+
+    fun copy(
+            name: CordaX500Name,
+            validating: Boolean = true,
+            rpcUsers: List<User> = emptyList(),
+            verifierType: VerifierType = VerifierType.InMemory,
+            cluster: ClusterSpec? = null
+    ) = this.copy(
+            name = name,
+            validating = validating,
+            rpcUsers = rpcUsers,
+            verifierType = verifierType,
+            cluster = cluster,
+            startInProcess = true
+    )
 
     var maximumHeapSize: String = "512m"
 }

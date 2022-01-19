@@ -20,6 +20,11 @@ ext {
     jolokia_version = constants.getProperty('jolokiaAgentVersion')
 }
 
+evaluationDependsOn(':core-deterministic')
+evaluationDependsOn(':serialization-deterministic')
+evaluationDependsOn(':serialization-djvm:deserializers')
+evaluationDependsOn(':node:djvm')
+
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -109,10 +114,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
-    // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:4.0.2"
-    compile "de.javakaffee:kryo-serializers:0.43"
-
+    compile "org.fusesource.jansi:jansi:$jansi_version"
     compile "com.google.guava:guava:$guava_version"
 
     // For caches rather than guava
@@ -194,7 +196,8 @@ dependencies {
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
-    
+    integrationTestCompile "org.apache.qpid:qpid-jms-client:${protonj_version}"
+
     // BFT-Smart dependencies
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
     compile 'commons-codec:commons-codec:1.13'
@@ -223,14 +226,11 @@ dependencies {
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
     compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
 
-    // Required by JVMAgentUtil (x-compatible java 8 & 11 agent lookup mechanism)
-    compile files("${System.properties['java.home']}/../lib/tools.jar")
-    
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
-    slowIntegrationTestCompile "org.jboss.byteman:byteman-submit:4.0.3"
+    slowIntegrationTestCompile "org.jboss.byteman:byteman-submit:4.0.11"
     // The actual Byteman agent which should only be in the classpath of the out of process nodes
-    slowIntegrationTestCompile "org.jboss.byteman:byteman:4.0.3"
+    slowIntegrationTestCompile "org.jboss.byteman:byteman:4.0.11"
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
@@ -242,15 +242,17 @@ dependencies {
     slowIntegrationTestRuntime configurations.runtime
     slowIntegrationTestRuntime configurations.testRuntime
 
+    integrationTestCompile(project(":testing:cordapps:missingmigration"))
+
     testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         jvmArgs '-Djdk.attach.allowAttachSelf=true'
     }
@@ -258,13 +260,13 @@ tasks.withType(Test) {
     systemProperty 'deterministic-sources.path', configurations.deterministic.asPath
 }
 
-task integrationTest(type: Test) {
+tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
 }
 
-task slowIntegrationTest(type: Test) {
+tasks.register('slowIntegrationTest', Test) {
     testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
     classpath = sourceSets.slowIntegrationTest.runtimeClasspath
     maxParallelForks = 1
@@ -273,7 +275,8 @@ task slowIntegrationTest(type: Test) {
 // quasar exclusions upon agent code instrumentation at run-time
 quasar {
     excludeClassLoaders.addAll(
-            'net.corda.djvm.**'
+            'net.corda.djvm.**',
+            'net.corda.core.serialization.internal.**'
     )
     excludePackages.addAll(
             "antlr**",
@@ -306,6 +309,11 @@ quasar {
 
 jar {
     baseName 'corda-node'
+    exclude 'sandbox/java/**'
+    exclude 'sandbox/org/**'
+    exclude 'sandbox/net/corda/core/crypto/SecureHash.class'
+    exclude 'sandbox/net/corda/core/crypto/SignatureScheme.class'
+    exclude 'sandbox/net/corda/core/crypto/TransactionSignature.class'
     manifest {
         attributes('Corda-Deterministic-Runtime': configurations.jdkRt.singleFile.name)
         attributes('Corda-Deterministic-Classpath': configurations.deterministic.collect { it.name }.join(' '))
@@ -316,7 +324,7 @@ publish {
     name jar.baseName
 }
 
-test {
+tasks.named('test', Test) {
     maxHeapSize = "3g"
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }

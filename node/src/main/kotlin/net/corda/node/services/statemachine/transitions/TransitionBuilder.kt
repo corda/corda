@@ -68,16 +68,18 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
 
     fun resumeFlowLogic(result: Any?): FlowContinuation {
         actions.add(Action.CreateTransaction)
-        currentState = currentState.copy(isFlowResumed = true, isWaitingForFuture = false)
+        currentState = currentState.copy(isFlowResumed = true, isWaitingForFuture = false, future = null)
         return FlowContinuation.Resume(result)
     }
 
     fun resumeFlowLogic(result: Throwable): FlowContinuation {
         actions.add(Action.CreateTransaction)
-        currentState = currentState.copy(isFlowResumed = true, isWaitingForFuture = false)
+        currentState = currentState.copy(isFlowResumed = true, isWaitingForFuture = false, future = null)
         return FlowContinuation.Throw(result)
     }
 }
 
 class CannotFindSessionException(sessionId: SessionId) : IllegalStateException("Couldn't find session with id $sessionId")
 class UnexpectedEventInState : IllegalStateException("Unexpected event")
+class PrematureSessionCloseException(sessionId: SessionId): IllegalStateException("The following session was closed before it was initialised: $sessionId")
+class PrematureSessionEndException(sessionId: SessionId): IllegalStateException("A premature session end message was received before the session was initialised: $sessionId")

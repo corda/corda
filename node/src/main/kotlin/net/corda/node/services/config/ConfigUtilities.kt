@@ -5,7 +5,9 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaSystemUtils
 import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -16,12 +18,15 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
+import net.corda.nodeapi.internal.storeLegalIdentity
 import org.slf4j.LoggerFactory
+import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.math.min
 
@@ -36,12 +41,36 @@ object ConfigHelper {
     private const val UPPERCASE_PROPERTY_PREFIX = "CORDA."
 
     private val log = LoggerFactory.getLogger(javaClass)
+
+    val DEFAULT_CONFIG_FILENAME = "node.conf"
+
+    @Suppress("LongParameterList")
     fun loadConfig(baseDirectory: Path,
-                   configFile: Path = baseDirectory / "node.conf",
+                   configFile: Path = baseDirectory / DEFAULT_CONFIG_FILENAME,
                    allowMissingConfig: Boolean = false,
-                   configOverrides: Config = ConfigFactory.empty()): Config {
+                   configOverrides: Config = ConfigFactory.empty()): Config
+        = loadConfig(baseDirectory,
+            configFile = configFile,
+            allowMissingConfig = allowMissingConfig,
+            configOverrides = configOverrides,
+            rawSystemOverrides = ConfigFactory.systemProperties(),
+            rawEnvironmentOverrides = ConfigFactory.systemEnvironment())
+
+    /**
+     * Internal equivalent of [loadConfig] which allows the system and environment
+     * overrides to be provided from a test.
+     */
+    @Suppress("LongParameterList")
+    @VisibleForTesting
+    internal fun loadConfig(baseDirectory: Path,
+                   configFile: Path,
+                   allowMissingConfig: Boolean,
+                   configOverrides: Config,
+                   rawSystemOverrides: Config,
+                   rawEnvironmentOverrides: Config
+    ): Config {
         val parseOptions = ConfigParseOptions.defaults()
-        val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
+        val defaultConfig = ConfigFactory.parseResources("corda-reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
 
         // Detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise.
@@ -54,8 +83,8 @@ object ConfigHelper {
                 "flowExternalOperationThreadPoolSize" to min(coreCount, FLOW_EXTERNAL_OPERATION_THREAD_POOL_SIZE_MAX).toString()
         )
 
-        val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
-        val environmentOverrides = ConfigFactory.systemEnvironment().cordaEntriesOnly()
+        val systemOverrides = rawSystemOverrides.cordaEntriesOnly()
+        val environmentOverrides = rawEnvironmentOverrides.cordaEntriesOnly()
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to baseDirectory.toString())
@@ -88,7 +117,15 @@ object ConfigHelper {
         return ConfigFactory.parseMap(
                 toProperties()
                 .mapKeys {
-                    var newKey = (it.key as String)
+                    val original = it.key as String
+
+                    // Reject environment variable that are in all caps
+                    // since these cannot be properties.
+                    if (original == original.toUpperCase()){
+                        return@mapKeys original
+                    }
+
+                    var newKey = original
                                 .replace('_', '.')
                                 .replace(UPPERCASE_PROPERTY_PREFIX, CORDA_PROPERTY_PREFIX)
 
@@ -107,7 +144,7 @@ object ConfigHelper {
 
                     newKey.let { key ->
                         val cfg = ConfigFactory.parseMap(mapOf(key to it.value))
-                        val result = V1NodeConfigurationSpec.validate(cfg, Configuration.Validation.Options(strict = true))
+                        val result = V1NodeConfigurationSpec.validate(cfg, Configuration.Options(strict = true))
 
                         val isInvalidProperty = result.errors.any { err -> err is Configuration.Validation.Error.Unknown }
                         if (isInvalidProperty) {
@@ -132,10 +169,16 @@ object ConfigHelper {
  * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
  */
 // TODO Move this to KeyStoreConfigHelpers.
-fun NodeConfiguration.configureWithDevSSLCertificate(cryptoService: CryptoService? = null) = p2pSslOptions.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory, cryptoService)
+fun NodeConfiguration.configureWithDevSSLCertificate(cryptoService: CryptoService? = null, entropy: BigInteger? = null) =
+        p2pSslOptions.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory, cryptoService, entropy)
 
 // TODO Move this to KeyStoreConfigHelpers.
-fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: CryptoService? = null) {
+@Suppress("ComplexMethod")
+fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name,
+                                                         signingCertificateStore: FileBasedCertificateStoreSupplier,
+                                                         certificatesDirectory: Path,
+                                                         cryptoService: CryptoService? = null,
+                                                         entropy: BigInteger? = null) {
     val specifiedTrustStore = trustStore.getOptional()
 
     val specifiedKeyStore = keyStore.getOptional()
@@ -154,7 +197,15 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
         when (cryptoService) {
             is BCCryptoService, null -> {
                 val signingKeyStore = FileBasedCertificateStoreSupplier(signingCertificateStore.path, signingCertificateStore.storePassword, signingCertificateStore.entryPassword).get(true)
-                        .also { it.installDevNodeCaCertPath(myLegalName) }
+                        .also {
+                            it.installDevNodeCaCertPath(myLegalName)
+                            val keyPair = if (entropy != null) {
+                                Crypto.deriveKeyPairFromEntropy(Crypto.DEFAULT_SIGNATURE_SCHEME, entropy)
+                            } else {
+                                Crypto.generateKeyPair()
+                            }
+                            it.storeLegalIdentity(X509Utilities.NODE_IDENTITY_KEY_ALIAS, keyPair)
+                        }
 
                 // Move distributed service composite key (generated by IdentityGenerator.generateToDisk) to keystore if exists.
                 val distributedServiceKeystore = certificatesDirectory / "distributedService.jks"

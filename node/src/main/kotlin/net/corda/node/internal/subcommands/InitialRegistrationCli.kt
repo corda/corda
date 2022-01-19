@@ -4,7 +4,6 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.core.internal.createFile
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.core.utilities.Try
 import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.*
@@ -26,9 +25,12 @@ class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-
     @Option(names = ["-p", "--network-root-truststore-password"], description = ["Network root trust store password obtained from network operator."], required = true)
     var networkRootTrustStorePassword: String = ""
 
+    @Option(names = ["-s", "--skip-schema-creation"], description = ["Prevent database migration scripts to run during initial node registration "], required = false)
+    var skipSchemaCreation: Boolean = false
+
     override fun runProgram() : Int {
         val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter ?: cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks"
-        return startup.initialiseAndRun(cmdLineOptions, InitialRegistration(cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, startup))
+        return startup.initialiseAndRun(cmdLineOptions, InitialRegistration(cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, skipSchemaCreation, startup))
     }
 
     override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
@@ -37,7 +39,8 @@ class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-
     val cmdLineOptions = InitialRegistrationCmdLineOptions()
 }
 
-class InitialRegistration(val baseDirectory: Path, private val networkRootTrustStorePath: Path, networkRootTrustStorePassword: String, private val startup: NodeStartup) : RunAfterNodeInitialisation, NodeStartupLogging {
+class InitialRegistration(val baseDirectory: Path, private val networkRootTrustStorePath: Path, networkRootTrustStorePassword: String,
+                          private val skipSchemaMigration: Boolean, private val startup: NodeStartup) : RunAfterNodeInitialisation, NodeStartupLogging {
     companion object {
         private const val INITIAL_REGISTRATION_MARKER = ".initialregistration"
 
@@ -63,21 +66,27 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         val versionInfo = startup.getVersionInfo()
 
         println("\n" +
-                "******************************************************************\n" +
-                "*                                                                *\n" +
-                "*      Registering as a new participant with a Corda network     *\n" +
-                "*                                                                *\n" +
-                "******************************************************************\n")
+                "*******************************************************************\n" +
+                "*                                                                 *\n" +
+                "*      Registering as a new participant with a Corda network      *\n" +
+                "*                                                                 *\n" +
+                "*******************************************************************\n")
 
         NodeRegistrationHelper(NodeRegistrationConfiguration(conf),
                 HTTPNetworkRegistrationService(
                         requireNotNull(conf.networkServices),
                         versionInfo),
-                nodeRegistration).generateKeysAndRegister()
+                nodeRegistration).apply {
+            generateKeysAndRegister()
+            generateNodeIdentity()
+        }
 
         // Minimal changes to make registration tool create node identity.
-        // TODO: Move node identity generation logic from node to registration helper.
-        startup.createNode(conf, versionInfo).generateAndSaveNodeInfo()
+        val node = startup.createNode(conf, versionInfo)
+        if(!skipSchemaMigration) {
+            node.runDatabaseMigrationScripts(updateCoreSchemas = true, updateAppSchemas = true, updateAppSchemasWithCheckpoints = false)
+        }
+        node.generateAndSaveNodeInfo()
 
         println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${conf.certificatesDirectory}', it is advised to backup the private keys and certificates.")
         println("Corda node will now terminate.")

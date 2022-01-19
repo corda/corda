@@ -204,6 +204,18 @@ class TransactionVerificationExceptionSerialisationTests {
         assertEquals(exc.message, exc2.message)
     }
 
+
+    @Test(timeout=300_000)
+    fun unsupportedHashTypeExceptionTest() {
+        val exc = TransactionVerificationException.UnsupportedHashTypeException(txid)
+
+        val exc2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exc, context),
+                context)
+
+        assertEquals(exc.message, exc2.message)
+    }
+
     @Test(timeout=300_000)
 	fun transactionNetworkParameterOrderingExceptionTest() {
         val exception = TransactionVerificationException.TransactionNetworkParameterOrderingException(
@@ -322,6 +334,19 @@ class TransactionVerificationExceptionSerialisationTests {
 
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
+
+    @Test(timeout=300_000)
+    fun unsupportedClassVersionErrorTest() {
+        val cause = UnsupportedClassVersionError("wobble")
+        val exception = TransactionVerificationException.UnsupportedClassVersionError(txid, cause.message!!, cause)
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals("java.lang.UnsupportedClassVersionError: ${exception.cause?.message}", exception2.cause?.message)
         assertEquals(exception.txId, exception2.txId)
     }
 }

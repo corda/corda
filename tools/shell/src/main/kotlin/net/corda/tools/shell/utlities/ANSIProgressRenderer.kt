@@ -19,8 +19,6 @@ import org.fusesource.jansi.AnsiOutputStream
 import rx.Observable.combineLatest
 import rx.Subscription
 import java.util.*
-import java.util.stream.IntStream
-import kotlin.streams.toList
 
 abstract class ANSIProgressRenderer {
 
