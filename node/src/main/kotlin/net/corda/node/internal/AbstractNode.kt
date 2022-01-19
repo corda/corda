@@ -100,7 +100,6 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.node.services.config.shell.toShellConfigMap
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.diagnostics.NodeDiagnosticsService
 import net.corda.node.services.events.NodeSchedulerService
@@ -688,11 +687,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
-            val shellConfiguration = configuration.toShellConfigMap()
-            shellConfiguration["sshdPort"]?.let {
+            configuration.sshd?.port?.let {
                 log.info("Binding Shell SSHD server on port $it.")
             }
-            InteractiveShell.startShellIfInstalled(configuration, shellConfiguration, cordappLoader)
+            InteractiveShell.startShellIfInstalled(configuration, cordappLoader)
         }
     }
 
