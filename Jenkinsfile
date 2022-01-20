@@ -2,10 +2,9 @@
 /**
  * Jenkins pipeline to build Corda Opensource Pull Requests.
  */
-
 @Library('corda-shared-build-pipeline-steps@ronanb/INFRA-1697/secure-wrapper-download') _
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-import static com.r3.build.AuthenticateGradleWrapper
+import com.r3.build.AuthenticateGradleWrapper
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
@@ -48,7 +47,6 @@ pipeline {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
-        GRADLE_WRAPPER_CREDS = credentials('gradle_wrapper-creds')
     }
 
     stages {
