@@ -73,27 +73,27 @@ class ArtemisTcpTransport {
 
         private fun CertificateStore.toKeyStoreTransportOptions(path: Path) = mapOf(
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
+                TransportConstants.KEYSTORE_TYPE_PROP_NAME to "JKS",
                 TransportConstants.KEYSTORE_PATH_PROP_NAME to path,
                 TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to password,
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true)
 
         private fun CertificateStore.toTrustStoreTransportOptions(path: Path) = mapOf(
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
+                TransportConstants.TRUSTSTORE_TYPE_PROP_NAME to "JKS",
                 TransportConstants.TRUSTSTORE_PATH_PROP_NAME to path,
                 TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to password,
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true)
 
         private fun ClientRpcSslOptions.toTransportOptions() = mapOf(
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to trustStoreProvider,
+                TransportConstants.TRUSTSTORE_TYPE_PROP_NAME to trustStoreProvider,
                 TransportConstants.TRUSTSTORE_PATH_PROP_NAME to trustStorePath,
                 TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to trustStorePassword)
 
         private fun BrokerRpcSslOptions.toTransportOptions() = mapOf(
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
+                TransportConstants.KEYSTORE_TYPE_PROP_NAME to "JKS",
                 TransportConstants.KEYSTORE_PATH_PROP_NAME to keyStorePath,
                 TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to keyStorePassword,
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to false)
@@ -106,9 +106,9 @@ class ArtemisTcpTransport {
             return p2pAcceptorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL, useOpenSsl = config?.useOpenSsl ?: false)
         }
 
-        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: MutualSslConfiguration?, enableSSL: Boolean = true, keyStoreProvider: String? = null): TransportConfiguration {
+        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: MutualSslConfiguration?, enableSSL: Boolean = true, keyStoreType: String? = null): TransportConfiguration {
 
-            return p2pConnectorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL, useOpenSsl = config?.useOpenSsl ?: false, keyStoreProvider = keyStoreProvider)
+            return p2pConnectorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL, useOpenSsl = config?.useOpenSsl ?: false, keyStoreType = keyStoreType)
         }
 
         fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true, useOpenSsl: Boolean = false): TransportConfiguration {
@@ -124,20 +124,22 @@ class ArtemisTcpTransport {
         }
 
         @Suppress("LongParameterList")
-        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true, useOpenSsl: Boolean = false, keyStoreProvider: String? = null): TransportConfiguration {
+        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true, useOpenSsl: Boolean = false, keyStoreType: String? = null): TransportConfiguration {
 
             val options = defaultArtemisOptions(hostAndPort, P2P_PROTOCOLS).toMutableMap()
             if (enableSSL) {
                 options.putAll(defaultSSLOptions)
                 (keyStore to trustStore).addToTransportOptions(options)
                 options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
-                keyStoreProvider?.let { options.put(TransportConstants.KEYSTORE_PROVIDER_PROP_NAME, keyStoreProvider) }
+                keyStoreType?.let { options.put(TransportConstants.KEYSTORE_TYPE_PROP_NAME, keyStoreType) }
+                // This is required to stop Client checking URL address vs. Server provided certificate
+                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
             }
             return TransportConfiguration(connectorFactoryClassName, options)
         }
 
-        fun p2pConnectorTcpTransportFromList(hostAndPortList: List<NetworkHostAndPort>, config: MutualSslConfiguration?, enableSSL: Boolean = true, keyStoreProvider: String? = null): List<TransportConfiguration> = hostAndPortList.map {
-            p2pConnectorTcpTransport(it, config, enableSSL, keyStoreProvider)
+        fun p2pConnectorTcpTransportFromList(hostAndPortList: List<NetworkHostAndPort>, config: MutualSslConfiguration?, enableSSL: Boolean = true, keyStoreType: String? = null): List<TransportConfiguration> = hostAndPortList.map {
+            p2pConnectorTcpTransport(it, config, enableSSL, keyStoreType)
         }
 
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: BrokerRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
@@ -159,6 +161,8 @@ class ArtemisTcpTransport {
                 config.trustStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
                 options.putAll(defaultSSLOptions)
+                // This is required to stop Client checking URL address vs. Server provided certificate
+                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
             }
             return TransportConfiguration(connectorFactoryClassName, options)
         }
@@ -167,17 +171,23 @@ class ArtemisTcpTransport {
             rpcConnectorTcpTransport(it, config, enableSSL)
         }
 
-        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreProvider: String? = null): TransportConfiguration {
-            return TransportConfiguration(connectorFactoryClassName, defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS) + defaultSSLOptions + config.toTransportOptions() + asMap(keyStoreProvider))
+        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreType: String? = null): TransportConfiguration {
+            val options = defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS).toMutableMap()
+            options.putAll(defaultSSLOptions)
+            options.putAll(config.toTransportOptions())
+            options.putAll(asMap(keyStoreType))
+            // This is required to stop Client checking URL address vs. Server provided certificate
+            options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
+            return TransportConfiguration(connectorFactoryClassName, options)
         }
 
-        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreProvider: String? = null): TransportConfiguration {
+        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreType: String? = null): TransportConfiguration {
             return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS) + defaultSSLOptions +
-                    config.toTransportOptions() + (TransportConstants.HANDSHAKE_TIMEOUT to 0) + asMap(keyStoreProvider))
+                    config.toTransportOptions() + (TransportConstants.HANDSHAKE_TIMEOUT to 0) + asMap(keyStoreType))
         }
 
-        private fun asMap(keyStoreProvider: String?): Map<String, String>  {
-            return keyStoreProvider?.let {mutableMapOf(TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to it)} ?: emptyMap()
+        private fun asMap(keyStoreType: String?): Map<String, String> {
+            return keyStoreType?.let { mutableMapOf(TransportConstants.KEYSTORE_TYPE_PROP_NAME to it) } ?: emptyMap()
         }
     }
 }

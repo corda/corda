@@ -24,6 +24,7 @@ import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Assert.assertArrayEquals
@@ -222,7 +223,8 @@ class AMQPBridgeTest {
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
             // Local queue for outgoing messages
-            artemis.session.createQueue(sourceQueueName, RoutingType.ANYCAST, sourceQueueName, true)
+            artemis.session.createQueue(
+                    QueueConfiguration(sourceQueueName).setRoutingType(RoutingType.ANYCAST).setAddress(sourceQueueName).setDurable(true))
             bridgeManager.deployBridge(ALICE_NAME.toString(), sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
         }
         return Triple(artemisServer, artemisClient, bridgeManager)

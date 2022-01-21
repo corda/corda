@@ -20,6 +20,7 @@ import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -114,7 +115,9 @@ class BridgeControlListener(private val keyStore: CertificateStore,
 
     private fun registerBridgeControlListener(artemisSession: ClientSession) {
         try {
-            artemisSession.createTemporaryQueue(BRIDGE_CONTROL, RoutingType.MULTICAST, bridgeControlQueue)
+            artemisSession.createQueue(
+                    QueueConfiguration(bridgeControlQueue).setAddress(BRIDGE_CONTROL).setRoutingType(RoutingType.MULTICAST)
+                            .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
         }
@@ -134,7 +137,9 @@ class BridgeControlListener(private val keyStore: CertificateStore,
 
     private fun registerBridgeDuplicateChecker(artemisSession: ClientSession) {
         try {
-            artemisSession.createTemporaryQueue(BRIDGE_NOTIFY, RoutingType.MULTICAST, bridgeNotifyQueue)
+            artemisSession.createQueue(
+                    QueueConfiguration(bridgeNotifyQueue).setAddress(BRIDGE_NOTIFY).setRoutingType(RoutingType.MULTICAST)
+                            .setTemporary(true).setDurable(false))
         } catch (ex: ActiveMQQueueExistsException) {
             // Ignore if there is a queue still not cleaned up
         }

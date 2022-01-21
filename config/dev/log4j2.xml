@@ -206,6 +206,10 @@
             <AppenderRef ref="Console-ErrorCode-Selector"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
+        <Logger name="org.apache.activemq.audit" level="error" additivity="false">
+            <AppenderRef ref="Console-ErrorCode-Selector"/>
+            <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
+        </Logger>
         <Logger name="org.jolokia" additivity="true" level="warn">
             <AppenderRef ref="Console-ErrorCode-Appender-Println"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>

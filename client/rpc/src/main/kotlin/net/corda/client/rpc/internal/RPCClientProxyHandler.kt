@@ -39,6 +39,7 @@ import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.nodeapi.internal.rpc.client.RpcObservableMap
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -60,6 +61,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -380,11 +382,18 @@ internal class RPCClientProxyHandler(
         targetLegalIdentity?.let {
             artemisMessage.putStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY, it.toString())
         }
-        sendExecutor!!.submit {
+        val future: Future<*> = sendExecutor!!.submit {
             artemisMessage.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, deduplicationSequenceNumber.getAndIncrement())
             log.debug { "-> RPC -> $message" }
-            rpcProducer!!.send(artemisMessage)
+            rpcProducer!!.let {
+                if (!it.isClosed) {
+                    it.send(artemisMessage)
+                } else {
+                    log.info("Producer is already closed. Not sending: $message")
+                }
+            }
         }
+        future.getOrThrow()
     }
 
     // The handler for Artemis messages.
@@ -570,7 +579,12 @@ internal class RPCClientProxyHandler(
         }
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
-            sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
+            } catch(ex: Exception) {
+                log.warn("Unable to close observables", ex)
+            }
         }
     }
 
@@ -632,7 +646,8 @@ internal class RPCClientProxyHandler(
         consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, 16384)
         clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$rpcUsername.${random63BitValue()}")
         log.debug { "Client address: $clientAddress" }
-        consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
+        consumerSession!!.createQueue(QueueConfiguration(clientAddress).setAddress(clientAddress).setRoutingType(RoutingType.ANYCAST)
+                .setTemporary(true).setDurable(false))
         rpcConsumer = consumerSession!!.createConsumer(clientAddress)
         rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
     }

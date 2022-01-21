@@ -15,7 +15,6 @@ import java.time.Duration
  *
  * totalFailoverDuration = 5 + 5 * 1.5 + 5 * (1.5)^2 + 5 * (1.5)^3 + 5 * (1.5)^4 = ~66 seconds
  *
- * @param failoverOnInitialAttempt Determines whether failover is triggered if initial connection fails.
  * @param initialConnectAttempts The number of reconnect attempts if failover is enabled for initial connection. A value
  * of -1 represents infinite attempts.
  * @param reconnectAttempts The number of reconnect attempts for failover after initial connection is done. A value
@@ -27,7 +26,6 @@ import java.time.Duration
 enum class MessagingServerConnectionConfiguration {
 
     DEFAULT {
-        override fun failoverOnInitialAttempt(isHa: Boolean) = true
         override fun initialConnectAttempts(isHa: Boolean) = 5
         override fun reconnectAttempts(isHa: Boolean) = 5
         override fun retryInterval() = 5.seconds
@@ -36,7 +34,6 @@ enum class MessagingServerConnectionConfiguration {
     },
 
     FAIL_FAST {
-        override fun failoverOnInitialAttempt(isHa: Boolean) = isHa
         override fun initialConnectAttempts(isHa: Boolean) = 0
         // Client die too fast during failover/failback, need a few reconnect attempts to allow new master to become active
         override fun reconnectAttempts(isHa: Boolean) = if (isHa) 3 else 0
@@ -46,7 +43,6 @@ enum class MessagingServerConnectionConfiguration {
     },
 
     CONTINUOUS_RETRY {
-        override fun failoverOnInitialAttempt(isHa: Boolean) = true
         override fun initialConnectAttempts(isHa: Boolean) = if (isHa) 0 else -1
         override fun reconnectAttempts(isHa: Boolean) = -1
         override fun retryInterval() = 5.seconds
@@ -54,7 +50,6 @@ enum class MessagingServerConnectionConfiguration {
         override fun maxRetryInterval(isHa: Boolean) = if (isHa) 3.minutes else 5.minutes
     };
 
-    abstract fun failoverOnInitialAttempt(isHa: Boolean): Boolean
     abstract fun initialConnectAttempts(isHa: Boolean): Int
     abstract fun reconnectAttempts(isHa: Boolean): Int
     abstract fun retryInterval(): Duration

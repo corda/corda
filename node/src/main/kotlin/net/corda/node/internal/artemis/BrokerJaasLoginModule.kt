@@ -14,6 +14,7 @@ import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
 import java.io.IOException
 import java.security.KeyStore
 import java.security.Principal
+import java.security.cert.X509Certificate
 import java.util.*
 import javax.security.auth.Subject
 import javax.security.auth.callback.CallbackHandler
@@ -119,26 +120,25 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
 
     // The Main authentication logic, responsible for running all the configured checks for each user type
     // and return the actual User and principals
-    @Suppress("DEPRECATION")    // should use java.security.cert.X509Certificate
-    private fun authenticateAndAuthorise(username: String, certificates: Array<javax.security.cert.X509Certificate>?, password: String): Pair<String, List<RolePrincipal>> {
-        fun requireTls(certificates: Array<javax.security.cert.X509Certificate>?) = requireNotNull(certificates) { "No client certificates presented." }
+    private fun authenticateAndAuthorise(username: String, certificates: Array<X509Certificate>, password: String): Pair<String, List<RolePrincipal>> {
+        fun requireTls(certificates: Array<X509Certificate>?) = requireNotNull(certificates) { "No client certificates presented." }
 
         return when (username) {
             ArtemisMessagingComponent.NODE_P2P_USER -> {
                 requireTls(certificates)
-                CertificateChainCheckPolicy.LeafMustMatch.createCheck(nodeJaasConfig.keyStore, nodeJaasConfig.trustStore).checkCertificateChain(certificates!!)
+                CertificateChainCheckPolicy.LeafMustMatch.createCheck(nodeJaasConfig.keyStore, nodeJaasConfig.trustStore).checkCertificateChain(certificates)
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(NODE_P2P_ROLE)))
             }
             ArtemisMessagingComponent.NODE_RPC_USER -> {
                 requireTls(certificates)
-                CertificateChainCheckPolicy.LeafMustMatch.createCheck(nodeJaasConfig.keyStore, nodeJaasConfig.trustStore).checkCertificateChain(certificates!!)
+                CertificateChainCheckPolicy.LeafMustMatch.createCheck(nodeJaasConfig.keyStore, nodeJaasConfig.trustStore).checkCertificateChain(certificates)
                 Pair(ArtemisMessagingComponent.NODE_RPC_USER, listOf(RolePrincipal(NODE_RPC_ROLE)))
             }
             ArtemisMessagingComponent.PEER_USER -> {
                 requireNotNull(p2pJaasConfig) { "Attempted to connect as a peer to the rpc broker." }
                 requireTls(certificates)
                 // This check is redundant as it was performed already during the SSL handshake
-                CertificateChainCheckPolicy.RootMustMatch.createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates!!)
+                CertificateChainCheckPolicy.RootMustMatch.createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates)
                 CertificateChainCheckPolicy.RevocationCheck(p2pJaasConfig!!.revocationMode)
                         .createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates)
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(PEER_ROLE)))
@@ -176,8 +176,8 @@ abstract class BaseBrokerJaasLoginModule : LoginModule {
     protected lateinit var callbackHandler: CallbackHandler
     protected val principals = ArrayList<Principal>()
 
-    @Suppress("DEPRECATION")    // should use java.security.cert.X509Certificate
-    protected fun getUsernamePasswordAndCerts(): Triple<String, String, Array<javax.security.cert.X509Certificate>?> {
+    @Suppress("ThrowsCount")
+    protected fun getUsernamePasswordAndCerts(): Triple<String, String, Array<X509Certificate>> {
         val nameCallback = NameCallback("Username: ")
         val passwordCallback = PasswordCallback("Password: ", false)
         val certificateCallback = CertificateCallback()
