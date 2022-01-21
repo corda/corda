@@ -47,7 +47,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     companion object {
         private const val CORDA_AMQP_FRAME_SIZE_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpMaxFrameSize"
         private const val CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpIdleTimeout"
-        private const val CREATE_ADDRESS_PERMISSION_ERROR = "AMQ119032"
+        private const val CREATE_ADDRESS_PERMISSION_ERROR = "AMQ229032"
 
         private val MAX_FRAME_SIZE = Integer.getInteger(CORDA_AMQP_FRAME_SIZE_PROP_NAME, 128 * 1024)
         private val IDLE_TIMEOUT = Integer.getInteger(CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME, 10 * 1000)
@@ -354,6 +354,8 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         if (link.remoteCondition != null) {
             val remoteConditionDescription = link.remoteCondition.description
             logWarnWithMDC("Connection closed due to error on remote side: `$remoteConditionDescription`")
+            // Description normally looks as follows:
+            // "AMQ229032: User: SystemUsers/Peer does not have permission='CREATE_ADDRESS' on address p2p.inbound.Test"
             if (remoteConditionDescription.contains(CREATE_ADDRESS_PERMISSION_ERROR)) {
                 handleRemoteCreatePermissionError(e)
             }
