@@ -1,11 +1,14 @@
 package net.corda.node
 
+import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import org.apache.commons.lang3.SystemUtils
+import org.hamcrest.Matchers.isOneOf
+import org.hamcrest.Matchers.oneOf
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -13,6 +16,7 @@ import kotlin.test.assertTrue
 class NodeRPCTests {
     private val CORDA_VERSION_REGEX = "\\d+(\\.\\d+)?(\\.\\d+)?(-\\w+)?".toRegex()
     private val CORDA_VENDOR = "Corda Open Source"
+    private val CORDA_VENDOR_CE = "Corda Community Edition"
     private val CORDAPPS = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
     private val CORDAPP_TYPES = setOf("Contract CorDapp", "Workflow CorDapp")
     private val CLASSIFIER = if (SystemUtils.IS_JAVA_11) "-jdk11" else ""
@@ -30,6 +34,7 @@ class NodeRPCTests {
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
             assertEquals(PLATFORM_VERSION, nodeDiagnosticInfo.platformVersion)
             assertEquals(CORDA_VENDOR, nodeDiagnosticInfo.vendor)
+            assertTrue(nodeDiagnosticInfo.vendor == CORDA_VENDOR || nodeDiagnosticInfo.vendor == CORDA_VENDOR_CE)
             nodeDiagnosticInfo.cordapps.forEach { println("${it.shortName} ${it.type}") }
             assertEquals(CORDAPPS.size, nodeDiagnosticInfo.cordapps.size)
             assertEquals(CORDAPP_TYPES, nodeDiagnosticInfo.cordapps.map { it.type }.toSet())
