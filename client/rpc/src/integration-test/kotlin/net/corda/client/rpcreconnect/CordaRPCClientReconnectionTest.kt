@@ -50,6 +50,7 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CordaRPCClientReconnectionTest {
@@ -591,6 +592,29 @@ class CordaRPCClientReconnectionTest {
                 val result0 = flowHandle0.returnValue.getOrThrow()
                 assertEquals(5, result0)
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `reconnecting 'reattachFlowWithClientId' rpc works if called with non-existent client id`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(additionalCustomOverrides: Map<String, Any?> = emptyMap()): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString()) + additionalCustomOverrides
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val nonExistentClientId = UUID.randomUUID().toString()
+                val flowHandle = rpcOps.reattachFlowWithClientId<Any>(nonExistentClientId)
+                assertNull(flowHandle)
             }
         }
     }
