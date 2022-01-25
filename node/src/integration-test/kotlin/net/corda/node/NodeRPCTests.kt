@@ -1,14 +1,11 @@
 package net.corda.node
 
-import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import org.apache.commons.lang3.SystemUtils
-import org.hamcrest.Matchers.isOneOf
-import org.hamcrest.Matchers.oneOf
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
