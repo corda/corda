@@ -3,6 +3,7 @@ package net.corda.node.djvm
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.BrokenAttachmentException
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import java.io.InputStream
@@ -16,6 +17,12 @@ private const val ID_IDX = 2
 private const val ATTACHMENT_IDX = 3
 private const val STREAMER_IDX = 4
 
+private const val CONTRACT_IDX = 5
+private const val ADDITIONAL_CONTRACT_IDX = 6
+private const val UPLOADER_IDX = 7
+private const val CONTRACT_SIGNER_KEYS_IDX = 8
+private const val VERSION_IDX = 9
+
 class AttachmentBuilder : Function<Array<Any>?, List<Attachment>?> {
     private val attachments = mutableListOf<Attachment>()
 
@@ -28,17 +35,30 @@ class AttachmentBuilder : Function<Array<Any>?, List<Attachment>?> {
     }
 
     override fun apply(inputs: Array<Any>?): List<Attachment>? {
+        @Suppress("unchecked_cast")
         return if (inputs == null) {
             unmodifiable(attachments)
         } else {
-            @Suppress("unchecked_cast")
-            attachments.add(SandboxAttachment(
+            var attachment: Attachment = SandboxAttachment(
                 signerKeys = inputs[SIGNER_KEYS_IDX] as List<PublicKey>,
                 size = inputs[SIZE_IDX] as Int,
                 id = inputs[ID_IDX] as SecureHash,
                 attachment = inputs[ATTACHMENT_IDX],
                 streamer = inputs[STREAMER_IDX] as Function<in Any, out InputStream>
-            ))
+            )
+
+            if (inputs.size > VERSION_IDX) {
+                attachment = ContractAttachment.create(
+                    attachment = attachment,
+                    contract = inputs[CONTRACT_IDX] as String,
+                    additionalContracts = (inputs[ADDITIONAL_CONTRACT_IDX] as Array<String>).toSet(),
+                    uploader = inputs[UPLOADER_IDX] as? String,
+                    signerKeys = inputs[CONTRACT_SIGNER_KEYS_IDX] as List<PublicKey>,
+                    version = inputs[VERSION_IDX] as Int
+                )
+            }
+
+            attachments.add(attachment)
             null
         }
     }
@@ -47,7 +67,7 @@ class AttachmentBuilder : Function<Array<Any>?, List<Attachment>?> {
 /**
  * This represents an [Attachment] from within the sandbox.
  */
-class SandboxAttachment(
+private class SandboxAttachment(
     override val signerKeys: List<PublicKey>,
     override val size: Int,
     override val id: SecureHash,

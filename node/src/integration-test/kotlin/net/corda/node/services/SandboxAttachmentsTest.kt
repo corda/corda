@@ -31,11 +31,11 @@ class SandboxAttachmentsTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
+        fun parametersFor(djvmSources: DeterministicSourcesRule, runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 cordappsForAllNodes = listOf(
                     cordappWithPackages("net.corda.flows.djvm.attachment"),
                     CustomCordapp(

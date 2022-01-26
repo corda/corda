@@ -46,7 +46,7 @@ class ContractWithCustomSerializerTest(private val runInProcess: Boolean) {
         driver(DriverParameters(
             portAllocation = incrementalPortAllocation(),
             startNodesInProcess = runInProcess,
-            notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+            notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
             cordappsForAllNodes = listOf(
                 cordappWithPackages("net.corda.flows.serialization.custom").signed(),
                 cordappWithPackages("net.corda.contracts.serialization.custom").signed()

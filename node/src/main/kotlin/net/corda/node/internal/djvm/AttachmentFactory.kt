@@ -1,6 +1,7 @@
 package net.corda.node.internal.djvm
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.serialization.serialize
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.node.djvm.AttachmentBuilder
@@ -19,14 +20,30 @@ class AttachmentFactory(
     fun toSandbox(attachments: List<Attachment>): Any? {
         val builder = taskFactory.apply(AttachmentBuilder::class.java)
         for (attachment in attachments) {
-            builder.apply(arrayOf(
-                serializer.deserialize(attachment.signerKeys.serialize()),
-                sandboxBasicInput.apply(attachment.size),
-                serializer.deserialize(attachment.id.serialize()),
-                attachment,
-                sandboxOpenAttachment
-            ))
+            builder.apply(generateArgsFor(attachment))
         }
         return builder.apply(null)
+    }
+
+    private fun generateArgsFor(attachment: Attachment): Array<Any?> {
+        val signerKeys = serializer.deserialize(attachment.signerKeys.serialize())
+        val id = serializer.deserialize(attachment.id.serialize())
+        val size = sandboxBasicInput.apply(attachment.size)
+        return if (attachment is ContractAttachment) {
+            val underlyingAttachment = attachment.attachment
+            arrayOf(
+                serializer.deserialize(underlyingAttachment.signerKeys.serialize()),
+                size, id,
+                underlyingAttachment,
+                sandboxOpenAttachment,
+                sandboxBasicInput.apply(attachment.contract),
+                sandboxBasicInput.apply(attachment.additionalContracts.toTypedArray()),
+                sandboxBasicInput.apply(attachment.uploader),
+                signerKeys,
+                sandboxBasicInput.apply(attachment.version)
+            )
+        } else {
+            arrayOf(signerKeys, size, id, attachment, sandboxOpenAttachment)
+        }
     }
 }

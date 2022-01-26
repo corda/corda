@@ -23,7 +23,7 @@ class ContractCannotMutateTransactionTest {
         private val mutatorFlowCorDapp = cordappWithPackages("net.corda.flows.mutator").signed()
         private val mutatorContractCorDapp = cordappWithPackages("net.corda.contracts.mutator").signed()
 
-        fun driverParameters(runInProcess: Boolean): DriverParameters {
+        fun driverParameters(runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = runInProcess,
@@ -35,7 +35,7 @@ class ContractCannotMutateTransactionTest {
 
     @Test(timeout = 300_000)
     fun testContractCannotModifyTransaction() {
-        driver(driverParameters(runInProcess = false)) {
+        driver(driverParameters()) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val txID = CordaRPCClient(hostAndPort = alice.rpcAddress)
                 .start(user.username, user.password)
