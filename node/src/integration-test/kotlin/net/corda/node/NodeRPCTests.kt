@@ -30,7 +30,6 @@ class NodeRPCTests {
             val nodeDiagnosticInfo = startNode().get().rpc.nodeDiagnosticInfo()
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))
             assertEquals(PLATFORM_VERSION, nodeDiagnosticInfo.platformVersion)
-            assertEquals(CORDA_VENDOR, nodeDiagnosticInfo.vendor)
             assertTrue(nodeDiagnosticInfo.vendor == CORDA_VENDOR || nodeDiagnosticInfo.vendor == CORDA_VENDOR_CE)
             nodeDiagnosticInfo.cordapps.forEach { println("${it.shortName} ${it.type}") }
             assertEquals(CORDAPPS.size, nodeDiagnosticInfo.cordapps.size)
