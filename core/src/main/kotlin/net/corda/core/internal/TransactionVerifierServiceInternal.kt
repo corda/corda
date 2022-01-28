@@ -13,6 +13,7 @@ import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.ConflictingAttachmentsRejection
 import net.corda.core.contracts.TransactionVerificationException.ConstraintPropagationRejection
 import net.corda.core.contracts.TransactionVerificationException.ContractCreationError
@@ -33,7 +34,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -47,16 +48,54 @@ interface TransactionVerifierServiceInternal {
  */
 fun LedgerTransaction.prepareVerify(attachments: List<Attachment>) = internalPrepareVerify(attachments)
 
+interface Verifier {
+
+    /**
+     * Placeholder function for the verification logic.
+     */
+    fun verify()
+}
+
+// This class allows us unit-test transaction verification more easily.
+abstract class AbstractVerifier(
+    protected val ltx: LedgerTransaction,
+    protected val transactionClassLoader: ClassLoader
+) : Verifier {
+    protected abstract val transaction: Supplier<LedgerTransaction>
+
+    protected companion object {
+        @JvmField
+        val logger = loggerFor<Verifier>()
+    }
+
+    /**
+     * Check that the transaction is internally consistent, and then check that it is
+     * contract-valid by running verify() for each input and output state contract.
+     * If any contract fails to verify, the whole transaction is considered to be invalid.
+     *
+     * Note: Reference states are not verified.
+     */
+    final override fun verify() {
+        try {
+            TransactionVerifier(transactionClassLoader).apply(transaction)
+        } catch (e: TransactionVerificationException) {
+            logger.error("Error validating transaction ${ltx.id}.", e.cause)
+            throw e
+        }
+    }
+}
+
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
  */
-abstract class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) {
+@KeepForDJVM
+private class Validator(private val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map(StateAndRef<ContractState>::state)
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map(StateAndRef<ContractState>::state) + ltx.outputs
 
-    companion object {
-        val logger = contextLogger()
+    private companion object {
+        private val logger = loggerFor<Validator>()
     }
 
     /**
@@ -66,7 +105,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      *
      * @throws net.corda.core.contracts.TransactionVerificationException
      */
-    fun verify() {
+    fun validate() {
         // checkNoNotaryChange and checkEncumbrancesValid are called here, and not in the c'tor, as they need access to the "outputs"
         // list, the contents of which need to be deserialized under the correct classloader.
         checkNoNotaryChange()
@@ -93,8 +132,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         // 4. Check that the [TransactionState] objects are correctly formed.
         validateStatesAgainstContract()
 
-        // 5. Final step is to run the contract code. After the first 4 steps we are now sure that we are running the correct code.
-        verifyContracts()
+        // 5. Final step will be to run the contract code.
     }
 
     private fun checkTransactionWithTimeWindowIsNotarised() {
@@ -106,6 +144,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      *  It makes sure there is one and only one.
      *  This is an important piece of the security of transactions.
      */
+    @Suppress("ThrowsCount")
     private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
         val contractClasses = allStates.mapTo(LinkedHashSet(), TransactionState<*>::contract)
 
@@ -210,6 +249,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
     // b -> c    and     c -> b
     // c -> a            b -> a
     // and form a full cycle, meaning that the bi-directionality property is satisfied.
+    @Suppress("ThrowsCount")
     private fun checkBidirectionalOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
         // [Set] of "from" (encumbered states).
         val encumberedSet = mutableSetOf<Int>()
@@ -306,6 +346,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
      * - Constraints should be one of the valid supported ones.
      * - Constraints should propagate correctly if not marked otherwise (in that case it is the responsibility of the contract to ensure that the output states are created properly).
      */
+    @Suppress("NestedBlockDepth")
     private fun verifyConstraintsValidity(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
 
         // First check that the constraints are valid.
@@ -392,19 +433,15 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                 throw ContractConstraintRejection(ltx.id, contract)
         }
     }
-
-    /**
-     * Placeholder function for the contract verification logic.
-     */
-    abstract fun verifyContracts()
 }
 
 /**
- * Verify all of the contracts on the given [LedgerTransaction].
+ * Verify the given [LedgerTransaction]. This includes validating
+ * its contents, as well as executing all of its smart contracts.
  */
 @Suppress("TooGenericExceptionCaught")
 @KeepForDJVM
-class ContractVerifier(private val transactionClassLoader: ClassLoader) : Function<Supplier<LedgerTransaction>, Unit> {
+class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Function<Supplier<LedgerTransaction>, Unit> {
     // This constructor is used inside the DJVM's sandbox.
     @Suppress("unused")
     constructor() : this(ClassLoader.getSystemClassLoader())
@@ -440,16 +477,33 @@ class ContractVerifier(private val transactionClassLoader: ClassLoader) : Functi
             }
     }
 
+    private fun validateTransaction(ltx: LedgerTransaction) {
+        Validator(ltx, transactionClassLoader).validate()
+    }
+
     override fun apply(transactionFactory: Supplier<LedgerTransaction>) {
         var firstLtx: LedgerTransaction? = null
 
         transactionFactory.get().let { ltx ->
             firstLtx = ltx
+
+            /**
+             * Check that this transaction is correctly formed.
+             * We only need to run these checks once.
+             */
+            validateTransaction(ltx)
+
+            /**
+             * Generate the list of unique contracts
+             * within this transaction.
+             */
             generateContracts(ltx)
         }.forEach { contract ->
             val ltx = firstLtx ?: transactionFactory.get()
             firstLtx = null
             try {
+                // Final step is to run the contract code. Having validated the
+                // transaction, we are now sure that we are running the correct code.
                 contract.verify(ltx)
             } catch (e: Exception) {
                 throw ContractRejection(ltx.id, contract, e)

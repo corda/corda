@@ -41,11 +41,11 @@ class DeterministicContractWithSerializationWhitelistTest {
         @JvmField
         val contractCordapp = cordappWithPackages("net.corda.contracts.djvm.whitelist").signed()
 
-        fun parametersFor(djvmSources: DeterministicSourcesRule, vararg cordapps: TestCordapp): DriverParameters {
+        fun parametersFor(djvmSources: DeterministicSourcesRule, cordapps: List<TestCordapp>, runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 cordappsForAllNodes = cordapps.toList(),
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda
@@ -61,7 +61,7 @@ class DeterministicContractWithSerializationWhitelistTest {
 
     @Test(timeout=300_000)
 	fun `test DJVM can verify using whitelist`() {
-        driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
+        driver(parametersFor(djvmSources, listOf(flowCordapp, contractCordapp))) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {
                 alice.rpc.startFlow(::DeterministicWhitelistFlow, WhitelistData(GOOD_VALUE))
@@ -73,7 +73,7 @@ class DeterministicContractWithSerializationWhitelistTest {
 
     @Test(timeout=300_000)
 	fun `test DJVM can fail verify using whitelist`() {
-        driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
+        driver(parametersFor(djvmSources, listOf(flowCordapp, contractCordapp))) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val badData = WhitelistData(BAD_VALUE)
             val ex = assertThrows<DeterministicVerificationException> {
