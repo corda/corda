@@ -95,9 +95,11 @@ class MutatorContract : Contract {
         }
     }
 
-    private class ExtraSpecialise(ltx: LedgerTransaction, ctx: SerializationContext)
-        : Verifier(ltx, ctx.deserializationClassLoader) {
-        override fun verifyContracts() {}
+    private class ExtraSpecialise(private val ltx: LedgerTransaction, private val ctx: SerializationContext) : Verifier {
+        override fun verify() {
+            ltx.inputStates.forEach(::println)
+            println(ctx.deserializationClassLoader)
+        }
     }
 
     class MutateState(val owner: AbstractParty) : ContractState {
