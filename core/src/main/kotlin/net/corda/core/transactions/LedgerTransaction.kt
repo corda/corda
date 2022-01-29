@@ -18,7 +18,7 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.ContractVerifier
+import net.corda.core.internal.AbstractVerifier
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.Verifier
 import net.corda.core.internal.castIfPossible
@@ -824,7 +824,7 @@ private constructor(
 private class BasicVerifier(
     ltx: LedgerTransaction,
     private val serializationContext: SerializationContext
-) : Verifier(ltx, serializationContext.deserializationClassLoader) {
+) : AbstractVerifier(ltx, serializationContext.deserializationClassLoader) {
 
     init {
         // This is a sanity check: We should only instantiate this
@@ -836,8 +836,14 @@ private class BasicVerifier(
         // Fetch these commands' signing parties from the database.
         // Corda forbids database access during contract verification,
         // and so we must load the commands here eagerly instead.
+        // THIS ALSO DESERIALISES THE COMMANDS USING THE WRONG CONTEXT
+        // BECAUSE THAT CONTEXT WAS CHOSEN WHEN THE LAZY MAP WAS CREATED,
+        // AND CHANGING THE DEFAULT CONTEXT HERE DOES NOT AFFECT IT.
         ltx.commands.eagerDeserialise()
     }
+
+    override val transaction: Supplier<LedgerTransaction>
+        get() = Supplier(::createTransaction)
 
     private fun createTransaction(): LedgerTransaction {
         // Deserialize all relevant classes using the serializationContext.
@@ -870,21 +876,6 @@ private class BasicVerifier(
             }
         }
     }
-
-    /**
-     * Check the transaction is contract-valid by running verify() for each input and output state contract.
-     * If any contract fails to verify, the whole transaction is considered to be invalid.
-     *
-     * Note: Reference states are not verified.
-     */
-    override fun verifyContracts() {
-        try {
-            ContractVerifier(transactionClassLoader).apply(Supplier(::createTransaction))
-        } catch (e: TransactionVerificationException) {
-            logger.error("Error validating transaction ${ltx.id}.", e.cause)
-            throw e
-        }
-    }
 }
 
 /**
@@ -892,10 +883,10 @@ private class BasicVerifier(
  *
  * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
  */
+@Suppress("unused_parameter")
 @CordaInternal
-private class NoOpVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext)
-    : Verifier(ltx, serializationContext.deserializationClassLoader) {
+private class NoOpVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext) : Verifier {
     // Invoking LedgerTransaction.verify() from Contract.verify(LedgerTransaction)
     // will execute this function. But why would anyone do that?!
-    override fun verifyContracts() {}
+    override fun verify() {}
 }

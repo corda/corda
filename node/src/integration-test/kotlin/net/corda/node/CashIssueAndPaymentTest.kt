@@ -30,12 +30,12 @@ class CashIssueAndPaymentTest {
         private val configOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
         private val CASH_AMOUNT = 500.DOLLARS
 
-        fun parametersFor(): DriverParameters {
+        fun parametersFor(runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 systemProperties = mapOf("co.paralleluniverse.fibers.verifyInstrumentation" to "false"),
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = false, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 notaryCustomOverrides = configOverrides,
                 cordappsForAllNodes = listOf(
                     findCordapp("net.corda.finance.contracts"),

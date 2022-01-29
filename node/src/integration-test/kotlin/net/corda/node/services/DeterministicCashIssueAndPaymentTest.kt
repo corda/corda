@@ -32,11 +32,11 @@ class DeterministicCashIssueAndPaymentTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
+        fun parametersFor(djvmSources: DeterministicSourcesRule, runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 notaryCustomOverrides = configOverrides,
                 cordappsForAllNodes = listOf(
                     findCordapp("net.corda.finance.contracts"),

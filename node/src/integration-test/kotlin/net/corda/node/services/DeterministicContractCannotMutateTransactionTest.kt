@@ -28,7 +28,7 @@ class DeterministicContractCannotMutateTransactionTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        fun driverParameters(runInProcess: Boolean): DriverParameters {
+        fun driverParameters(runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = runInProcess,
@@ -42,7 +42,7 @@ class DeterministicContractCannotMutateTransactionTest {
 
     @Test(timeout = 300_000)
     fun testContractCannotModifyTransaction() {
-        driver(driverParameters(runInProcess = false)) {
+        driver(driverParameters()) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val txID = CordaRPCClient(hostAndPort = alice.rpcAddress)
                 .start(user.username, user.password)

@@ -35,11 +35,11 @@ class ContractWithCordappFixupTest {
         val dependentContractCorDapp = cordappWithPackages("net.corda.contracts.fixup.dependent").signed()
         val standaloneContractCorDapp = cordappWithPackages("net.corda.contracts.fixup.standalone").signed()
 
-        fun driverParameters(cordapps: List<TestCordapp>): DriverParameters {
+        fun driverParameters(cordapps: List<TestCordapp>, runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 cordappsForAllNodes = cordapps,
                 systemProperties = mapOf("net.corda.transactionbuilder.missingclass.disabled" to true.toString())
             )

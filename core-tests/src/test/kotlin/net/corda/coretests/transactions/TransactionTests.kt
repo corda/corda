@@ -21,6 +21,7 @@ import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.internal.TestingNamedCacheFactory
+import org.assertj.core.api.Assertions.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -36,6 +37,7 @@ import kotlin.test.assertNotEquals
 @RunWith(Parameterized::class)
 class TransactionTests(private val digestService : DigestService) {
     private companion object {
+        const val ISOLATED_JAR = "isolated-4.0.jar"
         val DUMMY_KEY_1 = generateKeyPair()
         val DUMMY_KEY_2 = generateKeyPair()
         val DUMMY_CASH_ISSUER_KEY = entropyToKeyPair(BigInteger.valueOf(10))
@@ -200,15 +202,15 @@ class TransactionTests(private val digestService : DigestService) {
 
         val outputs = listOf(outState)
         val commands = emptyList<CommandWithParties<CommandData>>()
-        val attachments = listOf(object : AbstractAttachment({
-            AttachmentsClassLoaderTests::class.java.getResource("isolated-4.0.jar").openStream().readBytes()
+        val attachments = listOf(ContractAttachment(object : AbstractAttachment({
+            (AttachmentsClassLoaderTests::class.java.getResource(ISOLATED_JAR) ?: fail("Missing $ISOLATED_JAR")).openStream().readBytes()
         }, TESTDSL_UPLOADER) {
             @Suppress("OverridingDeprecatedMember")
             override val signers: List<Party> = emptyList()
             override val signerKeys: List<PublicKey> = emptyList()
             override val size: Int = 1234
             override val id: SecureHash = SecureHash.zeroHash
-        })
+        }, DummyContract.PROGRAM_ID))
         val id = digestService.randomHash()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt(digestService.digestLength)
