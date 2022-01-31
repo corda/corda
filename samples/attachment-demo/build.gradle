@@ -77,6 +77,7 @@ def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
                                                                              "InvokeRpc.partiesFromName",
+                                                                             "InvokeRpc.notaryPartyFromX500Name",
                                                                              "InvokeRpc.attachmentExists",
                                                                              "InvokeRpc.openAttachment",
                                                                              "InvokeRpc.uploadAttachment",
