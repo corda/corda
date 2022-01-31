@@ -34,7 +34,7 @@ class DeterministicEvilContractCannotModifyStatesTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        fun driverParameters(runInProcess: Boolean): DriverParameters {
+        fun driverParameters(runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = runInProcess,
@@ -53,7 +53,7 @@ class DeterministicEvilContractCannotModifyStatesTest {
     @Test(timeout = 300_000)
     fun testContractThatTriesToModifyStates() {
         val evilData = MutableDataObject(5000)
-        driver(driverParameters(runInProcess = false)) {
+        driver(driverParameters()) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val ex = assertFailsWith<DeterministicVerificationException> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
