@@ -16,35 +16,35 @@ class RestrictedEntityManager(private val delegate: EntityManager, private val s
     }
 
     override fun close() {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.close() }
+        restrictDatabaseOperationFromEntityManager("close", serviceHub) { delegate.close() }
     }
 
     override fun <T : Any?> unwrap(cls: Class<T>?): T {
-        return restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.unwrap(cls) }
+        return restrictDatabaseOperationFromEntityManager("unwrap", serviceHub) { delegate.unwrap(cls) }
     }
 
     override fun getDelegate(): Any {
-        return restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.delegate }
+        return restrictDatabaseOperationFromEntityManager("getDelegate", serviceHub) { delegate.delegate }
     }
 
     override fun getMetamodel(): Metamodel? {
-        return restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.metamodel }
+        return restrictDatabaseOperationFromEntityManager("getMetamodel", serviceHub) { delegate.metamodel }
     }
 
     override fun joinTransaction() {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.joinTransaction() }
+        restrictDatabaseOperationFromEntityManager("joinTransaction", serviceHub) { delegate.joinTransaction() }
     }
 
     override fun lock(entity: Any?, lockMode: LockModeType?) {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.lock(entity, lockMode) }
+        restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.lock(entity, lockMode) }
     }
 
     override fun lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?) {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.lock(entity, lockMode, properties) }
+        restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.lock(entity, lockMode, properties) }
     }
 
     override fun setProperty(propertyName: String?, value: Any?) {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.setProperty(propertyName, value) }
+        restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.setProperty(propertyName, value) }
     }
 }
 
@@ -54,14 +54,14 @@ class RestrictedEntityTransaction(
 ) : EntityTransaction by delegate {
 
     override fun rollback() {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.rollback() }
+        restrictDatabaseOperationFromEntityManager("EntityTransaction.rollback", serviceHub) { delegate.rollback() }
     }
 
     override fun commit() {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.commit() }
+        restrictDatabaseOperationFromEntityManager("EntityTransaction.commit", serviceHub) { delegate.commit() }
     }
 
     override fun begin() {
-        restrictDatabaseOperationFromEntityManager(serviceHub) { delegate.begin() }
+        restrictDatabaseOperationFromEntityManager("EntityTransaction.begin", serviceHub) { delegate.begin() }
     }
 }

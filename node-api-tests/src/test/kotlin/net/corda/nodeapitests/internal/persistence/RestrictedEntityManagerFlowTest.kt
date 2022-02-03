@@ -72,11 +72,11 @@ class RestrictedEntityManagerFlowTest {
         aliceNode = mockNetwork.createPartyNode(CordaX500Name("Alice", "London", "GB"))
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
                 .isThrownBy { aliceNode.startFlow(TestGetMetamodelMethodIsBlocked()).getOrThrow() }
-                .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager")
+                .withMessageContaining("ServiceHub.withEntityManager.getMetamodel is restricted and cannot be called")
 
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
                 .isThrownBy { aliceNode.startFlow(TestJoinTransactionMethodIsBlocked()).getOrThrow() }
-                .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager")
+                .withMessageContaining("ServiceHub.withEntityManager.joinTransaction is restricted and cannot be called")
 
         mockNetwork.runNetwork()
     }
@@ -87,11 +87,11 @@ class RestrictedEntityManagerFlowTest {
         aliceNode = mockNetwork.createPartyNode(CordaX500Name("Alice", "London", "GB"))
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
             .isThrownBy { aliceNode.startFlow(TestGetMetamodelMethodIsBlocked()).getOrThrow() }
-            .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager")
+            .withMessageContaining("ServiceHub.withEntityManager.getMetamodel is restricted and cannot be called")
 
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
             .isThrownBy { aliceNode.startFlow(TestJoinTransactionMethodIsBlocked()).getOrThrow() }
-            .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager")
+            .withMessageContaining("ServiceHub.withEntityManager.joinTransaction is restricted and cannot be called")
 
         mockNetwork.runNetwork()
     }

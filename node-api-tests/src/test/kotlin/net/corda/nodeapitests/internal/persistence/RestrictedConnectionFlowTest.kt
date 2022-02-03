@@ -66,11 +66,11 @@ class RestrictedConnectionFlowTest {
         aliceNode = mockNetwork.createPartyNode(CordaX500Name("Alice", "London", "GB"))
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
                 .isThrownBy { aliceNode.startFlow(TestAutoCommitMethodIsBlocked()).getOrThrow() }
-                .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession")
+                .withMessageContaining("ServiceHub.jdbcSession.setAutoCommit is restricted and cannot be called")
 
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
                 .isThrownBy { aliceNode.startFlow(TestClearWarningsMethodIsBlocked()).getOrThrow() }
-                .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession")
+                .withMessageContaining("ServiceHub.jdbcSession.clearWarnings is restricted and cannot be called")
 
         mockNetwork.runNetwork()
     }
@@ -81,11 +81,11 @@ class RestrictedConnectionFlowTest {
         aliceNode = mockNetwork.createPartyNode(CordaX500Name("Alice", "London", "GB"))
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
             .isThrownBy { aliceNode.startFlow(TestAutoCommitMethodIsBlocked()).getOrThrow() }
-            .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession")
+            .withMessageContaining("ServiceHub.jdbcSession.setAutoCommit is restricted and cannot be called")
 
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
             .isThrownBy { aliceNode.startFlow(TestClearWarningsMethodIsBlocked()).getOrThrow() }
-            .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession")
+            .withMessageContaining("ServiceHub.jdbcSession.clearWarnings is restricted and cannot be called")
 
         mockNetwork.runNetwork()
     }
