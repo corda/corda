@@ -13,10 +13,14 @@ import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.TraversableTransaction
+import net.corda.core.transactions.WireTransaction
+import java.lang.IllegalStateException
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
@@ -293,7 +297,14 @@ interface ServiceHub : ServicesForResolution {
     // Helper method to create an additional signature for an existing (partially) [SignedTransaction].
     private fun createSignature(signedTransaction: SignedTransaction, publicKey: PublicKey, signatureMetadata: SignatureMetadata): TransactionSignature {
         val signableData = SignableData(signedTransaction.id, signatureMetadata)
+        validateOutputStatesCanBeDeserialized(signedTransaction.tx)
         return keyManagementService.sign(signableData, publicKey)
+    }
+
+    private fun validateOutputStatesCanBeDeserialized(coreTransaction: CoreTransaction) {
+        if (coreTransaction is TraversableTransaction) {
+            require(coreTransaction.outputStates.size >= 0) { "outputStates has an invalid size" }
+        }
     }
 
     /**
@@ -344,6 +355,7 @@ interface ServiceHub : ServicesForResolution {
     // Helper method to create a signature for a FilteredTransaction.
     private fun createSignature(filteredTransaction: FilteredTransaction, publicKey: PublicKey, signatureMetadata: SignatureMetadata): TransactionSignature {
         val signableData = SignableData(filteredTransaction.id, signatureMetadata)
+        validateOutputStatesCanBeDeserialized(filteredTransaction)
         return keyManagementService.sign(signableData, publicKey)
     }
 
