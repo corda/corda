@@ -271,7 +271,7 @@ class NodeVaultService(
                 // This will cause a failure as we can't deserialize such states in the context of the `appClassloader`.
                 // For now we ignore these states.
                 // In the future we will use the AttachmentsClassloader to correctly deserialize and asses the relevancy.
-                log.debug { "Could not deserialize state $idx from transaction $txId. Cause: $e" }
+                log.warn("Could not deserialize state $idx from transaction $txId. Cause: $e")
                 null
             }
         }.toMap()
