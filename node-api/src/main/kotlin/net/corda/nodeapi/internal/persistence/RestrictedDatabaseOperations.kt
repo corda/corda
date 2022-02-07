@@ -20,8 +20,10 @@ internal inline fun <T> restrictDatabaseOperation(method: String, serviceHub: Se
         throw UnsupportedOperationException("$method is restricted and cannot be called")
     } else {
         log.warnOnce(
-            "$method should not be called, but allowing as the target platform version is less than " +
-                    "$RESTRICTED_DATABASE_OPERATIONS. In later versions, with a target platform version of " +
+            "$method should not be called, as manipulating database transactions and connections breaks the Corda flow state machine in " +
+                    "ways that only become evident in failure scenarios. Purely for API backwards compatibility reasons, the prior " +
+                    "behaviour is continued for target platform versions less than $RESTRICTED_DATABASE_OPERATIONS. You should evolve " +
+                    "the CorDapp away from using these problematic APIs as soon as possible. For target platform version of " +
                     "$RESTRICTED_DATABASE_OPERATIONS or above, an exception will be thrown instead."
         )
         operation()
