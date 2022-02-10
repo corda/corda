@@ -691,6 +691,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.sshd?.port?.let {
                 if (isShellStarted) {
                     log.info("Binding Shell SSHD server on port $it.")
+                } else {
+                    log.info("SSH port defined but corda-shell is not installed in node's drivers directory")
                 }
             }
         }

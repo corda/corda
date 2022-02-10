@@ -270,6 +270,8 @@ open class NodeStartup : NodeStartupLogging {
                 }
                 if (node.configuration.shouldStartSSHDaemon() && isShellStarted) {
                     Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
+                } else {
+                    Node.printBasicNodeInfo("SSH port defined but corda-shell is not installed in node's drivers directory")
                 }
             },
             { th ->
