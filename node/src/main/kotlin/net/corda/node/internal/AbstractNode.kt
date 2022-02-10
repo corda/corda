@@ -687,10 +687,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
+            val isShellStarted = InteractiveShell.startShellIfInstalled(configuration, cordappLoader)
             configuration.sshd?.port?.let {
-                log.info("Binding Shell SSHD server on port $it.")
+                if (isShellStarted) {
+                    log.info("Binding Shell SSHD server on port $it.")
+                }
             }
-            InteractiveShell.startShellIfInstalled(configuration, cordappLoader)
         }
     }
 
