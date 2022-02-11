@@ -263,11 +263,19 @@ open class NodeStartup : NodeStartupLogging {
                 Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
                 // Don't start the shell if there's no console attached.
-                if (node.configuration.shouldStartLocalShell()) {
+                val isShellStarted = if (node.configuration.shouldStartLocalShell()) {
                     InteractiveShell.runLocalShellIfInstalled(node::stop)
+                } else {
+                    false
                 }
                 if (node.configuration.shouldStartSSHDaemon()) {
-                    Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
+                    if (isShellStarted) {
+                        Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
+                    } else {
+                        Node.printBasicNodeInfo(
+                            "SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory"
+                        )
+                    }
                 }
             },
             { th ->

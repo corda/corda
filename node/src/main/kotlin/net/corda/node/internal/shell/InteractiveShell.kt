@@ -17,28 +17,36 @@ object InteractiveShell {
     private const val RUN_LOCAL_SHELL_METHOD = "runLocalShell"
     private const val SET_USER_INFO_METHOD = "setUserInfo"
 
-    fun startShellIfInstalled(configuration: NodeConfiguration, cordappLoader: CordappLoader) {
-        if (isShellInstalled()) {
+    fun startShellIfInstalled(configuration: NodeConfiguration, cordappLoader: CordappLoader): Boolean {
+        return if (isShellInstalled()) {
             try {
                 val shellConfiguration = configuration.toShellConfigMap()
                 setUnsafeUsers(configuration)
                 startShell(shellConfiguration, cordappLoader)
+                true
             } catch (e: Exception) {
                 log.error("Shell failed to start", e)
+                false
             }
+        } else {
+            false
         }
     }
 
     /**
      * Only call this after [startShellIfInstalled] has been called or the required classes will not be loaded into the current classloader.
      */
-    fun runLocalShellIfInstalled(onExit: () -> Unit = {}) {
-        if (isShellInstalled()) {
+    fun runLocalShellIfInstalled(onExit: () -> Unit = {}): Boolean {
+        return if (isShellInstalled()) {
             try {
                 runLocalShell(onExit)
+                true
             } catch (e: Exception) {
                 log.error("Shell failed to start", e)
+                false
             }
+        } else {
+            false
         }
     }
 
