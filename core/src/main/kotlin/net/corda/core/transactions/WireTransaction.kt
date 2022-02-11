@@ -13,6 +13,7 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationFactory
@@ -50,7 +51,9 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
+class WireTransaction
+@ConstructorForDeserialization
+constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 

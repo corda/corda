@@ -7,6 +7,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowLogic
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.security.cert.X509Certificate
@@ -36,7 +37,9 @@ import java.security.cert.X509Certificate
  * @see CompositeKey
  */
 @KeepForDJVM
-class Party(val name: CordaX500Name, owningKey: PublicKey) : Destination, AbstractParty(owningKey) {
+class Party
+@ConstructorForDeserialization
+constructor(val name: CordaX500Name, owningKey: PublicKey) : Destination, AbstractParty(owningKey) {
     constructor(certificate: X509Certificate)
             : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
 
