@@ -29,6 +29,7 @@ pipeline {
     stages {
         stage('Publish to Artifactory') {
             steps {
+                authenticateGradleWrapper()
                 rtServer (
                         id: 'R3-Artifactory',
                         url: 'https://software.r3.com/artifactory',
