@@ -5,10 +5,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.DummyClusterSpec
 import net.corda.testing.node.internal.findCordapp
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
@@ -21,7 +24,8 @@ class AttachmentDemoTest {
         driver(DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(findCordapp("net.corda.attachmentdemo.contracts"), findCordapp("net.corda.attachmentdemo.workflows")))
+                cordappsForAllNodes = listOf(findCordapp("net.corda.attachmentdemo.contracts"), findCordapp("net.corda.attachmentdemo.workflows")),
+                notarySpecs = listOf(NotarySpec(name = DUMMY_NOTARY_NAME, cluster = DummyClusterSpec(clusterSize = 1))))
         ) {
             val demoUser = listOf(User("demo", "demo", setOf(all())))
             val (nodeA, nodeB) = listOf(

@@ -16,6 +16,7 @@ typealias Version = Int
  * Attention: this value affects consensus, so it requires a minimum platform version bump in order to be changed.
  */
 const val MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT = 20
+private const val DJVM_SANDBOX_PREFIX = "sandbox."
 
 private val log = loggerFor<AttachmentConstraint>()
 
@@ -29,10 +30,14 @@ val Attachment.contractVersion: Version get() = if (this is ContractAttachment) 
 val ContractState.requiredContractClassName: String? get() {
     val annotation = javaClass.getAnnotation(BelongsToContract::class.java)
     if (annotation != null) {
-        return annotation.value.java.typeName
+        return annotation.value.java.typeName.removePrefix(DJVM_SANDBOX_PREFIX)
     }
     val enclosingClass = javaClass.enclosingClass ?: return null
-    return if (Contract::class.java.isAssignableFrom(enclosingClass)) enclosingClass.typeName else null
+    return if (Contract::class.java.isAssignableFrom(enclosingClass)) {
+        enclosingClass.typeName.removePrefix(DJVM_SANDBOX_PREFIX)
+    } else {
+        null
+    }
 }
 
 /**

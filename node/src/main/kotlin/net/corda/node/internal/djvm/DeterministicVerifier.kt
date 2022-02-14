@@ -7,13 +7,14 @@ import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.ContractVerifier
+import net.corda.core.internal.TransactionVerifier
 import net.corda.core.internal.Verifier
 import net.corda.core.internal.getNamesOfClassesImplementing
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.utilities.contextLogger
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.execution.ExecutionSummary
 import net.corda.djvm.execution.IsolatedTask
@@ -26,10 +27,14 @@ import java.util.function.Function
 import kotlin.collections.LinkedHashSet
 
 class DeterministicVerifier(
-    ltx: LedgerTransaction,
-    transactionClassLoader: ClassLoader,
+    private val ltx: LedgerTransaction,
+    private val transactionClassLoader: ClassLoader,
     private val sandboxConfiguration: SandboxConfiguration
-) : Verifier(ltx, transactionClassLoader) {
+) : Verifier {
+    private companion object {
+        private val logger = contextLogger()
+    }
+
     /**
      * Read the whitelisted classes without using the [java.util.ServiceLoader] mechanism
      * because the whitelists themselves are untrusted.
@@ -47,7 +52,7 @@ class DeterministicVerifier(
             }
     }
 
-    override fun verifyContracts() {
+    override fun verify() {
         val customSerializerNames = getNamesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
         val serializationWhitelistNames = getSerializationWhitelistNames(transactionClassLoader)
         val result = IsolatedTask(ltx.id.toString(), sandboxConfiguration).run<Any>(Function { classLoader ->
@@ -113,7 +118,7 @@ class DeterministicVerifier(
                 ))
             }
 
-            val verifier = taskFactory.apply(ContractVerifier::class.java)
+            val verifier = taskFactory.apply(TransactionVerifier::class.java)
 
             // Now execute the contract verifier task within the sandbox...
             verifier.apply(sandboxTx)
@@ -128,7 +133,7 @@ class DeterministicVerifier(
             val sandboxEx = SandboxException(
                 Message.getMessageFromException(this),
                 result.identifier,
-                ClassSource.fromClassName(ContractVerifier::class.java.name),
+                ClassSource.fromClassName(TransactionVerifier::class.java.name),
                 ExecutionSummary(result.costs),
                 this
             )
