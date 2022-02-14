@@ -94,6 +94,7 @@ pipeline {
                         }
                         stage('Recompile') {
                             steps {
+                                authenticateGradleWrapper()
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
