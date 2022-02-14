@@ -49,7 +49,7 @@ pipeline {
     stages {
         stage('Compile') {
             steps {
-                 authenticateGradleWrapper()
+                authenticateGradleWrapper()
                 sh script: [
                         './gradlew',
                         COMMON_GRADLE_PARAMS,
