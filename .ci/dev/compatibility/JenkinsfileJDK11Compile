@@ -25,6 +25,7 @@ pipeline {
     stages {
         stage('JDK 11 Compile') {
             steps {
+                authenticateGradleWrapper()
                 sh "./gradlew --no-daemon -Pcompilation.allWarningsAsErrors=true -Ptests.failFast=false " +
                 "-Ptests.ignoreFailures=true clean compileAll --stacktrace"
             }

@@ -47,6 +47,7 @@ pipeline {
     stages {
         stage('Unit Tests') {
             steps {
+                authenticateGradleWrapper()
                 sh "./gradlew clean --continue test --info -Ptests.failFast=true"
             }
         }

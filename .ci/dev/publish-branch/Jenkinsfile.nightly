@@ -63,6 +63,7 @@ pipeline {
     stages {
         stage('Sonatype Check') {
             steps {
+                authenticateGradleWrapper()
                 sh "./gradlew --no-daemon clean jar"
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
