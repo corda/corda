@@ -6,4 +6,5 @@ The text constant describes the feature and the numeric specifies the platform v
  */
 object PlatformVersionSwitches {
     const val ENABLE_P2P_COMPRESSION = 7
+    const val RESTRICTED_DATABASE_OPERATIONS = 7
 }
