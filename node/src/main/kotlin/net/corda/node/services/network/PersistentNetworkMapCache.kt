@@ -455,7 +455,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         database.transaction {
             val result = getAllNodeInfos(session)
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
-            for (nodeInfo in result) session.remove(nodeInfo)
+            for (nodeInfo in result) {
+                session.remove(nodeInfo)
+                archiveNamedIdentity(session, nodeInfo.toNodeInfo())
+            }
         }
     }
 
