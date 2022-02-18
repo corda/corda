@@ -4,8 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.checkParameterHash
+import net.corda.core.internal.dependencies
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
+import net.corda.core.transactions.RawDependency
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
@@ -30,7 +32,8 @@ import java.security.SignatureException
  */
 open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
                                                             private val checkSufficientSignatures: Boolean = true,
-                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE) : FlowLogic<SignedTransaction>() {
+                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
+                                                            private val encrypted : Boolean = false) : FlowLogic<SignedTransaction>() {
     @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
@@ -47,11 +50,59 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
             it.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(it.networkParametersHash)
-            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord))
+
+            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord, encrypted = encrypted))
+
             logger.info("Transaction dependencies resolution completed.")
             try {
-                it.verify(serviceHub, checkSufficientSignatures)
-                it
+                if (encrypted) {
+
+                    val validatedTxSvc = serviceHub.validatedTransactions
+
+                    val encryptedTxs = it.dependencies.mapNotNull {
+                        validatedTxId ->
+                        validatedTxSvc.getEncryptedTransaction(validatedTxId)?.let { etx ->
+                            etx.id to etx
+                        }
+                    }.toMap()
+
+                    val signedTxs = it.dependencies.mapNotNull {
+                        validatedTxId ->
+                        validatedTxSvc.getTransaction(validatedTxId)?.let { stx ->
+                            stx.id to stx
+                        }
+                    }.toMap()
+
+                    val networkParameters = it.dependencies.mapNotNull { depTxId ->
+                        val npHash = when {
+                            encryptedTxs[depTxId] != null -> serviceHub.encryptedTransactionService.getNetworkParameterHash(encryptedTxs[depTxId]!!)
+                                    ?: serviceHub.networkParametersService.defaultHash
+                            signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
+                                    ?: serviceHub.networkParametersService.defaultHash
+                            else -> null
+                        }
+
+                        npHash?.let { depTxId to npHash }
+                    }.associate {
+                        netParams ->
+                        netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
+                    }
+
+                    val rawDependencies = it.dependencies.associate {
+                        txId ->
+                        txId to RawDependency(
+                                encryptedTxs[txId],
+                                signedTxs[txId],
+                                networkParameters[txId]
+                        )
+                    }
+
+                    serviceHub.encryptedTransactionService.verifyTransaction(it, serviceHub, checkSufficientSignatures, rawDependencies)
+                    it
+                } else {
+                    it.verify(serviceHub, checkSufficientSignatures)
+                    it
+                }
             } catch (e: Exception) {
                 logger.warn("Transaction verification failed.")
                 throw e

@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.debug
@@ -21,7 +22,8 @@ class ResolveTransactionsFlow private constructor(
         val initialTx: SignedTransaction?,
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
-        val statesToRecord: StatesToRecord
+        val statesToRecord: StatesToRecord,
+        val encrypted: Boolean = false
 ) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
@@ -36,6 +38,10 @@ class ResolveTransactionsFlow private constructor(
     constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(transaction, transaction.dependencies, otherSide, statesToRecord)
 
+    // TODO: PoC constructor
+    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, encrypted: Boolean)
+            : this(transaction, transaction.dependencies, otherSide, statesToRecord, encrypted)
+
     private var fetchNetParamsFromCounterpart = false
 
     @Suppress("MagicNumber")
@@ -49,16 +55,25 @@ class ResolveTransactionsFlow private constructor(
         // Fetch missing parameters flow was added in version 4. This check is needed so we don't end up with node V4 sending parameters
         // request to node V3 that doesn't know about this protocol.
         fetchNetParamsFromCounterpart = counterpartyPlatformVersion >= PlatformVersionSwitches.FETCH_MISSING_NETWORK_PARAMETERS
-        val batchMode = counterpartyPlatformVersion >= PlatformVersionSwitches.BATCH_DOWNLOAD_COUNTERPARTY_BACKCHAIN
+
+        // disable batch mode for encrypted
+        val batchMode = counterpartyPlatformVersion >= PlatformVersionSwitches.BATCH_DOWNLOAD_COUNTERPARTY_BACKCHAIN && !encrypted
+
         logger.debug { "ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Batch mode = $batchMode" }
 
+        // TODO: attachments and net params are not encrypted (yet)
         if (initialTx != null) {
             fetchMissingAttachments(initialTx)
             fetchMissingNetworkParameters(initialTx)
         }
 
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
-        resolver.downloadDependencies(batchMode)
+
+        if (encrypted) {
+            resolver.downloadEncryptedDependencies()
+        } else {
+            resolver.downloadDependencies(batchMode)
+        }
 
         logger.trace { "ResolveTransactionsFlow: Sending END." }
         otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
@@ -66,7 +81,12 @@ class ResolveTransactionsFlow private constructor(
         // If transaction resolution is performed for a transaction where some states are relevant, then those should be
         // recorded if this has not already occurred.
         val usedStatesToRecord = if (statesToRecord == StatesToRecord.NONE) StatesToRecord.ONLY_RELEVANT else statesToRecord
-        resolver.recordDependencies(usedStatesToRecord)
+
+        if (encrypted) {
+            resolver.recordEncryptedDependencies(usedStatesToRecord)
+        } else {
+            resolver.recordDependencies(usedStatesToRecord)
+        }
     }
 
     /**
@@ -101,6 +121,27 @@ class ResolveTransactionsFlow private constructor(
     fun fetchMissingNetworkParameters(transaction: SignedTransaction): Boolean {
         return if (fetchNetParamsFromCounterpart) {
             transaction.networkParametersHash?.let {
+                val downloads = subFlow(FetchNetworkParametersFlow(setOf(it), otherSide)).downloaded
+                downloads.isNotEmpty()
+            } ?: false
+        } else {
+            false
+        }
+    }
+
+    // PoC variants.
+    // TODO: no support for contract upgrade!
+    @Suspendable
+    fun fetchMissingAttachments(transaction: EncryptedTransaction): Boolean {
+        val attachmentIds = serviceHub.encryptedTransactionService.getAttachmentIds(transaction)
+        val downloads = subFlow(FetchAttachmentsFlow(attachmentIds, otherSide)).downloaded
+        return (downloads.isNotEmpty())
+    }
+
+    @Suspendable
+    fun fetchMissingNetworkParameters(transaction: EncryptedTransaction): Boolean {
+        return if (fetchNetParamsFromCounterpart) {
+            serviceHub.encryptedTransactionService.getNetworkParameterHash(transaction)?.let {
                 val downloads = subFlow(FetchNetworkParametersFlow(setOf(it), otherSide)).downloaded
                 downloads.isNotEmpty()
             } ?: false

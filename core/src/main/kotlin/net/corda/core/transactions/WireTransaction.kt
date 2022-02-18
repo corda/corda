@@ -123,6 +123,31 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         )
     }
 
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    @DeleteForDJVM
+    fun toLedgerTransaction(services: ServicesForResolution, dependencyMap: SignedTransactionDependencyMap): LedgerTransaction {
+        return services.specialise(
+                toLedgerTransactionInternal(
+                        resolveIdentity = { services.identityService.partyFromKey(it) },
+                        resolveAttachment = { services.attachments.openAttachment(it) },
+                        resolveStateRefAsSerialized = {
+
+                            val dependencies = dependencyMap[it.txhash] ?: throw TransactionResolutionException(it.txhash)
+                            val stateRef = dependencies.inputsAndRefs[it] ?: throw TransactionResolutionException(it.txhash)
+
+                            stateRef.serialize()
+                        },
+                        resolveParameters = {
+                            val hashToResolve = it ?: services.networkParametersService.defaultHash
+                            services.networkParametersService.lookup(hashToResolve)
+                        },
+                        // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
+                        isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true },
+                        attachmentsClassLoaderCache = (services as? ServiceHubCoreInternal)?.attachmentsClassLoaderCache
+                )
+        )
+    }
+
     // Helper for deprecated toLedgerTransaction
     // TODO: revisit once Deterministic JVM code updated
     @Suppress("UNUSED") // not sure if this field can be removed safely??

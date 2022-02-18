@@ -3,11 +3,14 @@ package net.corda.node.services
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.FetchEncryptedTransactionsFlow
 import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.TransactionsResolver
 import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
+import net.corda.core.transactions.EncryptedTransaction
+import net.corda.core.transactions.RawDependency
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -113,11 +116,142 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
         }
     }
 
+    @Suspendable
+    override fun downloadEncryptedDependencies() {
+        logger.debug { "Downloading encrypted dependencies for transactions ${flow.txHashes}" }
+        val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
+        val encryptSvc = flow.serviceHub.encryptedTransactionService
+
+        val nextRequests = LinkedHashSet<SecureHash>(flow.txHashes) // Keep things unique but ordered, for unit test stability.
+        val topologicalSort = TopologicalSort()
+
+        while (nextRequests.isNotEmpty()) {
+            logger.debug { "Main fetch loop: size_remaining=${nextRequests.size}" }
+            // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
+            // graph we're traversing.
+            nextRequests.removeAll(topologicalSort.transactionIds)
+            if (nextRequests.isEmpty()) {
+                // Done early.
+                break
+            }
+
+            // Request the standalone transaction data (which may refer to things we don't yet have).
+            val (existingTxIds, downloadedTxs) = fetchEncryptedRequiredTransactions(Collections.singleton(nextRequests.first())) // Fetch first item only
+            for (tx in downloadedTxs) {
+                val dependencies = encryptSvc.getDependencies(tx)
+                topologicalSort.add(tx.id, dependencies)
+            }
+
+            var suspended = true
+            for (downloaded in downloadedTxs) {
+                suspended = false
+                val dependencies =  encryptSvc.getDependencies(downloaded)
+                // Do not keep in memory as this bloats the checkpoint. Write each item to the database.
+                transactionStorage.addUnverifiedEncryptedTransaction(downloaded)
+
+                // The write locks are only released over a suspend, so need to keep track of whether the flow has been suspended to ensure
+                // that locks are not held beyond each while loop iteration (as doing this would result in a deadlock due to claiming locks
+                // in the wrong order)
+                val suspendedViaAttachments = flow.fetchMissingAttachments(downloaded)
+                val suspendedViaParams = flow.fetchMissingNetworkParameters(downloaded)
+                suspended = suspended || suspendedViaAttachments || suspendedViaParams
+
+                // Add all input states and reference input states to the work queue.
+                nextRequests.addAll(dependencies)
+            }
+
+            // If the flow did not suspend on the last iteration of the downloaded loop above, perform a suspend here to ensure that
+            // all data is flushed to the database.
+            if (!suspended) {
+                FlowLogic.sleep(0.seconds)
+            }
+
+            // It's possible that the node has a transaction in storage already. Dependencies should also be present for this transaction,
+            // so just remove these IDs from the set of next requests.
+            nextRequests.removeAll(existingTxIds)
+        }
+
+        sortedDependencies = topologicalSort.complete()
+        logger.debug { "Downloaded ${sortedDependencies?.size} dependencies from remote peer for transactions ${flow.txHashes}" }
+    }
+
+    @Suspendable
+    override fun recordEncryptedDependencies(usedStatesToRecord: StatesToRecord) {
+        val sortedDependencies = checkNotNull(this.sortedDependencies)
+        val encryptSvc = flow.serviceHub.encryptedTransactionService
+        logger.trace { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
+        val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
+        for (txId in sortedDependencies) {
+            // Retrieve and delete the transaction from the unverified store.
+            val (tx, isVerified) = checkNotNull(transactionStorage.getEncryptedTransactionInternal(txId)) {
+                "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
+            }
+            if (!isVerified) {
+
+                val dependencies = encryptSvc.getDependencies(tx)
+
+                val encryptedTxs = dependencies.mapNotNull {
+                    depTxId ->
+                    transactionStorage.getEncryptedTransaction(depTxId)?.let { etx ->
+                        etx.id to etx
+                    }
+                }.toMap()
+
+                val signedTxs = dependencies.mapNotNull {
+                    depTxId ->
+                    transactionStorage.getTransaction(depTxId)?.let { stx ->
+                        stx.id to stx
+                    }
+                }.toMap()
+
+                val services = flow.serviceHub
+                val networkParameters = dependencies.mapNotNull { depTxId ->
+                    val npHash = when {
+                        encryptedTxs[depTxId] != null -> encryptSvc.getNetworkParameterHash(encryptedTxs[depTxId]!!)
+                                ?: services.networkParametersService.defaultHash
+                        signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
+                                ?: services.networkParametersService.defaultHash
+                        else -> null
+                    }
+
+                    npHash?.let { depTxId to npHash }
+                }.associate {
+                    it.first to services.networkParametersService.lookup(it.second)
+                }
+
+                val rawDependencies = dependencies.associate {
+                    it to RawDependency(
+                            encryptedTxs[it],
+                            signedTxs[it],
+                            networkParameters[it]
+                    )
+                }
+
+                encryptSvc.verifyTransaction(tx, flow.serviceHub,  true,  rawDependencies)
+
+                // TODO: why does this usually go through the serviceHub's recordTransactions function and not
+                //  direct to the validatedTransactions service??
+                //  flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
+
+                val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
+                transactionStorage.addEncryptedTransaction(tx)
+            } else {
+                logger.debug { "No need to record $txId as it's already been verified" }
+            }
+        }
+    }
+
     // The transactions already present in the database do not need to be checkpointed on every iteration of downloading
     // dependencies for other transactions, so strip these down to just the IDs here.
     @Suspendable
     private fun fetchRequiredTransactions(requests: Set<SecureHash>): Pair<List<SecureHash>, List<SignedTransaction>> {
         val requestedTxs = flow.subFlow(FetchTransactionsFlow(requests, flow.otherSide))
+        return Pair(requestedTxs.fromDisk.map { it.id }, requestedTxs.downloaded)
+    }
+
+    @Suspendable
+    private fun fetchEncryptedRequiredTransactions(requests: Set<SecureHash>): Pair<List<SecureHash>, List<EncryptedTransaction>> {
+        val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide))
         return Pair(requestedTxs.fromDisk.map { it.id }, requestedTxs.downloaded)
     }
 

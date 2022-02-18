@@ -67,7 +67,7 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * @param otherSide the target party.
  * @param stx the [SignedTransaction] being sent to the [otherSideSession].
  */
-open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
+open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, override val encrypted: Boolean = false) : DataVendingFlow(otherSide, stx, encrypted)
 
 /**
  * The [SendStateAndRefFlow] should be used to send a list of input [StateAndRef] to another peer that wishes to verify
@@ -80,7 +80,7 @@ open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) :
  */
 open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSideSession, stateAndRefs)
 
-open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) : FlowLogic<Void?>() {
+open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, open val encrypted: Boolean = false) : FlowLogic<Void?>() {
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
 
@@ -91,6 +91,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
     @Suspendable
     override fun call(): Void? {
+
+        val encryptSvc = serviceHub.encryptedTransactionService
+
         val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
         val maxPayloadSize = networkMaxMessageSize / 2
 
@@ -146,20 +149,48 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
             var numSent = 0
             payload = when (dataRequest.dataType) {
                 FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                    logger.trace { "Sending: TRANSACTION (dataRequest.hashes.size=${dataRequest.hashes.size})" }
+
+                    logger.trace { "Sending: TRANSACTION (dataRequest.hashes.size=${dataRequest.hashes.size}), encrypted: $encrypted" }
+
                     if (!authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
-                    val tx = serviceHub.validatedTransactions.getTransaction(txId)
-                            ?: throw FetchDataFlow.HashNotFound(txId)
-                    authorisedTransactions.removeAuthorised(tx.id)
-                    authorisedTransactions.addAuthorised(getInputTransactions(tx))
-                    totalByteCount += tx.txBits.size
-                    numSent++
-                    tx
+
+                    if (encrypted) {
+                        var encryptedTx = serviceHub.validatedTransactions.getEncryptedTransaction(txId)
+
+                        if (encryptedTx == null) {
+                            val tx = serviceHub.validatedTransactions.getTransaction(txId)
+                                    ?: throw FetchDataFlow.HashNotFound(txId)
+
+                            encryptedTx = encryptSvc.encryptTransaction(tx)
+                        }
+
+                        authorisedTransactions.removeAuthorised(encryptedTx.id)
+                        authorisedTransactions.addAuthorised(encryptSvc.getDependencies(encryptedTx))
+
+                        totalByteCount += encryptedTx.bytes.size
+                        numSent++
+                        encryptedTx
+                    } else {
+
+                        val tx = serviceHub.validatedTransactions.getTransaction(txId)
+                                ?: throw FetchDataFlow.HashNotFound(txId)
+                        authorisedTransactions.removeAuthorised(tx.id)
+                        authorisedTransactions.addAuthorised(getInputTransactions(tx))
+                        totalByteCount += tx.txBits.size
+                        numSent++
+                        tx
+                    }
                 }
                 // Loop on all items returned using dataRequest.hashes.map:
                 FetchDataFlow.DataType.BATCH_TRANSACTION -> dataRequest.hashes.map { txId ->
+
+                    // TODO: adding this for PoC to ensure that we don't fall into this
+                    if (encrypted) {
+                        throw FlowException("Batch mode disabled for encryption PoC")
+                    }
+
                     if (!authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }

@@ -7,7 +7,13 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
@@ -15,6 +21,7 @@ import net.corda.node.SimpleClock
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -32,12 +39,17 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import rx.plugins.RxJavaHooks
+import java.security.SecureRandom
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.spec.IvParameterSpec
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class DBTransactionStorageTests {
     private companion object {
@@ -390,6 +402,47 @@ class DBTransactionStorageTests {
         assertThat(warning).isEqualTo(DBTransactionStorage.TRANSACTION_ALREADY_IN_PROGRESS_WARNING)
     }
 
+    @Test(timeout=300_000)
+    fun `encrypted transaction`() {
+        val now = Instant.ofEpochSecond(111222333L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+
+        val keygen = KeyGenerator.getInstance("AES")
+        keygen.init(256)
+        val key = keygen.generateKey()
+
+        val cipherTransformation = "AES/CBC/PKCS5PADDING"
+        val encryptionCipher = Cipher.getInstance(cipherTransformation)
+        val iv = generateIv()
+        encryptionCipher.init(Cipher.ENCRYPT_MODE, key, iv)
+
+        val encryptedTxBytes = encryptionCipher.doFinal(transaction.serialize(context = contextToUse().withEncoding(CordaSerializationEncoding.SNAPPY)).bytes)
+        val encryptedTx = EncryptedTransaction(transaction.id, encryptedTxBytes)
+
+        transactionStorage.addEncryptedTransaction(encryptedTx)
+
+        val storedTx = transactionStorage.getEncryptedTransaction(transaction.id)
+
+        val decryptionCipher = Cipher.getInstance(cipherTransformation)
+        decryptionCipher.init(Cipher.DECRYPT_MODE, key, iv)
+
+        assertNotNull(storedTx, "Could not find stored encrypted message")
+
+        val decryptedTx = decryptionCipher.doFinal(storedTx!!.bytes).deserialize<SignedTransaction>(context = contextToUse())
+
+        assertEquals(decryptedTx, transaction)
+
+        assertEquals(now, readTransactionTimestampFromDB(transaction.id))
+    }
+
+    fun generateIv(): IvParameterSpec? {
+        val iv = ByteArray(16)
+        SecureRandom().nextBytes(iv)
+        return IvParameterSpec(iv)
+    }
+
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
         transactionStorage = DBTransactionStorage(database, TestingNamedCacheFactory(cacheSizeBytesOverride
                 ?: 1024), clock)
@@ -412,5 +465,13 @@ class DBTransactionStorageTests {
                 wtx,
                 listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID)))
         )
+    }
+
+    private fun contextToUse(): SerializationContext {
+        return if (effectiveSerializationEnv.serializationFactory.currentContext?.useCase == SerializationContext.UseCase.Storage) {
+            effectiveSerializationEnv.serializationFactory.currentContext!!
+        } else {
+            SerializationDefaults.STORAGE_CONTEXT
+        }
     }
 }

@@ -18,6 +18,7 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
@@ -271,6 +272,12 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
+}
+
+class FetchEncryptedTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
+        FetchDataFlow<EncryptedTransaction, EncryptedTransaction>(requests, otherSide, DataType.TRANSACTION) {
+
+    override fun load(txid: SecureHash): EncryptedTransaction? = serviceHub.validatedTransactions.getEncryptedTransaction(txid)
 }
 
 class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :

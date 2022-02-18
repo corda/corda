@@ -4,8 +4,10 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.toHexString
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
@@ -29,6 +31,9 @@ class CashPaymentFlowTests {
     private lateinit var bankOfCordaNode: StartedMockNode
     private lateinit var bankOfCorda: Party
     private lateinit var aliceNode: StartedMockNode
+    private lateinit var bobNode: StartedMockNode
+
+    private lateinit var issuanceTx: SignedTransaction
 
     @Before
     fun start() {
@@ -36,8 +41,9 @@ class CashPaymentFlowTests {
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        bobNode = mockNet.createPartyNode(BOB_NAME)
         val future = bankOfCordaNode.startFlow(CashIssueFlow(initialBalance, ref, mockNet.defaultNotaryIdentity))
-        future.getOrThrow()
+        issuanceTx = future.getOrThrow().stx
     }
 
     @After
@@ -58,7 +64,12 @@ class CashPaymentFlowTests {
 
         val future = bankOfCordaNode.startFlow(CashPaymentFlow(expectedPayment, payTo))
         mockNet.runNetwork()
-        future.getOrThrow()
+        val payTx = future.getOrThrow().stx
+
+        // pay Bob (not anonymously as we want to check that Bob owns it)
+        val futureBob = aliceNode.startFlow(CashPaymentFlow(expectedPayment, bobNode.info.singleIdentity(), false))
+        mockNet.runNetwork()
+        val bobTx = futureBob.getOrThrow().stx
 
         // Check Bank of Corda vault updates - we take in some issued cash and split it into $500 to the notary
         // and $1,500 back to us, so we expect to consume one state, produce one state for our own vault
@@ -79,6 +90,18 @@ class CashPaymentFlowTests {
                 val paymentState = produced.single().state.data
                 assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
             }
+        }
+
+
+        listOf(bobNode, aliceNode, bankOfCordaNode).forEach { node ->
+            listOf(issuanceTx, payTx, bobTx).forEach {  stx ->
+                println("${node.info.singleIdentity()} UNENCRYPTED: ${node.services.validatedTransactions.getTransaction(stx.id)}")
+                println("${node.info.singleIdentity()} ENCRYPTED:   ${node.services.validatedTransactions.getEncryptedTransaction(stx.id)?.let { "${stx.id} -> ${it.bytes.toHexString()}"}}")
+            }
+        }
+
+        bobNode.services.vaultService.queryBy(Cash.State::class.java).states.forEach {
+            println("BOB: ${it.state.data}")
         }
     }
 

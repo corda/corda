@@ -49,6 +49,8 @@ interface ServicesForResolution {
     /** Returns the network parameters the node is operating under. */
     val networkParameters: NetworkParameters
 
+    val encryptedTransactionService: EncryptedTransactionService
+
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
@@ -119,6 +121,8 @@ enum class StatesToRecord {
 interface ServiceHub : ServicesForResolution {
     // NOTE: Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid
     // their internal state from being serialized in checkpoints.
+
+    override val encryptedTransactionService: EncryptedTransactionService
 
     /**
      * The vault service lets you observe, soft lock and add notes to states that involve you or are relevant to your

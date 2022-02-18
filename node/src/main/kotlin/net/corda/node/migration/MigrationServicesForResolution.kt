@@ -10,6 +10,7 @@ import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.EncryptedTransactionService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
@@ -38,7 +39,8 @@ class MigrationServicesForResolution(
         override val attachments: AttachmentStorageInternal,
         private val transactions: TransactionStorage,
         private val cordaDB: CordaPersistence,
-        cacheFactory: MigrationNamedCacheFactory
+        cacheFactory: MigrationNamedCacheFactory,
+        override val encryptedTransactionService: EncryptedTransactionService = EncryptedTransactionService()
 ): ServicesForResolution {
 
     companion object {

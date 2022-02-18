@@ -180,7 +180,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             oldV3Broadcast(notarised, oldParticipants.toSet())
             for (session in sessions) {
                 try {
-                    subFlow(SendTransactionFlow(session, notarised))
+                    // PoC send encrypted
+                    subFlow(SendTransactionFlow(session, notarised, true))
                     logger.info("Party ${session.counterparty} received the transaction.")
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -282,7 +283,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                                                     private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        return subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = true, statesToRecord = statesToRecord) {
+        return subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = true, statesToRecord = statesToRecord, encrypted = true) {
             override fun checkBeforeRecording(stx: SignedTransaction) {
                 require(expectedTxId == null || expectedTxId == stx.id) {
                     "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +

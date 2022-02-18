@@ -86,7 +86,8 @@ open class MockServices private constructor(
         override val keyManagementService: KeyManagementService = MockKeyManagementService(
                 identityService,
                 *arrayOf(initialIdentity.keyPair) + moreKeys
-        )
+        ),
+        override val encryptedTransactionService : EncryptedTransactionService = EncryptedTransactionService()
 ) : ServiceHub {
 
     companion object {
@@ -457,7 +458,7 @@ open class MockServices private constructor(
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()
 
     protected val servicesForResolution: ServicesForResolution
-        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
+        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions, encryptedTransactionService)
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }

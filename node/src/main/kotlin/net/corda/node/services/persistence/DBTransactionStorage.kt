@@ -13,6 +13,7 @@ import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -53,8 +54,13 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val status: TransactionStatus,
 
             @Column(name = "timestamp", nullable = false)
-            val timestamp: Instant
-            )
+            val timestamp: Instant,
+
+            @Column(name = "encrypted", nullable = false)
+            val encrypted: Boolean = false
+
+            // TODO: will need to also store the signature of who verified this tx
+    )
 
     enum class TransactionStatus {
         UNVERIFIED,
@@ -120,17 +126,33 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = SecureHash::toString,
                     fromPersistentEntity = {
-                        SecureHash.create(it.txId) to TxCacheValue(
-                                it.transaction.deserialize(context = contextToUse()),
-                                it.status)
+                        if (it.encrypted) {
+                            SecureHash.create(it.txId) to TxCacheValue(
+                                    EncryptedTransaction(
+                                            SecureHash.parse(it.txId),
+                                            it.transaction
+                                    ),
+                                    it.status
+                            )
+                        } else {
+                            SecureHash.create(it.txId) to TxCacheValue(
+                                    it.transaction.deserialize<SignedTransaction>(context = contextToUse()),
+                                    it.status
+                            )
+                        }
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction(
                                 txId = key.toString(),
                                 stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString(),
-                                transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
+                                transaction = if( value.encrypted ) {
+                                    value.txBits
+                                } else {
+                                    value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes
+                                },
                                 status = value.status,
-                                timestamp = clock.instant()
+                                timestamp = clock.instant(),
+                                encrypted = value.encrypted
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -138,6 +160,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             )
         }
 
+        // TODO: weight of transactions will be wrong at this stage for encrypted transactions
         private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
             val actTx = tx.peekableValue ?: return 0
             return actTx.sigs.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.txBits.size
@@ -187,7 +210,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     override fun getTransaction(id: SecureHash): SignedTransaction? {
         return database.transaction {
-            txStorage.content[id]?.let { if (it.status.isVerified()) it.toSignedTx() else null }
+            txStorage.content[id]?.let { if (it.status.isVerified() && !it.encrypted ) it.toSignedTx() else null }
         }
     }
 
@@ -207,7 +230,58 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
         return database.transaction {
-            txStorage.content[id]?.let { it.toSignedTx() to it.status.isVerified() }
+            txStorage.content[id]?.let {
+                if (!it.encrypted) {
+                    it.toSignedTx() to it.status.isVerified()
+                } else null
+            }
+        }
+    }
+
+    override fun addEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean {
+        val transactionId = encryptedTransaction.id
+        return database.transaction {
+            txStorage.locked {
+                val cachedValue = TxCacheValue(encryptedTransaction, TransactionStatus.VERIFIED)
+                val addedOrUpdated = addOrUpdate(transactionId, cachedValue) { k, _ -> updateTransaction(k) }
+                if (addedOrUpdated) {
+                    logger.debug { "Transaction $transactionId has been recorded as verified" }
+                } else {
+                    logger.debug { "Transaction $transactionId is already recorded as verified, so no need to re-record" }
+                }
+                addedOrUpdated
+            }
+        }
+    }
+
+    override fun getEncryptedTransaction(id: SecureHash): EncryptedTransaction? {
+        return database.transaction {
+            txStorage.content[id]?.let { if (it.status.isVerified() && it.encrypted ) it.toEncryptedTx() else null }
+        }
+    }
+
+    override fun addUnverifiedEncryptedTransaction(encryptedTransaction: EncryptedTransaction) {
+        val transactionId = encryptedTransaction.id
+        database.transaction {
+            txStorage.locked {
+                val cacheValue = TxCacheValue(encryptedTransaction, status = TransactionStatus.UNVERIFIED)
+                val added = addWithDuplicatesAllowed(transactionId, cacheValue)
+                if (added) {
+                    logger.debug { "Encrypted Transaction $transactionId recorded as unverified." }
+                } else {
+                    logger.info("Encrypted Transaction $transactionId already exists so no need to record.")
+                }
+            }
+        }
+    }
+
+    override fun getEncryptedTransactionInternal(id: SecureHash): Pair<EncryptedTransaction, Boolean>? {
+        return database.transaction {
+            txStorage.content[id]?.let {
+                if (it.encrypted) {
+                    it.toEncryptedTx() to it.status.isVerified()
+                } else null
+            }
         }
     }
 
@@ -262,21 +336,70 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     private fun snapshot(): List<SignedTransaction> {
         return txStorage.content.allPersisted.use {
-            it.filter { it.second.status.isVerified() }.map { it.second.toSignedTx() }.toList()
+            it.filter { it.second.status.isVerified() && !it.second.encrypted }.map { it.second.toSignedTx() }.toList()
         }
     }
 
     // Cache value type to just store the immutable bits of a signed transaction plus conversion helpers
     private data class TxCacheValue(
-            val txBits: SerializedBytes<CoreTransaction>,
+            val id: SecureHash,
+            val txBits: ByteArray,
             val sigs: List<TransactionSignature>,
-            val status: TransactionStatus
+            val status: TransactionStatus,
+            val encrypted: Boolean
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
-                stx.txBits,
-                Collections.unmodifiableList(stx.sigs),
-                status)
+                stx.id,
+                stx.txBits.bytes,
+                stx.sigs,
+                status,
+        false)
 
-        fun toSignedTx() = SignedTransaction(txBits, sigs)
+        constructor(encryptedTransaction: EncryptedTransaction, status: TransactionStatus) : this(
+                encryptedTransaction.id,
+                encryptedTransaction.bytes,
+                emptyList(),
+                status,
+                true)
+
+        fun toSignedTx() : SignedTransaction {
+            return if (!encrypted) {
+                val txBitsAsSerialized = SerializedBytes<CoreTransaction>(txBits)
+                SignedTransaction(txBitsAsSerialized, sigs)
+            } else {
+                throw IllegalArgumentException("Cannot get signed transaction for encrypted tx")
+            }
+        }
+
+        fun toEncryptedTx() : EncryptedTransaction {
+            return if (encrypted) {
+                // TODO: EncryptedTransaction will be extended to include verification signature
+                EncryptedTransaction(id, txBits)
+            } else {
+                throw IllegalArgumentException("Cannot get encrypted transaction for signed tx")
+            }
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as TxCacheValue
+
+            if (!txBits.contentEquals(other.txBits)) return false
+            if (sigs != other.sigs) return false
+            if (status != other.status) return false
+            if (encrypted != other.encrypted) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = txBits.contentHashCode()
+            result = 31 * result + sigs.hashCode()
+            result = 31 * result + status.hashCode()
+            result = 31 * result + encrypted.hashCode()
+            return result
+        }
     }
 }

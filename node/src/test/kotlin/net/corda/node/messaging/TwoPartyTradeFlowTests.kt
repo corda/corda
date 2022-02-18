@@ -18,6 +18,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -784,6 +785,31 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
             return database.transaction {
                 delegate.getTransactionInternal(id)
+            }
+        }
+
+        // TODO: these Encrypted transactions may need an overhaul is probably indicative that overloading the current storage was a bad idea
+        override fun addEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean {
+            return database.transaction {
+                delegate.addEncryptedTransaction(encryptedTransaction)
+            }
+        }
+
+        override fun addUnverifiedEncryptedTransaction(encryptedTransaction: EncryptedTransaction) {
+            return database.transaction {
+                delegate.addUnverifiedEncryptedTransaction(encryptedTransaction)
+            }
+        }
+
+        override fun getEncryptedTransaction(id: SecureHash): EncryptedTransaction? {
+            return database.transaction {
+                delegate.getEncryptedTransaction(id)
+            }
+        }
+
+        override fun getEncryptedTransactionInternal(id: SecureHash): Pair<EncryptedTransaction, Boolean>? {
+            return database.transaction {
+                delegate.getEncryptedTransactionInternal(id)
             }
         }
     }
