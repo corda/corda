@@ -56,20 +56,17 @@ buildscript {
             'org.opentest4j**'
     ]
 
-    // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
-    // We must configure it manually to use the latest capsule version.
-    ext.capsule_version = '1.0.3'
+    ext.capsule_version = constants.getProperty("capsuleVersion")
 
-    ext.asm_version = '7.1'
-    ext.artemis_version = '2.19.1'
-    // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
-    ext.jackson_version = '2.9.7'
-    ext.jetty_version = '9.4.19.v20190610'
-    ext.jersey_version = '2.25'
-    ext.servlet_version = '4.0.1'
-    ext.assertj_version = '3.12.2'
-    ext.slf4j_version = '1.7.30'
-    ext.log4j_version = '2.17.1'
+    ext.asm_version = constants.getProperty("asmVersion")
+    ext.artemis_version = constants.getProperty("artemisVersion")
+    ext.jackson_version = constants.getProperty("jacksonVersion")
+    ext.jetty_version = constants.getProperty("jettyVersion")
+    ext.jersey_version = constants.getProperty("jerseyVersion")
+    ext.servlet_version = constants.getProperty("servletVersion")
+    ext.assertj_version = constants.getProperty("assertjVersion")
+    ext.slf4j_version = constants.getProperty("slf4JVersion")
+    ext.log4j_version = constants.getProperty("log4JVersion")
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
@@ -78,63 +75,58 @@ buildscript {
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
     ext.djvm_version = constants.getProperty("djvmVersion")
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
-    ext.okhttp_version = '3.14.2'
-    ext.netty_version = '4.1.68.Final'
+    ext.okhttp_version = constants.getProperty("okhttpVersion")
+    ext.netty_version = constants.getProperty("nettyVersion")
     ext.tcnative_version = constants.getProperty("tcnativeVersion")
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
-    ext.fileupload_version = '1.4'
-    ext.kryo_version = '4.0.2'
-    ext.kryo_serializer_version = '0.43'
-    // Legacy JUnit 4 version
-    ext.junit_version = '4.12'
-    // Need this version to access classpath scanning error handling fix -
-    // see https://github.com/junit-team/junit5/commit/389de48c2a18c5a93a7203ef424aa47a8a835a74
-    // Upgrade to 5.5.x when GA release is available.
-    ext.junit_vintage_version = '5.5.0-RC1'
-    ext.junit_jupiter_version = '5.5.0-RC1'
-    ext.junit_platform_version = '1.5.0-RC1'
-    ext.mockito_version = '2.28.2'
-    ext.mockito_kotlin_version = '1.6.0'
-    ext.hamkrest_version = '1.7.0.0'
-    ext.jopt_simple_version = '5.0.2'
-    ext.jansi_version = '1.18'
-    ext.hibernate_version = '5.4.3.Final'
-    ext.h2_version = '1.4.199' // Update docs if renamed or removed.
-    ext.rxjava_version = '1.3.8'
-    ext.dokka_version = '0.9.17'
-    ext.eddsa_version = '0.3.0'
-    ext.dependency_checker_version = '5.2.0'
-    ext.commons_collections_version = '4.3'
-    ext.beanutils_version = '1.9.4'
+    ext.fileupload_version = constants.getProperty("fileuploadVersion")
+    ext.kryo_version = constants.getProperty("kryoVersion")
+    ext.kryo_serializer_version = constants.getProperty("kryoSerializerVersion")
+    ext.junit_version = constants.getProperty("junitVersion")
+    ext.junit_vintage_version = constants.getProperty("junitVintageVersion")
+    ext.junit_jupiter_version = constants.getProperty("junitJupiterVersion")
+    ext.junit_platform_version = constants.getProperty("junitPlatformVersion")
+    ext.mockito_version = constants.getProperty("mockitoVersion")
+    ext.mockito_kotlin_version = constants.getProperty("mockitoKotlinVersion")
+    ext.hamkrest_version = constants.getProperty("hamkrestVersion")
+    ext.jopt_simple_version = constants.getProperty("joptSimpleVersion")
+    ext.jansi_version = constants.getProperty("jansiVersion")
+    ext.hibernate_version = constants.getProperty("hibernateVersion")
+    ext.h2_version = constants.getProperty("h2Version")
+    ext.rxjava_version = constants.getProperty("rxjavaVersion")
+    ext.dokka_version = constants.getProperty("dokkaVersion")
+    ext.eddsa_version = constants.getProperty("eddsaVersion")
+    ext.dependency_checker_version = constants.getProperty("dependencyCheckerVersion")
+    ext.commons_collections_version = constants.getProperty("commonsCollectionsVersion")
+    ext.beanutils_version = constants.getProperty("beanutilsVersion")
     ext.jsr305_version = constants.getProperty("jsr305Version")
-    ext.shiro_version = '1.4.1'
+    ext.shiro_version = constants.getProperty("shiroVersion")
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
-    ext.hikari_version = '3.3.1'
-    ext.liquibase_version = '3.6.3'
+    ext.hikari_version = constants.getProperty("hikariVersion")
+    ext.liquibase_version = constants.getProperty("liquibaseVersion")
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
-    ext.docker_compose_rule_version = '1.5.0'
-    ext.selenium_version = '3.141.59'
-    ext.ghostdriver_version = '2.1.0'
+    ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
+    ext.selenium_version = constants.getProperty("seleniumVersion")
+    ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
     ext.proguard_version = constants.getProperty('proguardVersion')
-    ext.jsch_version = '0.1.55'
-    ext.protonj_version = '0.33.0' // Overide Artemis version
-    ext.snappy_version = '0.4'
+    ext.jsch_version = constants.getProperty("jschVersion")
+    ext.protonj_version = constants.getProperty("protonjVersion")
+    ext.snappy_version = constants.getProperty("snappyVersion")
     ext.class_graph_version = constants.getProperty('classgraphVersion')
-    ext.jcabi_manifests_version = '1.1'
-    ext.picocli_version = '3.9.6'
-    ext.commons_lang_version = '3.9'
-    ext.commons_io_version = '2.6'
-    ext.controlsfx_version = '8.40.15'
+    ext.jcabi_manifests_version = constants.getProperty("jcabiManifestsVersion")
+    ext.picocli_version = constants.getProperty("picocliVersion")
+    ext.commons_lang_version = constants.getProperty("commonsLangVersion")
+    ext.commons_io_version = constants.getProperty("commonsIoVersion")
+    ext.controlsfx_version = constants.getProperty("controlsfxVersion")
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     if (JavaVersion.current().isJava8()) {
-        ext.fontawesomefx_commons_version = '8.15'
-        ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+        ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
+        ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
     } else {
-        // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
-        ext.fontawesomefx_commons_version = '11.0'
-        ext.fontawesomefx_fontawesome_version = '4.7.0-11'
+        ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
+        ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
     }
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
