@@ -32,4 +32,12 @@ interface TransactionsResolver {
 
     @Suspendable
     fun recordDependencies(usedStatesToRecord: StatesToRecord)
+
+    // for Poc we will create a completely parallel set of functions, perhaps a different implementation of TransactionsResolver is
+    // preferable long term
+    @Suspendable
+    fun downloadEncryptedDependencies()
+
+    @Suspendable
+    fun recordEncryptedDependencies(usedStatesToRecord: StatesToRecord)
 }

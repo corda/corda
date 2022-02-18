@@ -6,6 +6,7 @@ import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.EncryptedTransactionService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
@@ -19,7 +20,8 @@ data class ServicesForResolutionImpl(
         override val attachments: AttachmentStorage,
         override val cordappProvider: CordappProvider,
         override val networkParametersService: NetworkParametersService,
-        private val validatedTransactions: TransactionStorage
+        private val validatedTransactions: TransactionStorage,
+        override val encryptedTransactionService: EncryptedTransactionService
 ) : ServicesForResolution {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")

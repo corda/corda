@@ -14,8 +14,10 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
@@ -23,6 +25,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -254,15 +257,31 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addTransaction(transaction: SignedTransaction): Boolean
 
     /**
+     * Add a new encrypted transaction to the store
+     */
+    fun addEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean
+
+    /**
      * Add a new *unverified* transaction to the store.
      */
     fun addUnverifiedTransaction(transaction: SignedTransaction)
+
+    /**
+     * Add a new *unverified* encrypted transaction to the store.
+     */
+    fun addUnverifiedEncryptedTransaction(encryptedTransaction: EncryptedTransaction)
 
     /**
      * Return the transaction with the given ID from the store, and a flag of whether it's verified. Returns null if no transaction with the
      * ID exists.
      */
     fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>?
+
+    /**
+     * Return the transaction with the given ID from the store, and a flag of whether it's verified. Returns null if no transaction with the
+     * ID exists.
+     */
+    fun getEncryptedTransactionInternal(id: SecureHash): Pair<EncryptedTransaction, Boolean>?
 
     /**
      * Returns a future that completes with the transaction corresponding to [id] once it has been committed. Do not warn when run inside

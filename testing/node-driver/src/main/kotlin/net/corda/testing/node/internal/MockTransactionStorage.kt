@@ -6,6 +6,7 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.testing.node.MockServices
@@ -30,6 +31,7 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
     }
 
     private val txns = HashMap<SecureHash, TxHolder>()
+    private val encryptedTxns = HashMap<SecureHash, EncryptedTxHolder>()
 
     private val _updatesPublisher = PublishSubject.create<SignedTransaction>()
 
@@ -61,5 +63,27 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? = txns[id]?.let { Pair(it.stx, it.isVerified) }
 
+    override fun addEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean {
+        val current = encryptedTxns.putIfAbsent(encryptedTransaction.id, EncryptedTxHolder(encryptedTransaction, isVerified = true))
+        return if (current == null) {
+            true
+        } else if (!current.isVerified) {
+            current.isVerified = true
+            true
+        } else {
+            false
+        }
+    }
+
+    override fun addUnverifiedEncryptedTransaction(encryptedTransaction: EncryptedTransaction) {
+        encryptedTxns.putIfAbsent(encryptedTransaction.id, EncryptedTxHolder(encryptedTransaction, isVerified = false))
+    }
+
+    override fun getEncryptedTransaction(id: SecureHash): EncryptedTransaction? = encryptedTxns[id]?.let { if (it.isVerified) it.etx else null }
+
+    override fun getEncryptedTransactionInternal(id: SecureHash): Pair<EncryptedTransaction, Boolean>? =
+            encryptedTxns[id]?.let { Pair(it.etx, it.isVerified) }
+
     private class TxHolder(val stx: SignedTransaction, var isVerified: Boolean)
+    private class EncryptedTxHolder(val etx: EncryptedTransaction, var isVerified: Boolean)
 }
