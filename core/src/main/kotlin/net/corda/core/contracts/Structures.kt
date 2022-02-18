@@ -11,6 +11,7 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -326,7 +327,10 @@ interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out 
  */
 @CordaSerializable
 @KeepForDJVM
-class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+class PrivacySalt
+
+@ConstructorForDeserialization
+constructor(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** Constructs a salt with a randomly-generated saltLength byte value. */
     @DeleteForDJVM
     constructor(saltLength: Int) : this(secureRandomBytes(saltLength))

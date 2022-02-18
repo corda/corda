@@ -28,7 +28,9 @@ import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
-const val PLATFORM_VERSION = 10
+
+// When incrementing platformVersion make sure to update PLATFORM_VERSION in constants.properties as well.
+const val PLATFORM_VERSION = 11
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)

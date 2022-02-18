@@ -474,10 +474,12 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
 
         return LocalConstructorInformation(
                 observedConstructor.javaConstructor!!.apply { isAccessible = true },
-                observedConstructor.parameters.map {
+                observedConstructor.parameters.mapIndexed { index, it ->
                     val parameterType = it.type.javaType
                     LocalConstructorParameterInformation(
-                            it.name ?: throw IllegalStateException("Unnamed parameter in constructor $observedConstructor"),
+                            it.name ?: observedConstructor.javaConstructor?.let { constructor ->
+                                constructor.parameters[index].name
+                            } ?: throw IllegalStateException("Unnamed parameter in constructor $observedConstructor"),
                             resolveAndBuild(parameterType),
                             parameterType.asClass().isPrimitive || !it.type.isMarkedNullable)
                 })

@@ -14,7 +14,7 @@ inline fun <reified A : Annotation> Class<*>.requireAnnotation(): A {
 
 fun scanForCustomSerializationScheme(className: String, classLoader: ClassLoader) : SerializationScheme {
     val schemaClass = try {
-        classLoader.loadClass(className)
+        Class.forName(className, false, classLoader)
     } catch (exception: ClassNotFoundException) {
         throw ConfigurationException("$className was declared as a custom serialization scheme but could not be found.")
     }

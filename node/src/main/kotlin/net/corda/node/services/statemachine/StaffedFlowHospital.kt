@@ -11,6 +11,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.VisibleForTesting
@@ -21,6 +22,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
+import net.corda.node.services.statemachine.transitions.StartedFlowTransition
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.io.Closeable
@@ -29,10 +31,9 @@ import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.Timer
 import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.PersistenceException
-import kotlin.collections.HashMap
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
 
@@ -485,13 +486,22 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                         "the flow by re-starting the node. State machine state: $currentState", newError)
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else if (isFromReceiveFinalityFlow(newError)) {
-                if (isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveFinality(newError)) {
-                    // no need to keep around the flow, since notarisation has already failed at the counterparty.
-                    Diagnosis.NOT_MY_SPECIALTY
-                } else {
-                    log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                            "the flow by re-starting the node. State machine state: $currentState", newError)
-                    Diagnosis.OVERNIGHT_OBSERVATION
+                when {
+                    isErrorPropagatedFromCounterparty(newError) && isErrorThrownDuringReceiveTransactionFlow(newError) -> {
+                        // no need to keep around the flow, since notarisation has already failed at the counterparty.
+                        Diagnosis.NOT_MY_SPECIALTY
+                    }
+                    isEndSessionErrorThrownDuringReceiveTransactionFlow(newError) -> {
+                        // Typically occurs if the initiating flow catches a notary exception and ends their flow successfully.
+                        Diagnosis.NOT_MY_SPECIALTY
+                    }
+                    else -> {
+                        log.warn(
+                            "Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
+                                    "the flow by re-starting the node. State machine state: $currentState", newError
+                        )
+                        Diagnosis.OVERNIGHT_OBSERVATION
+                    }
                 }
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
@@ -523,12 +533,25 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
          * This is because in the latter case, the transaction might have already been finalised and deleting the flow
          * would introduce risk for inconsistency between nodes.
          */
-        private fun isErrorThrownDuringReceiveFinality(error: Throwable): Boolean {
+        private fun isErrorThrownDuringReceiveTransactionFlow(error: Throwable): Boolean {
             val strippedStacktrace = error.stackTrace
                     .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
                     .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
             return strippedStacktrace.isNotEmpty()
                     && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!!)
+        }
+
+        /**
+         * Checks if an end session error exception was thrown and that it did so within [ReceiveTransactionFlow].
+         *
+         * The check for [ReceiveTransactionFlow] is important to ensure that the session didn't end within [ResolveTransactionsFlow] which
+         * implies that it has been receiving the transaction's dependencies and therefore ending before receiving the whole transaction
+         * is incorrect behaviour.
+         */
+        private fun isEndSessionErrorThrownDuringReceiveTransactionFlow(error: Throwable): Boolean {
+            return error is UnexpectedFlowEndException
+                    && error.message?.contains(StartedFlowTransition.UNEXPECTED_SESSION_END_MESSAGE) == true
+                    && isErrorThrownDuringReceiveTransactionFlow(error)
         }
     }
 

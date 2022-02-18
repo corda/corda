@@ -61,9 +61,7 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
     private lateinit var tlsCert: X509Certificate
 
     private val chain
-        get() = listOf(tlsCert, nodeCACert, doormanCert, rootCert).map {
-            javax.security.cert.X509Certificate.getInstance(it.encoded)
-        }.toTypedArray()
+        get() = listOf(tlsCert, nodeCACert, doormanCert, rootCert).toTypedArray()
 
     @Before
     fun before() {

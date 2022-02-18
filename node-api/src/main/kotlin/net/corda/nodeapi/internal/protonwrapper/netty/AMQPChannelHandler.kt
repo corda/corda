@@ -302,7 +302,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                                                            -> logWarnWithMDC("Received close_notify during handshake")
             // io.netty.handler.ssl.SslHandler.setHandshakeFailureTransportFailure()
             cause is SSLException && (cause.message?.contains("writing TLS control frames") == true) -> logWarnWithMDC(cause.message!!)
-
+            cause is SSLException && (cause.message?.contains("internal_error") == true) -> logWarnWithMDC("Received internal_error during handshake")
             else -> badCert = true
         }
         logWarnWithMDC("Handshake failure: ${evt.cause().message}")

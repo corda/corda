@@ -13,8 +13,10 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.serialize
@@ -49,7 +51,9 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
+class WireTransaction
+@ConstructorForDeserialization
+constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
@@ -179,7 +183,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
-                { it.isUploaderTrusted() },
+                Attachment::isUploaderTrusted,
                 null
         )
     }
@@ -212,19 +216,26 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
-            val parties = cmd.signers.mapNotNull { pk -> resolveIdentity(pk) }
+            val parties = cmd.signers.mapNotNull(resolveIdentity)
             CommandWithParties(cmd.signers, parties, cmd.value)
+        }
+
+        // Ensure that the lazy mappings will use the correct SerializationContext.
+        val serializationFactory = SerializationFactory.defaultFactory
+        val serializationContext = serializationFactory.defaultContext
+        val toStateAndRef = { ssar: SerializedStateAndRef, _: Int ->
+            ssar.toStateAndRef(serializationFactory, serializationContext)
         }
 
         val serializedResolvedInputs = inputs.map { ref ->
             SerializedStateAndRef(resolveStateRefAsSerialized(ref) ?: throw TransactionResolutionException(ref.txhash), ref)
         }
-        val resolvedInputs = serializedResolvedInputs.lazyMapped { star, _ -> star.toStateAndRef() }
+        val resolvedInputs = serializedResolvedInputs.lazyMapped(toStateAndRef)
 
         val serializedResolvedReferences = references.map { ref ->
             SerializedStateAndRef(resolveStateRefAsSerialized(ref) ?: throw TransactionResolutionException(ref.txhash), ref)
         }
-        val resolvedReferences = serializedResolvedReferences.lazyMapped { star, _ -> star.toStateAndRef() }
+        val resolvedReferences = serializedResolvedReferences.lazyMapped(toStateAndRef)
 
         val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
 
@@ -239,7 +250,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 notary,
                 timeWindow,
                 privacySalt,
-                resolvedNetworkParameters,
+                resolvedNetworkParameters.toImmutable(),
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,

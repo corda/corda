@@ -11,6 +11,7 @@ import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
@@ -89,28 +90,26 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     override val started: Boolean
         get() = activeMQServer.isStarted
 
-    // TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from
-    // Artemis IO errors
     @Throws(IOException::class, AddressBindingException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
         val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
-            // Throw any exceptions which are detected during startup
-            registerActivationFailureListener { exception -> throw exception }
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
             registerPostQueueCreationCallback { log.debug { "Queue Created: $it" } }
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         try {
-            activeMQServer.start()
-        } catch (e: IOException) {
+            activeMQServer.startSynchronously()
+        } catch (e: Throwable) {
             log.error("Unable to start message broker", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)
             } else {
+                log.error("Unexpected error starting message broker", e)
                 throw e
             }
         }

@@ -72,15 +72,6 @@ dependencies {
     testCompile "com.github.detro:ghostdriver:$ghostdriver_version"
 }
 
-repositories {
-    maven {
-        url 'https://maven.scijava.org/content/repositories/public/'
-        content {
-            includeGroup 'com.github.detro'
-        }
-    }
-}
-
 bootRepackage {
     enabled = false
 }

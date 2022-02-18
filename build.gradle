@@ -13,6 +13,7 @@ buildscript {
     ext.baseVersion = constants.getProperty("cordaVersion")
     ext.versionSuffix = constants.getProperty("versionSuffix")
 
+    ext.corda_build_edition = System.getenv("CORDA_BUILD_EDITION")?.trim() ?: "Corda Open Source"
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
@@ -60,7 +61,7 @@ buildscript {
     ext.capsule_version = '1.0.3'
 
     ext.asm_version = '7.1'
-    ext.artemis_version = '2.6.2'
+    ext.artemis_version = '2.19.1'
     // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
     ext.jackson_version = '2.9.7'
     ext.jetty_version = '9.4.19.v20190610'
@@ -68,7 +69,7 @@ buildscript {
     ext.servlet_version = '4.0.1'
     ext.assertj_version = '3.12.2'
     ext.slf4j_version = '1.7.30'
-    ext.log4j_version = '2.16.0'
+    ext.log4j_version = '2.17.1'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
@@ -78,7 +79,7 @@ buildscript {
     ext.djvm_version = constants.getProperty("djvmVersion")
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = '3.14.2'
-    ext.netty_version = '4.1.67.Final'
+    ext.netty_version = '4.1.68.Final'
     ext.tcnative_version = '2.0.42.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
@@ -105,7 +106,6 @@ buildscript {
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.4'
-    ext.crash_version = '1.7.4'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.1'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
@@ -330,7 +330,7 @@ allprojects {
             attributes('Corda-Release-Version': corda_release_version)
             attributes('Corda-Platform-Version': corda_platform_version)
             attributes('Corda-Revision': corda_revision)
-            attributes('Corda-Vendor': 'Corda Open Source')
+            attributes('Corda-Vendor': corda_build_edition)
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
             attributes('Corda-Docs-Link': corda_docs_link)
         }
@@ -404,6 +404,8 @@ allprojects {
                     includeGroup 'co.paralleluniverse'
                     includeGroup 'org.crashub'
                     includeGroup 'com.github.bft-smart'
+                    includeGroup 'com.github.detro'
+                    includeGroup 'org.apache.activemq'
                 }
             }
             maven {

@@ -41,11 +41,11 @@ class DeterministicContractWithCustomSerializerTest {
         @JvmField
         val contractCordapp = cordappWithPackages("net.corda.contracts.serialization.custom").signed()
 
-        fun parametersFor(djvmSources: DeterministicSourcesRule, vararg cordapps: TestCordapp): DriverParameters {
+        fun parametersFor(djvmSources: DeterministicSourcesRule, cordapps: List<TestCordapp>, runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 cordappsForAllNodes = cordapps.toList(),
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda
@@ -61,7 +61,7 @@ class DeterministicContractWithCustomSerializerTest {
 
     @Test(timeout=300_000)
 	fun `test DJVM can verify using custom serializer`() {
-        driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
+        driver(parametersFor(djvmSources, listOf(flowCordapp, contractCordapp))) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {
                 alice.rpc.startFlow(::CustomSerializerFlow, Currantsy(GOOD_CURRANTS))
@@ -73,7 +73,7 @@ class DeterministicContractWithCustomSerializerTest {
 
     @Test(timeout=300_000)
 	fun `test DJVM can fail verify using custom serializer`() {
-        driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
+        driver(parametersFor(djvmSources, listOf(flowCordapp, contractCordapp))) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val currantsy = Currantsy(BAD_CURRANTS)
             val ex = assertThrows<DeterministicVerificationException> {

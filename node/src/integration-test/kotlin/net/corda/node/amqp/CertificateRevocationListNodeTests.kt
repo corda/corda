@@ -32,6 +32,7 @@ import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
@@ -487,7 +488,7 @@ class CertificateRevocationListNodeTests {
         @Path("node.crl")
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
-            return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
+            return Response.ok(createRevocationList(
                     server,
                     SIGNATURE_ALGORITHM,
                     INTERMEDIATE_CA.certificate,
@@ -663,7 +664,8 @@ class CertificateRevocationListNodeTests {
         val queueName = P2P_PREFIX + "Test"
         val (artemisServer, artemisClient) = createArtemisServerAndClient(serverPort, crlCheckSoftFail, crlCheckArtemisServer)
         artemisServer.use {
-            artemisClient.started!!.session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+            artemisClient.started!!.session.createQueue(
+                    QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true))
 
             val (amqpClient, nodeCert) = createClient(serverPort, true, nodeCrlDistPoint)
             if (revokedNodeCert) {

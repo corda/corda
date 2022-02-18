@@ -1,16 +1,22 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.serialization.serialize
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
+import org.junit.Assert
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
@@ -18,11 +24,159 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class NetworkMapCacheTest {
+    private val TestStartedNode.party get() = info.legalIdentities.first()
     private val mockNet = InternalMockNetwork()
 
     @After
     fun teardown() {
         mockNet.stopNodes()
+    }
+
+    @Test(timeout=300_000)
+    fun `unknown Party object gets recorded as null entry in node_named_identities table`() {
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        assertEquals(null, bobNode.services.identityService.wellKnownPartyFromX500Name(CHARLIE_NAME))
+        bobNode.database.transaction {
+            val cb = session.criteriaBuilder
+            val query = cb.createQuery(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+            val root = query.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+
+            val matchPublicKey = cb.isNull(root.get<String>("publicKeyHash"))
+            val matchName = cb.equal(root.get<String>("name"), CHARLIE_NAME.toString())
+            query.select(root).where(cb.and(matchName, matchPublicKey))
+
+            val resultList = session.createQuery(query).resultList
+            assertEquals(1, resultList.size)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `check Party object can still be retrieved when not in node_named_identities table`() {
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
+
+        val bobCacheInternal = bobCache as NetworkMapCacheInternal
+        assertNotNull(bobCacheInternal)
+        bobCache.removeNode(aliceNode.info)
+
+        val alicePubKeyHash = aliceNode.info.legalIdentities[0].owningKey.toStringShort()
+
+        // Remove node adds an entry to the PersistentPartyToPublicKeyHash, so for this test delete this entry.
+        removeNodeFromNodeNamedIdentitiesTable(bobNode, alicePubKeyHash)
+        assertEquals(aliceNode.party, bobNode.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME))
+        assertEquals(1, queryNodeNamedIdentities(bobNode, ALICE_NAME, alicePubKeyHash).size)
+    }
+
+    private fun removeNodeFromNodeNamedIdentitiesTable(node: TestStartedNode, publicKeyHashToRemove: String) {
+        // Remove node adds an entry to the PersistentPartyToPublicKeyHash, so for this test delete this entry.
+        node.database.transaction {
+            val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+            val queryRoot = deleteQuery.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+            deleteQuery.where(session.criteriaBuilder.equal(queryRoot.get<String>("publicKeyHash"), publicKeyHashToRemove))
+            session.createQuery(deleteQuery).executeUpdate()
+        }
+    }
+
+    private fun queryNodeNamedIdentities(node: TestStartedNode, party: CordaX500Name, publicKeyHash: String): List<PersistentNetworkMapCache.PersistentPartyToPublicKeyHash> {
+        return node.database.transaction {
+            val cb = session.criteriaBuilder
+            val query = cb.createQuery(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+            val root = query.from(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)
+            val matchPublicKeyHash = cb.equal(root.get<String>("publicKeyHash"), publicKeyHash)
+            val matchName = cb.equal(root.get<String>("name"), party.toString())
+            query.select(root).where(cb.and(matchName, matchPublicKeyHash))
+            session.createQuery(query).resultList
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `check removed node is inserted into node_name_identities table and then its Party object can be retrieved`() {
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
+
+        val bobCacheInternal = bobCache as NetworkMapCacheInternal
+        assertNotNull(bobCacheInternal)
+
+        val aliceParty1 = bobNode.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME)
+        println("alicePart1 = $aliceParty1")
+        bobCache.removeNode(aliceNode.info)
+
+        val alicePubKeyHash = aliceNode.info.legalIdentities[0].owningKey.toStringShort()
+        assertEquals(1, queryNodeNamedIdentities(bobNode, ALICE_NAME, alicePubKeyHash).size)
+        assertEquals(aliceNode.party, bobNode.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME))
+    }
+
+    @Test(timeout=300_000)
+    fun `check two removed nodes are both archived and then both Party objects are retrievable`() {
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
+
+        val bobCacheInternal = bobCache as NetworkMapCacheInternal
+        assertNotNull(bobCacheInternal)
+        bobCache.removeNode(aliceNode.info)
+        bobCache.removeNode(charlieNode.info)
+
+        val alicePubKeyHash = aliceNode.info.legalIdentities[0].owningKey.toStringShort()
+        val charliePubKeyHash = charlieNode.info.legalIdentities[0].owningKey.toStringShort()
+        assertEquals(1, queryNodeNamedIdentities(bobNode, ALICE_NAME, alicePubKeyHash).size)
+        assertEquals(1, queryNodeNamedIdentities(bobNode, CHARLIE_NAME, charliePubKeyHash).size)
+        assertEquals(aliceNode.party, bobNode.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME))
+        assertEquals(charlieNode.party, bobNode.services.identityService.wellKnownPartyFromX500Name(CHARLIE_NAME))
+    }
+
+    @Test(timeout=300_000)
+    fun `check latest identity returned according to certificate after identity mock rotatated`() {
+        val aliceNode1 = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
+        val alicePubKeyHash1 = aliceNode1.info.legalIdentities[0].owningKey.toStringShort()
+        val bobCacheInternal = bobCache as NetworkMapCacheInternal
+        assertNotNull(bobCacheInternal)
+        bobCache.removeNode(aliceNode1.info)
+        // Remove node adds an entry to the PersistentPartyToPublicKeyHash, so for this test delete this entry.
+        removeNodeFromNodeNamedIdentitiesTable(bobNode, alicePubKeyHash1)
+        val aliceNode2 = mockNet.createPartyNode(ALICE_NAME)
+        val alicePubKeyHash2 = aliceNode2.info.legalIdentities[0].owningKey.toStringShort()
+        bobCache.removeNode(aliceNode2.info)
+        // Remove node adds an entry to the PersistentPartyToPublicKeyHash, so for this test delete this entry.
+        removeNodeFromNodeNamedIdentitiesTable(bobNode, alicePubKeyHash2)
+        val retrievedParty = bobNode.services.identityService.wellKnownPartyFromX500Name(ALICE_NAME)
+        // For both identity certificates the valid from date is the start of the day, so either could be returned.
+        assertTrue(aliceNode2.party == retrievedParty || aliceNode1.party == retrievedParty)
+    }
+
+    @Test(timeout=300_000)
+    fun `latest identity is archived after identity rotated`() {
+        var aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val bobCache: NetworkMapCache = bobNode.services.networkMapCache
+
+        val bobCacheInternal = bobCache as NetworkMapCacheInternal
+        assertNotNull(bobCacheInternal)
+        bobCache.removeNode(aliceNode.info)
+
+        fun checkArchivedIdentity(bobNode: TestStartedNode, aliceNode: TestStartedNode) {
+            val alicePubKeyHash = aliceNode.info.legalIdentities[0].owningKey.toStringShort()
+            bobNode.database.transaction {
+                val hashToIdentityStatement = database.dataSource.connection.prepareStatement("SELECT name, pk_hash FROM node_named_identities WHERE pk_hash=?")
+                hashToIdentityStatement.setString(1, alicePubKeyHash)
+                val aliceResultSet = hashToIdentityStatement.executeQuery()
+
+                Assert.assertTrue(aliceResultSet.next())
+                Assert.assertEquals(ALICE_NAME.toString(), aliceResultSet.getString("name"))
+                Assert.assertEquals(alicePubKeyHash.toString(), aliceResultSet.getString("pk_hash"))
+                Assert.assertFalse(aliceResultSet.next())
+            }
+        }
+        checkArchivedIdentity(bobNode, aliceNode)
+        aliceNode.dispose()
+        aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        bobCache.removeNode(aliceNode.info)
+        checkArchivedIdentity(bobNode, aliceNode)
     }
 
     @Test(timeout=300_000)

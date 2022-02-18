@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationSchemeContext
@@ -16,7 +15,7 @@ class CustomSerializationSchemeScanningTest {
 
     open class DummySerializationScheme : CustomSerializationScheme {
         override fun getSchemeId(): Int {
-            return 7;
+            return 7
         }
 
         override fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationSchemeContext): T {
@@ -34,9 +33,7 @@ class CustomSerializationSchemeScanningTest {
 
     @Test(timeout = 300_000)
     fun `Can scan for custom serialization scheme and build a serialization scheme`() {
-        val classLoader = Mockito.mock(ClassLoader::class.java)
-        whenever(classLoader.loadClass(DummySerializationScheme::class.java.canonicalName)).thenAnswer { DummySerializationScheme::class.java }
-        val scheme = scanForCustomSerializationScheme(DummySerializationScheme::class.java.canonicalName, classLoader)
+        val scheme = scanForCustomSerializationScheme(DummySerializationScheme::class.java.name, this::class.java.classLoader)
         val mockContext = Mockito.mock(SerializationContext::class.java)
         assertFailsWith<DummySerializationSchemeException>("Tried to serialize with DummySerializationScheme")  {
             scheme.serialize(Any::class.java, mockContext)
@@ -45,34 +42,28 @@ class CustomSerializationSchemeScanningTest {
 
     @Test(timeout = 300_000)
     fun `verification fails with a helpful error if the class is not found in the classloader`() {
-        val classLoader = Mockito.mock(ClassLoader::class.java)
-        val missingClassName = DummySerializationScheme::class.java.canonicalName
-        whenever(classLoader.loadClass(missingClassName)).thenAnswer { throw ClassNotFoundException()}
+        val missingClassName = "org.testing.DoesNotExist"
         assertFailsWith<ConfigurationException>("$missingClassName was declared as a custom serialization scheme but could not " +
                 "be found.") {
-            scanForCustomSerializationScheme(missingClassName, classLoader)
+            scanForCustomSerializationScheme(missingClassName, this::class.java.classLoader)
         }
     }
 
     @Test(timeout = 300_000)
     fun `verification fails with a helpful error if the class is not a custom serialization scheme`() {
-        val canonicalName = NonSerializationScheme::class.java.canonicalName
-        val classLoader = Mockito.mock(ClassLoader::class.java)
-        whenever(classLoader.loadClass(canonicalName)).thenAnswer { NonSerializationScheme::class.java }
-        assertFailsWith<ConfigurationException>("$canonicalName was declared as a custom serialization scheme but does not " +
+        val schemeName = NonSerializationScheme::class.java.name
+        assertFailsWith<ConfigurationException>("$schemeName was declared as a custom serialization scheme but does not " +
                 "implement CustomSerializationScheme.") {
-            scanForCustomSerializationScheme(canonicalName, classLoader)
+            scanForCustomSerializationScheme(schemeName, this::class.java.classLoader)
         }
     }
 
     @Test(timeout = 300_000)
     fun `verification fails with a helpful error if the class does not have a no arg constructor`() {
-        val classLoader = Mockito.mock(ClassLoader::class.java)
-        val canonicalName = DummySerializationSchemeWithoutNoArgConstructor::class.java.canonicalName
-        whenever(classLoader.loadClass(canonicalName)).thenAnswer { DummySerializationSchemeWithoutNoArgConstructor::class.java }
-        assertFailsWith<ConfigurationException>("$canonicalName was declared as a custom serialization scheme but does not " +
+        val schemeName = DummySerializationSchemeWithoutNoArgConstructor::class.java.name
+        assertFailsWith<ConfigurationException>("$schemeName was declared as a custom serialization scheme but does not " +
                 "have a no argument constructor.") {
-            scanForCustomSerializationScheme(canonicalName, classLoader)
+            scanForCustomSerializationScheme(schemeName, this::class.java.classLoader)
         }
     }
 }

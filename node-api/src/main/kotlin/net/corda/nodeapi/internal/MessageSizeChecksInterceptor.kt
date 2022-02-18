@@ -8,6 +8,7 @@ import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.MessagePac
 import org.apache.activemq.artemis.protocol.amqp.broker.AMQPMessage
 import org.apache.activemq.artemis.protocol.amqp.broker.AmqpInterceptor
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
+import org.apache.qpid.proton.amqp.messaging.Data
 
 class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChecksInterceptor<Packet>(maxMessageSize), Interceptor {
     override fun getMessageSize(packet: Packet?): Int? {
@@ -22,7 +23,7 @@ class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChec
 }
 
 class AmqpMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChecksInterceptor<AMQPMessage>(maxMessageSize), AmqpInterceptor {
-    override fun getMessageSize(packet: AMQPMessage?): Int? = packet?.encodeSize
+    override fun getMessageSize(packet: AMQPMessage?): Int? = (packet?.protonMessage?.body as? Data)?.value?.length
 }
 
 /**

@@ -12,6 +12,10 @@ description 'Corda core'
 // required by DJVM and Avian JVM (for running inside the SGX enclave) which only supports Java 8.
 targetCompatibility = VERSION_1_8
 
+sourceSets {
+    obfuscator
+}
+
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
@@ -22,6 +26,9 @@ configurations {
 
 dependencies {
 
+    obfuscatorImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    testImplementation sourceSets.obfuscator.output
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
@@ -171,4 +178,11 @@ scanApi {
 
 publish {
     name jar.baseName
+}
+
+tasks.register("writeTestResources", JavaExec) {
+    classpath sourceSets.obfuscator.output
+    classpath sourceSets.obfuscator.runtimeClasspath
+    main 'net.corda.core.internal.utilities.TestResourceWriter'
+    args new File(sourceSets.test.resources.srcDirs.first(), "zip").toString()
 }

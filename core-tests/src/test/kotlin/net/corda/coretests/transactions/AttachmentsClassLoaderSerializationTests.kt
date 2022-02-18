@@ -55,7 +55,8 @@ class AttachmentsClassLoaderSerializationTests {
                 arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! },
                 testNetworkParameters(),
                 SecureHash.zeroHash,
-                { attachmentTrustCalculator.calculate(it) }, attachmentsClassLoaderCache = null) { classLoader ->
+                { attachmentTrustCalculator.calculate(it) }, attachmentsClassLoaderCache = null) { serializationContext ->
+            val classLoader = serializationContext.deserializationClassLoader
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
             val contract = contractClass.getDeclaredConstructor().newInstance() as Contract
             assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)

@@ -50,7 +50,7 @@ object IdentityTestSchemaV1 : MappedSchema(
             @Column(name = "name", length = 128, nullable = false)
             var name: String = "",
 
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
             var publicKeyHash: String = ""
     )
 

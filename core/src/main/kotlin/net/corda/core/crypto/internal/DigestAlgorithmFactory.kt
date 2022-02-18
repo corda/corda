@@ -28,9 +28,7 @@ sealed class DigestAlgorithmFactory {
     }
 
     private class CustomAlgorithmFactory(className: String) : DigestAlgorithmFactory() {
-        val constructor: Constructor<out DigestAlgorithm> = javaClass
-                .classLoader
-                .loadClass(className)
+        val constructor: Constructor<out DigestAlgorithm> = Class.forName(className, false, javaClass.classLoader)
                 .asSubclass(DigestAlgorithm::class.java)
                 .getConstructor()
         override val algorithm: String = constructor.newInstance().algorithm

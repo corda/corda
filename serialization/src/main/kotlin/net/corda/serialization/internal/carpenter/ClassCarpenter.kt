@@ -15,7 +15,6 @@ import org.objectweb.asm.Type
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
 import java.lang.reflect.Method
-import java.util.*
 
 /**
  * Any object that implements this interface is expected to expose its own fields via the [get] method, exactly
@@ -28,8 +27,23 @@ interface SimpleFieldAccess {
 }
 
 @DeleteForDJVM
-class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
+class CarpenterClassLoader(private val parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
+    @Throws(ClassNotFoundException::class)
+    override fun loadClass(name: String?, resolve: Boolean): Class<*>? {
+        return synchronized(getClassLoadingLock(name)) {
+            /**
+             * Search parent classloaders using lock-less [Class.forName],
+             * bypassing [parent] to avoid its [SecurityManager] overhead.
+             */
+            (findLoadedClass(name) ?: Class.forName(name, false, parentClassLoader)).also { clazz ->
+                if (resolve) {
+                    resolveClass(clazz)
+                }
+            }
+        }
+    }
+
     fun load(name: String, bytes: ByteArray): Class<*> {
         return defineClass(name, bytes, 0, bytes.size)
     }

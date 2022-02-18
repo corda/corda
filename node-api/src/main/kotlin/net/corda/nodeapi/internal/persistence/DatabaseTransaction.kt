@@ -112,12 +112,11 @@ class DatabaseTransaction(
         } finally {
             clearException()
             contextTransactionOrNull = outerTransaction
-        }
-
-        if (outerTransaction == null) {
-            synchronized(this) {
-                closed = true
-                boundary.onNext(CordaPersistence.Boundary(id, committed))
+            if (outerTransaction == null) {
+                synchronized(this) {
+                    closed = true
+                    boundary.onNext(CordaPersistence.Boundary(id, committed))
+                }
             }
         }
     }

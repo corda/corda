@@ -5,6 +5,7 @@ import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.toAttributesMap
 import net.corda.core.internal.toX500Name
 import net.corda.core.internal.unspecifiedCountry
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.x500.style.BCStyle
 import java.util.*
@@ -28,12 +29,16 @@ import javax.security.auth.x500.X500Principal
  */
 @CordaSerializable
 @KeepForDJVM
-data class CordaX500Name(val commonName: String?,
-                         val organisationUnit: String?,
-                         val organisation: String,
-                         val locality: String,
-                         val state: String?,
-                         val country: String) {
+data class CordaX500Name
+
+@ConstructorForDeserialization
+constructor(val commonName: String?,
+            val organisationUnit: String?,
+            val organisation: String,
+            val locality: String,
+            val state: String?,
+            val country: String) {
+
     constructor(commonName: String, organisation: String, locality: String, country: String) :
             this(commonName = commonName, organisationUnit = null, organisation = organisation, locality = locality, state = null, country = country)
 

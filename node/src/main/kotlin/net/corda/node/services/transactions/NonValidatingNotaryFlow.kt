@@ -6,6 +6,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
+import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
@@ -25,7 +26,10 @@ import java.time.Duration
  * the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
  * undo the commit of the input states (the exact mechanism still needs to be worked out).
  */
-class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
+class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration) :
+        NotaryServiceFlow(otherSideSession, service, etaThreshold),
+        IdempotentFlow
+{
     private val minPlatformVersion get() = serviceHub.networkParameters.minimumPlatformVersion
 
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {

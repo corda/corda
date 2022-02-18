@@ -90,7 +90,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
      */
     private fun getInputClassForCustomSerializer(classLoader: ClassLoader, customSerializer: CustomSerializerCheckpointAdaptor<*, *>): Class<*> {
         val typeNameWithoutGenerics = customSerializer.cordappType.typeName.substringBefore('<')
-        return classLoader.loadClass(typeNameWithoutGenerics)
+        return Class.forName(typeNameWithoutGenerics, false, classLoader)
     }
 
     /**

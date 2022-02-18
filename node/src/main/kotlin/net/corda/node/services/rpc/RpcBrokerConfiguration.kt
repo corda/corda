@@ -12,8 +12,8 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcAcceptorTcpTr
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcInternalAcceptorTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
@@ -37,14 +37,14 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         }
         acceptorConfigurations = acceptorConfigurationsSet
 
-        queueConfigurations = queueConfigurations()
+        queueConfigs = queueConfigurations()
 
         managementNotificationAddress = SimpleString(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
         addressesSettings = mapOf(
                 "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                     maxSizeBytes = 5L * maxMessageSize
                     addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
-                    pageSizeBytes = 1L * maxMessageSize
+                    pageSizeBytes = maxMessageSize
                 }
         )
 
@@ -76,7 +76,11 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         securityRoles["${ArtemisMessagingComponent.INTERNAL_PREFIX}#"] = setOf(nodeInternalRole)
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(BrokerJaasLoginModule.RPC_ROLE, send = true))
         securitySettingPlugins.add(rolesAdderOnLogin)
-        securityInvalidationInterval = ArtemisMessagingComponent.SECURITY_INVALIDATION_INTERVAL
+
+        // Effectively disable security cache as permissions might change dynamically when e.g. DB is updated
+        authenticationCacheSize = 0
+        authorizationCacheSize = 0
+        securityInvalidationInterval = 0
     }
 
     private fun enableJmx() {
@@ -85,19 +89,19 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
     }
 
     private fun initialiseSettings(maxMessageSize: Int, journalBufferTimeout: Int?) {
-        // Enable built in message deduplication. Note we still have to do our own as the delayed commits
-        // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
+        // Enable built-in message deduplication. Note we still have to do our own as the delayed commits
+        // and our own definition of commit means that the built-in deduplication cannot remove all the duplicates.
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
         isPersistIDCache = true
         isPopulateValidatedUser = true
-        journalBufferSize_NIO = maxMessageSize // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
+        journalBufferSize_NIO = maxMessageSize // Artemis default is 490 KB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
         journalBufferTimeout_NIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutNio()
         journalBufferSize_AIO = maxMessageSize // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
         journalBufferTimeout_AIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutAio()
-        journalFileSize = maxMessageSize // The size of each journal file in bytes. Artemis default is 10MiB.
+        journalFileSize = maxMessageSize // The size of each journal file in bytes. Artemis default is 10 MB.
     }
 
-    private fun queueConfigurations(): List<CoreQueueConfiguration> {
+    private fun queueConfigurations(): List<QueueConfiguration> {
         return listOf(
                 queueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME, durable = false),
                 queueConfiguration(
@@ -122,15 +126,8 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         pagingDirectory = (baseDirectory / "paging").toString()
     }
 
-    private fun queueConfiguration(name: String, address: String = name, filter: String? = null, durable: Boolean): CoreQueueConfiguration {
-        val configuration = CoreQueueConfiguration()
-
-        configuration.name = name
-        configuration.address = address
-        configuration.filterString = filter
-        configuration.isDurable = durable
-
-        return configuration
+    private fun queueConfiguration(name: String, address: String = name, filter: String? = null, durable: Boolean): QueueConfiguration {
+        return QueueConfiguration(name).setAddress(address).setFilterString(filter).setDurable(durable)
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,

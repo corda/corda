@@ -54,7 +54,7 @@ fun combinedHash(components: Iterable<SecureHash>, digestService: DigestService)
     components.forEach {
         stream.write(it.bytes)
     }
-    return digestService.hash(stream.toByteArray());
+    return digestService.hash(stream.toByteArray())
 }
 
 /**
@@ -114,14 +114,14 @@ fun deserialiseCommands(
         componentGroups: List<ComponentGroup>,
         forceDeserialize: Boolean = false,
         factory: SerializationFactory = SerializationFactory.defaultFactory,
-        @Suppress("UNUSED_PARAMETER") context: SerializationContext = factory.defaultContext,
+        context: SerializationContext = factory.defaultContext,
         digestService: DigestService = DigestService.sha2_256
 ): List<Command<*>> {
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed
     //      and it will throw if any of the signers objects is not List of public keys).
-    val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, ComponentGroupEnum.SIGNERS_GROUP, forceDeserialize))
-    val commandDataList: List<CommandData> = deserialiseComponentGroup(componentGroups, CommandData::class, ComponentGroupEnum.COMMANDS_GROUP, forceDeserialize)
+    val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, ComponentGroupEnum.SIGNERS_GROUP, forceDeserialize, factory, context))
+    val commandDataList: List<CommandData> = deserialiseComponentGroup(componentGroups, CommandData::class, ComponentGroupEnum.COMMANDS_GROUP, forceDeserialize, factory, context)
     val group = componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.COMMANDS_GROUP.ordinal }
     return if (group is FilteredComponentGroup) {
         check(commandDataList.size <= signersList.size) {
@@ -154,8 +154,9 @@ fun createComponentGroups(inputs: List<StateRef>,
                           timeWindow: TimeWindow?,
                           references: List<StateRef>,
                           networkParametersHash: SecureHash?): List<ComponentGroup> {
-    val serializationContext = SerializationFactory.defaultFactory.defaultContext
-    val serialize = { value: Any, _: Int -> value.serialize(context = serializationContext) }
+    val serializationFactory = SerializationFactory.defaultFactory
+    val serializationContext = serializationFactory.defaultContext
+    val serialize = { value: Any, _: Int -> value.serialize(serializationFactory, serializationContext) }
     val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
     if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
     if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
@@ -178,7 +179,11 @@ fun createComponentGroups(inputs: List<StateRef>,
  */
 @KeepForDJVM
 data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef) {
-    fun toStateAndRef(): StateAndRef<ContractState> = StateAndRef(serializedState.deserialize(), ref)
+    fun toStateAndRef(factory: SerializationFactory, context: SerializationContext) = StateAndRef(serializedState.deserialize(factory, context), ref)
+    fun toStateAndRef(): StateAndRef<ContractState> {
+        val factory = SerializationFactory.defaultFactory
+        return toStateAndRef(factory, factory.defaultContext)
+    }
 }
 
 /** Check that network parameters hash on this transaction is the current hash for the network. */

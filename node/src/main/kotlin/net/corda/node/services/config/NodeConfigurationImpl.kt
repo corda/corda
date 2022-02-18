@@ -8,6 +8,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
+import net.corda.node.services.config.shell.SSHDConfiguration
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
@@ -15,11 +16,11 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
-import java.util.*
+import java.util.Properties
+import java.util.UUID
 import javax.security.auth.x500.X500Principal
 
 data class NodeConfigurationImpl(

@@ -28,6 +28,7 @@ class StartedFlowTransition(
 
     companion object {
         private val logger: Logger = contextLogger()
+        const val UNEXPECTED_SESSION_END_MESSAGE = "Received session end message instead of a data session message. Mismatched send and receive?"
     }
 
     override fun transition(): TransitionResult {
@@ -253,7 +254,7 @@ class StartedFlowTransition(
                         newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages.subList(1, messages.size).toArrayList())
                         // at this point, we've already checked for errors and session ends, so it's guaranteed that the first message will be a data message.
                         resultMessages[sessionId] = if (messages[0] is EndSessionMessage) {
-                            throw UnexpectedFlowEndException("Received session end message instead of a data session message. Mismatched send and receive?")
+                            throw UnexpectedFlowEndException(UNEXPECTED_SESSION_END_MESSAGE)
                         } else {
                             (messages[0] as DataSessionMessage).payload
                         }

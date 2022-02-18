@@ -10,6 +10,7 @@
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
+def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Edition" : "Corda Open Source"
 
 /*
 ** calculate the stage for NexusIQ evaluation
@@ -65,6 +66,7 @@ pipeline {
 
     parameters {
         choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
+        booleanParam defaultValue: true, description: 'Run tests during this build?', name: 'DO_TEST'
     }
 
     /*
@@ -75,6 +77,7 @@ pipeline {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_BUILD_EDITION = "${buildEdition}"
         DOCKER_URL = "https://index.docker.io/v1/"
     }
 
@@ -91,6 +94,9 @@ pipeline {
         }
 
         stage('Stash') {
+            when {
+                expression { params.DO_TEST }
+            }
             steps {
                 stash name: 'compiled', useDefaultExcludes: false
             }
@@ -116,7 +122,8 @@ pipeline {
 
         stage('All Tests') {
             when {
-                expression { return false }
+                expression { params.DO_TEST }
+                beforeAgent true
             }
             parallel {
                 stage('Another agent') {
@@ -187,9 +194,6 @@ pipeline {
                             }
                         }
                         stage('Slow Integration Test') {
-                            when {
-                              expression { return false }
-                            }
                             steps {
                                 sh script: [
                                         './gradlew',
@@ -327,10 +331,12 @@ pipeline {
         always {
             script {
                 try {
-                    unstash 'allure-input'
-                    allure includeProperties: false,
-                            jdk: '',
-                            results: [[path: '**/allure-input']]
+                    if (params.DO_TEST) {
+                        unstash 'allure-input'
+                        allure includeProperties: false,
+                                jdk: '',
+                                results: [[path: '**/allure-input']]
+                    }
                 } catch (err) {
                     echo("Allure report generation failed: $err")
 

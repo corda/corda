@@ -14,6 +14,7 @@ import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.vault.NodeVaultService
@@ -133,7 +134,8 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
                 PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,
-                DBNetworkParametersStorage.PersistentNetworkParameters::class.java
+                DBNetworkParametersStorage.PersistentNetworkParameters::class.java,
+                PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java
         )
 )
 

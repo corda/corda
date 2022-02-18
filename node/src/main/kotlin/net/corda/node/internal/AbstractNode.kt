@@ -39,13 +39,13 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
-import net.corda.core.internal.messaging.FlowManagerRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
+import net.corda.core.messaging.flows.FlowManagerRPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -84,6 +84,7 @@ import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
+import net.corda.node.internal.shell.InteractiveShell
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
@@ -100,8 +101,6 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.node.services.config.shell.determineUnsafeUsers
-import net.corda.node.services.config.shell.toShellConfig
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.diagnostics.NodeDiagnosticsService
 import net.corda.node.services.events.NodeSchedulerService
@@ -167,7 +166,6 @@ import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
-import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
@@ -180,7 +178,8 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.ArrayList
+import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -408,23 +407,21 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [RPCOps] interfaces used by this node. */
+    @Suppress("DEPRECATION")
     open fun makeRPCOps(cordappLoader: CordappLoader): List<RPCOps> {
-        val cordaRPCOpsImpl = Pair(CordaRPCOps::class.java, CordaRPCOpsImpl(
-                services,
-                smm,
-                flowStarter
-        ) {
-            shutdownExecutor.submit(::stop)
-        }.also { it.closeOnStop() })
+        val cordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit(::stop) }
+        cordaRPCOps.closeOnStop()
+        val flowManagerRPCOps = FlowManagerRPCOpsImpl(checkpointDumper)
+        val attachmentTrustInfoRPCOps = AttachmentTrustInfoRPCOpsImpl(services.attachmentTrustCalculator)
 
-        val checkpointRPCOpsImpl = Pair(FlowManagerRPCOps::class.java, FlowManagerRPCOpsImpl(checkpointDumper))
-
-        val attachmentTrustInfoRPCOps = Pair(AttachmentTrustInfoRPCOps::class.java, AttachmentTrustInfoRPCOpsImpl(services.attachmentTrustCalculator))
-
-        return listOf(cordaRPCOpsImpl, checkpointRPCOpsImpl, attachmentTrustInfoRPCOps).map { rpcOpsImplPair ->
+        return listOf(
+            CordaRPCOps::class.java to cordaRPCOps,
+            FlowManagerRPCOps::class.java to flowManagerRPCOps,
+            net.corda.core.internal.messaging.FlowManagerRPCOps::class.java to flowManagerRPCOps,
+            AttachmentTrustInfoRPCOps::class.java to attachmentTrustInfoRPCOps
+        ).map { (targetInterface, implementation) ->
             // Mind that order of proxies is important
-            val targetInterface = rpcOpsImplPair.first
-            val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(rpcOpsImplPair.second, targetInterface)
+            val stage1Proxy = AuthenticatedRpcOpsProxy.proxy(implementation, targetInterface)
             val stage2Proxy = ThreadContextAdjustingRpcOpsProxy.proxy(stage1Proxy, targetInterface, cordappLoader.appClassLoader)
 
             stage2Proxy
@@ -694,16 +691,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
-            val shellConfiguration = configuration.toShellConfig()
-            shellConfiguration.sshdPort?.let {
+            configuration.sshd?.port?.let {
                 log.info("Binding Shell SSHD server on port $it.")
             }
-
-            val unsafeUsers = determineUnsafeUsers(configuration)
-            org.crsh.ssh.term.CRaSHCommand.setUserInfo(unsafeUsers, true, false)
-            log.info("Setting unsafe users as: ${unsafeUsers}")
-
-            InteractiveShell.startShell(shellConfiguration, cordappLoader.appClassLoader)
+            InteractiveShell.startShellIfInstalled(configuration, cordappLoader)
         }
     }
 

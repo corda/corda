@@ -6,6 +6,6 @@ import net.corda.core.DeleteForDJVM
 object SgxSupport {
     @JvmStatic
     val isInsideEnclave: Boolean by lazy {
-        (System.getProperty("os.name") == "Linux") && (System.getProperty("java.vm.name") == "Avian (Corda)")
+        (System.getProperty("os.name") == "linuxsgx") && (System.getProperty("java.vm.name") == "Substrate VM")
     }
 }

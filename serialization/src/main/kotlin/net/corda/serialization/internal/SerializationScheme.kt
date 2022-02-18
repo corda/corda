@@ -40,6 +40,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     /**
      * {@inheritDoc}
      */
+    @Suppress("OverridingDeprecatedMember")
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
         return this
     }
@@ -108,12 +109,13 @@ open class SerializationFactoryImpl(
         val lookupKey = magic to target
         // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
         return (schemes[lookupKey] ?: schemes.computeIfAbsent(lookupKey) {
-            registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
-            logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
-                    "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
-            val schemeId = getSchemeIdIfCustomSerializationMagic(magic) ?: throw UnsupportedOperationException("Serialization scheme" +
-                    " $lookupKey not supported.")
-            throw UnsupportedOperationException("Could not find custom serialization scheme with SchemeId = $schemeId.")
+            registeredSchemes.firstOrNull { it.canDeserializeVersion(magic, target) } ?: run {
+                logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
+                        "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
+                val schemeId = getSchemeIdIfCustomSerializationMagic(magic) ?: throw UnsupportedOperationException("Serialization scheme" +
+                        " $lookupKey not supported.")
+                throw UnsupportedOperationException("Could not find custom serialization scheme with SchemeId = $schemeId.")
+            }
         }) to magic
     }
 

@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
@@ -28,6 +29,14 @@ object X509CRLSerializer
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext): X509CRL {
         val bytes = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
+        @Suppress("unchecked_cast")
+        return (context.properties[DESERIALIZATION_CACHE_PROPERTY] as? MutableMap<CacheKey, X509CRL>)
+            ?.computeIfAbsent(CacheKey(bytes)) { key ->
+                generateCRL(key.bytes)
+            } ?: generateCRL(bytes)
+    }
+
+    private fun generateCRL(bytes: ByteArray): X509CRL {
         return CertificateFactory.getInstance("X.509").generateCRL(bytes.inputStream()) as X509CRL
     }
 }

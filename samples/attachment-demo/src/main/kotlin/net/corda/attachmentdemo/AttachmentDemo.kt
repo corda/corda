@@ -5,6 +5,7 @@ import net.corda.attachmentdemo.contracts.AttachmentContract
 import net.corda.attachmentdemo.workflows.AttachmentDemoFlow
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.CordaRPCOps
@@ -65,7 +66,7 @@ fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
 
 private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
     // Get the identity key of the other side (the recipient).
-    val notaryParty = rpc.partiesFromName("Notary", false).firstOrNull() ?: throw IllegalArgumentException("Couldn't find notary party")
+    val notaryParty = rpc.notaryPartyFromX500Name(CordaX500Name.parse("O=Notary Service,L=Zurich,C=CH")) ?: throw IllegalArgumentException("Couldn't find notary party")
     val bankBParty = rpc.partiesFromName("Bank B", false).firstOrNull() ?: throw IllegalArgumentException("Couldn't find Bank B party")
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {

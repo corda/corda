@@ -66,7 +66,6 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                 retryInterval = messagingServerConnectionConfig.retryInterval().toMillis()
                 retryIntervalMultiplier = messagingServerConnectionConfig.retryIntervalMultiplier()
                 maxRetryInterval = messagingServerConnectionConfig.maxRetryInterval(isHA).toMillis()
-                isFailoverOnInitialConnection = messagingServerConnectionConfig.failoverOnInitialAttempt(isHA)
                 initialConnectAttempts = messagingServerConnectionConfig.initialConnectAttempts(isHA)
             }
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))

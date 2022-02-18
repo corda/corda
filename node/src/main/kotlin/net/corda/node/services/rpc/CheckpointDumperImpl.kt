@@ -221,7 +221,10 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                     instrumentCheckpointAgent(runId)
 
                                 val (bytes, fileName) = try {
-                                    val checkpoint = serialisedCheckpoint.deserialize(checkpointSerializationContext)
+                                    val checkpoint = serialisedCheckpoint.deserialize(
+                                        checkpointSerializationContext,
+                                        alwaysDeserializeFlowState = true
+                                    )
                                     val json = checkpoint.toJson(runId.uuid, now)
                                     val jsonBytes = writer.writeValueAsBytes(json)
                                     jsonBytes to "${json.topLevelFlowClass.simpleName}-${runId.uuid}.json"
@@ -259,7 +262,12 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
 
                             //Dump checkpoints in "fibers" folder
                             for((runId, serializedCheckpoint) in stream) {
-                                val flowState = serializedCheckpoint.deserialize(checkpointSerializationContext).flowState
+                                val flowState = serializedCheckpoint.deserialize(
+                                    checkpointSerializationContext,
+                                    alwaysDeserializeFlowState = true
+                                ).flowState
+                                // This includes paused flows because we have forced the deserialization of the checkpoint's flow state
+                                // which will show as started.
                                 if(flowState is FlowState.Started) writeFiber2Zip(zip, checkpointSerializationContext, runId, flowState)
                             }
 
@@ -315,7 +323,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
      * the checkpoint agent source code
      */
     private fun checkpointAgentRunning() = try {
-        javaClass.classLoader.loadClass("net.corda.tools.CheckpointAgent").kotlin.companionObject
+        Class.forName("net.corda.tools.CheckpointAgent", false, javaClass.classLoader).kotlin.companionObject
     } catch (e: ClassNotFoundException) {
         null
     }?.let { cls ->
@@ -354,6 +362,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                 topLevelFlowLogic = flowLogic,
                 flowCallStackSummary = flowCallStack.toSummary(),
                 flowCallStack = flowCallStack,
+                status = status,
                 suspendedOn = (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(
                         timestamp,
                         now
@@ -436,6 +445,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             val topLevelFlowClass: Class<FlowLogic<*>>,
             val topLevelFlowLogic: FlowLogic<*>,
             val flowCallStackSummary: List<FlowCallSummary>,
+            val status: Checkpoint.FlowStatus,
             val suspendedOn: SuspendedOn?,
             val flowCallStack: List<FlowCall>,
             val origin: Origin,
