@@ -455,7 +455,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    fun clearNetworkMapCache() {
+    open fun clearNetworkMapCache() {
         Node.printBasicNodeInfo("Clearing network map cache entries")
         log.info("Starting clearing of network map cache entries...")
         startDatabase()
