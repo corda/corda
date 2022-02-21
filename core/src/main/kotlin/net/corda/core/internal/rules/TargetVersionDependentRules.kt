@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.warnOnce
+import net.corda.core.utilities.SgxSupport
 import org.slf4j.LoggerFactory
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
@@ -26,6 +27,9 @@ object StateContractValidationEnforcementRule {
     private val targetVersionCache = ConcurrentHashMap<URL, Int>()
 
     fun shouldEnforce(state: ContractState): Boolean {
+        if(SgxSupport.isInsideEnclave) {
+            return true
+        }
         val jarLocation = state::class.java.protectionDomain.codeSource.location
 
         if (jarLocation == null) {

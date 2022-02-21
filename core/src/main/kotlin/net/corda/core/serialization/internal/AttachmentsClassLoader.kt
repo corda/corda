@@ -30,6 +30,7 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.serialization.withWhitelist
+import net.corda.core.utilities.SgxSupport
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import java.io.IOException
@@ -353,7 +354,11 @@ object AttachmentsClassLoaderBuilder {
         val cache = attachmentsClassLoaderCache ?: fallBackCache
         val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
+            val transactionClassLoader = if(SgxSupport.isInsideEnclave) {
+                SerializationFactory.defaultFactory.defaultContext.deserializationClassLoader
+            } else {
+                AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
+            }
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
                         JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)

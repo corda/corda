@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
@@ -20,7 +21,20 @@ import java.util.*
  */
 @CordaSerializable
 @KeepForDJVM
-data class UniqueIdentifier @JvmOverloads @DeleteForDJVM constructor(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
+data class UniqueIdentifier
+
+    @ConstructorForDeserialization
+    constructor(val externalId: String?, val id: UUID) : Comparable<UniqueIdentifier> {
+
+    @DeleteForDJVM
+    constructor(externalId: String? = null) : this(externalId, UUID.randomUUID())
+
+    @DeleteForDJVM
+    constructor(id: UUID = UUID.randomUUID()) : this(null, id)
+
+    @DeleteForDJVM
+    constructor() : this(null, UUID.randomUUID())
+
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 
     companion object {
