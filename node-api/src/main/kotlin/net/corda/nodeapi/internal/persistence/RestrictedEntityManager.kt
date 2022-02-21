@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
+import net.corda.core.node.ServiceHub
 import javax.persistence.EntityManager
 import javax.persistence.EntityTransaction
 import javax.persistence.LockModeType
@@ -8,56 +9,59 @@ import javax.persistence.metamodel.Metamodel
 /**
  * A delegate of [EntityManager] which disallows some operations.
  */
-class RestrictedEntityManager(private val delegate: EntityManager) : EntityManager by delegate {
+class RestrictedEntityManager(private val delegate: EntityManager, private val serviceHub: ServiceHub) : EntityManager by delegate {
 
     override fun getTransaction(): EntityTransaction {
-        return RestrictedEntityTransaction(delegate.transaction)
+        return RestrictedEntityTransaction(delegate.transaction, serviceHub)
     }
 
     override fun close() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("close", serviceHub) { delegate.close() }
     }
 
     override fun <T : Any?> unwrap(cls: Class<T>?): T {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        return restrictDatabaseOperationFromEntityManager("unwrap", serviceHub) { delegate.unwrap(cls) }
     }
 
     override fun getDelegate(): Any {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        return restrictDatabaseOperationFromEntityManager("getDelegate", serviceHub) { delegate.delegate }
     }
 
     override fun getMetamodel(): Metamodel? {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        return restrictDatabaseOperationFromEntityManager("getMetamodel", serviceHub) { delegate.metamodel }
     }
 
     override fun joinTransaction() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("joinTransaction", serviceHub) { delegate.joinTransaction() }
     }
 
     override fun lock(entity: Any?, lockMode: LockModeType?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.lock(entity, lockMode) }
     }
 
     override fun lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.lock(entity, lockMode, properties) }
     }
 
     override fun setProperty(propertyName: String?, value: Any?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("lock", serviceHub) { delegate.setProperty(propertyName, value) }
     }
 }
 
-class RestrictedEntityTransaction(private val delegate: EntityTransaction) : EntityTransaction by delegate {
+class RestrictedEntityTransaction(
+    private val delegate: EntityTransaction,
+    private val serviceHub: ServiceHub
+) : EntityTransaction by delegate {
 
     override fun rollback() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("EntityTransaction.rollback", serviceHub) { delegate.rollback() }
     }
 
     override fun commit() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("EntityTransaction.commit", serviceHub) { delegate.commit() }
     }
 
     override fun begin() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+        restrictDatabaseOperationFromEntityManager("EntityTransaction.begin", serviceHub) { delegate.begin() }
     }
 }

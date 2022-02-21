@@ -1157,7 +1157,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         /**
          * Exposes the database connection as a [RestrictedConnection] to the users.
          */
-        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
+        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession(), services)
 
         @Suppress("TooGenericExceptionCaught")
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
@@ -1167,7 +1167,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 withSavePoint { savepoint ->
                     // Restrict what entity manager they can use inside the block
                     try {
-                        block(RestrictedEntityManager(manager)).also {
+                        block(RestrictedEntityManager(manager, services)).also {
                             if (!manager.transaction.rollbackOnly) {
                                 manager.flush()
                             } else {
