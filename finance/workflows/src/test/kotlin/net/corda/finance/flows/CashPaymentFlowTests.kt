@@ -71,38 +71,31 @@ class CashPaymentFlowTests {
         mockNet.runNetwork()
         val bobTx = futureBob.getOrThrow().stx
 
-        // Check Bank of Corda vault updates - we take in some issued cash and split it into $500 to the notary
-        // and $1,500 back to us, so we expect to consume one state, produce one state for our own vault
-        vaultUpdatesBoc.expectEvents {
-            expect { (consumed, produced) ->
-                assertThat(consumed).hasSize(1)
-                assertThat(produced).hasSize(1)
-                val changeState = produced.single().state.data
-                assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
+        listOf(bankOfCordaNode, aliceNode, bobNode).forEach { node ->
+            println("------------------------")
+            println("${node.info.singleIdentity()}")
+            println("------------------------")
+            listOf(
+                    "Bank issue to self: " to issuanceTx,
+                    "Bank pays Alice:    " to payTx,
+                    "Alice pays Bob:     " to bobTx).forEach {  labelToStx ->
+                val label = labelToStx.first
+                val stx = labelToStx.second
+                println("$label (${stx.id})")
+                println("> FOUND UNENCRYPTED: ${node.services.validatedTransactions.getTransaction(stx.id)}")
+                println("> FOUND   ENCRYPTED: ${node.services.validatedTransactions.getEncryptedTransaction(stx.id)?.let { shortStringDesc(it.bytes.toHexString()) }}")
+                println()
             }
-        }
-
-        // Check notary node vault updates
-        vaultUpdatesBankClient.expectEvents {
-            expect { (consumed, produced) ->
-                assertThat(consumed).isEmpty()
-                assertThat(produced).hasSize(1)
-                val paymentState = produced.single().state.data
-                assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
-            }
-        }
-
-
-        listOf(bobNode, aliceNode, bankOfCordaNode).forEach { node ->
-            listOf(issuanceTx, payTx, bobTx).forEach {  stx ->
-                println("${node.info.singleIdentity()} UNENCRYPTED: ${node.services.validatedTransactions.getTransaction(stx.id)}")
-                println("${node.info.singleIdentity()} ENCRYPTED:   ${node.services.validatedTransactions.getEncryptedTransaction(stx.id)?.let { "${stx.id} -> ${it.bytes.toHexString()}"}}")
-            }
+            println()
         }
 
         bobNode.services.vaultService.queryBy(Cash.State::class.java).states.forEach {
             println("BOB: ${it.state.data}")
         }
+    }
+
+    private fun shortStringDesc(longString : String) : String {
+        return "EncryptedTransaction(${longString.take(15)}...${longString.takeLast(15)})"
     }
 
     @Test(timeout=300_000)
