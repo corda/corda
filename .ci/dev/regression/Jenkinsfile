@@ -319,7 +319,7 @@ pipeline {
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
                             'docker:pushDockerImage',
-                            '-Pdocker.image.repository=corda/corda',
+                            '-Pdocker.image.repository=corda/community',
                             '--image OFFICIAL'
                             ].join(' ')
                 }
