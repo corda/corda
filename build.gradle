@@ -405,7 +405,6 @@ allprojects {
                     includeGroup 'org.crashub'
                     includeGroup 'com.github.bft-smart'
                     includeGroup 'com.github.detro'
-                    includeGroup 'org.apache.activemq'
                 }
             }
             maven {
