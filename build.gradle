@@ -1,5 +1,7 @@
 import com.r3.testing.DistributeTestsBy
 import com.r3.testing.PodLogLevel
+import java.nio.file.Files
+import java.nio.file.Paths
 
 import static org.gradle.api.JavaVersion.VERSION_11
 import static org.gradle.api.JavaVersion.VERSION_1_8
@@ -188,6 +190,18 @@ buildscript {
             }
             mavenCentral()
             jcenter()
+        }
+
+        maven {
+            def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
+            if (!Files.isDirectory(path.resolve("com"))) {
+                if (Files.isDirectory(Paths.get("/repo/com"))) {
+                    path = Paths.get("/repo")
+                } else {
+                    throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
+                }
+            }
+            url = path.toFile()
         }
     }
     dependencies {
@@ -424,6 +438,18 @@ allprojects {
             }
             mavenCentral()
             jcenter()
+
+            maven {
+                def path = Paths.get(rootDir.absolutePath).resolve(conclaveRepo).toAbsolutePath().normalize()
+                if (!Files.isDirectory(path.resolve("com"))) {
+                    if (Files.isDirectory(Paths.get("/repo/com"))) {
+                        path = Paths.get("/repo")
+                    } else {
+                        throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
+                    }
+                }
+                url = path.toFile()
+            }
         }
     }
 

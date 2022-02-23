@@ -1,0 +1,7 @@
+apply plugin: 'kotlin'
+
+dependencies {
+    implementation "com.r3.conclave:conclave-common:$conclaveVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "net.i2p.crypto:eddsa:0.3.0"
+}
