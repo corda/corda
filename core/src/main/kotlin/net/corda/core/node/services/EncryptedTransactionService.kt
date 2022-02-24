@@ -14,6 +14,7 @@ import net.corda.core.transactions.RawDependencyMap
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.SignedTransactionDependencies
 import net.corda.core.transactions.SignedTransactionDependencyMap
+import net.corda.core.transactions.VerifiedEncryptedTransaction
 import net.corda.core.utilities.toHexString
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -66,7 +67,7 @@ class EncryptedTransactionService() : SingletonSerializeAsToken() {
     }
 
     // TODO: this is glossing over a lot of difficulty here. toLedgerTransaction resolves a lot of stuff via services which wont be available within an enclave
-    fun verifyTransaction(encryptedTransaction: EncryptedTransaction, serviceHub : ServiceHub, checkSufficientSignatures: Boolean, rawDependencies: RawDependencyMap): ByteArray {
+    fun verifyTransaction(encryptedTransaction: EncryptedTransaction, serviceHub : ServiceHub, checkSufficientSignatures: Boolean, rawDependencies: RawDependencyMap): VerifiedEncryptedTransaction {
 
         println("Verifying encrypted ${encryptedTransaction.id} ${serviceHub.myInfo.legalIdentities.single()}")
 
@@ -77,7 +78,9 @@ class EncryptedTransactionService() : SingletonSerializeAsToken() {
         // will throw if cannot verify
         stx.toLedgerTransaction(serviceHub, checkSufficientSignatures, dependencies).verify()
 
-        return Crypto.doSign(enclaveKeyPair.private, stx.txBits.bytes)
+        val sig = Crypto.doSign(enclaveKeyPair.private, stx.txBits.bytes)
+
+        return encryptedTransaction.toVerified(sig)
     }
 
     fun verifyTransaction(signedTransaction: SignedTransaction, serviceHub: ServiceHub, checkSufficientSignatures: Boolean, rawDependencies: RawDependencyMap) {

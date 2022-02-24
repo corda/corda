@@ -227,14 +227,14 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                     )
                 }
 
-                encryptSvc.verifyTransaction(tx, flow.serviceHub,  true,  rawDependencies)
+                val verifiedTransaction = encryptSvc.verifyTransaction(tx, flow.serviceHub,  true,  rawDependencies)
 
                 // TODO: why does this usually go through the serviceHub's recordTransactions function and not
                 //  direct to the validatedTransactions service??
                 //  flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
 
                 val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
-                transactionStorage.addEncryptedTransaction(tx)
+                transactionStorage.addVerifiedEncryptedTransaction(verifiedTransaction)
             } else {
                 logger.debug { "No need to record $txId as it's already been verified" }
             }

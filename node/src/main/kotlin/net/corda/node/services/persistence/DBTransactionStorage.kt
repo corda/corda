@@ -15,6 +15,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.VerifiedEncryptedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.CordaClock
@@ -57,9 +58,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val timestamp: Instant,
 
             @Column(name = "encrypted", nullable = false)
-            val encrypted: Boolean = false
+            val encrypted: Boolean = false,
 
-            // TODO: will need to also store the signature of who verified this tx
+            @Column(name = "verifier_signature", nullable = true)
+            val verifierSignature: ByteArray? = null
     )
 
     enum class TransactionStatus {
@@ -238,11 +240,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    override fun addEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean {
-        val transactionId = encryptedTransaction.id
+    override fun addVerifiedEncryptedTransaction(verifiedEncryptedTransaction: VerifiedEncryptedTransaction): Boolean {
+        val transactionId = verifiedEncryptedTransaction.id
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(encryptedTransaction, TransactionStatus.VERIFIED)
+                val cachedValue = TxCacheValue(verifiedEncryptedTransaction, TransactionStatus.VERIFIED)
                 val addedOrUpdated = addOrUpdate(transactionId, cachedValue) { k, _ -> updateTransaction(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction $transactionId has been recorded as verified" }
@@ -251,6 +253,12 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 }
                 addedOrUpdated
             }
+        }
+    }
+
+    override fun getVerifiedEncryptedTransaction(id: SecureHash): VerifiedEncryptedTransaction? {
+        return database.transaction {
+            txStorage.content[id]?.let { if (it.status.isVerified() && it.encrypted ) it.toVerifiedEncryptedTx() else null }
         }
     }
 
@@ -335,8 +343,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         get() = database.transaction { snapshot() }
 
     private fun snapshot(): List<SignedTransaction> {
-        return txStorage.content.allPersisted.use {
-            it.filter { it.second.status.isVerified() && !it.second.encrypted }.map { it.second.toSignedTx() }.toList()
+        return txStorage.content.allPersisted.use { hashAndCache ->
+            hashAndCache.filter { it.second.status.isVerified() && !it.second.encrypted }.map { it.second.toSignedTx() }.toList()
         }
     }
 
@@ -346,21 +354,32 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val txBits: ByteArray,
             val sigs: List<TransactionSignature>,
             val status: TransactionStatus,
-            val encrypted: Boolean
+            val encrypted: Boolean,
+            val verifierSignature: ByteArray?
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.id,
                 stx.txBits.bytes,
                 stx.sigs,
                 status,
-        false)
+        false,
+        null)
 
         constructor(encryptedTransaction: EncryptedTransaction, status: TransactionStatus) : this(
                 encryptedTransaction.id,
                 encryptedTransaction.bytes,
                 emptyList(),
                 status,
-                true)
+                true,
+                null)
+
+        constructor(verifiedEncryptedTransaction: VerifiedEncryptedTransaction, status: TransactionStatus) : this(
+                verifiedEncryptedTransaction.id,
+                verifiedEncryptedTransaction.bytes,
+                emptyList(),
+                status,
+                true,
+                verifiedEncryptedTransaction.verifierSignature)
 
         fun toSignedTx() : SignedTransaction {
             return if (!encrypted) {
@@ -373,8 +392,17 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         fun toEncryptedTx() : EncryptedTransaction {
             return if (encrypted) {
-                // TODO: EncryptedTransaction will be extended to include verification signature
                 EncryptedTransaction(id, txBits)
+            } else {
+                throw IllegalArgumentException("Cannot get encrypted transaction for signed tx")
+            }
+        }
+
+        fun toVerifiedEncryptedTx() : VerifiedEncryptedTransaction {
+            return if (encrypted) {
+                val sig = verifierSignature
+                        ?: throw IllegalArgumentException("Null verifierSignature not permitted when returning a verified encrypted tx")
+                VerifiedEncryptedTransaction(id, txBits, sig)
             } else {
                 throw IllegalArgumentException("Cannot get encrypted transaction for signed tx")
             }

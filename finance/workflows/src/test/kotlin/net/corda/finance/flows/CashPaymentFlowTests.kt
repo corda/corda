@@ -1,5 +1,6 @@
 package net.corda.finance.flows
 
+import net.corda.core.crypto.Crypto
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
@@ -83,7 +84,8 @@ class CashPaymentFlowTests {
                 val stx = labelToStx.second
                 println("$label (${stx.id})")
                 println("> FOUND UNENCRYPTED: ${node.services.validatedTransactions.getTransaction(stx.id)}")
-                println("> FOUND   ENCRYPTED: ${node.services.validatedTransactions.getEncryptedTransaction(stx.id)?.let { shortStringDesc(it.bytes.toHexString()) }}")
+                println("> FOUND   ENCRYPTED: ${node.services.validatedTransactions.getVerifiedEncryptedTransaction(stx.id)?.let { "${shortStringDesc(it.bytes.toHexString())} signature ${it.verifierSignature.toHexString()}"}}")
+
                 println()
             }
             println()

@@ -421,7 +421,7 @@ class DBTransactionStorageTests {
         val encryptedTxBytes = encryptionCipher.doFinal(transaction.serialize(context = contextToUse().withEncoding(CordaSerializationEncoding.SNAPPY)).bytes)
         val encryptedTx = EncryptedTransaction(transaction.id, encryptedTxBytes)
 
-        transactionStorage.addEncryptedTransaction(encryptedTx)
+        transactionStorage.addVerifiedEncryptedTransaction(encryptedTx.toVerified(byteArrayOf()))
 
         val storedTx = transactionStorage.getEncryptedTransaction(transaction.id)
 

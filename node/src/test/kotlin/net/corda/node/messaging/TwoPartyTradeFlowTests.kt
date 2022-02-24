@@ -21,6 +21,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.VerifiedEncryptedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -789,9 +790,15 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
 
         // TODO: these Encrypted transactions may need an overhaul is probably indicative that overloading the current storage was a bad idea
-        override fun addEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean {
+        override fun addVerifiedEncryptedTransaction(encryptedTransaction: VerifiedEncryptedTransaction): Boolean {
             return database.transaction {
-                delegate.addEncryptedTransaction(encryptedTransaction)
+                delegate.addVerifiedEncryptedTransaction(encryptedTransaction)
+            }
+        }
+
+        override fun getVerifiedEncryptedTransaction(id: SecureHash): VerifiedEncryptedTransaction? {
+            return database.transaction {
+                delegate.getVerifiedEncryptedTransaction(id)
             }
         }
 
