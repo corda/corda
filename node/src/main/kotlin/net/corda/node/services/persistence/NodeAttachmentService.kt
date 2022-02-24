@@ -88,11 +88,11 @@ class NodeAttachmentService @JvmOverloads constructor(
 
             while (true) {
                 val cursor = jar.nextJarEntry ?: break
+                // Security check to stop directory traversal from filename entry
+                require(!(cursor.name.contains("../"))) { "Bad character in ${cursor.name}" }
+                require(!(cursor.name.contains("..\\"))) { "Bad character in ${cursor.name}" }
                 if (manifestHasEntries && !allManifestEntries!!.remove(cursor.name)) extraFilesNotFoundInEntries.add(cursor)
                 val entryPath = Paths.get(cursor.name)
-                // Security check to stop directory traversal from filename entry
-                require(!(cursor.name.contains("../"))) { "Bad character in $entryPath" }
-                require(!(cursor.name.contains("..\\"))) { "Bad character in $entryPath" }
                 // Security check to stop zips trying to escape their rightful place.
                 require(!entryPath.isAbsolute) { "Path $entryPath is absolute" }
                 require(entryPath.normalize() == entryPath) { "Path $entryPath is not normalised" }
