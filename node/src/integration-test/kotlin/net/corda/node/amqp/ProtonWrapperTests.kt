@@ -291,9 +291,11 @@ class ProtonWrapperTests {
 
     @Test(timeout=300_000)
 	fun `Send a message larger then maxMessageSize from AMQP to Artemis inbox`() {
-        val maxMessageSize = 100_000
-        val (server, artemisClient) = createArtemisServerAndClient(maxMessageSize)
-        val amqpClient = createClient(maxMessageSize)
+        val maxUserPayloadSize = 100_000
+        val maxMessageSizeWithHeaders = maxUserPayloadSize + 512 // Adding a small "shim" to account for headers
+                                                             // and other non-payload bits of data
+        val (server, artemisClient) = createArtemisServerAndClient(maxMessageSizeWithHeaders)
+        val amqpClient = createClient(maxMessageSizeWithHeaders)
         val clientConnected = amqpClient.onConnection.toFuture()
         amqpClient.start()
         assertEquals(true, clientConnected.get().connected)
@@ -308,7 +310,7 @@ class ProtonWrapperTests {
         testProperty["TestProp"] = "1"
 
         // Send normal message.
-        val testData = ByteArray(maxMessageSize)
+        val testData = ByteArray(maxUserPayloadSize)
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)
         assertEquals(MessageStatus.Acknowledged, message.onComplete.get())
@@ -317,7 +319,7 @@ class ProtonWrapperTests {
         assertArrayEquals(testData, ByteArray(received.bodySize).apply { received.bodyBuffer.readBytes(this) })
 
         // Send message larger than max message size.
-        val largeData = ByteArray(maxMessageSize + 1)
+        val largeData = ByteArray(maxMessageSizeWithHeaders + 1)
         // Create message will fail.
         assertThatThrownBy {
             amqpClient.createMessage(largeData, sendAddress, CHARLIE_NAME.toString(), testProperty)
