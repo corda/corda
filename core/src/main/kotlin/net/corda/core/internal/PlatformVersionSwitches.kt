@@ -16,5 +16,6 @@ object PlatformVersionSwitches {
     const val LIMIT_KEYS_IN_SIGNATURE_CONSTRAINTS = 5
     const val BATCH_DOWNLOAD_COUNTERPARTY_BACKCHAIN = 6
     const val ENABLE_P2P_COMPRESSION = 7
+    const val RESTRICTED_DATABASE_OPERATIONS = 7
     const val CERTIFICATE_ROTATION = 9
 }

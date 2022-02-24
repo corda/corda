@@ -5,6 +5,10 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 
+dependencies {
+    compile rootProject
+}
+
 def internalPackagePrefixes(sourceDirs) {
     def prefixes = []
     // Kotlin allows packages to deviate from the directory structure, but let's assume they don't:
@@ -36,10 +40,13 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 }
 
 [dokka, dokkaJavadoc].collect {
-    it.configure {
+    it.configuration {
         moduleName = 'corda'
-        processConfigurations = ['compile']
-        sourceDirs = dokkaSourceDirs
+        dokkaSourceDirs.collect { sourceDir ->
+            sourceRoot {
+                path = sourceDir.path
+            }
+        }
         includes = ['packages.md']
         jdkVersion = 8
         externalDocumentationLink {
@@ -52,7 +59,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
             url = new URL("https://www.bouncycastle.org/docs/docs1.5on/")
         }
         internalPackagePrefixes.collect { packagePrefix ->
-            packageOptions {
+            perPackageOption {
                 prefix = packagePrefix
                 suppress = true
             }
