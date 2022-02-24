@@ -12,6 +12,7 @@ import net.corda.core.internal.TransactionVerifierServiceInternal
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -42,9 +43,9 @@ import java.util.function.Predicate
 // DOCSTART 1
 @KeepForDJVM
 @CordaSerializable
-data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
-                             override val sigs: List<TransactionSignature>
-) : TransactionWithSignatures {
+data class SignedTransaction
+@ConstructorForDeserialization
+constructor(val txBits: SerializedBytes<CoreTransaction>, override val sigs: List<TransactionSignature>) : TransactionWithSignatures {
     // DOCEND 1
     constructor(ctx: CoreTransaction, sigs: List<TransactionSignature>) : this(ctx.serialize(), sigs) {
         cachedTransaction = ctx

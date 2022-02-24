@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import java.security.InvalidKeyException
 import java.security.PublicKey
@@ -17,7 +18,9 @@ import java.util.*
  */
 @CordaSerializable
 @KeepForDJVM
-class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata, val partialMerkleTree: PartialMerkleTree?) : DigitalSignature(bytes) {
+class TransactionSignature
+@ConstructorForDeserialization
+constructor(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata, val partialMerkleTree: PartialMerkleTree?) : DigitalSignature(bytes) {
     /**
      * Construct a [TransactionSignature] with [partialMerkleTree] set to null.
      * This is the recommended constructor when signing over a single transaction.
