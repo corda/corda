@@ -128,7 +128,7 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
             // Select a subset of the available states we were given that sums up to >= totalSendAmount.
             val (gathered, gatheredAmount) = gatherCoins(acceptableStates, totalSendAmount)
             check(gatheredAmount >= totalSendAmount)
-            val keysUsed = gathered.map { it.state.data.owner.owningKey }
+            val keysUsed = gathered.map { it.state.data.owner.owningKey } //+ payments.map { it.party.owningKey }
 
             // Now calculate the output states. This is complicated by the fact that a single payment may require
             // multiple output states, due to the need to keep states separated by issuer. We start by figuring out

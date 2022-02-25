@@ -89,6 +89,18 @@ class EncryptedTransactionService() : SingletonSerializeAsToken() {
 
         val dependencies = extractDependencies(signedTransaction.inputs + signedTransaction.references, rawDependencies)
 
+        (signedTransaction.tx.inputsStates + signedTransaction.tx.referenceStates).forEach {
+            val dependency = dependencies[it.ref.txhash] ?: throw IllegalArgumentException("Dependency transaction not found")
+            val dependencyState = dependency.inputsAndRefs[it.ref] ?: throw IllegalArgumentException("Dependency state not found")
+
+            val dependentState = dependencyState.data
+            val suppliedState = it.state.data
+            require(dependencyState.data  == it.state.data) {
+
+                "Supplied input/ref on transaction did not match it's stateRef"
+            }
+        }
+
         // will throw if cannot verify
         signedTransaction.toLedgerTransaction(serviceHub, checkSufficientSignatures, dependencies).verify()
     }

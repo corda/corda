@@ -153,7 +153,9 @@ fun createComponentGroups(inputs: List<StateRef>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
                           references: List<StateRef>,
-                          networkParametersHash: SecureHash?): List<ComponentGroup> {
+                          networkParametersHash: SecureHash?,
+                          inputStates: List<StateAndRef<ContractState>> = emptyList(),
+                          referenceStates: List<StateAndRef<ContractState>> = emptyList()): List<ComponentGroup> {
     val serializationFactory = SerializationFactory.defaultFactory
     val serializationContext = serializationFactory.defaultContext
     val serialize = { value: Any, _: Int -> value.serialize(serializationFactory, serializationContext) }
@@ -170,6 +172,8 @@ fun createComponentGroups(inputs: List<StateRef>,
     // a FilteredTransaction can now verify it sees all the commands it should sign.
     if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
     if (networkParametersHash != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
+    if (inputStates.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.INPUT_STATES_GROUP.ordinal, inputStates.lazyMapped(serialize)))
+    if (referenceStates.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.REFERENCE_STATES_GROUP.ordinal, referenceStates.lazyMapped(serialize)))
     return componentGroupMap
 }
 

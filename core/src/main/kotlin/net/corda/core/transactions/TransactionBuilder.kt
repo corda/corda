@@ -90,6 +90,7 @@ open class TransactionBuilder(
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val referencesWithTransactionStateAndRef = arrayListOf<StateAndRef<ContractState>>()
     private val excludedAttachments = arrayListOf<AttachmentId>()
 
     /**
@@ -109,6 +110,7 @@ open class TransactionBuilder(
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
+        t.referencesWithTransactionStateAndRef.addAll(this.referencesWithTransactionStateAndRef)
         return t
     }
 
@@ -215,7 +217,9 @@ open class TransactionBuilder(
                             notary,
                             window,
                             referenceStates,
-                            services.networkParametersService.currentHash),
+                            services.networkParametersService.currentHash,
+                            inputsWithTransactionState,
+                            referencesWithTransactionStateAndRef),
                     privacySalt,
                     services.digestService
             )
@@ -758,6 +762,7 @@ open class TransactionBuilder(
     open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>) = apply {
         val stateAndRef = referencedStateAndRef.stateAndRef
         referencesWithTransactionState.add(stateAndRef.state)
+        referencesWithTransactionStateAndRef.add(stateAndRef)
 
         // It is likely the case that users of reference states do not have permission to change the notary assigned
         // to a reference state. Even if users _did_ have this permission the result would likely be a bunch of

@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.sun.org.apache.xpath.internal.operations.Bool
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toStringShort
@@ -8,7 +9,9 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
+import net.corda.core.internal.dependencies
 import net.corda.core.node.ServiceHub
+import net.corda.core.transactions.RawDependency
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -203,7 +206,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
     @Suspendable
     override fun call(): List<TransactionSignature> {
         // SendTransactionFlow allows counterparty to access our data to resolve the transaction.
-        subFlow(SendTransactionFlow(session, partiallySignedTx))
+        subFlow(SendTransactionFlow(session, partiallySignedTx, encrypted = true))
         // Send the key we expect the counterparty to sign with - this is important where they may have several
         // keys to sign with, as it makes it faster for them to identify the key to sign with, and more straight forward
         // for us to check we have the expected signature returned.
@@ -259,7 +262,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  * @param otherSideSession The session which is providing you a transaction to sign.
  */
 abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSession: FlowSession,
-                                                             override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
+                                                             override val progressTracker: ProgressTracker = SignTransactionFlow.tracker(), val encrypted : Boolean = false) : FlowLogic<SignedTransaction>() {
 
     companion object {
         object RECEIVING : ProgressTracker.Step("Receiving transaction proposal for signing.")
@@ -274,10 +277,10 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
     override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
-        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
+        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, encrypted = true))
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
         // means we only have to check we own that one key, rather than matching all keys in the transaction against all
-        // keys we own.
+        // keys we own.t
         val signingKeys = otherSideSession.receive<List<PublicKey>>().unwrap { keys ->
             // TODO: We should have a faster way of verifying we own a single key
             serviceHub.keyManagementService.filterMyKeys(keys)
@@ -287,7 +290,53 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
         checkMySignaturesRequired(stx, signingKeys)
         // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
         checkSignatures(stx)
-        stx.tx.toLedgerTransaction(serviceHub).verify()
+        if (encrypted) {
+            val encryptionService = serviceHub.encryptedTransactionService
+            val validatedTxSvc = serviceHub.validatedTransactions
+
+            val encryptedTxs = stx.dependencies.mapNotNull {
+                validatedTxId ->
+                validatedTxSvc.getEncryptedTransaction(validatedTxId)?.let { etx ->
+                    etx.id to etx
+                }
+            }.toMap()
+
+            val signedTxs = stx.dependencies.mapNotNull {
+                validatedTxId ->
+                validatedTxSvc.getTransaction(validatedTxId)?.let { stx ->
+                    stx.id to stx
+                }
+            }.toMap()
+
+            val networkParameters = stx.dependencies.mapNotNull { depTxId ->
+                val npHash = when {
+                    encryptedTxs[depTxId] != null -> serviceHub.encryptedTransactionService.getNetworkParameterHash(encryptedTxs[depTxId]!!)
+                            ?: serviceHub.networkParametersService.defaultHash
+                    signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
+                            ?: serviceHub.networkParametersService.defaultHash
+                    else -> null
+                }
+
+                npHash?.let { depTxId to npHash }
+            }.associate {
+                netParams ->
+                netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
+            }
+
+            val rawDependencies = stx.dependencies.associate {
+                txId ->
+                txId to RawDependency(
+                        encryptedTxs[txId],
+                        signedTxs[txId],
+                        networkParameters[txId]
+                )
+            }
+
+            encryptionService.verifyTransaction(stx, serviceHub, false, rawDependencies)
+        } else {
+
+            stx.tx.toLedgerTransaction(serviceHub).verify()
+        }
         // Perform some custom verification over the transaction.
         try {
             checkTransaction(stx)

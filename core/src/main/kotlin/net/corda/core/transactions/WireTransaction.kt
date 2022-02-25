@@ -18,6 +18,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
@@ -88,6 +89,22 @@ constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt,
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
     override val id: SecureHash get() = merkleTree.hash
+
+    // Encryption PoC
+    val serializationFactory = SerializationFactory.defaultFactory
+    val serializationContext = serializationFactory.defaultContext
+
+    override val inputsStates: List<StateAndRef<ContractState>> = componentGroups
+            .singleOrNull{ it.groupIndex == ComponentGroupEnum.INPUT_STATES_GROUP.ordinal }
+            ?.let { group ->
+                group.components.map { (it as SerializedBytes<StateAndRef<ContractState>>).deserialize(serializationFactory, serializationContext) }
+            } ?: emptyList()
+
+    override val referenceStates : List<StateAndRef<ContractState>> = componentGroups
+            .singleOrNull{ it.groupIndex == ComponentGroupEnum.REFERENCE_STATES_GROUP.ordinal }
+            ?.let { group ->
+                group.components.map {(it as SerializedBytes<StateAndRef<ContractState>>).deserialize(serializationFactory, serializationContext) }
+            } ?: emptyList()
 
     /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
     val requiredSigningKeys: Set<PublicKey>

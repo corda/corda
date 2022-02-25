@@ -24,6 +24,10 @@ abstract class CoreTransaction : BaseTransaction() {
      * was created on older version of Corda (before 4), resolution will default to initial parameters.
      */
     abstract val networkParametersHash: SecureHash?
+
+    // Encryption PoC - optionally bundle the states
+    open val inputsStates: List<StateAndRef<ContractState>> = emptyList()
+    open val referenceStates: List<StateAndRef<ContractState>> = emptyList()
 }
 
 /** A transaction with fully resolved components, such as input states. */

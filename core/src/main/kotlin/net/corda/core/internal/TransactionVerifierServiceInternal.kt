@@ -133,6 +133,9 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
         validateStatesAgainstContract()
 
         // 5. Final step will be to run the contract code.
+
+        // Encryption PoC
+
     }
 
     private fun checkTransactionWithTimeWindowIsNotarised() {
@@ -509,6 +512,10 @@ class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Fun
                 throw ContractRejection(ltx.id, contract, e)
             }
         }
+    }
+
+    private fun checkInputs() {
+
     }
 }
 
