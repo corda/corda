@@ -5,3 +5,5 @@ package com.r3.conclave.cordapp.common
  * attestation contained in the mail body (requires an enclave host to be registered).
  */
 class InitPostOfficeToRemoteEnclave : EnclaveCommand
+
+class VerifyUnencryptedTx : EnclaveCommand
