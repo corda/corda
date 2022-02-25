@@ -1,7 +1,11 @@
 apply plugin: 'kotlin'
 
 dependencies {
-    implementation "com.r3.conclave:conclave-common:$conclaveVersion"
+    // TODO: fix conclaveVersion property
+    // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
+    implementation "com.r3.conclave:conclave-common:1.1"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "net.i2p.crypto:eddsa:0.3.0"
+
+    implementation project(':core')
 }

@@ -47,8 +47,9 @@ abstract class CommandEnclave : Enclave() {
      * @param mail the received [EnclaveMail].
      * @param routingHint a [String] containing the executing flowId and enclave command to execute.
      * @throws [IllegalArgumentException] if [routingHint] is null, or cannot be parsed.
+     * @throws [IllegalStateException] if attempting to execute a command when the host has not been registered.
      */
-    override fun receiveMail(mail: EnclaveMail, routingHint: String?) {
+    override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
         routingHint ?: throw IllegalArgumentException(
             "routingHint must be set for this enclave: ${this.javaClass.simpleName}")
 

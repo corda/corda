@@ -193,6 +193,8 @@ buildscript {
         }
 
         maven {
+            // TODO: fix conclaveRepo property
+            // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
             def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
             if (!Files.isDirectory(path.resolve("com"))) {
                 if (Files.isDirectory(Paths.get("/repo/com"))) {
@@ -440,7 +442,9 @@ allprojects {
             jcenter()
 
             maven {
-                def path = Paths.get(rootDir.absolutePath).resolve(conclaveRepo).toAbsolutePath().normalize()
+                // TODO: fix conclaveRepo property
+                // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
+                def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
                 if (!Files.isDirectory(path.resolve("com"))) {
                     if (Files.isDirectory(Paths.get("/repo/com"))) {
                         path = Paths.get("/repo")
