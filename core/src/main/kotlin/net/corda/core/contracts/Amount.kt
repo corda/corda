@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
 import java.math.BigDecimal
@@ -39,7 +40,9 @@ interface TokenizableAssetInfo {
  */
 @KeepForDJVM
 @CordaSerializable
-data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal, val token: T) : Comparable<Amount<T>> {
+data class Amount<T : Any>
+    @ConstructorForDeserialization
+    constructor(val quantity: Long, val displayTokenSize: BigDecimal, val token: T) : Comparable<Amount<T>> {
     // TODO Proper lookup of currencies in a locale and context sensitive fashion is not supported and is left to the application.
     companion object {
         /**

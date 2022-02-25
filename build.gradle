@@ -1,5 +1,7 @@
 import com.r3.testing.DistributeTestsBy
 import com.r3.testing.PodLogLevel
+import java.nio.file.Files
+import java.nio.file.Paths
 
 import static org.gradle.api.JavaVersion.VERSION_11
 import static org.gradle.api.JavaVersion.VERSION_1_8
@@ -69,7 +71,7 @@ buildscript {
     ext.servlet_version = '4.0.1'
     ext.assertj_version = '3.12.2'
     ext.slf4j_version = '1.7.30'
-    ext.log4j_version = '2.17.1'
+    ext.log4j_version = '2.16.0'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
@@ -188,6 +190,20 @@ buildscript {
             }
             mavenCentral()
             jcenter()
+        }
+
+        maven {
+            // TODO: fix conclaveRepo property
+            // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
+            def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
+            if (!Files.isDirectory(path.resolve("com"))) {
+                if (Files.isDirectory(Paths.get("/repo/com"))) {
+                    path = Paths.get("/repo")
+                } else {
+                    throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
+                }
+            }
+            url = path.toFile()
         }
     }
     dependencies {
@@ -424,6 +440,20 @@ allprojects {
             }
             mavenCentral()
             jcenter()
+
+            maven {
+                // TODO: fix conclaveRepo property
+                // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
+                def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
+                if (!Files.isDirectory(path.resolve("com"))) {
+                    if (Files.isDirectory(Paths.get("/repo/com"))) {
+                        path = Paths.get("/repo")
+                    } else {
+                        throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
+                    }
+                }
+                url = path.toFile()
+            }
         }
     }
 

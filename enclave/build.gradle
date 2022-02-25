@@ -1,0 +1,89 @@
+plugins {
+    id 'kotlin'
+    id 'com.r3.conclave.enclave'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.allopen'
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'java'
+apply plugin: 'kotlin-allopen'
+apply plugin: 'kotlin-noarg'
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        jvmTarget = "1.8"
+        javaParameters = true
+    }
+}
+
+/**
+ * The default Java version for enclaves is 11 so we need to set it to 8 for the CorDapp to work.
+ */
+tasks.withType(JavaCompile) {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+noArg {
+    annotations("net.corda.core.serialization.CordaSerializable", "net.corda.core.contracts.BelongsToContract")
+}
+
+/**
+ * There is no Kotlin code in this project,
+ * but if there were, this section would be required.
+ * Note: Java versions above and here have to match.
+ */
+/*
+tasks.withType(AbstractCompile) {
+    if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
+        kotlinOptions {
+            jvmTarget = JavaVersion.VERSION_1_8
+            apiVersion = '1.5'
+            languageVersion = '1.5'
+        }
+    }
+}
+*/
+
+dependencies {
+    implementation project(':common-enclave')
+    implementation project(':node-api')
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation 'junit:junit:4.13.1'
+
+    implementation "com.r3.conclave:conclave-enclave"
+
+    implementation ("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72") {
+        exclude group: 'org.jetbrains.kotlinx', module: 'kotlinx-serialization-json'
+    }
+
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.3.72"
+    implementation "org.bouncycastle:bcprov-jdk15on:1.68"
+    implementation "com.github.ben-manes.caffeine:caffeine:2.7.0"
+
+    testImplementation(platform('org.junit:junit-bom:5.7.0'))
+}
+
+conclave {
+    productID = 1
+    revocationLevel = 0
+
+    simulation {
+        signingType = privateKey
+        signingKey = file("sample_private_key.pem")
+    }
+
+    debug {
+        signingType = privateKey
+        signingKey = file("sample_private_key.pem")
+    }
+
+    release {
+        signingType = privateKey
+        signingKey = file("sample_private_key.pem")
+    }
+}

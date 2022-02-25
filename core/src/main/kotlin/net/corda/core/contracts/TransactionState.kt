@@ -4,6 +4,7 @@ package net.corda.core.contracts
 import net.corda.core.KeepForDJVM
 import net.corda.core.identity.Party
 import net.corda.core.internal.requiredContractClassName
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.loggerFor
 
@@ -15,7 +16,10 @@ typealias ContractClassName = String
  * This is the definitive state that is stored on the ledger and used in transaction outputs.
  */
 @CordaSerializable
-data class TransactionState<out T : ContractState> @JvmOverloads constructor(
+data class TransactionState<out T : ContractState>
+
+    @ConstructorForDeserialization
+    constructor(
         /** The custom contract state */
         val data: T,
         /**

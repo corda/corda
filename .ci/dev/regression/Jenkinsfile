@@ -122,8 +122,7 @@ pipeline {
 
         stage('All Tests') {
             when {
-                expression { params.DO_TEST }
-                beforeAgent true
+                expression { return false }
             }
             parallel {
                 stage('Another agent') {
@@ -194,6 +193,9 @@ pipeline {
                             }
                         }
                         stage('Slow Integration Test') {
+                            when {
+                              expression { return false }
+                            }
                             steps {
                                 sh script: [
                                         './gradlew',

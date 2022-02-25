@@ -222,6 +222,52 @@ private constructor(
                 // All states must also deserialize using the correct SerializationContext.
             ).also(LedgerTransaction::checkBaseInvariants)
         }
+
+        /**
+         * This factory function will create an instance of [LedgerTransaction]
+         * that will be used for contract verification. See [BasicVerifier] and
+         * [DeterministicVerifier][net.corda.node.internal.djvm.DeterministicVerifier].
+         */
+        @CordaInternal
+        fun createForConclaveVerify(
+                inputs: List<StateAndRef<ContractState>>,
+                outputs: List<TransactionState<ContractState>>,
+                commands: List<CommandWithParties<CommandData>>,
+                attachments: List<Attachment>,
+                id: SecureHash,
+                notary: Party?,
+                timeWindow: TimeWindow?,
+                privacySalt: PrivacySalt,
+                networkParameters: NetworkParameters?,
+                references: List<StateAndRef<ContractState>>,
+                componentGroups: List<ComponentGroup>?,
+                serializedInputs: List<SerializedStateAndRef>?,
+                serializedReferences: List<SerializedStateAndRef>?,
+                digestService: DigestService): LedgerTransaction {
+
+            return LedgerTransaction(
+                    inputs = protect(inputs),
+                    outputs = protect(outputs),
+                    commands = protect(commands),
+                    attachments = protect(attachments),
+                    id = id,
+                    notary = notary,
+                    timeWindow = timeWindow,
+                    privacySalt = privacySalt,
+                    networkParameters = networkParameters,
+                    references = protect(references),
+                    componentGroups = componentGroups,
+                    serializedInputs = serializedInputs,
+                    serializedReferences = serializedReferences,
+                    isAttachmentTrusted = { true },
+                    verifierFactory = ::BasicVerifier,
+                    attachmentsClassLoaderCache = null,
+                    digestService = digestService
+                    // This check accesses input states and must run on the LedgerTransaction
+                    // instance that is verified, not on the outer LedgerTransaction shell.
+                    // All states must also deserialize using the correct SerializationContext.
+            ).also(LedgerTransaction::checkBaseInvariants)
+        }
     }
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
