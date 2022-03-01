@@ -3,6 +3,7 @@ apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
+    cordaDriver "net.corda:corda-shell:$corda_release_version"
     runtimeOnly project(':node-api')
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.

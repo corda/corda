@@ -27,6 +27,7 @@ cordapp {
 }
 
 dependencies {
+    cordaDriver "net.corda:corda-shell:$corda_release_version"
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
 

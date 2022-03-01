@@ -26,6 +26,7 @@ configurations {
 }
 
 dependencies {
+    cordaDriver "net.corda:corda-shell:$corda_release_version"
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
