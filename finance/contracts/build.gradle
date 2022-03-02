@@ -49,6 +49,9 @@ cordapp {
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
+    signing {
+        enabled false
+    }
     // By default the Cordapp is signed by Corda development certificate, for production build pass the following system properties to Gradle to use specific keystore e.g:
     // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 }

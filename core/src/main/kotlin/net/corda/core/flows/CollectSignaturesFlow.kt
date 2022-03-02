@@ -11,7 +11,6 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
 import net.corda.core.internal.dependencies
 import net.corda.core.node.ServiceHub
-import net.corda.core.transactions.RawDependency
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -323,16 +322,16 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
                 netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
             }
 
-            val rawDependencies = stx.dependencies.associate {
-                txId ->
-                txId to RawDependency(
-                        encryptedTxs[txId],
-                        signedTxs[txId],
-                        networkParameters[txId]
-                )
-            }
-
-            encryptionService.verifyTransaction(stx, serviceHub, false, rawDependencies)
+//            val rawDependencies = stx.dependencies.associate {
+//                txId ->
+//                txId to RawDependency(
+//                        encryptedTxs[txId],
+//                        signedTxs[txId],
+//                        networkParameters[txId]
+//                )
+//            }
+//
+//            encryptionService.verifyTransaction(stx, false)
         } else {
 
             stx.tx.toLedgerTransaction(serviceHub).verify()

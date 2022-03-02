@@ -88,6 +88,8 @@ dependencies {
 
     testCompile "org.ow2.asm:asm:$asm_version"
 
+    implementation "com.r3.conclave:conclave-client:1.1"
+
     // JDK11: required by Quasar at run-time
     testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
 

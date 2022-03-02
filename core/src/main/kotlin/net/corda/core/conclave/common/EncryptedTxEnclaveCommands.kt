@@ -1,4 +1,4 @@
-package com.r3.conclave.cordapp.common
+package net.corda.core.conclave.common
 
 /**
  * An [EnclaveCommand] that instructs the enclave to initialise a post office to a remote enclave using the serialized

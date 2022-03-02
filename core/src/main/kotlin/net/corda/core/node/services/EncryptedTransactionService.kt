@@ -1,5 +1,8 @@
 package net.corda.core.node.services
 
+import net.corda.core.conclave.common.DummyEnclaveClient
+import net.corda.core.conclave.common.EnclaveClient
+import net.corda.core.conclave.common.dto.WireTxAdditionalInfo
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -9,12 +12,9 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.EncryptedTransaction
-import net.corda.core.transactions.RawDependency
-import net.corda.core.transactions.RawDependencyMap
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.SignedTransactionDependencies
-import net.corda.core.transactions.SignedTransactionDependencyMap
 import net.corda.core.transactions.VerifiedEncryptedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toHexString
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -22,7 +22,9 @@ import javax.crypto.KeyGenerator
 import javax.crypto.spec.IvParameterSpec
 
 // TODO: this should be an interface
-class EncryptedTransactionService() : SingletonSerializeAsToken() {
+class EncryptedTransactionService(val enclaveClient: EnclaveClient = DummyEnclaveClient()) : SingletonSerializeAsToken() {
+
+
     companion object {
 
         private const val CRYPTO_TRANSFORMATION = "AES/CBC/PKCS5PADDING"
@@ -67,42 +69,45 @@ class EncryptedTransactionService() : SingletonSerializeAsToken() {
     }
 
     // TODO: this is glossing over a lot of difficulty here. toLedgerTransaction resolves a lot of stuff via services which wont be available within an enclave
-    fun verifyTransaction(encryptedTransaction: EncryptedTransaction, serviceHub : ServiceHub, checkSufficientSignatures: Boolean, rawDependencies: RawDependencyMap): VerifiedEncryptedTransaction {
+    fun verifyTransaction(encryptedTransaction: EncryptedTransaction, checkSufficientSignatures: Boolean): VerifiedEncryptedTransaction {
 
-        println("Verifying encrypted ${encryptedTransaction.id} ${serviceHub.myInfo.legalIdentities.single()}")
-
-        val stx = decryptTransaction(encryptedTransaction)
-
-        val dependencies = extractDependencies(stx.inputs + stx.references, rawDependencies)
-
-        // will throw if cannot verify
-        stx.toLedgerTransaction(serviceHub, checkSufficientSignatures, dependencies).verify()
-
-        val sig = Crypto.doSign(enclaveKeyPair.private, stx.txBits.bytes)
-
-        return encryptedTransaction.toVerified(sig)
+//        println("Verifying encrypted ${encryptedTransaction.id} ${serviceHub.myInfo.legalIdentities.single()}")
+//
+//        val stx = decryptTransaction(encryptedTransaction)
+//
+//        val dependencies = extractDependencies(stx.inputs + stx.references, rawDependencies)
+//
+//        // will throw if cannot verify
+//
+//        stx.toLedgerTransaction(serviceHub, checkSufficientSignatures, dependencies).verify()
+//
+//        val sig = Crypto.doSign(enclaveKeyPair.private, stx.txBits.bytes)
+//
+//        return encryptedTransaction.toVerified(sig)
+        
+        return VerifiedEncryptedTransaction(encryptedTransaction, "sa".toByteArray())
     }
 
-    fun verifyTransaction(signedTransaction: SignedTransaction, serviceHub: ServiceHub, checkSufficientSignatures: Boolean, rawDependencies: RawDependencyMap) {
+    fun verifyTransaction(wireTxAdditionalInfo: WireTxAdditionalInfo, checkSufficientSignatures: Boolean) {
 
-        println("Verifying ${signedTransaction.id} ${serviceHub.myInfo.legalIdentities.single()}")
-
-        val dependencies = extractDependencies(signedTransaction.inputs + signedTransaction.references, rawDependencies)
-
-        (signedTransaction.tx.inputsStates + signedTransaction.tx.referenceStates).forEach {
-            val dependency = dependencies[it.ref.txhash] ?: throw IllegalArgumentException("Dependency transaction not found")
-            val dependencyState = dependency.inputsAndRefs[it.ref] ?: throw IllegalArgumentException("Dependency state not found")
-
-            val dependentState = dependencyState.data
-            val suppliedState = it.state.data
-            require(dependencyState.data  == it.state.data) {
-
-                "Supplied input/ref on transaction did not match it's stateRef"
-            }
-        }
-
-        // will throw if cannot verify
-        signedTransaction.toLedgerTransaction(serviceHub, checkSufficientSignatures, dependencies).verify()
+//        println("Verifying ${signedTransaction.id} ${serviceHub.myInfo.legalIdentities.single()}")
+//
+//        val dependencies = extractDependencies(signedTransaction.inputs + signedTransaction.references, rawDependencies)
+//
+//        (signedTransaction.tx.inputsStates + signedTransaction.tx.referenceStates).forEach {
+//            val dependency = dependencies[it.ref.txhash] ?: throw IllegalArgumentException("Dependency transaction not found")
+//            val dependencyState = dependency.inputsAndRefs[it.ref] ?: throw IllegalArgumentException("Dependency state not found")
+//
+//            val dependentState = dependencyState.data
+//            val suppliedState = it.state.data
+//            require(dependencyState.data  == it.state.data) {
+//
+//                "Supplied input/ref on transaction did not match it's stateRef"
+//            }
+//        }
+//
+//        // will throw if cannot verify
+//        signedTransaction.toLedgerTransaction(serviceHub, checkSufficientSignatures, dependencies).verify()
     }
 
     fun encryptTransaction(signedTransaction: SignedTransaction): EncryptedTransaction {
@@ -138,27 +143,27 @@ class EncryptedTransactionService() : SingletonSerializeAsToken() {
         return decryptionCipher.doFinal(encryptedTransactionBytes).deserialize()
     }
 
-    private fun extractDependencies(requiredStateRefs: List<StateRef>, rawDependencies: RawDependencyMap) : SignedTransactionDependencyMap {
+//    private fun extractDependencies(requiredStateRefs: List<StateRef>, rawDependencies: RawDependencyMap) : SignedTransactionDependencyMap {
+//
+//        val requiredStates = requiredStateRefs.map { it.txhash }.distinct()
+//
+//        val dependencies = requiredStateRefs.map {
+//            val rawDependency = rawDependencies[it.txhash] ?: throw IllegalArgumentException("Missing raw dependency for ${it.txhash}")
+//            val tx = rawDependency.getTransaction() ?: throw IllegalArgumentException("Missing raw dependency data for ${it.txhash} $rawDependency")
+//            it to tx.coreTransaction.outputs[it.index]
+//        }.groupBy { it.first.txhash }
+//
+//
+//        return requiredStates.map {
+//            val resolvedDependencies = dependencies[it] ?: throw IllegalArgumentException("Missing encrypted transaction resolved reference for $it")
+//            it to  SignedTransactionDependencies(
+//                    inputsAndRefs = resolvedDependencies.toMap(),
+//                    networkParameters = rawDependencies[it]?.networkParameters
+//            )
+//        }.toMap()
+//    }
 
-        val requiredStates = requiredStateRefs.map { it.txhash }.distinct()
-
-        val dependencies = requiredStateRefs.map {
-            val rawDependency = rawDependencies[it.txhash] ?: throw IllegalArgumentException("Missing raw dependency for ${it.txhash}")
-            val tx = rawDependency.getTransaction() ?: throw IllegalArgumentException("Missing raw dependency data for ${it.txhash} $rawDependency")
-            it to tx.coreTransaction.outputs[it.index]
-        }.groupBy { it.first.txhash }
-
-
-        return requiredStates.map {
-            val resolvedDependencies = dependencies[it] ?: throw IllegalArgumentException("Missing encrypted transaction resolved reference for $it")
-            it to  SignedTransactionDependencies(
-                    inputsAndRefs = resolvedDependencies.toMap(),
-                    networkParameters = rawDependencies[it]?.networkParameters
-            )
-        }.toMap()
-    }
-
-    private fun RawDependency.getTransaction() : SignedTransaction? {
-        return signedTransaction ?: encryptedTransaction?.let { decryptTransaction(it) }
-    }
+//    private fun RawDependency.getTransaction() : SignedTransaction? {
+//        return signedTransaction ?: encryptedTransaction?.let { decryptTransaction(it) }
+//    }
 }

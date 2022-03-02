@@ -2,12 +2,14 @@ package com.r3.conclave.cordapp.sample.enclave
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.r3.conclave.common.EnclaveInstanceInfo
-import com.r3.conclave.cordapp.common.*
-import com.r3.conclave.cordapp.common.dto.ConclaveVerificationResponse
-import com.r3.conclave.cordapp.common.dto.VerificationStatus
-import com.r3.conclave.cordapp.common.dto.WireTxAdditionalInfo
 import com.r3.conclave.enclave.EnclavePostOffice
 import com.r3.conclave.mail.EnclaveMail
+import net.corda.core.conclave.common.EnclaveCommand
+import net.corda.core.conclave.common.InitPostOfficeToRemoteEnclave
+import net.corda.core.conclave.common.VerifyUnencryptedTx
+import net.corda.core.conclave.common.dto.ConclaveVerificationResponse
+import net.corda.core.conclave.common.dto.VerificationStatus
+import net.corda.core.conclave.common.dto.WireTxAdditionalInfo
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT

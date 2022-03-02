@@ -1,7 +1,7 @@
 package com.r3.conclave.cordapp.sample.enclave
 
-import com.r3.conclave.cordapp.common.dto.ConclaveNetworkParameters
-import com.r3.conclave.cordapp.common.dto.WireTxAdditionalInfo
+import net.corda.core.conclave.common.dto.ConclaveNetworkParameters
+import net.corda.core.conclave.common.dto.WireTxAdditionalInfo
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.node.NetworkParameters

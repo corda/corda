@@ -10,7 +10,6 @@ import net.corda.core.internal.TransactionsResolver
 import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.EncryptedTransaction
-import net.corda.core.transactions.RawDependency
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -219,15 +218,15 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                     it.first to services.networkParametersService.lookup(it.second)
                 }
 
-                val rawDependencies = dependencies.associate {
-                    it to RawDependency(
-                            encryptedTxs[it],
-                            signedTxs[it],
-                            networkParameters[it]
-                    )
-                }
+//                val rawDependencies = dependencies.associate {
+//                    it to RawDependency(
+//                            encryptedTxs[it],
+//                            signedTxs[it],
+//                            networkParameters[it]
+//                    )
+//                }
 
-                val verifiedTransaction = encryptSvc.verifyTransaction(tx, flow.serviceHub,  true,  rawDependencies)
+                val verifiedTransaction = encryptSvc.verifyTransaction(tx,true)
 
                 // TODO: why does this usually go through the serviceHub's recordTransactions function and not
                 //  direct to the validatedTransactions service??

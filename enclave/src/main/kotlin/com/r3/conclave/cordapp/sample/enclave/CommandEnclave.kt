@@ -1,12 +1,11 @@
 package com.r3.conclave.cordapp.sample.enclave
 
-import com.r3.conclave.cordapp.common.EnclaveCommand
-import com.r3.conclave.cordapp.common.RegisterHostIdentity
-import com.r3.conclave.cordapp.common.getRoutingInfo
-import com.r3.conclave.cordapp.common.internal.SenderIdentityImpl
 import com.r3.conclave.enclave.Enclave
 import com.r3.conclave.mail.EnclaveMail
 import com.r3.conclave.enclave.EnclavePostOffice
+import net.corda.core.conclave.common.EnclaveCommand
+import net.corda.core.conclave.common.RegisterHostIdentity
+import net.corda.core.conclave.common.getRoutingInfo
 import java.lang.IllegalStateException
 import java.security.PublicKey
 import java.security.cert.CertificateFactory
@@ -50,23 +49,23 @@ abstract class CommandEnclave : Enclave() {
      * @throws [IllegalStateException] if attempting to execute a command when the host has not been registered.
      */
     override fun receiveMail(id: Long, mail: EnclaveMail, routingHint: String?) {
-        routingHint ?: throw IllegalArgumentException(
-            "routingHint must be set for this enclave: ${this.javaClass.simpleName}")
-
-        val (flowId, route) = getRoutingInfo(routingHint)
-
-        val registeredHost = if (isHostRegistered()) authenticatedHostKey else null
-        println("Received route: $route, registered host: $registeredHost")
-
-        if (route is RegisterHostIdentity) {
-            registerHostIdentity(mail, flowId)
-        } else if (isHostRegistered()) {
-            receiveMail(mail, flowId, route)
-        } else {
-            throw IllegalStateException(
-                "Host must be registered before executing enclave commands"
-            )
-        }
+//        routingHint ?: throw IllegalArgumentException(
+//            "routingHint must be set for this enclave: ${this.javaClass.simpleName}")
+//
+//        val (flowId, route) = getRoutingInfo(routingHint)
+//
+//        val registeredHost = if (isHostRegistered()) authenticatedHostKey else null
+//        println("Received route: $route, registered host: $registeredHost")
+//
+//        if (route is RegisterHostIdentity) {
+//            registerHostIdentity(mail, flowId)
+//        } else if (isHostRegistered()) {
+//            receiveMail(mail, flowId, route)
+//        } else {
+//            throw IllegalStateException(
+//                "Host must be registered before executing enclave commands"
+//            )
+//        }
     }
 
     abstract fun receiveMail(mail: EnclaveMail, flowId: String, route: EnclaveCommand)
@@ -78,21 +77,21 @@ abstract class CommandEnclave : Enclave() {
      * @param mail an incoming [EnclaveMail] containing a serialized [SenderIdentityImpl] instance.
      * @param flowId the ID of the flow executing on our host.
      */
-    protected fun registerHostIdentity(mail: EnclaveMail, flowId: String) {
-        val identity = SenderIdentityImpl.deserialize(mail.bodyAsBytes)
-        val sharedSecret = mail.authenticatedSender.encoded
-
-        val authenticated = authenticateIdentity(sharedSecret, identity)
-        if (authenticated) {
-            authenticatedHostKey = mail.authenticatedSender
-            hostPostOffice = postOffice(mail)
-        }
-
-        val responseString = if (authenticated) "ack" else "nak"
-
-        val reply = postOffice(mail).encryptMail(responseString.toByteArray(Charsets.UTF_8))
-        postMail(reply, "$flowId:${RegisterHostIdentity().serialize()}")
-    }
+//    protected fun registerHostIdentity(mail: EnclaveMail, flowId: String) {
+//        val identity = SenderIdentityImpl.deserialize(mail.bodyAsBytes)
+//        val sharedSecret = mail.authenticatedSender.encoded
+//
+//        val authenticated = authenticateIdentity(sharedSecret, identity)
+//        if (authenticated) {
+//            authenticatedHostKey = mail.authenticatedSender
+//            hostPostOffice = postOffice(mail)
+//        }
+//
+//        val responseString = if (authenticated) "ack" else "nak"
+//
+//        val reply = postOffice(mail).encryptMail(responseString.toByteArray(Charsets.UTF_8))
+//        postMail(reply, "$flowId:${RegisterHostIdentity().serialize()}")
+//    }
 
     /**
      * Return true if a host has successfully registered and authenticated their identity.
@@ -105,10 +104,10 @@ abstract class CommandEnclave : Enclave() {
      * @param sharedSecret check identity signature against this shared secret.
      * @param identity the [SenderIdentityImpl] instance to authenticate.
      */
-    private fun authenticateIdentity(sharedSecret: ByteArray, identity: SenderIdentityImpl): Boolean {
-        val isTrusted = identity.isTrusted(trustedRootCertificate)
-        val didSign = identity.didSign(sharedSecret)
-
-        return isTrusted && didSign
-    }
+//    private fun authenticateIdentity(sharedSecret: ByteArray, identity: SenderIdentityImpl): Boolean {
+//        val isTrusted = identity.isTrusted(trustedRootCertificate)
+//        val didSign = identity.didSign(sharedSecret)
+//
+//        return isTrusted && didSign
+//    }
 }

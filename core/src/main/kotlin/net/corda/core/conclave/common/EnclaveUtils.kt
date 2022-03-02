@@ -1,4 +1,4 @@
-package com.r3.conclave.cordapp.common
+package net.corda.core.conclave.common
 
 import java.security.MessageDigest
 import java.util.*

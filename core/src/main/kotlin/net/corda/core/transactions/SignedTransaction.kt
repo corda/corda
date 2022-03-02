@@ -365,47 +365,6 @@ constructor(val txBits: SerializedBytes<CoreTransaction>, override val sigs: Lis
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
         : NamedByHash, SignatureException(missingSignatureMsg(missing, descriptions, id)), CordaThrowable by CordaException(missingSignatureMsg(missing, descriptions, id))
 
-
-    //region Added for encryption PoC
-    @JvmOverloads
-    @DeleteForDJVM
-    @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true, dependencyMap: SignedTransactionDependencyMap): LedgerTransaction {
-        if (checkSufficientSignatures) {
-            verifyRequiredSignatures() // It internally invokes checkSignaturesAreValid().
-        } else {
-            checkSignaturesAreValid()
-        }
-        // We need parameters check here, because finality flow calls stx.toLedgerTransaction() and then verify.
-        resolveAndCheckNetworkParameters(services, dependencyMap)
-        return tx.toLedgerTransaction(services, dependencyMap)
-    }
-
-    @DeleteForDJVM
-    private fun resolveAndCheckNetworkParameters(services: ServiceHub, dependencyMap: SignedTransactionDependencyMap) {
-
-        val defaultNetworkParameters = services.networkParametersService.lookup(services.networkParametersService.defaultHash)
-        val txNetworkParameters = if (networkParametersHash != null) {
-            services.networkParametersService.lookup(networkParametersHash!!)
-        } else {
-            defaultNetworkParameters
-        } ?: throw TransactionResolutionException(id)
-
-        val groupedInputsAndRefs = (inputs + references).groupBy { it.txhash }
-        groupedInputsAndRefs.map { entry ->
-
-            val dependencies = dependencyMap[entry.key] ?: throw TransactionResolutionException(id)
-
-            val params = (dependencies.networkParameters ?: defaultNetworkParameters) ?: throw TransactionResolutionException(id)
-
-            if (txNetworkParameters.epoch < params.epoch) {
-                throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, entry.value.first(), txNetworkParameters, params)
-            }
-        }
-    }
-    //endregion
-
-
     //region Deprecated
     /** Returns the contained [NotaryChangeWireTransaction], or throws if this is a normal transaction. */
     @Deprecated("No replacement, this should not be used outside of Corda core")
@@ -416,25 +375,3 @@ constructor(val txBits: SerializedBytes<CoreTransaction>, override val sigs: Lis
     fun isNotaryChangeTransaction() = this.coreTransaction is NotaryChangeWireTransaction
     //endregion
 }
-
-typealias SignedTransactionDependencyMap = Map<SecureHash, SignedTransactionDependencies>
-
-data class SignedTransactionDependencies(
-        val inputsAndRefs : Map<StateRef, TransactionState<ContractState>>,
-        val networkParameters : NetworkParameters?
-)
-
-//data class RawDependencies(
-//        val encryptedTransactions: Map<SecureHash, EncryptedTransaction>,
-//        val signedTransactions: Map<SecureHash, SignedTransaction>
-//        val networkParameters: NetworkParameters
-//)
-
-
-typealias RawDependencyMap = Map<SecureHash, RawDependency>
-
-data class RawDependency(
-        val encryptedTransaction: EncryptedTransaction?,
-        val signedTransaction: SignedTransaction?,
-        val networkParameters: NetworkParameters?
-)

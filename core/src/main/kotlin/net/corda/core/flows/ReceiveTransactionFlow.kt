@@ -7,7 +7,6 @@ import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.dependencies
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
-import net.corda.core.transactions.RawDependency
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
@@ -88,16 +87,16 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
                         netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
                     }
 
-                    val rawDependencies = it.dependencies.associate {
-                        txId ->
-                        txId to RawDependency(
-                                encryptedTxs[txId],
-                                signedTxs[txId],
-                                networkParameters[txId]
-                        )
-                    }
-
-                    serviceHub.encryptedTransactionService.verifyTransaction(it, serviceHub, checkSufficientSignatures, rawDependencies)
+//                    val rawDependencies = it.dependencies.associate {
+//                        txId ->
+//                        txId to RawDependency(
+//                                encryptedTxs[txId],
+//                                signedTxs[txId],
+//                                networkParameters[txId]
+//                        )
+//                    }
+//
+//                    serviceHub.encryptedTransactionService.verifyTransaction(it, serviceHub, checkSufficientSignatures, rawDependencies)
                     it
                 } else {
                     it.verify(serviceHub, checkSufficientSignatures)

@@ -1,4 +1,4 @@
-package com.r3.conclave.cordapp.common.dto
+package net.corda.core.conclave.common.dto
 
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId

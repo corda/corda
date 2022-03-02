@@ -9,6 +9,7 @@ import com.zaxxer.hikari.pool.HikariPool
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
+import net.corda.core.conclave.common.EnclaveClient
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.DigitalSignature
@@ -291,7 +292,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
 
-    val encryptedTransactionService = EncryptedTransactionService().tokenize()
+    val encryptedTransactionService = makeEncryptedTransactionService().tokenize()
 
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, encryptedTransactionService).also {
         attachments.servicesForResolution = it
@@ -1051,6 +1052,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
         return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
+    }
+
+    private fun makeEncryptedTransactionService(): EncryptedTransactionService {
+        return cordappLoader.cordapps.map { it.services.filter { clazz -> clazz.interfaces.contains(EnclaveClient::class.java) }}.flatten().firstOrNull()?.let {
+            EncryptedTransactionService(it.newInstance() as EnclaveClient)
+        } ?: run {
+            EncryptedTransactionService()
+        }
     }
 
     open fun stop() {
