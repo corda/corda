@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
+import net.corda.core.node.ServiceHub
 import java.sql.Connection
 import java.sql.Savepoint
 import java.util.concurrent.Executor
@@ -8,73 +9,73 @@ import java.util.concurrent.Executor
  * A delegate of [Connection] which disallows some operations.
  */
 @Suppress("TooManyFunctions")
-class RestrictedConnection(private val delegate : Connection) : Connection by delegate {
+class RestrictedConnection(private val delegate: Connection, private val serviceHub: ServiceHub) : Connection by delegate {
 
     override fun abort(executor: Executor?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("abort", serviceHub) { delegate.abort(executor) }
     }
 
     override fun clearWarnings() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("clearWarnings", serviceHub) { delegate.clearWarnings() }
     }
 
     override fun close() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("close", serviceHub) { delegate.close() }
     }
 
     override fun commit() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("commit", serviceHub) { delegate.commit() }
     }
 
     override fun setSavepoint(): Savepoint? {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        return restrictDatabaseOperationFromJdbcSession("setSavepoint", serviceHub) { delegate.setSavepoint() }
     }
 
-    override fun setSavepoint(name : String?): Savepoint? {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+    override fun setSavepoint(name: String?): Savepoint? {
+        return restrictDatabaseOperationFromJdbcSession("setSavepoint", serviceHub) { delegate.setSavepoint(name) }
     }
 
     override fun releaseSavepoint(savepoint: Savepoint?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("releaseSavepoint", serviceHub) { delegate.releaseSavepoint(savepoint) }
     }
 
     override fun rollback() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("rollback", serviceHub) { delegate.rollback() }
     }
 
     override fun rollback(savepoint: Savepoint?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("rollback", serviceHub) { delegate.rollback(savepoint) }
     }
 
-    override fun setCatalog(catalog : String?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+    override fun setCatalog(catalog: String?) {
+        restrictDatabaseOperationFromJdbcSession("setCatalog", serviceHub) { delegate.catalog = catalog }
     }
 
     override fun setTransactionIsolation(level: Int) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("setTransactionIsolation", serviceHub) { delegate.transactionIsolation = level }
     }
 
     override fun setTypeMap(map: MutableMap<String, Class<*>>?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("setTypeMap", serviceHub) { delegate.typeMap = map }
     }
 
     override fun setHoldability(holdability: Int) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("setHoldability", serviceHub) { delegate.holdability = holdability }
     }
 
     override fun setSchema(schema: String?) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("setSchema", serviceHub) { delegate.schema = schema }
     }
 
     override fun setNetworkTimeout(executor: Executor?, milliseconds: Int) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("setNetworkTimeout", serviceHub) { delegate.setNetworkTimeout(executor, milliseconds) }
     }
 
     override fun setAutoCommit(autoCommit: Boolean) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("setAutoCommit", serviceHub) { delegate.autoCommit = autoCommit }
     }
 
     override fun setReadOnly(readOnly: Boolean) {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.jdbcSession.")
+        restrictDatabaseOperationFromJdbcSession("setReadOnly", serviceHub) { delegate.isReadOnly = readOnly }
     }
 }

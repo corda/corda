@@ -455,7 +455,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    fun clearNetworkMapCache() {
+    open fun clearNetworkMapCache() {
         Node.printBasicNodeInfo("Clearing network map cache entries")
         log.info("Starting clearing of network map cache entries...")
         startDatabase()
@@ -690,9 +690,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val isShellStarted = InteractiveShell.startShellIfInstalled(configuration, cordappLoader)
             configuration.sshd?.port?.let {
                 if (isShellStarted) {
-                    log.info("Binding Shell SSHD server on port $it.")
+                    Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
+                    log.info("SSH server listening on port: $it.")
                 } else {
-                    log.info("SSH port defined but corda-shell is not installed in node's drivers directory")
+                    Node.printBasicNodeInfo(
+                        "SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory"
+                    )
+                    log.info("SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory")
                 }
             }
         }
@@ -1157,7 +1161,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         /**
          * Exposes the database connection as a [RestrictedConnection] to the users.
          */
-        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
+        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession(), services)
 
         @Suppress("TooGenericExceptionCaught")
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
@@ -1167,7 +1171,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 withSavePoint { savepoint ->
                     // Restrict what entity manager they can use inside the block
                     try {
-                        block(RestrictedEntityManager(manager)).also {
+                        block(RestrictedEntityManager(manager, services)).also {
                             if (!manager.transaction.rollbackOnly) {
                                 manager.flush()
                             } else {

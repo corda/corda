@@ -8,14 +8,13 @@ import org.apache.activemq.artemis.core.protocol.core.impl.wireformat.MessagePac
 import org.apache.activemq.artemis.protocol.amqp.broker.AMQPMessage
 import org.apache.activemq.artemis.protocol.amqp.broker.AmqpInterceptor
 import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
-import org.apache.qpid.proton.amqp.messaging.Data
 
 class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChecksInterceptor<Packet>(maxMessageSize), Interceptor {
-    override fun getMessageSize(packet: Packet?): Int? {
+    override fun getMessageSize(packet: Packet?): Long? {
         return when (packet) {
         // This is an estimate of how much memory a Message body takes up.
         // Note, it is only an estimate
-            is MessagePacket -> (packet.message.persistentSize - packet.message.headersAndPropertiesEncodeSize - 4).toInt()
+            is MessagePacket -> (packet.message.persistentSize - packet.message.headersAndPropertiesEncodeSize - 4)
         // Skip all artemis control messages.
             else -> null
         }
@@ -23,7 +22,7 @@ class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChec
 }
 
 class AmqpMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChecksInterceptor<AMQPMessage>(maxMessageSize), AmqpInterceptor {
-    override fun getMessageSize(packet: AMQPMessage?): Int? = (packet?.protonMessage?.body as? Data)?.value?.length
+    override fun getMessageSize(packet: AMQPMessage?): Long? = packet?.wholeMessageSize
 }
 
 /**
@@ -46,6 +45,6 @@ sealed class MessageSizeChecksInterceptor<T : Any>(private val maxMessageSize: I
     }
 
     // get size of the message in byte, returns null if the message is null or size don't need to be checked.
-    abstract fun getMessageSize(packet: T?): Int?
+    abstract fun getMessageSize(packet: T?): Long?
 }
 
