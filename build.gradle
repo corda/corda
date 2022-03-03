@@ -63,7 +63,7 @@ buildscript {
     ext.asm_version = '7.1'
     ext.artemis_version = '2.19.1'
     // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
-    ext.jackson_version = '2.11.1'
+    ext.jackson_version = '2.12.6'
     ext.jackson_kotlin_version = '2.9.7'
     ext.jetty_version = '9.4.19.v20190610'
     ext.jersey_version = '2.25'
