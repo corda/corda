@@ -584,7 +584,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
 
     private object MapSerializer : JsonSerializer<Map<Any, Any>>() {
         override fun serialize(map: Map<Any, Any>, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeStartArray(map, map.size)
+            gen.writeStartArray()
             map.forEach { (key, value) ->
                 gen.jsonObject {
                     writeObjectField("key", key)
