@@ -127,7 +127,9 @@ dependencies {
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
     compile "org.apache.commons:commons-collections4:${commons_collections_version}"
     compile "commons-beanutils:commons-beanutils:${beanutils_version}"
-    compile "org.apache.activemq:artemis-server:${artemis_version}"
+    compile("org.apache.activemq:artemis-server:${artemis_version}") {
+        exclude group: 'org.apache.commons', module: 'commons-dbcp2'
+    }
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
     runtime("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
