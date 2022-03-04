@@ -129,11 +129,15 @@ dependencies {
     compile "commons-beanutils:commons-beanutils:${beanutils_version}"
     compile("org.apache.activemq:artemis-server:${artemis_version}") {
         exclude group: 'org.apache.commons', module: 'commons-dbcp2'
+        exclude group: 'org.jgroups', module: 'jgroups'
     }
-    compile "org.apache.activemq:artemis-core-client:${artemis_version}"
+    compile("org.apache.activemq:artemis-core-client:${artemis_version}") {
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
     runtime("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
+        exclude group: 'org.jgroups', module: 'jgroups'
     }
 
     // Manifests: for reading stuff from the manifest file
