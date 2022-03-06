@@ -31,6 +31,7 @@ configurations {
 }
 
 dependencies {
+    cordaDriver "net.corda:corda-shell:$corda_release_version"
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
     compile "javax.servlet:javax.servlet-api:${servlet_version}"

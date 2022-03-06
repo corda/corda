@@ -12,6 +12,7 @@ cordapp {
 }
 
 dependencies {
+    cordaDriver "net.corda:corda-shell:$corda_release_version"
     // Cordformation needs this for the Network Bootstrapper.
     runtimeOnly project(':node-api')
 
