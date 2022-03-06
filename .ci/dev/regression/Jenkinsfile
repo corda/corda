@@ -3,6 +3,7 @@
  * Jenkins pipeline to build Corda OS release branches and tags.
  * PLEASE NOTE: we DO want to run a build for each commit!!!
  */
+@Library('corda-shared-build-pipeline-steps')
 
 /**
  * Sense environment
@@ -325,6 +326,61 @@ pipeline {
                 }
             }
         }
+
+		stage('Prepare for S3 upload') {
+
+		    when {
+                expression { isReleaseTag }
+            }
+            steps {
+                script {
+                    sh 'rm -rf build/downloaded-files'
+                    def propsFile = readProperties  file:'constants.properties'
+                    version="${propsFile['cordaVersion']}-${propsFile['versionSuffix']}"
+
+                    withEnv(["CORDA_VERSION=${version}"]) {
+						rtDownload(
+								serverId: 'R3 Artifactory',
+								spec: '''{
+									"files": [
+										{
+										"pattern" : "corda-releases/net/corda/*/${CORDA_VERSION}/*.jar",
+										"target" : "build/downloaded-files/community/",
+										"flat" : true,
+										"sortBy" : ["created"],
+										"sortOrder" : "desc"
+										}
+								   ]
+								}''',
+						)
+					}
+
+                    tar file: 'communityBinaries.tar', archive: false, dir: 'build/downloaded-files/community',overwrite: true
+                    zip zipFile: 'communityBinaries.zip', archive: false, dir: 'build/downloaded-files/community',overwrite: true
+
+                    // create S3 properties file
+                    sh 'mkdir build/downloaded-files/community/communityArchives'
+                    writeFile file: 'build/downloaded-files/community/communityArchives.upload.properties', text: "path=corda-community-edition/${version}"
+
+                    // clean up and final archive
+                    sh 'rm -rf build/downloaded-files/community/*jar && mv communityBinaries* build/downloaded-files/community/communityArchives'
+                    tar file: 'toUpload.tar.gz', archive: true, dir: 'build/downloaded-files/community', overwrite: true
+                }
+            }
+        }
+
+		stage('S3 Upload') {
+		    when {
+                expression { isReleaseTag }
+            }
+            steps {
+                    build job: "uploadToS3",
+                    parameters: [password(name: "GPG_KEY_PASS", value: params.GPG_KEY_PASS), string(name: 'UPSTREAM_VERSION_SUFFIX', value: env.VERSION_SUFFIX), string(name: 'UPSTREAM_PROJECT_NAME', value: 'upload-test'), string(name: "RELEASE_TYPE", value:'RC' )]
+
+            }
+        }
+
+
     }
 
     post {
