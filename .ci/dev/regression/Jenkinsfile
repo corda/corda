@@ -375,7 +375,7 @@ pipeline {
             }
             steps {
                     build job: "uploadToS3",
-                    parameters: [password(name: "GPG_KEY_PASS", value: params.GPG_KEY_PASS), string(name: 'UPSTREAM_VERSION_SUFFIX', value: env.VERSION_SUFFIX), string(name: 'UPSTREAM_PROJECT_NAME', value: 'upload-test'), string(name: "RELEASE_TYPE", value:'RC' )]
+                    parameters: [password(name: "GPG_KEY_PASS", value: params.GPG_KEY_PASS), string(name: 'UPSTREAM_VERSION_SUFFIX', value: env.VERSION_SUFFIX), string(name: 'UPSTREAM_PROJECT_NAME', value: env.JOB_NAME), string(name: "RELEASE_TYPE", value: "${isReleaseCandidate ? 'RC' : 'GA'}" )]
 
             }
         }
