@@ -271,7 +271,7 @@ pipeline {
                 rtGradleRun(
                         usesPlugin: true,
                         useWrapper: true,
-                        switches: '-s --info',
+                        switches: '-s --info -DpublishApiDocs',
                         tasks: 'artifactoryPublish',
                         deployerId: 'deployer',
                         buildName: env.ARTIFACTORY_BUILD_NAME
