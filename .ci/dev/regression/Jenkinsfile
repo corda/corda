@@ -3,7 +3,6 @@
  * Jenkins pipeline to build Corda OS release branches and tags.
  * PLEASE NOTE: we DO want to run a build for each commit!!!
  */
-@Library('corda-shared-build-pipeline-steps')
 
 /**
  * Sense environment
