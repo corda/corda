@@ -112,6 +112,9 @@ project(":common-configuration-parsing").projectDir = new File("$settingsDir/com
 
 include 'common-logging'
 project(":common-logging").projectDir = new File("$settingsDir/common/logging")
+
+include 'common-mock-enclave'
+project(":common-mock-enclave").projectDir = new File("$settingsDir/common/mock-enclave")
 // Common libraries - end
 
 apply from: 'buildCacheSettings.gradle'
