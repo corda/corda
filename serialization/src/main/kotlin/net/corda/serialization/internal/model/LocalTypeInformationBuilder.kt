@@ -5,6 +5,7 @@ import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.utilities.SgxSupport
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.model.LocalTypeInformation.Abstract
@@ -488,15 +489,17 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
 
 private fun Method.returnsNullable(): Boolean = try {
     val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull {
-        it.javaGetter == this
-    }?.returnType?.toString() ?: "?"
+        it.javaGetter == this || run {
+            val getterName = it.getter.name.replace("_", "")
+            (SgxSupport.isInsideEnclave && this.name == getterName.substringBefore("-").replace("<", "") + getterName.substringAfter("-")
+                    .capitalize().replace(">", ""))
+        }
+    }
 
-    returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
+    returnTypeString?.returnType?.isMarkedNullable ?: true
 } catch (e: KotlinReflectionInternalError) {
     // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue
-    // is: https://youtrack.jetbrains.com/issue/KT-13077
-    // TODO: Revisit this when Kotlin issue is fixed.
-
+    // is: https://youtrack.jetbrains.com/issue/KT-13077    // TODO: Revisit this when Kotlin issue is fixed.
     true
 }
 
