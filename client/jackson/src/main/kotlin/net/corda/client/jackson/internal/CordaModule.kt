@@ -2,16 +2,30 @@
 
 package net.corda.client.jackson.internal
 
-import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Value
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
-import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.BeanDescription
+import com.fasterxml.jackson.databind.BeanProperty
+import com.fasterxml.jackson.databind.DeserializationConfig
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.Module
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationConfig
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.cfg.MapperConfig
@@ -19,6 +33,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer
 import com.fasterxml.jackson.databind.deser.std.DelegatingDeserializer
 import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
+import com.fasterxml.jackson.databind.introspect.AccessorNamingStrategy
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass
 import com.fasterxml.jackson.databind.introspect.BasicClassIntrospector
 import com.fasterxml.jackson.databind.introspect.POJOPropertiesCollector
@@ -31,12 +46,30 @@ import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer
 import com.fasterxml.jackson.databind.ser.std.UUIDSerializer
 import com.google.common.primitives.Booleans
 import net.corda.client.jackson.JacksonSupport
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigestService
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.PartialMerkleTree.PartialTree
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_256
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
@@ -44,7 +77,12 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.*
+import net.corda.core.transactions.ContractUpgradeFilteredTransaction
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.FilteredTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseAsHex
@@ -116,6 +154,14 @@ private class CordaSerializableClassIntrospector(private val context: Module.Set
             context.configOverride(type.rawClass).visibility = Value.defaultVisibility().withFieldVisibility(Visibility.ANY)
         }
         return super.constructPropertyCollector(config, ac, type, forSerialization, mutatorPrefix)
+    }
+
+    override fun constructPropertyCollector(config: MapperConfig<*>?, classDef: AnnotatedClass?, type: JavaType, forSerialization: Boolean, accNaming: AccessorNamingStrategy?): POJOPropertiesCollector {
+        if (hasCordaSerializable(type.rawClass)) {
+            // Adjust the field visibility of CordaSerializable classes on the fly as they are encountered.
+            context.configOverride(type.rawClass).visibility = Value.defaultVisibility().withFieldVisibility(Visibility.ANY)
+        }
+        return super.constructPropertyCollector(config, classDef, type, forSerialization, accNaming)
     }
 }
 
