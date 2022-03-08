@@ -49,6 +49,7 @@ String COMMON_GRADLE_PARAMS = [
         '--info',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
+        '-DexcludeShell',
 ].join(' ')
 
 pipeline {
