@@ -422,6 +422,12 @@ allprojects {
                     includeGroup 'com.github.detro'
                 }
             }
+            maven {
+                url "${artifactory_contextUrl}/corda-releases"
+                content {
+                    includeModule('net.corda', 'corda-shell')
+                }
+            }
             mavenCentral()
             jcenter()
         }
