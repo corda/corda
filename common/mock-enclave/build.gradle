@@ -1,0 +1,47 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+cordapp {
+    targetPlatformVersion 9
+    minimumPlatformVersion 9
+    workflow {
+        name "CorDapp with enclave flows"
+        vendor "R3"
+        licence "Apache License, Version 2.0"
+        versionId 1
+    }
+    signing {
+        enabled false
+    }
+}
+
+dependencies {
+    compile group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
+    compile group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
+
+    compile group: "com.typesafe", name: "config", version: typesafe_config_version
+
+    compile project(":core")
+    compile project(":node-api")
+    compile project(":serialization")
+
+    // test dependencies
+    testImplementation "junit:junit:$junit_version"
+    testCompile group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
+
+    testCompile project(":node-driver")
+    testCompile project(":finance")
+}
+
+
+jar {
+    baseName 'corda-common-mock-enclave'
+}
+
+publish {
+    name jar.baseName
+}

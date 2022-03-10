@@ -22,15 +22,7 @@ pluginManagement {
             mavenLocal()
             gradlePluginPortal()
             maven { url "${artifactory_contextUrl}/corda-dependencies" }
-            maven { url "$settingsDir/repo" }
         }
-    }
-
-    plugins {
-        println("CONCLAVE VERSION: $conclaveVersion")
-        // TODO: fix conclaveVersion property
-        // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
-        id 'com.r3.conclave.enclave' version '1.1' apply false
     }
 }
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
@@ -110,9 +102,6 @@ include 'testing:cordapps:dbfailure:dbfworkflows'
 include 'testing:cordapps:missingmigration'
 include 'testing:cordapps:sleeping'
 
-// Conclave
-include 'enclave'
-
 // Common libraries - start
 include 'common-validation'
 project(":common-validation").projectDir = new File("$settingsDir/common/validation")
@@ -124,8 +113,8 @@ project(":common-configuration-parsing").projectDir = new File("$settingsDir/com
 include 'common-logging'
 project(":common-logging").projectDir = new File("$settingsDir/common/logging")
 
-include 'common-enclave'
-project(":common-enclave").projectDir = new File("$settingsDir/common/enclave")
+include 'common-mock-enclave'
+project(":common-mock-enclave").projectDir = new File("$settingsDir/common/mock-enclave")
 // Common libraries - end
 
 apply from: 'buildCacheSettings.gradle'
