@@ -424,6 +424,13 @@ allprojects {
             }
             mavenCentral()
             jcenter()
+            maven {
+                url "${artifactory_contextUrl}/corda-releases"
+                content {
+                    includeGroupByRegex 'net\\.corda(\\..*)?'
+                    includeGroupByRegex 'com\\.r3(\\..*)?'
+                }
+            }
         }
     }
 
