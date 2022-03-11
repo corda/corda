@@ -71,9 +71,6 @@ class EncryptedTxEnclave {
         signedTransaction.verifyRequiredSignatures()
 
         val dependencies = decryptDependencies(txAndDependencies.dependencies)
-        dependencies.forEach {
-            it.verifyRequiredSignatures()
-        }
 
         val ledgerTransaction = LedgerTxHelper.toLedgerTxInternal(txAndDependencies.conclaveLedgerTxModel, dependencies)
         ledgerTransaction.verify()
