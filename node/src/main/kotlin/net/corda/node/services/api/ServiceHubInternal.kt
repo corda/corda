@@ -16,9 +16,7 @@ import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.VerifiedEncryptedTransaction
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
@@ -26,7 +24,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
-import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -260,7 +257,7 @@ interface WritableTransactionStorage : TransactionStorage {
     /**
      * Add a new encrypted transaction to the store
      */
-    fun addVerifiedEncryptedTransaction(verifiedEncryptedTransaction: VerifiedEncryptedTransaction): Boolean
+    fun addVerifiedEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean
 
     /**
      * Add a new *unverified* transaction to the store.

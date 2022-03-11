@@ -7,8 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.DataFeed
 import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.VerifiedEncryptedTransaction
-import net.corda.core.utilities.debug
 import rx.Observable
 
 /**
@@ -26,11 +24,6 @@ interface TransactionStorage {
      * Return the encrypted transaction with the given [id], or null if no such transaction exists.
      */
     fun getEncryptedTransaction(id: SecureHash): EncryptedTransaction?
-
-    /**
-     * Return the encrypted transaction with the given [id], or null if no such transaction exists.
-     */
-    fun getVerifiedEncryptedTransaction(id: SecureHash): VerifiedEncryptedTransaction?
 
     /**
      * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already

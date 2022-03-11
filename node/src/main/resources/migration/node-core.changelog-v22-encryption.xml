@@ -4,11 +4,27 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="add_encrypted_column_to_node_transactions">
-        <addColumn tableName="node_transactions">
-            <column name="encrypted" type="BOOLEAN" defaultValueBoolean="false">
+    <changeSet author="R3.Corda" id="create_encrypted_transactions">
+        <createTable tableName="node_encrypted_transactions">
+            <column name="tx_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-        </addColumn>
+            <column name="transaction_value" type="blob">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP" defaultValueDate="2000-01-01 12:00:00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state_machine_run_id" type="NVARCHAR(36)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="NVARCHAR(1)" defaultValue="V">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="encrypted_transactions_add_primary_key">
+        <addPrimaryKey columnNames="tx_id" constraintName="node_encrypted_transactions_pkey" tableName="node_encrypted_transactions"
+                       clustered="false"/>
     </changeSet>
 </databaseChangeLog>
