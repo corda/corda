@@ -46,7 +46,9 @@ def nexusIqStageChoices = [nexusDefaultIqStage].plus(
  */
 def teamsWebHookURL = ""
 if (isReleaseBranch || isReleaseTag){
-    teamsWebHookURL = "https://jor3cev.webhook.office.com/webhookb2/8a439305-65b8-45ca-afd3-7ee0226bb0a7@a4be1f2e-2d10-4195-87cd-736aca9b672c/JenkinsCI/1fcff1e5217c4f39b3a914dabbfca649/2d4b786b-b76c-4485-a3b6-ba62301d1fc6"
+    withCredentials([string(credentialsId: 'ms-teams-webhook', variable: 'webhook_url')]) {
+        teamsWebHookURL = "$webhook_url"
+    }
 }
 
 /**
