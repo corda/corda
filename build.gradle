@@ -191,20 +191,20 @@ buildscript {
             mavenCentral()
             jcenter()
         }
-
-        maven {
-            // TODO: fix conclaveRepo property
-            // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
-            def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
-            if (!Files.isDirectory(path.resolve("com"))) {
-                if (Files.isDirectory(Paths.get("/repo/com"))) {
-                    path = Paths.get("/repo")
-                } else {
-                    throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
-                }
-            }
-            url = path.toFile()
-        }
+//
+//        maven {
+//            // TODO: fix conclaveRepo property
+//            // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
+//            def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
+//            if (!Files.isDirectory(path.resolve("com"))) {
+//                if (Files.isDirectory(Paths.get("/repo/com"))) {
+//                    path = Paths.get("/repo")
+//                } else {
+//                    throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
+//                }
+//            }
+//            url = path.toFile()
+//        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -440,20 +440,6 @@ allprojects {
             }
             mavenCentral()
             jcenter()
-
-            maven {
-                // TODO: fix conclaveRepo property
-                // (none of the conclave properties seem to be sourced from gradle.properties, they appear to be coming from somewhere else)
-                def path = Paths.get(rootDir.absolutePath).resolve("./repo").toAbsolutePath().normalize()
-                if (!Files.isDirectory(path.resolve("com"))) {
-                    if (Files.isDirectory(Paths.get("/repo/com"))) {
-                        path = Paths.get("/repo")
-                    } else {
-                        throw new Exception("Neither $path nor /repo seem to exist, or they aren't Maven repositories; it should be the SDK 'repo' subdirectory.")
-                    }
-                }
-                url = path.toFile()
-            }
         }
     }
 
