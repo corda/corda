@@ -38,4 +38,6 @@
 
     <include file="migration/node-core.changelog-v21.xml"/>
 
+    <include file="migration/node-core.changelog-v22-encryption.xml"/>
+
 </databaseChangeLog>

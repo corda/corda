@@ -1,6 +1,5 @@
 package net.corda.node.services.persistence
 
-import com.github.benmanes.caffeine.cache.Weigher
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -77,7 +76,26 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val status: TransactionStatus,
 
             @Column(name = "timestamp", nullable = false)
-            val timestamp: Instant
+            val timestamp: Instant,
+
+            @ElementCollection
+            @CollectionTable(
+                    name="${NODE_DATABASE_PREFIX}encrypted_transactions_dependencies",
+                    joinColumns = [JoinColumn(name = "tx_id", referencedColumnName = "tx_id")],
+                    foreignKey = ForeignKey(name = "FK__dependencies__encrytpedtx")
+            )
+            @Column(name="dependency")
+            val dependencies: List<String>,
+
+            @ElementCollection
+            @CollectionTable(
+                    name="${NODE_DATABASE_PREFIX}encrypted_transactions_signatures",
+                    joinColumns = [JoinColumn(name = "tx_id", referencedColumnName = "tx_id")],
+                    foreignKey = ForeignKey(name = "FK__signers__encrytpedtx")
+            )
+            @Lob
+            @Column(name="signature")
+            val signatures: List<ByteArray>
     )
 
     enum class TransactionStatus {
@@ -176,8 +194,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                     EncryptedTransaction(
                                             SecureHash.parse(it.txId),
                                             it.transaction,
-                                            emptySet(),
-                                            emptyList()
+                                            it.dependencies.map { hashString -> SecureHash.parse(hashString) }.toSet(),
+                                            it.signatures.map { signature -> signature.deserialize<TransactionSignature>() }
                                     ),
                                     it.status
                             )
@@ -188,7 +206,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString(),
                                 transaction = value.encryptedBytes,
                                 status = value.status,
-                                timestamp = clock.instant()
+                                timestamp = clock.instant(),
+                                dependencies = value.dependencies.map { it.toHexString() },
+                                signatures = value.signatures.map { it.serialize().bytes }
                         )
                     },
                     persistentEntityClass = DBEncryptedTransaction::class.java
@@ -431,14 +451,18 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     private data class TxCacheEncryptedValue(
             val id: SecureHash,
             val encryptedBytes: ByteArray,
-            val status: TransactionStatus
+            val status: TransactionStatus,
+            val dependencies: Set<SecureHash>,
+            val signatures: List<TransactionSignature>
     ) {
         constructor(encryptedTransaction: EncryptedTransaction, status: TransactionStatus) : this(
                 encryptedTransaction.id,
                 encryptedTransaction.encryptedBytes,
-                status)
+                status,
+                encryptedTransaction.dependencies,
+                encryptedTransaction.sigs)
 
-        fun toEncryptedTx() = EncryptedTransaction(id, encryptedBytes, emptySet(), emptyList())
+        fun toEncryptedTx() = EncryptedTransaction(id, encryptedBytes, dependencies, signatures)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

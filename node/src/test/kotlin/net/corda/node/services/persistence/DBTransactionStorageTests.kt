@@ -5,8 +5,11 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.sign
+import net.corda.core.internal.dependencies
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
@@ -430,18 +433,36 @@ class DBTransactionStorageTests {
         encryptionCipher.init(Cipher.ENCRYPT_MODE, key, iv)
 
         val encryptedTxBytes = encryptionCipher.doFinal(transaction.serialize(context = contextToUse().withEncoding(CordaSerializationEncoding.SNAPPY)).bytes)
-        val encryptedTx = EncryptedTransaction(transaction.id, encryptedTxBytes, emptySet(), emptyList())
+
+        // let's sign with 2 keys to ensure we can store multiple sigs
+        val enclaveKeyPairs = (0..1).map {
+            Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        }
+
+        val signatures = enclaveKeyPairs.map {
+            val signatureMetadata = SignatureMetadata(
+                    platformVersion = 1,
+                    schemeNumberID = Crypto.findSignatureScheme(it.public).schemeNumberID
+            )
+            val signableData = SignableData(transaction.id, signatureMetadata)
+            it.sign(signableData)
+        }
+
+        val encryptedTx = EncryptedTransaction(transaction.id, encryptedTxBytes, transaction.dependencies, signatures)
 
         transactionStorage.addVerifiedEncryptedTransaction(encryptedTx)
 
-        val storedTx = transactionStorage.getEncryptedTransaction(transaction.id)
 
         val decryptionCipher = Cipher.getInstance(cipherTransformation)
         decryptionCipher.init(Cipher.DECRYPT_MODE, key, iv)
 
-        assertNotNull(storedTx, "Could not find stored encrypted message")
+        val storedTx = transactionStorage.getEncryptedTransaction(transaction.id) ?:
+            throw IllegalStateException("Could not find stored encrypted message")
 
-        val decryptedTx = decryptionCipher.doFinal(storedTx!!.encryptedBytes).deserialize<SignedTransaction>(context = contextToUse())
+        val decryptedTx = decryptionCipher.doFinal(storedTx.encryptedBytes).deserialize<SignedTransaction>(context = contextToUse())
+
+        assertEquals(transaction.dependencies, storedTx.dependencies)
+        assertEquals(signatures.toSet(), storedTx.sigs.toSet())
 
         assertEquals(decryptedTx, transaction)
 
@@ -465,7 +486,7 @@ class DBTransactionStorageTests {
 
     private fun newTransaction(): SignedTransaction {
         val wtx = createWireTransaction(
-                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
+                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
                 commands = listOf(dummyCommand()),

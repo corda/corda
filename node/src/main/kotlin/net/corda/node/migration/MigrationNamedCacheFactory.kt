@@ -27,6 +27,7 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
             "DBTransactionStorage_transactions" -> caffeine.maximumWeight(
                     nodeConfiguration?.transactionCacheSizeBytes ?: NodeConfiguration.defaultTransactionCacheSize
             )
+            "DBTransactionStorage_encrypted_transactions" -> caffeine.maximumSize(defaultCacheSize)
             "PersistentIdentityService_keyToPartyAndCert" -> caffeine.maximumSize(defaultCacheSize)
             "PersistentIdentityService_nameToParty" -> caffeine.maximumSize(defaultCacheSize)
             "PersistentIdentityService_keyToParty" -> caffeine.maximumSize(defaultCacheSize)

@@ -24,7 +24,32 @@
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="encrypted_transactions_add_primary_key">
-        <addPrimaryKey columnNames="tx_id" constraintName="node_encrypted_transactions_pkey" tableName="node_encrypted_transactions"
-                       clustered="false"/>
+        <addPrimaryKey columnNames="tx_id" constraintName="node_encrypted_transactions_pkey" tableName="node_encrypted_transactions"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="create_encrypted_transactions_dependencies">
+        <createTable tableName="node_encrypted_transactions_dependencies">
+            <column name="tx_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dependency" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="tx_id" baseTableName="node_encrypted_transactions_dependencies"
+                                 constraintName="FK__dependencies__encrytpedtx"
+                                 referencedColumnNames="tx_id" referencedTableName="node_encrypted_transactions"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="create_encrypted_transactions_signatures">
+        <createTable tableName="node_encrypted_transactions_signatures">
+            <column name="tx_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signature" type="blob">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="tx_id" baseTableName="node_encrypted_transactions_signatures"
+                                 constraintName="FK__signers__encrytpedtx"
+                                 referencedColumnNames="tx_id" referencedTableName="node_encrypted_transactions"/>
     </changeSet>
 </databaseChangeLog>
