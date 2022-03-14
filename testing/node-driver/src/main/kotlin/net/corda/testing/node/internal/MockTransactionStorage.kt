@@ -8,7 +8,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.VerifiedEncryptedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.testing.node.MockServices
 import rx.Observable
@@ -32,7 +31,7 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
     }
 
     private val txns = HashMap<SecureHash, TxHolder>()
-    private val encryptedTxns = HashMap<SecureHash, VerifiedEncryptedTxHolder>()
+    private val encryptedTxns = HashMap<SecureHash, EncryptedTxHolder>()
 
     private val _updatesPublisher = PublishSubject.create<SignedTransaction>()
 
@@ -64,10 +63,8 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? = txns[id]?.let { Pair(it.stx, it.isVerified) }
 
-    override fun getVerifiedEncryptedTransaction(id: SecureHash): VerifiedEncryptedTransaction? = encryptedTxns[id]?.let { if (it.isVerified) it.vetx else null }
-
-    override fun addVerifiedEncryptedTransaction(verifiedEncryptedTransaction: VerifiedEncryptedTransaction): Boolean {
-        val current = encryptedTxns.putIfAbsent(verifiedEncryptedTransaction.id, VerifiedEncryptedTxHolder(verifiedEncryptedTransaction, isVerified = true))
+    override fun addVerifiedEncryptedTransaction(encryptedTransaction: EncryptedTransaction): Boolean {
+        val current = encryptedTxns.putIfAbsent(encryptedTransaction.id, EncryptedTxHolder(encryptedTransaction, isVerified = true))
         return if (current == null) {
             true
         } else if (!current.isVerified) {
@@ -79,14 +76,14 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
     }
 
     override fun addUnverifiedEncryptedTransaction(encryptedTransaction: EncryptedTransaction) {
-        encryptedTxns.putIfAbsent(encryptedTransaction.id, VerifiedEncryptedTxHolder(encryptedTransaction.toVerified(byteArrayOf()), isVerified = false))
+        encryptedTxns.putIfAbsent(encryptedTransaction.id, EncryptedTxHolder(encryptedTransaction, isVerified = false))
     }
 
-    override fun getEncryptedTransaction(id: SecureHash): EncryptedTransaction? = encryptedTxns[id]?.let { if (it.isVerified) it.vetx.encryptedTransaction else null }
+    override fun getEncryptedTransaction(id: SecureHash): EncryptedTransaction? = encryptedTxns[id]?.let { if (it.isVerified) it.et else null }
 
     override fun getEncryptedTransactionInternal(id: SecureHash): Pair<EncryptedTransaction, Boolean>? =
-            encryptedTxns[id]?.let { Pair(it.vetx.encryptedTransaction, it.isVerified) }
+            encryptedTxns[id]?.let { Pair(it.et, it.isVerified) }
 
     private class TxHolder(val stx: SignedTransaction, var isVerified: Boolean)
-    private class VerifiedEncryptedTxHolder(val vetx: VerifiedEncryptedTransaction, var isVerified: Boolean)
+    private class EncryptedTxHolder(val et: EncryptedTransaction, var isVerified: Boolean)
 }
