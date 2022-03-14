@@ -1,6 +1,6 @@
-package com.r3.conclave.encryptedtx.enclave
+package net.corda.core.conclave.common
 
-import com.r3.conclave.encryptedtx.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractState

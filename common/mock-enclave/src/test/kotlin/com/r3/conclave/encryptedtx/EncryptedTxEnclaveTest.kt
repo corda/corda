@@ -1,9 +1,9 @@
 package com.r3.conclave.encryptedtx
 
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.r3.conclave.encryptedtx.dto.ConclaveLedgerTxModel
-import com.r3.conclave.encryptedtx.dto.VerifiableTxAndDependencies
 import com.r3.conclave.encryptedtx.enclave.EncryptedTxEnclave
+import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
@@ -91,7 +91,7 @@ class EncryptedTxEnclaveTest {
         val paymentStx = future.getOrThrow().stx
 
         val ledgerTxModel = paymentStx.toLedgerTxModel(bankOfCordaNode.services)
-        val txAndDependenciesBytes = VerifiableTxAndDependencies(ledgerTxModel, setOf(encryptedTx)).serialize()
+        val txAndDependenciesBytes = VerifiableTxAndDependencies(ledgerTxModel, emptySet(), setOf(encryptedTx)).serialize()
 
         encryptedTxEnclave.verifyTx(txAndDependenciesBytes.bytes)
     }

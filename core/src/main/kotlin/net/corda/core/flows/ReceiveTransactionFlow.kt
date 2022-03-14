@@ -1,6 +1,8 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.contracts.*
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.checkParameterHash
@@ -45,58 +47,53 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
         } else {
             logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
+
+        var conclaveLedgerTxModel : ConclaveLedgerTxModel? = null
+        var remoteAttestation : ByteArray? = null
+        if (encrypted) {
+            // The first step in an encrypted exchange, is to request an exchange of attestations
+            remoteAttestation = subFlow(ExchangeAttestationFlowHandler(otherSideSession))
+            conclaveLedgerTxModel = otherSideSession.receive<ConclaveLedgerTxModel>().unwrap { it }
+        }
+
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
             it.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(it.networkParametersHash)
 
-            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord, encrypted = encrypted))
+            if (conclaveLedgerTxModel != null) {
+                require(conclaveLedgerTxModel.signedTransaction == it) {
+                    "The supplied signed transaction and conclaveLedgerTxModel are different"
+                }
+            }
+
+            require(remoteAttestation != null) {
+                "A remote attestation is required for encrypted mode"
+            }
+
+            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord, encrypted = encrypted, remoteAttestation = remoteAttestation!!))
 
             logger.info("Transaction dependencies resolution completed.")
             try {
                 if (encrypted) {
-
                     val validatedTxSvc = serviceHub.validatedTransactions
-
-                    val encryptedTxs = it.dependencies.mapNotNull {
-                        validatedTxId ->
-                        validatedTxSvc.getEncryptedTransaction(validatedTxId)?.let { etx ->
-                            etx.id to etx
-                        }
-                    }.toMap()
 
                     val signedTxs = it.dependencies.mapNotNull {
                         validatedTxId ->
-                        validatedTxSvc.getTransaction(validatedTxId)?.let { stx ->
-                            stx.id to stx
-                        }
-                    }.toMap()
+                        validatedTxSvc.getTransaction(validatedTxId)
+                    }.toSet()
 
-                    val networkParameters = it.dependencies.mapNotNull { depTxId ->
-                        val npHash = when {
-                            encryptedTxs[depTxId] != null -> serviceHub.encryptedTransactionService.getNetworkParameterHash(encryptedTxs[depTxId]!!)
-                                    ?: serviceHub.networkParametersService.defaultHash
-                            signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
-                                    ?: serviceHub.networkParametersService.defaultHash
-                            else -> null
-                        }
+                    val encryptedTxs = it.dependencies.mapNotNull {
+                        validatedTxId ->
+                        validatedTxSvc.getEncryptedTransaction(validatedTxId)
+                    }.toSet()
 
-                        npHash?.let { depTxId to npHash }
-                    }.associate {
-                        netParams ->
-                        netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
-                    }
-
-//                    val rawDependencies = it.dependencies.associate {
-//                        txId ->
-//                        txId to RawDependency(
-//                                encryptedTxs[txId],
-//                                signedTxs[txId],
-//                                networkParameters[txId]
-//                        )
-//                    }
-//
-//                    serviceHub.encryptedTransactionService.verifyTransaction(it, serviceHub, checkSufficientSignatures, rawDependencies)
+                    val verifiableTx = VerifiableTxAndDependencies(
+                            it.toLedgerTxModel(serviceHub),
+                            signedTxs,
+                            encryptedTxs
+                    )
+                    serviceHub.encryptedTransactionService.enclaveVerifyAndEncrypt(verifiableTx)
                     it
                 } else {
                     it.verify(serviceHub, checkSufficientSignatures)

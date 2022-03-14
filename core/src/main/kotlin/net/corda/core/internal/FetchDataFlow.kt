@@ -48,7 +48,8 @@ import java.util.*
 sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSideSession: FlowSession,
-        protected val dataType: DataType) : FlowLogic<FetchDataFlow.Result<T>>() {
+        protected val dataType: DataType,
+        protected val remoteAttestation: ByteArray? = null) : FlowLogic<FetchDataFlow.Result<T>>() {
 
     @CordaSerializable
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
@@ -274,10 +275,19 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
 }
 
-class FetchEncryptedTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
-        FetchDataFlow<EncryptedTransaction, EncryptedTransaction>(requests, otherSide, DataType.TRANSACTION) {
+class FetchEncryptedTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession, remoteAttestation: ByteArray) :
+        FetchDataFlow<EncryptedTransaction, EncryptedTransaction>(requests, otherSide, DataType.TRANSACTION, remoteAttestation) {
 
-    override fun load(txid: SecureHash): EncryptedTransaction? = serviceHub.validatedTransactions.getEncryptedTransaction(txid)
+    override fun load(txid: SecureHash): EncryptedTransaction? {
+
+        require(remoteAttestation != null) {
+            "FetchEncryptedTransactionsFlow requires a remoteAttestation"
+        }
+
+        return serviceHub.validatedTransactions.getEncryptedTransaction(txid)?.let {
+            serviceHub.encryptedTransactionService.encryptTransactionForRemote(it, remoteAttestation!!)
+        }
+    }
 }
 
 class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :

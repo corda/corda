@@ -93,6 +93,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
     override fun call(): Void? {
 
         val encryptSvc = serviceHub.encryptedTransactionService
+        var remoteAttestation : ByteArray? = null
 
         val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
         val maxPayloadSize = networkMaxMessageSize / 2
@@ -120,6 +121,16 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
         }
 
+        if (encrypted) {
+             // The first step in an encrypted exchange, is to request an exchange of attestations
+             remoteAttestation = subFlow(ExchangeAttestationFlowHandler(otherSideSession))
+
+            // also send the ledger transaction
+            if (payload is SignedTransaction) {
+                val conclaveLedgerTxModel = payload.toLedgerTxModel(serviceHub)
+                otherSideSession.send(conclaveLedgerTxModel)
+            }
+        }
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
         // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSideSession` to indicate end of
         // data request.
@@ -157,21 +168,26 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
                     }
 
                     if (encrypted) {
-                        var encryptedTx = serviceHub.validatedTransactions.getEncryptedTransaction(txId)
 
-                        if (encryptedTx == null) {
+                        val remoteAtt = remoteAttestation ?:
+                            throw IllegalStateException("Cannot share encrypted backchain without a remote attestation")
+
+                        val encryptedTx = serviceHub.validatedTransactions.getEncryptedTransaction(txId)
+
+                        val encryptedTransactionToSend = if (encryptedTx != null) {
+                            encryptSvc.encryptTransactionForRemote(encryptedTx, remoteAtt)
+                        } else {
                             val tx = serviceHub.validatedTransactions.getTransaction(txId)
                                     ?: throw FetchDataFlow.HashNotFound(txId)
-
-                            encryptedTx = encryptSvc.encryptTransaction(tx)
+                            encryptSvc.encryptTransactionForRemote(tx.toLedgerTxModel(serviceHub), remoteAtt)
                         }
 
-                        authorisedTransactions.removeAuthorised(encryptedTx.id)
-                        authorisedTransactions.addAuthorised(encryptSvc.getDependencies(encryptedTx))
+                        authorisedTransactions.removeAuthorised(txId)
+                        authorisedTransactions.addAuthorised(encryptedTransactionToSend.dependencies)
 
-                        totalByteCount += encryptedTx.bytes.size
+                        totalByteCount += encryptedTransactionToSend.encryptedBytes.size
                         numSent++
-                        encryptedTx
+                        encryptedTransactionToSend
                     } else {
 
                         val tx = serviceHub.validatedTransactions.getTransaction(txId)

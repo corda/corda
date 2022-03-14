@@ -4,6 +4,7 @@ import net.corda.core.CordaException
 import net.corda.core.CordaThrowable
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
+import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -374,4 +375,18 @@ constructor(val txBits: SerializedBytes<CoreTransaction>, override val sigs: Lis
     @Deprecated("No replacement, this should not be used outside of Corda core")
     fun isNotaryChangeTransaction() = this.coreTransaction is NotaryChangeWireTransaction
     //endregion
+
+
+    // For Conclave PoC
+    fun toLedgerTxModel(services: ServiceHub): ConclaveLedgerTxModel {
+        val ledgerTx = toLedgerTransaction(services)
+
+        return ConclaveLedgerTxModel(
+                signedTransaction = this,
+                inputStates = ledgerTx.inputs.toTypedArray(),
+                attachments = ledgerTx.attachments.toTypedArray(),
+                networkParameters = ledgerTx.networkParameters!!,
+                references = ledgerTx.references.toTypedArray()
+        )
+    }
 }

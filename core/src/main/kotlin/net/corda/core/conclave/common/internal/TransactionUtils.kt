@@ -1,6 +1,6 @@
-package com.r3.conclave.encryptedtx.internal
+package net.corda.core.conclave.common.internal
 
-import com.r3.conclave.encryptedtx.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.crypto.SecureHash
 
 val ConclaveLedgerTxModel.dependencies: Set<SecureHash>

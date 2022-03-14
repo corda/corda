@@ -23,7 +23,8 @@ class ResolveTransactionsFlow private constructor(
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
         val statesToRecord: StatesToRecord,
-        val encrypted: Boolean = false
+        val encrypted: Boolean = false,
+        val remoteAttestation : ByteArray? = null
 ) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
@@ -39,8 +40,8 @@ class ResolveTransactionsFlow private constructor(
             : this(transaction, transaction.dependencies, otherSide, statesToRecord)
 
     // TODO: PoC constructor
-    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, encrypted: Boolean)
-            : this(transaction, transaction.dependencies, otherSide, statesToRecord, encrypted)
+    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, encrypted: Boolean, remoteAttestation: ByteArray)
+            : this(transaction, transaction.dependencies, otherSide, statesToRecord, encrypted, remoteAttestation)
 
     private var fetchNetParamsFromCounterpart = false
 
@@ -60,6 +61,8 @@ class ResolveTransactionsFlow private constructor(
         val batchMode = counterpartyPlatformVersion >= PlatformVersionSwitches.BATCH_DOWNLOAD_COUNTERPARTY_BACKCHAIN && !encrypted
 
         logger.debug { "ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Batch mode = $batchMode" }
+
+
 
         // TODO: attachments and net params are not encrypted (yet)
         if (initialTx != null) {
@@ -121,27 +124,6 @@ class ResolveTransactionsFlow private constructor(
     fun fetchMissingNetworkParameters(transaction: SignedTransaction): Boolean {
         return if (fetchNetParamsFromCounterpart) {
             transaction.networkParametersHash?.let {
-                val downloads = subFlow(FetchNetworkParametersFlow(setOf(it), otherSide)).downloaded
-                downloads.isNotEmpty()
-            } ?: false
-        } else {
-            false
-        }
-    }
-
-    // PoC variants.
-    // TODO: no support for contract upgrade!
-    @Suspendable
-    fun fetchMissingAttachments(transaction: EncryptedTransaction): Boolean {
-        val attachmentIds = serviceHub.encryptedTransactionService.getAttachmentIds(transaction)
-        val downloads = subFlow(FetchAttachmentsFlow(attachmentIds, otherSide)).downloaded
-        return (downloads.isNotEmpty())
-    }
-
-    @Suspendable
-    fun fetchMissingNetworkParameters(transaction: EncryptedTransaction): Boolean {
-        return if (fetchNetParamsFromCounterpart) {
-            serviceHub.encryptedTransactionService.getNetworkParameterHash(transaction)?.let {
                 val downloads = subFlow(FetchNetworkParametersFlow(setOf(it), otherSide)).downloaded
                 downloads.isNotEmpty()
             } ?: false

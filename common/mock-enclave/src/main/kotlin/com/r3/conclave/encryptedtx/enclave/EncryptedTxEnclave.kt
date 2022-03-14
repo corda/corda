@@ -1,8 +1,9 @@
 package com.r3.conclave.encryptedtx.enclave
 
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.r3.conclave.encryptedtx.dto.ConclaveLedgerTxModel
-import com.r3.conclave.encryptedtx.dto.VerifiableTxAndDependencies
+import net.corda.core.conclave.common.LedgerTxHelper
+import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -70,7 +71,7 @@ class EncryptedTxEnclave {
         val signedTransaction = txAndDependencies.conclaveLedgerTxModel.signedTransaction
         signedTransaction.verifyRequiredSignatures()
 
-        val dependencies = decryptDependencies(txAndDependencies.dependencies)
+        val dependencies = decryptDependencies(txAndDependencies.encryptedDependencies)
         dependencies.forEach {
             it.verifyRequiredSignatures()
         }

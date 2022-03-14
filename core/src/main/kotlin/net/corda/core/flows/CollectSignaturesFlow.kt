@@ -307,20 +307,20 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
                 }
             }.toMap()
 
-            val networkParameters = stx.dependencies.mapNotNull { depTxId ->
-                val npHash = when {
-                    encryptedTxs[depTxId] != null -> serviceHub.encryptedTransactionService.getNetworkParameterHash(encryptedTxs[depTxId]!!)
-                            ?: serviceHub.networkParametersService.defaultHash
-                    signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
-                            ?: serviceHub.networkParametersService.defaultHash
-                    else -> null
-                }
-
-                npHash?.let { depTxId to npHash }
-            }.associate {
-                netParams ->
-                netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
-            }
+//            val networkParameters = stx.dependencies.mapNotNull { depTxId ->
+//                val npHash = when {
+//                    encryptedTxs[depTxId] != null -> serviceHub.encryptedTransactionService.getNetworkParameterHash(encryptedTxs[depTxId]!!)
+//                            ?: serviceHub.networkParametersService.defaultHash
+//                    signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
+//                            ?: serviceHub.networkParametersService.defaultHash
+//                    else -> null
+//                }
+//
+//                npHash?.let { depTxId to npHash }
+//            }.associate {
+//                netParams ->
+//                netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
+//            }
 
 //            val rawDependencies = stx.dependencies.associate {
 //                txId ->
@@ -331,7 +331,7 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
 //                )
 //            }
 //
-//            encryptionService.verifyTransaction(stx, false)
+ //           encryptionService.enclaveVerifyAndEncrypt()
         } else {
 
             stx.tx.toLedgerTransaction(serviceHub).verify()

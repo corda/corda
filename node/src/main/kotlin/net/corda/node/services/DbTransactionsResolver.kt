@@ -137,23 +137,26 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             // Request the standalone transaction data (which may refer to things we don't yet have).
             val (existingTxIds, downloadedTxs) = fetchEncryptedRequiredTransactions(Collections.singleton(nextRequests.first())) // Fetch first item only
             for (tx in downloadedTxs) {
-                val dependencies = encryptSvc.getDependencies(tx)
+                val dependencies = tx.dependencies
                 topologicalSort.add(tx.id, dependencies)
             }
 
             var suspended = true
             for (downloaded in downloadedTxs) {
                 suspended = false
-                val dependencies =  encryptSvc.getDependencies(downloaded)
+                val dependencies = downloaded.dependencies
                 // Do not keep in memory as this bloats the checkpoint. Write each item to the database.
-                transactionStorage.addUnverifiedEncryptedTransaction(downloaded)
 
-                // The write locks are only released over a suspend, so need to keep track of whether the flow has been suspended to ensure
-                // that locks are not held beyond each while loop iteration (as doing this would result in a deadlock due to claiming locks
-                // in the wrong order)
-                val suspendedViaAttachments = flow.fetchMissingAttachments(downloaded)
-                val suspendedViaParams = flow.fetchMissingNetworkParameters(downloaded)
-                suspended = suspended || suspendedViaAttachments || suspendedViaParams
+                val encryptedForLongTermStorage = encryptSvc.encryptTransactionForLocal(downloaded)
+                transactionStorage.addUnverifiedEncryptedTransaction(encryptedForLongTermStorage)
+
+                // TODO: confirm, but this should not be necessary as all attachments and network parameters are in the encrypted transaction
+//                // The write locks are only released over a suspend, so need to keep track of whether the flow has been suspended to ensure
+//                // that locks are not held beyond each while loop iteration (as doing this would result in a deadlock due to claiming locks
+//                // in the wrong order)
+//                val suspendedViaAttachments = flow.fetchMissingAttachments(downloaded)
+//                val suspendedViaParams = flow.fetchMissingNetworkParameters(downloaded)
+//                suspended = suspended || suspendedViaAttachments || suspendedViaParams
 
                 // Add all input states and reference input states to the work queue.
                 nextRequests.addAll(dependencies)
@@ -186,47 +189,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
             }
             if (!isVerified) {
-
-                val dependencies = encryptSvc.getDependencies(tx)
-
-                val encryptedTxs = dependencies.mapNotNull {
-                    depTxId ->
-                    transactionStorage.getEncryptedTransaction(depTxId)?.let { etx ->
-                        etx.id to etx
-                    }
-                }.toMap()
-
-                val signedTxs = dependencies.mapNotNull {
-                    depTxId ->
-                    transactionStorage.getTransaction(depTxId)?.let { stx ->
-                        stx.id to stx
-                    }
-                }.toMap()
-
-                val services = flow.serviceHub
-                val networkParameters = dependencies.mapNotNull { depTxId ->
-                    val npHash = when {
-                        encryptedTxs[depTxId] != null -> encryptSvc.getNetworkParameterHash(encryptedTxs[depTxId]!!)
-                                ?: services.networkParametersService.defaultHash
-                        signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
-                                ?: services.networkParametersService.defaultHash
-                        else -> null
-                    }
-
-                    npHash?.let { depTxId to npHash }
-                }.associate {
-                    it.first to services.networkParametersService.lookup(it.second)
-                }
-
-//                val rawDependencies = dependencies.associate {
-//                    it to RawDependency(
-//                            encryptedTxs[it],
-//                            signedTxs[it],
-//                            networkParameters[it]
-//                    )
-//                }
-
-                val verifiedTransaction = encryptSvc.verifyTransaction(tx,true)
+                val verifiedTransaction = encryptSvc.enclaveVerifyAndEncrypt(tx)
 
                 // TODO: why does this usually go through the serviceHub's recordTransactions function and not
                 //  direct to the validatedTransactions service??
@@ -250,7 +213,11 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
     @Suspendable
     private fun fetchEncryptedRequiredTransactions(requests: Set<SecureHash>): Pair<List<SecureHash>, List<EncryptedTransaction>> {
-        val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide))
+
+        val remoteAttestation = flow.remoteAttestation ?:
+            throw IllegalStateException("fetchEncryptedRequiredTransactions requires a remoteAttestation")
+
+        val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide, remoteAttestation))
         return Pair(requestedTxs.fromDisk.map { it.id }, requestedTxs.downloaded)
     }
 
