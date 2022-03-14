@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import com.github.benmanes.caffeine.cache.Weigher
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -19,6 +20,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.CordaClock
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.*
@@ -165,7 +167,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         private fun createEncryptedTransactionsMap(cacheFactory: NamedCacheFactory, clock: CordaClock)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheEncryptedValue, DBEncryptedTransaction, String> {
-            return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheEncryptedValue, DBEncryptedTransaction, String>(
+            return AppendOnlyPersistentMap<SecureHash, TxCacheEncryptedValue, DBEncryptedTransaction, String>(
                     cacheFactory = cacheFactory,
                     name = "DBTransactionStorage_encrypted_transactions",
                     toPersistentEntityKey = SecureHash::toString,
@@ -189,12 +191,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 timestamp = clock.instant()
                         )
                     },
-                    persistentEntityClass = DBEncryptedTransaction::class.java,
-                    weighingFunc = { hash, _ -> hash.size } // TODO: should their be weighing?
+                    persistentEntityClass = DBEncryptedTransaction::class.java
             )
         }
 
-        // TODO: weight of transactions will be wrong at this stage for encrypted transactions
         private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
             val actTx = tx.peekableValue ?: return 0
             return actTx.sigs.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.txBits.size

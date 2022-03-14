@@ -41,6 +41,7 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     DBCheckpointStorage.DBFlowMetadata::class.java,
 
                     DBTransactionStorage.DBTransaction::class.java,
+                    DBTransactionStorage.DBEncryptedTransaction::class.java,
                     BasicHSMKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,

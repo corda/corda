@@ -187,6 +187,17 @@ class DBTransactionStorageTests {
         return fromDb[0].timestamp
     }
 
+    private fun readEncryptedTransactionTimestampFromDB(id: SecureHash): Instant {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorage.DBEncryptedTransaction::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorage.DBEncryptedTransaction::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        assertEquals(1, fromDb.size)
+        return fromDb[0].timestamp
+    }
+
     @Test(timeout = 300_000)
     fun `empty store`() {
         assertThat(transactionStorage.getTransaction(newTransaction().id)).isNull()
@@ -419,9 +430,9 @@ class DBTransactionStorageTests {
         encryptionCipher.init(Cipher.ENCRYPT_MODE, key, iv)
 
         val encryptedTxBytes = encryptionCipher.doFinal(transaction.serialize(context = contextToUse().withEncoding(CordaSerializationEncoding.SNAPPY)).bytes)
-        val encryptedTx = EncryptedTransaction(transaction.id, encryptedTxBytes)
+        val encryptedTx = EncryptedTransaction(transaction.id, encryptedTxBytes, emptySet(), emptyList())
 
-        transactionStorage.addVerifiedEncryptedTransaction(encryptedTx.toVerified(byteArrayOf()))
+        transactionStorage.addVerifiedEncryptedTransaction(encryptedTx)
 
         val storedTx = transactionStorage.getEncryptedTransaction(transaction.id)
 
@@ -430,11 +441,11 @@ class DBTransactionStorageTests {
 
         assertNotNull(storedTx, "Could not find stored encrypted message")
 
-        val decryptedTx = decryptionCipher.doFinal(storedTx!!.bytes).deserialize<SignedTransaction>(context = contextToUse())
+        val decryptedTx = decryptionCipher.doFinal(storedTx!!.encryptedBytes).deserialize<SignedTransaction>(context = contextToUse())
 
         assertEquals(decryptedTx, transaction)
 
-        assertEquals(now, readTransactionTimestampFromDB(transaction.id))
+        assertEquals(now, readEncryptedTransactionTimestampFromDB(transaction.id))
     }
 
     fun generateIv(): IvParameterSpec? {

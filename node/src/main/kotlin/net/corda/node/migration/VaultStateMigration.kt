@@ -130,6 +130,7 @@ object VaultMigrationSchema
 object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
+                DBTransactionStorage.DBEncryptedTransaction::class.java,
                 PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
                 PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
