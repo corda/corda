@@ -15,4 +15,6 @@ interface IdentityServiceInternal : IdentityService {
     fun verifyAndRegisterNewRandomIdentity(identity: PartyAndCertificate)
 
     fun invalidateCaches(name: CordaX500Name) {}
+
+    fun archiveNamedIdentity(name:String, publicKeyHash: String?) {}
 }
