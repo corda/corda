@@ -7,6 +7,7 @@
 /**
  * Sense environment
  */
+boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
@@ -40,6 +41,17 @@ def nexusIqStageChoices = [nexusDefaultIqStage].plus(
                 ].minus([nexusDefaultIqStage]))
 
 /**
+ * define an empty teamsWebHookURL and if it is a Release Branch
+ * then set it for the Corda 4 Jenkins Connector
+ */
+def teamsWebHookURL = ""
+if (isReleaseBranch || isReleaseTag){
+    withCredentials([string(credentialsId: 'ms-teams-webhook', variable: 'webhook_url')]) {
+        teamsWebHookURL = "$webhook_url"
+    }
+}
+
+/**
  * Common Gradle arguments for all Gradle executions
  */
 String COMMON_GRADLE_PARAMS = [
@@ -61,6 +73,18 @@ pipeline {
         parallelsAlwaysFailFast()
         timeout(time: 6, unit: 'HOURS')
         timestamps()
+        office365ConnectorWebhooks([[
+                                            name                 : "Corda 4 Jenkins Connector",
+                                            notifyBackToNormal   : true,
+                                            startNotification    : false,
+                                            notifyFailure        : true,
+                                            notifySuccess        : true,
+                                            notifyNotBuilt       : false,
+                                            notifyAborted        : false,
+                                            notifyRepeatedFailure: true,
+                                            notifyUnstable       : true,
+                                            url                  : "${teamsWebHookURL}"
+                                    ]])
     }
 
     parameters {
