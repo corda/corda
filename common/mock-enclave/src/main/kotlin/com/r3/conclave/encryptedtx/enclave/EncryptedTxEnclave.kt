@@ -1,14 +1,24 @@
 package com.r3.conclave.encryptedtx.enclave
 
 import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.conclave.common.EnclaveClient
 import net.corda.core.conclave.common.LedgerTxHelper
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sign
 import net.corda.core.internal.dependencies
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.CordaService
+import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ByteSequence
@@ -18,8 +28,9 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 
-class EncryptedTxEnclave {
+class EncryptedTxEnclaveClient() : EnclaveClient {
 
+    // this will be 'our' key to sign over verified transactions
     private val enclaveKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
     private val signatureMetadata = SignatureMetadata(
             platformVersion = 1,
@@ -43,37 +54,71 @@ class EncryptedTxEnclave {
         }
     }
 
-    fun encryptSignedTx(ledgerTxBytes: ByteArray): EncryptedTransaction {
-        val ledgerTxModel = serializationFactoryImpl.deserialize(
-                byteSequence = ByteSequence.of(ledgerTxBytes, 0, ledgerTxBytes.size),
-                clazz = ConclaveLedgerTxModel::class.java,
-                context = AMQP_P2P_CONTEXT
-        )
+    override fun getEnclaveInstanceInfo(): ByteArray {
 
-        val signedTransaction = ledgerTxModel.signedTransaction
-        val signableData = SignableData(signedTransaction.id, signatureMetadata)
-        val transactionSignature = enclaveKeyPair.sign(signableData)
-
-        return EncryptedTransaction(
-                id = signedTransaction.id,
-                encryptedBytes = ledgerTxBytes,
-                dependencies = signedTransaction.dependencies,
-                sigs = listOf(transactionSignature)
-        )
+        // no remote attestations in this remote enclave
+        return byteArrayOf()
     }
 
-    fun verifyTx(txAndDependenciesBytes: ByteArray) {
-        val txAndDependencies = serializationFactoryImpl.deserialize(
-                byteSequence = ByteSequence.of(txAndDependenciesBytes, 0, txAndDependenciesBytes.size),
-                clazz = VerifiableTxAndDependencies::class.java,
-                context = AMQP_P2P_CONTEXT)
+    override fun enclaveVerifyAndEncrypt(txAndDependencies: VerifiableTxAndDependencies, checkSufficientSignatures: Boolean): EncryptedTransaction {
+
+        verifyTx(txAndDependencies, checkSufficientSignatures)
+
+        val ledgerTx = txAndDependencies.conclaveLedgerTxModel
+        val transactionSignature = getSignature(ledgerTx.signedTransaction.id)
+        return encrypt(ledgerTx).addSignature(transactionSignature)
+    }
+
+    override fun encryptTransactionForLocal(encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
+        // no re-encryption in this mock enclave, in a real one we'd need to decrypt from the remote then re-encrypt with whatever key
+        // we want to use for long term storage
+        return encryptedTransaction
+    }
+
+    override fun enclaveVerify(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
+        val decrypted = decrypt(encryptedTxAndDependencies.encryptedTransaction)
+
+        val verifiableTxAndDependencies = VerifiableTxAndDependencies(
+                decrypted,
+                encryptedTxAndDependencies.dependencies,
+                encryptedTxAndDependencies.encryptedDependencies
+        )
+
+        verifyTx(verifiableTxAndDependencies)
+
+        val transactionSignature = getSignature(decrypted.signedTransaction.id)
+        return encrypt(decrypted).addSignature(transactionSignature)
+    }
+
+    override fun encryptTransactionForRemote(conclaveLedgerTxModel: ConclaveLedgerTxModel, remoteAttestation: ByteArray): EncryptedTransaction {
+        // just serialise in this mock enclave, in a real one we'd need to encrypt for the remote party
+        return encrypt(conclaveLedgerTxModel)
+    }
+
+    override fun encryptTransactionForRemote(encryptedTransaction: EncryptedTransaction, remoteAttestation: ByteArray): EncryptedTransaction {
+
+        // no re-encryption in this mock enclave, in a real one we'd need to decrypt from the remote then re-encrypt with whatever key
+        // we want to use for long term storage
+        return encryptedTransaction
+    }
+
+    private fun getSignature(transactionId : SecureHash) : TransactionSignature {
+        val signableData = SignableData(transactionId, signatureMetadata)
+        return  enclaveKeyPair.sign(signableData)
+    }
+
+    private fun verifyTx(txAndDependencies: VerifiableTxAndDependencies, checkSufficientSignatures: Boolean = true) {
 
         val signedTransaction = txAndDependencies.conclaveLedgerTxModel.signedTransaction
-        signedTransaction.verifyRequiredSignatures()
 
-        val dependencies = decryptDependencies(txAndDependencies.encryptedDependencies)
-        dependencies.forEach {
-            it.verifyRequiredSignatures()
+        if (checkSufficientSignatures) {
+            signedTransaction.verifyRequiredSignatures()
+        }
+
+        val dependencies = txAndDependencies.dependencies + decryptDependencies(txAndDependencies.encryptedDependencies)
+
+        require(dependencies.map { it.id }.containsAll(signedTransaction.dependencies)) {
+            "Missing dependencies to resolve transaction"
         }
 
         val ledgerTransaction = LedgerTxHelper.toLedgerTxInternal(txAndDependencies.conclaveLedgerTxModel, dependencies)
@@ -83,12 +128,40 @@ class EncryptedTxEnclave {
     private fun decryptDependencies(dependencies: Set<EncryptedTransaction>): Set<SignedTransaction> {
         // simply deserialize for this "mock enclave"
         return dependencies.map {
-            val conclaveLedgerTxModel = serializationFactoryImpl.deserialize(
-                    byteSequence = ByteSequence.of(it.encryptedBytes, 0, it.encryptedBytes.size),
-                    clazz = ConclaveLedgerTxModel::class.java,
-                    context = AMQP_P2P_CONTEXT)
+            dependency ->
 
-            conclaveLedgerTxModel.signedTransaction
+            // firstly, ensure that WE have signed over this dependency before, else we cannot trust that it has been verified
+            val ourSig = dependency.sigs.singleOrNull { it.by == enclaveKeyPair.public }
+
+            ourSig?.let {
+                it.verify(dependency.id)
+            } ?: throw IllegalStateException("An encrypted dependency was provided ")
+
+            decrypt(dependency).signedTransaction
         }.toSet()
+    }
+
+    private fun encrypt(ledgerTx: ConclaveLedgerTxModel): EncryptedTransaction {
+
+        return EncryptedTransaction(
+                ledgerTx.signedTransaction.id,
+                serializationFactoryImpl.serialize(
+                        obj = ledgerTx,
+                        context = AMQP_P2P_CONTEXT).bytes,
+                ledgerTx.inputStates.map { it.ref.txhash }.toSet(),
+                emptyList()
+        )
+    }
+
+    private fun EncryptedTransaction.addSignature(extraSignature : TransactionSignature) : EncryptedTransaction {
+        return  this.copy(sigs = this.sigs + extraSignature)
+    }
+
+    private fun decrypt(encryptedTransaction: EncryptedTransaction): ConclaveLedgerTxModel {
+
+        return serializationFactoryImpl.deserialize(
+                byteSequence = ByteSequence.of(encryptedTransaction.encryptedBytes, 0, encryptedTransaction.encryptedBytes.size),
+                clazz = ConclaveLedgerTxModel::class.java,
+                context = AMQP_P2P_CONTEXT)
     }
 }

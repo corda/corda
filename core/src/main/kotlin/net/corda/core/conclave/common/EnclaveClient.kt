@@ -1,19 +1,19 @@
 package net.corda.core.conclave.common
 
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 
-@CordaService
 interface EnclaveClient {
 
     fun getEnclaveInstanceInfo() : ByteArray
 
-    fun enclaveVerifyAndEncrypt(txAndDependencies : VerifiableTxAndDependencies): EncryptedTransaction
+    fun enclaveVerifyAndEncrypt(txAndDependencies : VerifiableTxAndDependencies, checkSufficientSignatures: Boolean): EncryptedTransaction
 
-    fun enclaveVerify(encryptedTransaction : EncryptedTransaction): EncryptedTransaction
+    fun enclaveVerify(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction
 
     fun encryptTransactionForLocal(encryptedTransaction: EncryptedTransaction): EncryptedTransaction
 
@@ -31,11 +31,11 @@ class DummyEnclaveClient: EnclaveClient, SingletonSerializeAsToken() {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerifyAndEncrypt(txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
+    override fun enclaveVerifyAndEncrypt(txAndDependencies: VerifiableTxAndDependencies, checkSufficientSignatures: Boolean): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerify(encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
+    override fun enclaveVerify(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies) : EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 

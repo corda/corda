@@ -378,8 +378,8 @@ constructor(val txBits: SerializedBytes<CoreTransaction>, override val sigs: Lis
 
 
     // For Conclave PoC
-    fun toLedgerTxModel(services: ServiceHub): ConclaveLedgerTxModel {
-        val ledgerTx = toLedgerTransaction(services)
+    fun toLedgerTxModel(services: ServiceHub, checkSufficientSignatures: Boolean = true): ConclaveLedgerTxModel {
+        val ledgerTx = toLedgerTransaction(services, checkSufficientSignatures)
 
         return ConclaveLedgerTxModel(
                 signedTransaction = this,

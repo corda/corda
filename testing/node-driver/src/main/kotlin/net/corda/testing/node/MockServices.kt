@@ -22,6 +22,7 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
@@ -429,6 +430,12 @@ open class MockServices private constructor(
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             (validatedTransactions as WritableTransactionStorage).addTransaction(it)
+        }
+    }
+
+    override fun recordEncryptedTransactions(txs: List<EncryptedTransaction>) {
+        txs.forEach {
+            (validatedTransactions as WritableTransactionStorage).addVerifiedEncryptedTransaction(it)
         }
     }
 

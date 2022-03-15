@@ -64,6 +64,19 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             return sort.complete()
         }
 
+        fun recordEncryptedTransactions(txs: List<EncryptedTransaction>,
+                               validatedTransactions: WritableTransactionStorage,
+                               database: CordaPersistence) {
+
+            database.transaction {
+                require(txs.isNotEmpty()) { "No encrypted transactions passed in for recording" }
+
+                txs.forEach {
+                    validatedTransactions.addVerifiedEncryptedTransaction(it)
+                }
+            }
+        }
+
         fun recordTransactions(statesToRecord: StatesToRecord,
                                txs: Collection<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
@@ -164,6 +177,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 validatedTransactions,
                 stateMachineRecordedTransactionMapping,
                 vaultService,
+                database
+        )
+    }
+
+    override fun recordEncryptedTransactions(txs: List<EncryptedTransaction>) {
+        txs.forEach { requireSupportedHashType(it) }
+        Companion.recordEncryptedTransactions(
+                txs,
+                validatedTransactions,
                 database
         )
     }

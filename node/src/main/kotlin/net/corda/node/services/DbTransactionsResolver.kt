@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FetchEncryptedTransactionsFlow
@@ -189,7 +190,18 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
             }
             if (!isVerified) {
-                val verifiedTransaction = encryptSvc.enclaveVerifyAndEncrypt(tx)
+
+                // get the dependencies
+                val signedTransactions = tx.dependencies.mapNotNull { transactionStorage.getTransaction(it) }.toSet()
+                val encryptedTransactions = tx.dependencies.mapNotNull { transactionStorage.getEncryptedTransaction(it) }.toSet()
+
+                val verifiedTransaction = encryptSvc.enclaveVerifyAndEncrypt(
+                        EncryptedVerifiableTxAndDependencies(
+                                tx,
+                                signedTransactions,
+                                encryptedTransactions
+                        )
+                )
 
                 // TODO: why does this usually go through the serviceHub's recordTransactions function and not
                 //  direct to the validatedTransactions service??

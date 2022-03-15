@@ -31,17 +31,44 @@ import java.security.SignatureException
  * @property checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
  * @property statesToRecord which transaction states should be recorded in the vault, if any.
  */
+
 open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
+                                                                   private val checkSufficientSignatures: Boolean = true,
+                                                                   private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
+                                                                   private val encrypted : Boolean = false) :
+        ReceiveTransactionFlowBase<SignedTransaction>(otherSideSession, checkSufficientSignatures, statesToRecord, encrypted) {
+
+    override fun getReturnVal(stx: SignedTransaction, conclaveLedgerTxModel: ConclaveLedgerTxModel?): SignedTransaction {
+        return stx
+    }
+}
+
+open class ReceiveTransactionAsConclaveModelFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
                                                             private val checkSufficientSignatures: Boolean = true,
                                                             private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
-                                                            private val encrypted : Boolean = false) : FlowLogic<SignedTransaction>() {
+                                                            private val encrypted : Boolean = false) :
+        ReceiveTransactionFlowBase<ConclaveLedgerTxModel>(otherSideSession, checkSufficientSignatures, statesToRecord, encrypted) {
+
+    override fun getReturnVal(stx: SignedTransaction, conclaveLedgerTxModel: ConclaveLedgerTxModel?): ConclaveLedgerTxModel {
+        return conclaveLedgerTxModel ?: throw IllegalStateException("Cannot return a null ConclaveLedgerTxModel")
+    }
+}
+
+abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private val otherSideSession: FlowSession,
+                                                            private val checkSufficientSignatures: Boolean = true,
+                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
+                                                            private val encrypted : Boolean = false) : FlowLogic<T>() {
+
+    @Suspendable
+    abstract fun getReturnVal(stx: SignedTransaction, conclaveLedgerTxModel: ConclaveLedgerTxModel?) : T
+
     @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
             AttachmentResolutionException::class,
             TransactionResolutionException::class,
             TransactionVerificationException::class)
-    override fun call(): SignedTransaction {
+    override fun call(): T {
         if (checkSufficientSignatures) {
             logger.trace { "Receiving a transaction from ${otherSideSession.counterparty}" }
         } else {
@@ -89,11 +116,16 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
                     }.toSet()
 
                     val verifiableTx = VerifiableTxAndDependencies(
-                            it.toLedgerTxModel(serviceHub),
+                            conclaveLedgerTxModel!!,
                             signedTxs,
                             encryptedTxs
                     )
-                    serviceHub.encryptedTransactionService.enclaveVerifyAndEncrypt(verifiableTx)
+                    val encryptedAndVerifiedTx = serviceHub.encryptedTransactionService.enclaveVerifyAndEncrypt(verifiableTx, checkSufficientSignatures)
+
+                    if (checkSufficientSignatures) {
+                        serviceHub.recordEncryptedTransactions(listOf(encryptedAndVerifiedTx))
+                    }
+
                     it
                 } else {
                     it.verify(serviceHub, checkSufficientSignatures)
@@ -112,7 +144,7 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Successfully recorded received transaction locally.")
         }
-        return stx
+        return getReturnVal(stx, conclaveLedgerTxModel)
     }
 
     /**

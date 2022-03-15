@@ -2,6 +2,8 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.sun.org.apache.xpath.internal.operations.Bool
+import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toStringShort
@@ -276,7 +278,16 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
     override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
-        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, encrypted = true))
+
+        var conclaveLedgerTxModel : ConclaveLedgerTxModel? = null
+
+        val stx = if (encrypted) {
+            conclaveLedgerTxModel = subFlow(ReceiveTransactionAsConclaveModelFlow(otherSideSession, checkSufficientSignatures = false, encrypted = true))
+            conclaveLedgerTxModel.signedTransaction
+        } else {
+            subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, encrypted = true))
+        }
+
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
         // means we only have to check we own that one key, rather than matching all keys in the transaction against all
         // keys we own.t
@@ -294,44 +305,18 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
             val validatedTxSvc = serviceHub.validatedTransactions
 
             val encryptedTxs = stx.dependencies.mapNotNull {
-                validatedTxId ->
-                validatedTxSvc.getEncryptedTransaction(validatedTxId)?.let { etx ->
-                    etx.id to etx
-                }
-            }.toMap()
+                validatedTxSvc.getEncryptedTransaction(it)
+            }.toSet()
 
             val signedTxs = stx.dependencies.mapNotNull {
-                validatedTxId ->
-                validatedTxSvc.getTransaction(validatedTxId)?.let { stx ->
-                    stx.id to stx
-                }
-            }.toMap()
+                validatedTxSvc.getTransaction(it)
+            }.toSet()
 
-//            val networkParameters = stx.dependencies.mapNotNull { depTxId ->
-//                val npHash = when {
-//                    encryptedTxs[depTxId] != null -> serviceHub.encryptedTransactionService.getNetworkParameterHash(encryptedTxs[depTxId]!!)
-//                            ?: serviceHub.networkParametersService.defaultHash
-//                    signedTxs[depTxId] != null -> signedTxs[depTxId]!!.networkParametersHash
-//                            ?: serviceHub.networkParametersService.defaultHash
-//                    else -> null
-//                }
-//
-//                npHash?.let { depTxId to npHash }
-//            }.associate {
-//                netParams ->
-//                netParams.first to serviceHub.networkParametersService.lookup(netParams.second)
-//            }
-
-//            val rawDependencies = stx.dependencies.associate {
-//                txId ->
-//                txId to RawDependency(
-//                        encryptedTxs[txId],
-//                        signedTxs[txId],
-//                        networkParameters[txId]
-//                )
-//            }
-//
- //           encryptionService.enclaveVerifyAndEncrypt()
+            encryptionService.enclaveVerifyAndEncrypt(VerifiableTxAndDependencies(
+                    conclaveLedgerTxModel!!,
+                    signedTxs,
+                    encryptedTxs
+            ), false)
         } else {
 
             stx.tx.toLedgerTransaction(serviceHub).verify()

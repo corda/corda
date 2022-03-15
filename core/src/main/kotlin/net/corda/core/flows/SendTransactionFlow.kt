@@ -123,11 +123,11 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
 
         if (encrypted) {
              // The first step in an encrypted exchange, is to request an exchange of attestations
-             remoteAttestation = subFlow(ExchangeAttestationFlowHandler(otherSideSession))
+             remoteAttestation = subFlow(ExchangeAttestationFlow(otherSideSession))
 
             // also send the ledger transaction
             if (payload is SignedTransaction) {
-                val conclaveLedgerTxModel = payload.toLedgerTxModel(serviceHub)
+                val conclaveLedgerTxModel = payload.toLedgerTxModel(serviceHub, false)
                 otherSideSession.send(conclaveLedgerTxModel)
             }
         }

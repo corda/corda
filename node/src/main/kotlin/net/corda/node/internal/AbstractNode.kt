@@ -1055,8 +1055,21 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private fun makeEncryptedTransactionService(): EncryptedTransactionService {
-        return cordappLoader.cordapps.map { it.services.filter { clazz -> clazz.interfaces.contains(EnclaveClient::class.java) }}.flatten().firstOrNull()?.let {
-            EncryptedTransactionService(it.newInstance() as EnclaveClient)
+        val clazz = cordappLoader.cordapps
+                .map {
+                    it.cordappClasses
+                }
+                .flatten()
+                .firstOrNull {
+                    try {
+                        it.contains("EnclaveClient") && Class.forName(it).interfaces.contains(EnclaveClient::class.java)
+                    } catch (e: NoClassDefFoundError) {
+                        false
+                    }
+                }
+
+        return clazz?.let {
+            EncryptedTransactionService(Class.forName(it).getDeclaredConstructor().newInstance() as EnclaveClient)
         } ?: run {
             EncryptedTransactionService()
         }

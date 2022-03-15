@@ -10,9 +10,11 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -235,6 +237,12 @@ interface ServiceHub : ServicesForResolution {
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
         recordTransactions(StatesToRecord.ONLY_RELEVANT, txs)
     }
+
+    /**
+     * Stores the given [EncryptedTransaction]s in the local transaction storage.
+     * This is expected to be run within a database transaction.
+     */
+    fun recordEncryptedTransactions(txs: List<EncryptedTransaction>)
 
     /**
      * Converts the given [StateRef] into a [StateAndRef] object.
