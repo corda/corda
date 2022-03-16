@@ -1,6 +1,8 @@
 package net.corda.serialization.internal.amqp.custom
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
+import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.io.NotSerializableException
@@ -28,7 +30,21 @@ class CertPathSerializer(
         }
     }
 
+    override fun fromProxy(proxy: CertPathProxy, context: SerializationContext): CertPath {
+        // This requires [CertPathProxy] to have correct
+        // implementations for [equals] and [hashCode].
+        @Suppress("unchecked_cast")
+        return (context.properties[DESERIALIZATION_CACHE_PROPERTY] as? MutableMap<CertPathProxy, CertPath>)
+            ?.computeIfAbsent(proxy, ::fromProxy)
+            ?: fromProxy(proxy)
+    }
+
     @KeepForDJVM
-    @Suppress("ArrayInDataClass")
-    data class CertPathProxy(val type: String, val encoded: ByteArray)
+    data class CertPathProxy(val type: String, val encoded: ByteArray) {
+        override fun hashCode() = (type.hashCode() * 31) + encoded.contentHashCode()
+        override fun equals(other: Any?): Boolean {
+            return (this === other)
+                || (other is CertPathProxy && (type == other.type && encoded.contentEquals(other.encoded)))
+        }
+    }
 }

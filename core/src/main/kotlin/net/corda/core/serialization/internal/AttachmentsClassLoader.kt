@@ -9,21 +9,42 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
-import net.corda.core.internal.*
+import net.corda.core.internal.JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.PlatformVersionSwitches
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.targetPlatformVersion
+import net.corda.core.internal.createInstancesOfClassesImplementing
+import net.corda.core.internal.createSimpleCache
+import net.corda.core.internal.toSynchronised
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.*
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationWhitelist
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
+import net.corda.core.serialization.withWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.WeakReference
-import java.net.*
+import java.net.URL
+import java.net.URLClassLoader
+import java.net.URLConnection
+import java.net.URLStreamHandler
+import java.net.URLStreamHandlerFactory
+import java.security.MessageDigest
 import java.security.Permission
-import java.util.*
+import java.util.Locale
+import java.util.ServiceLoader
+import java.util.WeakHashMap
 import java.util.function.Function
 
 /**
@@ -51,12 +72,15 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         init {
             // Apply our own URLStreamHandlerFactory to resolve attachments
             setOrDecorateURLStreamHandlerFactory()
+
+            // Allow AttachmentsClassLoader to be used concurrently.
+            registerAsParallelCapable()
         }
 
         // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
         // In the AttachmentsClassLoader we just block any class in those 2 packages.
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
-        private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
+        private val ignorePackages = ignoreDirectories.map { it.replace('/', '.') }
 
         /**
          * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
@@ -128,6 +152,20 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         checkAttachments(attachments)
     }
 
+    private class AttachmentHashContext(
+            val txId: SecureHash,
+            val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE))
+
+    private fun hash(inputStream : InputStream, ctx : AttachmentHashContext) : SecureHash.SHA256 {
+        val md = MessageDigest.getInstance(SecureHash.SHA2_256)
+        while(true) {
+            val read = inputStream.read(ctx.buffer)
+            if(read <= 0) break
+            md.update(ctx.buffer, 0, read)
+        }
+        return SecureHash.SHA256(md.digest())
+    }
+
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
         jar.nextEntry != null
     }
@@ -146,10 +184,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     // TODO - investigate potential exploits.
     private fun shouldCheckForNoOverlap(path: String, targetPlatformVersion: Int): Boolean {
         require(path.toLowerCase() == path)
-        require(!path.contains("\\"))
+        require(!path.contains('\\'))
 
         return when {
-            path.endsWith("/") -> false                     // Directories (packages) can overlap.
+            path.endsWith('/') -> false                     // Directories (packages) can overlap.
             targetPlatformVersion < PlatformVersionSwitches.IGNORE_JOLOKIA_JSON_SIMPLE_IN_CORDAPPS &&
                     ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
             path.endsWith(".class") -> true                 // All class files need to be unique.
@@ -160,6 +198,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         }
     }
 
+    @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
     private fun checkAttachments(attachments: List<Attachment>) {
         require(attachments.isNotEmpty()) { "attachments list is empty" }
 
@@ -188,7 +227,8 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // attacks on externally connected systems that only consider type names, we allow people to formally
         // claim their parts of the Java package namespace via registration with the zone operator.
 
-        val classLoaderEntries = mutableMapOf<String, SecureHash.SHA256>()
+        val classLoaderEntries = mutableMapOf<String, SecureHash>()
+        val ctx = AttachmentHashContext(sampleTxId)
         for (attachment in attachments) {
             // We may have been given an attachment loaded from the database in which case, important info like
             // signers is already calculated.
@@ -206,10 +246,12 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                 // signed by the owners of the packages, even if it's not. We'd eventually discover that fact
                 // when trying to read the class file to use it, but if we'd made any decisions based on
                 // perceived correctness of the signatures or package ownership already, that would be too late.
-                attachment.openAsJAR().use { JarSignatureCollector.collectSigners(it) }
+                attachment.openAsJAR().use(JarSignatureCollector::collectSigners)
             }
+
             // Now open it again to compute the overlap and package ownership data.
             attachment.openAsJAR().use { jar ->
+
                 val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                 while (true) {
                     val entry = jar.nextJarEntry ?: break
@@ -250,13 +292,9 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     if (!shouldCheckForNoOverlap(path, targetPlatformVersion)) continue
 
                     // This calculates the hash of the current entry because the JarInputStream returns only the current entry.
-                    fun entryHash() = ByteArrayOutputStream().use {
-                        jar.copyTo(it)
-                        it.toByteArray()
-                    }.sha256()
+                    val currentHash = hash(jar, ctx)
 
                     // If 2 entries are identical, it means the same file is present in both attachments, so that is ok.
-                    val currentHash = entryHash()
                     val previousFileHash = classLoaderEntries[path]
                     when {
                         previousFileHash == null -> {
@@ -279,11 +317,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
      * Required to prevent classes that were excluded from the no-overlap check from being loaded by contract code.
      * As it can lead to non-determinism.
      */
-    override fun loadClass(name: String?): Class<*> {
-        if (ignorePackages.any { name!!.startsWith(it) }) {
+    override fun loadClass(name: String, resolve: Boolean): Class<*>? {
+        if (ignorePackages.any { name.startsWith(it) }) {
             throw ClassNotFoundException(name)
         }
-        return super.loadClass(name)
+        return super.loadClass(name, resolve)
     }
 }
 
@@ -293,7 +331,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
  */
 @VisibleForTesting
 object AttachmentsClassLoaderBuilder {
-    const val CACHE_SIZE = 16
+    private const val CACHE_SIZE = 16
 
     private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl(CACHE_SIZE)
 
@@ -309,13 +347,13 @@ object AttachmentsClassLoaderBuilder {
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
-                                              block: (ClassLoader) -> T): T {
-        val attachmentIds = attachments.map(Attachment::id).toSet()
+                                              block: (SerializationContext) -> T): T {
+        val attachmentIds = attachments.mapTo(LinkedHashSet(), Attachment::id)
 
         val cache = attachmentsClassLoaderCache ?: fallBackCache
-        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function {
+        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
                         JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
@@ -336,11 +374,16 @@ object AttachmentsClassLoaderBuilder {
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        })
+        }).withProperties(mapOf<Any, Any>(
+            // Duplicate the SerializationContext from the cache and give
+            // it these extra properties, just for this transaction.
+            AMQP_ENVELOPE_CACHE_PROPERTY to HashMap<Any, Any>(AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY),
+            DESERIALIZATION_CACHE_PROPERTY to HashMap<Any, Any>()
+        ))
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            block(serializationContext.deserializationClassLoader)
+            block(serializationContext)
         }
     }
 }

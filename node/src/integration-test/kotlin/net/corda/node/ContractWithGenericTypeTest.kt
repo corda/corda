@@ -31,11 +31,11 @@ class ContractWithGenericTypeTest {
         @JvmField
         val user = User("u", "p", setOf(Permissions.all()))
 
-        fun parameters(): DriverParameters {
+        fun parameters(runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 cordappsForAllNodes = listOf(
                     cordappWithPackages("net.corda.flows.serialization.generics").signed(),
                     cordappWithPackages("net.corda.contracts.serialization.generics").signed()

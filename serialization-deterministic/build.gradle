@@ -23,7 +23,10 @@ def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 
 configurations {
-    deterministicLibraries.extendsFrom implementation
+    deterministicLibraries {
+        canBeConsumed = false
+        extendsFrom implementation
+    }
     deterministicArtifacts.extendsFrom deterministicLibraries
 }
 
@@ -55,7 +58,7 @@ def originalJar = serializationJarTask.map { it.outputs.files.singleFile }
 
 def patchSerialization = tasks.register('patchSerialization', Zip) {
     dependsOn serializationJarTask
-    destinationDirectory = file("$buildDir/source-libs")
+    destinationDirectory = layout.buildDirectory.dir('source-libs')
     metadataCharset 'UTF-8'
     archiveClassifier = 'transient'
     archiveExtension = 'jar'
@@ -157,7 +160,7 @@ def determinise = tasks.register('determinise', ProGuardTask) {
 def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask)
 
 def metafix = tasks.register('metafix', MetaFixerTask) {
-    outputDir file("$buildDir/libs")
+    outputDir = layout.buildDirectory.dir('libs')
     jars determinise
     suffix ""
 

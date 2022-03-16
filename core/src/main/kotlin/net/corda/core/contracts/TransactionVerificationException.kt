@@ -343,7 +343,11 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
                     "You will need to manually install the CorDapp to whitelist it for use.")
 
     @KeepForDJVM
-    class UnsupportedHashTypeException(txId: SecureHash) : TransactionVerificationException(txId, "The transaction Id is defined by an unsupported hash type", null);
+    class UnsupportedHashTypeException(txId: SecureHash) : TransactionVerificationException(txId, "The transaction Id is defined by an unsupported hash type", null)
+
+    @KeepForDJVM
+    class AttachmentTooBigException(txId: SecureHash) : TransactionVerificationException(
+            txId, "The transaction attachments are too large and exceed both max transaction size and the maximum allowed compression ratio", null)
 
     /*
     If you add a new class extending [TransactionVerificationException], please add a test in `TransactionVerificationExceptionSerializationTests`

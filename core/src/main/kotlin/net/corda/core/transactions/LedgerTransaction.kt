@@ -18,21 +18,25 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.BasicVerifier
+import net.corda.core.internal.AbstractVerifier
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.Verifier
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.eagerDeserialise
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
 import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
+import java.util.function.Supplier
 
 /**
  * A LedgerTransaction is derived from a [WireTransaction]. It is the result of doing the following operations:
@@ -90,7 +94,7 @@ private constructor(
         private val serializedInputs: List<SerializedStateAndRef>?,
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
-        private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
+        private val verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
         private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
         val digestService: DigestService
 ) : FullTransaction() {
@@ -100,22 +104,23 @@ private constructor(
      */
     @DeprecatedConstructorForDeserialization(1)
     private constructor(
-            inputs: List<StateAndRef<ContractState>>,
-                outputs: List<TransactionState<ContractState>>,
-                commands: List<CommandWithParties<CommandData>>,
-                attachments: List<Attachment>,
-                id: SecureHash,
-                notary: Party?,
-                timeWindow: TimeWindow?,
-                privacySalt: PrivacySalt,
-                networkParameters: NetworkParameters?,
-                references: List<StateAndRef<ContractState>>,
-                componentGroups: List<ComponentGroup>?,
-                serializedInputs: List<SerializedStateAndRef>?,
-                serializedReferences: List<SerializedStateAndRef>?,
-                isAttachmentTrusted: (Attachment) -> Boolean,
-                verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
-                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?) : this(
+        inputs: List<StateAndRef<ContractState>>,
+        outputs: List<TransactionState<ContractState>>,
+        commands: List<CommandWithParties<CommandData>>,
+        attachments: List<Attachment>,
+        id: SecureHash,
+        notary: Party?,
+        timeWindow: TimeWindow?,
+        privacySalt: PrivacySalt,
+        networkParameters: NetworkParameters?,
+        references: List<StateAndRef<ContractState>>,
+        componentGroups: List<ComponentGroup>?,
+        serializedInputs: List<SerializedStateAndRef>?,
+        serializedReferences: List<SerializedStateAndRef>?,
+        isAttachmentTrusted: (Attachment) -> Boolean,
+        verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
+        attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
+    ) : this(
             inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt,
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
             isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
@@ -124,8 +129,8 @@ private constructor(
     companion object {
         private val logger = contextLogger()
 
-        private fun <T> protect(list: List<T>?): List<T>? {
-            return list?.run {
+        private fun <T> protect(list: List<T>): List<T> {
+            return list.run {
                 if (isEmpty()) {
                     emptyList()
                 } else {
@@ -133,6 +138,8 @@ private constructor(
                 }
             }
         }
+
+        private fun <T> protectOrNull(list: List<T>?): List<T>? = list?.let(::protect)
 
         @CordaInternal
         internal fun create(
@@ -164,9 +171,9 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
-                componentGroups = protect(componentGroups),
-                serializedInputs = protect(serializedInputs),
-                serializedReferences = protect(serializedReferences),
+                componentGroups = protectOrNull(componentGroups),
+                serializedInputs = protectOrNull(serializedInputs),
+                serializedReferences = protectOrNull(serializedReferences),
                 isAttachmentTrusted = isAttachmentTrusted,
                 verifierFactory = ::BasicVerifier,
                 attachmentsClassLoaderCache = attachmentsClassLoaderCache,
@@ -176,10 +183,11 @@ private constructor(
 
         /**
          * This factory function will create an instance of [LedgerTransaction]
-         * that will be used inside the DJVM sandbox.
+         * that will be used for contract verification. See [BasicVerifier] and
+         * [DeterministicVerifier][net.corda.node.internal.djvm.DeterministicVerifier].
          */
         @CordaInternal
-        fun createForSandbox(
+        fun createForContractVerify(
                 inputs: List<StateAndRef<ContractState>>,
                 outputs: List<TransactionState<ContractState>>,
                 commands: List<CommandWithParties<CommandData>>,
@@ -188,28 +196,31 @@ private constructor(
                 notary: Party?,
                 timeWindow: TimeWindow?,
                 privacySalt: PrivacySalt,
-                networkParameters: NetworkParameters,
+                networkParameters: NetworkParameters?,
                 references: List<StateAndRef<ContractState>>,
                 digestService: DigestService): LedgerTransaction {
             return LedgerTransaction(
-                inputs = inputs,
-                outputs = outputs,
-                commands = commands,
-                attachments = attachments,
+                inputs = protect(inputs),
+                outputs = protect(outputs),
+                commands = protect(commands),
+                attachments = protect(attachments),
                 id = id,
                 notary = notary,
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references,
+                references = protect(references),
                 componentGroups = null,
                 serializedInputs = null,
                 serializedReferences = null,
                 isAttachmentTrusted = { true },
-                verifierFactory = ::BasicVerifier,
+                verifierFactory = ::NoOpVerifier,
                 attachmentsClassLoaderCache = null,
                 digestService = digestService
-            )
+                // This check accesses input states and must run on the LedgerTransaction
+                // instance that is verified, not on the outer LedgerTransaction shell.
+                // All states must also deserialize using the correct SerializationContext.
+            ).also(LedgerTransaction::checkBaseInvariants)
         }
     }
 
@@ -251,11 +262,17 @@ private constructor(
                 getParamsWithGoo(),
                 id,
                 isAttachmentTrusted = isAttachmentTrusted,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache) { transactionClassLoader ->
-            // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache) { serializationContext ->
+
+            // Legacy check - warns if the LedgerTransaction was created incorrectly.
+            checkLtxForVerification()
+
+            // Create a copy of the outer LedgerTransaction which deserializes all fields using
+            // the serialization context (or its deserializationClassloader).
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.
-            verifierFactory(createLtxForVerification(), transactionClassLoader)
+            // NOTE: The Verifier creates the copies of the LedgerTransaction object now.
+            verifierFactory(this, serializationContext)
         }
     }
 
@@ -272,7 +289,7 @@ private constructor(
      * Node without changing either the wire format or any public APIs.
      */
     @CordaInternal
-    fun specialise(alternateVerifier: (LedgerTransaction, ClassLoader) -> Verifier): LedgerTransaction = LedgerTransaction(
+    fun specialise(alternateVerifier: (LedgerTransaction, SerializationContext) -> Verifier): LedgerTransaction = LedgerTransaction(
         inputs = inputs,
         outputs = outputs,
         commands = commands,
@@ -287,7 +304,11 @@ private constructor(
         serializedInputs = serializedInputs,
         serializedReferences = serializedReferences,
         isAttachmentTrusted = isAttachmentTrusted,
-        verifierFactory = alternateVerifier,
+        verifierFactory = if (verifierFactory == ::NoOpVerifier) {
+            throw IllegalStateException("Cannot specialise transaction while verifying contracts")
+        } else {
+            alternateVerifier
+        },
         attachmentsClassLoaderCache = attachmentsClassLoaderCache,
         digestService = digestService
     )
@@ -319,58 +340,12 @@ private constructor(
     }
 
     /**
-     * Create the [LedgerTransaction] instance that will be used by contract verification.
-     *
-     * This method needs to run in the special transaction attachments classloader context.
      */
-    private fun createLtxForVerification(): LedgerTransaction {
-        val serializedInputs = this.serializedInputs
-        val serializedReferences = this.serializedReferences
-        val componentGroups = this.componentGroups
-
-        val transaction= if (serializedInputs != null && serializedReferences != null && componentGroups != null) {
-            // Deserialize all relevant classes in the transaction classloader.
-            val deserializedInputs = serializedInputs.map { it.toStateAndRef() }
-            val deserializedReferences = serializedReferences.map { it.toStateAndRef() }
-            val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
-            val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = digestService)
-            val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
-                @Suppress("DEPRECATION")   // Deprecated feature.
-                val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
-                CommandWithParties(cmd.signers, parties, cmd.value)
-            }
-
-            LedgerTransaction(
-                    inputs = deserializedInputs,
-                    outputs = deserializedOutputs,
-                    commands = authenticatedDeserializedCommands,
-                    attachments = this.attachments,
-                    id = this.id,
-                    notary = this.notary,
-                    timeWindow = this.timeWindow,
-                    privacySalt = this.privacySalt,
-                    networkParameters = this.networkParameters,
-                    references = deserializedReferences,
-                    componentGroups = componentGroups,
-                    serializedInputs = serializedInputs,
-                    serializedReferences = serializedReferences,
-                    isAttachmentTrusted = isAttachmentTrusted,
-                    verifierFactory = verifierFactory,
-                    attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                    digestService = digestService
-            )
-        } else {
-            // This branch is only present for backwards compatibility.
+    private fun checkLtxForVerification() {
+        if (serializedInputs == null || serializedReferences == null || componentGroups == null) {
             logger.warn("The LedgerTransaction should not be instantiated directly from client code. Please use WireTransaction.toLedgerTransaction." +
                     "The result of the verify method might not be accurate.")
-            this
         }
-
-        // This check accesses input states and must be run in this context.
-        // It must run on the instance that is verified, not on the outer LedgerTransaction shell.
-        transaction.checkBaseInvariants()
-
-        return transaction
     }
 
     /**
@@ -740,7 +715,7 @@ private constructor(
             componentGroups = null,
             serializedInputs = null,
             serializedReferences = null,
-            isAttachmentTrusted = { it.isUploaderTrusted() },
+            isAttachmentTrusted = Attachment::isUploaderTrusted,
             verifierFactory = ::BasicVerifier,
             attachmentsClassLoaderCache = null
     )
@@ -770,7 +745,7 @@ private constructor(
             componentGroups = null,
             serializedInputs = null,
             serializedReferences = null,
-            isAttachmentTrusted = { it.isUploaderTrusted() },
+            isAttachmentTrusted = Attachment::isUploaderTrusted,
             verifierFactory = ::BasicVerifier,
             attachmentsClassLoaderCache = null
     )
@@ -837,4 +812,81 @@ private constructor(
                 digestService = digestService
         )
     }
+}
+
+/**
+ * This is the default [Verifier] that configures Corda
+ * to execute [Contract.verify(LedgerTransaction)].
+ *
+ * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
+ */
+@CordaInternal
+private class BasicVerifier(
+    ltx: LedgerTransaction,
+    private val serializationContext: SerializationContext
+) : AbstractVerifier(ltx, serializationContext.deserializationClassLoader) {
+
+    init {
+        // This is a sanity check: We should only instantiate this
+        // class from [LedgerTransaction.internalPrepareVerify].
+        require(serializationContext === SerializationFactory.defaultFactory.currentContext) {
+            "BasicVerifier for TX ${ltx.id} created outside its SerializationContext"
+        }
+
+        // Fetch these commands' signing parties from the database.
+        // Corda forbids database access during contract verification,
+        // and so we must load the commands here eagerly instead.
+        // THIS ALSO DESERIALISES THE COMMANDS USING THE WRONG CONTEXT
+        // BECAUSE THAT CONTEXT WAS CHOSEN WHEN THE LAZY MAP WAS CREATED,
+        // AND CHANGING THE DEFAULT CONTEXT HERE DOES NOT AFFECT IT.
+        ltx.commands.eagerDeserialise()
+    }
+
+    override val transaction: Supplier<LedgerTransaction>
+        get() = Supplier(::createTransaction)
+
+    private fun createTransaction(): LedgerTransaction {
+        // Deserialize all relevant classes using the serializationContext.
+        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+            ltx.transform { componentGroups, serializedInputs, serializedReferences ->
+                val deserializedInputs = serializedInputs.map(SerializedStateAndRef::toStateAndRef)
+                val deserializedReferences = serializedReferences.map(SerializedStateAndRef::toStateAndRef)
+                val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
+                val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true, digestService = ltx.digestService)
+                val authenticatedDeserializedCommands = deserializedCommands.mapIndexed { idx, cmd ->
+                    // Requires ltx.commands to have been deserialized already.
+                    @Suppress("DEPRECATION")   // Deprecated feature.
+                    val parties = ltx.commands[idx].signingParties
+                    CommandWithParties(cmd.signers, parties, cmd.value)
+                }
+
+                LedgerTransaction.createForContractVerify(
+                    inputs = deserializedInputs,
+                    outputs = deserializedOutputs,
+                    commands = authenticatedDeserializedCommands,
+                    attachments = ltx.attachments,
+                    id = ltx.id,
+                    notary = ltx.notary,
+                    timeWindow = ltx.timeWindow,
+                    privacySalt = ltx.privacySalt,
+                    networkParameters = ltx.networkParameters,
+                    references = deserializedReferences,
+                    digestService = ltx.digestService
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A "do nothing" [Verifier] installed for contract verification.
+ *
+ * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
+ */
+@Suppress("unused_parameter")
+@CordaInternal
+private class NoOpVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext) : Verifier {
+    // Invoking LedgerTransaction.verify() from Contract.verify(LedgerTransaction)
+    // will execute this function. But why would anyone do that?!
+    override fun verify() {}
 }

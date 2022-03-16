@@ -13,6 +13,10 @@ import net.corda.core.utilities.sequence
 import java.io.NotSerializableException
 import java.sql.Blob
 
+const val DESERIALIZATION_CACHE_PROPERTY = "DESERIALIZATION_CACHE"
+const val AMQP_ENVELOPE_CACHE_PROPERTY = "AMQP_ENVELOPE_CACHE"
+const val AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY = 256
+
 data class ObjectWithCompatibleContext<out T : Any>(val obj: T, val context: SerializationContext)
 
 /**
@@ -65,12 +69,16 @@ abstract class SerializationFactory {
      * Change the current context inside the block to that supplied.
      */
     fun <T> withCurrentContext(context: SerializationContext?, block: () -> T): T {
-        val priorContext = _currentContext.get()
-        if (context != null) _currentContext.set(context)
-        try {
-            return block()
-        } finally {
-            if (context != null) _currentContext.set(priorContext)
+        return if (context == null) {
+            block()
+        } else {
+            val priorContext = _currentContext.get()
+            _currentContext.set(context)
+            try {
+                block()
+            } finally {
+                _currentContext.set(priorContext)
+            }
         }
     }
 
