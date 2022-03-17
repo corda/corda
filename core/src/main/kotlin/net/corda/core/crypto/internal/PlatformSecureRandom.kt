@@ -8,6 +8,7 @@ import net.corda.core.crypto.DummySecureRandom
 import net.corda.core.utilities.SgxSupport
 import net.corda.core.utilities.loggerFor
 import org.apache.commons.lang3.SystemUtils
+import org.bouncycastle.crypto.prng.FixedSecureRandom
 import java.io.DataInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -16,14 +17,20 @@ import java.io.InputStream
 import java.security.Provider
 import java.security.SecureRandom
 import java.security.SecureRandomSpi
+import java.util.*
 
 /**
  * This has been migrated into a separate class so that it
  * is easier to delete from the core-deterministic module.
  */
+
+val randomBytes = ByteArray(1024){
+    Random().nextInt().toByte()
+}
+
 internal val platformSecureRandom: () -> SecureRandom = when {
     SgxSupport.isInsideEnclave -> {
-        { DummySecureRandom }
+        { FixedSecureRandom(randomBytes) }
     }
     else -> {
         { sharedSecureRandom }

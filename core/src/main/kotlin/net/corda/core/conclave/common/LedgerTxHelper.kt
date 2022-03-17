@@ -1,6 +1,7 @@
 package net.corda.core.conclave.common
 
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.ConclaveNetworkParams
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractState
@@ -9,9 +10,11 @@ import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
+import java.time.Duration
 
 class LedgerTxHelper {
     companion object {
@@ -39,7 +42,7 @@ class LedgerTxHelper {
                     notary = wireTransaction.notary,
                     timeWindow = wireTransaction.timeWindow,
                     privacySalt = wireTransaction.privacySalt,
-                    networkParameters = conclaveLedgerTxModel.networkParameters,
+                    networkParameters = conclaveLedgerTxModel.networkParameters.toNetworkParams(),
                     references = conclaveLedgerTxModel.references.toList(),
                     componentGroups = wireTransaction.componentGroups,
                     serializedInputs = serializedResolvedInputs,
@@ -63,4 +66,10 @@ class LedgerTxHelper {
             return resolvedState?.let { SerializedStateAndRef(it, stateRef) }
         }
     }
+}
+
+private fun ConclaveNetworkParams.toNetworkParams(): NetworkParameters? {
+    return NetworkParameters(
+            this.minimumPlatformVersion, this.notaries, this.maxMessageSize, this.maxTransactionSize, this.modifiedTime, this.epoch, emptyMap(), Duration.ofDays(1000), emptyMap()
+    )
 }

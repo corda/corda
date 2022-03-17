@@ -7,6 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.noPackageOverlap
 import net.corda.core.internal.requirePackageValid
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.days
@@ -38,7 +39,7 @@ import java.util.Collections.unmodifiableMap
  */
 @KeepForDJVM
 @CordaSerializable
-data class NetworkParameters(
+data class NetworkParameters @ConstructorForDeserialization constructor(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
         val maxMessageSize: Int,

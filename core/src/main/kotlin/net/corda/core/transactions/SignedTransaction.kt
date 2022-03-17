@@ -5,6 +5,7 @@ import net.corda.core.CordaThrowable
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.ConclaveNetworkParams
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -385,8 +386,14 @@ constructor(val txBits: SerializedBytes<CoreTransaction>, override val sigs: Lis
                 signedTransaction = this,
                 inputStates = ledgerTx.inputs.toTypedArray(),
                 attachments = ledgerTx.attachments.toTypedArray(),
-                networkParameters = ledgerTx.networkParameters!!,
+                networkParameters = ledgerTx.networkParameters!!.toConclaveNetworkParams(),
                 references = ledgerTx.references.toTypedArray()
         )
     }
+}
+
+private fun NetworkParameters.toConclaveNetworkParams(): ConclaveNetworkParams {
+    return ConclaveNetworkParams(
+            this.minimumPlatformVersion, this.notaries, this.maxMessageSize, this.maxTransactionSize, this.modifiedTime, this.epoch
+    )
 }

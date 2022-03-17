@@ -3,10 +3,20 @@ package net.corda.core.conclave.common.dto
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
+import java.time.Instant
+
+@CordaSerializable
+data class ConclaveNetworkParams(
+        val minimumPlatformVersion: Int,
+        val notaries: List<NotaryInfo>,
+        val maxMessageSize: Int,
+        val maxTransactionSize: Int,
+        val modifiedTime: Instant,
+        val epoch: Int
+)
 
 /**
  * Enclave representation of a signed and ledger transaction.
@@ -24,7 +34,7 @@ data class ConclaveLedgerTxModel(
         val signedTransaction: SignedTransaction,
         val inputStates: Array<StateAndRef<ContractState>>,
         val attachments: Array<Attachment>,
-        val networkParameters: NetworkParameters,
+        val networkParameters: ConclaveNetworkParams,
         val references: Array<StateAndRef<ContractState>>
 ) {
     override fun equals(other: Any?): Boolean {
