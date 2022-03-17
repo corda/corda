@@ -23,6 +23,7 @@ import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter
 import net.corda.coretesting.internal.TEST_TX_TIME
+import net.corda.finance.contracts.asset.Move
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
@@ -144,7 +145,7 @@ class CommercialPaperTestsGeneric {
                 input("alice's $900")
                 output(Cash.PROGRAM_ID, "borrowed $900", 900.DOLLARS.CASH issuedBy megaCorpRef ownedBy megaCorp.party)
                 output(thisTest.getContract(), "alice's paper", "paper".output<ICommercialPaperState>().withOwner(alice.party))
-                command(alice.publicKey, Cash.Commands.Move())
+                command(alice.publicKey, Move())
                 command(megaCorp.publicKey, thisTest.getMoveCommand())
                 this.verifies()
             }
@@ -160,7 +161,7 @@ class CommercialPaperTestsGeneric {
                     output(Cash.PROGRAM_ID, "Alice's profit", aliceGetsBack.STATE ownedBy alice.party)
                     output(Cash.PROGRAM_ID, "Change", (someProfits - aliceGetsBack).STATE ownedBy megaCorp.party)
                 }
-                command(megaCorp.publicKey, Cash.Commands.Move())
+                command(megaCorp.publicKey, Move())
                 command(alice.publicKey, thisTest.getRedeemCommand(dummyNotary.party))
                 tweak {
                     outputs(700.DOLLARS `issued by` megaCorpRef)

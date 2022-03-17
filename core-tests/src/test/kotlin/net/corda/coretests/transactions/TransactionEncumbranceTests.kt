@@ -13,6 +13,8 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Issue
+import net.corda.finance.contracts.asset.Move
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -91,7 +93,7 @@ class TransactionEncumbranceTests {
                 input(Cash.PROGRAM_ID, state)
                 output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1, contractState = stateWithNewOwner)
                 output(TEST_TIMELOCK_ID, "5pm time-lock", 0, timeLock)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 verifies()
             }
         }
@@ -107,7 +109,7 @@ class TransactionEncumbranceTests {
                 output(Cash.PROGRAM_ID, "state encumbered by state 2", encumbrance = 2, contractState = stateWithNewOwner)
                 output(Cash.PROGRAM_ID, "state encumbered by state 3", encumbrance = 3, contractState = stateWithNewOwner)
                 output(TEST_TIMELOCK_ID, "5pm time-lock", 0, timeLock)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 verifies()
             }
         }
@@ -125,7 +127,7 @@ class TransactionEncumbranceTests {
                 output(TEST_TIMELOCK_ID, "5pm time-lock A", 0, timeLock)
                 output(TEST_TIMELOCK_ID, "5pm time-lock B", 1, timeLock)
                 output(TEST_TIMELOCK_ID, "5pm time-lock C", 2, timeLock)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 verifies()
             }
         }
@@ -139,7 +141,7 @@ class TransactionEncumbranceTests {
                 output(Cash.PROGRAM_ID, "state encumbered by state 2", encumbrance = 2, contractState = stateWithNewOwner)
                 output(Cash.PROGRAM_ID, "state encumbered by state 0", encumbrance = 0, contractState = stateWithNewOwner)
                 output(TEST_TIMELOCK_ID, "5pm time-lock", 1, timeLock)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 verifies()
             }
         }
@@ -155,7 +157,7 @@ class TransactionEncumbranceTests {
                     input(Cash.PROGRAM_ID, state)
                     output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1, contractState = stateWithNewOwner)
                     output(TEST_TIMELOCK_ID, "5pm time-lock", timeLock)
-                    command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                    command(MEGA_CORP.owningKey, Move())
                     verifies()
                 }
             }
@@ -172,7 +174,7 @@ class TransactionEncumbranceTests {
                     output(Cash.PROGRAM_ID, "state encumbered by state 3", encumbrance = 3, contractState = stateWithNewOwner)
                     output(Cash.PROGRAM_ID, "state encumbered by state 3 again", encumbrance = 3, contractState = stateWithNewOwner)
                     output(TEST_TIMELOCK_ID, "5pm time-lock", timeLock)
-                    command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                    command(MEGA_CORP.owningKey, Move())
                     verifies()
                 }
             }
@@ -189,7 +191,7 @@ class TransactionEncumbranceTests {
                     output(Cash.PROGRAM_ID, "state encumbered by state 3", encumbrance = 3, contractState = stateWithNewOwner)
                     output(Cash.PROGRAM_ID, "state encumbered by state 0", encumbrance = 0, contractState = stateWithNewOwner)
                     output(TEST_TIMELOCK_ID, "5pm time-lock", timeLock)
-                    command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                    command(MEGA_CORP.owningKey, Move())
                     verifies()
                 }
             }
@@ -207,7 +209,7 @@ class TransactionEncumbranceTests {
                     output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock B", encumbrance = 3, contractState = stateWithNewOwner)
                     output(TEST_TIMELOCK_ID, "5pm time-lock A", 0, timeLock)
                     output(TEST_TIMELOCK_ID, "5pm time-lock B", timeLock)
-                    command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                    command(MEGA_CORP.owningKey, Move())
                     verifies()
                 }
             }
@@ -228,7 +230,7 @@ class TransactionEncumbranceTests {
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
                 output(Cash.PROGRAM_ID, stateWithNewOwner)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 timeWindow(FIVE_PM)
                 verifies()
             }
@@ -249,7 +251,7 @@ class TransactionEncumbranceTests {
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
                 output(Cash.PROGRAM_ID, state)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 timeWindow(FOUR_PM)
                 this `fails with` "the time specified in the time-lock has passed"
             }
@@ -268,7 +270,7 @@ class TransactionEncumbranceTests {
                 attachments(Cash.PROGRAM_ID)
                 input("state encumbered by 5pm time-lock")
                 output(Cash.PROGRAM_ID, stateWithNewOwner)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 timeWindow(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }
@@ -282,7 +284,7 @@ class TransactionEncumbranceTests {
                 attachments(Cash.PROGRAM_ID)
                 input(Cash.PROGRAM_ID, state)
                 output(Cash.PROGRAM_ID, "state encumbered by itself", encumbrance = 0, contractState = stateWithNewOwner)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 this `fails with` "Missing required encumbrance 0 in OUTPUT"
             }
         }
@@ -296,7 +298,7 @@ class TransactionEncumbranceTests {
                 input(Cash.PROGRAM_ID, state)
                 output(TEST_TIMELOCK_ID, "state encumbered by state 2 which does not exist", encumbrance = 2, contractState = stateWithNewOwner)
                 output(TEST_TIMELOCK_ID, timeLock)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 this `fails with` "Missing required encumbrance 2 in OUTPUT"
             }
         }
@@ -316,7 +318,7 @@ class TransactionEncumbranceTests {
                 input("state encumbered by some other state")
                 input("5pm time-lock")
                 output(Cash.PROGRAM_ID, stateWithNewOwner)
-                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                command(MEGA_CORP.owningKey, Move())
                 timeWindow(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }
@@ -330,7 +332,7 @@ class TransactionEncumbranceTests {
             TransactionBuilder()
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticPlaceholderConstraint)
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 0, AutomaticPlaceholderConstraint)
-                    .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                    .addCommand(Issue("issue-123"), MEGA_CORP.owningKey)
                     .toLedgerTransaction(ledgerServices)
                     .verify()
         }
@@ -345,7 +347,7 @@ class TransactionEncumbranceTests {
                             .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticPlaceholderConstraint)
                             .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 0, AutomaticPlaceholderConstraint)
                             .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 2, AutomaticPlaceholderConstraint)
-                            .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                            .addCommand(Issue("issue-123"), MEGA_CORP.owningKey)
                             .toLedgerTransaction(ledgerServices)
                             .verify()
                 }
@@ -362,7 +364,7 @@ class TransactionEncumbranceTests {
                             .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 0, AutomaticPlaceholderConstraint)
                             .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticPlaceholderConstraint)
                             .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 2, AutomaticPlaceholderConstraint)
-                            .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                            .addCommand(Issue("issue-123"), MEGA_CORP.owningKey)
                             .toLedgerTransaction(ledgerServices)
                             .verify()
                 }

@@ -37,6 +37,7 @@ import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
 import net.corda.coretesting.internal.TEST_TX_TIME
+import net.corda.finance.contracts.asset.Move
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
@@ -116,7 +117,7 @@ class PartialMerkleTreeWithNamedHashMultiAlgTreeTest {
                 input("MEGA_CORP cash")
                 reference("dummy cash 1")
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
+                command(MEGA_CORP_PUBKEY, Move())
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
             }

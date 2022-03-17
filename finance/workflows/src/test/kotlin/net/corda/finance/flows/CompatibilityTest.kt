@@ -3,7 +3,7 @@ package net.corda.finance.flows
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Issue
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.Schema
@@ -46,7 +46,7 @@ class CompatibilityTest {
 
         val commands = transaction.tx.commands
         assertEquals(1, commands.size)
-        assertTrue(commands.first().value is Cash.Commands.Issue)
+        assertTrue(commands.first().value is Issue)
 
         // Serialize back and check that representation is byte-to-byte identical to what it was originally.
         val output = SerializationOutput(serializerFactory)

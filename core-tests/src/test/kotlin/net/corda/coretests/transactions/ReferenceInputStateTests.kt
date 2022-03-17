@@ -16,6 +16,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Move
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -120,7 +121,7 @@ class ReferenceStateTests {
                 reference("REF DATA")
                 input(Cash.PROGRAM_ID, bobCash)
                 output(Cash.PROGRAM_ID, "ALICE CASH", bobCash.withNewOwner(ALICE_PARTY).ownableState)
-                command(BOB_PUBKEY, Cash.Commands.Move())
+                command(BOB_PUBKEY, Move())
                 verifies()
             }
             // Alice can use it too.
@@ -128,7 +129,7 @@ class ReferenceStateTests {
                 reference("REF DATA")
                 input("ALICE CASH")
                 output(Cash.PROGRAM_ID, "BOB CASH 2", bobCash.withNewOwner(BOB_PARTY).ownableState)
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
             // Bob can use it again.
@@ -136,7 +137,7 @@ class ReferenceStateTests {
                 reference("REF DATA")
                 input("BOB CASH 2")
                 output(Cash.PROGRAM_ID, bobCash.withNewOwner(ALICE_PARTY).ownableState)
-                command(BOB_PUBKEY, Cash.Commands.Move())
+                command(BOB_PUBKEY, Move())
                 verifies()
             }
         }
@@ -155,7 +156,7 @@ class ReferenceStateTests {
                 input("REF DATA")
                 input(Cash.PROGRAM_ID, bobCash)
                 output(Cash.PROGRAM_ID, bobCash.withNewOwner(ALICE_PARTY).ownableState)
-                command(BOB_PUBKEY, Cash.Commands.Move())
+                command(BOB_PUBKEY, Move())
                 fails()
             }
         }
@@ -175,7 +176,7 @@ class ReferenceStateTests {
                 reference("REF DATA")
                 input(Cash.PROGRAM_ID, bobCash)
                 output(Cash.PROGRAM_ID, "ALICE CASH", bobCash.withNewOwner(ALICE_PARTY).ownableState)
-                command(BOB_PUBKEY, Cash.Commands.Move())
+                command(BOB_PUBKEY, Move())
                 verifies()
             }
             // Update it.
@@ -190,7 +191,7 @@ class ReferenceStateTests {
                 reference("REF DATA")
                 input("ALICE CASH")
                 output(Cash.PROGRAM_ID, bobCash.withNewOwner(BOB_PARTY).ownableState)
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
             fails() // "double spend" of ExampleState!! Alice updated it in the 3rd transaction.

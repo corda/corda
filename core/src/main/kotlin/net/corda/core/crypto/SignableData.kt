@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -14,4 +15,4 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 @KeepForDJVM
-data class SignableData(val txId: SecureHash, val signatureMetadata: SignatureMetadata)
+data class SignableData @ConstructorForDeserialization constructor(val txId: SecureHash, val signatureMetadata: SignatureMetadata)

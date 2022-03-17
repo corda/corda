@@ -24,6 +24,8 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Issue
+import net.corda.finance.contracts.asset.Move
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -103,14 +105,14 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, HashAttachmentConstraint(allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -145,13 +147,13 @@ class ConstraintsPropagationTests {
                     unverifiedTransaction {
                         attachment(Cash.PROGRAM_ID, unsignedAttachmentId)
                         output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(unsignedAttachmentId), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                        command(ALICE_PUBKEY, Cash.Commands.Issue())
+                        command(ALICE_PUBKEY, Issue("issue-123"))
                     })
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID, signedAttachmentId)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -163,7 +165,7 @@ class ConstraintsPropagationTests {
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(zeroHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             }
             assertFailsWith<IllegalArgumentException> {
@@ -171,7 +173,7 @@ class ConstraintsPropagationTests {
                     attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                     input("c1")
                     output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, HashAttachmentConstraint(allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                    command(ALICE_PUBKEY, Cash.Commands.Move())
+                    command(ALICE_PUBKEY, Move())
                     verifies()
                 }
             }
@@ -184,28 +186,28 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(zeroHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, WhitelistedByZoneAttachmentConstraint, Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 failsWith("are not propagated correctly")
             })
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(ALICE_PUBKEY), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 fails()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c4", DUMMY_NOTARY, null, AlwaysAcceptAttachmentConstraint, Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 fails()
             }
         }
@@ -217,14 +219,14 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, WhitelistedByZoneAttachmentConstraint, Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, HashAttachmentConstraint(zeroHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -237,7 +239,7 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 output(Cash.PROGRAM_ID, "w1", DUMMY_NOTARY, null, WhitelistedByZoneAttachmentConstraint, Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
 
@@ -246,7 +248,7 @@ class ConstraintsPropagationTests {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey))
                 input("w1")
                 output(Cash.PROGRAM_ID, "w2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -258,7 +260,7 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 output(Cash.PROGRAM_ID, "w1", DUMMY_NOTARY, null, WhitelistedByZoneAttachmentConstraint, Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             // the attachment is not signed
@@ -266,7 +268,7 @@ class ConstraintsPropagationTests {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 input("w1")
                 output(Cash.PROGRAM_ID, "w2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(ALICE_PUBKEY), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 // Note that it fails after the constraints propagation check, because the attachment is not signed.
                 fails()
             }
@@ -386,14 +388,14 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "1"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -405,14 +407,14 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "3"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "3"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -424,14 +426,14 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "1"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -443,20 +445,20 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "1"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 input("c1")
                 input("c2")
                 output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(2000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -468,14 +470,14 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), emptyMap())
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
@@ -487,14 +489,14 @@ class ConstraintsPropagationTests {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), emptyMap())
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                command(ALICE_PUBKEY, Issue("issue-123"))
                 verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to "2"))
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
+                command(ALICE_PUBKEY, Move())
                 verifies()
             }
         }
