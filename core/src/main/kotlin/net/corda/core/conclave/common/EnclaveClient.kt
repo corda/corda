@@ -141,25 +141,31 @@ class DummyEnclaveClient: EnclaveClient, SingletonSerializeAsToken() {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerifyAndEncrypt(txAndDependencies: VerifiableTxAndDependencies, checkSufficientSignatures: Boolean): EncryptedTransaction {
+    override fun registerRemoteEnclaveInstanceInfo(flowIdAndRemoteAttestation: FlowIdAndPayload<ByteArray>) {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerify(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies) : EncryptedTransaction {
+    override fun enclaveVerifyWithoutSignatures(txAndDependencies: VerifiableTxAndDependencies) {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptTransactionForLocal(encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
+    override fun enclaveVerifyWithSignatures(txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptTransactionForRemote(conclaveLedgerTxModel: ConclaveLedgerTxModel,
-                                             remoteAttestation: ByteArray): EncryptedTransaction {
+    override fun enclaveVerifyWithSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptTransactionForRemote(encryptedTransaction: EncryptedTransaction,
-                                             remoteAttestation: ByteArray): EncryptedTransaction {
+    override fun encryptTransactionForLocal(remoteEncryptedTransaction: EncryptedTransaction): EncryptedTransaction {
+        throw UnsupportedOperationException("Add your custom enclave client implementation")
+    }
+
+    override fun encryptConclaveLedgerTxForRemote(flowIdWithConclaveLedgerTx: FlowIdAndPayload<ConclaveLedgerTxModel>): EncryptedTransaction {
+        throw UnsupportedOperationException("Add your custom enclave client implementation")
+    }
+
+    override fun encryptEncryptedTransactionForRemote(flowIdWithLocallyEncryptedTx: FlowIdAndPayload<EncryptedTransaction>): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 }

@@ -120,10 +120,12 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
                             signedTxs,
                             encryptedTxs
                     )
-                    val encryptedAndVerifiedTx = serviceHub.encryptedTransactionService.enclaveVerifyAndEncrypt(verifiableTx, checkSufficientSignatures)
 
                     if (checkSufficientSignatures) {
+                        val encryptedAndVerifiedTx = serviceHub.encryptedTransactionService.enclaveVerifyWithSignatures(verifiableTx)
                         serviceHub.recordEncryptedTransactions(listOf(encryptedAndVerifiedTx))
+                    } else {
+                        serviceHub.encryptedTransactionService.enclaveVerifyWithoutSignatures(verifiableTx)
                     }
 
                     it

@@ -195,7 +195,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 val signedTransactions = tx.dependencies.mapNotNull { transactionStorage.getTransaction(it) }.toSet()
                 val encryptedTransactions = tx.dependencies.mapNotNull { transactionStorage.getEncryptedTransaction(it) }.toSet()
 
-                val verifiedTransaction = encryptSvc.enclaveVerifyAndEncrypt(
+                val verifiedTransaction = encryptSvc.enclaveVerifyWithSignatures(
                         EncryptedVerifiableTxAndDependencies(
                                 tx,
                                 signedTransactions,
@@ -229,7 +229,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
         val remoteAttestation = flow.remoteAttestation ?:
             throw IllegalStateException("fetchEncryptedRequiredTransactions requires a remoteAttestation")
 
-        val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide, remoteAttestation))
+        val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide))
         return Pair(requestedTxs.fromDisk.map { it.id }, requestedTxs.downloaded)
     }
 

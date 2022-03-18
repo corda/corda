@@ -2,6 +2,7 @@ package com.r3.conclave.encryptedtx.enclave
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.conclave.common.EnclaveClient
+import net.corda.core.conclave.common.FlowIdAndPayload
 import net.corda.core.conclave.common.LedgerTxHelper
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
@@ -13,12 +14,6 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sign
 import net.corda.core.internal.dependencies
-import net.corda.core.node.AppServiceHub
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.CordaService
-import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ByteSequence
@@ -44,6 +39,8 @@ class EncryptedTxEnclaveClient() : EnclaveClient {
 
     private val serializationFactoryImpl: SerializationFactoryImpl
 
+    var rejectAttestation = false
+
     init {
         val serverScheme = AMQPServerSerializationScheme(emptyList(), serializerFactoriesForContexts)
         val clientScheme = AMQPServerSerializationScheme(emptyList(), serializerFactoriesForContexts)
@@ -60,22 +57,27 @@ class EncryptedTxEnclaveClient() : EnclaveClient {
         return byteArrayOf()
     }
 
-    override fun enclaveVerifyAndEncrypt(txAndDependencies: VerifiableTxAndDependencies, checkSufficientSignatures: Boolean): EncryptedTransaction {
+    override fun registerRemoteEnclaveInstanceInfo(flowIdAndRemoteAttestation: FlowIdAndPayload<ByteArray>) {
+        // for testing
+        if (rejectAttestation) {
+            throw EnclaveClient.RemoteAttestationException("Invalid attestation")
+        }
+    }
 
-        verifyTx(txAndDependencies, checkSufficientSignatures)
+    override fun enclaveVerifyWithoutSignatures(txAndDependencies: VerifiableTxAndDependencies) {
+        verifyTx(txAndDependencies, false)
+    }
+
+    override fun enclaveVerifyWithSignatures(txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
+
+        verifyTx(txAndDependencies, true)
 
         val ledgerTx = txAndDependencies.conclaveLedgerTxModel
         val transactionSignature = getSignature(ledgerTx.signedTransaction.id)
         return encrypt(ledgerTx).addSignature(transactionSignature)
     }
 
-    override fun encryptTransactionForLocal(encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
-        // no re-encryption in this mock enclave, in a real one we'd need to decrypt from the remote then re-encrypt with whatever key
-        // we want to use for long term storage
-        return encryptedTransaction
-    }
-
-    override fun enclaveVerify(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
+    override fun enclaveVerifyWithSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
         val decrypted = decrypt(encryptedTxAndDependencies.encryptedTransaction)
 
         val verifiableTxAndDependencies = VerifiableTxAndDependencies(
@@ -90,16 +92,22 @@ class EncryptedTxEnclaveClient() : EnclaveClient {
         return encrypt(decrypted).addSignature(transactionSignature)
     }
 
-    override fun encryptTransactionForRemote(conclaveLedgerTxModel: ConclaveLedgerTxModel, remoteAttestation: ByteArray): EncryptedTransaction {
-        // just serialise in this mock enclave, in a real one we'd need to encrypt for the remote party
-        return encrypt(conclaveLedgerTxModel)
-    }
-
-    override fun encryptTransactionForRemote(encryptedTransaction: EncryptedTransaction, remoteAttestation: ByteArray): EncryptedTransaction {
-
+    override fun encryptTransactionForLocal(encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
         // no re-encryption in this mock enclave, in a real one we'd need to decrypt from the remote then re-encrypt with whatever key
         // we want to use for long term storage
         return encryptedTransaction
+    }
+
+    override fun encryptConclaveLedgerTxForRemote(flowIdWithConclaveLedgerTx: FlowIdAndPayload<ConclaveLedgerTxModel>) : EncryptedTransaction {
+        // just serialise in this mock enclave, in a real one we'd need to encrypt for the remote party
+        val conclaveLedgerTxModel = flowIdWithConclaveLedgerTx.payload
+        return encrypt(conclaveLedgerTxModel)
+    }
+
+    override fun encryptEncryptedTransactionForRemote(flowIdWithLocallyEncryptedTx: FlowIdAndPayload<EncryptedTransaction>): EncryptedTransaction {
+        // no re-encryption in this mock enclave, in a real one we'd need to decrypt from the remote then re-encrypt with whatever key
+        // we want to use for long term storage
+        return flowIdWithLocallyEncryptedTx.payload
     }
 
     private fun getSignature(transactionId : SecureHash) : TransactionSignature {

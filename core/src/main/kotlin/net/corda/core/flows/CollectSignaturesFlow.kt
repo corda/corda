@@ -312,11 +312,13 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
                 validatedTxSvc.getTransaction(it)
             }.toSet()
 
-            encryptionService.enclaveVerifyAndEncrypt(VerifiableTxAndDependencies(
+            encryptionService.enclaveVerifyWithoutSignatures(
+                VerifiableTxAndDependencies(
                     conclaveLedgerTxModel!!,
                     signedTxs,
                     encryptedTxs
-            ), false)
+                )
+            )
         } else {
 
             stx.tx.toLedgerTransaction(serviceHub).verify()
