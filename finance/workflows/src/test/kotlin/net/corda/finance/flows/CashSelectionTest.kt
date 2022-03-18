@@ -9,6 +9,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.workflows.asset.selection.AbstractCashSelection
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Issue
 import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.issuedBy
 import net.corda.testing.core.singleIdentity
@@ -56,7 +57,7 @@ class CashSelectionTest {
         val exitedAmount = 1.DOLLARS
         val issuance = TransactionBuilder(null as Party?)
         issuance.addOutputState(TransactionState(Cash.State(coin, nodeIdentity), Cash.PROGRAM_ID, mockNet.defaultNotaryIdentity))
-        issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        issuance.addCommand(Issue("issue-123"), nodeIdentity.owningKey)
 
         // Insert and select in the same transaction
         val exitStates = node.database.transaction {
@@ -85,7 +86,7 @@ class CashSelectionTest {
                 val coin = 1.DOLLARS.issuedBy(issuer)
                 val issuance = TransactionBuilder(null as Party?)
                 issuance.addOutputState(TransactionState(Cash.State(coin, nodeIdentity), Cash.PROGRAM_ID, mockNet.defaultNotaryIdentity))
-                issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+                issuance.addCommand(Issue("issue-123"), nodeIdentity.owningKey)
 
                 val transaction = node.services.signInitialTransaction(issuance, nodeIdentity.owningKey)
 
@@ -114,7 +115,7 @@ class CashSelectionTest {
         coins.forEach {
             issuance.addOutputState(TransactionState(Cash.State(it, nodeIdentity), "net.corda.finance.contracts.asset.Cash", mockNet.defaultNotaryIdentity))
         }
-        issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        issuance.addCommand(Issue("issue-123"), nodeIdentity.owningKey)
 
         val transaction = node.services.signInitialTransaction(issuance, nodeIdentity.owningKey)
         node.database.transaction {

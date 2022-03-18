@@ -3,7 +3,7 @@ package net.corda.deterministic.txverify
 import net.corda.deterministic.bytesOfResource
 import net.corda.deterministic.verifier.LocalSerializationRule
 import net.corda.deterministic.verifier.verifyTransaction
-import net.corda.finance.contracts.asset.Cash.Commands.*
+import net.corda.finance.contracts.asset.Move
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test

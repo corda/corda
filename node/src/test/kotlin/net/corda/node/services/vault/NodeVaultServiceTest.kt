@@ -25,6 +25,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Issue
+import net.corda.finance.contracts.asset.Move
 import net.corda.finance.contracts.utils.sumCash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.workflows.asset.CashUtils
@@ -758,7 +760,7 @@ class NodeVaultServiceTest {
         // Send some minimalist dummy transaction.
         val txb = TransactionBuilder(DUMMY_NOTARY)
         txb.addOutputState(Cash.State(MEGA_CORP.ref(0), 100.DOLLARS, MINI_CORP), Cash::class.java.name)
-        txb.addCommand(Cash.Commands.Move(), MEGA_CORP_PUBKEY)
+        txb.addCommand(Move(), MEGA_CORP_PUBKEY)
         val wtx = txb.toWireTransaction(services)
         database.transaction {
             vaultService.notify(StatesToRecord.ONLY_RELEVANT, wtx)
@@ -786,7 +788,7 @@ class NodeVaultServiceTest {
         //create single transaction with 2 'identical' cash outputs
         val txb = TransactionBuilder(DUMMY_NOTARY)
         coins.map { txb.addOutputState(TransactionState(Cash.State(it, nodeIdentity), Cash.PROGRAM_ID, DUMMY_NOTARY)) }
-        txb.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        txb.addCommand(Issue("issue-123"), nodeIdentity.owningKey)
         val issueTx = txb.toWireTransaction(services)
 
         // ensure transaction contract state is persisted in DBStorage
@@ -809,7 +811,7 @@ class NodeVaultServiceTest {
         //create single transaction with 2 'identical' cash outputs
         val txb = TransactionBuilder(DUMMY_NOTARY)
         coins.map { txb.addOutputState(TransactionState(Cash.State(it, nodeIdentity), Cash.PROGRAM_ID, DUMMY_NOTARY)) }
-        txb.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        txb.addCommand(Issue("issue-123"), nodeIdentity.owningKey)
         val issueTx = txb.toWireTransaction(services)
 
         // ensure transaction contract state is persisted in DBStorage

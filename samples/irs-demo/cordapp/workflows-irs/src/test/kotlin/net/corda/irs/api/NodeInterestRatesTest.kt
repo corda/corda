@@ -10,6 +10,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Move
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
@@ -141,7 +142,7 @@ class NodeInterestRatesTest {
 
             val ftx1 = wtx1.buildFilteredTransaction(Predicate(::filterAllOutputs))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
-            tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
+            tx.addCommand(Move(), ALICE_PUBKEY)
             val wtx2 = tx.toWireTransaction(services)
             val ftx2 = wtx2.buildFilteredTransaction(Predicate { x -> filterCmds(x) })
             assertFalse(wtx1.id == wtx2.id)

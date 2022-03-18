@@ -32,6 +32,8 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Issue
+import net.corda.finance.contracts.asset.Move
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.services.api.CheckpointStorage
@@ -673,10 +675,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             output(Cash.PROGRAM_ID, "elbonian money 1", notary = notary, contractState = 800.DOLLARS.CASH issuedBy issuer ownedBy interimOwner)
             output(Cash.PROGRAM_ID, "elbonian money 2", notary = notary, contractState = 1000.DOLLARS.CASH issuedBy issuer ownedBy interimOwner)
             if (!withError) {
-                command(issuer.party.owningKey, Cash.Commands.Issue())
+                command(issuer.party.owningKey, Issue("issue-123"))
             } else {
                 // Put a broken command on so at least a signature is created
-                command(issuer.party.owningKey, Cash.Commands.Move())
+                command(issuer.party.owningKey, Move())
             }
             timeWindow(TEST_TX_TIME)
             if (withError) {
@@ -691,7 +693,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bc1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 1")
             output(Cash.PROGRAM_ID, "bob cash 1", notary = notary, contractState = 800.DOLLARS.CASH issuedBy issuer ownedBy owner)
-            command(interimOwner.owningKey, Cash.Commands.Move())
+            command(interimOwner.owningKey, Move())
             this.verifies()
         }
         val eb2Txns = insertFakeTransactions(listOf(bc1), node, identity, notaryNode, *extraSigningNodes)
@@ -700,7 +702,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             input("elbonian money 2")
             output(Cash.PROGRAM_ID, "bob cash 2", notary = notary, contractState = 300.DOLLARS.CASH issuedBy issuer ownedBy owner)
             output(Cash.PROGRAM_ID, notary = notary, contractState = 700.DOLLARS.CASH issuedBy issuer ownedBy interimOwner)   // Change output.
-            command(interimOwner.owningKey, Cash.Commands.Move())
+            command(interimOwner.owningKey, Move())
             this.verifies()
         }
         val eb3Txns = insertFakeTransactions(listOf(bc2), node, identity, notaryNode, *extraSigningNodes)

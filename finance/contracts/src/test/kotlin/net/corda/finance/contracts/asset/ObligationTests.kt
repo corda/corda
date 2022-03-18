@@ -379,7 +379,7 @@ class ObligationTests {
 
         // Now generate a transaction settling the obligation
         val settleTx = TransactionBuilder(DUMMY_NOTARY).apply {
-            ObligationUtils.generateSettle(this, listOf(obligationTx.outRef<Obligation.State<Currency>>(0)), listOf(cashTx.outRef(0)), Cash.Commands.Move(), DUMMY_NOTARY)
+            ObligationUtils.generateSettle(this, listOf(obligationTx.outRef<Obligation.State<Currency>>(0)), listOf(cashTx.outRef(0)), Move(), DUMMY_NOTARY)
         }.toWireTransaction(miniCorpServices)
         assertEquals(2, settleTx.inputs.size)
         assertEquals(1, settleTx.outputs.size)
@@ -518,7 +518,7 @@ class ObligationTests {
                 input("Alice's $1,000,000")
                 output(Cash.PROGRAM_ID, "Bob's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
                 command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)))
-                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
+                command(ALICE_PUBKEY, Move(Obligation::class.java))
                 attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
@@ -534,7 +534,7 @@ class ObligationTests {
                 output(Obligation.PROGRAM_ID, "Alice's $500,000 obligation to Bob", halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB))
                 output(Cash.PROGRAM_ID, "Bob's $500,000", 500000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
                 command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)))
-                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
+                command(ALICE_PUBKEY, Move(Obligation::class.java))
                 attachment(attachment(cashContractBytes.inputStream()))
                 this.verifies()
             }
@@ -549,7 +549,7 @@ class ObligationTests {
                 input(Cash.PROGRAM_ID, 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy ALICE)
                 output(Cash.PROGRAM_ID, "Bob's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
                 command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity, inState.amount.token)))
-                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
+                command(ALICE_PUBKEY, Move(Obligation::class.java))
                 this `fails with` "all inputs are in the normal state"
             }
         }
@@ -563,7 +563,7 @@ class ObligationTests {
                 input("Alice's $1,000,000")
                 output(Cash.PROGRAM_ID, "Bob's $1,000,000", 1000000.DOLLARS.CASH issuedBy defaultIssuer ownedBy BOB)
                 command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneMillionDollars.quantity / 2, inState.amount.token)))
-                command(ALICE_PUBKEY, Cash.Commands.Move(Obligation::class.java))
+                command(ALICE_PUBKEY, Move(Obligation::class.java))
                 attachment(attachment(cashContractBytes.inputStream()))
                 this `fails with` "amount in settle command"
             }

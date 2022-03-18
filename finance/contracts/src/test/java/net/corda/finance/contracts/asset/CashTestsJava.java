@@ -45,7 +45,7 @@ public class CashTestsJava {
 
             tx.tweak(tw -> {
                 tw.output(Cash.PROGRAM_ID, new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(MINI_CORP.getPublicKey())));
-                tw.command(MEGA_CORP.getPublicKey(), new Cash.Commands.Move());
+                tw.command(MEGA_CORP.getPublicKey(), new Move());
                 return tw.failsWith("the amounts balance");
             });
 
@@ -57,7 +57,7 @@ public class CashTestsJava {
             });
             tx.tweak(tw -> {
                 tw.output(Cash.PROGRAM_ID, outState);
-                tw.command(MINI_CORP.getPublicKey(), new Cash.Commands.Move());
+                tw.command(MINI_CORP.getPublicKey(), new Move());
                 return tw.failsWith("the owning keys are a subset of the signing keys");
             });
             tx.tweak(tw -> {
@@ -65,14 +65,14 @@ public class CashTestsJava {
                 // issuedBy() can't be directly imported because it conflicts with other identically named functions
                 // with different overloads (for some reason).
                 tw.output(Cash.PROGRAM_ID, outState.issuedBy(MINI_CORP.getParty()));
-                tw.command(MEGA_CORP.getPublicKey(), new Cash.Commands.Move());
+                tw.command(MEGA_CORP.getPublicKey(), new Move());
                 return tw.failsWith("at least one cash input");
             });
 
             // Simple reallocation works.
             return tx.tweak(tw -> {
                 tw.output(Cash.PROGRAM_ID, outState);
-                tw.command(MEGA_CORP.getPublicKey(), new Cash.Commands.Move());
+                tw.command(MEGA_CORP.getPublicKey(), new Move());
                 return tw.verifies();
             });
         });

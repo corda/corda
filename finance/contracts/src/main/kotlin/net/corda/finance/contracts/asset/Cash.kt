@@ -12,6 +12,7 @@ import net.corda.core.internal.Emoji
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.utils.sumCash
@@ -39,16 +40,15 @@ import java.util.*
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
-    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Cash.Commands>>
+class Cash : OnLedgerAsset<Currency, CommandData, Cash.State>() {
+    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<CommandData>>
             = commands.select()
 
     // DOCSTART 1
     /** A state representing a cash claim against some party. */
     @BelongsToContract(Cash::class)
-    data class State(
+    data class State @ConstructorForDeserialization constructor(
             override val amount: Amount<Issued<Currency>>,
-
             /** There must be a MoveCommand signed by this key to claim the amount. */
             override val owner: AbstractParty
     ) : FungibleAsset<Currency>, QueryableState {
@@ -63,7 +63,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
 
-        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Move(), copy(owner = newOwner))
         infix fun ownedBy(owner: AbstractParty) = copy(owner = owner)
         infix fun issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
         infix fun issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
@@ -90,29 +90,6 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     }
     // DOCEND 1
 
-    // Just for grouping
-    interface Commands : CommandData {
-        /**
-         * A command stating that money has been moved, optionally to fulfil another contract.
-         *
-         * @param contract the contract this move is for the attention of. Only that contract's verify function
-         * should take the moved states into account when considering whether it is valid. Typically this will be
-         * null.
-         */
-        data class Move(override val contract: Class<out Contract>? = null) : MoveCommand
-
-        /**
-         * Allows new cash states to be issued into existence.
-         */
-        class Issue : TypeOnlyCommandData()
-
-        /**
-         * A command stating that money has been withdrawn from the shared ledger and is now accounted for
-         * in some other way.
-         */
-        data class Exit(val amount: Amount<Issued<Currency>>) : CommandData
-    }
-
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
@@ -123,13 +100,13 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: AbstractParty, notary: Party)
-            = generateIssue(tx, TransactionState(State(amount, owner), PROGRAM_ID, notary), Commands.Issue())
+            = generateIssue(tx, TransactionState(State(amount, owner), PROGRAM_ID, notary), Issue("issue-123"))
 
     override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
-    override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Commands.Exit(amount)
-    override fun generateMoveCommand() = Commands.Move()
+    override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Exit(amount)
+    override fun generateMoveCommand() = Move()
 
     override fun verify(tx: LedgerTransaction) {
         // Each group is a set of input/output states with distinct (reference, currency) attributes. These types
@@ -145,7 +122,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                 "there are no zero sized outputs" using (outputs.none { it.amount.quantity == 0L })
             }
 
-            val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
+            val issueCommand = tx.commands.select<Issue>().firstOrNull()
             if (issueCommand != null) {
                 verifyIssueCommand(inputs, outputs, tx, issueCommand, currency, issuer)
             } else {
@@ -155,7 +132,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                 // If we want to remove cash from the ledger, that must be signed for by the issuer.
                 // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
                 val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
-                val exitCommand = tx.commands.select<Commands.Exit>(parties = null, signers = exitKeys).singleOrNull { it.value.amount.token == key }
+                val exitCommand = tx.commands.select<Exit>(parties = null, signers = exitKeys).singleOrNull { it.value.amount.token == key }
                 val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, currency))
 
                 requireThat {
@@ -164,7 +141,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                             (inputAmount == outputAmount + amountExitingLedger)
                 }
 
-                verifyFlattenedMoveCommand<Commands.Move>(inputs, tx.commands)
+                verifyFlattenedMoveCommand<Move>(inputs, tx.commands)
             }
         }
     }
@@ -172,7 +149,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     private fun verifyIssueCommand(inputs: List<State>,
                                    outputs: List<State>,
                                    tx: LedgerTransaction,
-                                   issueCommand: CommandWithParties<Commands.Issue>,
+                                   issueCommand: CommandWithParties<Issue>,
                                    currency: Currency,
                                    issuer: PartyAndReference) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,
@@ -187,7 +164,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         // The grouping ensures that all outputs have the same deposit reference and currency.
         val inputAmount = inputs.sumCashOrZero(Issued(issuer, currency))
         val outputAmount = outputs.sumCash()
-        val cashCommands = tx.commands.select<Commands.Issue>()
+        val cashCommands = tx.commands.select<Issue>()
         requireThat {
             // TODO: This doesn't work with the trader demo, so use the underlying key instead
             // "output states are issued by a command signer" by (issuer.party in issueCommand.signingParties)

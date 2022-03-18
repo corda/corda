@@ -14,8 +14,8 @@ import net.corda.deterministic.verifier.SampleCommandData
 import net.corda.deterministic.verifier.TransactionVerificationRequest
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.asset.Cash.Commands.Issue
-import net.corda.finance.contracts.asset.Cash.Commands.Move
+import net.corda.finance.contracts.asset.Issue
+import net.corda.finance.contracts.asset.Move
 import net.corda.finance.contracts.asset.Cash.Companion.PROGRAM_ID
 import net.corda.finance.contracts.asset.Cash.State
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -51,13 +51,13 @@ object TransactionGenerator {
             val wtx1 = transaction {
                 attachments(PROGRAM_ID)
                 output(PROGRAM_ID, "c1", State(1000.POUNDS `issued by` DUMMY_CASH_ISSUER, AnonymousParty(MEGA_CORP_PUBKEY)))
-                command(DUMMY_CASH_ISSUER.party.owningKey, Issue())
+                command(DUMMY_CASH_ISSUER.party.owningKey, Issue("issue-123"))
                 verifies()
             }
             val wtx2 = transaction {
                 attachments(PROGRAM_ID)
                 output(PROGRAM_ID, "c2", State(2000.POUNDS `issued by` DUMMY_CASH_ISSUER, AnonymousParty(MEGA_CORP_PUBKEY)))
-                command(DUMMY_CASH_ISSUER.party.owningKey, Issue())
+                command(DUMMY_CASH_ISSUER.party.owningKey, Issue("issue-123"))
                 verifies()
             }
             val wtx3 = transaction {
@@ -85,13 +85,13 @@ object TransactionGenerator {
             val wtx1 = transaction {
                 attachments(PROGRAM_ID)
                 output(PROGRAM_ID, "c1", State(1000.POUNDS `issued by` DUMMY_CASH_ISSUER, AnonymousParty(MEGA_CORP_PUBKEY)))
-                command(DUMMY_CASH_ISSUER.party.owningKey, Issue())
+                command(DUMMY_CASH_ISSUER.party.owningKey, Issue("issue-123"))
                 verifies()
             }
             val wtx2 = transaction {
                 attachments(PROGRAM_ID)
                 output(PROGRAM_ID, "c2", State(2000.POUNDS `issued by` DUMMY_CASH_ISSUER, AnonymousParty(MEGA_CORP_PUBKEY)))
-                command(DUMMY_CASH_ISSUER.party.owningKey, Issue())
+                command(DUMMY_CASH_ISSUER.party.owningKey, Issue("issue-123"))
                 verifies()
             }
             val wtx3 = transaction {
