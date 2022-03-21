@@ -26,13 +26,8 @@ class EncryptedTransactionService(val enclaveClient: EnclaveClient = DummyEnclav
         enclaveClient.registerRemoteEnclaveInstanceInfo(flowId, remoteAttestation)
     }
 
-    fun enclaveVerifyWithoutSignatures(txAndDependencies: VerifiableTxAndDependencies) {
-
-        return enclaveClient.enclaveVerifyWithoutSignatures(getCurrentFlowIdOrGenerateNewInvokeId(), txAndDependencies)
-    }
-
-    fun enclaveVerifyWithSignatures(txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
-        return enclaveClient.enclaveVerifyWithSignatures(getCurrentFlowIdOrGenerateNewInvokeId(), txAndDependencies)
+    fun enclaveVerifyWithoutSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies) {
+        return enclaveClient.enclaveVerifyWithoutSignatures(getCurrentFlowIdOrGenerateNewInvokeId(), encryptedTxAndDependencies)
     }
 
     fun enclaveVerifyWithSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {

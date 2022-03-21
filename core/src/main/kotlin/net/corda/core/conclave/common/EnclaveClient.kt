@@ -42,37 +42,19 @@ interface EnclaveClient {
     fun registerRemoteEnclaveInstanceInfo(invokeId: UUID, payload: ByteArray)
 
     /**
-     * Verify an unencrypted transaction (supplied with its dependencies), without checking the signatures. This would be used during
+     * Verify an encrypted transaction (supplied with its dependencies), without checking the signatures. This would be used during
      * [CollectSignaturesFlow], where we need to verify a transaction, but it is not fully signed (e.g. we haven't signed it yet, the
      * notary hasn't signed it yet, and possibly other parties).
      *
      * We do not return a signed and encrypted transaction from this call, as we will not be storing these transactions long term. They
      * are not fully signed at this stage therefore cannot be committed to the ledger.
      *
-     * @param txAndDependencies the transaction to verify
+     * @param encryptedTxAndDependencies the encrypted transaction to verify
      *
      * @throws [VerificationException] if verification failed
      */
     @Throws(VerificationException::class)
-    fun enclaveVerifyWithoutSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies)
-
-    /**
-     * Verify an unencrypted transaction (supplied with its dependencies), and also check the signatures. This would be used during
-     * [FinalityFlow], where we need to verify a transaction fully.
-     *
-     * We return a signed and encrypted transaction from this call, as we can store that and supply it to the enclave whenever we need it
-     * as proof that we have verified a transaction previously. I.e. our own signature over the id means that we (as an enclave) have
-     * previously verified this transaction
-     *
-     * @param txAndDependencies the transaction to verify
-     *
-     * @return an [EncryptedTransaction] which will be an encrypted version of the transaction, along with our enclave's signature
-     * over the transaction id.
-     *
-     * @throws [VerificationException] if verification failed
-     */
-    @Throws(VerificationException::class)
-    fun enclaveVerifyWithSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction
+    fun enclaveVerifyWithoutSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies)
 
     /**
      * Verify an encrypted transaction (supplied with its dependencies) and also check the signatures. This would be used during
@@ -141,11 +123,7 @@ class DummyEnclaveClient: EnclaveClient, SingletonSerializeAsToken() {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerifyWithoutSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies) {
-        throw UnsupportedOperationException("Add your custom enclave client implementation")
-    }
-
-    override fun enclaveVerifyWithSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
+    override fun enclaveVerifyWithoutSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies) {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 

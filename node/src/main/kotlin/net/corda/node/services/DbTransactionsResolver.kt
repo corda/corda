@@ -225,10 +225,6 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
     @Suspendable
     private fun fetchEncryptedRequiredTransactions(requests: Set<SecureHash>): Pair<List<SecureHash>, List<EncryptedTransaction>> {
-
-        val remoteAttestation = flow.remoteAttestation ?:
-            throw IllegalStateException("fetchEncryptedRequiredTransactions requires a remoteAttestation")
-
         val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide))
         return Pair(requestedTxs.fromDisk.map { it.id }, requestedTxs.downloaded)
     }

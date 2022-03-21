@@ -1,8 +1,8 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.sun.org.apache.xpath.internal.operations.Bool
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
 import net.corda.core.internal.dependencies
 import net.corda.core.node.ServiceHub
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -279,11 +280,12 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
 
-        var conclaveLedgerTxModel : ConclaveLedgerTxModel? = null
+        var receivedEncryptedTx : EncryptedTransaction? = null
 
         val stx = if (encrypted) {
-            conclaveLedgerTxModel = subFlow(ReceiveTransactionAsConclaveModelFlow(otherSideSession, checkSufficientSignatures = false, encrypted = true))
-            conclaveLedgerTxModel.signedTransaction
+            val stxAndEncrypted = subFlow(ReceiveTransactionWithEncryptedFlow(otherSideSession, checkSufficientSignatures = false))
+            receivedEncryptedTx = stxAndEncrypted.encryptedTransaction
+            stxAndEncrypted.signedTransaction
         } else {
             subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, encrypted = true))
         }
@@ -304,6 +306,10 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
             val encryptionService = serviceHub.encryptedTransactionService
             val validatedTxSvc = serviceHub.validatedTransactions
 
+            val usableReceivedTx = receivedEncryptedTx ?: throw IllegalStateException("An encrypted transaction is required")
+
+            val locallyEncryptedTransaction = encryptionService.encryptTransactionForLocal(usableReceivedTx)
+
             val encryptedTxs = stx.dependencies.mapNotNull {
                 validatedTxSvc.getEncryptedTransaction(it)
             }.toSet()
@@ -313,8 +319,8 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
             }.toSet()
 
             encryptionService.enclaveVerifyWithoutSignatures(
-                VerifiableTxAndDependencies(
-                    conclaveLedgerTxModel!!,
+                EncryptedVerifiableTxAndDependencies(
+                    locallyEncryptedTransaction,
                     signedTxs,
                     encryptedTxs
                 )

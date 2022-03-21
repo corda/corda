@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
+import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.contracts.*
 import net.corda.core.internal.ResolveTransactionsFlow
@@ -9,6 +10,8 @@ import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.dependencies
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.EncryptedTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
@@ -38,19 +41,28 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
                                                                    private val encrypted : Boolean = false) :
         ReceiveTransactionFlowBase<SignedTransaction>(otherSideSession, checkSufficientSignatures, statesToRecord, encrypted) {
 
-    override fun getReturnVal(stx: SignedTransaction, conclaveLedgerTxModel: ConclaveLedgerTxModel?): SignedTransaction {
+    override fun getReturnVal(stx: SignedTransaction, encryptedTransaction: EncryptedTransaction?): SignedTransaction {
         return stx
     }
 }
 
-open class ReceiveTransactionAsConclaveModelFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
-                                                            private val checkSufficientSignatures: Boolean = true,
-                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
-                                                            private val encrypted : Boolean = false) :
-        ReceiveTransactionFlowBase<ConclaveLedgerTxModel>(otherSideSession, checkSufficientSignatures, statesToRecord, encrypted) {
 
-    override fun getReturnVal(stx: SignedTransaction, conclaveLedgerTxModel: ConclaveLedgerTxModel?): ConclaveLedgerTxModel {
-        return conclaveLedgerTxModel ?: throw IllegalStateException("Cannot return a null ConclaveLedgerTxModel")
+@CordaSerializable
+data class SignedTransactionWithEncrypted(val signedTransaction: SignedTransaction, val encryptedTransaction: EncryptedTransaction)
+
+open class ReceiveTransactionWithEncryptedFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
+                                                                         private val checkSufficientSignatures: Boolean = true,
+                                                                         private val statesToRecord: StatesToRecord = StatesToRecord.NONE) :
+        ReceiveTransactionFlowBase<SignedTransactionWithEncrypted>(otherSideSession, checkSufficientSignatures, statesToRecord, true) {
+
+
+    override fun getReturnVal(stx: SignedTransaction, encryptedTransaction: EncryptedTransaction?): SignedTransactionWithEncrypted {
+
+        require(encryptedTransaction != null) {
+            "Cannot return a null ConclaveLedgerTxModel"
+        }
+
+        return SignedTransactionWithEncrypted(stx, encryptedTransaction!!)
     }
 }
 
@@ -60,7 +72,7 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
                                                             private val encrypted : Boolean = false) : FlowLogic<T>() {
 
     @Suspendable
-    abstract fun getReturnVal(stx: SignedTransaction, conclaveLedgerTxModel: ConclaveLedgerTxModel?) : T
+    abstract fun getReturnVal(stx: SignedTransaction, encryptedTransaction: EncryptedTransaction?) : T
 
     @Suppress("KDocMissingDocumentation")
     @Suspendable
@@ -75,12 +87,11 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
             logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
 
-        var conclaveLedgerTxModel : ConclaveLedgerTxModel? = null
-        var remoteAttestation : ByteArray? = null
+        var encryptedTx : EncryptedTransaction? = null
         if (encrypted) {
             // The first step in an encrypted exchange, is to request an exchange of attestations
-            remoteAttestation = subFlow(ExchangeAttestationFlowHandler(otherSideSession))
-            conclaveLedgerTxModel = otherSideSession.receive<ConclaveLedgerTxModel>().unwrap { it }
+            subFlow(ExchangeAttestationFlowHandler(otherSideSession))
+            encryptedTx = otherSideSession.receive<EncryptedTransaction>().unwrap { it }
         }
 
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
@@ -88,17 +99,13 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(it.networkParametersHash)
 
-            if (conclaveLedgerTxModel != null) {
-                require(conclaveLedgerTxModel.signedTransaction == it) {
-                    "The supplied signed transaction and conclaveLedgerTxModel are different"
+            if (encryptedTx != null) {
+                require(encryptedTx.id == it.id) {
+                    "The supplied signed transaction and encrypted transactions are different"
                 }
             }
 
-            require(remoteAttestation != null) {
-                "A remote attestation is required for encrypted mode"
-            }
-
-            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord, encrypted = encrypted, remoteAttestation = remoteAttestation!!))
+            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord, encrypted = encrypted))
 
             logger.info("Transaction dependencies resolution completed.")
             try {
@@ -115,8 +122,8 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
                         validatedTxSvc.getEncryptedTransaction(validatedTxId)
                     }.toSet()
 
-                    val verifiableTx = VerifiableTxAndDependencies(
-                            conclaveLedgerTxModel!!,
+                    val verifiableTx = EncryptedVerifiableTxAndDependencies(
+                            encryptedTx!!,
                             signedTxs,
                             encryptedTxs
                     )
@@ -146,7 +153,7 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Successfully recorded received transaction locally.")
         }
-        return getReturnVal(stx, conclaveLedgerTxModel)
+        return getReturnVal(stx, encryptedTx)
     }
 
     /**

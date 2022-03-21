@@ -64,18 +64,18 @@ class EncryptedTxEnclaveClient() : EnclaveClient {
         }
     }
 
-    override fun enclaveVerifyWithoutSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies) {
-        verifyTx(txAndDependencies, false)
+    override fun enclaveVerifyWithoutSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies) {
+        val decrypted = decrypt(encryptedTxAndDependencies.encryptedTransaction)
+
+        val verifiableTxAndDependencies = VerifiableTxAndDependencies(
+                decrypted,
+                encryptedTxAndDependencies.dependencies,
+                encryptedTxAndDependencies.encryptedDependencies
+        )
+
+        verifyTx(verifiableTxAndDependencies, false)
     }
 
-    override fun enclaveVerifyWithSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
-
-        verifyTx(txAndDependencies, true)
-
-        val ledgerTx = txAndDependencies.conclaveLedgerTxModel
-        val transactionSignature = getSignature(ledgerTx.signedTransaction.id)
-        return encrypt(ledgerTx).addSignature(transactionSignature)
-    }
 
     override fun enclaveVerifyWithSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
         val decrypted = decrypt(encryptedTxAndDependencies.encryptedTransaction)

@@ -128,7 +128,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
             // also send the ledger transaction
             if (payload is SignedTransaction) {
                 val conclaveLedgerTxModel = payload.toLedgerTxModel(serviceHub, false)
-                otherSideSession.send(conclaveLedgerTxModel)
+                val encryptedTransaction = encryptSvc.encryptTransactionForRemote(runId.uuid, conclaveLedgerTxModel)
+                otherSideSession.send(encryptedTransaction)
             }
         }
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need

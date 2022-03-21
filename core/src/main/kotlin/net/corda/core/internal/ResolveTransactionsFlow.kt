@@ -23,8 +23,7 @@ class ResolveTransactionsFlow private constructor(
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
         val statesToRecord: StatesToRecord,
-        val encrypted: Boolean = false,
-        val remoteAttestation : ByteArray? = null
+        val encrypted: Boolean = false
 ) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
@@ -40,8 +39,8 @@ class ResolveTransactionsFlow private constructor(
             : this(transaction, transaction.dependencies, otherSide, statesToRecord)
 
     // TODO: PoC constructor
-    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, encrypted: Boolean, remoteAttestation: ByteArray)
-            : this(transaction, transaction.dependencies, otherSide, statesToRecord, encrypted, remoteAttestation)
+    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, encrypted: Boolean)
+            : this(transaction, transaction.dependencies, otherSide, statesToRecord, encrypted)
 
     private var fetchNetParamsFromCounterpart = false
 
