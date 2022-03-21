@@ -5,8 +5,9 @@ import net.corda.core.serialization.CordaSerializable
 @CordaSerializable
 enum class EnclaveCommand {
     InitPostOfficeToRemoteEnclave,
-    VerifyAndEncryptTransaction,
-    VerifyTransaction,
+    VerifyTransactionWithSignatures,
+    VerifyTransactionWithoutSignatures,
+    EncryptTransactionForLocal,
     EncryptLedgerTransactionForRemote,
     EncryptVerifiedTransactionForRemote,
     DeserializeTransactionReturnHash;
