@@ -4,8 +4,6 @@ import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.flows.FlowException
-import net.corda.core.node.services.CordaService
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
@@ -14,8 +12,6 @@ import java.util.*
  * A structure to wrap any payload with an associated flowID. This will be serialised and used to send data to an enclave as it expects all
  * data to arrive in a single ByteArray
  */
-@CordaSerializable
-data class FlowIdAndPayload<T : Any>(val flowId: UUID, val payload: T)
 
 interface EnclaveClient {
 
@@ -38,12 +34,12 @@ interface EnclaveClient {
      * Register a remote enclave's [EnclaveInstanceInfo] with our own enclave. From this point on, our enclave will cache this information,
      * and use it whenever it needs it when dealing with requests from the same flowID
      *
-     * @param flowIdAndRemoteAttestation flowId and the remote attestation as a [ByteArray] wrapped in a [FlowIdAndPayload] object
+     * @param invokeId flowId and the remote attestation as a [ByteArray] wrapped in a [FlowIdAndPayload] object
      *
      * @throws [RemoteAttestationException] if our enclave does not accept the attestation
      */
     @Throws(RemoteAttestationException::class)
-    fun registerRemoteEnclaveInstanceInfo(flowIdAndRemoteAttestation: FlowIdAndPayload<ByteArray>)
+    fun registerRemoteEnclaveInstanceInfo(invokeId: UUID, payload: ByteArray)
 
     /**
      * Verify an unencrypted transaction (supplied with its dependencies), without checking the signatures. This would be used during
@@ -58,7 +54,7 @@ interface EnclaveClient {
      * @throws [VerificationException] if verification failed
      */
     @Throws(VerificationException::class)
-    fun enclaveVerifyWithoutSignatures(txAndDependencies : VerifiableTxAndDependencies)
+    fun enclaveVerifyWithoutSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies)
 
     /**
      * Verify an unencrypted transaction (supplied with its dependencies), and also check the signatures. This would be used during
@@ -76,7 +72,7 @@ interface EnclaveClient {
      * @throws [VerificationException] if verification failed
      */
     @Throws(VerificationException::class)
-    fun enclaveVerifyWithSignatures(txAndDependencies : VerifiableTxAndDependencies): EncryptedTransaction
+    fun enclaveVerifyWithSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction
 
     /**
      * Verify an encrypted transaction (supplied with its dependencies) and also check the signatures. This would be used during
@@ -95,7 +91,7 @@ interface EnclaveClient {
      * @throws [VerificationException] if verification failed
      */
     @Throws(VerificationException::class)
-    fun enclaveVerifyWithSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction
+    fun enclaveVerifyWithSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction
 
     /**
      * When we receive an encrypted transaction from another node, before we store it we will want to encrypt it with our long term
@@ -106,33 +102,33 @@ interface EnclaveClient {
      *
      * @return an [EncryptedTransaction] the transaction encrypted with our enclave's long term storage key
      */
-    fun encryptTransactionForLocal(remoteEncryptedTransaction: EncryptedTransaction): EncryptedTransaction
+    fun encryptTransactionForLocal(invokeId: UUID, remoteEncryptedTransaction: EncryptedTransaction): EncryptedTransaction
 
     /**
      * During backchain resolution, when we send an transaction to another node, we need to encrypt it with a post office related to their
      * enclave's remote attestation. This function takes an unencrypted transaction (as a [ConclaveLedgerTxModel]) and returns
      * an [EncryptedTransaction] which contains that transaction, but encrypted for the remote enclave.
      *
-     * @param flowIdWithConclaveLedgerTx our local unencrypted transaction wrapped in a [FlowIdAndPayload] class so that the remote
+     * @param conclaveLedgerTx our local unencrypted transaction wrapped in a [FlowIdAndPayload] class so that the remote
      * enclave can identify which cached remote attestation to use.
      *
      * @return an [EncryptedTransaction] the transaction encrypted according to the remote enclave's remote attestation. Note that we do
      * not need our enclave to sign this encrypted transaction, as our signature is only relevant to our own enclave.
      */
-    fun encryptConclaveLedgerTxForRemote(flowIdWithConclaveLedgerTx: FlowIdAndPayload<ConclaveLedgerTxModel>): EncryptedTransaction
+    fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel): EncryptedTransaction
 
     /**
      * During backchain resolution, when we send an transaction to another node, we need to encrypt it with a post office related to their
      * enclave's remote attestation. This function takes an encrypted transaction (as a [EncryptedTransaction]) and returns
      * an [EncryptedTransaction] which contains that transaction, but encrypted for the remote enclave.
      *
-     * @param flowIdWithLocallyEncryptedTx our local encrypted transaction wrapped in a [FlowIdAndPayload] class so that the remote
+     * @param locallyEncryptedTx our local encrypted transaction wrapped in a [FlowIdAndPayload] class so that the remote
      * enclave can identify which cached remote attestation to use.
      *
      * @return an [EncryptedTransaction] the transaction re-encrypted according to the remote enclave's remote attestation. Note that we do
      * not need our enclave to sign this encrypted transaction, as our signature is only relevant to our own enclave.
      */
-    fun encryptEncryptedTransactionForRemote(flowIdWithLocallyEncryptedTx: FlowIdAndPayload<EncryptedTransaction>): EncryptedTransaction
+    fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction): EncryptedTransaction
 }
 
 class DummyEnclaveClient: EnclaveClient, SingletonSerializeAsToken() {
@@ -141,31 +137,31 @@ class DummyEnclaveClient: EnclaveClient, SingletonSerializeAsToken() {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun registerRemoteEnclaveInstanceInfo(flowIdAndRemoteAttestation: FlowIdAndPayload<ByteArray>) {
+    override fun registerRemoteEnclaveInstanceInfo(invokeId: UUID, payload: ByteArray) {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerifyWithoutSignatures(txAndDependencies: VerifiableTxAndDependencies) {
+    override fun enclaveVerifyWithoutSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies) {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerifyWithSignatures(txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
+    override fun enclaveVerifyWithSignatures(invokeId: UUID, txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun enclaveVerifyWithSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
+    override fun enclaveVerifyWithSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptTransactionForLocal(remoteEncryptedTransaction: EncryptedTransaction): EncryptedTransaction {
+    override fun encryptTransactionForLocal(invokeId: UUID, remoteEncryptedTransaction: EncryptedTransaction): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptConclaveLedgerTxForRemote(flowIdWithConclaveLedgerTx: FlowIdAndPayload<ConclaveLedgerTxModel>): EncryptedTransaction {
+    override fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptEncryptedTransactionForRemote(flowIdWithLocallyEncryptedTx: FlowIdAndPayload<EncryptedTransaction>): EncryptedTransaction {
+    override fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 }
