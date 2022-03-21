@@ -1,46 +1,53 @@
 package net.corda.core.node.services
 
+import co.paralleluniverse.fibers.Fiber
 import net.corda.core.conclave.common.DummyEnclaveClient
 import net.corda.core.conclave.common.EnclaveClient
-import net.corda.core.conclave.common.FlowIdAndPayload
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
 
 class EncryptedTransactionService(val enclaveClient: EnclaveClient = DummyEnclaveClient()) : SingletonSerializeAsToken() {
 
-    fun getEnclaveInstance() : ByteArray {
+    private fun getCurrentFlowIdOrGenerateNewInvokeId(): UUID {
+        val currentFiber = Fiber.currentFiber() as? FlowStateMachine<*>
+        return currentFiber?.id?.uuid ?: UUID.randomUUID()
+    }
+
+    fun getEnclaveInstance(): ByteArray {
         return enclaveClient.getEnclaveInstanceInfo()
     }
 
-    fun registerRemoteEnclaveInstanceInfo(flowId : UUID, remoteAttestation: ByteArray) {
-        enclaveClient.registerRemoteEnclaveInstanceInfo(FlowIdAndPayload(flowId, remoteAttestation))
+    fun registerRemoteEnclaveInstanceInfo(flowId: UUID, remoteAttestation: ByteArray) {
+        enclaveClient.registerRemoteEnclaveInstanceInfo(flowId, remoteAttestation)
     }
 
-    fun enclaveVerifyWithoutSignatures(txAndDependencies : VerifiableTxAndDependencies) {
-        return enclaveClient.enclaveVerifyWithoutSignatures(txAndDependencies)
+    fun enclaveVerifyWithoutSignatures(txAndDependencies: VerifiableTxAndDependencies) {
+
+        return enclaveClient.enclaveVerifyWithoutSignatures(getCurrentFlowIdOrGenerateNewInvokeId(), txAndDependencies)
     }
 
-    fun enclaveVerifyWithSignatures(txAndDependencies : VerifiableTxAndDependencies) : EncryptedTransaction {
-        return enclaveClient.enclaveVerifyWithSignatures(txAndDependencies)
+    fun enclaveVerifyWithSignatures(txAndDependencies: VerifiableTxAndDependencies): EncryptedTransaction {
+        return enclaveClient.enclaveVerifyWithSignatures(getCurrentFlowIdOrGenerateNewInvokeId(), txAndDependencies)
     }
 
-    fun enclaveVerifyWithSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies) : EncryptedTransaction {
-        return enclaveClient.enclaveVerifyWithSignatures(encryptedTxAndDependencies)
+    fun enclaveVerifyWithSignatures(encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction {
+        return enclaveClient.enclaveVerifyWithSignatures(getCurrentFlowIdOrGenerateNewInvokeId(), encryptedTxAndDependencies)
     }
 
     fun encryptTransactionForLocal(encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
-        return enclaveClient.encryptTransactionForLocal(encryptedTransaction)
+        return enclaveClient.encryptTransactionForLocal(getCurrentFlowIdOrGenerateNewInvokeId(), encryptedTransaction)
     }
 
     fun encryptTransactionForRemote(flowId: UUID, conclaveLedgerTxModel: ConclaveLedgerTxModel): EncryptedTransaction {
-        return enclaveClient.encryptConclaveLedgerTxForRemote(FlowIdAndPayload(flowId,conclaveLedgerTxModel))
+        return enclaveClient.encryptConclaveLedgerTxForRemote(flowId, conclaveLedgerTxModel)
     }
 
     fun encryptTransactionForRemote(flowId: UUID, encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
-        return enclaveClient.encryptEncryptedTransactionForRemote(FlowIdAndPayload(flowId, encryptedTransaction))
+        return enclaveClient.encryptEncryptedTransactionForRemote(flowId, encryptedTransaction)
     }
 }

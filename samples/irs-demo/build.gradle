@@ -69,7 +69,7 @@ dependencies {
     slowIntegrationTestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")
     testCompile "com.palantir.docker.compose:docker-compose-rule-junit4:$docker_compose_rule_version"
     testCompile "org.seleniumhq.selenium:selenium-java:$selenium_version"
-    testCompile "com.github.detro:ghostdriver:$ghostdriver_version"
+//    testCompile "com.github.detro:ghostdriver:$ghostdriver_version"
 }
 
 bootRepackage {

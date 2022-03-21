@@ -1,29 +1,20 @@
 package net.corda.core.conclave.common
 
-/**
- * Generic type for an enclave command.
- * This type contains no properties or methods and simply instructs the enclave to perform a specific action.
- */
-interface EnclaveCommand {
+import net.corda.core.serialization.CordaSerializable
 
-    /**
-     * Convert this type to a [String].
-     * @return serialized [String] of this type.
-     */
+@CordaSerializable
+enum class EnclaveCommand {
+    InitPostOfficeToRemoteEnclave,
+    VerifyAndEncryptTransaction,
+    VerifyTransaction,
+    EncryptLedgerTransactionForRemote,
+    EncryptVerifiedTransactionForRemote,
+    DeserializeTransactionReturnHash;
     fun serialize(): String {
-        return this.javaClass.name
+        return this.name
     }
 }
 
-/**
- * Deserialize an [EnclaveCommand].
- * Convert a serialized string into an [EnclaveCommand] instance.
- */
 fun String.toEnclaveCommand(): EnclaveCommand {
-    return Class.forName(this).newInstance() as EnclaveCommand
+    return EnclaveCommand.valueOf(this)
 }
-
-/**
- * An [EnclaveCommand] that instructs the enclave to register a host identity.
- */
-class RegisterHostIdentity : EnclaveCommand
