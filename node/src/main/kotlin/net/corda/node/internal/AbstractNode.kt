@@ -1151,7 +1151,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
         override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
-        override val encryptedTransactionService: EncryptedTransactionService = this@AbstractNode.encryptedTransactionService
+        override val encryptedTransactionService: EncryptedTransactionService get() = this@AbstractNode.encryptedTransactionService
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

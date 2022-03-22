@@ -124,7 +124,7 @@ interface ServiceHub : ServicesForResolution {
     // NOTE: Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid
     // their internal state from being serialized in checkpoints.
 
-    override val encryptedTransactionService: EncryptedTransactionService
+    //override val encryptedTransactionService: EncryptedTransactionService
 
     /**
      * The vault service lets you observe, soft lock and add notes to states that involve you or are relevant to your
