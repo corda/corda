@@ -1,6 +1,7 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import net.corda.core.conclave.common.CordaEnclaveClient
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
@@ -88,7 +89,7 @@ open class MockServices private constructor(
                 identityService,
                 *arrayOf(initialIdentity.keyPair) + moreKeys
         ),
-        override val encryptedTransactionService : EncryptedTransactionService = EncryptedTransactionService()
+        override val encryptedTransactionService : EncryptedTransactionService = makeEncryptedTransactionService(cordappLoader)
 ) : ServiceHub {
 
     companion object {
@@ -285,6 +286,27 @@ open class MockServices private constructor(
                 override val size: Int = 512
             }
             attachment
+        }
+
+        internal fun makeEncryptedTransactionService(cordappLoader: CordappLoader): EncryptedTransactionService {
+            val clazz = cordappLoader.cordapps
+                    .map {
+                        it.cordappClasses
+                    }
+                    .flatten()
+                    .firstOrNull {
+                        try {
+                            it.contains("EnclaveClient") && Class.forName(it).interfaces.contains(CordaEnclaveClient::class.java)
+                        } catch (e: NoClassDefFoundError) {
+                            false
+                        }
+                    }
+
+            return clazz?.let {
+                EncryptedTransactionService(Class.forName(it).getDeclaredConstructor().newInstance() as CordaEnclaveClient)
+            } ?: run {
+                EncryptedTransactionService()
+            }
         }
     }
 

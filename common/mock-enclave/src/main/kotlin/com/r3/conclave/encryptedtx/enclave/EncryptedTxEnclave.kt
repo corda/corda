@@ -1,7 +1,7 @@
 package com.r3.conclave.encryptedtx.enclave
 
 import com.github.benmanes.caffeine.cache.Caffeine
-import net.corda.core.conclave.common.EnclaveClient
+import net.corda.core.conclave.common.CordaEnclaveClient
 import net.corda.core.conclave.common.LedgerTxHelper
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
@@ -23,7 +23,7 @@ import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.util.*
 
-class EncryptedTxEnclaveClient() : EnclaveClient {
+class EncryptedTxCordaEnclaveClient() : CordaEnclaveClient {
 
     // this will be 'our' key to sign over verified transactions
     private val enclaveKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
@@ -60,7 +60,7 @@ class EncryptedTxEnclaveClient() : EnclaveClient {
     override fun registerRemoteEnclaveInstanceInfo(invokeId: UUID, payload: ByteArray) {
         // for testing
         if (rejectAttestation) {
-            throw EnclaveClient.RemoteAttestationException("Invalid attestation")
+            throw CordaEnclaveClient.RemoteAttestationException("Invalid attestation")
         }
     }
 

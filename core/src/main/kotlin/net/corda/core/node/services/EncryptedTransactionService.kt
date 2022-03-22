@@ -1,17 +1,16 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Fiber
-import net.corda.core.conclave.common.DummyEnclaveClient
-import net.corda.core.conclave.common.EnclaveClient
+import net.corda.core.conclave.common.DummyCordaEnclaveClient
+import net.corda.core.conclave.common.CordaEnclaveClient
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
-import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
 
-class EncryptedTransactionService(val enclaveClient: EnclaveClient = DummyEnclaveClient()) : SingletonSerializeAsToken() {
+class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyCordaEnclaveClient()) : SingletonSerializeAsToken() {
 
     private fun getCurrentFlowIdOrGenerateNewInvokeId(): UUID {
         val currentFiber = Fiber.currentFiber() as? FlowStateMachine<*>

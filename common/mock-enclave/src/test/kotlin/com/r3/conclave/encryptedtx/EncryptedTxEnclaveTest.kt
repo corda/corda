@@ -2,9 +2,6 @@ package com.r3.conclave.encryptedtx
 
 import co.paralleluniverse.fibers.Suspendable
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.r3.conclave.encryptedtx.enclave.EncryptedTxEnclaveClient
-import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
-import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
@@ -21,9 +18,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -32,8 +27,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
-import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.flows.CashPaymentFlow
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
@@ -44,7 +37,6 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.After
 import org.junit.Before

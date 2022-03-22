@@ -9,7 +9,7 @@ import com.zaxxer.hikari.pool.HikariPool
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
-import net.corda.core.conclave.common.EnclaveClient
+import net.corda.core.conclave.common.CordaEnclaveClient
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.DigitalSignature
@@ -1062,14 +1062,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 .flatten()
                 .firstOrNull {
                     try {
-                        it.contains("EnclaveClient") && Class.forName(it).interfaces.contains(EnclaveClient::class.java)
+                        it.contains("EnclaveClient") && Class.forName(it).interfaces.contains(CordaEnclaveClient::class.java)
                     } catch (e: NoClassDefFoundError) {
                         false
                     }
                 }
 
         return clazz?.let {
-            EncryptedTransactionService(Class.forName(it).getDeclaredConstructor().newInstance() as EnclaveClient)
+            EncryptedTransactionService(Class.forName(it).getDeclaredConstructor().newInstance() as CordaEnclaveClient)
         } ?: run {
             EncryptedTransactionService()
         }

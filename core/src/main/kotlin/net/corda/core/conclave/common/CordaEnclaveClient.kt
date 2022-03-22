@@ -2,7 +2,6 @@ package net.corda.core.conclave.common
 
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
-import net.corda.core.conclave.common.dto.VerifiableTxAndDependencies
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
@@ -13,7 +12,7 @@ import java.util.*
  * data to arrive in a single ByteArray
  */
 
-interface EnclaveClient {
+interface CordaEnclaveClient {
 
     // Some exceptions we could throw [TBD - do we want this?]
     class RemoteAttestationException(description: String) : FlowException(description)
@@ -113,7 +112,7 @@ interface EnclaveClient {
     fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction): EncryptedTransaction
 }
 
-class DummyEnclaveClient: EnclaveClient, SingletonSerializeAsToken() {
+class DummyCordaEnclaveClient: CordaEnclaveClient, SingletonSerializeAsToken() {
 
     override fun getEnclaveInstanceInfo(): ByteArray {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
