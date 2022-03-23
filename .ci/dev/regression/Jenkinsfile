@@ -7,6 +7,7 @@
 /**
  * Sense environment
  */
+boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/.*/)
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
@@ -381,6 +382,22 @@ pipeline {
                     } else {
                         echo('Already sent summary email today, suppressing')
                     }
+                }
+            }
+        }
+        failure {
+            script {
+                def statusSymbol = '\u274c'
+                if (isReleaseTag || isReleaseBranch || isReleaseCandidate) {
+                    emailext subject: "$statusSymbol " + '$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS!',
+                            body: '${SCRIPT, template="groovy-html.template"}',
+                            recipientProviders: [
+                                    [$class: 'CulpritsRecipientProvider'],
+                                    [$class: 'RequesterRecipientProvider']
+                            ],
+                            mimeType: 'text/html',
+                            replyTo: '$DEFAULT_REPLYTO',
+                            to: "adel.el-beik@r3.com"
                 }
             }
         }
