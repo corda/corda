@@ -5,12 +5,13 @@ import net.corda.core.conclave.common.DummyCordaEnclaveClient
 import net.corda.core.conclave.common.CordaEnclaveClient
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
 
-class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyCordaEnclaveClient()) : SingletonSerializeAsToken() {
+class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyCordaEnclaveClient(CordaX500Name("PartyDummy", "London", "GB" ))) : SingletonSerializeAsToken() {
 
     private fun getCurrentFlowIdOrGenerateNewInvokeId(): UUID {
         val currentFiber = Fiber.currentFiber() as? FlowStateMachine<*>

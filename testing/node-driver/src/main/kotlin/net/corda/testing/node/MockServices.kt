@@ -89,7 +89,7 @@ open class MockServices private constructor(
                 identityService,
                 *arrayOf(initialIdentity.keyPair) + moreKeys
         ),
-        override val encryptedTransactionService : EncryptedTransactionService = makeEncryptedTransactionService(cordappLoader)
+        override val encryptedTransactionService : EncryptedTransactionService = makeEncryptedTransactionService(cordappLoader, initialIdentity)
 ) : ServiceHub {
 
     companion object {
@@ -288,7 +288,7 @@ open class MockServices private constructor(
             attachment
         }
 
-        internal fun makeEncryptedTransactionService(cordappLoader: CordappLoader): EncryptedTransactionService {
+        internal fun makeEncryptedTransactionService(cordappLoader: CordappLoader, initialIdentity: TestIdentity): EncryptedTransactionService {
             val clazz = cordappLoader.cordapps
                     .map {
                         it.cordappClasses
@@ -303,7 +303,7 @@ open class MockServices private constructor(
                     }
 
             return clazz?.let {
-                EncryptedTransactionService(Class.forName(it).getDeclaredConstructor().newInstance() as CordaEnclaveClient)
+                EncryptedTransactionService(Class.forName(it).getDeclaredConstructor(CordaX500Name::class.java).newInstance(initialIdentity.name) as CordaEnclaveClient)
             } ?: run {
                 EncryptedTransactionService()
             }

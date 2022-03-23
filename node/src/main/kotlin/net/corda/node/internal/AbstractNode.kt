@@ -1068,8 +1068,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                     }
                 }
 
+
+
         return clazz?.let {
-            EncryptedTransactionService(Class.forName(it).getDeclaredConstructor().newInstance() as CordaEnclaveClient)
+            EncryptedTransactionService(Class.forName(it).getDeclaredConstructor(CordaX500Name::class.java).newInstance(configuration.myLegalName) as CordaEnclaveClient)
         } ?: run {
             EncryptedTransactionService()
         }

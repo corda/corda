@@ -3,6 +3,7 @@ package net.corda.core.conclave.common
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
@@ -112,7 +113,7 @@ interface CordaEnclaveClient {
     fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction): EncryptedTransaction
 }
 
-class DummyCordaEnclaveClient: CordaEnclaveClient, SingletonSerializeAsToken() {
+class DummyCordaEnclaveClient(val x500: CordaX500Name): CordaEnclaveClient, SingletonSerializeAsToken() {
 
     override fun getEnclaveInstanceInfo(): ByteArray {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
