@@ -11,6 +11,7 @@ boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
+boolean isReleasePatch = (env.TAG_NAME =~ /^release.*([1-9]\d*|0)(\.([1-9]\d*|0)){2}$/)
 
 /*
 ** calculate the stage for NexusIQ evaluation
@@ -329,7 +330,7 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate && !isReleasePatch}
             }
             steps {
                 withCredentials([
