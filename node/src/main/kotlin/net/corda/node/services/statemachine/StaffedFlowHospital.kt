@@ -103,17 +103,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      * Flows should be removed from [flowsInHospital] when they have completed a successful transition.
      */
     private val flowsInHospital = ConcurrentHashMap<StateMachineRunId, FlowFiber>()
-
-    /**
-     * Returns true if the flow is currently being treated in the hospital.
-     * The differs to flows with a medical history (which can accessed via [StaffedFlowHospital.contains]).
-     */
-    @VisibleForTesting
-    internal fun flowInHospital(runId: StateMachineRunId): Boolean {
-        // The .keys avoids https://youtrack.jetbrains.com/issue/KT-18053
-        return runId in flowsInHospital.keys
-    }
-
     private val mutex = ThreadBox(object {
         /**
          * Contains medical history of every flow (a patient) that has entered the hospital. A flow can leave the hospital,
@@ -347,7 +336,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
-    operator fun contains(flowId: StateMachineRunId) = mutex.locked { flowId in flowPatients }
+    operator fun contains(flowId: StateMachineRunId) = flowId in flowsInHospital.keys
 
     override fun close() {
         hospitalJobTimer.cancel()
