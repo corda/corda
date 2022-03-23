@@ -111,6 +111,11 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
             try {
                 if (encrypted) {
                     val validatedTxSvc = serviceHub.validatedTransactions
+                    val encryptedTxSvc = serviceHub.encryptedTransactionService
+
+                    val usableEncryptedTransaction = encryptedTxSvc.encryptTransactionForLocal(
+                            encryptedTx ?: throw IllegalStateException("And encrypted transaction is required")
+                    )
 
                     val signedTxs = it.dependencies.mapNotNull {
                         validatedTxId ->
@@ -123,16 +128,16 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
                     }.toSet()
 
                     val verifiableTx = EncryptedVerifiableTxAndDependencies(
-                            encryptedTx!!,
+                            usableEncryptedTransaction,
                             signedTxs,
                             encryptedTxs
                     )
 
                     if (checkSufficientSignatures) {
-                        val encryptedAndVerifiedTx = serviceHub.encryptedTransactionService.enclaveVerifyWithSignatures(verifiableTx)
+                        val encryptedAndVerifiedTx = encryptedTxSvc.enclaveVerifyWithSignatures(verifiableTx)
                         serviceHub.recordEncryptedTransactions(listOf(encryptedAndVerifiedTx))
                     } else {
-                        serviceHub.encryptedTransactionService.enclaveVerifyWithoutSignatures(verifiableTx)
+                        encryptedTxSvc.enclaveVerifyWithoutSignatures(verifiableTx)
                     }
 
                     it
