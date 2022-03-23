@@ -7,7 +7,6 @@
 /**
  * Sense environment
  */
-
 boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
