@@ -14,7 +14,9 @@ enum class EnclaveCommand {
     EncryptTransactionForLocal,
     EncryptLedgerTransactionForRemote,
     EncryptVerifiedTransactionForRemote,
-    DeserializeTransactionReturnHash;
+    DeserializeTransactionReturnHash,
+    GetLocalEncryptedTransaction;
+
     fun serialize(): String {
         return this.name
     }
