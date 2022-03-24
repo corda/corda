@@ -1,16 +1,18 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.identity.Party
 import net.corda.core.utilities.unwrap
 
-class ExchangeAttestationFlow(private val session : FlowSession) : FlowLogic<ByteArray>() {
+@InitiatingFlow
+class ExchangeAttestationFlow(private val counterParty: Party) : FlowLogic<ByteArray>() {
 
     @Suspendable
     override fun call() : ByteArray {
 
         val encSvc = serviceHub.encryptedTransactionService
         val ourAttestationBytes = encSvc.getEnclaveInstance()
-
+        val session = initiateFlow(counterParty)
         val theirAttestationBytes = session.sendAndReceive<ByteArray>(ourAttestationBytes).unwrap { it }
         // this can throw if the enclave does not believe the attestation to be valid
         encSvc.registerRemoteEnclaveInstanceInfo(runId.uuid, theirAttestationBytes)
@@ -19,7 +21,8 @@ class ExchangeAttestationFlow(private val session : FlowSession) : FlowLogic<Byt
     }
 }
 
-class ExchangeAttestationFlowHandler(private val otherSideSession: FlowSession) : FlowLogic<ByteArray>() {
+@InitiatedBy(ExchangeAttestationFlow::class)
+class ExchangeAttestationFlowHandler(val otherSideSession: FlowSession) : FlowLogic<ByteArray>() {
 
     @Suspendable
     override fun call(): ByteArray {

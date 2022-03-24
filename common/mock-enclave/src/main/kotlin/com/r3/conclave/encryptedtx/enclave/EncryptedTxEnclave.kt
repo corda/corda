@@ -96,11 +96,11 @@ class EncryptedTxCordaEnclaveClient() : CordaEnclaveClient {
         return encryptedTransaction
     }
 
-    override fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel) : EncryptedTransaction {
+    override fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel, theirAttestationBytes: ByteArray) : EncryptedTransaction {
         return encrypt(conclaveLedgerTx)
     }
 
-    override fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction): EncryptedTransaction {
+    override fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction {
         // no re-encryption in this mock enclave, in a real one we'd need to decrypt from the remote then re-encrypt with whatever key
         // we want to use for long term storage
         return locallyEncryptedTx

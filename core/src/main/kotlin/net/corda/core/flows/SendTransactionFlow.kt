@@ -121,14 +121,10 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         }
 
         if (encrypted) {
-             // The first step in an encrypted exchange, is to request an exchange of attestations. This will also cache the attestation
-             // in the enclave for future use
-             subFlow(ExchangeAttestationFlow(otherSideSession))
-
-            // also send the ledger transaction
+             val theirAttestation: ByteArray = subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
             if (payload is SignedTransaction) {
                 val conclaveLedgerTxModel = payload.toLedgerTxModel(serviceHub, false)
-                val encryptedTransaction = encryptSvc.encryptTransactionForRemote(runId.uuid, conclaveLedgerTxModel)
+                val encryptedTransaction = encryptSvc.encryptTransactionForRemote(runId.uuid, conclaveLedgerTxModel, theirAttestation)
                 otherSideSession.send(encryptedTransaction)
             }
         }
@@ -171,13 +167,14 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
                     if (encrypted) {
                         val flowId = runId.uuid
                         val encryptedTx = serviceHub.validatedTransactions.getEncryptedTransaction(txId)
+                        val theirAttestation: ByteArray = subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
 
                         val encryptedTransactionToSend = if (encryptedTx != null) {
-                            encryptSvc.encryptTransactionForRemote(flowId, encryptedTx)
+                            encryptSvc.encryptTransactionForRemote(flowId, encryptedTx, theirAttestation)
                         } else {
                             val tx = serviceHub.validatedTransactions.getTransaction(txId)
                                     ?: throw FetchDataFlow.HashNotFound(txId)
-                            encryptSvc.encryptTransactionForRemote(flowId, tx.toLedgerTxModel(serviceHub))
+                            encryptSvc.encryptTransactionForRemote(flowId, tx.toLedgerTxModel(serviceHub), theirAttestation)
                         }
 
                         authorisedTransactions.removeAuthorised(txId)

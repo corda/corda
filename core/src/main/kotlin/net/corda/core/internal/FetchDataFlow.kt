@@ -5,6 +5,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.ExchangeAttestationFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -279,7 +280,8 @@ class FetchEncryptedTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowS
 
     override fun load(txid: SecureHash): EncryptedTransaction? {
         return serviceHub.validatedTransactions.getEncryptedTransaction(txid)?.let {
-            serviceHub.encryptedTransactionService.encryptTransactionForRemote(runId.uuid,it)
+            val theirAttestation: ByteArray = subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
+            serviceHub.encryptedTransactionService.encryptTransactionForRemote(runId.uuid, it, theirAttestation)
         }
     }
 }

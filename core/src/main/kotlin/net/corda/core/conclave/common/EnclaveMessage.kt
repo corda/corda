@@ -4,7 +4,7 @@ import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 @CordaSerializable
-data class EnclaveMessage(val invocationId: UUID, val command: EnclaveCommand, val message: ByteArray) {
+data class EnclaveMessage(val invocationId: UUID, val command: EnclaveCommand, val message: ByteArray, val remoteAttestation: ByteArray? = null) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

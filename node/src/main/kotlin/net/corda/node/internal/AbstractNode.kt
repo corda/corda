@@ -17,6 +17,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.ExchangeAttestationFlow
+import net.corda.core.flows.ExchangeAttestationFlowHandler
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
@@ -980,6 +982,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         flowManager.registerInitiatedCoreFlowFactory(NotaryChangeFlow::class, NotaryChangeHandler::class, ::NotaryChangeHandler)
         flowManager.registerInitiatedCoreFlowFactory(ContractUpgradeFlow.Initiate::class, NotaryChangeHandler::class, ::ContractUpgradeHandler)
         flowManager.registerInitiatedCoreFlowFactory(SwapIdentitiesFlow::class, SwapIdentitiesHandler::class, ::SwapIdentitiesHandler)
+        flowManager.registerInitiatedCoreFlowFactory(ExchangeAttestationFlow::class, ExchangeAttestationFlowHandler::class, ::ExchangeAttestationFlowHandler)
     }
 
     // Ideally we should be disabling the FinalityHandler if it's not needed, to prevent any party from submitting transactions to us without

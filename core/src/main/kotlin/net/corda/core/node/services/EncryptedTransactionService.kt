@@ -38,11 +38,11 @@ class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyC
         return enclaveClient.encryptTransactionForLocal(getCurrentFlowIdOrGenerateNewInvokeId(), encryptedTransaction)
     }
 
-    fun encryptTransactionForRemote(flowId: UUID, conclaveLedgerTxModel: ConclaveLedgerTxModel): EncryptedTransaction {
-        return enclaveClient.encryptConclaveLedgerTxForRemote(flowId, conclaveLedgerTxModel)
+    fun encryptTransactionForRemote(flowId: UUID, conclaveLedgerTxModel: ConclaveLedgerTxModel, theirAttestationBytes: ByteArray): EncryptedTransaction {
+        return enclaveClient.encryptConclaveLedgerTxForRemote(flowId, conclaveLedgerTxModel, theirAttestationBytes)
     }
 
-    fun encryptTransactionForRemote(flowId: UUID, encryptedTransaction: EncryptedTransaction): EncryptedTransaction {
-        return enclaveClient.encryptEncryptedTransactionForRemote(flowId, encryptedTransaction)
+    fun encryptTransactionForRemote(flowId: UUID, encryptedTransaction: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction {
+        return enclaveClient.encryptEncryptedTransactionForRemote(flowId, encryptedTransaction, theirAttestationBytes)
     }
 }

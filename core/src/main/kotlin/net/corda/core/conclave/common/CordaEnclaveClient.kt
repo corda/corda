@@ -97,7 +97,7 @@ interface CordaEnclaveClient {
      * @return an [EncryptedTransaction] the transaction encrypted according to the remote enclave's remote attestation. Note that we do
      * not need our enclave to sign this encrypted transaction, as our signature is only relevant to our own enclave.
      */
-    fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel): EncryptedTransaction
+    fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel, theirAttestationBytes: ByteArray): EncryptedTransaction
 
     /**
      * During backchain resolution, when we send an transaction to another node, we need to encrypt it with a post office related to their
@@ -110,7 +110,7 @@ interface CordaEnclaveClient {
      * @return an [EncryptedTransaction] the transaction re-encrypted according to the remote enclave's remote attestation. Note that we do
      * not need our enclave to sign this encrypted transaction, as our signature is only relevant to our own enclave.
      */
-    fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction): EncryptedTransaction
+    fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction
 }
 
 class DummyCordaEnclaveClient(val x500: CordaX500Name): CordaEnclaveClient, SingletonSerializeAsToken() {
@@ -135,11 +135,11 @@ class DummyCordaEnclaveClient(val x500: CordaX500Name): CordaEnclaveClient, Sing
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel): EncryptedTransaction {
+    override fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel, theirAttestationBytes: ByteArray): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction): EncryptedTransaction {
+    override fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 }

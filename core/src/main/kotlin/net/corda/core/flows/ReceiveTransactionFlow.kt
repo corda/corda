@@ -89,8 +89,6 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
 
         var encryptedTx : EncryptedTransaction? = null
         if (encrypted) {
-            // The first step in an encrypted exchange, is to request an exchange of attestations
-            subFlow(ExchangeAttestationFlowHandler(otherSideSession))
             encryptedTx = otherSideSession.receive<EncryptedTransaction>().unwrap { it }
         }
 
