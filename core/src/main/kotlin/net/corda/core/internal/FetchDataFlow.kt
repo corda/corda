@@ -139,6 +139,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         // Do nothing by default.
     }
 
+    @Suspendable
     private fun loadWhatWeHave(): Pair<List<SecureHash>, Set<SecureHash>> {
         val fromDisk = ArrayList<SecureHash>()
         val toFetch = LinkedHashSet<SecureHash>()
@@ -154,6 +155,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         return Pair(fromDisk, toFetch)
     }
 
+    @Suspendable
     private fun loadExpected(ids: List<SecureHash>): List<T> {
         val loaded = ids.mapNotNull { load(it) }
         require(ids.size == loaded.size) {
@@ -162,6 +164,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         return loaded
     }
 
+    @Suspendable
     protected abstract fun load(txid: SecureHash): T?
 
     protected open fun convert(wire: W): T = uncheckedCast(wire)
@@ -226,6 +229,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     private val uploader = "$P2P_UPLOADER:${otherSideSession.counterparty.name}"
 
+    @Suspendable
     override fun load(txid: SecureHash): Attachment? = serviceHub.attachments.openAttachment(txid)
 
     override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire }, uploader)
@@ -272,16 +276,22 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {
 
+    @Suspendable
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
 }
 
-class FetchEncryptedTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
+class FetchEncryptedTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession, val flow: ResolveTransactionsFlow) :
         FetchDataFlow<EncryptedTransaction, EncryptedTransaction>(requests, otherSide, DataType.TRANSACTION) {
 
+    @Suspendable
     override fun load(txid: SecureHash): EncryptedTransaction? {
-        return serviceHub.validatedTransactions.getEncryptedTransaction(txid)?.let {
-            val theirAttestation: ByteArray = subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
-            serviceHub.encryptedTransactionService.encryptTransactionForRemote(runId.uuid, it, theirAttestation)
+        val foundEncryptedTransaction = serviceHub.validatedTransactions.getEncryptedTransaction(txid)
+        if (foundEncryptedTransaction == null){
+            return null
+        }else{
+            val theirAttestation: ByteArray = flow.subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
+            val encryptedTransaction = serviceHub.encryptedTransactionService.encryptTransactionForRemote(runId.uuid, foundEncryptedTransaction, theirAttestation)
+            return encryptedTransaction
         }
     }
 }
@@ -289,6 +299,7 @@ class FetchEncryptedTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowS
 class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
         FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide, DataType.BATCH_TRANSACTION) {
 
+    @Suspendable
     override fun load(txid: SecureHash): MaybeSerializedSignedTransaction? {
         val tran = serviceHub.validatedTransactions.getTransaction(txid)
         return if (tran == null) {
@@ -308,6 +319,8 @@ class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSessi
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                                  otherSide: FlowSession) : FetchDataFlow<SignedDataWithCert<NetworkParameters>,
         SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
+
+    @Suspendable
     override fun load(txid: SecureHash): SignedDataWithCert<NetworkParameters>? {
         return (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(txid)
     }

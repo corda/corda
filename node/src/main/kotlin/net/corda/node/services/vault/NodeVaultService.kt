@@ -323,15 +323,10 @@ class NodeVaultService(
                 when (statesToRecord) {
                     StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                     StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
-                        val notSeenReferences = tx.references - loadStates(tx.references).map { it.ref }
-                        // TODO: This is expensive - is there another way?
-                        tx.toLedgerTransaction(servicesForResolution).deserializableRefStates()
-                                .filter { (_, stateAndRef) -> stateAndRef.ref in notSeenReferences }
-                                .values
+                       emptyList<StateAndRef<ContractState>>()
                     }
                 }
             }
-
             return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet())
         }
 

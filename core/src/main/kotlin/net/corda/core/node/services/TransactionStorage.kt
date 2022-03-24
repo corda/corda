@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
@@ -23,6 +24,7 @@ interface TransactionStorage {
     /**
      * Return the encrypted transaction with the given [id], or null if no such transaction exists.
      */
+    @Suspendable
     fun getEncryptedTransaction(id: SecureHash): EncryptedTransaction?
 
     /**

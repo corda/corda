@@ -326,7 +326,6 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
                 )
             )
         } else {
-
             stx.tx.toLedgerTransaction(serviceHub).verify()
         }
         // Perform some custom verification over the transaction.

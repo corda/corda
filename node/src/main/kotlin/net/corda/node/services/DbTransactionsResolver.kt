@@ -225,7 +225,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
     @Suspendable
     private fun fetchEncryptedRequiredTransactions(requests: Set<SecureHash>): Pair<List<SecureHash>, List<EncryptedTransaction>> {
-        val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide))
+        val requestedTxs = flow.subFlow(FetchEncryptedTransactionsFlow(requests, flow.otherSide, flow))
         return Pair(requestedTxs.fromDisk.map { it.id }, requestedTxs.downloaded)
     }
 

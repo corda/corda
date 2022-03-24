@@ -24,6 +24,8 @@ import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
+import org.hibernate.annotations.LazyCollection
+import org.hibernate.annotations.LazyCollectionOption
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Instant
@@ -78,7 +80,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             @Column(name = "timestamp", nullable = false)
             val timestamp: Instant,
 
-            @ElementCollection
+            @ElementCollection(fetch = FetchType.EAGER)
+            @LazyCollection(LazyCollectionOption.FALSE)
             @CollectionTable(
                     name="${NODE_DATABASE_PREFIX}encrypted_transactions_dependencies",
                     joinColumns = [JoinColumn(name = "tx_id", referencedColumnName = "tx_id")],
@@ -88,6 +91,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val dependencies: List<String>,
 
             @ElementCollection
+            @LazyCollection(LazyCollectionOption.FALSE)
             @CollectionTable(
                     name="${NODE_DATABASE_PREFIX}encrypted_transactions_signatures",
                     joinColumns = [JoinColumn(name = "tx_id", referencedColumnName = "tx_id")],

@@ -2,10 +2,11 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.identity.Party
+import net.corda.core.internal.IdempotentFlow
 import net.corda.core.utilities.unwrap
 
 @InitiatingFlow
-class ExchangeAttestationFlow(private val counterParty: Party) : FlowLogic<ByteArray>() {
+class ExchangeAttestationFlow(private val counterParty: Party) : FlowLogic<ByteArray>(), IdempotentFlow {
 
     @Suspendable
     override fun call() : ByteArray {
