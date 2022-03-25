@@ -96,7 +96,7 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
             checkParameterHash(it.networkParametersHash)
 
             if (encryptedTx != null) {
-                require(encryptedTx.id == it.id) {
+                require(encryptedTx!!.id == it.id) {
                     "The supplied signed transaction and encrypted transactions are different"
                 }
             }
@@ -112,7 +112,7 @@ abstract class ReceiveTransactionFlowBase<T> @JvmOverloads constructor(private v
                     val usableEncryptedTransaction = encryptedTxSvc.encryptTransactionForLocal(
                             encryptedTx ?: throw IllegalStateException("And encrypted transaction is required")
                     )
-
+                    encryptedTx = usableEncryptedTransaction
                     val signedTxs = it.dependencies.mapNotNull {
                         validatedTxId ->
                         validatedTxSvc.getTransaction(validatedTxId)
