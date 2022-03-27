@@ -242,7 +242,6 @@ apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'com.r3.testing.distributed-testing'
 
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 

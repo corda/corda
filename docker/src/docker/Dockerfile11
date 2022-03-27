@@ -10,7 +10,7 @@
 # export DOCKER_USERNAME=<username>
 # export DOCKER_PASSWORD=<password>
 
-FROM corda.azurecr.io/jdk/azul/zulu-sa-jdk:11.0.3_7_LTS
+FROM adoptopenjdk/openjdk11
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN apt-get update && \
