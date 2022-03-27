@@ -1,5 +1,3 @@
-import com.r3.testing.DistributeTestsBy
-import com.r3.testing.PodLogLevel
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -225,7 +223,6 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
-        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: '1.3.0'
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }
 
@@ -745,40 +742,3 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-distributedTesting {
-    profilesURL = 'https://raw.githubusercontent.com/corda/infrastructure-profiles/master'
-
-    parallelTestGroups {
-        allParallelIntegrationTest {
-            testGroups 'integrationTest'
-            profile 'generalPurpose.yml'
-            podLogLevel PodLogLevel.INFO
-            distribution DistributeTestsBy.METHOD
-        }
-        allParallelUnitTest {
-            podLogLevel PodLogLevel.INFO
-            testGroups 'test'
-            profile 'generalPurpose.yml'
-            distribution DistributeTestsBy.CLASS
-        }
-        allParallelUnitAndIntegrationTest {
-            testGroups 'test', 'integrationTest'
-            profile 'generalPurpose.yml'
-            distribution DistributeTestsBy.METHOD
-        }
-        allParallelSmokeTest {
-            testGroups 'smokeTest'
-            profile 'regression.yml'
-            distribution DistributeTestsBy.METHOD
-        }
-        allParallelSlowIntegrationTest {
-            testGroups 'slowIntegrationTest'
-            profile 'regression.yml'
-            distribution DistributeTestsBy.METHOD
-        }
-    }
-
-    ignoredTests = [
-        ':core-deterministic:testing:data:test'
-    ]
-}
