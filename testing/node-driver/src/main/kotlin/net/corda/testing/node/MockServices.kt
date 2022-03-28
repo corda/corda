@@ -289,18 +289,12 @@ open class MockServices private constructor(
         }
 
         internal fun makeEncryptedTransactionService(cordappLoader: CordappLoader, initialIdentity: TestIdentity): EncryptedTransactionService {
-            val clazz = cordappLoader.cordapps
-                    .map {
-                        it.cordappClasses
-                    }
-                    .flatten()
-                    .firstOrNull {
-                        try {
-                            it.contains("EnclaveClient") && Class.forName(it).interfaces.contains(CordaEnclaveClient::class.java)
-                        } catch (e: NoClassDefFoundError) {
-                            false
-                        }
-                    }
+
+            val clazz = try {
+                Class.forName("cbdc.r3.corda.conclave.client.CBDCEnclaveClient").name
+            }catch(e: Exception) {
+                null
+            }
 
             return clazz?.let {
                 EncryptedTransactionService(Class.forName(it).getDeclaredConstructor(CordaX500Name::class.java).newInstance(initialIdentity.name) as CordaEnclaveClient)
