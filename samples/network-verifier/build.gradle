@@ -32,11 +32,11 @@ dependencies {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
-    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     nodeDefaults{
         projectCordapp {
             deploy = false
         }
+        rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
         cordapp project(':samples:network-verifier:contracts')
         cordapp project(':samples:network-verifier:workflows')
         runSchemaMigration = true
@@ -47,6 +47,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
                   serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
         ]
         p2pPort 10002
+        rpcUsers = []
         rpcSettings {
             port 10003
             adminPort 10004
@@ -57,7 +58,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             port 10007
             adminPort 10008
@@ -68,7 +68,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         name "O=Bank B,L=New York,C=US"
         p2pPort 10009
         cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             port 10011
             adminPort 10012

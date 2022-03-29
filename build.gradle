@@ -398,6 +398,15 @@ allprojects {
             }
         } else {
             maven {
+                url "${artifactory_contextUrl}/corda-dependencies-dev"
+                mavenContent {
+                    snapshotsOnly()
+                }
+                content {
+                    includeGroup 'co.paralleluniverse'
+                }
+            }
+            maven {
                 url "${artifactory_contextUrl}/corda-dependencies"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'

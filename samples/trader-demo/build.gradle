@@ -80,11 +80,11 @@ task integrationTest(type: Test, dependsOn: []) {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
-    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
     nodeDefaults {
         projectCordapp {
             deploy = false // TODO This is a bug, project cordapp should be disabled if no cordapp plugin is applied.
         }
+        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
         cordapp project(':samples:trader-demo:workflows-trader')
@@ -96,6 +96,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
                   serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
         ]
         p2pPort 10002
+        rpcUsers = []
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10004"
@@ -105,7 +106,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
@@ -115,7 +115,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10009"
             adminAddress "localhost:10010"
@@ -125,7 +124,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=BankOfCorda,L=New York,C=US"
         p2pPort 10011
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10012"
             adminAddress "localhost:10013"
@@ -137,7 +135,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=NonLogging Bank,L=London,C=GB"
         p2pPort 10025
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10026"
             adminAddress "localhost:10027"

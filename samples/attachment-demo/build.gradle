@@ -78,7 +78,11 @@ task integrationTest(type: Test, dependsOn: []) {
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
-    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+    nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
+        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
                                                                              "InvokeRpc.partiesFromName",
                                                                              "InvokeRpc.notaryPartyFromX500Name",
                                                                              "InvokeRpc.attachmentExists",
@@ -87,11 +91,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                                                                              "InvokeRpc.internalVerifiedTransactionsFeed",
                                                                              "InvokeRpc.startTrackedFlowDynamic",
                                                                              "InvokeRpc.nodeInfo"]]]
-
-    nodeDefaults {
-        projectCordapp {
-            deploy = false
-        }
         cordapp project(':samples:attachment-demo:contracts')
         cordapp project(':samples:attachment-demo:workflows')
         runSchemaMigration = true
@@ -103,7 +102,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         ]
         p2pPort 10002
         cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10004"
@@ -114,7 +112,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
@@ -130,7 +127,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         }
         webPort 10010
         cordapps = []
-        rpcUsers = ext.rpcUsers
         extraConfig = ['h2Settings.address': 'localhost:10014']
     }
 }
