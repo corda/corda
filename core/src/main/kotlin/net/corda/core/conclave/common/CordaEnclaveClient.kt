@@ -126,7 +126,7 @@ abstract class CordaEnclaveClient(val x500: CordaX500Name, val serviceHub: Servi
     abstract fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): Pair<Array<StateAndRef<ContractState>>, Array<StateAndRef<ContractState>>>
 }
 
-class DummyCordaEnclaveClient(x500: CordaX500Name, serviceHub: ServiceHub?): CordaEnclaveClient(x500, serviceHub) {
+class DummyCordaEnclaveClient(x500: CordaX500Name, serviceHub: ServiceHub? = null): CordaEnclaveClient(x500, serviceHub) {
 
     override fun getEnclaveInstanceInfo(): ByteArray {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
