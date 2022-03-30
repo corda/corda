@@ -4,6 +4,10 @@ import net.corda.core.serialization.CordaSerializable
 
 @CordaSerializable
 enum class EnclaveCommand {
+    IsNodeKeyRegisteredWithEnclave,
+    RequestChallenge,
+    VerifyChallenge,
+    DecryptInputsAndRefsForNode,
     InitPostOfficeToRemoteEnclave,
     VerifyTransactionWithSignatures,
     VerifyTransactionWithoutSignatures,

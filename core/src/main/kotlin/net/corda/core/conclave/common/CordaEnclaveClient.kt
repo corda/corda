@@ -2,6 +2,8 @@ package net.corda.core.conclave.common
 
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -111,6 +113,16 @@ interface CordaEnclaveClient {
      * not need our enclave to sign this encrypted transaction, as our signature is only relevant to our own enclave.
      */
     fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction
+
+    /**
+     * Decrypts inputs and reference states from transaction and returns them in clear text. Only input states where registered node is participant
+     * will be returned while all the reference states will be returned.
+     *
+     * @param encryptedTransaction The [EncryptedTransaction] for which registered node requests decryption from enclave.
+     *
+     * @return Pair of arrays of input states and reference states. Input states are filtered by the list of registered participants.
+     */
+    fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): Pair<Array<StateAndRef<ContractState>>, Array<StateAndRef<ContractState>>>
 }
 
 class DummyCordaEnclaveClient(val x500: CordaX500Name): CordaEnclaveClient, SingletonSerializeAsToken() {
@@ -140,6 +152,10 @@ class DummyCordaEnclaveClient(val x500: CordaX500Name): CordaEnclaveClient, Sing
     }
 
     override fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction {
+        throw UnsupportedOperationException("Add your custom enclave client implementation")
+    }
+
+    override fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): Pair<Array<StateAndRef<ContractState>>, Array<StateAndRef<ContractState>>> {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 }
