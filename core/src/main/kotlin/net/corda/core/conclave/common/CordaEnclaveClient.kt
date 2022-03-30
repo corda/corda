@@ -6,6 +6,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
@@ -15,7 +16,7 @@ import java.util.*
  * data to arrive in a single ByteArray
  */
 
-interface CordaEnclaveClient {
+abstract class CordaEnclaveClient(val x500: CordaX500Name, val serviceHub: ServiceHub? = null): SingletonSerializeAsToken() {
 
     // Some exceptions we could throw [TBD - do we want this?]
     class RemoteAttestationException(description: String) : FlowException(description)
@@ -30,7 +31,7 @@ interface CordaEnclaveClient {
      * our own mock [EnclaveInstanceInfo] objects. In theory this could be generalised to exchange a generic set of 'handshake' bytes,
      * of which an enclave instance info is just one type of handshake
      */
-    fun getEnclaveInstanceInfo() : ByteArray
+    abstract fun getEnclaveInstanceInfo() : ByteArray
 
     /**
      * Register a remote enclave's [EnclaveInstanceInfo] with our own enclave. From this point on, our enclave will cache this information,
@@ -41,7 +42,7 @@ interface CordaEnclaveClient {
      * @throws [RemoteAttestationException] if our enclave does not accept the attestation
      */
     @Throws(RemoteAttestationException::class)
-    fun registerRemoteEnclaveInstanceInfo(invokeId: UUID, payload: ByteArray)
+    abstract fun registerRemoteEnclaveInstanceInfo(invokeId: UUID, payload: ByteArray)
 
     /**
      * Verify an encrypted transaction (supplied with its dependencies), without checking the signatures. This would be used during
@@ -56,7 +57,7 @@ interface CordaEnclaveClient {
      * @throws [VerificationException] if verification failed
      */
     @Throws(VerificationException::class)
-    fun enclaveVerifyWithoutSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies)
+    abstract fun enclaveVerifyWithoutSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies)
 
     /**
      * Verify an encrypted transaction (supplied with its dependencies) and also check the signatures. This would be used during
@@ -75,7 +76,7 @@ interface CordaEnclaveClient {
      * @throws [VerificationException] if verification failed
      */
     @Throws(VerificationException::class)
-    fun enclaveVerifyWithSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction
+    abstract fun enclaveVerifyWithSignatures(invokeId: UUID, encryptedTxAndDependencies: EncryptedVerifiableTxAndDependencies): EncryptedTransaction
 
     /**
      * When we receive an encrypted transaction from another node, before we store it we will want to encrypt it with our long term
@@ -86,7 +87,7 @@ interface CordaEnclaveClient {
      *
      * @return an [EncryptedTransaction] the transaction encrypted with our enclave's long term storage key
      */
-    fun encryptTransactionForLocal(invokeId: UUID, remoteEncryptedTransaction: EncryptedTransaction): EncryptedTransaction
+    abstract fun encryptTransactionForLocal(invokeId: UUID, remoteEncryptedTransaction: EncryptedTransaction): EncryptedTransaction
 
     /**
      * During backchain resolution, when we send an transaction to another node, we need to encrypt it with a post office related to their
@@ -99,7 +100,7 @@ interface CordaEnclaveClient {
      * @return an [EncryptedTransaction] the transaction encrypted according to the remote enclave's remote attestation. Note that we do
      * not need our enclave to sign this encrypted transaction, as our signature is only relevant to our own enclave.
      */
-    fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel, theirAttestationBytes: ByteArray): EncryptedTransaction
+    abstract fun encryptConclaveLedgerTxForRemote(invokeId: UUID, conclaveLedgerTx: ConclaveLedgerTxModel, theirAttestationBytes: ByteArray): EncryptedTransaction
 
     /**
      * During backchain resolution, when we send an transaction to another node, we need to encrypt it with a post office related to their
@@ -112,7 +113,7 @@ interface CordaEnclaveClient {
      * @return an [EncryptedTransaction] the transaction re-encrypted according to the remote enclave's remote attestation. Note that we do
      * not need our enclave to sign this encrypted transaction, as our signature is only relevant to our own enclave.
      */
-    fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction
+    abstract fun encryptEncryptedTransactionForRemote(invokeId: UUID, locallyEncryptedTx: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction
 
     /**
      * Decrypts inputs and reference states from transaction and returns them in clear text. Only input states where registered node is participant
@@ -122,10 +123,10 @@ interface CordaEnclaveClient {
      *
      * @return Pair of arrays of input states and reference states. Input states are filtered by the list of registered participants.
      */
-    fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): Pair<Array<StateAndRef<ContractState>>, Array<StateAndRef<ContractState>>>
+    abstract fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): Pair<Array<StateAndRef<ContractState>>, Array<StateAndRef<ContractState>>>
 }
 
-class DummyCordaEnclaveClient(val x500: CordaX500Name): CordaEnclaveClient, SingletonSerializeAsToken() {
+class DummyCordaEnclaveClient(x500: CordaX500Name, serviceHub: ServiceHub?): CordaEnclaveClient(x500, serviceHub) {
 
     override fun getEnclaveInstanceInfo(): ByteArray {
         throw UnsupportedOperationException("Add your custom enclave client implementation")

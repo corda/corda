@@ -297,7 +297,7 @@ open class MockServices private constructor(
             }
 
             return clazz?.let {
-                EncryptedTransactionService(Class.forName(it).getDeclaredConstructor(CordaX500Name::class.java).newInstance(initialIdentity.name) as CordaEnclaveClient)
+                EncryptedTransactionService(Class.forName(it).getDeclaredConstructor(CordaX500Name::class.java, ServiceHub::class.java).newInstance(initialIdentity.name, null) as CordaEnclaveClient)
             } ?: run {
                 EncryptedTransactionService()
             }
