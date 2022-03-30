@@ -294,6 +294,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
 
+    val services = ServiceHubInternalImpl().tokenize()
     val encryptedTransactionService = makeEncryptedTransactionService().tokenize()
 
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, encryptedTransactionService).also {
@@ -335,7 +336,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             log.warn("MessagingService subscription error", it)
         })
     }
-    val services = ServiceHubInternalImpl().tokenize()
+
     val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics), platformClock)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
