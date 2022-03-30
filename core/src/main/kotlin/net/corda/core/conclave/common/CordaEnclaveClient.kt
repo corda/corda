@@ -2,6 +2,7 @@ package net.corda.core.conclave.common
 
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
+import net.corda.core.conclave.common.dto.InputsAndRefsForNode
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowException
@@ -121,9 +122,9 @@ abstract class CordaEnclaveClient(val x500: CordaX500Name, val serviceHub: Servi
      *
      * @param encryptedTransaction The [EncryptedTransaction] for which registered node requests decryption from enclave.
      *
-     * @return Pair of arrays of input states and reference states. Input states are filtered by the list of registered participants.
+     * @return [InputsAndRefsForNode] as arrays of input states and reference states. Input states are filtered by the list of registered participants.
      */
-    abstract fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): Pair<Array<StateAndRef<ContractState>>, Array<StateAndRef<ContractState>>>
+    abstract fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): InputsAndRefsForNode
 }
 
 class DummyCordaEnclaveClient(x500: CordaX500Name, serviceHub: ServiceHub? = null): CordaEnclaveClient(x500, serviceHub) {
@@ -156,7 +157,7 @@ class DummyCordaEnclaveClient(x500: CordaX500Name, serviceHub: ServiceHub? = nul
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 
-    override fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): Pair<Array<StateAndRef<ContractState>>, Array<StateAndRef<ContractState>>> {
+    override fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): InputsAndRefsForNode {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
     }
 }
