@@ -294,7 +294,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
 
-    val services = ServiceHubInternalImpl().tokenize()
     val encryptedTransactionService = makeEncryptedTransactionService().tokenize()
 
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, encryptedTransactionService).also {
@@ -337,6 +336,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         })
     }
 
+    val services = ServiceHubInternalImpl().tokenize()
     val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics), platformClock)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
@@ -1066,10 +1066,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             null
         }
         return clazz?.let {
-            val internalServiceHub = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage, EncryptedTransactionService()).also {
-                attachments.servicesForResolution = it
-            }
-            EncryptedTransactionService(Class.forName(it).getDeclaredConstructor(CordaX500Name::class.java, ServiceHub::class.java).newInstance(configuration.myLegalName, internalServiceHub) as CordaEnclaveClient)
+            EncryptedTransactionService(Class.forName(it).getDeclaredConstructor(CordaX500Name::class.java, KeyManagementService::class.java, IdentityService::class.java)
+                    .newInstance(configuration.myLegalName, keyManagementService, identityService) as CordaEnclaveClient)
         } ?: run {
             EncryptedTransactionService()
         }
