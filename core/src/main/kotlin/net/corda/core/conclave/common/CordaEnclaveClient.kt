@@ -3,11 +3,9 @@ package net.corda.core.conclave.common
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.InputsAndRefsForNode
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
@@ -17,7 +15,7 @@ import java.util.*
  * data to arrive in a single ByteArray
  */
 
-abstract class CordaEnclaveClient(val x500: CordaX500Name, val serviceHub: ServiceHub? = null): SingletonSerializeAsToken() {
+abstract class CordaEnclaveClient(val x500: CordaX500Name, val serviceHub: ServicesForResolution? = null): SingletonSerializeAsToken() {
 
     // Some exceptions we could throw [TBD - do we want this?]
     class RemoteAttestationException(description: String) : FlowException(description)
@@ -127,7 +125,7 @@ abstract class CordaEnclaveClient(val x500: CordaX500Name, val serviceHub: Servi
     abstract fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): InputsAndRefsForNode
 }
 
-class DummyCordaEnclaveClient(x500: CordaX500Name, serviceHub: ServiceHub? = null): CordaEnclaveClient(x500, serviceHub) {
+class DummyCordaEnclaveClient(x500: CordaX500Name, serviceHub: ServicesForResolution? = null): CordaEnclaveClient(x500, serviceHub) {
 
     override fun getEnclaveInstanceInfo(): ByteArray {
         throw UnsupportedOperationException("Add your custom enclave client implementation")
