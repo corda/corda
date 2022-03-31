@@ -18,4 +18,5 @@ object PlatformVersionSwitches {
     const val ENABLE_P2P_COMPRESSION = 7
     const val RESTRICTED_DATABASE_OPERATIONS = 7
     const val CERTIFICATE_ROTATION = 9
+    const val RESTRICTED_DATABASE_OPERATIONS = 7
 }
