@@ -6,6 +6,7 @@ import net.corda.core.conclave.common.DummyCordaEnclaveClient
 import net.corda.core.conclave.common.CordaEnclaveClient
 import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
+import net.corda.core.conclave.common.dto.InputsAndRefsForNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -53,5 +54,10 @@ class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyC
     @Suspendable
     fun encryptTransactionForRemote(flowId: UUID, encryptedTransaction: EncryptedTransaction, theirAttestationBytes: ByteArray): EncryptedTransaction {
         return enclaveClient.encryptEncryptedTransactionForRemote(flowId, encryptedTransaction, theirAttestationBytes)
+    }
+
+    @Suspendable
+    fun decryptInputAndRefsForNode(encryptedTransaction: EncryptedTransaction): InputsAndRefsForNode {
+        return enclaveClient.decryptInputAndRefsForNode(encryptedTransaction)
     }
 }
