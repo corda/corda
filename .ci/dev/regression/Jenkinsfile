@@ -61,6 +61,7 @@ String COMMON_GRADLE_PARAMS = [
         '--info',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
+        '-DexcludeShell',
 ].join(' ')
 
 pipeline {
@@ -86,6 +87,18 @@ pipeline {
         parallelsAlwaysFailFast()
         timeout(time: 6, unit: 'HOURS')
         timestamps()
+        office365ConnectorWebhooks([[
+                                            name                 : "Corda 4 Jenkins Connector",
+                                            notifyBackToNormal   : true,
+                                            startNotification    : false,
+                                            notifyFailure        : true,
+                                            notifySuccess        : true,
+                                            notifyNotBuilt       : false,
+                                            notifyAborted        : false,
+                                            notifyRepeatedFailure: true,
+                                            notifyUnstable       : true,
+                                            url                  : "${teamsWebHookURL}"
+                                    ]])
     }
 
     parameters {
@@ -295,7 +308,7 @@ pipeline {
                 rtGradleRun(
                         usesPlugin: true,
                         useWrapper: true,
-                        switches: '-s --info',
+                        switches: '-s --info -DpublishApiDocs',
                         tasks: 'artifactoryPublish',
                         deployerId: 'deployer',
                         buildName: env.ARTIFACTORY_BUILD_NAME

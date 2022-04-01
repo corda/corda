@@ -61,6 +61,7 @@ buildscript {
     ext.asm_version = constants.getProperty("asmVersion")
     ext.artemis_version = constants.getProperty("artemisVersion")
     ext.jackson_version = constants.getProperty("jacksonVersion")
+    ext.jackson_kotlin_version = constants.getProperty("jacksonKotlinVersion")
     ext.jetty_version = constants.getProperty("jettyVersion")
     ext.jersey_version = constants.getProperty("jerseyVersion")
     ext.servlet_version = constants.getProperty("servletVersion")
@@ -411,6 +412,12 @@ allprojects {
                 content {
                     includeGroup 'org.gradle'
                     includeGroup 'com.github.detro'
+                }
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-releases"
+                content {
+                    includeModule('net.corda', 'corda-shell')
                 }
             }
             mavenCentral()

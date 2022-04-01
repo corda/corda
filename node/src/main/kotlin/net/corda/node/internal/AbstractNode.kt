@@ -690,9 +690,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val isShellStarted = InteractiveShell.startShellIfInstalled(configuration, cordappLoader)
             configuration.sshd?.port?.let {
                 if (isShellStarted) {
-                    log.info("Binding Shell SSHD server on port $it.")
+                    Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
+                    log.info("SSH server listening on port: $it.")
                 } else {
-                    log.info("SSH port defined but corda-shell is not installed in node's drivers directory")
+                    Node.printBasicNodeInfo(
+                        "SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory"
+                    )
+                    log.info("SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory")
                 }
             }
         }
