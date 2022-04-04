@@ -206,7 +206,8 @@ buildscript {
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }
 
-    configurations.all {
+    configurations.classpath {
+        // FORCE Gradle to use latest SNAPSHOT plugins.
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }
 }
@@ -472,6 +473,9 @@ allprojects {
                     substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
                     substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
                 }
+
+                // FORCE Gradle to use latest SNAPSHOT dependencies.
+                cacheChangingModulesFor 0, 'seconds'
             }
         }
     }
