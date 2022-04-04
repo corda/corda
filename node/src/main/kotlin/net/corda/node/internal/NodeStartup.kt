@@ -48,7 +48,6 @@ import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.lo
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
-import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
 import net.corda.nodeapi.internal.addShutdownHook
@@ -263,19 +262,8 @@ open class NodeStartup : NodeStartupLogging {
                 Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
                 // Don't start the shell if there's no console attached.
-                val isShellStarted = if (node.configuration.shouldStartLocalShell()) {
+                if (node.configuration.shouldStartLocalShell()) {
                     InteractiveShell.runLocalShellIfInstalled(node::stop)
-                } else {
-                    false
-                }
-                if (node.configuration.shouldStartSSHDaemon()) {
-                    if (isShellStarted) {
-                        Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
-                    } else {
-                        Node.printBasicNodeInfo(
-                            "SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory"
-                        )
-                    }
                 }
             },
             { th ->

@@ -310,7 +310,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         synchronized(_changed) {
             database.transaction {
                 removeInfoDB(session, node)
-                archiveNamedIdentity(session, node)
+                archiveNamedIdentity(node)
                 changePublisher.onNext(MapChange.Removed(node))
             }
         }
@@ -319,13 +319,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         logger.debug { "Done removing node with info: $node" }
     }
 
-    private fun archiveNamedIdentity(session: Session, nodeInfo: NodeInfo) {
+    private fun archiveNamedIdentity(nodeInfo: NodeInfo) {
         nodeInfo.legalIdentities.forEach { party ->
-            val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentPartyToPublicKeyHash::class.java)
-            val queryRoot = deleteQuery.from(PersistentPartyToPublicKeyHash::class.java)
-            deleteQuery.where(session.criteriaBuilder.equal(queryRoot.get<String>("name"), party.name.toString()))
-            session.createQuery(deleteQuery).executeUpdate()
-            session.save(PersistentPartyToPublicKeyHash(party.name.toString(), party.owningKey.toStringShort() ))
+            identityService.archiveNamedIdentity(party.name.toString(), party.owningKey.toStringShort())
         }
     }
 
@@ -457,7 +453,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) {
                 session.remove(nodeInfo)
-                archiveNamedIdentity(session, nodeInfo.toNodeInfo())
+                archiveNamedIdentity(nodeInfo.toNodeInfo())
             }
         }
     }
