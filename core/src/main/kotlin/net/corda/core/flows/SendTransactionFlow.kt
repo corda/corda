@@ -120,8 +120,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
         }
 
+        var theirAttestation: ByteArray? = null
         if (encrypted) {
-             val theirAttestation: ByteArray = subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
+            theirAttestation = subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
             if (payload is SignedTransaction) {
                 val conclaveLedgerTxModel = payload.toLedgerTxModel(serviceHub, false)
                 val encryptedTransaction = encryptSvc.encryptTransactionForRemote(runId.uuid, conclaveLedgerTxModel, theirAttestation)
@@ -167,14 +168,13 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
                     if (encrypted) {
                         val flowId = runId.uuid
                         val encryptedTx = serviceHub.validatedTransactions.getEncryptedTransaction(txId)
-                        val theirAttestation: ByteArray = subFlow(ExchangeAttestationFlow(otherSideSession.counterparty))
 
                         val encryptedTransactionToSend = if (encryptedTx != null) {
-                            encryptSvc.encryptTransactionForRemote(flowId, encryptedTx, theirAttestation)
+                            encryptSvc.encryptTransactionForRemote(flowId, encryptedTx, theirAttestation!!)
                         } else {
                             val tx = serviceHub.validatedTransactions.getTransaction(txId)
                                     ?: throw FetchDataFlow.HashNotFound(txId)
-                            encryptSvc.encryptTransactionForRemote(flowId, tx.toLedgerTxModel(serviceHub), theirAttestation)
+                            encryptSvc.encryptTransactionForRemote(flowId, tx.toLedgerTxModel(serviceHub), theirAttestation!!)
                         }
 
                         authorisedTransactions.removeAuthorised(txId)
