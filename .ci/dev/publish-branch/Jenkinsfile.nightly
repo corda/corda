@@ -33,6 +33,18 @@ def nexusIqStageChoices = [nexusDefaultIqStage].plus(
                         'operate'
                 ].minus([nexusDefaultIqStage]))
 
+/**
+ * define an empty teamsWebHookURL and if it is a Release Branch
+ * then set it for the Corda 4 Jenkins Connector
+ */
+boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
+def teamsWebHookURL = ""
+if (isReleaseBranch){
+    withCredentials([string(credentialsId: 'ms-teams-webhook', variable: 'webhook_url')]) {
+        teamsWebHookURL = "$webhook_url"
+    }
+}
+
 pipeline {
     agent { label 'standard' }
 
@@ -42,6 +54,18 @@ pipeline {
         overrideIndexTriggers(false)
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        office365ConnectorWebhooks([[
+                                            name                 : "Corda 4 Jenkins Connector",
+                                            notifyBackToNormal   : true,
+                                            startNotification    : false,
+                                            notifyFailure        : true,
+                                            notifySuccess        : true,
+                                            notifyNotBuilt       : false,
+                                            notifyAborted        : false,
+                                            notifyRepeatedFailure: true,
+                                            notifyUnstable       : true,
+                                            url                  : "${teamsWebHookURL}"
+                                    ]])
     }
 
     parameters {
@@ -110,17 +134,6 @@ pipeline {
                         serverId: 'R3-Artifactory',
                         buildName: env.ARTIFACTORY_BUILD_NAME
                 )
-            }
-        }
-
-        stage('Publish Nightly to Docker Hub') {
-            steps {
-                withCredentials([
-                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
-                                usernameVariable: 'DOCKER_USERNAME',
-                                passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh "./gradlew pushOfficialImages"
-                }
             }
         }
     }
