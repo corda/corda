@@ -8,12 +8,16 @@ import net.corda.core.conclave.common.dto.ConclaveLedgerTxModel
 import net.corda.core.conclave.common.dto.EncryptedVerifiableTxAndDependencies
 import net.corda.core.conclave.common.dto.InputsAndRefsForNode
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyCordaEnclaveClient(CordaX500Name("PartyDummy", "London", "GB" ))) : SingletonSerializeAsToken() {
+
+    private val attestationCache = ConcurrentHashMap<Party, ByteArray>()
 
     @Suspendable
     private fun getCurrentFlowIdOrGenerateNewInvokeId(): UUID {
@@ -22,12 +26,20 @@ class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyC
     }
 
     @Suspendable
+    fun getRemoteAttestationForParty(party: Party): ByteArray? {
+        return attestationCache[party]
+    }
+
+    @Suspendable
     fun getEnclaveInstance(): ByteArray {
         return enclaveClient.getEnclaveInstanceInfo()
     }
 
     @Suspendable
-    fun registerRemoteEnclaveInstanceInfo(flowId: UUID, remoteAttestation: ByteArray) {
+    fun registerRemoteEnclaveInstanceInfo(flowId: UUID, remoteAttestation: ByteArray, party: Party) {
+        attestationCache.computeIfAbsent(party) {
+            remoteAttestation
+        }
         enclaveClient.registerRemoteEnclaveInstanceInfo(flowId, remoteAttestation)
     }
 
