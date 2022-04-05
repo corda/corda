@@ -44,6 +44,18 @@ if (isReleaseBranch){
     }
 }
 
+/**
+ * define an empty teamsWebHookURL and if it is a Release Branch
+ * then set it for the Corda 4 Jenkins Connector
+ */
+boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
+def teamsWebHookURL = ""
+if (isReleaseBranch){
+    withCredentials([string(credentialsId: 'ms-teams-webhook', variable: 'webhook_url')]) {
+        teamsWebHookURL = "$webhook_url"
+    }
+}
+
 pipeline {
     agent { label 'standard' }
 
