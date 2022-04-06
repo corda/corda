@@ -198,8 +198,7 @@ constructor(val txBits: SerializedBytes<CoreTransaction>, override val sigs: Lis
         val groupedInputsAndRefs = (inputs + references).groupBy { it.txhash }
         groupedInputsAndRefs.map { entry ->
             val tx = services.validatedTransactions.getTransaction(entry.key)?.coreTransaction
-                    ?: throw TransactionResolutionException(id)
-            val paramHash = tx.networkParametersHash ?: services.networkParametersService.defaultHash
+            val paramHash = tx?.networkParametersHash ?: services.networkParametersService.defaultHash
             val params = services.networkParametersService.lookup(paramHash) ?: throw TransactionResolutionException(id)
             if (txNetworkParameters.epoch < params.epoch)
                 throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, entry.value.first(), txNetworkParameters, params)
