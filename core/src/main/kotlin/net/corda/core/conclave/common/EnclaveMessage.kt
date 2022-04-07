@@ -1,10 +1,17 @@
 package net.corda.core.conclave.common
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 @CordaSerializable
-data class EnclaveMessage(val invocationId: UUID, val command: EnclaveCommand, val message: ByteArray, val remoteAttestation: ByteArray? = null) {
+data class EnclaveMessage(
+        val invocationId: UUID,
+        val command: EnclaveCommand,
+        val message: ByteArray,
+        val remoteAttestation: ByteArray? = null,
+        val callingParty: CordaX500Name? = null
+) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
