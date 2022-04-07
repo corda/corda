@@ -16,7 +16,7 @@ import java.util.*
  * data to arrive in a single ByteArray
  */
 
-abstract class CordaEnclaveClient(val x500: CordaX500Name, val keyManagementService: KeyManagementService? = null, val identityService: IdentityService? = null) {
+abstract class CordaEnclaveClient(val x500: CordaX500Name, val keyManagementService: KeyManagementService? = null, val identityService: IdentityService? = null): SingletonSerializeAsToken() {
 
     // Some exceptions we could throw [TBD - do we want this?]
     class RemoteAttestationException(description: String) : FlowException(description)

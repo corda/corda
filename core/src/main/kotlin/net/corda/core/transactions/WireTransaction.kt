@@ -437,7 +437,8 @@ constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt,
                     is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
                     else -> if(SgxSupport.isInsideEnclave) {
                         services.validatedTransactions.getEncryptedTransaction(stateRef.txhash)?.let { encryptedTx ->
-                            services.encryptedTransactionService.decryptInputAndRefsForNode(encryptedTx).inputs.singleOrNull { it.ref == stateRef }?.state?.serialize()
+                            //services.encryptedTransactionService.decryptInputAndRefsForNode(encryptedTx).inputs.singleOrNull { it.ref == stateRef }?.state?.serialize()
+                            null
                         } ?: throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction?.javaClass ?: "null"} transaction. This is not supported.")
                     } else {
                         throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction?.javaClass ?: "null"} transaction. This is not supported.")
