@@ -4,6 +4,8 @@ import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.conclave.common.CordaEnclaveClient
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
@@ -453,6 +455,10 @@ open class MockServices private constructor(
         txs.forEach {
             (validatedTransactions as WritableTransactionStorage).addVerifiedEncryptedTransaction(it)
         }
+    }
+
+    override fun recordDecryptedInputsAndRefs(inputs: Set<StateAndRef<ContractState>>, refs: Set<StateAndRef<ContractState>>) {
+        (vaultService as VaultServiceInternal).notify(inputs, refs)
     }
 
     override val networkParameters: NetworkParameters

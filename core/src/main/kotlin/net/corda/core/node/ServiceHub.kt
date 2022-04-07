@@ -245,6 +245,12 @@ interface ServiceHub : ServicesForResolution {
     fun recordEncryptedTransactions(txs: List<EncryptedTransaction>)
 
     /**
+     * Stores decrypted states for which we were a participant in our vault.
+     * This is expected to be run within a database transaction.
+     */
+    fun recordDecryptedInputsAndRefs(inputs: Set<StateAndRef<ContractState>>, refs: Set<StateAndRef<ContractState>>)
+
+    /**
      * Converts the given [StateRef] into a [StateAndRef] object.
      *
      * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.

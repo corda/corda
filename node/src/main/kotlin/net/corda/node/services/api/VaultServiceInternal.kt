@@ -1,5 +1,7 @@
 package net.corda.node.services.api
 
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.CoreTransaction
@@ -22,4 +24,9 @@ interface VaultServiceInternal : VaultService {
      * This does not allow for passing transactions that have already been seen by the node, as this API is only used in testing.
      */
     fun notify(statesToRecord: StatesToRecord, tx: CoreTransaction) = notifyAll(statesToRecord, listOf(tx))
+
+    /**
+     * Persist [inputs] and [refs] for which we were a participant but may not have observed the full transaction.
+     */
+    fun notify(inputs: Set<StateAndRef<ContractState>>, refs: Set<StateAndRef<ContractState>>)
 }

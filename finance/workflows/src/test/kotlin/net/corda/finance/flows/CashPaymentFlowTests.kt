@@ -83,10 +83,6 @@ class CashPaymentFlowTests {
                 val label = labelToStx.first
                 val stx = labelToStx.second
                 println("$label (${stx.id})")
-                println("> FOUND UNENCRYPTED: ${node.services.validatedTransactions.getTransaction(stx.id)}")
-                println("> FOUND   ENCRYPTED: ${node.services.validatedTransactions.getVerifiedEncryptedTransaction(stx.id)?.let { "${shortStringDesc(it.bytes.toHexString())} signature ${it.verifierSignature.toHexString()}"}}")
-
-                println()
             }
             println()
         }

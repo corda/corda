@@ -184,12 +184,16 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
         val encryptSvc = flow.serviceHub.encryptedTransactionService
         logger.trace { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
+
+        println("Processing encrypted dependencies for node: ${flow.ourIdentity}")
+
         for (txId in sortedDependencies) {
             // Retrieve and delete the transaction from the unverified store.
             val (tx, isVerified) = checkNotNull(transactionStorage.getEncryptedTransactionInternal(txId)) {
                 "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
             }
             if (!isVerified) {
+                println("Processing dependency: ${tx.id}")
 
                 // get the dependencies
                 val signedTransactions = tx.dependencies.mapNotNull { transactionStorage.getTransaction(it) }.toSet()
@@ -207,7 +211,24 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 //  direct to the validatedTransactions service??
                 //  flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
 
-                val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
+                // encryptedTransactions.forEach {
+                //     println("decrypting inputs and refs for dependency: ${it.id}")
+                //     val statesToRecord = encryptSvc.decryptInputAndRefsForNode(it)
+
+                //     flow.serviceHub.recordDecryptedInputsAndRefs(statesToRecord.inputs.toSet(), statesToRecord.refs.toSet())
+                // }
+
+                val statesToRecord = encryptSvc.decryptInputAndRefsForNode(tx)
+
+                println("Decrypted inputs: ${statesToRecord.inputs}")
+                println("Decrypted refs: ${statesToRecord.refs}")
+
+                if (statesToRecord.inputs.size > 0 || statesToRecord.refs.size > 0) {
+                    println("Break!")
+                }
+
+                flow.serviceHub.recordDecryptedInputsAndRefs(statesToRecord.inputs.toSet(), statesToRecord.refs.toSet())
+
                 transactionStorage.addVerifiedEncryptedTransaction(verifiedTransaction)
             } else {
                 logger.debug { "No need to record $txId as it's already been verified" }

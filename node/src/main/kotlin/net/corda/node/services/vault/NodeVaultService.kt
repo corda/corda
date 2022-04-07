@@ -261,6 +261,12 @@ class NodeVaultService(
         processTransactions(txns, false)
     }
 
+    override fun notify(inputs: Set<StateAndRef<ContractState>>, refs: Set<StateAndRef<ContractState>>) {
+        println("NodeVaultService: notified of update: $inputs, $refs")
+        val updates = Vault.Update(inputs, emptySet(), references = refs)
+        // processAndNotify(listOf(updates))
+    }
+
     private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean): List<Vault.Update<ContractState>> {
 
         fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> = (0 until list.size).mapNotNull { idx ->

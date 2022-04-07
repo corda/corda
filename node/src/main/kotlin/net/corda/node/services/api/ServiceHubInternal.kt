@@ -2,6 +2,8 @@ package net.corda.node.services.api
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -74,6 +76,17 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 txs.forEach {
                     validatedTransactions.addVerifiedEncryptedTransaction(it)
                 }
+            }
+        }
+
+        fun recordDecryptedInputsAndRefs(
+                                inputs: Set<StateAndRef<ContractState>>,
+                                refs: Set<StateAndRef<ContractState>>,
+                                vaultService: VaultServiceInternal,
+                                database: CordaPersistence) {
+
+            database.transaction {
+                vaultService.notify(inputs, refs)
             }
         }
 
@@ -188,6 +201,10 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 validatedTransactions,
                 database
         )
+    }
+
+    override fun recordDecryptedInputsAndRefs(inputs: Set<StateAndRef<ContractState>>, refs: Set<StateAndRef<ContractState>>) {
+        Companion.recordDecryptedInputsAndRefs(inputs, refs, vaultService, database)
     }
 
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
