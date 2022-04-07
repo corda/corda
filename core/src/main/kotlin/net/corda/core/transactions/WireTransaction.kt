@@ -22,6 +22,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.SgxSupport
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -425,6 +426,7 @@ constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt,
                 val paramsHash = coreTransaction?.networkParametersHash ?: services.networkParametersService.defaultHash
                 val params = services.networkParametersService.lookup(paramsHash)
                         ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
+
                 @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
                     is WireTransaction -> coreTransaction.componentGroups
@@ -433,10 +435,12 @@ constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt,
                             ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
                     is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
                     is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
-                    else -> {
+                    else -> if(SgxSupport.isInsideEnclave) {
                         services.validatedTransactions.getEncryptedTransaction(stateRef.txhash)?.let { encryptedTx ->
-                            services.encryptedTransactionService.decryptInputAndRefsForNode(encryptedTx).inputs.single { it.ref == stateRef }.serialize() as SerializedBytes<TransactionState<ContractState>>?
-                        } ?: throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction?.let { it.javaClass } ?: null} transaction. This is not supported.")
+                            services.encryptedTransactionService.decryptInputAndRefsForNode(encryptedTx).inputs.singleOrNull { it.ref == stateRef }?.state?.serialize()
+                        } ?: throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction?.javaClass ?: "null"} transaction. This is not supported.")
+                    } else {
+                        throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction?.javaClass ?: "null"} transaction. This is not supported.")
                     }
                 }
             } else {

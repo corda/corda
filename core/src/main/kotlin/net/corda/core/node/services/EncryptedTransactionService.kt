@@ -15,7 +15,7 @@ import net.corda.core.transactions.EncryptedTransaction
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyCordaEnclaveClient(CordaX500Name("PartyDummy", "London", "GB" ))) : SingletonSerializeAsToken() {
+class EncryptedTransactionService(val enclaveClient: CordaEnclaveClient = DummyCordaEnclaveClient(CordaX500Name("PartyDummy", "London", "GB" ))) {
 
     private val attestationCache = ConcurrentHashMap<Party, ByteArray>()
 
