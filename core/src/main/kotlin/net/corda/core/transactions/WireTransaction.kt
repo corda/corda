@@ -420,9 +420,9 @@ constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt,
         fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes<TransactionState<ContractState>>? {
             return if (services is ServiceHub) {
                 val coreTransaction = services.validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
-                        ?: throw TransactionResolutionException(stateRef.txhash)
+
                 // Get the network parameters from the tx or whatever the default params are.
-                val paramsHash = coreTransaction.networkParametersHash ?: services.networkParametersService.defaultHash
+                val paramsHash = coreTransaction?.networkParametersHash ?: services.networkParametersService.defaultHash
                 val params = services.networkParametersService.lookup(paramsHash)
                         ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
                 @Suppress("UNCHECKED_CAST")
@@ -433,7 +433,11 @@ constructor(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt,
                             ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
                     is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
                     is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
-                    else -> throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
+                    else -> {
+                        services.validatedTransactions.getEncryptedTransaction(stateRef.txhash)?.let { encryptedTx ->
+                            services.encryptedTransactionService.decryptInputAndRefsForNode(encryptedTx).inputs.single { it.ref == stateRef }.serialize() as SerializedBytes<TransactionState<ContractState>>?
+                        } ?: throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction?.let { it.javaClass } ?: null} transaction. This is not supported.")
+                    }
                 }
             } else {
                 // For backwards compatibility revert to using the node classloader.
