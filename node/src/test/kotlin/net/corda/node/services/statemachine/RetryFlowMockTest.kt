@@ -6,7 +6,6 @@ import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.KilledFlowException
@@ -30,7 +29,6 @@ import net.corda.testing.node.internal.MessagingServiceSpy
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.newContext
-import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.h2.util.Utils
@@ -49,7 +47,6 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -324,25 +321,6 @@ class RetryFlowMockTest {
             val tx = DBTransactionStorage.DBTransaction("Foo", null, Utils.EMPTY_BYTES,
                     DBTransactionStorage.TransactionStatus.VERIFIED, Instant.now())
             contextTransaction.session.save(tx)
-        }
-    }
-
-    class HospitalizeThenSucceedFlow : FlowLogic<Boolean>() {
-        companion object {
-            var runs = 0
-            var flowRetried = Semaphore(0)
-            var flowWillReturn = Semaphore(0)
-        }
-
-        @Suspendable
-        override fun call(): Boolean {
-            if (runs == 0) {
-                runs++
-                throw HospitalizeFlowException("Hospitalize on first run")
-            }
-            flowRetried.release()
-            flowWillReturn.acquire()
-            return true
         }
     }
 
