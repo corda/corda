@@ -741,9 +741,11 @@ open class TransactionBuilder(
                     addReferenceState(resolvedStateAndRef.referenced())
                 }
             } else {
-                log.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
-                        "state pointers outside of flows. If you are writing a unit test then pass in a " +
-                        "MockServices instance.")
+                if (nextStatePointer.isResolved) {
+                    log.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
+                            "state pointers outside of flows. If you are writing a unit test then pass in a " +
+                            "MockServices instance.")
+                }
                 return
             }
         }
