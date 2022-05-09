@@ -51,6 +51,7 @@ String COMMON_GRADLE_PARAMS = [
         '--info',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
+        '-DexcludeShell',
 ].join(' ')
 
 pipeline {
@@ -274,7 +275,7 @@ pipeline {
                 rtGradleRun(
                         usesPlugin: true,
                         useWrapper: true,
-                        switches: '-s --info',
+                        switches: '-s --info -DpublishApiDocs',
                         tasks: 'artifactoryPublish',
                         deployerId: 'deployer',
                         buildName: env.ARTIFACTORY_BUILD_NAME
@@ -390,10 +391,11 @@ pipeline {
         success {
             script {
                 sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
+
             }
         }
         unstable {
-            script {                 
+            script {
                 sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")                      
             }
         }

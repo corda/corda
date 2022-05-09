@@ -9,7 +9,8 @@ plugins {
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
 ext['selenium.version'] = "$selenium_version"
-ext['jackson.version'] = "$jackson_version"
+// Using jackson_kotlin_version here for JDK11 compatibility with kotlin 1.2.71
+ext['jackson.version'] = "$jackson_kotlin_version"
 ext['dropwizard-metrics.version'] = "$metrics_version"
 ext['mockito.version'] = "$mockito_version"
 

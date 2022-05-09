@@ -61,6 +61,7 @@ buildscript {
     ext.asm_version = constants.getProperty("asmVersion")
     ext.artemis_version = constants.getProperty("artemisVersion")
     ext.jackson_version = constants.getProperty("jacksonVersion")
+    ext.jackson_kotlin_version = constants.getProperty("jacksonKotlinVersion")
     ext.jetty_version = constants.getProperty("jettyVersion")
     ext.jersey_version = constants.getProperty("jerseyVersion")
     ext.servlet_version = constants.getProperty("servletVersion")
@@ -205,7 +206,8 @@ buildscript {
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }
 
-    configurations.all {
+    configurations.classpath {
+        // FORCE Gradle to use latest SNAPSHOT plugins.
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }
 }
@@ -413,6 +415,12 @@ allprojects {
                     includeGroup 'com.github.detro'
                 }
             }
+            maven {
+                url "${artifactory_contextUrl}/corda-releases"
+                content {
+                    includeModule('net.corda', 'corda-shell')
+                }
+            }
             mavenCentral()
             jcenter()
         }
@@ -465,6 +473,9 @@ allprojects {
                     substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
                     substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
                 }
+
+                // FORCE Gradle to use latest SNAPSHOT dependencies.
+                cacheChangingModulesFor 0, 'seconds'
             }
         }
     }
