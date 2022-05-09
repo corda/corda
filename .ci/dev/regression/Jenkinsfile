@@ -389,17 +389,17 @@ pipeline {
         }
         success {
             script {
-                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-build-notifications")
+                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
             }
         }
         unstable {
             script {                 
-                sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-build-notifications")                      
+                sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")                      
             }
         }
         failure {
             script {                 
-                sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-build-notifications")
+                sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-open-source-build-notifications")
             } 
         }       
         cleanup {
