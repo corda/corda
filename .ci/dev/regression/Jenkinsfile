@@ -408,19 +408,21 @@ pipeline {
                 }
             }
         }
+        success {
+            script {
+                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
+            }
+        }
+        unstable {
+            script {                 
+                sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")                      
+            }
+        }
         failure {
             script {
-                def statusSymbol = '\u274c'
+                sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-open-source-build-notifications")
                 if (isReleaseTag || isReleaseBranch || isReleaseCandidate) {
-                    emailext subject: "$statusSymbol " + '$PROJECT_NAME - Build # $BUILD_NUMBER - $BUILD_STATUS!',
-                            body: '${SCRIPT, template="groovy-html.template"}',
-                            recipientProviders: [
-                                    [$class: 'CulpritsRecipientProvider'],
-                                    [$class: 'RequesterRecipientProvider']
-                            ],
-                            mimeType: 'text/html',
-                            replyTo: '$DEFAULT_REPLYTO',
-                            to: "adel.el-beik@r3.com"
+                    sendEmailNotifications("${env.EMAIL_RECIPIENTS}")
                 }
             }
         }
