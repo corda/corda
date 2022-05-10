@@ -11,7 +11,6 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.SingletonSerializeAsToken
