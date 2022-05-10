@@ -129,16 +129,6 @@ class CordaServiceTest {
                 .hasMessageContaining("com.r3.corda.sdk.tokens.money")
                 .hasMessageEndingWith(" not found on the classpath")
     }
-
-    @Test(timeout=300_000)
-    fun `Corda services receive lifecycle events during node startup`() {
-        val expectedStartupEventsInOrder = listOf(
-                ServiceLifecycleEvent.BEFORE_STATE_MACHINE_START,
-                ServiceLifecycleEvent.STATE_MACHINE_STARTED
-        )
-        val service = nodeA.services.cordaService(TestCordaServiceLifecycleEvents::class.java)
-        assertEquals(expectedStartupEventsInOrder, service.receivedEvents)
-    }
     
     @StartableByService
     class DummyServiceFlow : FlowLogic<InvocationContext>() {
@@ -224,20 +214,6 @@ class CordaServiceTest {
             serviceHub.withEntityManager {
                 createNativeQuery("SELECT * FROM VAULT_STATES").resultList
             }
-        }
-    }
-
-    /** service that subscribes to lifecycle events and captures the events it sees
-     */
-    @CordaService
-    class TestCordaServiceLifecycleEvents(val appServiceHub: AppServiceHub) : SingletonSerializeAsToken() {
-        init {
-            appServiceHub.register { processEvent(it) }
-        }
-        var receivedEvents = mutableListOf<ServiceLifecycleEvent>()
-
-        private fun processEvent(event: ServiceLifecycleEvent) {
-            receivedEvents.add(event)
         }
     }
 }

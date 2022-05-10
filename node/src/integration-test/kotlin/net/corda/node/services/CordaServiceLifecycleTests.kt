@@ -7,6 +7,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
+import net.corda.core.node.services.ServiceLifecycleEvent.BEFORE_STATE_MACHINE_START
 import net.corda.core.node.services.ServiceLifecycleEvent.STATE_MACHINE_STARTED
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
@@ -34,8 +35,8 @@ class CordaServiceLifecycleTests {
             node.rpc.startFlow(::ComputeTextLengthThroughCordaService, TEST_PHRASE).returnValue.getOrThrow()
         }
         assertEquals(TEST_PHRASE.length, result)
-        assertEquals(1, eventsCaptured.size)
-        assertEquals(listOf(STATE_MACHINE_STARTED), eventsCaptured)
+        assertEquals(2, eventsCaptured.size)
+        assertEquals(listOf(BEFORE_STATE_MACHINE_START, STATE_MACHINE_STARTED), eventsCaptured)
     }
 
     @StartableByRPC
