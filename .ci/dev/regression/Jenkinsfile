@@ -82,6 +82,7 @@ pipeline {
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_BUILD_EDITION = "${buildEdition}"
         DOCKER_URL = "https://index.docker.io/v1/"
+        EMAIL_RECIPIENTS = credentials('corda4-email-recipient')
     }
 
     stages {
@@ -389,19 +390,23 @@ pipeline {
         }
         success {
             script {
-                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-build-notifications")
+                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
+
             }
         }
         unstable {
-            script {                 
-                sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-build-notifications")                      
+            script {
+                sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")                      
             }
         }
         failure {
-            script {                 
-                sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-build-notifications")
-            } 
-        }       
+            script {
+                sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-open-source-build-notifications")
+                if (isReleaseTag || isReleaseBranch || isReleaseCandidate) {
+                    sendEmailNotifications("${env.EMAIL_RECIPIENTS}")
+                }
+            }
+        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
