@@ -373,6 +373,12 @@ allprojects {
 
     repositories {
         mavenLocal()
+        // Prevents cache giving use the wrong artemis
+        mavenCentral {
+            content {
+                includeGroup 'org.apache.activemq'
+            }
+        }
         // Use system environment to activate caching with Artifactory,
         // because it is actually easier to pass that during parallel build.
         // NOTE: it has to be a name of a virtual repository with all
