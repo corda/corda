@@ -351,7 +351,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
 
             val entities =
-                alice.rpc.startFlow(::EntityManagerWithinTheSameDatabaseTransactionFlow).returnValue.getOrThrow(2000.seconds)
+                alice.rpc.startFlow(::EntityManagerWithinTheSameDatabaseTransactionFlow).returnValue.getOrThrow(20.seconds)
             assertEquals(3, entities.size)
             assertEquals(0, counter)
         }
