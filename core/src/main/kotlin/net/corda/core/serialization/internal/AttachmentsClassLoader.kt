@@ -32,6 +32,7 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.t
 import net.corda.core.serialization.withWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
 import java.io.IOException
 import java.io.InputStream
 import java.lang.ref.WeakReference
@@ -470,7 +471,18 @@ interface AttachmentsClassLoaderCache {
 @DeleteForDJVM
 class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
 
-    private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
+    private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(
+        // Close deserialization classloaders when we evict them
+        // to release any resources they may be holding.
+        @Suppress("TooGenericExceptionCaught")
+        Caffeine.newBuilder().removalListener { key, context, _ ->
+            try {
+                (context?.deserializationClassLoader as? AutoCloseable)?.close()
+            } catch (e: Exception) {
+                loggerFor<AttachmentsClassLoaderCacheImpl>().warn("Error destroying serialization context for $key", e)
+            }
+        }, "AttachmentsClassLoader_cache"
+    )
 
     override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
