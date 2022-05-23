@@ -378,7 +378,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return resultList.last().publicKeyHash
     }
 
-    private fun archiveNamedIdentity(name:String, publicKeyHash: String?) {
+    override fun archiveNamedIdentity(name:String, publicKeyHash: String?) {
         archiveIdentityExecutor.submit {
             database.transaction {
                 val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentNetworkMapCache.PersistentPartyToPublicKeyHash::class.java)

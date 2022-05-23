@@ -171,7 +171,6 @@ import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
 import java.lang.reflect.InvocationTargetException
-import java.net.URLConnection
 import java.sql.Connection
 import java.sql.Savepoint
 import java.time.Clock
@@ -237,7 +236,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         quasarExcludePackages(configuration)
-        disableURLConnectionCache()
 
         if (allowHibernateToManageAppSchema && !configuration.devMode) {
             throw ConfigurationException("Hibernate can only be used to manage app schema in development while using dev mode. " +
@@ -422,13 +420,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             stage2Proxy
         }
-    }
-
-    private fun disableURLConnectionCache() {
-        object : URLConnection(null) {
-            override fun connect() {
-            }
-        }.defaultUseCaches = false
     }
 
     private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
@@ -690,9 +681,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val isShellStarted = InteractiveShell.startShellIfInstalled(configuration, cordappLoader)
             configuration.sshd?.port?.let {
                 if (isShellStarted) {
-                    log.info("Binding Shell SSHD server on port $it.")
+                    Node.printBasicNodeInfo("SSH server listening on port", configuration.sshd!!.port.toString())
+                    log.info("SSH server listening on port: $it.")
                 } else {
-                    log.info("SSH port defined but corda-shell is not installed in node's drivers directory")
+                    Node.printBasicNodeInfo(
+                        "SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory"
+                    )
+                    log.info("SSH server not started. SSH port is defined but the corda-shell is not installed in node's drivers directory")
                 }
             }
         }

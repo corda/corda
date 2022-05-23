@@ -16,7 +16,7 @@ dependencies {
     cordaCompile project(':core')
     
 
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
+    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
     
     // only included to control the `DemoClock` as part of the demo application
     // normally `:node` should not be depended on in any CorDapps
