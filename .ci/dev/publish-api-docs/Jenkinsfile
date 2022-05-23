@@ -33,6 +33,7 @@ pipeline {
         stage('Publish Archived API Docs to Artifactory') {
             when { tag pattern: /^docs-release-os-V(\d+\.\d+)(\.\d+){0,1}(-GA){0,1}(-\d{4}-\d\d-\d\d-\d{4}){0,1}$/, comparator: 'REGEXP' }
             steps {
+                authenticateGradleWrapper()
                 sh "./gradlew :clean :docs:artifactoryPublish -DpublishApiDocs"
             }
         }
