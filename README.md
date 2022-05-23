@@ -10,9 +10,9 @@ Corda is an open source blockchain project, designed for business from the start
 
 ## Architecure Evolution
 
-The code present in this repository reflects the first version of the implementation of the Corda model for DLT technology. This first architecture version covers Corda versions 1 through 4 and continues to deliver on the promise of DLT for both the open source community and industry as a whole. However, with time comes lessons, and all things must evolve to serve the more stringent needs of today.
+The code present in this repository reflects the first version of the implementation of the Corda model for DLT technology. This first architecture version covers Corda versions 1 through 4 and continues to deliver on the promise of DLT for both the open source community and industry as a whole. 
 
-As such,the second (and current) version of the Corda Arcchitecture can be found [here](https://github.com/corda/corda-runtime-os) and will form the basis of the Corda 5 release.
+However, like all things, Corda must evolve to serve the more stringent needs of today. This is why the second (and current) version of the Corda Arcchitecture can be found [here](https://github.com/corda/corda-runtime-os) and will form the basis of the Corda 5 release.
 
 ## Features
 
