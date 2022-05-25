@@ -143,7 +143,7 @@ pipeline {
                 NEXUSIQ_CREDENTIALS = credentials('jenkins-nexusiq-credentials')
             }
             steps {
-                sh '''
+                sh '''\
                     rm -f wiki-report.md
                     env NEXUSIQ_USERNAME="${NEXUSIQ_CREDENTIALS_USR}" \
                         NEXUSIQ_PASSWORD="${NEXUSIQ_CREDENTIALS_PSW}" \
