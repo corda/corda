@@ -121,6 +121,73 @@ pipeline {
                 )
             }
         }
+        stage('Generate Wiki Report') {
+            when {
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate && !isReleasePatch }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    image 'nexusiq-sonatype-cli:latest'
+                    reuseNode true
+                    registryUrl 'https://engineering-docker.software.r3.com/'
+                    registryCredentialsId 'artifactory-credentials'
+                }
+            }
+            options {
+                retry(3)
+            }
+            environment {
+                NEXUS_APP_ID="${nexusAppId}"
+                NEXUS_APP_STAGE="${params.nexusIqStage}"
+                NEXUSIQ_CREDENTIALS = credentials('jenkins-nexusiq-credentials')
+            }
+            steps {
+                sh '''
+                    rm -f wiki-report.md
+                    env NEXUSIQ_USERNAME="${NEXUSIQ_CREDENTIALS_USR}" \
+                        NEXUSIQ_PASSWORD="${NEXUSIQ_CREDENTIALS_PSW}" \
+                            /opt/app/wrapper wiki-report \
+                                --app "${NEXUS_APP_ID}" \
+                                --stage "${NEXUS_APP_STAGE}" >wiki-report.md
+                '''.stripIndent()
+                archiveArtifacts 'wiki-report.md'
+            }
+        }
+        stage('Generate Licence Report') {
+            when {
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate && !isReleasePatch }
+                beforeAgent true
+            }
+            agent {
+                docker {
+                    image 'nexusiq-licence-report:latest'
+                    reuseNode true
+                    registryUrl 'https://engineering-docker.software.r3.com/'
+                    registryCredentialsId 'artifactory-credentials'
+                }
+            }
+            options {
+                retry(3)
+            }
+            environment {
+                NEXUS_APP_ID="${nexusAppId}"
+                NEXUS_APP_STAGE="${params.nexusIqStage}"
+                NEXUSIQ_CREDENTIALS = credentials('jenkins-nexusiq-credentials')
+            }
+            steps {
+                sh '''\
+                    rm -rf report
+                    env NEXUSIQ_USERNAME="${NEXUSIQ_CREDENTIALS_USR}" \
+                        NEXUSIQ_PASSWORD="${NEXUSIQ_CREDENTIALS_PSW}" \
+                            /opt/app/wrapper --write --outdir report \
+                                --force \
+                                --app "${NEXUS_APP_ID}" \
+                                --stage "${NEXUS_APP_STAGE}"
+                '''.stripIndent()
+                archiveArtifacts 'report/*.md'
+            }
+        }
 
         stage('All Tests') {
             when {
