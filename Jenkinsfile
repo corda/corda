@@ -52,6 +52,7 @@ pipeline {
     stages {
         stage('Compile') {
             steps {
+                authenticateGradleWrapper()
                 sh script: [
                         './gradlew',
                         COMMON_GRADLE_PARAMS,
@@ -93,6 +94,7 @@ pipeline {
                         }
                         stage('Recompile') {
                             steps {
+                                authenticateGradleWrapper()
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,

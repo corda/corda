@@ -102,6 +102,7 @@ pipeline {
         stage('Compile') {
             steps {
                 dir(sameAgentFolder) {
+                    authenticateGradleWrapper()
                     sh script: [
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
