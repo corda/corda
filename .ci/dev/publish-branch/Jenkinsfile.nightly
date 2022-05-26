@@ -33,18 +33,6 @@ def nexusIqStageChoices = [nexusDefaultIqStage].plus(
                         'operate'
                 ].minus([nexusDefaultIqStage]))
 
-/**
- * define an empty teamsWebHookURL and if it is a Release Branch
- * then set it for the Corda 4 Jenkins Connector
- */
-boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
-def teamsWebHookURL = ""
-if (isReleaseBranch){
-    withCredentials([string(credentialsId: 'ms-teams-webhook', variable: 'webhook_url')]) {
-        teamsWebHookURL = "$webhook_url"
-    }
-}
-
 pipeline {
     agent { label 'standard' }
 
@@ -54,18 +42,6 @@ pipeline {
         overrideIndexTriggers(false)
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
-        office365ConnectorWebhooks([[
-                                            name                 : "Corda 4 Jenkins Connector",
-                                            notifyBackToNormal   : true,
-                                            startNotification    : false,
-                                            notifyFailure        : true,
-                                            notifySuccess        : true,
-                                            notifyNotBuilt       : false,
-                                            notifyAborted        : false,
-                                            notifyRepeatedFailure: true,
-                                            notifyUnstable       : true,
-                                            url                  : "${teamsWebHookURL}"
-                                    ]])
     }
 
     parameters {
@@ -87,6 +63,7 @@ pipeline {
     stages {
         stage('Sonatype Check') {
             steps {
+                authenticateGradleWrapper()
                 sh "./gradlew --no-daemon clean jar"
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
