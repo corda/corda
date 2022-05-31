@@ -123,7 +123,7 @@ pipeline {
         }
         stage('Generate Wiki Report') {
             when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate && !isReleasePatch }
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate }
                 beforeAgent true
             }
             agent {
@@ -156,7 +156,7 @@ pipeline {
         }
         stage('Generate Licence Report') {
             when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate && !isReleasePatch }
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate }
                 beforeAgent true
             }
             agent {
