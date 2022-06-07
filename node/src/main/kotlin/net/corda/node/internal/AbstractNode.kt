@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import co.paralleluniverse.fibers.instrument.Retransform
+import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
@@ -383,6 +384,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected val keyStoreHandler = KeyStoreHandler(configuration, cryptoService)
 
+    enum class NodeStatus {
+        WAITING_TO_START,
+        STARTING,
+        STARTED,
+        STOPPING
+    }
+
+    private var nodeStatus = NodeStatus.WAITING_TO_START
+
     private fun <T : Any> T.tokenize(): T {
         tokenizableServices?.add(this as? SerializeAsToken ?:
             throw IllegalStateException("${this::class.java} is expected to be extending from SerializeAsToken"))
@@ -524,6 +534,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         Node.printBasicNodeInfo("CorDapp schemas synchronised")
     }
 
+    private fun setNodeStatus(st : NodeStatus) {
+        log.info("Node status update: [$nodeStatus] -> [$st]")
+        nodeStatus = st
+    }
+
+
     @Suppress("ComplexMethod")
     open fun start(): S {
         check(started == null) { "Node has already been started" }
@@ -533,9 +549,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
+        setNodeStatus(NodeStatus.STARTING)
+
+        initialiseJolokia()
+        monitoringService.metrics.register(MetricRegistry.name("Node", "Status"), Gauge { nodeStatus })
 
         val trustRoots = initKeyStores()
-        initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
             val warning = it.toWarning()
@@ -658,6 +677,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.warn("Not distributing events as NetworkMap is not ready")
             }
         }
+        setNodeStatus(NodeStatus.STARTED)
         return resultingNodeInfo
     }
 
@@ -1049,6 +1069,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     open fun stop() {
+
+        setNodeStatus(NodeStatus.STOPPING)
 
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStopped(nodeServicesContext))
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStop(nodeServicesContext))
