@@ -8,7 +8,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.test.assertTrue
 
-class Publish {
+class PublishTest {
 
     @Test(timeout=300_000)
     fun `node publishes node information via JMX when configured to do so`() {
