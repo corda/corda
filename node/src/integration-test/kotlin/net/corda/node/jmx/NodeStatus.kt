@@ -19,7 +19,12 @@ class NodeStatusTest {
         driver(DriverParameters(notarySpecs = emptyList(), jmxPolicy = JmxPolicy.defaultEnabled())) {
             val jmxAddress = startNode().get().jmxAddress.toString()
             val nodeStatusURL = URL("http://$jmxAddress/jolokia/read/net.corda:name=Status,type=Node")
-            var jmxInfo = ""
+                        val jmxInfo = with(nodeStatusURL.openConnection() as HttpURLConnection) {
+                requestMethod = "GET"
+                inputStream.bufferedReader().use {
+                    it.lines().collect(Collectors.toList()).joinToString()
+                }
+            }
 
             with(nodeStatusURL.openConnection() as HttpURLConnection) {
                 requestMethod = "GET"
