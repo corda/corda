@@ -147,6 +147,7 @@ import net.corda.node.utilities.BindableNamedCacheFactory
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NotaryLoader
 import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.NodeStatus
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
@@ -384,13 +385,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected val keyStoreHandler = KeyStoreHandler(configuration, cryptoService)
 
-    enum class NodeStatus {
-        WAITING_TO_START,
-        STARTING,
-        STARTED,
-        STOPPING
-    }
-
+    @Volatile
     private var nodeStatus = NodeStatus.WAITING_TO_START
 
     private fun <T : Any> T.tokenize(): T {
