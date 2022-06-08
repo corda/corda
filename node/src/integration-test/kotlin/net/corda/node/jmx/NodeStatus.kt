@@ -12,7 +12,7 @@ import java.net.URL
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class NodeStatus {
+class NodeStatusTest {
 
     @Test(timeout=300_000)
     fun `node status is published via JMX`() {
