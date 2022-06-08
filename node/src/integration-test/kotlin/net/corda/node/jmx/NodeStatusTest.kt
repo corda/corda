@@ -9,6 +9,7 @@ import org.junit.Test
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
+import java.util.stream.Collectors
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -19,19 +20,10 @@ class NodeStatusTest {
         driver(DriverParameters(notarySpecs = emptyList(), jmxPolicy = JmxPolicy.defaultEnabled())) {
             val jmxAddress = startNode().get().jmxAddress.toString()
             val nodeStatusURL = URL("http://$jmxAddress/jolokia/read/net.corda:name=Status,type=Node")
-                        val jmxInfo = with(nodeStatusURL.openConnection() as HttpURLConnection) {
+            val jmxInfo = with(nodeStatusURL.openConnection() as HttpURLConnection) {
                 requestMethod = "GET"
                 inputStream.bufferedReader().use {
                     it.lines().collect(Collectors.toList()).joinToString()
-                }
-            }
-
-            with(nodeStatusURL.openConnection() as HttpURLConnection) {
-                requestMethod = "GET"
-                inputStream.bufferedReader().use {
-                    it.lines().forEach { line ->
-                        jmxInfo += line
-                    }
                 }
             }
 
