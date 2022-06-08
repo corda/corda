@@ -15,7 +15,10 @@ class PublishTest {
         driver(DriverParameters(notarySpecs = emptyList(), jmxPolicy = JmxPolicy.defaultEnabled())) {
             val jmxAddress = startNode().get().jmxAddress.toString()
             val nodeStatusURL = URL("http://$jmxAddress/jolokia/read/net.corda:*")
-            var httpResponse = HttpURLConnection.HTTP_NOT_FOUND
+                       val httpResponse = with(nodeStatusURL.openConnection() as HttpURLConnection) {
+                requestMethod = "GET"
+                responseCode
+            }
             with(nodeStatusURL.openConnection() as HttpURLConnection) {
                 requestMethod = "GET"
                 httpResponse = responseCode
