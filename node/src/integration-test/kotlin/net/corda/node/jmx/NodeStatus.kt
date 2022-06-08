@@ -7,13 +7,13 @@ import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.net.HttpURLConnection
-import java.net.HttpURLConnection.*
+import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NodeStatus {
-    
+
     @Test(timeout=300_000)
     fun `node status is published via JMX`() {
         driver(DriverParameters(notarySpecs = emptyList(), jmxPolicy = JmxPolicy.defaultEnabled())) {
