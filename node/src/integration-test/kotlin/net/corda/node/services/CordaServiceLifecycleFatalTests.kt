@@ -51,12 +51,14 @@ class CordaServiceLifecycleFatalTests {
 
         object FailingObserver : ServiceLifecycleObserver {
             override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
-                val tmpFile = File(System.getProperty(tempFilePropertyName))
-                tmpFile.appendText("\n" + readyToThrowMarker)
-                eventually(duration = 30.seconds) {
-                    assertEquals(goodToThrowMarker, tmpFile.readLines().last())
+                if (event == ServiceLifecycleEvent.STATE_MACHINE_STARTED) {
+                    val tmpFile = File(System.getProperty(tempFilePropertyName))
+                    tmpFile.appendText("\n" + readyToThrowMarker)
+                    eventually(duration = 30.seconds) {
+                        assertEquals(goodToThrowMarker, tmpFile.readLines().last())
+                    }
+                    throw CordaServiceCriticalFailureException("controlled failure")
                 }
-                throw CordaServiceCriticalFailureException("controlled failure")
             }
         }
     }

@@ -639,6 +639,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
+            /* Note the .get() at the end of the distributeEvent call, below.
+               This will block until all Corda Services have returned from processing the event, allowing a service to prevent the
+               state machine manager from starting (just below this) until the service is ready.
+             */
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeStateMachineStart(nodeServicesContext)).get()
             val callback = smm.start(frozenTokenizableServices)
             val smmStartedFuture = rootFuture.map { callback() }
             // Shut down the SMM so no Fibers are scheduled.
