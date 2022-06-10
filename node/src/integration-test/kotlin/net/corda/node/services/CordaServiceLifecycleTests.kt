@@ -90,27 +90,6 @@ class CordaServiceLifecycleTests {
         assertEquals(expectedResult, result)
     }
 
-    @Test(timeout=300_000)
-    fun `corda node blocks until all BEFORE_STATE_MACHINE_START events are processed`() {
-        /*
-            Register 200 callbacks for a bit of 'volume' - this is how many times each service event will be delivered.
-            There is a slight delay in each handler for BEFORE_STATE_MACHINE_START.
-
-            When the test completes, there should have been 200 x BEFORE_STATE_MACHINE_STARTs received.
-            If not then the node did not block and
-            */
-        numServiceCallbacks = 200
-        eventsToBeCaptured = setOf(BEFORE_STATE_MACHINE_START).toMutableSet()   // only interested in BEFORE_STATE_MACHINE_START
-
-        val result = driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()),
-                notarySpecs = emptyList())) {
-            val node = startNode(providedName = ALICE_NAME).getOrThrow()
-            node.rpc.startFlow(::ComputeTextLengthThroughCordaService, TEST_PHRASE).returnValue.getOrThrow()
-        }
-        assertEquals(TEST_PHRASE.length, result)
-        assertEquals(numServiceCallbacks, eventsCaptured.size)
-    }
-
     @StartableByRPC
     @StartableByService
     class ComputeTextLengthThroughCordaService(private val text: String) : FlowLogic<Int>() {
@@ -132,13 +111,6 @@ class CordaServiceLifecycleTests {
         }
 
         private fun addEvent(event: ServiceLifecycleEvent) {
-            when (event) {
-                BEFORE_STATE_MACHINE_START -> {
-                    TimeUnit.MILLISECONDS.sleep(25) // tiny delay to slow thing down a bit
-                }
-                else -> {
-                }
-            }
             if (event in eventsToBeCaptured) {
                 eventsCaptured.add(event)
             }
