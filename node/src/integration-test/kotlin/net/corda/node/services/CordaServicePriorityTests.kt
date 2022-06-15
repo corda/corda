@@ -52,6 +52,7 @@ open class CordaServicePriorityTests {
 
     @Before
     fun startUp() {
+        eventsCaptured.clear()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()),
                 notarySpecs = emptyList())) {
             startNode(providedName = ALICE_NAME).getOrThrow()
