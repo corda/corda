@@ -33,6 +33,7 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     putAll(EdDSASecurityProvider())
     // Override the normal EdDSA engine with one which can handle X509 keys.
     put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.java.name)
+    put("Signature.Ed25519", X509EdDSAEngine::class.java.name)
     addKeyInfoConverter(`id-Curve25519ph`, object : AsymmetricKeyInfoConverter {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo) = decodePublicKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
         override fun generatePrivate(keyInfo: PrivateKeyInfo) = decodePrivateKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
