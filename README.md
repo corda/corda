@@ -37,7 +37,7 @@ However, like all things, Corda must evolve to serve the more stringent needs of
 * [Documentation](https://docs.corda.net)
 * [Stack Overflow Tag](https://stackoverflow.com/questions/tagged/corda)
 * [Slack Channel](https://slack.corda.net/)
-* [Twitter](https://twitter.com/cordadlt)
+* [Twitter](https://twitter.com/Cordablockchain)
 * [Meetups](https://www.meetup.com/pro/corda/)
 * [Training Courses](https://www.corda.net/corda-training/)
 
