@@ -387,15 +387,38 @@ class RPCServer(
                     val arguments = Try.on {
                         clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                     }
+                    log.debug("Received RPC request for [${clientToServer.methodName}]")
+
+                    /*
+                        The supplied method name may consist of <class>#<method>.
+                        If just a method name is supplied then it is a call made via CordaRPCOps.
+
+                        Only two quick RPCs are supported here so check them explicitly:
+                        1) getProtocolVersion() for ANY RPC Ops class
+                        2) CordaRPCOps.currentNodeTime()
+                     */
+                    val isQuickRpc = if (clientToServer.methodName.substringAfter(CLASS_METHOD_DIVIDER) == "getProtocolVersion" ||
+                                         clientToServer.methodName == "currentNodeTime") {
+                        log.debug("Handling [${clientToServer.methodName}] as a quick RPC")
+                        true
+                    } else {
+                        false
+                    }
+
                     val context: RpcAuthContext
                     when (arguments) {
                         is Try.Success -> {
                             context = artemisMessage.context(clientToServer.sessionId, arguments.value)
                             context.invocation.pushToLoggingContext()
                             log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
-                            rpcExecutor!!.submit {
+                            if (isQuickRpc) {
                                 val result = invokeRpc(context, clientToServer.methodName, arguments.value)
                                 sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+                            } else {
+                                rpcExecutor!!.submit {
+                                    val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                                    sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+                                }
                             }
                         }
                         is Try.Failure -> {
