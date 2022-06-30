@@ -33,7 +33,7 @@ class QuickRPCRequestTests : AbstractRPCTest() {
         fun downLatch(id: Long)
     }
 
-    class TestOpsImpl() : TestOps {
+    class TestOpsImpl : TestOps {
         private val latches = ConcurrentHashMap<Long, CountDownLatch>()
         override val protocolVersion = 1000
 

@@ -359,6 +359,22 @@ class RPCServer(
     }
 
     private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
+
+        /*
+            Local function for actually executing an RPC, either directly or through the thread pool
+         */
+        fun executeRpc(context : RpcAuthContext, clientToServer : RPCApi.ClientToServer.RpcRequest, arguments : Try.Success<List<Any?>>, isQuickRpc : Boolean) {
+            if (isQuickRpc) {
+                val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+            } else {
+                rpcExecutor!!.submit {
+                    val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                    sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+                }
+            }
+        }
+
         lifeCycle.requireState(State.STARTED)
         val clientToServer = RPCApi.ClientToServer.fromClientMessage(artemisMessage)
         if (log.isDebugEnabled) {
@@ -411,15 +427,7 @@ class RPCServer(
                             context = artemisMessage.context(clientToServer.sessionId, arguments.value)
                             context.invocation.pushToLoggingContext()
                             log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
-                            if (isQuickRpc) {
-                                val result = invokeRpc(context, clientToServer.methodName, arguments.value)
-                                sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
-                            } else {
-                                rpcExecutor!!.submit {
-                                    val result = invokeRpc(context, clientToServer.methodName, arguments.value)
-                                    sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
-                                }
-                            }
+                            executeRpc(context, clientToServer, arguments, isQuickRpc)
                         }
                         is Try.Failure -> {
                             context = artemisMessage.context(clientToServer.sessionId, emptyList())
