@@ -63,6 +63,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 import kotlin.concurrent.thread
 
 private typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
@@ -407,14 +408,28 @@ class RPCServer(
 
                     /*
                         The supplied method name may consist of <class>#<method>.
-                        If just a method name is supplied then it is a call made via CordaRPCOps.
+                        If just a method name is supplied then it is a call made via CordaRPCOps because a quirk of the
+                        stored method names is that CordaRPCOps methods are stored without their class name,
 
                         Only two quick RPCs are supported here so check them explicitly:
                         1) getProtocolVersion() for ANY RPC Ops class
                         2) CordaRPCOps.currentNodeTime()
                      */
-                    val isQuickRpc = if (clientToServer.methodName.substringAfter(CLASS_METHOD_DIVIDER) == "getProtocolVersion" ||
-                                         clientToServer.methodName == "currentNodeTime") {
+                    val quickRpcsList = listOf<Predicate<RPCApi.ClientToServer.RpcRequest>>(
+                            // getProtocolVersion for any class
+                            Predicate() { req ->
+                                req.methodName.substringAfter(CLASS_METHOD_DIVIDER) == "getProtocolVersion"
+                            },
+                            // currentNodeTime for CordaRPCOps
+                            Predicate() { req ->
+                                req.methodName == "currentNodeTime"
+                            }
+                            // Add more predicates as and when needed
+                    )
+
+                    val isQuickRpc = if (quickRpcsList.any {
+                                it.test(clientToServer)
+                            }) {
                         log.debug("Handling [${clientToServer.methodName}] as a quick RPC")
                         true
                     } else {
