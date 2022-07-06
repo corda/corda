@@ -409,11 +409,11 @@ class RPCServer(
                     /*
                         The supplied method name may consist of <class>#<method>.
                         If just a method name is supplied then it is a call made via CordaRPCOps because a quirk of the
-                        stored method names is that CordaRPCOps methods are stored without their class name,
+                        stored method names is that CordaRPCOps methods are stored without their class name.
 
-                        Only two quick RPCs are supported here so check them explicitly:
-                        1) getProtocolVersion() for ANY RPC Ops class
-                        2) CordaRPCOps.currentNodeTime()
+                        The list of predicates below describes how to match quick RPC methods.
+                        If at least one predicate returns true for the supplied method then it is treated as
+                        a quick RPC.
                      */
                     val quickRpcsList = listOf<Predicate<RPCApi.ClientToServer.RpcRequest>>(
                             // getProtocolVersion for any class
