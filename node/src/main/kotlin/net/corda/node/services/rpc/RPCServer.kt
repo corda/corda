@@ -63,6 +63,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 import kotlin.concurrent.thread
 
 private typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
@@ -359,6 +360,22 @@ class RPCServer(
     }
 
     private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
+
+        /*
+            Local function for actually executing an RPC, either directly or through the thread pool
+         */
+        fun executeRpc(context : RpcAuthContext, clientToServer : RPCApi.ClientToServer.RpcRequest, arguments : Try.Success<List<Any?>>, isQuickRpc : Boolean) {
+            if (isQuickRpc) {
+                val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+            } else {
+                rpcExecutor!!.submit {
+                    val result = invokeRpc(context, clientToServer.methodName, arguments.value)
+                    sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
+                }
+            }
+        }
+
         lifeCycle.requireState(State.STARTED)
         val clientToServer = RPCApi.ClientToServer.fromClientMessage(artemisMessage)
         if (log.isDebugEnabled) {
@@ -387,16 +404,45 @@ class RPCServer(
                     val arguments = Try.on {
                         clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                     }
+                    log.debug("Received RPC request for [${clientToServer.methodName}]")
+
+                    /*
+                        The supplied method name may consist of <class>#<method>.
+                        If just a method name is supplied then it is a call made via CordaRPCOps because a quirk of the
+                        stored method names is that CordaRPCOps methods are stored without their class name.
+
+                        The list of predicates below describes how to match quick RPC methods.
+                        If at least one predicate returns true for the supplied method then it is treated as
+                        a quick RPC.
+                     */
+                    val quickRpcsList = listOf<Predicate<RPCApi.ClientToServer.RpcRequest>>(
+                            // getProtocolVersion for any class
+                            Predicate() { req ->
+                                req.methodName.substringAfter(CLASS_METHOD_DIVIDER) == "getProtocolVersion"
+                            },
+                            // currentNodeTime for CordaRPCOps
+                            Predicate() { req ->
+                                req.methodName == "currentNodeTime"
+                            }
+                            // Add more predicates as and when needed
+                    )
+
+                    val isQuickRpc = if (quickRpcsList.any {
+                                it.test(clientToServer)
+                            }) {
+                        log.debug("Handling [${clientToServer.methodName}] as a quick RPC")
+                        true
+                    } else {
+                        false
+                    }
+
                     val context: RpcAuthContext
                     when (arguments) {
                         is Try.Success -> {
                             context = artemisMessage.context(clientToServer.sessionId, arguments.value)
                             context.invocation.pushToLoggingContext()
                             log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
-                            rpcExecutor!!.submit {
-                                val result = invokeRpc(context, clientToServer.methodName, arguments.value)
-                                sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
-                            }
+                            executeRpc(context, clientToServer, arguments, isQuickRpc)
                         }
                         is Try.Failure -> {
                             context = artemisMessage.context(clientToServer.sessionId, emptyList())
