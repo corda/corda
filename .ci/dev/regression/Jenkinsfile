@@ -466,14 +466,20 @@ pipeline {
             }
         }
         success {
-            script {
-                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
-            }
+        	script {
+        		sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
+                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+                    snykSecurityScan.generateHtmlElements()
+                }
+        	}
         }
         unstable {
-            script {                 
-                sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")                      
-            }
+        	script {
+        		sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")
+                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+                    snykSecurityScan.generateHtmlElements()
+                }
+        	}
         }
         failure {
             script {
