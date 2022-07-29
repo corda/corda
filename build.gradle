@@ -129,6 +129,7 @@ buildscript {
     ext.controlsfx_version = '8.40.15'
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
+    ext.commons_configuration2_version = "2.8.0"
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = '8.15'
         ext.fontawesomefx_fontawesome_version = '4.7.0-5'
@@ -450,7 +451,9 @@ allprojects {
                 // Force dependencies to use the same version of Guava as Corda.
                 force "com.google.guava:guava:$guava_version"
 
-                // Demand that everything uses our given version of Netty.
+                // Demand that everything uses our given versions of:
+                // * Netty
+                // * Apache commons-configuration2
                 eachDependency { details ->
                     if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
                         if (details.requested.name.startsWith('netty-tcnative')){
@@ -458,6 +461,10 @@ allprojects {
                         } else {
                             details.useVersion netty_version
                         }
+                    }
+
+                    if (details.requested.group == 'org.apache.commons' && details.requested.name == "commons-configuration2") {
+                        details.useVersion commons_configuration2_version
                     }
                 }
             }
