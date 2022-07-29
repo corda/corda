@@ -83,6 +83,7 @@ pipeline {
         CORDA_BUILD_EDITION = "${buildEdition}"
         DOCKER_URL = "https://index.docker.io/v1/"
         EMAIL_RECIPIENTS = credentials('corda4-email-recipient')
+        SNYK_API_KEY = "c4-os-snyk"
     }
 
     stages {
@@ -189,6 +190,15 @@ pipeline {
                                 --stage "${NEXUS_APP_STAGE}"
                 '''.stripIndent()
                 archiveArtifacts 'report/*.md'
+            }
+        }
+
+        stage('Snyk Security') {
+            when {
+                expression { isReleaseTag || isReleaseCandidate || isReleaseBranch }
+            }
+            steps {
+                snykSecurityScan("${env.SNYK_API_KEY}", "--all-sub-projects --prune-repeated-subdependencies --debug --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+","_")}'")
             }
         }
 
@@ -458,15 +468,20 @@ pipeline {
             }
         }
         success {
-            script {
-                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
-
-            }
+        	script {
+        		sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
+                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+                    snykSecurityScan.generateHtmlElements()
+                }
+        	}
         }
         unstable {
-            script {
-                sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")
-            }
+        	script {
+        		sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")
+                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+                    snykSecurityScan.generateHtmlElements()
+                }
+        	}
         }
         failure {
             script {
