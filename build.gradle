@@ -28,13 +28,15 @@ buildscript {
     if (JavaVersion.current().isJava8()) {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier")
+        ext.corda_archive_appendix = ''
     } else {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
+        ext.corda_archive_appendix = 'jdk11'
     }
-    ext.cordaScanApiClassifier = jdkClassifier
+
+    ext.addArchiveAppendix = { "$ext.corda_archive_appendix" == "" ? it : "${it}-${ext.corda_archive_appendix}" }
+
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -363,14 +365,7 @@ allprojects {
         }
     }
 
-    if (jdkClassifier) {
-        jar {
-            // JDK11 built and published artifacts to include classifier
-            archiveClassifier = jdkClassifier
-        }
-    }
-
-    group 'net.corda'
+    group "net.corda"
     version "$corda_release_version"
 
     repositories {
@@ -682,7 +677,8 @@ bintrayConfig {
             'corda-common-logging',
             'corda-tools-network-builder',
             'corda-tools-checkpoint-agent'
-    ]
+    ].collect { addArchiveAppendix(it) }
+
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

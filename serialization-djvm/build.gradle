@@ -51,6 +51,8 @@ dependencies {
 jar {
     archiveBaseName = 'corda-serialization-djvm'
     archiveClassifier = ''
+    archiveAppendix = corda_archive_appendix
+
     manifest {
         attributes('Automatic-Module-Name': 'net.corda.serialization.djvm')
         attributes('Sealed': true)
@@ -72,7 +74,7 @@ tasks.withType(Test).configureEach {
 }
 
 publish {
-    name jar.archiveBaseName
+    name addArchiveAppendix(jar.baseName)
 }
 
 idea {

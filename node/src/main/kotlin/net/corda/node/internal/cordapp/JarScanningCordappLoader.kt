@@ -50,7 +50,8 @@ import kotlin.streams.toList
 class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
                                                    private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                                                    extraCordapps: List<CordappImpl>,
-                                                   private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList()) : CordappLoaderTemplate() {
+                                                   private val signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
+                                                   private val djvmEnabled: Boolean = false) : CordappLoaderTemplate() {
     init {
         if (cordappJarPaths.isEmpty()) {
             logger.info("No CorDapp paths provided")
@@ -76,10 +77,11 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         fun fromDirectories(cordappDirs: Collection<Path>,
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
-                            signerKeyFingerprintBlacklist: List<SecureHash> = emptyList()): JarScanningCordappLoader {
+                            signerKeyFingerprintBlacklist: List<SecureHash> = emptyList(),
+                            djvmEnabled: Boolean = false): JarScanningCordappLoader {
             logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
             val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist, djvmEnabled)
         }
 
         /**
@@ -462,8 +464,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         }
 
         private fun validateClassFileVersion(classInfo: ClassInfo) {
-            if (classInfo.classfileMajorVersion < JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION ||
-                classInfo.classfileMajorVersion > JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
+            val classRange = getSupportedClassVersionRange(djvmEnabled)
+
+            if (classInfo.classfileMajorVersion < classRange.start ||
+                classInfo.classfileMajorVersion > classRange.endInclusive)
                     throw IllegalStateException("Class ${classInfo.name} from jar file ${cordappJarPath.url} has an invalid version of " +
                             "${classInfo.classfileMajorVersion}")
         }

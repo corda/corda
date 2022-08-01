@@ -110,7 +110,7 @@ task copyQuasarJar(type: Copy) {
 jar {
     finalizedBy(copyQuasarJar)
     archiveBaseName = 'corda-core'
-    archiveClassifier = ''
+    archiveAppendix = corda_archive_appendix
 }
 
 configurations {
@@ -179,7 +179,7 @@ scanApi {
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }
 
 tasks.register("writeTestResources", JavaExec) {

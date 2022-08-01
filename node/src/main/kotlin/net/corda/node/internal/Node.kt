@@ -276,6 +276,11 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
+    private fun isDjvmEnabled(config: NodeConfiguration): Boolean {
+        val djvm = config.devModeOptions?.djvm
+        return (config.devMode && djvm != null) || java.lang.Boolean.getBoolean(CORDA_DJVM)
+    }
+
     override val log: Logger get() = staticLog
     override val transactionVerifierWorkerCount: Int get() = 4
 

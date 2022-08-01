@@ -25,6 +25,11 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
         put("Alg.Alias.Signature.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         put("Alg.Alias.Signature.OID.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         putPlatformSecureRandomService()
+
+        // JDK11 - Hack to set Provider#legacyChanged to false, without this SecureRandom will not
+        //         pickup our random implementation (even if our provider is the first provider in
+        //         the chain).
+        super.getService("UNDEFINED", "UNDEFINED")
     }
 
     @StubOutForDJVM

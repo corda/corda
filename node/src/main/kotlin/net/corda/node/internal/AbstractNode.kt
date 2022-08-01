@@ -214,7 +214,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                djvmBootstrapSource: ApiSource = EmptyApi,
                                djvmCordaSource: UserSource? = null,
                                protected val allowHibernateToManageAppSchema: Boolean = false,
-                               private val allowAppSchemaUpgradeWithCheckpoints: Boolean = false) : SingletonSerializeAsToken() {
+                               private val allowAppSchemaUpgradeWithCheckpoints: Boolean = false,
+                               private val djvmEnabled: Boolean = false) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
 

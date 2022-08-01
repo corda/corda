@@ -19,7 +19,6 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').ta
     applicationClass 'net.corda.explorer.Main'
     archiveBaseName = 'node-explorer'
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
         project(':tools:explorer').configurations.runtimeClasspath,
@@ -52,9 +51,10 @@ artifacts {
 jar {
     classifier "ignore"
     enabled = false
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {
     disableDefaultJar = true
-    name 'corda-tools-explorer'
+    name addArchiveAppendix('corda-tools-explorer')
 }

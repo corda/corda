@@ -90,9 +90,12 @@ interface DriverDSL {
      *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
      *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
      * @param logLevelOverride log4j log level used to override the default value of info.
+     * @param javaHome (optional) the Java home directory
+     * @param classPath (optional) the java class path
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
      *     it sees all previously started nodes, including the notaries.
      */
+    @Suppress("LongParameterList")
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
             providedName: CordaX500Name? = defaultParameters.providedName,
@@ -101,7 +104,9 @@ interface DriverDSL {
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            logLevelOverride: String? = defaultParameters.logLevelOverride
+            logLevelOverride: String? = defaultParameters.logLevelOverride,
+            javaHome: String? = defaultParameters.javaHome,
+            classPath: List<String>? = defaultParameters.classPath
     ): CordaFuture<NodeHandle> {
         return startNode(defaultParameters.copy(
                 providedName = providedName,
@@ -110,7 +115,9 @@ interface DriverDSL {
                 customOverrides = customOverrides,
                 startInSameProcess = startInSameProcess,
                 maximumHeapSize = maximumHeapSize,
-                logLevelOverride = logLevelOverride
+                logLevelOverride = logLevelOverride,
+                javaHome = javaHome,
+                classPath = classPath
         ))
     }
 
@@ -132,9 +139,12 @@ interface DriverDSL {
      * @param maximumHeapSize The maximum JVM heap size to use for the node as a [String]. By default a number is interpreted
      *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
      *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
+     * @param javaHome (optional) the Java home directory
+     * @param classPath (optional) the java classpath
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
      *     it sees all previously started nodes, including the notaries.
      */
+    @Suppress("LongParameterList")
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
             providedName: CordaX500Name? = defaultParameters.providedName,
@@ -142,7 +152,9 @@ interface DriverDSL {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize
+            maximumHeapSize: String = defaultParameters.maximumHeapSize,
+            javaHome: String? = defaultParameters.javaHome,
+            classPath: List<String>? = defaultParameters.classPath
     ): CordaFuture<NodeHandle> {
         return startNode(defaultParameters.copy(
                 providedName = providedName,
@@ -150,7 +162,9 @@ interface DriverDSL {
                 verifierType = verifierType,
                 customOverrides = customOverrides,
                 startInSameProcess = startInSameProcess,
-                maximumHeapSize = maximumHeapSize
+                maximumHeapSize = maximumHeapSize,
+                javaHome = javaHome,
+                classPath = classPath
         ))
     }
 

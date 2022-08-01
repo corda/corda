@@ -69,6 +69,7 @@ task integrationTest(type: Test) {
 
 jar {
     baseName 'corda-node-driver'
+    archiveAppendix = corda_archive_appendix
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
@@ -87,7 +88,7 @@ tasks.named('javadoc', Javadoc) {
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }
 
 scanApi {

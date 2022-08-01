@@ -21,14 +21,15 @@ import kotlin.streams.toList
  * the [scanPackage] may reference a gradle CorDapp project on the local system. In this scenerio the project's "jar" task is executed to
  * build the CorDapp jar. This allows us to inherit the CorDapp's MANIFEST information without having to do any extra processing.
  */
-data class TestCordappImpl(val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal() {
+data class TestCordappImpl(val scanPackage: String, override val config: Map<String, Any>, val archiveAppendix: String? = null) : TestCordappInternal() {
     override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
 
     override fun withOnlyJarContents(): TestCordappImpl = copy(config = emptyMap())
 
     override val jarFile: Path
         get() {
-            val jars = findJars(scanPackage)
+            val filterPattern = if (archiveAppendix != null) "-${archiveAppendix}-" else ""
+            val jars = findJars(scanPackage).filter { it.fileName.toString().contains(filterPattern) }
             when (jars.size) {
                 0 -> throw IllegalArgumentException("There are no CorDapps containing the package $scanPackage on the classpath. Make sure " +
                         "the package name is correct and that the CorDapp is added as a gradle dependency.")

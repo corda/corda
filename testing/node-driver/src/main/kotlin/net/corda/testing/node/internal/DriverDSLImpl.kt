@@ -345,7 +345,9 @@ class DriverDSLImpl(
                 },
                 NodeConfiguration::verifierType.name to parameters.verifierType.name,
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
-                NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000
+                NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000,
+                NodeConfiguration::javaHome.name to parameters.javaHome,
+                NodeConfiguration::classPath.name to parameters.classPath
         ) + czUrlConfig + jmxConfig + parameters.customOverrides
         return NodeConfig(
                 ConfigHelper.loadConfig(
@@ -677,7 +679,7 @@ class DriverDSLImpl(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(
                 config,
-                quasarJarPath,
+                getQuasarJarPath(config),
                 debugPort,
                 bytemanJarPath,
                 null,
@@ -752,7 +754,7 @@ class DriverDSLImpl(
             log.info("StartNodeInternal for ${config.corda.myLegalName.organisation} - create schema done")
             val process = startOutOfProcessNode(
                     config,
-                    quasarJarPath,
+                    getQuasarJarPath(config),
                     debugPort,
                     bytemanJarPath,
                     bytemanPort,
@@ -845,6 +847,11 @@ class DriverDSLImpl(
 
     private fun NodeConfig.withNotaryDefinition(validating: Boolean): NodeConfig {
         return NodeConfig(this.typesafe.plus(mapOf("notary" to mapOf("validating" to validating))))
+    }
+
+    private fun getQuasarJarPath(config: NodeConfig): String {
+        val classPath = config.corda.classPath ?: listOf(quasarJarPath)
+        return classPath.first { it.contains("quasar-core") }
     }
 
     companion object {
@@ -1028,7 +1035,7 @@ class DriverDSLImpl(
 
             // The following dependencies are excluded from the classpath of the created JVM,
             // so that the environment resembles a real one as close as possible.
-            val cp = ProcessUtilities.defaultClassPath.filter { cpEntry ->
+            val cp = config.corda.classPath ?: ProcessUtilities.defaultClassPath.filter { cpEntry ->
                 val cpPathEntry = Paths.get(cpEntry)
                 cpPathEntry.isRegularFile()
                         && !isTestArtifact(cpPathEntry.fileName.toString())
@@ -1044,7 +1051,8 @@ class DriverDSLImpl(
                     maximumHeapSize = maximumHeapSize,
                     classPath = cp,
                     identifier = identifier,
-                    environmentVariables = environmentVariables
+                    environmentVariables = environmentVariables,
+                    javaHome = config.corda.javaHome
             )
         }
 

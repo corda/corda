@@ -73,7 +73,6 @@ processResources {
 
 shadowJar {
     baseName = 'network-builder'
-    archiveClassifier = jdkClassifier
     version = null
     zip64 true
 }
@@ -89,9 +88,10 @@ artifacts {
 
 jar {
     enabled = false
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {
     disableDefaultJar = true
-    name 'corda-tools-network-builder'
+    name addArchiveAppendix('corda-tools-network-builder')
 }

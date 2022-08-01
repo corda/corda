@@ -10,8 +10,9 @@ dependencies {
 
 jar {
     baseName 'corda-common-validation'
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }

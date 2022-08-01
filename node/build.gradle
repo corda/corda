@@ -316,6 +316,7 @@ quasar {
 
 jar {
     baseName 'corda-node'
+    archiveAppendix = corda_archive_appendix
     exclude 'sandbox/java/**'
     exclude 'sandbox/org/**'
     exclude 'sandbox/net/corda/core/crypto/SecureHash.class'
@@ -328,7 +329,7 @@ jar {
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }
 
 tasks.named('test', Test) {

@@ -32,8 +32,9 @@ abstract class TestCordapp {
          * is also thrown if no CorDapp is found.
          *
          * @param scanPackage The package name used to find the CorDapp. This does not need to be the root package of the CorDapp.
+         * @param archiveAppendix (Optional) The archive appendix to search for the cordapp
          */
         @JvmStatic
-        fun findCordapp(scanPackage: String): TestCordapp = TestCordappImpl(scanPackage = scanPackage, config = emptyMap())
+        fun findCordapp(scanPackage: String, archiveAppendix: String? = null): TestCordapp = TestCordappImpl(scanPackage = scanPackage, config = emptyMap(), archiveAppendix = archiveAppendix)
     }
 }

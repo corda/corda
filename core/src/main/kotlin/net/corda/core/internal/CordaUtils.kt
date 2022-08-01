@@ -157,6 +157,17 @@ fun AttachmentStorage.internalFindTrustedAttachmentForClass(className: String): 
     return null
 }
 
+fun getSupportedClassVersionRange(djvmEnabled: Boolean): IntRange {
+    val isAtLeastJava11 = JavaVersion.isVersionAtLeast(JavaVersion.Java_11)
+    val rangeEnd = if (isAtLeastJava11 && !djvmEnabled) {
+        JDK11_CLASS_FILE_FORMAT_MAJOR_VERSION
+    } else {
+        JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION
+    }
+
+    return JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..rangeEnd
+}
+
 private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
     while (true) {
         val e = jarStream.nextJarEntry ?: return false

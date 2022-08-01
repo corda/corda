@@ -50,7 +50,8 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = "${project.name}"
+    baseName project.name
+    archiveAppendix = corda_archive_appendix
     manifest {
         attributes(
                 'Premain-Class': 'net.corda.tools.CheckpointAgent',
@@ -65,5 +66,5 @@ jar {
 }
 
 publish {
-    name 'corda-tools-checkpoint-agent'
+    name addArchiveAppendix('corda-tools-checkpoint-agent')
 }
