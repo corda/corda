@@ -19,7 +19,6 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').ta
     applicationClass 'net.corda.explorer.Main'
     archiveBaseName = 'node-explorer'
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
         project(':tools:explorer').configurations.runtimeClasspath,

@@ -46,7 +46,6 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
         nodeProject.configurations.runtimeClasspath,
