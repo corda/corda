@@ -28,7 +28,6 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
     applicationClass 'net.corda.webserver.WebServer'
     archiveBaseName = 'corda-testserver'
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
         project(':testing:testserver').configurations.runtimeClasspath,

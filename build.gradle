@@ -28,13 +28,10 @@ buildscript {
     if (JavaVersion.current().isJava8()) {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier")
     } else {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
     }
-    ext.cordaScanApiClassifier = jdkClassifier
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -363,14 +360,7 @@ allprojects {
         }
     }
 
-    if (jdkClassifier) {
-        jar {
-            // JDK11 built and published artifacts to include classifier
-            archiveClassifier = jdkClassifier
-        }
-    }
-
-    group 'net.corda'
+    group JavaVersion.current().isJava11() ? 'net.corda.jdk11' : 'net.corda'
     version "$corda_release_version"
 
     repositories {

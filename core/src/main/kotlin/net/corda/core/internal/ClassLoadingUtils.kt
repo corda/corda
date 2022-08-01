@@ -39,7 +39,11 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
 @StubOutForDJVM
 fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
                                            classVersionRange: IntRange? = null): Set<String> {
-    return ClassGraph().overrideClassLoaders(classloader)
+    return ClassGraph().apply {
+            if (classloader !== ClassLoader.getSystemClassLoader()) {
+                overrideClassLoaders(classloader)
+            }
+        }
         .enableURLScheme(attachmentScheme)
         .ignoreParentClassLoaders()
         .enableClassInfo()
@@ -52,8 +56,8 @@ fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Clas
                 }
             }
             result.getClassesImplementing(clazz.name)
-                .filterNot(ClassInfo::isAbstract)
-                .mapTo(LinkedHashSet(), ClassInfo::getName)
+                    .filterNot(ClassInfo::isAbstract)
+                    .mapTo(LinkedHashSet(), ClassInfo::getName)
         }
 }
 
