@@ -73,7 +73,6 @@ processResources {
 
 shadowJar {
     baseName = 'network-builder'
-    archiveClassifier = jdkClassifier
     version = null
     zip64 true
 }
