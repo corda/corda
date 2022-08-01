@@ -122,6 +122,7 @@ buildscript {
     ext.controlsfx_version = constants.getProperty("controlsfxVersion")
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
+    ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
@@ -435,7 +436,17 @@ allprojects {
     configurations {
         all {
             resolutionStrategy {
-                // Demand that everything uses our given version of Netty.
+                // Force dependencies to use the same version of Kotlin as Corda.
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+                // Force dependencies to use the same version of Guava as Corda.
+                force "com.google.guava:guava:$guava_version"
+
+                // Demand that everything uses our given versions of:
+                // * Netty
+                // * Apache commons-configuration2
                 eachDependency { details ->
                     if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
                         if (details.requested.name.startsWith('netty-tcnative')) {
@@ -443,6 +454,10 @@ allprojects {
                         } else {
                             details.useVersion netty_version
                         }
+                    }
+
+                    if (details.requested.group == 'org.apache.commons' && details.requested.name == "commons-configuration2") {
+                        details.useVersion commons_configuration2_version
                     }
                 }
 

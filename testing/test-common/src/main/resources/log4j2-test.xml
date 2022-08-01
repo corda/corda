@@ -90,7 +90,7 @@
             <AppenderRef ref="Console-ErrorCode-Appender"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
-        <Logger name="org.apache.activemq.artemis.core.server" level="info" additivity="false">
+        <Logger name="org.apache.activemq.artemis.core.server" level="warn" additivity="false">
             <Filters>
                 <RegexFilter regex=".*AMQ222165.*" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <RegexFilter regex=".*AMQ222166.*" onMatch="DENY" onMismatch="NEUTRAL"/>
