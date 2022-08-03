@@ -224,7 +224,6 @@ apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'com.r3.testing.distributed-testing'
 
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
@@ -762,42 +761,4 @@ wrapper {
 buildScan {
     termsOfServiceUrl = 'https://gradle.com/terms-of-service'
     termsOfServiceAgree = 'yes'
-}
-
-distributedTesting {
-    profilesURL = 'https://raw.githubusercontent.com/corda/infrastructure-profiles/master'
-
-    parallelTestGroups {
-        allParallelIntegrationTest {
-            testGroups 'integrationTest'
-            profile 'generalPurpose.yml'
-            podLogLevel PodLogLevel.INFO
-            distribution DistributeTestsBy.METHOD
-        }
-        allParallelUnitTest {
-            podLogLevel PodLogLevel.INFO
-            testGroups 'test'
-            profile 'generalPurpose.yml'
-            distribution DistributeTestsBy.CLASS
-        }
-        allParallelUnitAndIntegrationTest {
-            testGroups 'test', 'integrationTest'
-            profile 'generalPurpose.yml'
-            distribution DistributeTestsBy.METHOD
-        }
-        allParallelSmokeTest {
-            testGroups 'smokeTest'
-            profile 'regression.yml'
-            distribution DistributeTestsBy.METHOD
-        }
-        allParallelSlowIntegrationTest {
-            testGroups 'slowIntegrationTest'
-            profile 'regression.yml'
-            distribution DistributeTestsBy.METHOD
-        }
-    }
-
-    ignoredTests = [
-        ':core-deterministic:testing:data:test'
-    ]
 }
