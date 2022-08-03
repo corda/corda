@@ -299,6 +299,14 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                                                     private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
+        subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord) {
+            override fun checkBeforeRecording(stx: SignedTransaction) {
+                require(expectedTxId == null || expectedTxId == stx.id) {
+                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
+                            "not recorded and nor its states sent to the vault."
+                }
+            }
+        })
         return subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = true, statesToRecord = statesToRecord) {
             override fun checkBeforeRecording(stx: SignedTransaction) {
                 require(expectedTxId == null || expectedTxId == stx.id) {
