@@ -172,15 +172,30 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
         }
 
-        val notarised = notariseAndRecord()
-
         progressTracker.currentStep = BROADCASTING
 
+        logger.info("About to broadcast transaction to other parties (minus Notary signature)")
+        broadcastToOtherParties(externalTxParticipants, transaction)
+        logger.info("All parties received the transaction successfully. (minus Notary signature)")
+        recordTransactionLocally(transaction)
+
+        val notarised = notariseAndRecord()
+        if (notarised != transaction) {
+            logger.info("About to broadcast transaction to other parties with (plus Notary signature)")
+            broadcastToOtherParties(externalTxParticipants, notarised)
+            logger.info("All parties received the transaction successfully. (plus Notary signature)")
+            recordTransactionLocally(notarised)
+        }
+
+        return notarised
+    }
+    @Suspendable
+    private fun broadcastToOtherParties(externalTxParticipants: Set<Party>, tx: SignedTransaction) {
         if (newApi) {
-            oldV3Broadcast(notarised, oldParticipants.toSet())
+            oldV3Broadcast(tx, oldParticipants.toSet())
             for (session in sessions) {
                 try {
-                    subFlow(SendTransactionFlow(session, notarised))
+                    subFlow(SendTransactionFlow(session, tx))
                     logger.info("Party ${session.counterparty} received the transaction.")
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -192,12 +207,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 }
             }
         } else {
-            oldV3Broadcast(notarised, (externalTxParticipants + oldParticipants).toSet())
+            oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
         }
-
-        logger.info("All parties received the transaction successfully.")
-
-        return notarised
     }
 
     @Suspendable
@@ -220,6 +231,15 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
+    private fun recordTransactionLocally(tx: SignedTransaction): SignedTransaction {
+        logger.info("Recording transaction locally.")
+        serviceHub.recordTransactions(statesToRecord, listOf(tx))
+        logger.info("Recorded transaction locally successfully.")
+        return tx
+    }
+
+
+    @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
         val notarised = if (needsNotarySignature(transaction)) {
             progressTracker.currentStep = NOTARISING
@@ -229,9 +249,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             logger.info("No need to notarise this transaction.")
             transaction
         }
-        logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(statesToRecord, listOf(notarised))
-        logger.info("Recorded transaction locally successfully.")
         return notarised
     }
 
