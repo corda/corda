@@ -8,6 +8,7 @@ buildscript {
     }
     dependencies {
         classpath "org.yaml:snakeyaml:1.24"
+        classpath "com.bmuschko:gradle-docker-plugin:$docker_plugin_version"
     }
 }
 

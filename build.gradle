@@ -120,6 +120,8 @@ buildscript {
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
+    ext.docker_plugin_version = constants.getProperty('docker_plugin_version')
+
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
