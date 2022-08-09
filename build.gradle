@@ -28,9 +28,11 @@ buildscript {
     if (JavaVersion.current().isJava8()) {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
+        ext.net_corda_group = 'net.corda'
     } else {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
+        ext.net_corda_group = 'net.corda.jdk11'
     }
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
@@ -360,7 +362,7 @@ allprojects {
         }
     }
 
-    group JavaVersion.current().isJava11() ? 'net.corda.jdk11' : 'net.corda'
+    group "$net_corda_group"
     version "$corda_release_version"
 
     repositories {
