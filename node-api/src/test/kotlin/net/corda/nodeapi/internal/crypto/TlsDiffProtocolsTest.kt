@@ -7,7 +7,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import org.assertj.core.api.Assertions
-import org.assertj.core.api.Assumptions.assumeThat
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -85,7 +85,7 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
 
     @Test(timeout=300_000)
 	fun testClientServerTlsExchange() {
-        assumeThat(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
+         assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
 
         //System.setProperty("javax.net.debug", "all")
 
