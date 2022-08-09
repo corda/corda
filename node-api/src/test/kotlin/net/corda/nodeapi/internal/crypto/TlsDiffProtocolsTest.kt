@@ -8,7 +8,6 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assumptions.assumeThat
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
