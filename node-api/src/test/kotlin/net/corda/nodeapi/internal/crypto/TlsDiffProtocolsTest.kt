@@ -1,11 +1,13 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.internal.JavaVersion
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assumptions.assumeThat
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -28,7 +30,6 @@ import kotlin.test.assertTrue
 /**
  * This test checks compatibility of TLS 1.2 and 1.3 communication using different cipher suites with SNI header
  */
-@Ignore("Disabled till we switched to Java 11 where TLS 1.3 becomes available")
 @RunWith(Parameterized::class)
 class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlgo: String,
                            private val cipherSuites: CipherSuites, private val shouldFail: Boolean,
@@ -85,6 +86,7 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
 
     @Test(timeout=300_000)
 	fun testClientServerTlsExchange() {
+        assumeThat(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
 
         //System.setProperty("javax.net.debug", "all")
 
