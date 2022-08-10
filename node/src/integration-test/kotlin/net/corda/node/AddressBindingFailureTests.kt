@@ -11,6 +11,8 @@ import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.net.InetAddress
+import java.net.InetAddress.getLoopbackAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 
@@ -24,10 +26,10 @@ class AddressBindingFailureTests {
 	fun `p2p address`() = assertBindExceptionForOverrides { address -> mapOf("p2pAddress" to address.toString()) }
 
     @Test(timeout=300_000)
-	fun `rpc address`() = assertBindExceptionForOverrides { address -> mapOf("rpcSettings" to mapOf("address" to address.toString())) }
+	fun `rpc address`() = assertBindExceptionForOverrides(getLoopbackAddress(), { address -> mapOf("rpcSettings" to mapOf("address" to address.toString())) })
 
     @Test(timeout=300_000)
-	fun `rpc admin address`() = assertBindExceptionForOverrides { address -> mapOf("rpcSettings" to mapOf("adminAddress" to address.toString())) }
+	fun `rpc admin address`() = assertBindExceptionForOverrides(getLoopbackAddress(), { address -> mapOf("rpcSettings" to mapOf("adminAddress" to address.toString())) })
 
     @Test(timeout=300_000)
 	fun `H2 address`() = assertBindExceptionForOverrides { address -> mapOf("h2Settings" to mapOf("address" to address.toString()), "dataSourceProperties.dataSource.password" to "password") }
@@ -52,9 +54,9 @@ class AddressBindingFailureTests {
         }
     }
 
-    private fun assertBindExceptionForOverrides(overrides: (NetworkHostAndPort) -> Map<String, Any?>) {
+    private fun assertBindExceptionForOverrides(bindAddr: InetAddress? = null, overrides: (NetworkHostAndPort) -> Map<String, Any?>) {
 
-        ServerSocket(0).use { socket ->
+        ServerSocket(0, 10, bindAddr).use { socket ->
 
             val address = InetSocketAddress("localhost", socket.localPort).toNetworkHostAndPort()
             driver(DriverParameters(startNodesInProcess = true,
