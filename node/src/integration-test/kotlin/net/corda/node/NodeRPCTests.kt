@@ -16,9 +16,8 @@ class NodeRPCTests {
     private val CORDA_VENDOR_CE = "Corda Community Edition"
     private val CORDAPPS = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
     private val CORDAPP_TYPES = setOf("Contract CorDapp", "Workflow CorDapp")
-    private val CLASSIFIER = if (SystemUtils.IS_JAVA_11) "-jdk11" else ""
     private val CORDAPP_CONTRACTS_NAME_REGEX = "corda-finance-contracts-$CORDA_VERSION_REGEX".toRegex()
-    private val CORDAPP_WORKFLOWS_NAME_REGEX = "corda-finance-workflows-$CORDA_VERSION_REGEX$CLASSIFIER".toRegex()
+    private val CORDAPP_WORKFLOWS_NAME_REGEX = "corda-finance-workflows-$CORDA_VERSION_REGEX".toRegex()
     private val CORDAPP_SHORT_NAME = "Corda Finance Demo"
     private val CORDAPP_VENDOR = "R3"
     private val CORDAPP_LICENCE = "Open Source (Apache 2)"
