@@ -99,6 +99,7 @@ dependencies {
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
     compile project(':common-logging')
+    compile project(":node:src:integration-cordapp")
 
     implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
