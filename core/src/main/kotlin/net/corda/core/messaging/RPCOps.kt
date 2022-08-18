@@ -8,6 +8,10 @@ import net.corda.core.DoNotImplement
  */
 @DoNotImplement
 interface RPCOps {
-    /** Returns the RPC protocol version. Exists since version 0 so guaranteed to be present. */
+    /** Returns the RPC protocol version. Exists since version 0 so guaranteed to be present.
+     *
+     * Getting this property is handled as a quick RPC, meaning that it is handled outside the node's standard
+     * thread pool in order to provide a quick response even when the node is dealing with a high volume of RPC calls.
+     */
     val protocolVersion: Int
 }
