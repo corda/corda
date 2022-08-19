@@ -198,7 +198,7 @@ pipeline {
                 expression { isReleaseTag || isReleaseCandidate || isReleaseBranch }
             }
             steps {
-                snykSecurityScan("${env.SNYK_API_KEY}", "--sub-project=node --prune-repeated-subdependencies --debug --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+","_")}'")
+                snykSecurityScan("${env.SNYK_API_KEY}", "--sub-project=node --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --debug --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+","_")}'")
             }
         }
 
