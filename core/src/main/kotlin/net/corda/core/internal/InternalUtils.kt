@@ -569,6 +569,7 @@ fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): Untrustworthy
     } catch (ex: Exception) {
         throw IllegalArgumentException("Payload invalid", ex)
     }
+
     return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
             ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }
@@ -646,3 +647,4 @@ fun Logger.warnOnce(warning: String) {
 
 const val JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
 const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52
+const val JDK11_CLASS_FILE_FORMAT_MAJOR_VERSION = 55

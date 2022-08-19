@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateAndRef
@@ -38,7 +39,9 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.flows.waitForAllFlowsToComplete
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.findCordapp
@@ -231,7 +234,10 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
             }
+
+            waitForAllFlowsToComplete(nodeBHandle)
         }
+
         // 1 is the notary failing to notarise and propagating the error
         // 2 is the receiving flow failing due to the unexpected session end error
         assertEquals(2, dischargedCounter)
@@ -286,7 +292,10 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref, true).returnValue.getOrThrow(20.seconds)
             }
+
+            waitForAllFlowsToComplete(nodeBHandle)
         }
+
         // 1 is the notary failing to notarise and propagating the error
         assertEquals(1, dischargedCounter)
         assertEquals(0, observationCounter)
