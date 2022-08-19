@@ -13,6 +13,7 @@ import net.corda.testing.driver.NodeHandle
 import net.corda.testing.node.internal.TestStartedNode
 import rx.Observable
 import kotlin.reflect.KClass
+import net.corda.core.internal.RetrieveAnyTransactionPayload.isEmpty as isEmpty1
 
 /**
  * Extracts data from a [Map[FlowSession, UntrustworthyData<Any>]] without performing checks and casting to [R].
@@ -99,8 +100,11 @@ fun <T : FlowLogic<*>> TestStartedNode.registerCoreFlowFactory(initiatingFlowCla
     return this.internals.registerInitiatedFlowFactory(initiatingFlowClass, initiatedFlowClass, InitiatedFlowFactory.Core(flowFactory), track)
 }
 
-fun waitForAllFlowsToComplete(nodeHandle: NodeHandle) {
-    do {
-        Strand.sleep(500)
-    } while (nodeHandle.rpc.stateMachinesSnapshot().isNotEmpty())
+fun waitForAllFlowsToComplete(nodeHandle: NodeHandle, maxIterations: Int = 10, iterationDelay: Long = 500) {
+    (0..maxIterations).forEach { i ->
+        if (nodeHandle.rpc.stateMachinesSnapshot().isEmpty()) {
+            return
+        }
+        Strand.sleep(iterationDelay)
+    }
 }
