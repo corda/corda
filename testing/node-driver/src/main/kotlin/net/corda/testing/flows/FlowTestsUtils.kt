@@ -13,7 +13,6 @@ import net.corda.testing.driver.NodeHandle
 import net.corda.testing.node.internal.TestStartedNode
 import rx.Observable
 import kotlin.reflect.KClass
-import net.corda.core.internal.RetrieveAnyTransactionPayload.isEmpty as isEmpty1
 
 /**
  * Extracts data from a [Map[FlowSession, UntrustworthyData<Any>]] without performing checks and casting to [R].
