@@ -125,7 +125,7 @@ class FlowSessionCloseTest {
      * If sessions are not closed, then the node will crash with an out-of-memory error.
      * This can be confirmed by commenting out [FlowSession.close] operation in the invoked flow and re-run the test.
      */
-    @Test(timeout=300_000)
+    @Test(timeout=600_000)
     fun `flow looping over sessions can close them to release resources and avoid out-of-memory failures, when the other side does not finish early`() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
             val (nodeAHandle, nodeBHandle) = listOf(
@@ -139,7 +139,7 @@ class FlowSessionCloseTest {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout=600_000)
     fun `flow looping over sessions will close sessions automatically, when the other side finishes early`() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
             val (nodeAHandle, nodeBHandle) = listOf(
@@ -247,7 +247,7 @@ class FlowSessionCloseTest {
                     session.close()
                 }
 
-                logger.info("Completed iteration $i")
+                println("Completed iteration $i")
             }
         }
     }
