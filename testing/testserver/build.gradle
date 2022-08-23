@@ -77,8 +77,9 @@ task integrationTest(type: Test) {
 
 jar {
     baseName 'corda-testserver-impl'
+    archiveAppendix = "$archive_appendix"
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }
