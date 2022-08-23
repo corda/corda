@@ -48,6 +48,7 @@ dependencies {
 
 tasks.named('jar', Jar) {
     archiveBaseName = 'DOES-NOT-EXIST'
+    archiveAppendix = "$archive_appendix"
     // Don't build a jar here because it would be the wrong one.
     // The jar we really want will be built by the metafix task.
     enabled = false
@@ -130,7 +131,7 @@ def jarFilter = tasks.register('jarFilter', JarFilterTask) {
 
 def determinise = tasks.register('determinise', ProGuardTask) {
     injars jarFilter
-    outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
+    outjars file("$buildDir/proguard/${addArchiveAppendix(jarBaseName)}-${project.version}.jar")
 
     if (JavaVersion.current().isJava9Compatible()) {
         libraryjars "$javaHome/jmods"
@@ -216,7 +217,7 @@ publish {
     dependenciesFrom(configurations.deterministicArtifacts) {
         defaultScope = 'compile'
     }
-    name jarBaseName
+    name addArchiveAppendix(jarBaseName)
 }
 
 idea {

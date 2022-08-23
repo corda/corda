@@ -14,6 +14,7 @@ dependencies {
 jar {
     archiveBaseName = 'corda-node-djvm'
     archiveClassifier = ''
+    archiveAppendix = "$archive_appendix"
     manifest {
         attributes('Automatic-Module-Name': 'net.corda.node.djvm')
         attributes('Sealed': true)
@@ -21,5 +22,5 @@ jar {
 }
 
 publish {
-    name jar.archiveBaseName.get()
+    name addArchiveAppendix(jar.baseName)
 }

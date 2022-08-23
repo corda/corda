@@ -88,9 +88,10 @@ artifacts {
 
 jar {
     enabled = false
+    archiveAppendix = "$archive_appendix"
 }
 
 publish {
     disableDefaultJar = true
-    name 'corda-tools-network-builder'
+    name addArchiveAppendix('corda-tools-network-builder')
 }
