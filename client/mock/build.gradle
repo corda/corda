@@ -28,6 +28,7 @@ dependencies {
 
 jar {
     baseName 'corda-mock'
+    archiveAppendix = "$archive_appendix"
     manifest {
         attributes(
             'Automatic-Module-Name': 'net.corda.client.mock',
@@ -40,5 +41,5 @@ jar {
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }

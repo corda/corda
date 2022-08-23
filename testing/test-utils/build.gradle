@@ -33,6 +33,7 @@ dependencies {
 
 jar {
     baseName 'corda-test-utils'
+    archiveAppendix = "$archive_appendix"
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
@@ -41,5 +42,5 @@ jar {
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }

@@ -70,8 +70,9 @@ artifacts {
 jar {
     archiveBaseName = 'corda-serialization'
     archiveClassifier = ''
+    archiveAppendix = "$archive_appendix"
 }
 
 publish {
-    name jar.archiveBaseName
+    name addArchiveAppendix(jar.baseName)
 }

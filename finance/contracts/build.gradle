@@ -34,6 +34,7 @@ configurations {
 jar {
     archiveBaseName = 'corda-finance-contracts'
     archiveClassifier = ''
+    archiveAppendix = "$archive_appendix"
     manifest {
         attributes('Corda-Revision': 'n/a')
         attributes('Corda-Vendor': 'Corda Open Source')
@@ -54,5 +55,5 @@ cordapp {
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }

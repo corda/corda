@@ -84,8 +84,9 @@ artifacts {
 
 jar {
     baseName 'corda-node-api'
+    archiveAppendix = "$archive_appendix"
 }
 
 publish {
-    name jar.baseName
+    name addArchiveAppendix(jar.baseName)
 }

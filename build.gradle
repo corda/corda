@@ -28,12 +28,15 @@ buildscript {
     if (JavaVersion.current().isJava8()) {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
-        ext.net_corda_group = 'net.corda'
+        ext.archive_appendix = ''
     } else {
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-        ext.net_corda_group = 'net.corda.jdk11'
+        ext.archive_appendix = 'jdk11'
     }
+
+    ext.addArchiveAppendix = { "$ext.archive_appendix" == "" ? it : "${it}-${ext.archive_appendix}" }
+
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -362,7 +365,7 @@ allprojects {
         }
     }
 
-    group "$net_corda_group"
+    group "net.corda"
     version "$corda_release_version"
 
     repositories {
@@ -673,7 +676,8 @@ bintrayConfig {
             'corda-common-logging',
             'corda-tools-network-builder',
             'corda-tools-checkpoint-agent'
-    ]
+    ].collect { addArchiveAppendix(it) }
+
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
