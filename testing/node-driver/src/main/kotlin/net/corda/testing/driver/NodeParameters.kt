@@ -36,7 +36,8 @@ data class NodeParameters(
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
         val logLevelOverride: String? = null,
-        val rpcAddress: NetworkHostAndPort? = null
+        val rpcAddress: NetworkHostAndPort? = null,
+        val javaHome: String? = null
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
@@ -53,6 +54,7 @@ data class NodeParameters(
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
     fun withLogLevelOverride(logLevelOverride: String?): NodeParameters = copy(logLevelOverride = logLevelOverride)
+    fun withJavaHome(javaHome: String) = copy(javaHome = javaHome)
 
     constructor(
             providedName: CordaX500Name?,
