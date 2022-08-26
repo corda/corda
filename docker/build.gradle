@@ -36,6 +36,7 @@ enum ImageVariant {
     UBUNTU_ZULU("Dockerfile", "1.8", "zulu-openjdk8"),
     UBUNTU_ZULU_11("Dockerfile11", "11", "zulu-openjdk11"),
     AL_CORRETTO("DockerfileAL", "1.8", "amazonlinux2"),
+    ARM("DockerfileARM", "1.8", "openjdk8"),
     OFFICIAL(UBUNTU_ZULU)
 
     String dockerFile
