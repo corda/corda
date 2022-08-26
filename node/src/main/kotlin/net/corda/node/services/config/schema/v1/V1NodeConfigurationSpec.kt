@@ -72,6 +72,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val custom by nestedObject().optional()
     @Suppress("unused")
     private val systemProperties by nestedObject().optional()
+    private val javaHome by string().optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Validated<NodeConfiguration, Configuration.Validation.Error> {
         val config = configuration.withOptions(options)
@@ -137,7 +138,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     flowExternalOperationThreadPoolSize = config[flowExternalOperationThreadPoolSize],
                     quasarExcludePackages = config[quasarExcludePackages],
                     reloadCheckpointAfterSuspend = config[reloadCheckpointAfterSuspend],
-                    networkParametersPath = networkParametersPath
+                    networkParametersPath = networkParametersPath,
+                    javaHome = config[javaHome]
             ))
         } catch (e: Exception) {
             return when (e) {

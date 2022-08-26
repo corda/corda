@@ -13,7 +13,8 @@ object ProcessUtilities {
             jdwpPort: Int? = null,
             extraJvmArguments: List<String> = emptyList(),
             maximumHeapSize: String? = null,
-            environmentVariables: Map<String, String> = emptyMap()
+            environmentVariables: Map<String, String> = emptyMap(),
+            javaHome: String? = null
     ): Process {
         return startJavaProcess(
                 C::class.java.name,
@@ -23,7 +24,8 @@ object ProcessUtilities {
                 jdwpPort,
                 extraJvmArguments,
                 maximumHeapSize,
-                environmentVariables = environmentVariables
+                environmentVariables = environmentVariables,
+                javaHome = javaHome
         )
     }
 
@@ -38,10 +40,11 @@ object ProcessUtilities {
             maximumHeapSize: String? = null,
             identifier: String = "",
             environmentVariables: Map<String,String> = emptyMap(),
-            inheritIO: Boolean = true
+            inheritIO: Boolean = true,
+            javaHome: String? = null
     ): Process {
         val command = mutableListOf<String>().apply {
-            add(javaPath)
+            add("${javaHome ?: DEFAULT_JAVA_HOME}/bin/java")
             (jdwpPort != null) && add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
             if (maximumHeapSize != null) add("-Xmx$maximumHeapSize")
             add("-XX:+UseG1GC")
@@ -63,7 +66,7 @@ object ProcessUtilities {
         }.start()
     }
 
-    private val javaPath = (System.getProperty("java.home") / "bin" / "java").toString()
+    val DEFAULT_JAVA_HOME: String = System.getProperty("java.home")
 
     val defaultClassPath: List<String> = System.getProperty("java.class.path").split(File.pathSeparator)
 }
