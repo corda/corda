@@ -98,6 +98,8 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val reloadCheckpointAfterSuspend: Boolean
 
+    val javaHome: String?
+
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
         val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
