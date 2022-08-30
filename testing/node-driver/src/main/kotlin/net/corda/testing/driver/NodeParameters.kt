@@ -24,6 +24,8 @@ import net.corda.testing.node.User
  * @property logLevelOverride log level to be passed as parameter to an out of process node. ERROR, WARN, INFO, DEBUG, TRACE. This overrides debug port
  * log level argument.
  * @property rpcAddress optional override for RPC address on which node will be accepting RPC connections from the clients. Port provided must be vacant.
+ * @property javaHome optional override the java home directory
+ * @property classPath optional override the classpath
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -37,7 +39,8 @@ data class NodeParameters(
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
         val logLevelOverride: String? = null,
         val rpcAddress: NetworkHostAndPort? = null,
-        val javaHome: String? = null
+        val javaHome: String? = null,
+        val classPath: List<String>? = null
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
@@ -55,6 +58,7 @@ data class NodeParameters(
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
     fun withLogLevelOverride(logLevelOverride: String?): NodeParameters = copy(logLevelOverride = logLevelOverride)
     fun withJavaHome(javaHome: String) = copy(javaHome = javaHome)
+    fun withClassPath(classPath: List<String>) = copy(classPath = classPath)
 
     constructor(
             providedName: CordaX500Name?,
