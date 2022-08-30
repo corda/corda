@@ -346,7 +346,8 @@ class DriverDSLImpl(
                 NodeConfiguration::verifierType.name to parameters.verifierType.name,
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
                 NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000,
-                NodeConfiguration::javaHome.name to parameters.javaHome
+                NodeConfiguration::javaHome.name to parameters.javaHome,
+                NodeConfiguration::classPath.name to parameters.classPath
         ) + czUrlConfig + jmxConfig + parameters.customOverrides
         return NodeConfig(
                 ConfigHelper.loadConfig(
@@ -1029,7 +1030,7 @@ class DriverDSLImpl(
 
             // The following dependencies are excluded from the classpath of the created JVM,
             // so that the environment resembles a real one as close as possible.
-            val cp = ProcessUtilities.defaultClassPath.filter { cpEntry ->
+            val cp = config.corda.classPath ?: ProcessUtilities.defaultClassPath.filter { cpEntry ->
                 val cpPathEntry = Paths.get(cpEntry)
                 cpPathEntry.isRegularFile()
                         && !isTestArtifact(cpPathEntry.fileName.toString())
