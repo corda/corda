@@ -87,7 +87,8 @@ data class NodeConfigurationImpl(
         override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages,
         override val reloadCheckpointAfterSuspend: Boolean = Defaults.reloadCheckpointAfterSuspend,
         override val networkParametersPath: Path = baseDirectory,
-        override val javaHome: String? = null
+        override val javaHome: String? = null,
+        override val classPath: List<String>? = null
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null

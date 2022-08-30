@@ -8,7 +8,6 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
-import net.corda.node.services.config.NodeConfigurationImpl.Defaults.reloadCheckpointAfterSuspend
 import net.corda.node.services.config.schema.parsers.*
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
@@ -74,6 +73,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     @Suppress("unused")
     private val systemProperties by nestedObject().optional()
     private val javaHome by string().optional()
+    private val classPath by string().list().optional()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Validated<NodeConfiguration, Configuration.Validation.Error> {
         val config = configuration.withOptions(options)
@@ -141,7 +141,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     quasarExcludePackages = config[quasarExcludePackages],
                     reloadCheckpointAfterSuspend = config[reloadCheckpointAfterSuspend],
                     networkParametersPath = networkParametersPath,
-                    javaHome = config[javaHome]
+                    javaHome = config[javaHome],
+                    classPath = config[classPath]
             ))
         } catch (e: Exception) {
             return when (e) {
