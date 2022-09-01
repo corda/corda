@@ -696,11 +696,6 @@ class DriverDSLImpl(
         }
     }
 
-    private fun getQuasarJarPath(config: NodeConfig): String {
-        val classPath = config.corda.classPath ?: listOf(quasarJarPath)
-        return classPath.first { it.contains("quasar-core") }
-    }
-
     @Suppress("ComplexMethod")
     private fun startNodeInternal(config: NodeConfig,
                                   webAddress: NetworkHostAndPort,
@@ -915,6 +910,11 @@ class DriverDSLImpl(
             } else {
                 this
             }
+        }
+
+        private fun getQuasarJarPath(config: NodeConfig): String {
+            val classPath = config.corda.classPath ?: listOf(quasarJarPath)
+            return classPath.first { it.contains("quasar-core") }
         }
 
         private inline fun <T> Config.withOptionalValue(key: String, obj: T?, body: (T) -> ConfigValue): Config {
