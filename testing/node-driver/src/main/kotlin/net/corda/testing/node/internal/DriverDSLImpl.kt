@@ -849,6 +849,11 @@ class DriverDSLImpl(
         return NodeConfig(this.typesafe.plus(mapOf("notary" to mapOf("validating" to validating))))
     }
 
+    private fun getQuasarJarPath(config: NodeConfig): String {
+        val classPath = config.corda.classPath ?: listOf(quasarJarPath)
+        return classPath.first { it.contains("quasar-core") }
+    }
+
     companion object {
         private val RPC_CONNECT_POLL_INTERVAL: Duration = 100.millis
         internal val log = contextLogger()
@@ -910,11 +915,6 @@ class DriverDSLImpl(
             } else {
                 this
             }
-        }
-
-        private fun getQuasarJarPath(config: NodeConfig): String {
-            val classPath = config.corda.classPath ?: listOf(quasarJarPath)
-            return classPath.first { it.contains("quasar-core") }
         }
 
         private inline fun <T> Config.withOptionalValue(key: String, obj: T?, body: (T) -> ConfigValue): Config {
