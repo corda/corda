@@ -679,7 +679,7 @@ class DriverDSLImpl(
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(
                 config,
-                quasarJarPath,
+                getQuasarJarPath(config),
                 debugPort,
                 bytemanJarPath,
                 null,
@@ -694,6 +694,11 @@ class DriverDSLImpl(
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
             if (process.isAlive) null else Unit
         }
+    }
+
+    private fun getQuasarJarPath(config: NodeConfig): String {
+        val classPath = config.corda.classPath ?: listOf(quasarJarPath)
+        return classPath.first { it.contains("quasar-core") }
     }
 
     @Suppress("ComplexMethod")
