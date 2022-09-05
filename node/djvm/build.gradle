@@ -1,3 +1,5 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 apply from: '../../deterministic.gradle'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -14,7 +16,7 @@ dependencies {
 jar {
     archiveBaseName = 'corda-node-djvm'
     archiveClassifier = ''
-    archiveAppendix = "$archive_appendix"
+
     manifest {
         attributes('Automatic-Module-Name': 'net.corda.node.djvm')
         attributes('Sealed': true)
