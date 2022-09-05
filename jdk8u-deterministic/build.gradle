@@ -40,8 +40,10 @@ def copyJdk = tasks.register('copyJdk', Copy) {
 tasks.named('assemble') {
     dependsOn copyJdk
 }
+
 tasks.named('jar', Jar)  {
     enabled = false
+    archiveAppendix = archive_appendix
 }
 
 artifacts {

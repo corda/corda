@@ -1,3 +1,5 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
@@ -33,8 +35,8 @@ configurations {
 
 jar {
     archiveBaseName = 'corda-finance-contracts'
-    archiveClassifier = ''
-    archiveAppendix = "$archive_appendix"
+    archiveAppendix = archive_appendix
+
     manifest {
         attributes('Corda-Revision': 'n/a')
         attributes('Corda-Vendor': 'Corda Open Source')

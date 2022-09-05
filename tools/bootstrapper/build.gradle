@@ -34,7 +34,7 @@ jar {
         rename 'corda-(.*)', 'corda.jar'
     }
     baseName = "network-bootstrapper"
-    archiveAppendix = "$archive_appendix"
+    archiveAppendix = archive_appendix
     manifest {
         attributes(
                 'Main-Class': 'net.corda.bootstrapper.MainKt'
