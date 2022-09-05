@@ -31,7 +31,7 @@ dependencies {
 
 jar {
     archiveBaseName = 'corda-deterministic-verifier'
-    archiveAppendix = "$archive_appendix"
+    archiveAppendix = archive_appendix
 }
 
 artifacts {

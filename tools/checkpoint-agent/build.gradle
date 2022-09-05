@@ -50,8 +50,8 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = "${project.name}"
-    archiveAppendix = "$archive_appendix"
+    archiveBaseName = project.name
+    archiveAppendix = archive_appendix
     manifest {
         attributes(
                 'Premain-Class': 'net.corda.tools.CheckpointAgent',

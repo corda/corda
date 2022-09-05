@@ -24,7 +24,7 @@ dependencies {
 
 jar {
     baseName 'corda-common-configuration-parsing'
-    archiveAppendix = "$archive_appendix"
+    archiveAppendix = archive_appendix
 }
 
 publish {

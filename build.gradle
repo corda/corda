@@ -251,7 +251,7 @@ apply plugin: 'java'
 
 logger.lifecycle("Java version: {}", JavaVersion.current())
 sourceCompatibility = VERSION_1_8
-targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
+targetCompatibility = VERSION_1_8
 logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
 logger.lifecycle("Java target compatibility: {}", targetCompatibility)
 logger.lifecycle("Quasar version: {}", quasar_version)
