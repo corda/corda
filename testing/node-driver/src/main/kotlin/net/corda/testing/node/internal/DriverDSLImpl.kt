@@ -754,7 +754,7 @@ class DriverDSLImpl(
             log.info("StartNodeInternal for ${config.corda.myLegalName.organisation} - create schema done")
             val process = startOutOfProcessNode(
                     config,
-                    quasarJarPath,
+                    getQuasarJarPath(config),
                     debugPort,
                     bytemanJarPath,
                     bytemanPort,

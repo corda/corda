@@ -95,6 +95,7 @@ interface DriverDSL {
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
      *     it sees all previously started nodes, including the notaries.
      */
+    @Suppress("LongParameterList")
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
             providedName: CordaX500Name? = defaultParameters.providedName,
@@ -104,8 +105,8 @@ interface DriverDSL {
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
             logLevelOverride: String? = defaultParameters.logLevelOverride,
-            javaHome: String? = null,
-            classPath: List<String>? = null
+            javaHome: String? = defaultParameters.javaHome,
+            classPath: List<String>? = defaultParameters.classPath
     ): CordaFuture<NodeHandle> {
         return startNode(defaultParameters.copy(
                 providedName = providedName,
@@ -143,6 +144,7 @@ interface DriverDSL {
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
      *     it sees all previously started nodes, including the notaries.
      */
+    @Suppress("LongParameterList")
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
             providedName: CordaX500Name? = defaultParameters.providedName,
@@ -151,8 +153,8 @@ interface DriverDSL {
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            javaHome: String? = null,
-            classPath: List<String>? = null
+            javaHome: String? = defaultParameters.javaHome,
+            classPath: List<String>? = defaultParameters.classPath
     ): CordaFuture<NodeHandle> {
         return startNode(defaultParameters.copy(
                 providedName = providedName,
