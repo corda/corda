@@ -20,6 +20,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class RoundTripTests {
 
@@ -145,7 +146,7 @@ class RoundTripTests {
 	fun canSerializeClassesWithUntypedProperties() {
         val data = MembershipState<Any>(mapOf("foo" to "bar"))
         val party = Party(
-                CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
+                CordaX500Name.interner.intern(CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES")),
                 entropyToKeyPair(BigInteger.valueOf(83)).public)
         val transactionState = TransactionState(
                 data,
@@ -162,6 +163,8 @@ class RoundTripTests {
         val bytes = SerializationOutput(factory).serialize(instance)
         val deserialized = DeserializationInput(factory).deserialize(bytes)
         assertEquals(mapOf("foo" to "bar"), deserialized.changedMembership.state.data.metadata)
+        assertSame(instance.changedMembership.state.notary.name, deserialized.changedMembership.state.notary.name)
+        assertSame(instance.changedMembership.state.notary.owningKey, deserialized.changedMembership.state.notary.owningKey)
     }
 
     interface I2<T> {
