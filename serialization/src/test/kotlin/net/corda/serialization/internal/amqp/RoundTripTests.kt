@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
@@ -167,6 +168,16 @@ class RoundTripTests {
         assertNotSame(instance.changedMembership.state.notary, deserialized.changedMembership.state.notary)
         assertSame(instance.changedMembership.state.notary.name, deserialized.changedMembership.state.notary.name)
         assertSame(instance.changedMembership.state.notary.owningKey, deserialized.changedMembership.state.notary.owningKey)
+    }
+
+    @Test(timeout = 300_000)
+    fun sigConstraintsInterned() {
+        val instance = SignatureAttachmentConstraint.interner.intern(SignatureAttachmentConstraint(entropyToKeyPair(BigInteger.valueOf(83)).public))
+
+        val factory = testDefaultFactoryNoEvolution().apply { register(PublicKeySerializer) }
+        val bytes = SerializationOutput(factory).serialize(instance)
+        val deserialized = DeserializationInput(factory).deserialize(bytes)
+        assertSame(instance, deserialized)
     }
 
     @Test(timeout = 300_000)
