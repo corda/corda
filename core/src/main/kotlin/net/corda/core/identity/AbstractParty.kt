@@ -3,6 +3,8 @@ package net.corda.core.identity
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.flows.Destination
+import net.corda.core.internal.utilities.Internable
+import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
@@ -31,4 +33,8 @@ abstract class AbstractParty(val owningKey: PublicKey): Destination {
      * ledger.
      */
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
+
+    companion object : Internable<AbstractParty> {
+        override val interner: PrivateInterner<AbstractParty> = PrivateInterner()
+    }
 }

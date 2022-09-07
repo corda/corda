@@ -20,6 +20,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
 class RoundTripTests {
@@ -163,8 +164,33 @@ class RoundTripTests {
         val bytes = SerializationOutput(factory).serialize(instance)
         val deserialized = DeserializationInput(factory).deserialize(bytes)
         assertEquals(mapOf("foo" to "bar"), deserialized.changedMembership.state.data.metadata)
+        assertNotSame(instance.changedMembership.state.notary, deserialized.changedMembership.state.notary)
         assertSame(instance.changedMembership.state.notary.name, deserialized.changedMembership.state.notary.name)
         assertSame(instance.changedMembership.state.notary.owningKey, deserialized.changedMembership.state.notary.owningKey)
+    }
+
+    @Test(timeout = 300_000)
+    fun canSerializeClassesWithUntypedPropertiesWithInternedParty() {
+        val data = MembershipState<Any>(mapOf("foo" to "bar"))
+        val party = AbstractParty.interner.intern(Party(
+                CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
+                entropyToKeyPair(BigInteger.valueOf(83)).public))
+        val transactionState = TransactionState(
+                data,
+                "foo",
+                party
+        )
+        val ref = StateRef(SecureHash.zeroHash, 0)
+        val instance = OnMembershipChanged(StateAndRef(
+                transactionState,
+                ref
+        ))
+
+        val factory = testDefaultFactoryNoEvolution().apply { register(PublicKeySerializer) }
+        val bytes = SerializationOutput(factory).serialize(instance)
+        val deserialized = DeserializationInput(factory).deserialize(bytes)
+        assertEquals(mapOf("foo" to "bar"), deserialized.changedMembership.state.data.metadata)
+        assertSame(instance.changedMembership.state.notary, deserialized.changedMembership.state.notary)
     }
 
     interface I2<T> {
@@ -173,8 +199,8 @@ class RoundTripTests {
 
     data class C<A, B : A>(override val t: B) : I2<B>
 
-    @Test(timeout=300_000)
-	fun recursiveTypeVariableResolution() {
+    @Test(timeout = 300_000)
+    fun recursiveTypeVariableResolution() {
         val factory = testDefaultFactoryNoEvolution()
         val instance = C<Collection<String>, List<String>>(emptyList())
 
