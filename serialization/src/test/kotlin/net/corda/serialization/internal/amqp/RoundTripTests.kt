@@ -172,7 +172,7 @@ class RoundTripTests {
 
     @Test(timeout = 300_000)
     fun sigConstraintsInterned() {
-        val instance = SignatureAttachmentConstraint.interner.intern(SignatureAttachmentConstraint(entropyToKeyPair(BigInteger.valueOf(83)).public))
+        val instance = SignatureAttachmentConstraint.create(entropyToKeyPair(BigInteger.valueOf(83)).public)
 
         val factory = testDefaultFactoryNoEvolution().apply { register(PublicKeySerializer) }
         val bytes = SerializationOutput(factory).serialize(instance)
