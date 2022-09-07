@@ -1,5 +1,6 @@
 package net.corda.core.identity
 
+import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.CompositeKey
@@ -45,4 +46,12 @@ class Party(val name: CordaX500Name, owningKey: PublicKey) : Destination, Abstra
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = name.toString()
     fun description() = "$name (owningKey = ${owningKey.toStringShort()})"
+
+    companion object {
+        @CordaInternal
+        fun create(name: CordaX500Name, owningKey: PublicKey): Party = interner.intern(Party(name, owningKey))
+
+        @CordaInternal
+        fun create(certificate: X509Certificate): Party = interner.intern(Party(certificate))
+    }
 }

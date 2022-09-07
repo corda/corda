@@ -183,9 +183,9 @@ class RoundTripTests {
     @Test(timeout = 300_000)
     fun canSerializeClassesWithUntypedPropertiesWithInternedParty() {
         val data = MembershipState<Any>(mapOf("foo" to "bar"))
-        val party = AbstractParty.interner.intern(Party(
+        val party = Party.create(
                 CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
-                entropyToKeyPair(BigInteger.valueOf(83)).public))
+                entropyToKeyPair(BigInteger.valueOf(83)).public)
         val transactionState = TransactionState(
                 data,
                 "foo",

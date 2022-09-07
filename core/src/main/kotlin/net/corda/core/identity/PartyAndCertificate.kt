@@ -33,7 +33,7 @@ class PartyAndCertificate(val certPath: CertPath) {
     }
 
     @Transient
-    val party: Party = AbstractParty.interner.intern(Party(certificate))
+    val party: Party = Party.create(certificate)
 
     val owningKey: PublicKey get() = party.owningKey
     val name: CordaX500Name get() = party.name
