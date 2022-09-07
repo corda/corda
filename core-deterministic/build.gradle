@@ -43,7 +43,6 @@ dependencies {
     api "javax.persistence:javax.persistence-api:2.2"
     api "com.google.code.findbugs:jsr305:$jsr305_version"
     api "org.slf4j:slf4j-api:$slf4j_version"
-    api "com.google.guava:guava:$guava_version"
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
@@ -79,6 +78,7 @@ def patchCore = tasks.register('patchCore', Zip) {
         exclude 'net/corda/core/serialization/internal/AttachmentsHolderImpl.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
+        exclude 'net/corda/core/internal/utilities/PrivateInterner.class'
     }
 
     reproducibleFileOrder = true
