@@ -183,6 +183,9 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             } ?: throw IllegalArgumentException("Provided string is null")
         }
 
+        @JvmStatic
+        fun createSHA256(bytes: ByteArray) = interner.intern(SHA256(bytes))
+
         private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
         private fun digestFor(algorithm: String): DigestSupplier {

@@ -43,10 +43,30 @@ import java.net.URLStreamHandler
 import java.net.URLStreamHandlerFactory
 import java.security.MessageDigest
 import java.security.Permission
-import java.util.Locale
-import java.util.ServiceLoader
-import java.util.WeakHashMap
+import java.util.*
 import java.util.function.Function
+import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashSet
+import kotlin.collections.List
+import kotlin.collections.MutableMap
+import kotlin.collections.Set
+import kotlin.collections.any
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.dropLast
+import kotlin.collections.filter
+import kotlin.collections.filterNot
+import kotlin.collections.flatMap
+import kotlin.collections.isNotEmpty
+import kotlin.collections.iterator
+import kotlin.collections.joinToString
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapOf
+import kotlin.collections.mapTo
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
+import kotlin.collections.toTypedArray
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -164,7 +184,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             if(read <= 0) break
             md.update(ctx.buffer, 0, read)
         }
-        return SecureHash.SHA256(md.digest())
+        return SecureHash.createSHA256(md.digest())
     }
 
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->

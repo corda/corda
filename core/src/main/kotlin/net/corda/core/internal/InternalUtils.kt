@@ -77,10 +77,54 @@ import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.Any
+import kotlin.Array
+import kotlin.Boolean
+import kotlin.Byte
+import kotlin.ByteArray
+import kotlin.Comparator
+import kotlin.Double
+import kotlin.Exception
+import kotlin.IllegalArgumentException
+import kotlin.Int
+import kotlin.Long
+import kotlin.Pair
+import kotlin.String
+import kotlin.Suppress
+import kotlin.Throwable
+import kotlin.Unit
+import kotlin.UnsupportedOperationException
+import kotlin.also
+import kotlin.apply
+import kotlin.arrayOfNulls
+import kotlin.collections.AbstractList
+import kotlin.collections.IntIterator
+import kotlin.collections.Iterable
+import kotlin.collections.LinkedHashMap
 import kotlin.collections.LinkedHashSet
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.MutableSet
+import kotlin.collections.Set
+import kotlin.collections.first
+import kotlin.collections.fold
+import kotlin.collections.forEach
+import kotlin.collections.groupBy
+import kotlin.collections.iterator
+import kotlin.collections.map
+import kotlin.collections.sum
+import kotlin.collections.takeLast
+import kotlin.let
 import kotlin.math.roundToLong
+import kotlin.plus
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
+import kotlin.require
+import kotlin.requireNotNull
+import kotlin.run
+import kotlin.synchronized
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
 val Throwable.rootMessage: String? get() {
@@ -165,7 +209,7 @@ fun InputStream.hash(): SecureHash {
             }
             md.update(buffer, 0, count)
         }
-        SecureHash.SHA256(md.digest())
+        SecureHash.createSHA256(md.digest())
     }
 }
 
