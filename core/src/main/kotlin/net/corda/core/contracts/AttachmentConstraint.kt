@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
@@ -125,6 +126,7 @@ data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstra
     }
 
     companion object : Internable<SignatureAttachmentConstraint> {
-        override val interner: PrivateInterner<SignatureAttachmentConstraint> = PrivateInterner()
+        @CordaInternal
+        override val interner = PrivateInterner<SignatureAttachmentConstraint>()
     }
 }

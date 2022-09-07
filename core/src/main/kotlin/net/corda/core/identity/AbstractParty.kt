@@ -1,5 +1,6 @@
 package net.corda.core.identity
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.flows.Destination
@@ -35,6 +36,7 @@ abstract class AbstractParty(val owningKey: PublicKey): Destination {
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 
     companion object : Internable<AbstractParty> {
-        override val interner: PrivateInterner<AbstractParty> = PrivateInterner()
+        @CordaInternal
+        override val interner = PrivateInterner<AbstractParty>()
     }
 }

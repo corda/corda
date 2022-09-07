@@ -61,17 +61,6 @@ import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.*
 import kotlin.collections.ArrayList
-import kotlin.collections.Iterator
-import kotlin.collections.List
-import kotlin.collections.Set
-import kotlin.collections.forEach
-import kotlin.collections.listOf
-import kotlin.collections.minusAssign
-import kotlin.collections.plus
-import kotlin.collections.plusAssign
-import kotlin.collections.toList
-import kotlin.collections.toMutableList
-import kotlin.collections.toSet
 
 object DefaultKryoCustomizer {
     private val serializationWhitelists: List<SerializationWhitelist> by lazy {

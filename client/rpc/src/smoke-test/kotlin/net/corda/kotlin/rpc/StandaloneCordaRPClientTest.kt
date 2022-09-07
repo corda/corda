@@ -50,7 +50,7 @@ import org.junit.Test
 import org.junit.rules.ExpectedException
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.util.*
+import java.util.Currency
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
