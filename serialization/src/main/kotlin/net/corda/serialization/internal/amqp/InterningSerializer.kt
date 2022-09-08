@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.utilities.Internable
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.SerializationContext
@@ -14,7 +15,7 @@ class InterningSerializer(private val delegate: ObjectSerializer, private val in
         fun findInterner(clazz: Class<*>): PrivateInterner<Any>? {
             return clazz.kotlin.companionObjectInstance?.let {
                 (it as? Internable<*>)?.let {
-                    it.interner as PrivateInterner<Any>
+                    uncheckedCast(it.interner)
                 }
             }
         }
