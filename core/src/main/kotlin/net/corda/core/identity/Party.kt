@@ -47,6 +47,7 @@ class Party(val name: CordaX500Name, owningKey: PublicKey) : Destination, Abstra
     override fun toString() = name.toString()
     fun description() = "$name (owningKey = ${owningKey.toStringShort()})"
 
+    @CordaInternal
     companion object {
         @CordaInternal
         fun create(name: CordaX500Name, owningKey: PublicKey): Party = interner.intern(Party(name, owningKey))

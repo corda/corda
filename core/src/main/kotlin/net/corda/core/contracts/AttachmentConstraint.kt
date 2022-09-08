@@ -125,6 +125,7 @@ data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstra
         } else true
     }
 
+    @CordaInternal
     companion object : Internable<SignatureAttachmentConstraint> {
         @CordaInternal
         override val interner = PrivateInterner<SignatureAttachmentConstraint>()

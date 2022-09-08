@@ -36,8 +36,8 @@ abstract class AbstractParty(val owningKey: PublicKey): Destination {
      */
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 
+    @CordaInternal
     companion object : Internable<AbstractParty> {
-        @CordaInternal
         override val interner = PrivateInterner<AbstractParty>(object : Verifier<AbstractParty> {
             override fun choose(original: AbstractParty, interned: AbstractParty): AbstractParty {
                 // Because Party does not compare name in equals(), don't intern if there's a clash
