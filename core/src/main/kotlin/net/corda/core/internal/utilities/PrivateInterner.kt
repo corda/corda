@@ -12,7 +12,7 @@ import net.corda.core.internal.uncheckedCast
  * System properties allow disabling, in the event an issue is uncovered in a live environment.  The
  * correct default for the concurrency setting is the result of performance evaluation.
  */
-class PrivateInterner<T> {
+class PrivateInterner<T>(val verifier: Verifier<T> = NoneVerifier()) {
     companion object {
         private const val DEFAULT_CONCURRENCY_LEVEL = 32
         private val CONCURRENCY_LEVEL = Integer.getInteger("net.corda.core.intern.concurrency", DEFAULT_CONCURRENCY_LEVEL).toInt()
@@ -21,6 +21,6 @@ class PrivateInterner<T> {
 
     private val interner = Interners.newBuilder().weak().concurrencyLevel(CONCURRENCY_LEVEL).build<T>()
 
-    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(interner.intern(sample))
+    fun <S : T> intern(sample: S): S = if (DISABLE) sample else uncheckedCast(verifier.choose(sample, interner.intern(sample)))
 }
 

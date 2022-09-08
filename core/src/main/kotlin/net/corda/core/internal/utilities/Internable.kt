@@ -8,3 +8,17 @@ interface Internable<T> {
     @CordaInternal
     val interner: PrivateInterner<T>
 }
+
+@KeepForDJVM
+@CordaInternal
+interface Verifier<T> {
+    // If a type being interned has a slightly dodgy equality check, the more strict rules you probably
+    // want to apply to interning can be enforced here.
+    fun choose(original: T, interned: T): T
+}
+
+@KeepForDJVM
+@CordaInternal
+class NoneVerifier<T> : Verifier<T> {
+    override fun choose(original: T, interned: T): T = interned
+}
