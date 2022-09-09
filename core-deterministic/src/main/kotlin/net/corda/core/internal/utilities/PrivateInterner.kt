@@ -9,6 +9,7 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
 
     @KeepForDJVM
     companion object {
+        @Suppress("UNUSED_PARAMETER")
         fun findFor(clazz: Class<*>?): PrivateInterner<Any>? = null
     }
 }

@@ -28,10 +28,15 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
          */
         fun findFor(clazz: Class<*>?): PrivateInterner<Any>? {
             fun findInterner(clazz: Class<*>?): PrivateInterner<Any>? {
-                return clazz?.kotlin?.companionObjectInstance?.let {
-                    (it as? Internable<*>)?.let {
-                        uncheckedCast(it.interner)
+                try {
+                    return clazz?.kotlin?.companionObjectInstance?.let {
+                        (it as? Internable<*>)?.let {
+                            uncheckedCast(it.interner)
+                        }
                     }
+                } catch (e: Exception) {
+                    // Kotlin reflection stuff can throw this for some classes
+                    return null
                 }
             }
             return if (clazz != null) findInterner(clazz) ?: findInterner(clazz.superclass) else null
