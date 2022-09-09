@@ -893,6 +893,13 @@ public final class net.corda.core.contracts.SignatureAttachmentConstraint extend
   public String toString()
   public static final net.corda.core.contracts.SignatureAttachmentConstraint$Companion Companion
 ##
+public static final class net.corda.core.contracts.SignatureAttachmentConstraint$Companion extends java.lang.Object implements net.corda.core.internal.utilities.Internable
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final net.corda.core.contracts.SignatureAttachmentConstraint create(java.security.PublicKey)
+  @NotNull
+  public net.corda.core.internal.utilities.PrivateInterner<net.corda.core.contracts.SignatureAttachmentConstraint> getInterner()
+##
 public final class net.corda.core.contracts.SourceAndAmount extends java.lang.Object
   public <init>(P, net.corda.core.contracts.Amount<T>, Object)
   public <init>(Object, net.corda.core.contracts.Amount, Object, int, kotlin.jvm.internal.DefaultConstructorMarker)
@@ -3354,6 +3361,12 @@ public final class net.corda.core.identity.AnonymousParty extends net.corda.core
   public net.corda.core.contracts.PartyAndReference ref(net.corda.core.utilities.OpaqueBytes)
   @NotNull
   public String toString()
+  public static final net.corda.core.identity.AnonymousParty$Companion Companion
+##
+public static final class net.corda.core.identity.AnonymousParty$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final net.corda.core.identity.AnonymousParty create(java.security.PublicKey)
 ##
 @CordaSerializable
 public final class net.corda.core.identity.CordaX500Name extends java.lang.Object
@@ -3446,6 +3459,13 @@ public final class net.corda.core.identity.Party extends net.corda.core.identity
   @NotNull
   public String toString()
   public static final net.corda.core.identity.Party$Companion Companion
+##
+public static final class net.corda.core.identity.Party$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final net.corda.core.identity.Party create(java.security.cert.X509Certificate)
+  @NotNull
+  public final net.corda.core.identity.Party create(net.corda.core.identity.CordaX500Name, java.security.PublicKey)
 ##
 @CordaSerializable
 public final class net.corda.core.identity.PartyAndCertificate extends java.lang.Object

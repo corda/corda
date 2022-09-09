@@ -1,6 +1,5 @@
 package net.corda.core.identity
 
-import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.CompositeKey
@@ -47,12 +46,15 @@ class Party(val name: CordaX500Name, owningKey: PublicKey) : Destination, Abstra
     override fun toString() = name.toString()
     fun description() = "$name (owningKey = ${owningKey.toStringShort()})"
 
-    @CordaInternal
     companion object {
-        @CordaInternal
+        /**
+         * Factory method to be used in preference to the constructor.
+         */
         fun create(name: CordaX500Name, owningKey: PublicKey): Party = interner.intern(Party(name, owningKey))
 
-        @CordaInternal
+        /**
+         * Factory method to be used in preference to the constructor.
+         */
         fun create(certificate: X509Certificate): Party = interner.intern(Party(certificate))
     }
 }

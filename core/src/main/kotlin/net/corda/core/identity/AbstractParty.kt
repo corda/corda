@@ -5,8 +5,8 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.flows.Destination
 import net.corda.core.internal.utilities.Internable
+import net.corda.core.internal.utilities.IternabilityVerifier
 import net.corda.core.internal.utilities.PrivateInterner
-import net.corda.core.internal.utilities.Verifier
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
@@ -38,7 +38,8 @@ abstract class AbstractParty(val owningKey: PublicKey): Destination {
 
     @CordaInternal
     companion object : Internable<AbstractParty> {
-        override val interner = PrivateInterner<AbstractParty>(object : Verifier<AbstractParty> {
+        @CordaInternal
+        override val interner = PrivateInterner<AbstractParty>(object : IternabilityVerifier<AbstractParty> {
             override fun choose(original: AbstractParty, interned: AbstractParty): AbstractParty {
                 // Because Party does not compare name in equals(), don't intern if there's a clash
                 return if (original.nameOrNull() != interned.nameOrNull()) original else interned

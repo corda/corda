@@ -183,8 +183,11 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             } ?: throw IllegalArgumentException("Provided string is null")
         }
 
+        /**
+         * Factory method for SHA256 to be used in preference to the constructor.
+         */
         @JvmStatic
-        fun createSHA256(bytes: ByteArray) = interner.intern(SHA256(bytes))
+        fun createSHA256(bytes: ByteArray): SHA256 = interner.intern(SHA256(bytes))
 
         private val messageDigests: ConcurrentMap<String, DigestSupplier> = ConcurrentHashMap()
 
