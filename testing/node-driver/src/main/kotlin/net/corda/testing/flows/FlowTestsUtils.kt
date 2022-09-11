@@ -99,7 +99,7 @@ fun <T : FlowLogic<*>> TestStartedNode.registerCoreFlowFactory(initiatingFlowCla
     return this.internals.registerInitiatedFlowFactory(initiatingFlowClass, initiatedFlowClass, InitiatedFlowFactory.Core(flowFactory), track)
 }
 
-fun waitForAllFlowsToComplete(nodeHandle: NodeHandle, maxIterations: Int = 10, iterationDelay: Long = 500) {
+fun waitForAllFlowsToComplete(nodeHandle: NodeHandle, maxIterations: Int = 60, iterationDelay: Long = 500) {
     (0..maxIterations).forEach {
         if (nodeHandle.rpc.stateMachinesSnapshot().isEmpty()) {
             return

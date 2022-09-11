@@ -233,6 +233,7 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
             }
 
+            waitForAllFlowsToComplete(nodeAHandle)
             waitForAllFlowsToComplete(nodeBHandle)
         }
 
@@ -264,6 +265,10 @@ class FlowHospitalTest {
                 val ref3 = it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeCHandle.nodeInfo.singleIdentity(), ref2).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::CreateTransactionButDontFinalizeFlow, nodeBHandle.nodeInfo.singleIdentity(), ref3).returnValue.getOrThrow(20.seconds)
             }
+
+            waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
+            waitForAllFlowsToComplete(nodeCHandle)
         }
         assertEquals(0, dischargedCounter)
         assertEquals(1, observationCounter)
@@ -291,6 +296,7 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref, true).returnValue.getOrThrow(20.seconds)
             }
 
+            waitForAllFlowsToComplete(nodeAHandle)
             waitForAllFlowsToComplete(nodeBHandle)
         }
 
