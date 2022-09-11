@@ -82,7 +82,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-jfx'
+    archiveBaseName = 'corda-jfx'
     archiveAppendix = archive_appendix
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.jfx'

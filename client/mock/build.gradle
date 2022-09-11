@@ -27,7 +27,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-mock'
+    archiveBaseName = 'corda-mock'
     archiveAppendix = archive_appendix
     manifest {
         attributes(
