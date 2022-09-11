@@ -68,7 +68,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-node-driver'
+    archiveBaseName = 'corda-node-driver'
     archiveAppendix = archive_appendix
     manifest {
         // This JAR is part of Corda's testing framework.

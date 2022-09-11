@@ -22,7 +22,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-test-common'
+    archiveBaseName = 'corda-test-common'
     archiveAppendix = archive_appendix
     manifest {
         // This JAR is part of Corda's testing framework.
