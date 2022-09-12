@@ -30,7 +30,7 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = 'corda-confidential-identities'
+    baseName 'corda-confidential-identities'
     archiveAppendix = archive_appendix
 }
 

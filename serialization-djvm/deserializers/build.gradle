@@ -1,5 +1,3 @@
-import static org.gradle.api.JavaVersion.VERSION_1_8
-
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'net.corda.plugins.publish-utils'

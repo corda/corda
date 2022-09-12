@@ -19,5 +19,5 @@ cordapp {
 }
 
 jar {
-    archiveBaseName = 'corda-notary-demo-contracts'
+    baseName 'corda-notary-demo-contracts'
 }
