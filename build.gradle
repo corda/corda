@@ -16,6 +16,7 @@ buildscript {
     ext.corda_build_edition = System.getenv("CORDA_BUILD_EDITION")?.trim() ?: "Corda Open Source"
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
+    ext.gradle_api_scanner_plugin_version = constants.getProperty("gradleApiScannerPluginVersion")
 
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
     //
@@ -194,7 +195,7 @@ buildscript {
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
-        classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
+        classpath "net.corda.plugins:api-scanner:$gradle_api_scanner_plugin_version"
         classpath "net.corda.plugins:jar-filter:$gradle_plugins_version"
         classpath "net.sf.proguard:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
