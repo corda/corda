@@ -6,6 +6,7 @@ import static org.gradle.api.JavaVersion.VERSION_1_8
 
 buildscript {
     // For sharing constants between builds
+    //
     Properties constants = new Properties()
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
