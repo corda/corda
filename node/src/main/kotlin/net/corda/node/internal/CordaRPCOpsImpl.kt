@@ -201,10 +201,10 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun nodeDiagnosticInfo(): NodeDiagnosticInfo {
-        val CORDA_CORE_JAR_PATTERN = "corda-core(-jdk11)?-${CordaVersion.releaseVersion}.jar$".toRegex()
+        val cordaCoreJarPattern = "corda-core(-jdk11)?-${CordaVersion.releaseVersion}.jar$".toRegex()
         val versionInfo = services.diagnosticsService.nodeVersionInfo()
         val cordapps = services.cordappProvider.cordapps
-                .filter { !CORDA_CORE_JAR_PATTERN.containsMatchIn(it.jarPath.toString()) }
+                .filter { !cordaCoreJarPattern.containsMatchIn(it.jarPath.toString()) }
                 .map {
                     CordappInfo(
                             type = when (it.info) {

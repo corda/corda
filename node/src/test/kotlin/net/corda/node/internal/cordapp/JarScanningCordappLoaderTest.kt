@@ -11,7 +11,6 @@ import org.junit.Test
 import java.nio.file.Paths
 import net.corda.core.internal.packageName_
 import org.junit.Assume
-import java.lang.IllegalStateException
 
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
