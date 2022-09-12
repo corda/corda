@@ -185,8 +185,8 @@ class JarScanningCordappLoaderTest {
         assertThat(loader.cordapps).hasSize(1)
     }
 
-    @Test(expected = IllegalStateException::class, timeout=300_000)
-    fun `cordapp classloader raises exception when loading contract class at class version 55`() {
+    @Test(timeout=300_000)
+    fun `cordapp classloader does not raise exception when loading contract class at class version 55`() {
         Assume.assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
         val jar = JarScanningCordappLoaderTest::class.java.getResource("/contractClassAtVersion55.jar")!!
         JarScanningCordappLoader.fromJarUrls(listOf(jar)).cordapps
