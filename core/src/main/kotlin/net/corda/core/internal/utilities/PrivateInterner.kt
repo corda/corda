@@ -2,7 +2,9 @@ package net.corda.core.internal.utilities
 
 import com.google.common.collect.Interners
 import net.corda.core.CordaInternal
+import net.corda.core.internal.packageNameOrNull
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.CordaSerializable
 import kotlin.reflect.full.companionObjectInstance
 
 /**
@@ -26,20 +28,36 @@ class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternabl
          * to see if they implement [Internable], in which case there is a [PrivateInterner] instance
          * available to do interning.  Tolerant of null class references and a lack of companion objects.
          */
+        @Suppress("ComplexMethod")
         fun findFor(clazz: Class<*>?): PrivateInterner<Any>? {
+            fun hasCordaSerializable(type: Class<*>): Boolean {
+                return type.isAnnotationPresent(CordaSerializable::class.java)
+                        || type.interfaces.any(::hasCordaSerializable)
+                        || (type.superclass != null && hasCordaSerializable(type.superclass))
+            }
+
+            fun isSerializableCore(clazz: Class<*>): Boolean {
+                if (!(clazz.packageNameOrNull?.startsWith("net.corda.core") ?: false)) return false
+                return hasCordaSerializable(clazz)
+            }
+
             fun findInterner(clazz: Class<*>?): PrivateInterner<Any>? {
+                // Kotlin reflection has a habit of throwing exceptions, so protect just in case.
                 try {
                     return clazz?.kotlin?.companionObjectInstance?.let {
                         (it as? Internable<*>)?.let {
                             uncheckedCast(it.interner)
                         }
                     }
-                } catch (e: Exception) {
-                    // Kotlin reflection stuff can throw this for some classes
+                } catch (_: Throwable) {
                     return null
                 }
             }
-            return if (clazz != null) findInterner(clazz) ?: findInterner(clazz.superclass) else null
+            return if (clazz != null) {
+                // We try not to ruffle the feathers of kotlin reflection by avoiding throwing all types at it.
+                if (!isSerializableCore(clazz)) return null
+                findInterner(clazz) ?: findInterner(clazz.superclass)
+            } else null
         }
     }
 
