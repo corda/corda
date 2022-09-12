@@ -35,7 +35,7 @@ task generateSource(type: Copy) {
 compileKotlin.dependsOn generateSource
 
 jar {
-    archiveBaseName = 'corda-common-logging'
+    baseName 'corda-common-logging'
     archiveAppendix = archive_appendix
 }
 

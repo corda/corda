@@ -33,7 +33,7 @@ jar {
     from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
-    archiveBaseName = "network-bootstrapper"
+    baseName "network-bootstrapper"
     archiveAppendix = archive_appendix
     manifest {
         attributes(

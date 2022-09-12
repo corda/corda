@@ -27,6 +27,6 @@ cordapp {
 }
 
 jar {
-    archiveBaseName = 'corda-notary-demo-workflows'
+    baseName 'corda-notary-demo-workflows'
     archiveAppendix = archive_appendix
 }

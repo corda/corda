@@ -121,7 +121,7 @@ task smokeTest(type: Test) {
 }
 
 jar {
-    archiveBaseName = 'corda-rpc'
+    baseName 'corda-rpc'
     archiveAppendix = archive_appendix
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.rpc'

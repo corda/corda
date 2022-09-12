@@ -83,7 +83,7 @@ artifacts {
 }
 
 jar {
-    archiveBaseName = 'corda-node-api'
+    baseName 'corda-node-api'
     archiveAppendix = archive_appendix
 }
 

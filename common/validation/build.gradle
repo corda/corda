@@ -9,7 +9,7 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = 'corda-common-validation'
+    baseName 'corda-common-validation'
     archiveAppendix = archive_appendix
 }
 

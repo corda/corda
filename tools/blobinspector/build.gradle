@@ -23,7 +23,7 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    archiveBaseName = "blob-inspector"
+    baseName "blob-inspector"
     archiveAppendix = archive_appendix
     manifest {
         attributes(

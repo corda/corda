@@ -33,7 +33,7 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = 'corda-jackson'
+    baseName 'corda-jackson'
     archiveAppendix = archive_appendix
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.jackson'
