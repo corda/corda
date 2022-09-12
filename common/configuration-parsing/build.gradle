@@ -23,7 +23,7 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = 'corda-common-configuration-parsing'
+    baseName 'corda-common-configuration-parsing'
     archiveAppendix = archive_appendix
 }
 

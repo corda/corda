@@ -50,7 +50,7 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = project.name
+    baseName project.name
     archiveAppendix = archive_appendix
     manifest {
         attributes(

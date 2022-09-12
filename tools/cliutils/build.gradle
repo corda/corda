@@ -20,7 +20,7 @@ dependencies {
 }
 
 jar {
-    archiveBaseName = "corda-tools-cliutils"
+    baseName = "corda-tools-cliutils"
     archiveAppendix = archive_appendix
 }
 
