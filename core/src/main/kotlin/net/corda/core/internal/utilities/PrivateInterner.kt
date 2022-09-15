@@ -19,7 +19,8 @@ import kotlin.reflect.full.companionObjectInstance
 @CordaInternal
 class PrivateInterner<T>(val verifier: IternabilityVerifier<T> = AlwaysInternableVerifier()) {
     companion object {
-        private const val DEFAULT_CONCURRENCY_LEVEL = 32
+        // This value is the default in Guava, and performance testing did reveal a need to change
+        private const val DEFAULT_CONCURRENCY_LEVEL = 4
         private val CONCURRENCY_LEVEL = Integer.getInteger("net.corda.core.intern.concurrency", DEFAULT_CONCURRENCY_LEVEL).toInt()
         private val DISABLE = java.lang.Boolean.getBoolean("net.corda.core.intern.disable")
 
