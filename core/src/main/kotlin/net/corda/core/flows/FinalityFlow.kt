@@ -3,7 +3,9 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.pushToLoggingContext
@@ -14,6 +16,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.unwrap
 
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
@@ -180,10 +183,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         recordTransactionLocally(transaction)
 
         val notarised = notariseAndRecord()
-        if (notarised != transaction) {
-            logger.info("About to broadcast transaction to other parties with (plus Notary signature)")
-            broadcastToOtherParties(externalTxParticipants, notarised)
-            logger.info("All parties received the transaction successfully. (plus Notary signature)")
+        if (notarised.sigs != transaction.sigs) {
+            logger.info("About to broadcast extra signatures to other parties")
+            val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
+            broadcastToOtherParties(notarisedSigs)
+            logger.info("All parties received the extra signatures successfully.")
             recordTransactionLocally(notarised)
         }
 
@@ -208,6 +212,24 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
         } else {
             oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
+        }
+    }
+    @Suspendable
+    private fun broadcastToOtherParties(sigs: List<TransactionSignature>) {
+        if (newApi) {
+            for (session in sessions) {
+                try {
+                    session.send(sigs)
+                    logger.info("Party ${session.counterparty} received the extra signature.")
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
+                }
+            }
         }
     }
 
@@ -252,18 +274,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         return notarised
     }
 
-    private fun needsNotarySignature(stx: SignedTransaction): Boolean {
-        val wtx = stx.tx
-        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
-        return needsNotarisation && hasNoNotarySignature(stx)
-    }
-
-    private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
-        val notaryKey = stx.tx.notary?.owningKey
-        val signers = stx.sigs.asSequence().map { it.by }.toSet()
-        return notaryKey?.isFulfilledBy(signers) != true
-    }
-
     private fun extractExternalParticipants(ltx: LedgerTransaction): Set<Party> {
         val participants = ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
         return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities
@@ -277,6 +287,20 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val ltx = transaction.toLedgerTransaction(serviceHub, false)
         ltx.verify()
         return ltx
+    }
+}
+
+object NotarySigCheck {
+    fun needsNotarySignature(stx: SignedTransaction): Boolean {
+        val wtx = stx.tx
+        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
+        return needsNotarisation && hasNoNotarySignature(stx)
+    }
+
+    private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
+        val notaryKey = stx.tx.notary?.owningKey
+        val signers = stx.sigs.asSequence().map { it.by }.toSet()
+        return notaryKey?.isFulfilledBy(signers) != true
     }
 }
 
@@ -299,21 +323,18 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                                                     private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord) {
-            override fun checkBeforeRecording(stx: SignedTransaction) {
-                require(expectedTxId == null || expectedTxId == stx.id) {
-                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
-                            "not recorded and nor its states sent to the vault."
-                }
-            }
+        logger.info("1st ReceiveFinalityFlow subFlow called")
+        val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord) {
         })
-        return subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = true, statesToRecord = statesToRecord) {
-            override fun checkBeforeRecording(stx: SignedTransaction) {
-                require(expectedTxId == null || expectedTxId == stx.id) {
-                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
-                            "not recorded and nor its states sent to the vault."
-                }
-            }
-        })
+        return if(needsNotarySignature(stx)) {
+            logger.info("2nd ReceiveFinalityFlow subFlow called")
+
+            val signedTransaction = otherSideSession.receive<List<TransactionSignature>>()
+                    .unwrap { sigs -> SignedTransaction(stx.txBits, stx.sigs + sigs) }
+            serviceHub.recordTransactions(statesToRecord, listOf(signedTransaction))
+            signedTransaction
+        } else {
+            stx
+        }
     }
 }

@@ -53,7 +53,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val status: TransactionStatus,
 
             @Column(name = "timestamp", nullable = false)
-            val timestamp: Instant
+            val timestamp: Instant,
+
+            @Column(name = "signatures")
+            val signatures: ByteArray,
+
+            @Column(name = "notary_status", length = 1)
+            @Convert(converter = NotaryStatusConverter::class)
+            val notaryStatus: NotaryStatus
             )
 
     enum class TransactionStatus {
@@ -84,6 +91,34 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         private class UnexpectedStatusValueException(status: String) : Exception("Found unexpected status value $status in transaction store")
     }
 
+    enum class NotaryStatus {
+        BEFORE,
+        DONE;
+
+        fun toDatabaseValue(): String {
+            return when (this) {
+                BEFORE -> "B"
+                DONE -> "D"
+            }
+        }
+
+        fun isNotarised(): Boolean {
+            return this == DONE
+        }
+
+        companion object {
+            fun fromDatabaseValue(databaseValue: String): NotaryStatus {
+                return when (databaseValue) {
+                    "B" -> BEFORE
+                    "D" -> DONE
+                    else -> throw UnexpectedStatusValueException(databaseValue)
+                }
+            }
+        }
+
+        private class UnexpectedStatusValueException(notaryStatus: String) : Exception("Found unexpected status value $notaryStatus in transaction store")
+    }
+
     @Converter
     class TransactionStatusConverter : AttributeConverter<TransactionStatus, String> {
         override fun convertToDatabaseColumn(attribute: TransactionStatus): String {
@@ -92,6 +127,17 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         override fun convertToEntityAttribute(dbData: String): TransactionStatus {
             return TransactionStatus.fromDatabaseValue(dbData)
+        }
+    }
+
+    @Converter
+    class NotaryStatusConverter : AttributeConverter<NotaryStatus, String> {
+        override fun convertToDatabaseColumn(attribute: NotaryStatus): String {
+            return attribute.toDatabaseValue()
+        }
+
+        override fun convertToEntityAttribute(dbData: String): NotaryStatus {
+            return NotaryStatus.fromDatabaseValue(dbData)
         }
     }
 
@@ -122,7 +168,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     fromPersistentEntity = {
                         SecureHash.create(it.txId) to TxCacheValue(
                                 it.transaction.deserialize(context = contextToUse()),
-                                it.status)
+                                it.status,
+                                it.notaryStatus)
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction(
@@ -130,7 +177,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString(),
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 status = value.status,
-                                timestamp = clock.instant()
+                                timestamp = clock.instant(),
+                                signatures = value.sigs.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
+                                notaryStatus = value.notaryStatus
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -256,6 +305,20 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
+    override fun addNotNotarizedTransactionSigs(transaction: SignedTransaction) {
+        database.transaction {
+            txStorage.locked {
+                val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED, notaryStatus = NotaryStatus.BEFORE)
+                val addedOrUpdated = addOrUpdate(transaction.id, cacheValue) { k, _ -> updateTransaction(k) }
+                if (addedOrUpdated) {
+                    logger.debug { "Transaction ${transaction.id} recorded as not yet having notary signature." }
+                } else {
+                    logger.info("Transaction ${transaction.id} already exists so no need to record.")
+                }
+            }
+        }
+    }
+
     @VisibleForTesting
     val transactions: List<SignedTransaction>
         get() = database.transaction { snapshot() }
@@ -270,12 +333,18 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     private data class TxCacheValue(
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
-            val status: TransactionStatus
+            val status: TransactionStatus,
+            val notaryStatus: NotaryStatus = NotaryStatus.BEFORE
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
                 status)
+        constructor(stx: SignedTransaction, status: TransactionStatus, notaryStatus: NotaryStatus) : this(
+                stx.txBits,
+                Collections.unmodifiableList(stx.sigs),
+                status,
+                notaryStatus)
 
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }

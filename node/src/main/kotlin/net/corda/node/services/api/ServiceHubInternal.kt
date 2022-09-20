@@ -269,6 +269,11 @@ interface WritableTransactionStorage : TransactionStorage {
      * a DB transaction.
      */
     fun trackTransactionWithNoWarning(id: SecureHash): CordaFuture<SignedTransaction>
+
+    /**
+     * Add a new transaction without the notary signature to the store.
+     */
+    fun addNotNotarizedTransactionSigs(transaction: SignedTransaction)
 }
 
 /**

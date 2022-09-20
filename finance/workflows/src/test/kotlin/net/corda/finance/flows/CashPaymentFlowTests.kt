@@ -7,9 +7,13 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
-import net.corda.testing.core.*
+import net.corda.finance.`issued by`
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
