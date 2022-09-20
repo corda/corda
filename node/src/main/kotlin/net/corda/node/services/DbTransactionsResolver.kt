@@ -68,9 +68,6 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 // Do not keep in memory as this bloats the checkpoint. Write each item to the database.
                 transactionStorage.addUnverifiedTransaction(downloaded)
 
-                //Add or update transactions without notary signature in the database
-                transactionStorage.addNotNotarizedTransactionSigs(downloaded)
-
                 // The write locks are only released over a suspend, so need to keep track of whether the flow has been suspended to ensure
                 // that locks are not held beyond each while loop iteration (as doing this would result in a deadlock due to claiming locks
                 // in the wrong order)
