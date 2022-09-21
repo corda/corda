@@ -194,7 +194,7 @@ pipeline {
         }
 
         stage('Snyk Security') {
-			when {
+            when {
                 expression { isReleaseTag || isReleaseCandidate || isReleaseBranch }
             }
             steps {
