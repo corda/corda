@@ -129,6 +129,34 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
             }
         }
+
+        fun recordSignatures(statesToRecord: StatesToRecord,
+                               txs: Collection<SignedTransaction>,
+                               validatedTransactions: WritableTransactionStorage,
+                               stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
+                               vaultService: VaultServiceInternal,
+                               database: CordaPersistence) {
+
+            database.transaction {
+                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
+
+                val orderedTxs = topologicalSort(txs)
+
+                val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
+                    orderedTxs.filter(validatedTransactions::addSignatures) to emptyList()
+                } else {
+                    orderedTxs.partition(validatedTransactions::addSignatures)
+                }
+                val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
+                if (stateMachineRunId != null) {
+                    recordedTransactions.forEach {
+                        stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+                    }
+                } else {
+                    log.warn("Transactions recorded from outside of a state machine")
+                }
+            }
+        }
     }
 
     override val attachments: AttachmentStorageInternal
@@ -166,6 +194,20 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 database
         )
     }
+
+    override fun recordSignatures(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+        txs.forEach { requireSupportedHashType(it) }
+        recordSignatures(
+                statesToRecord,
+                txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
+                validatedTransactions,
+                stateMachineRecordedTransactionMapping,
+                vaultService,
+                database
+        )
+    }
+
+
 
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
 
@@ -252,6 +294,8 @@ interface WritableTransactionStorage : TransactionStorage {
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean
+
+    fun addSignatures(transaction: SignedTransaction): Boolean
 
     /**
      * Add a new *unverified* transaction to the store.

@@ -53,6 +53,10 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         }
     }
 
+    override fun addSignatures(transaction: SignedTransaction): Boolean {
+        TODO("Not yet implemented")
+    }
+
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
         txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false))
     }

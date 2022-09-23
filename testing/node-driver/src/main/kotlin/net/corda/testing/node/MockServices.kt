@@ -431,6 +431,10 @@ open class MockServices private constructor(
         }
     }
 
+    override fun recordSignatures(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+        TODO("Not yet implemented")
+    }
+
     override val networkParameters: NetworkParameters
         get() = networkParametersService.run { lookup(currentHash)!! }
 

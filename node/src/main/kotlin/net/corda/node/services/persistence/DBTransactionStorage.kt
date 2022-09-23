@@ -229,6 +229,39 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
+
+    private fun updateSignatures(txId: SecureHash): Boolean {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
+        val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
+        criteriaUpdate.set(updateRoot.get<NotaryStatus>(DBTransaction::notaryStatus.name), NotaryStatus.BEFORE)
+        criteriaUpdate.where(criteriaBuilder.and(
+                criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
+                criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
+        ))
+        criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
+        val update = session.createQuery(criteriaUpdate)
+        val rowsUpdated = update.executeUpdate()
+        return rowsUpdated != 0
+    }
+
+    override fun addSignatures(transaction: SignedTransaction): Boolean {
+        return database.transaction {
+            txStorage.locked {
+                val cachedValue = TxCacheValue(transaction, TransactionStatus.UNVERIFIED, NotaryStatus.BEFORE)
+                val addedOrUpdatedSignatures = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateSignatures(k) }
+                if (addedOrUpdatedSignatures) {
+                    logger.debug { "Transaction ${transaction.id} has been recorded as unverified with all signatures except notary's" }
+                    onNewTx(transaction)
+                } else {
+                    logger.debug { "Transaction ${transaction.id} is already recorded as unverified with all signatures except notary's" }
+                    false
+                }
+            }
+        }
+    }
+
     private fun onNewTx(transaction: SignedTransaction): Boolean {
         updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
         return true

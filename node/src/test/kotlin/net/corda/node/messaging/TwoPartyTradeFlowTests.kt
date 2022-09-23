@@ -768,6 +768,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
+        override fun addSignatures(transaction: SignedTransaction): Boolean {
+            TODO("Not yet implemented")
+        }
+
         override fun addUnverifiedTransaction(transaction: SignedTransaction) {
             database.transaction {
                 delegate.addUnverifiedTransaction(transaction)

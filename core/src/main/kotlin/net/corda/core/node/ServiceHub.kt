@@ -216,6 +216,8 @@ interface ServiceHub : ServicesForResolution {
      */
     fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>)
 
+    fun recordSignatures(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>)
+
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.

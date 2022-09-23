@@ -180,7 +180,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         logger.info("About to broadcast transaction to other parties (minus Notary signature)")
         broadcastToOtherParties(externalTxParticipants, transaction)
         logger.info("All parties received the transaction successfully. (minus Notary signature)")
-        recordTransactionLocally(transaction)
+        recordSignaturesLocally(transaction)
 
         val notarised = notariseAndRecord()
         if (notarised.sigs != transaction.sigs) {
@@ -189,6 +189,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             broadcastToOtherParties(notarisedSigs)
             logger.info("All parties received the extra signatures successfully.")
             recordTransactionLocally(notarised)
+        } else {
+            recordTransactionLocally(transaction)
         }
 
         return notarised
@@ -257,6 +259,14 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         logger.info("Recording transaction locally.")
         serviceHub.recordTransactions(statesToRecord, listOf(tx))
         logger.info("Recorded transaction locally successfully.")
+        return tx
+    }
+
+    @Suspendable
+    private fun recordSignaturesLocally(tx: SignedTransaction): SignedTransaction {
+        logger.info("Recording transaction signatures locally.")
+        serviceHub.recordSignatures(statesToRecord, listOf(tx))
+        logger.info("Recorded transaction signatures locally successfully.")
         return tx
     }
 
