@@ -19,6 +19,7 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.revocation.ExternalSourceRevocationChecker
+import org.bouncycastle.asn1.ASN1IA5String
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.DERIA5String
 import org.bouncycastle.asn1.DEROctetString
@@ -71,7 +72,7 @@ fun X509Certificate.distributionPoints() : Set<String>? {
 
     val dpNames = distPoint.distributionPoints.mapNotNull { it.distributionPoint }.filter { it.type == DistributionPointName.FULL_NAME }
     val generalNames = dpNames.flatMap { GeneralNames.getInstance(it.name).names.asList() }
-    return generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { DERIA5String.getInstance(it.name).string }.toSet()
+     return generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { ASN1IA5String.getInstance(it.name).string }.toSet()
 }
 
 fun X509Certificate.distributionPointsToString() : String {
