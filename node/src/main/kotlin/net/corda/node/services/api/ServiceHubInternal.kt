@@ -130,31 +130,14 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             }
         }
 
-        fun recordSignatures(statesToRecord: StatesToRecord,
-                               txs: Collection<SignedTransaction>,
+        fun recordSignatures(txs: Collection<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
-                               stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
-                               vaultService: VaultServiceInternal,
                                database: CordaPersistence) {
 
             database.transaction {
-                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
+                require(txs.isNotEmpty()) { "No signatures passed in for recording" }
 
-                val orderedTxs = topologicalSort(txs)
-
-                val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
-                    orderedTxs.filter(validatedTransactions::addSignatures) to emptyList()
-                } else {
-                    orderedTxs.partition(validatedTransactions::addSignatures)
-                }
-                val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
-                if (stateMachineRunId != null) {
-                    recordedTransactions.forEach {
-                        stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
-                    }
-                } else {
-                    log.warn("Transactions recorded from outside of a state machine")
-                }
+                txs.map(validatedTransactions::addSignatures)
             }
         }
     }
@@ -195,14 +178,10 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun recordSignatures(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+    override fun recordSignatures(txs: Collection<SignedTransaction>) {
         txs.forEach { requireSupportedHashType(it) }
-        recordSignatures(
-                statesToRecord,
-                txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
+        recordSignatures(txs,
                 validatedTransactions,
-                stateMachineRecordedTransactionMapping,
-                vaultService,
                 database
         )
     }

@@ -265,7 +265,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun recordSignaturesLocally(tx: SignedTransaction): SignedTransaction {
         logger.info("Recording transaction signatures locally.")
-        serviceHub.recordSignatures(statesToRecord, listOf(tx))
+        serviceHub.recordSignatures(listOf(tx))
         logger.info("Recorded transaction signatures locally successfully.")
         return tx
     }

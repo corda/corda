@@ -431,7 +431,7 @@ open class MockServices private constructor(
         }
     }
 
-    override fun recordSignatures(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+    override fun recordSignatures(txs: Collection<SignedTransaction>) {
         TODO("Not yet implemented")
     }
 
