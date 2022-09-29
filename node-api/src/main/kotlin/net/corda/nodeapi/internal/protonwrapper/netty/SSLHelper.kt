@@ -19,7 +19,6 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.revocation.ExternalSourceRevocationChecker
-import org.bouncycastle.asn1.ASN1IA5String
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.DERIA5String
 import org.bouncycastle.asn1.DEROctetString
