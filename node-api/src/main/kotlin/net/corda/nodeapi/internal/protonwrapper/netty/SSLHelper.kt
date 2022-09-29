@@ -72,7 +72,8 @@ fun X509Certificate.distributionPoints() : Set<String>? {
 
     val dpNames = distPoint.distributionPoints.mapNotNull { it.distributionPoint }.filter { it.type == DistributionPointName.FULL_NAME }
     val generalNames = dpNames.flatMap { GeneralNames.getInstance(it.name).names.asList() }
-     return generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { ASN1IA5String.getInstance(it.name).string }.toSet()
+    // return generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { ASN1IA5String.getInstance(it.name).string }.toSet()
+    return generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { DERIA5String.getInstance(it.name).string }.toSet()
 }
 
 fun X509Certificate.distributionPointsToString() : String {
