@@ -10,6 +10,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.checkParameterHash
+import net.corda.core.node.services.StatusCode
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.lang.IllegalStateException
@@ -75,13 +76,24 @@ abstract class NotaryServiceFlow(
                 }
             }
 
-            service.commitInputStates(
-                    tx.inputs,
-                    tx.id,
-                    otherSideSession.counterparty,
-                    requestPayload.requestSignature,
-                    tx.timeWindow,
-                    tx.references)
+            val telemetryId = serviceHub.telemetryService.startSpan("commitInputStates", flowLogic = this)
+            try {
+                service.commitInputStates(
+                        tx.inputs,
+                        tx.id,
+                        otherSideSession.counterparty,
+                        requestPayload.requestSignature,
+                        tx.timeWindow,
+                        tx.references)
+            }
+            catch (t: Throwable) {
+                telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
+                telemetryId.recordException(t)
+                throw t
+            }
+            finally {
+                telemetryId.close()
+            }
         } catch (e: NotaryInternalException) {
             logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error

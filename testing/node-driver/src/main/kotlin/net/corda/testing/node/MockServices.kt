@@ -213,7 +213,7 @@ open class MockServices private constructor(
                     TestingNamedCacheFactory(),
                     identityService,
                     persistence,
-                    MockCryptoService(aliasKeyMap)
+                    MockCryptoService(aliasKeyMap), TelemetryService()
             )
             persistence.transaction { keyManagementService.start(aliasedMoreKeys + aliasedIdentityKey) }
 
@@ -438,6 +438,7 @@ open class MockServices private constructor(
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
+    override val telemetryService: TelemetryService get() = throw java.lang.UnsupportedOperationException()
     override val clock: TestClock get() = TestClock(Clock.systemUTC())
     override val myInfo: NodeInfo
         get() {
@@ -467,10 +468,17 @@ open class MockServices private constructor(
     /** A map of available [CordaService] implementations */
     internal val cordappServices: MutableClassToInstanceMap<SerializeAsToken> = MutableClassToInstanceMap.create<SerializeAsToken>()
 
+    internal val cordappTelemetryComponents: MutableClassToInstanceMap<TelemetryComponent> = MutableClassToInstanceMap.create<TelemetryComponent>()
+
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
         require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
         return cordappServices.getInstance(type)
                 ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+    }
+
+    override fun <T : TelemetryComponent> cordaTelemetryComponent(type: Class<T>): T {
+        return cordappTelemetryComponents.getInstance(type)
+                ?: throw IllegalArgumentException("Corda telemetry component ${type.name} does not exist")
     }
 
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()

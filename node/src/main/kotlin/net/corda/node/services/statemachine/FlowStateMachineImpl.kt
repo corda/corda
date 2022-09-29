@@ -36,6 +36,9 @@ import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.node.services.ComponentTelemetryIds
+import net.corda.core.node.services.SerializedTelemetry
+import net.corda.core.node.services.StatusCode
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -71,7 +74,8 @@ class TransientReference<out A>(@Transient val value: A)
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
-                              override val creationTime: Long = System.currentTimeMillis()
+                              override val creationTime: Long = System.currentTimeMillis(),
+                              val serializedTelemetry: SerializedTelemetry?
 ) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R>, FlowFiber {
     companion object {
         /**
@@ -337,6 +341,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 .timer("Flows.StartupQueueTime")
                 .update(System.currentTimeMillis() - creationTime, TimeUnit.MILLISECONDS)
         var initialised = false
+        val telemetryId = serviceHub.telemetryService.startSpanForFlow(logic.javaClass.name, emptyMap<String, String>(), logic, serializedTelemetry)
         val resultOrError = try {
 
             initialiseFlow()
@@ -353,8 +358,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if(t.isUnrecoverable()) {
                 errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
             }
+            telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
+            telemetryId.recordException(t)
             logFlowError(t)
             Try.Failure<R>(t)
+        }
+        finally {
+            serviceHub.telemetryService.endSpanForFlow(telemetryId)
         }
         val softLocksId = if (softLockedStates.isNotEmpty()) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
@@ -416,9 +426,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
+        val telemetryId = serviceHub.telemetryService.startSpan(subFlow.javaClass.name, emptyMap(), subFlow)
         return try {
             subFlow.call()
+        }
+        catch (t: Throwable) {
+            // TODO: Check this, is this valid, to catch and rethrow, given whats in the finally below
+            telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
+            telemetryId.recordException(t)
+            throw t
         } finally {
+            serviceHub.telemetryService.endSpan(telemetryId)
             processEventImmediately(
                     Event.LeaveSubFlow,
                     isDbTransactionOpenOnEntry = true,
@@ -457,10 +475,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun initiateFlow(destination: Destination, wellKnownParty: Party): FlowSession {
+    override fun initiateFlow(destination: Destination, wellKnownParty: Party, serializedTelemetry: SerializedTelemetry): FlowSession {
         require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
         val resume = processEventImmediately(
-                Event.InitiateFlow(destination, wellKnownParty),
+                Event.InitiateFlow(destination, wellKnownParty, serializedTelemetry),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         ) as FlowContinuation.Resume
@@ -527,6 +545,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
         val serializationContext = TransientReference(transientValues.checkpointSerializationContext)
         val transaction = extractThreadLocalTransaction()
+        val telemetryIds = retrieveTelemetryIds()
         parkAndSerialize { _, _ ->
             setLoggingContext()
             logger.trace { "Suspended on $ioRequest" }
@@ -563,6 +582,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         }
 
+        storeTelemetryIds(telemetryIds)
         transientState.reloadCheckpointAfterSuspendCount?.let { count ->
             if (count < transientState.checkpoint.checkpointState.numberOfSuspends) {
                 onReloadFlowFromCheckpoint?.invoke(id)
@@ -578,6 +598,16 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
         ))
+    }
+
+    private fun retrieveTelemetryIds(): ComponentTelemetryIds? {
+        return serviceHub.telemetryService.getCurrentTelemetryIds()
+    }
+
+    private fun storeTelemetryIds(telemetryIds: ComponentTelemetryIds?) {
+        telemetryIds?.let {
+            serviceHub.telemetryService.setCurrentTelemetryId(it)
+        }
     }
 
     private fun containsIdempotentFlows(): Boolean {

@@ -10,6 +10,7 @@ import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
+import net.corda.core.node.services.StatusCode
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -221,18 +222,40 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
-        val notarised = if (needsNotarySignature(transaction)) {
-            progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
-            transaction + notarySignatures
-        } else {
-            logger.info("No need to notarise this transaction.")
-            transaction
+        val telemetryId = serviceHub.telemetryService.startSpan("notariseAndRecord", flowLogic = this)
+        try {
+            val notarised = if (needsNotarySignature(transaction)) {
+                progressTracker.currentStep = NOTARISING
+                val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
+                transaction + notarySignatures
+            } else {
+                logger.info("No need to notarise this transaction.")
+                transaction
+            }
+            val recordingTelemetryId = serviceHub.telemetryService.startSpan("recordTransactions", flowLogic = this)
+            try {
+                logger.info("Recording transaction locally.")
+                serviceHub.recordTransactions(statesToRecord, listOf(notarised))
+                logger.info("Recorded transaction locally successfully.")
+                return notarised
+            }
+            catch (ex: Throwable) {
+                recordingTelemetryId.setStatus(StatusCode.ERROR, ex.message ?: "Recording transaction locally failed")
+                recordingTelemetryId.recordException(ex)
+                throw ex
+            }
+            finally {
+                recordingTelemetryId.close()
+            }
         }
-        logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(statesToRecord, listOf(notarised))
-        logger.info("Recorded transaction locally successfully.")
-        return notarised
+        catch (ex: Throwable) {
+            telemetryId.setStatus(StatusCode.ERROR, ex.message ?: "notariseAndRecord transaction locally failed")
+            telemetryId.recordException(ex)
+            throw ex
+        }
+        finally {
+            telemetryId.close()
+        }
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
