@@ -58,7 +58,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
     private var suppressClose: Boolean = false
-    private var badCert: Boolean = false
+    private var connectionResult: ConnectionResult = ConnectionResult.NO_ERROR
     private var localCert: X509Certificate? = null
     private var requestedServerName: String? = null
 
@@ -131,7 +131,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         val ch = ctx.channel()
         logInfoWithMDC { "Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}" }
         if (!suppressClose) {
-            onClose(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert))
+            onClose(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, connectionResult))
         }
         eventProcessor?.close()
         ctx.fireChannelInactive()
@@ -274,13 +274,13 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         val remoteX500Name = try {
             CordaX500Name.build(remoteCert!!.subjectX500Principal)
         } catch (ex: IllegalArgumentException) {
-            badCert = true
+            connectionResult = ConnectionResult.HANDSHAKE_FAILURE
             logErrorWithMDC("Certificate subject not a valid CordaX500Name", ex)
             ctx.close()
             return
         }
         if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
-            badCert = true
+            connectionResult = ConnectionResult.HANDSHAKE_FAILURE
             logErrorWithMDC("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
             ctx.close()
             return
@@ -288,7 +288,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
         logInfoWithMDC { "Handshake completed with subject: $remoteX500Name, requested server name: ${sslHandler.getRequestedServerName()}." }
         createAMQPEngine(ctx)
-        onOpen(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, connected = true, badCert = false))
+        onOpen(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, connected = true, connectionResult = ConnectionResult.NO_ERROR))
     }
 
     private fun handleFailedHandshake(ctx: ChannelHandlerContext, evt: SslHandshakeCompletionEvent) {
@@ -303,7 +303,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             // io.netty.handler.ssl.SslHandler.setHandshakeFailureTransportFailure()
             cause is SSLException && (cause.message?.contains("writing TLS control frames") == true) -> logWarnWithMDC(cause.message!!)
             cause is SSLException && (cause.message?.contains("internal_error") == true) -> logWarnWithMDC("Received internal_error during handshake")
-            else -> badCert = true
+            else -> connectionResult = ConnectionResult.HANDSHAKE_FAILURE
         }
         logWarnWithMDC("Handshake failure: ${evt.cause().message}")
         if (log.isTraceEnabled) {

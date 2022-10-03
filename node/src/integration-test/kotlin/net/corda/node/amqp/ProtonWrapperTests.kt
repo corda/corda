@@ -36,6 +36,7 @@ import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
+import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
@@ -203,6 +204,103 @@ class ProtonWrapperTests {
         }
         serverThread.join(1000)
         assertTrue(handshakeError)
+        serverSocket.close()
+        assertTrue(done)
+    }
+
+    @Suppress("TooGenericExceptionCaught") // Too generic exception thrown!
+    @Test(timeout=300_000)
+    fun `AMPQClient that fails to handshake with a server will retry the server`() {
+        /*
+            This test has been modelled on `Test AMQP Client with invalid root certificate`, above.
+            The aim is to set up a server with an invalid root cert so that the TLS handshake will fail.
+            The test allows the AMQPClient to retry the connection (which it should do).
+         */
+
+        val certificatesDirectory = temporaryFolder.root.toPath()
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "serverstorepass")
+        val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = "serverstorepass")
+
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+
+        // Generate server cert and private key and populate another keystore suitable for SSL
+        signingCertificateStore.get(true).also { it.installDevNodeCaCertPath(ALICE_NAME, rootCa.certificate, intermediateCa) }
+        sslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(ALICE_NAME, rootCa.certificate, intermediateCa) }
+        sslConfig.createTrustStore(rootCa.certificate)
+
+        val keyStore = sslConfig.keyStore.get()
+        val trustStore = sslConfig.trustStore.get()
+
+        val context = SSLContext.getInstance("TLS")
+        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+        keyManagerFactory.init(keyStore)
+        val keyManagers = keyManagerFactory.keyManagers
+        val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        trustMgrFactory.init(trustStore)
+        val trustManagers = trustMgrFactory.trustManagers
+        context.init(keyManagers, trustManagers, newSecureRandom())
+
+        val serverSocketFactory = context.serverSocketFactory
+
+        val serverSocket = serverSocketFactory.createServerSocket(serverPort) as SSLServerSocket
+        val serverParams = SSLParameters(ArtemisTcpTransport.CIPHER_SUITES.toTypedArray(),
+                arrayOf("TLSv1.2"))
+        serverParams.wantClientAuth = true
+        serverParams.needClientAuth = true
+        serverParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
+        serverSocket.sslParameters = serverParams
+        serverSocket.useClientMode = false
+
+        var done = false
+        var handshakeErrorCount = 0
+
+        //
+        // This is the thread that acts as the server-side endpoint for the AMQPClient to connect to.
+        //
+        val serverThread = thread {
+            //
+            // The server thread will keep making itself available for SSL connections until
+            // the 'done' flag is set by the client thread, later on.
+            //
+            while (!done) {
+                try {
+                    val sslServerSocket = serverSocket.accept() as SSLSocket
+                    sslServerSocket.addHandshakeCompletedListener {
+                        done = true
+                    }
+                    sslServerSocket.startHandshake()
+                } catch (ex: SSLException) {
+                    ++handshakeErrorCount
+                } catch (e: Throwable) {
+                    println(e)
+                }
+            }
+        }
+
+        //
+        // Create the AMQPClient but only specify one server endpoint to connect to.
+        //
+        val amqpClient = createClient(serverAddressList = listOf(NetworkHostAndPort("localhost", serverPort)))
+        amqpClient.use {
+
+            amqpClient.start()
+            //
+            // Waiting for the number of handshake errors to get to at least 2.
+            // This happens when the AMQPClient has made it's first retry attempt, which is
+            // what this test is interested in.
+            //
+            while (handshakeErrorCount < 2) {
+                Thread.sleep(2)
+            }
+            done = true
+        }
+
+        serverThread.join(1000)
+        //
+        // check that there was at least one retry i.e. > 1 handshake error.
+        //
+        Assertions.assertThat(handshakeErrorCount > 1).isTrue()
+
         serverSocket.close()
         assertTrue(done)
     }
@@ -450,7 +548,11 @@ class ProtonWrapperTests {
         return Pair(server, client)
     }
 
-    private fun createClient(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPClient {
+    private fun createClient(maxMessageSize: Int = MAX_MESSAGE_SIZE,
+                             serverAddressList: List<NetworkHostAndPort> = listOf(
+                                     NetworkHostAndPort("localhost", serverPort),
+                                     NetworkHostAndPort("localhost", serverPort2),
+                                     NetworkHostAndPort("localhost", artemisPort))): AMQPClient {
         val baseDirectory = temporaryFolder.root.toPath() / "client"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
@@ -474,9 +576,7 @@ class ProtonWrapperTests {
             override val maxMessageSize: Int = maxMessageSize
         }
         return AMQPClient(
-                listOf(NetworkHostAndPort("localhost", serverPort),
-                        NetworkHostAndPort("localhost", serverPort2),
-                        NetworkHostAndPort("localhost", artemisPort)),
+                serverAddressList,
                 setOf(ALICE_NAME, CHARLIE_NAME),
                 amqpConfig)
     }

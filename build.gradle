@@ -107,7 +107,6 @@ buildscript {
     ext.hikari_version = constants.getProperty("hikariVersion")
     ext.liquibase_version = constants.getProperty("liquibaseVersion")
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
-    ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
     ext.selenium_version = constants.getProperty("seleniumVersion")
     ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
