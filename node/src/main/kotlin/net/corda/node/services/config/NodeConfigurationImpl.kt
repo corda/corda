@@ -42,6 +42,7 @@ data class NodeConfigurationImpl(
         override val security: SecurityConfiguration? = Defaults.security,
         override val verifierType: VerifierType,
         override val flowTimeout: FlowTimeoutConfiguration,
+        override val telemetry: TelemetryConfiguration,
         override val p2pAddress: NetworkHostAndPort,
         override val additionalP2PAddresses: List<NetworkHostAndPort> = Defaults.additionalP2PAddresses,
         private val rpcAddress: NetworkHostAndPort? = Defaults.rpcAddress,

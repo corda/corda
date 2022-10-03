@@ -57,8 +57,9 @@ class OpenTelemetryComponent : TelemetryComponent {
 
     val spans = ConcurrentHashMap<UUID, SpanInfo>()
     override fun isEnabled(): Boolean {
-        // Check if we have the opentelemetry component enabled?
-        return true
+        val tracer = GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
+        // TODO: Is there a better way to determine if we have the NoopTracer?
+        return tracer.javaClass.name != "io.opentelemetry.api.trace.DefaultTracer"
     }
 
     override fun name(): String = "OpenTelemetry"

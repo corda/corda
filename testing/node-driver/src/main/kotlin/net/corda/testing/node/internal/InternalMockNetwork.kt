@@ -47,6 +47,7 @@ import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.TelemetryConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -491,6 +492,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
             doReturn(emptyList<String>()).whenever(it).quasarExcludePackages
+            doReturn(TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false)).whenever(it).telemetry
             parameters.configOverrides(it)
         }
 

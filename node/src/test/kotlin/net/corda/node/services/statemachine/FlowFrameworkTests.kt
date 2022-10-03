@@ -29,6 +29,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.declaredField
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
+import net.corda.core.node.services.SerializedTelemetry
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -1103,7 +1104,7 @@ internal data class SessionTransfer(val from: Int, val message: SessionMessage, 
 }
 
 internal fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
-    return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize(), null)
+    return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize(), serializedTelemetry = SerializedTelemetry(emptyMap()))
 }
 
 internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), DataSessionMessage(payload.serialize()))

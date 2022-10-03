@@ -257,10 +257,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     // TODO: Make configurable, the SimpleLogTelemetry
     val telemetryService: TelemetryService = TelemetryService().also {
         val openTelemetryComponent = OpenTelemetryComponent()
-        if (openTelemetryComponent.isEnabled()) {
+        if (configuration.telemetry.openTelemetryEnabled && openTelemetryComponent.isEnabled()) {
             it.addTelemetryComponent(openTelemetryComponent)
         }
-        it.addTelemetryComponent(SimpleLogTelemetryComponent())
+        if (configuration.telemetry.simpleLogTelemetryEnabled) {
+            it.addTelemetryComponent(SimpleLogTelemetryComponent())
+        }
     }.tokenize()
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
