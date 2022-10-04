@@ -107,7 +107,7 @@ fun cordappWithFixups(fixups: List<AttachmentFixup>) = CustomCordapp(fixups = fi
  * Find the single CorDapp jar on the current classpath which contains the given package. This is a convenience method for
  * [TestCordapp.findCordapp] but returns the internal [TestCordappImpl].
  */
-fun findCordapp(scanPackage: String): TestCordappImpl = TestCordapp.findCordapp(scanPackage) as TestCordappImpl
+fun findCordapp(scanPackage: String, archiveAppendix: String? = null): TestCordappImpl = TestCordapp.findCordapp(scanPackage, archiveAppendix) as TestCordappImpl
 
 /** Create a *custom* CorDapp which just contains the enclosed classes of the receiver class. */
 fun Any.enclosedCordapp(): CustomCordapp {
