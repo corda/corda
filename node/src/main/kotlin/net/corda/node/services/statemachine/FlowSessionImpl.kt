@@ -50,11 +50,7 @@ class FlowSessionImpl(
             payload: Any,
             maySkipCheckpoint: Boolean
     ): UntrustworthyData<R> {
-        val telemetryId = flowStateMachine.serviceHub.telemetryService.startSpan(
-                "FlowSessionImpl.sendAndReceive",
-                telemetryMap, flowLogic = flowStateMachine.logic
-        )
-        try {
+        flowStateMachine.serviceHub.telemetryService.span("FlowSessionImpl.sendAndReceive", telemetryMap, flowLogic = flowStateMachine.logic) {
             enforceNotPrimitive(receiveType)
             val request = FlowIORequest.SendAndReceive(
                     sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
@@ -62,16 +58,7 @@ class FlowSessionImpl(
             )
             val responseValues: Map<FlowSession, SerializedBytes<Any>> = flowStateMachine.suspend(request, maySkipCheckpoint)
             val responseForCurrentSession = responseValues.getValue(this)
-
             return responseForCurrentSession.checkPayloadIs(receiveType)
-        }
-        catch(t: Throwable) {
-            telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
-            telemetryId.recordException(t)
-            throw t
-        }
-        finally {
-            flowStateMachine.serviceHub.telemetryService.endSpan(telemetryId)
         }
     }
 
@@ -80,19 +67,10 @@ class FlowSessionImpl(
 
     @Suspendable
     override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
-        val telemetryId = flowStateMachine.serviceHub.telemetryService.startSpan("FlowSessionImpl.receive", telemetryMap, flowStateMachine.logic )
-        try {
+        flowStateMachine.serviceHub.telemetryService.span("FlowSessionImpl.receive", telemetryMap, flowStateMachine.logic ) {
             enforceNotPrimitive(receiveType)
             val request = FlowIORequest.Receive(NonEmptySet.of(this))
             return flowStateMachine.suspend(request, maySkipCheckpoint).getValue(this).checkPayloadIs(receiveType)
-        }
-        catch (t: Throwable) {
-            telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
-            telemetryId.recordException(t)
-            throw t
-        }
-        finally {
-            flowStateMachine.serviceHub.telemetryService.endSpan(telemetryId)
         }
     }
 
@@ -101,20 +79,11 @@ class FlowSessionImpl(
 
     @Suspendable
     override fun send(payload: Any, maySkipCheckpoint: Boolean) {
-        val telemetryId = flowStateMachine.serviceHub.telemetryService.startSpan("FlowSessionImpl.send", telemetryMap, flowStateMachine.logic)
-        try {
+        flowStateMachine.serviceHub.telemetryService.span("FlowSessionImpl.send", telemetryMap, flowStateMachine.logic) {
             val request = FlowIORequest.Send(
                     sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
             )
             return flowStateMachine.suspend(request, maySkipCheckpoint)
-        }
-        catch (t: Throwable) {
-            telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
-            telemetryId.recordException(t)
-            throw t
-        }
-        finally {
-            flowStateMachine.serviceHub.telemetryService.endSpan(telemetryId)
         }
     }
 

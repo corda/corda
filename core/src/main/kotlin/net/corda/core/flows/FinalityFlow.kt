@@ -222,8 +222,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
-        val telemetryId = serviceHub.telemetryService.startSpan("notariseAndRecord", flowLogic = this)
-        try {
+        serviceHub.telemetryService.span("notariseAndRecord", flowLogic = this) {
             val notarised = if (needsNotarySignature(transaction)) {
                 progressTracker.currentStep = NOTARISING
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
@@ -232,29 +231,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 logger.info("No need to notarise this transaction.")
                 transaction
             }
-            val recordingTelemetryId = serviceHub.telemetryService.startSpan("recordTransactions", flowLogic = this)
-            try {
+            serviceHub.telemetryService.span("recordTransactions", flowLogic = this) {
                 logger.info("Recording transaction locally.")
                 serviceHub.recordTransactions(statesToRecord, listOf(notarised))
                 logger.info("Recorded transaction locally successfully.")
                 return notarised
             }
-            catch (ex: Throwable) {
-                recordingTelemetryId.setStatus(StatusCode.ERROR, ex.message ?: "Recording transaction locally failed")
-                recordingTelemetryId.recordException(ex)
-                throw ex
-            }
-            finally {
-                recordingTelemetryId.close()
-            }
-        }
-        catch (ex: Throwable) {
-            telemetryId.setStatus(StatusCode.ERROR, ex.message ?: "notariseAndRecord transaction locally failed")
-            telemetryId.recordException(ex)
-            throw ex
-        }
-        finally {
-            telemetryId.close()
         }
     }
 

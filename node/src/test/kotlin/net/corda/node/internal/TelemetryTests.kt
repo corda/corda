@@ -49,6 +49,17 @@ class TelemetryTests {
     @Suspendable
     data class TestTelemetryItem(val name: String, val randomUUID: UUID): TelemetryDataItem
 
+
+    @Test(timeout = 300_000)
+    fun `test passing a block with suspend to span func`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
+            val alice = startNode().getOrThrow()
+            val handle = alice.rpc.startFlow(::FlowWithSpanCallAndSleep)
+            handle.returnValue.getOrThrow()
+            // assertion for test is in Component function setCurrentTelemetryId below.
+        }
+    }
+
     @Test(timeout = 300_000)
     fun `run flow with a suspend then check thread locals for fibre are the same`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
@@ -277,6 +288,26 @@ class TelemetryTests {
             sleep(Duration.ofSeconds(1))
             progressTracker.currentStep = TEST_STEP
             return stateMachine.context
+        }
+    }
+
+    @StartableByRPC
+    class FlowWithSpanCallAndSleep : FlowLogic<InvocationContext>() {
+        companion object {
+            object TEST_STEP : ProgressTracker.Step("Custom progress step")
+        }
+        override val progressTracker: ProgressTracker = ProgressTracker(TEST_STEP)
+
+        @Suspendable
+        override fun call(): InvocationContext {
+            val telemetryService = serviceHub.telemetryService
+            val context = telemetryService.span("FlowWithSpanCallAndSleep", emptyMap(), this) {
+                // Do a sleep which invokes a suspend
+                sleep(Duration.ofSeconds(1))
+                progressTracker.currentStep = TEST_STEP
+                stateMachine.context
+            }
+            return context
         }
     }
 }

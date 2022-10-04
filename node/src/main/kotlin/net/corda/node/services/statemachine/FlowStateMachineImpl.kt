@@ -341,7 +341,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 .timer("Flows.StartupQueueTime")
                 .update(System.currentTimeMillis() - creationTime, TimeUnit.MILLISECONDS)
         var initialised = false
-        val telemetryId = serviceHub.telemetryService.startSpanForFlow(logic.javaClass.name, emptyMap<String, String>(), logic, serializedTelemetry)
         val resultOrError = try {
 
             initialiseFlow()
@@ -351,20 +350,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
             Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
 
-            val result = logic.call()
+            val result = serviceHub.telemetryService.spanForFlow(logic.javaClass.name, emptyMap(), logic, serializedTelemetry) {
+                logic.call()
+            }
             suspend(FlowIORequest.WaitForSessionConfirmations(), maySkipCheckpoint = true)
             Try.Success(result)
         } catch (t: Throwable) {
             if(t.isUnrecoverable()) {
                 errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
             }
-            telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
-            telemetryId.recordException(t)
             logFlowError(t)
             Try.Failure<R>(t)
-        }
-        finally {
-            serviceHub.telemetryService.endSpanForFlow(telemetryId)
         }
         val softLocksId = if (softLockedStates.isNotEmpty()) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
@@ -426,17 +422,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
-        val telemetryId = serviceHub.telemetryService.startSpan(subFlow.javaClass.name, emptyMap(), subFlow)
         return try {
-            subFlow.call()
+            serviceHub.telemetryService.span(subFlow.javaClass.name, emptyMap(), subFlow) {
+                subFlow.call()
+            }
         }
-        catch (t: Throwable) {
-            // TODO: Check this, is this valid, to catch and rethrow, given whats in the finally below
-            telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
-            telemetryId.recordException(t)
-            throw t
-        } finally {
-            serviceHub.telemetryService.endSpan(telemetryId)
+        finally {
             processEventImmediately(
                     Event.LeaveSubFlow,
                     isDbTransactionOpenOnEntry = true,

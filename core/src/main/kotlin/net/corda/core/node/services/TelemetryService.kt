@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
@@ -126,6 +127,36 @@ class TelemetryService : SingletonSerializeAsToken() {
     fun endSpan(telemetryId: TelemetryId) {
         telemetryComponents.forEach {
             it.onTelemetryEvent(EndSpanEvent(telemetryId.id))
+        }
+    }
+
+    inline fun <R> span(name: String, attributes: Map<String, String> = emptyMap(), flowLogic: FlowLogic<*>? = null, block: () -> R): R {
+        val telemetryId = startSpan(name, attributes, flowLogic)
+        try {
+            return block()
+        }
+        catch(ex: Throwable) {
+            recordException(telemetryId, ex)
+            setStatus(telemetryId, StatusCode.ERROR, "Exception raised: ${ex.message}")
+            throw ex
+        }
+        finally {
+            endSpan(telemetryId)
+        }
+    }
+
+    inline fun <R> spanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, remoteSerializedTelemetry: SerializedTelemetry? = null, block: () -> R): R {
+        val telemetryId = startSpanForFlow(name, attributes, flowLogic, remoteSerializedTelemetry)
+        try {
+            return block()
+        }
+        catch(ex: Throwable) {
+            recordException(telemetryId, ex)
+            setStatus(telemetryId, StatusCode.ERROR, "Exception raised: ${ex.message}")
+            throw ex
+        }
+        finally {
+            endSpanForFlow(telemetryId)
         }
     }
 

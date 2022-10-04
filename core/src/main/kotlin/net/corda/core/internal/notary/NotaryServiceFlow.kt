@@ -75,9 +75,7 @@ abstract class NotaryServiceFlow(
                     sleep(Duration.ZERO)
                 }
             }
-
-            val telemetryId = serviceHub.telemetryService.startSpan("commitInputStates", flowLogic = this)
-            try {
+            serviceHub.telemetryService.span("commitInputStates", flowLogic = this) {
                 service.commitInputStates(
                         tx.inputs,
                         tx.id,
@@ -85,14 +83,6 @@ abstract class NotaryServiceFlow(
                         requestPayload.requestSignature,
                         tx.timeWindow,
                         tx.references)
-            }
-            catch (t: Throwable) {
-                telemetryId.setStatus(StatusCode.ERROR, t.message ?: t.toString())
-                telemetryId.recordException(t)
-                throw t
-            }
-            finally {
-                telemetryId.close()
             }
         } catch (e: NotaryInternalException) {
             logError(e.error)
