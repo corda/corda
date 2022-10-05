@@ -59,18 +59,22 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val signatures: ByteArray?,
 
             @Column(name = "notary_status", length = 1)
-            @Convert(converter = NotaryStatusConverter::class)
-            val notaryStatus: NotaryStatus
+            @Convert(converter = TransactionStatusConverter::class)
+            val notaryStatus: TransactionStatus
             )
 
     enum class TransactionStatus {
         UNVERIFIED,
-        VERIFIED;
+        VERIFIED,
+        MISSING_NOTARY_SIG,
+        HAS_NOTARY_SIG;
 
         fun toDatabaseValue(): String {
             return when (this) {
                 UNVERIFIED -> "U"
                 VERIFIED -> "V"
+                MISSING_NOTARY_SIG -> "M"
+                HAS_NOTARY_SIG -> "H"
             }
         }
 
@@ -83,40 +87,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 return when (databaseValue) {
                     "V" -> VERIFIED
                     "U" -> UNVERIFIED
+                    "M" -> MISSING_NOTARY_SIG
+                    "H" -> HAS_NOTARY_SIG
                     else -> throw UnexpectedStatusValueException(databaseValue)
                 }
             }
         }
 
         private class UnexpectedStatusValueException(status: String) : Exception("Found unexpected status value $status in transaction store")
-    }
-
-    enum class NotaryStatus {
-        BEFORE,
-        DONE;
-
-        fun toDatabaseValue(): String {
-            return when (this) {
-                BEFORE -> "B"
-                DONE -> "D"
-            }
-        }
-
-        fun isNotarised(): Boolean {
-            return this == DONE
-        }
-
-        companion object {
-            fun fromDatabaseValue(databaseValue: String): NotaryStatus {
-                return when (databaseValue) {
-                    "B" -> BEFORE
-                    "D" -> DONE
-                    else -> throw UnexpectedStatusValueException(databaseValue)
-                }
-            }
-        }
-
-        private class UnexpectedStatusValueException(notaryStatus: String) : Exception("Found unexpected status value $notaryStatus in transaction store")
     }
 
     @Converter
@@ -127,17 +105,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         override fun convertToEntityAttribute(dbData: String): TransactionStatus {
             return TransactionStatus.fromDatabaseValue(dbData)
-        }
-    }
-
-    @Converter
-    class NotaryStatusConverter : AttributeConverter<NotaryStatus, String> {
-        override fun convertToDatabaseColumn(attribute: NotaryStatus): String {
-            return attribute.toDatabaseValue()
-        }
-
-        override fun convertToEntityAttribute(dbData: String): NotaryStatus {
-            return NotaryStatus.fromDatabaseValue(dbData)
         }
     }
 
@@ -167,7 +134,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     toPersistentEntityKey = SecureHash::toString,
                     fromPersistentEntity = {
                         SecureHash.create(it.txId) to TxCacheValue(
-                                it.transaction.deserialize(context = contextToUse()),
+                                it.transaction.deserialize<SignedTransaction>(context = contextToUse()),
+                                it.signatures?.deserialize(context = contextToUse()),
                                 it.status,
                                 it.notaryStatus)
                     },
@@ -203,11 +171,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
         criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
-        criteriaUpdate.set(updateRoot.get<NotaryStatus>(DBTransaction::notaryStatus.name), NotaryStatus.DONE)
+        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::notaryStatus.name), TransactionStatus.HAS_NOTARY_SIG)
         criteriaUpdate.where(criteriaBuilder.and(
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
                 criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED),
-                criteriaBuilder.equal(updateRoot.get<NotaryStatus>(DBTransaction::notaryStatus.name), NotaryStatus.BEFORE)
+                criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::notaryStatus.name), TransactionStatus.MISSING_NOTARY_SIG)
         ))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
         val update = session.createQuery(criteriaUpdate)
@@ -237,7 +205,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
-        criteriaUpdate.set(updateRoot.get<NotaryStatus>(DBTransaction::notaryStatus.name), NotaryStatus.BEFORE)
+        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::notaryStatus.name), TransactionStatus.MISSING_NOTARY_SIG)
         criteriaUpdate.where(criteriaBuilder.and(
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
                 criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
@@ -251,7 +219,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, TransactionStatus.UNVERIFIED, NotaryStatus.BEFORE)
+                val cachedValue = TxCacheValue(transaction, TransactionStatus.UNVERIFIED, TransactionStatus.MISSING_NOTARY_SIG)
                 val addedOrUpdatedSignatures = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateTransactionWithoutNotarySignature(k) }
                 if (addedOrUpdatedSignatures) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as unverified with all signatures except notary's" }
@@ -362,7 +330,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun addNotNotarizedTransactionSigs(transaction: SignedTransaction) {
         database.transaction {
             txStorage.locked {
-                val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED, notaryStatus = NotaryStatus.BEFORE)
+                val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED, notaryStatus = TransactionStatus.MISSING_NOTARY_SIG)
                 val addedOrUpdated = addOrUpdate(transaction.id, cacheValue) { k, _ -> updateTransaction(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} recorded as not yet having notary signature." }
@@ -388,15 +356,21 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
             val status: TransactionStatus,
-            val notaryStatus: NotaryStatus = NotaryStatus.BEFORE
+            val notaryStatus: TransactionStatus = TransactionStatus.MISSING_NOTARY_SIG
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
                 status)
-        constructor(stx: SignedTransaction, status: TransactionStatus, notaryStatus: NotaryStatus) : this(
+
+        constructor(stx: SignedTransaction, status: TransactionStatus, notaryStatus: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
+                status,
+                notaryStatus)
+        constructor(stx: SignedTransaction, sigs: List<TransactionSignature>?, status: TransactionStatus, notaryStatus: TransactionStatus) : this(
+                stx.txBits,
+                Collections.unmodifiableList(stx.sigs) + sigs!!,
                 status,
                 notaryStatus)
 
