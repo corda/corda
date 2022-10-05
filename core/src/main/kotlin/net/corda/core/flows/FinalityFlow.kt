@@ -177,17 +177,17 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         progressTracker.currentStep = BROADCASTING
 
-        logger.info("About to broadcast transaction to other parties (minus Notary signature)")
+        logger.debug("About to broadcast transaction to other parties (minus Notary signature)")
         broadcastToOtherParties(externalTxParticipants, transaction)
-        logger.info("All parties received the transaction successfully. (minus Notary signature)")
+        logger.debug("All parties received the transaction successfully. (minus Notary signature)")
         recordSignaturesLocally(transaction)
 
         val notarised = notariseAndRecord()
         if (notarised.sigs != transaction.sigs) {
-            logger.info("About to broadcast extra signatures to other parties")
+            logger.debug("About to broadcast extra signatures to other parties")
             val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
             broadcastToOtherParties(notarisedSigs)
-            logger.info("All parties received the extra signatures successfully.")
+            logger.debug("All parties received the extra signatures successfully.")
             recordTransactionLocally(notarised)
         } else {
             recordTransactionLocally(transaction)
@@ -333,12 +333,9 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                                                     private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        logger.info("1st ReceiveFinalityFlow subFlow called")
         val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord) {
         })
         return if(needsNotarySignature(stx)) {
-            logger.info("2nd ReceiveFinalityFlow subFlow called")
-
             val signedTransaction = otherSideSession.receive<List<TransactionSignature>>()
                     .unwrap { sigs -> SignedTransaction(stx.txBits, stx.sigs + sigs) }
             serviceHub.recordTransactions(statesToRecord, listOf(signedTransaction))
