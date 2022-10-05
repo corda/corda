@@ -6,6 +6,7 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
@@ -431,7 +432,11 @@ open class MockServices private constructor(
         }
     }
 
-    override fun recordSignatures(txs: Collection<SignedTransaction>) {
+    override fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordExtraSignatures(txId: SecureHash, sigs: Collection<TransactionSignature>) {
         TODO("Not yet implemented")
     }
 

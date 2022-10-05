@@ -56,7 +56,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val timestamp: Instant,
 
             @Column(name = "signatures")
-            val signatures: ByteArray,
+            val signatures: ByteArray?,
 
             @Column(name = "notary_status", length = 1)
             @Convert(converter = NotaryStatusConverter::class)
@@ -178,7 +178,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 status = value.status,
                                 timestamp = clock.instant(),
-                                signatures = value.sigs.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
+                                signatures = null,
                                 notaryStatus = value.notaryStatus
                         )
                     },
@@ -232,7 +232,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
 
-    private fun updateSignatures(txId: SecureHash): Boolean {
+    private fun updateTransactionWithoutNotarySignature(txId: SecureHash): Boolean {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
@@ -248,11 +248,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         return rowsUpdated != 0
     }
 
-    override fun addSignatures(transaction: SignedTransaction): Boolean {
+    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
         return database.transaction {
             txStorage.locked {
                 val cachedValue = TxCacheValue(transaction, TransactionStatus.UNVERIFIED, NotaryStatus.BEFORE)
-                val addedOrUpdatedSignatures = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateSignatures(k) }
+                val addedOrUpdatedSignatures = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateTransactionWithoutNotarySignature(k) }
                 if (addedOrUpdatedSignatures) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as unverified with all signatures except notary's" }
                     onNewTx(transaction)
@@ -260,6 +260,25 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     logger.debug { "Transaction ${transaction.id} is already recorded as unverified with all signatures except notary's" }
                     false
                 }
+            }
+        }
+    }
+
+    override fun recordExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
+        return database.transaction {
+            txStorage.locked {
+                val session = currentDBSession()
+                val criteriaBuilder = session.criteriaBuilder
+                val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
+                val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
+                criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
+                criteriaUpdate.where(criteriaBuilder.and(
+                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString())
+                ))
+                criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
+                val update = session.createQuery(criteriaUpdate)
+                val rowsUpdated = update.executeUpdate()
+                rowsUpdated != 0
             }
         }
     }

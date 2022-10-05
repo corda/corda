@@ -177,21 +177,21 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         progressTracker.currentStep = BROADCASTING
 
+        recordTransactionWithoutNotarySignatureLocally(transaction)
         logger.debug("About to broadcast transaction to other parties (minus Notary signature)")
         broadcastToOtherParties(externalTxParticipants, transaction)
         logger.debug("All parties received the transaction successfully. (minus Notary signature)")
-        recordSignaturesLocally(transaction)
 
         val notarised = notariseAndRecord()
         if (notarised.sigs != transaction.sigs) {
-            logger.debug("About to broadcast extra signatures to other parties")
             val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
+            serviceHub.recordExtraSignatures(transaction.id, notarisedSigs)
+            logger.debug("About to broadcast extra signatures to other parties")
             broadcastToOtherParties(notarisedSigs)
             logger.debug("All parties received the extra signatures successfully.")
-            recordTransactionLocally(notarised)
-        } else {
-            recordTransactionLocally(transaction)
         }
+
+        recordTransactionLocally(transaction)
 
         return notarised
     }
@@ -221,7 +221,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         if (newApi) {
             for (session in sessions) {
                 try {
-                    session.send(sigs)
+                    session.sendAndReceive<String>(sigs)
                     logger.info("Party ${session.counterparty} received the extra signature.")
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -263,10 +263,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun recordSignaturesLocally(tx: SignedTransaction): SignedTransaction {
-        logger.info("Recording transaction signatures locally.")
-        serviceHub.recordSignatures(listOf(tx))
-        logger.info("Recorded transaction signatures locally successfully.")
+    private fun recordTransactionWithoutNotarySignatureLocally(tx: SignedTransaction): SignedTransaction {
+        logger.info("Recording transaction without notary signature locally.")
+        serviceHub.recordTransactionWithoutNotarySignature(listOf(tx))
+        logger.info("Recorded transaction without notary signature locally successfully.")
         return tx
     }
 
@@ -335,13 +335,13 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     override fun call(): SignedTransaction {
         val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord) {
         })
-        return if(needsNotarySignature(stx)) {
-            val signedTransaction = otherSideSession.receive<List<TransactionSignature>>()
-                    .unwrap { sigs -> SignedTransaction(stx.txBits, stx.sigs + sigs) }
-            serviceHub.recordTransactions(statesToRecord, listOf(signedTransaction))
-            signedTransaction
-        } else {
-            stx
+        if(needsNotarySignature(stx)) {
+            val signatures = otherSideSession.receive<List<TransactionSignature>>()
+                    .unwrap { it }
+            serviceHub.recordExtraSignatures(stx.id, signatures)
+            otherSideSession.send("Received signatures")
         }
+
+        return stx
     }
 }

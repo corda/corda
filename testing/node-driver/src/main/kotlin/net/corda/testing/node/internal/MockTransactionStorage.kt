@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -53,7 +54,11 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         }
     }
 
-    override fun addSignatures(transaction: SignedTransaction): Boolean {
+    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
         TODO("Not yet implemented")
     }
 

@@ -3,6 +3,7 @@ package net.corda.node.services.api
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
@@ -130,14 +131,25 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             }
         }
 
-        fun recordSignatures(txs: Collection<SignedTransaction>,
-                               validatedTransactions: WritableTransactionStorage,
-                               database: CordaPersistence) {
+        fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>,
+                                                    validatedTransactions: WritableTransactionStorage,
+                                                    database: CordaPersistence) {
 
             database.transaction {
-                require(txs.isNotEmpty()) { "No signatures passed in for recording" }
+                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
 
-                txs.map(validatedTransactions::addSignatures)
+                txs.map(validatedTransactions::addTransactionWithoutNotarySignature)
+            }
+        }
+        fun recordExtraSignatures(txId: SecureHash,
+                                  sigs: Collection<TransactionSignature>,
+                                  validatedTransactions: WritableTransactionStorage,
+                                  database: CordaPersistence) {
+
+            database.transaction {
+                require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
+
+                validatedTransactions.recordExtraSignatures(txId, sigs)
             }
         }
     }
@@ -178,15 +190,20 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun recordSignatures(txs: Collection<SignedTransaction>) {
+    override fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>) {
         txs.forEach { requireSupportedHashType(it) }
-        recordSignatures(txs,
+        recordTransactionWithoutNotarySignature(txs,
                 validatedTransactions,
                 database
         )
     }
 
-
+    override fun recordExtraSignatures(txId: SecureHash, sigs: Collection<TransactionSignature>) {
+        recordExtraSignatures(txId,
+                sigs,
+                validatedTransactions,
+                database)
+    }
 
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
 
@@ -274,7 +291,8 @@ interface WritableTransactionStorage : TransactionStorage {
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean
 
-    fun addSignatures(transaction: SignedTransaction): Boolean
+    fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean
+    fun recordExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>) : Boolean
 
     /**
      * Add a new *unverified* transaction to the store.
