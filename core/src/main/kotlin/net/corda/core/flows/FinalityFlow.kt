@@ -339,6 +339,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             val signatures = otherSideSession.receive<List<TransactionSignature>>()
                     .unwrap { it }
             serviceHub.recordExtraSignatures(stx.id, signatures)
+            serviceHub.recordTransactions(statesToRecord, listOf(stx))
             otherSideSession.send("Received signatures")
         }
 

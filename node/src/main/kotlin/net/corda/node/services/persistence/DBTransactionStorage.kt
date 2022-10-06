@@ -56,25 +56,19 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val timestamp: Instant,
 
             @Column(name = "signatures")
-            val signatures: ByteArray?,
-
-            @Column(name = "notary_status", length = 1)
-            @Convert(converter = TransactionStatusConverter::class)
-            val notaryStatus: TransactionStatus
+            val signatures: ByteArray?
             )
 
     enum class TransactionStatus {
         UNVERIFIED,
         VERIFIED,
-        MISSING_NOTARY_SIG,
-        HAS_NOTARY_SIG;
+        MISSING_NOTARY_SIG;
 
         fun toDatabaseValue(): String {
             return when (this) {
                 UNVERIFIED -> "U"
                 VERIFIED -> "V"
                 MISSING_NOTARY_SIG -> "M"
-                HAS_NOTARY_SIG -> "H"
             }
         }
 
@@ -88,7 +82,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     "V" -> VERIFIED
                     "U" -> UNVERIFIED
                     "M" -> MISSING_NOTARY_SIG
-                    "H" -> HAS_NOTARY_SIG
                     else -> throw UnexpectedStatusValueException(databaseValue)
                 }
             }
@@ -136,8 +129,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                         SecureHash.create(it.txId) to TxCacheValue(
                                 it.transaction.deserialize<SignedTransaction>(context = contextToUse()),
                                 it.signatures?.deserialize(context = contextToUse()),
-                                it.status,
-                                it.notaryStatus)
+                                it.status)
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction(
@@ -146,8 +138,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 status = value.status,
                                 timestamp = clock.instant(),
-                                signatures = null,
-                                notaryStatus = value.notaryStatus
+                                signatures = null
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -171,11 +162,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
         criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
-        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::notaryStatus.name), TransactionStatus.HAS_NOTARY_SIG)
         criteriaUpdate.where(criteriaBuilder.and(
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED),
-                criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::notaryStatus.name), TransactionStatus.MISSING_NOTARY_SIG)
+                criteriaBuilder.or(criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED),
+                        criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG))
+
         ))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
         val update = session.createQuery(criteriaUpdate)
@@ -205,10 +196,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
-        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::notaryStatus.name), TransactionStatus.MISSING_NOTARY_SIG)
+        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG)
         criteriaUpdate.where(criteriaBuilder.and(
-                criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
+                criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString())
         ))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
         val update = session.createQuery(criteriaUpdate)
@@ -219,7 +209,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, TransactionStatus.UNVERIFIED, TransactionStatus.MISSING_NOTARY_SIG)
+                val cachedValue = TxCacheValue(transaction, TransactionStatus.MISSING_NOTARY_SIG)
                 val addedOrUpdatedSignatures = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateTransactionWithoutNotarySignature(k) }
                 if (addedOrUpdatedSignatures) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as unverified with all signatures except notary's" }
@@ -330,7 +320,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun addNotNotarizedTransactionSigs(transaction: SignedTransaction) {
         database.transaction {
             txStorage.locked {
-                val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED, notaryStatus = TransactionStatus.MISSING_NOTARY_SIG)
+                val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
                 val addedOrUpdated = addOrUpdate(transaction.id, cacheValue) { k, _ -> updateTransaction(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} recorded as not yet having notary signature." }
@@ -355,25 +345,16 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     private data class TxCacheValue(
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
-            val status: TransactionStatus,
-            val notaryStatus: TransactionStatus = TransactionStatus.MISSING_NOTARY_SIG
+            val status: TransactionStatus
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
                 status)
-
-        constructor(stx: SignedTransaction, status: TransactionStatus, notaryStatus: TransactionStatus) : this(
+        constructor(stx: SignedTransaction, sigs: List<TransactionSignature>?, status: TransactionStatus) : this(
                 stx.txBits,
-                Collections.unmodifiableList(stx.sigs),
-                status,
-                notaryStatus)
-        constructor(stx: SignedTransaction, sigs: List<TransactionSignature>?, status: TransactionStatus, notaryStatus: TransactionStatus) : this(
-                stx.txBits,
-                Collections.unmodifiableList(stx.sigs) + sigs!!,
-                status,
-                notaryStatus)
-
+                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs) + sigs,
+                status)
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }
 }

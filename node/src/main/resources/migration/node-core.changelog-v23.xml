@@ -8,8 +8,5 @@
         <addColumn tableName="node_transactions">
             <column name="signatures" type="BINARY(33554432)"/>
         </addColumn>
-        <addColumn tableName="node_transactions">
-            <column name="notary_status" type="NVARCHAR(1)"/>
-        </addColumn>
     </changeSet>
 </databaseChangeLog>
