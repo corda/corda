@@ -134,6 +134,7 @@ class NodeH2SecurityTests {
         whenever(config.dataSourceProperties).thenReturn(hikaryProperties)
         whenever(config.baseDirectory).thenReturn(mock())
         whenever(config.effectiveH2Settings).thenAnswer { NodeH2Settings(address) }
+        whenever(config.telemetry).thenReturn(mock())
     }
 
     private inner class MockNode: Node(config, VersionInfo.UNKNOWN, false) {
