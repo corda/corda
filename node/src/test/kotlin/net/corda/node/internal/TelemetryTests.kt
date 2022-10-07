@@ -184,6 +184,18 @@ class TelemetryTests {
         var previousTelemetryId: UUID? = null
         val dummyTelemetryItem = TestTelemetryItem("this is a dummy string", UUID.randomUUID())
 
+        override fun getCurrentSpanId(): String {
+            TODO("Not yet implemented")
+        }
+
+        override fun getCurrentTraceId(): String {
+            TODO("Not yet implemented")
+        }
+
+        override fun getCurrentBaggage(): Map<String, String> {
+            TODO("Not yet implemented")
+        }
+
         override fun isEnabled(): Boolean {
             return true
         }
@@ -301,7 +313,7 @@ class TelemetryTests {
         @Suspendable
         override fun call(): InvocationContext {
             val telemetryService = serviceHub.telemetryService
-            val context = telemetryService.span("FlowWithSpanCallAndSleep", emptyMap(), this) {
+            val context = telemetryService.span("${this::class.java.name}", emptyMap(), this) {
                 // Do a sleep which invokes a suspend
                 sleep(Duration.ofSeconds(1))
                 progressTracker.currentStep = TEST_STEP

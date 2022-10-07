@@ -286,7 +286,7 @@ abstract class FlowLogic<out T> {
 
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
-        serviceHub.telemetryService.span("FlowSession.sendAndReceiveWithRetry", mapOf("destination" to destination.toString())) {
+        serviceHub.telemetryService.span("${this::class.java.name}#sendAndReceiveWithRetry", mapOf("destination" to destination.toString())) {
             val request = FlowIORequest.SendAndReceive(
                     sessionToMessage = stateMachine.serialize(mapOf(this to payload)),
                     shouldRetrySend = true

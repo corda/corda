@@ -10,7 +10,6 @@ import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
-import net.corda.core.node.services.StatusCode
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -222,7 +221,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
-        serviceHub.telemetryService.span("notariseAndRecord", flowLogic = this) {
+        serviceHub.telemetryService.span("${this::class.java.name}#notariseAndRecord", flowLogic = this) {
             val notarised = if (needsNotarySignature(transaction)) {
                 progressTracker.currentStep = NOTARISING
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
@@ -231,12 +230,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 logger.info("No need to notarise this transaction.")
                 transaction
             }
-            serviceHub.telemetryService.span("recordTransactions", flowLogic = this) {
+            serviceHub.telemetryService.span("${this::class.java.name}#notariseAndRecord:recordTransactions", flowLogic = this) {
                 logger.info("Recording transaction locally.")
                 serviceHub.recordTransactions(statesToRecord, listOf(notarised))
                 logger.info("Recorded transaction locally successfully.")
-                return notarised
             }
+            return notarised
         }
     }
 

@@ -8,15 +8,17 @@ import org.slf4j.MDC
 import java.util.*
 
 @CordaSerializable
-data class SimpleLogContext(val traceId: UUID): TelemetryDataItem
+data class SimpleLogContext(val traceId: UUID, val baggage: Map<String, String>): TelemetryDataItem
 
 // Simple telemetry class that creates a single UUID and uses this for the trace id. When the flow starts we use the trace is passed in. After this
 // though we must use the trace id propagated to us (if remote), or the trace id associated with thread local.
 class SimpleLogTelemetryComponent : TelemetryComponent {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(SimpleLogTelemetryComponent::class.java)
-        private val traces: InheritableThreadLocal<UUID> = InheritableThreadLocal()
     }
+
+    private val traces: InheritableThreadLocal<UUID> = InheritableThreadLocal()
+    private val logContexts = mutableMapOf<UUID, SimpleLogContext>()
 
     override fun isEnabled(): Boolean {
         return true
@@ -38,17 +40,28 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
     private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, telemetryDataItem: TelemetryDataItem?) {
         val traceId = (telemetryDataItem as? SimpleLogContext)?.traceId ?: telemetryId
         val flowId = flowLogic?.runId
-        val clientId = flowLogic?.stateMachine?.clientId
+        val clientId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("client.id") ?: flowLogic?.stateMachine?.clientId
         traces.set(traceId)
+        val baggageAttributes = (telemetryDataItem as? SimpleLogContext)?.baggage ?: populateBaggageWithFlowAttributes(flowLogic)
+
+        logContexts[traceId] = SimpleLogContext(traceId, baggageAttributes)
         // check below re. the name - do we have some convention here?
-        MDC.put("corda.traceid", traceId.toString())
-        log.info("startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: $attributes")
+        MDC.put("corda.client.id", clientId)
+        MDC.put("corda.trace.id", traceId.toString())
+        log.info("startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}")
+    }
+
+    private fun populateBaggageWithFlowAttributes(flowLogic: FlowLogic<*>?): Map<String, String> {
+        return flowLogic?.let {
+            mutableMapOf("client.id" to "${flowLogic.stateMachine.clientId}")
+        } ?: emptyMap()
     }
 
     // Check when you start a top level flow the startSpanForFlow appears just once, and so the endSpanForFlow also appears just once
     // So its valid to do the MDC clear here. For remotes nodes as well
     private fun endSpanForFlow(telemetryId: UUID) {
         log.info("endSpanForFlow: traceId: ${traces.get()}")
+        logContexts.remove(telemetryId)
         MDC.clear()
     }
 
@@ -65,10 +78,11 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
 
     override fun getCurrentTelemetryData(): SimpleLogContext {
         traces.get()?.let {
-            return SimpleLogContext(it)
+            logContexts[it]?.let { simpleLogContext ->
+                return simpleLogContext
+            }
         }
-        log.info("getCurrentTelemetryData called on SimpleLogTelemetry but UUID not set, return all zeros")
-        return SimpleLogContext(UUID(0,0))
+        return SimpleLogContext(UUID(0, 0), emptyMap())
     }
 
     override fun getCurrentTelemetryId(): UUID {
@@ -77,6 +91,19 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
 
     override fun setCurrentTelemetryId(id: UUID) {
         traces.set(id)
+    }
+
+    override fun getCurrentSpanId(): String {
+        return traces.get()?.toString() ?: ""
+    }
+
+    override fun getCurrentTraceId(): String {
+        return traces.get()?.toString() ?: ""
+    }
+
+    override fun getCurrentBaggage(): Map<String, String> {
+        val uuid = traces.get()
+        return logContexts[uuid]?.baggage ?: emptyMap()
     }
 
     private fun setStatus(telemetryId: UUID, statusCode: StatusCode, message: String) {

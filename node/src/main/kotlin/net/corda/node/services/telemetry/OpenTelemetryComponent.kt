@@ -1,6 +1,8 @@
 package net.corda.node.services.telemetry
 
 import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.baggage.Baggage
+import io.opentelemetry.api.baggage.BaggageBuilder
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.common.AttributesBuilder
@@ -42,7 +44,7 @@ data class SerializableSpanContext(val traceIdHex : String, val spanIdHex : Stri
     private fun createTraceState() = traceStateMap.toList().fold(TraceState.builder()) { builder, pair -> builder.put(pair.first, pair.second)}.build()
 }
 
-data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val startedSpanContext: SerializableSpanContext): TelemetryDataItem
+data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val startedSpanContext: SerializableSpanContext, val baggage: Map<String,String>): TelemetryDataItem
 
 data class SpanInfo(val name: String, val childSpan: Span, val childSpanScope: Scope,
                     val rootSpan: Span?, val rootSpanScope: Scope?, val startedSpanContext: SerializableSpanContext?, val parentStartedSpanContext: SerializableSpanContext?)
@@ -56,6 +58,8 @@ class OpenTelemetryComponent : TelemetryComponent {
     }
 
     val spans = ConcurrentHashMap<UUID, SpanInfo>()
+    val baggages = ConcurrentHashMap<UUID, Scope>()
+
     override fun isEnabled(): Boolean {
         val tracer = GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
         // TODO: Is there a better way to determine if we have the NoopTracer?
@@ -75,7 +79,21 @@ class OpenTelemetryComponent : TelemetryComponent {
     }
 
     private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, telemetryDataItem: TelemetryDataItem?) {
-        val attributesMap = attributes.toList()
+        // add some baggage
+        val baggageAttributes = if (telemetryDataItem == null) {
+            val baggageAttributes = mutableMapOf<String, String>()
+            populateBaggageWithFlowAttributes(baggageAttributes, flowLogic)
+            baggageAttributes
+        }
+        else {
+            (telemetryDataItem as OpenTelemetryContext).baggage
+        }
+
+        val baggageBuilder = baggageAttributes.toList().fold(Baggage.current().toBuilder()) {builder, attribute -> builder.put(attribute.first, attribute.second)}
+        baggages[telemetryId] = baggageBuilder.build().makeCurrent()
+
+        // Also add the baggage to the span
+        val attributesMap = (attributes+baggageAttributes).toList()
                 .fold(Attributes.builder()) { builder, attribute -> builder.put(attribute.first, attribute.second) }.also {
                     populateWithFlowAttributes(it, flowLogic)
                 }.build()
@@ -141,6 +159,10 @@ class OpenTelemetryComponent : TelemetryComponent {
         spanInfo?.rootSpanScope?.close()
         spanInfo?.rootSpan?.end()
         spans.remove(telemetryId)
+
+        val baggageScope = baggages[telemetryId]
+        baggageScope?.close()
+        baggages.remove(telemetryId)
     }
 
     private fun createSpanToCaptureEndSpanEvent(spanInfo: SpanInfo?) {
@@ -153,8 +175,12 @@ class OpenTelemetryComponent : TelemetryComponent {
     }
 
     private fun startSpan(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?) {
+        val currentBaggage = Baggage.current()
+        val baggageAttributes = mutableMapOf<String,String>()
+        currentBaggage.forEach { t, u -> baggageAttributes[t] = u.value }
+
         val parentSpan = Span.current()
-        val attributesMap = attributes.toList().fold(Attributes.builder()) { builder, attribute -> builder.put(attribute.first, attribute.second) }.also {
+        val attributesMap = (attributes+baggageAttributes).toList().fold(Attributes.builder()) { builder, attribute -> builder.put(attribute.first, attribute.second) }.also {
             populateWithFlowAttributes(it, flowLogic)
         }.build()
         val subFlowSpan = tracer.spanBuilder(name).setAllAttributes(attributesMap).startSpan()
@@ -166,9 +192,14 @@ class OpenTelemetryComponent : TelemetryComponent {
     private fun populateWithFlowAttributes(attributesBuilder: AttributesBuilder, flowLogic: FlowLogic<*>?) {
         flowLogic?.let {
             attributesBuilder.put("flow.id", flowLogic.runId.uuid.toString())
-            attributesBuilder.put("client.id", flowLogic.stateMachine.clientId)
             attributesBuilder.put("creation.time", flowLogic.stateMachine.creationTime)
             attributesBuilder.put("class.name", flowLogic.javaClass.name!!)
+        }
+    }
+
+    private fun populateBaggageWithFlowAttributes(baggageAttributes: MutableMap<String, String>, flowLogic: FlowLogic<*>?) {
+        flowLogic?.let {
+            baggageAttributes["client.id"] = "${flowLogic.stateMachine.clientId}"
         }
     }
 
@@ -180,7 +211,7 @@ class OpenTelemetryComponent : TelemetryComponent {
         var parentStartedSpanContext = SerializableSpanContext()
         if (filteredSpans.isNotEmpty()) {
             parentStartedSpanContext = filteredSpans[0].second.startedSpanContext ?: SerializableSpanContext()
-            val startedSpanContext = parentStartedSpanContext?.createRemoteSpanContext()
+            val startedSpanContext = parentStartedSpanContext.createRemoteSpanContext()
             val startedSpanFromContext = Span.wrap(startedSpanContext)
             val startedSpanChild  = tracer.spanBuilder("${name}-start").setAllAttributes(attributesMap)
                     .setParent(Context.current().with(startedSpanFromContext)).startSpan()
@@ -205,7 +236,7 @@ class OpenTelemetryComponent : TelemetryComponent {
         val spanContext = SerializableSpanContext(currentSpan.spanContext)
         val filteredSpans = spans.filter { it.value.childSpan == currentSpan }.toList()
         val startedSpanContext = filteredSpans.getOrNull(0)?.second?.startedSpanContext ?: SerializableSpanContext()
-        return OpenTelemetryContext(spanContext, startedSpanContext)
+        return OpenTelemetryContext(spanContext, startedSpanContext, Baggage.current().asMap().mapValues { it.value.value })
     }
 
     override fun getCurrentTelemetryId(): UUID {
@@ -225,6 +256,18 @@ class OpenTelemetryComponent : TelemetryComponent {
             val newSpanInfo = spanInfo.copy(childSpanScope = childSpanScope)
             spans[id] = newSpanInfo
         }
+    }
+
+    override fun getCurrentSpanId(): String {
+        return Span.current().spanContext.spanId
+    }
+
+    override fun getCurrentTraceId(): String {
+        return Span.current().spanContext.traceId
+    }
+
+    override fun getCurrentBaggage(): Map<String, String> {
+        return Baggage.current().asMap().mapValues { it.value.value }
     }
 
     private fun setStatus(telemetryId: UUID, statusCode: net.corda.core.node.services.StatusCode, message: String) {

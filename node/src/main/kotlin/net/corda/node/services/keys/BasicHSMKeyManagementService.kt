@@ -137,7 +137,7 @@ class BasicHSMKeyManagementService(
     }
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
-        telemetryService.span("BasicHSMKeyManagementService.sign") {
+        telemetryService.span("${this::class.java.name}#sign") {
             val signingPublicKey = getSigningPublicKey(publicKey)
             return if (signingPublicKey in originalKeysMap) {
                 DigitalSignature.WithKey(signingPublicKey, cryptoService.sign(originalKeysMap[signingPublicKey]!!, bytes))

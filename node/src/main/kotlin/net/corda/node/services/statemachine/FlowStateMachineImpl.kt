@@ -351,9 +351,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
 
             val result = serviceHub.telemetryService.spanForFlow(logic.javaClass.name, emptyMap(), logic, serializedTelemetry) {
-                logic.call()
+                val ret = logic.call()
+                // Note suspend stores the telemetry ids back in the components from checkpoint, so must be done, before we end the span
+                suspend(FlowIORequest.WaitForSessionConfirmations(), maySkipCheckpoint = true)
+                ret
             }
-            suspend(FlowIORequest.WaitForSessionConfirmations(), maySkipCheckpoint = true)
             Try.Success(result)
         } catch (t: Throwable) {
             if(t.isUnrecoverable()) {

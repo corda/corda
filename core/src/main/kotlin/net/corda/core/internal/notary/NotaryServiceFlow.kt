@@ -75,7 +75,7 @@ abstract class NotaryServiceFlow(
                     sleep(Duration.ZERO)
                 }
             }
-            serviceHub.telemetryService.span("commitInputStates", flowLogic = this) {
+            serviceHub.telemetryService.span("${this::class.java.name}#call:commitInputStates", flowLogic = this) {
                 service.commitInputStates(
                         tx.inputs,
                         tx.id,
