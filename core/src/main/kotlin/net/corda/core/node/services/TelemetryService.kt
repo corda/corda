@@ -58,7 +58,8 @@ interface TelemetryEvent
 
 class StartSpanForFlowEvent(val name: String,
                        val attributes: Map<String, String>,
-                       val telemetryId: UUID, val flowLogic: FlowLogic<*>?, val telemetryDataItem: TelemetryDataItem?): TelemetryEvent
+                       val telemetryId: UUID, val flowLogic: FlowLogic<*>?,
+                       val externalId: String?, val telemetryDataItem: TelemetryDataItem?): TelemetryEvent
 class EndSpanForFlowEvent(val telemetryId: UUID): TelemetryEvent
 class StartSpanEvent(val name: String, val attributes: Map<String, String>, val telemetryId: UUID, val flowLogic: FlowLogic<*>?): TelemetryEvent
 class EndSpanEvent(val telemetryId: UUID): TelemetryEvent
@@ -120,12 +121,13 @@ class TelemetryService : SingletonSerializeAsToken() {
     }
 
     @CordaInternal
-    fun startSpanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, remoteSerializedTelemetry: SerializedTelemetry? = null): TelemetryId {
+    fun startSpanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, externalId: String? = null,
+                         remoteSerializedTelemetry: SerializedTelemetry? = null): TelemetryId {
         val telemetryId = TelemetryId(this)
         telemetryComponents.values.forEach {
             val bytes = remoteSerializedTelemetry?.serializedTelemetryData?.get(it.name())
             val telemetryDataItem = bytes?.let { deserialize(bytes) }
-            it.onTelemetryEvent(StartSpanForFlowEvent(name, attributes, telemetryId.id, flowLogic, telemetryDataItem))
+            it.onTelemetryEvent(StartSpanForFlowEvent(name, attributes, telemetryId.id, flowLogic, externalId, telemetryDataItem))
         }
         return telemetryId
     }
@@ -168,8 +170,8 @@ class TelemetryService : SingletonSerializeAsToken() {
     }
 
     @CordaInternal
-    inline fun <R> spanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, remoteSerializedTelemetry: SerializedTelemetry? = null, block: () -> R): R {
-        val telemetryId = startSpanForFlow(name, attributes, flowLogic, remoteSerializedTelemetry)
+    inline fun <R> spanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, externalId: String? = null, remoteSerializedTelemetry: SerializedTelemetry? = null, block: () -> R): R {
+        val telemetryId = startSpanForFlow(name, attributes, flowLogic, externalId, remoteSerializedTelemetry)
         try {
             return block()
         }

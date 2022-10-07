@@ -28,7 +28,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
 
     override fun onTelemetryEvent(ev: TelemetryEvent) {
         when (ev) {
-            is StartSpanForFlowEvent -> startSpanForFlow(ev.name, ev.attributes, ev.telemetryId, ev.flowLogic, ev.telemetryDataItem)
+            is StartSpanForFlowEvent -> startSpanForFlow(ev.name, ev.attributes, ev.telemetryId, ev.flowLogic, ev.externalId, ev.telemetryDataItem)
             is EndSpanForFlowEvent -> endSpanForFlow(ev.telemetryId)
             is StartSpanEvent -> startSpan(ev.name, ev.attributes, ev.telemetryId, ev.flowLogic)
             is EndSpanEvent -> endSpan(ev.telemetryId)
@@ -37,24 +37,27 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         }
     }
 
-    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, telemetryDataItem: TelemetryDataItem?) {
+    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, externalId: String?, telemetryDataItem: TelemetryDataItem?) {
         val traceId = (telemetryDataItem as? SimpleLogContext)?.traceId ?: telemetryId
         val flowId = flowLogic?.runId
         val clientId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("client.id") ?: flowLogic?.stateMachine?.clientId
+        val externalId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("external.id") ?: externalId
         traces.set(traceId)
-        val baggageAttributes = (telemetryDataItem as? SimpleLogContext)?.baggage ?: populateBaggageWithFlowAttributes(flowLogic)
+        val baggageAttributes = (telemetryDataItem as? SimpleLogContext)?.baggage ?: populateBaggageWithFlowAttributes(flowLogic, externalId)
 
         logContexts[traceId] = SimpleLogContext(traceId, baggageAttributes)
         // check below re. the name - do we have some convention here?
-        MDC.put("corda.client.id", clientId)
+        clientId?.let { MDC.put("client.id", it) }
+        externalId?.let { MDC.put("external.id", it)}
         MDC.put("corda.trace.id", traceId.toString())
         log.info("startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}")
     }
 
-    private fun populateBaggageWithFlowAttributes(flowLogic: FlowLogic<*>?): Map<String, String> {
-        return flowLogic?.let {
-            mutableMapOf("client.id" to "${flowLogic.stateMachine.clientId}")
-        } ?: emptyMap()
+    private fun populateBaggageWithFlowAttributes(flowLogic: FlowLogic<*>?, externalId: String?): Map<String, String> {
+        val baggageAttributes = mutableMapOf<String, String>()
+        flowLogic?.stateMachine?.clientId?.let { baggageAttributes["client.id"] = it }
+        externalId?.let { baggageAttributes["external.id"] = it }
+        return baggageAttributes
     }
 
     // Check when you start a top level flow the startSpanForFlow appears just once, and so the endSpanForFlow also appears just once

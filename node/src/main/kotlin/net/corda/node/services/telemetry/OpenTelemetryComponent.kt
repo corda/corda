@@ -69,7 +69,7 @@ class OpenTelemetryComponent : TelemetryComponent {
     override fun name(): String = "OpenTelemetry"
     override fun onTelemetryEvent(event: TelemetryEvent) {
         when (event) {
-            is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.telemetryDataItem)
+            is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.externalId, event.telemetryDataItem)
             is EndSpanForFlowEvent -> endSpanForFlow(event.telemetryId)
             is StartSpanEvent -> startSpan(event.name, event.attributes, event.telemetryId, event.flowLogic)
             is EndSpanEvent -> endSpan(event.telemetryId)
@@ -78,11 +78,12 @@ class OpenTelemetryComponent : TelemetryComponent {
         }
     }
 
-    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, telemetryDataItem: TelemetryDataItem?) {
+    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?,
+                                 externalId: String?, telemetryDataItem: TelemetryDataItem?) {
         // add some baggage
         val baggageAttributes = if (telemetryDataItem == null) {
             val baggageAttributes = mutableMapOf<String, String>()
-            populateBaggageWithFlowAttributes(baggageAttributes, flowLogic)
+            populateBaggageWithFlowAttributes(baggageAttributes, flowLogic, externalId)
             baggageAttributes
         }
         else {
@@ -197,10 +198,11 @@ class OpenTelemetryComponent : TelemetryComponent {
         }
     }
 
-    private fun populateBaggageWithFlowAttributes(baggageAttributes: MutableMap<String, String>, flowLogic: FlowLogic<*>?) {
+    private fun populateBaggageWithFlowAttributes(baggageAttributes: MutableMap<String, String>, flowLogic: FlowLogic<*>?, externalId: String?) {
         flowLogic?.let {
             baggageAttributes["client.id"] = "${flowLogic.stateMachine.clientId}"
         }
+        externalId?.let { baggageAttributes["external.id"] = it }
     }
 
     private fun createStartedEventSpan(name: String, attributesMap: Attributes, parentSpan: Span): Pair<SerializableSpanContext?, SerializableSpanContext?> {

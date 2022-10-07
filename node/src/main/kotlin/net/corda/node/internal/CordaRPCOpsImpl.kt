@@ -267,6 +267,16 @@ internal class CordaRPCOpsImpl(
         }
     }
 
+    override fun <T> startFlowDynamicWithExternalId(
+            externalId: String,
+            logicType: Class<out FlowLogic<T>>,
+            vararg args: Any?
+    ): FlowHandleImpl<T> {
+        return startFlow(logicType, context().withExternalId(externalId), args).run {
+            FlowHandleImpl(id = id, returnValue = resultFuture)
+        }
+    }
+
     @Suppress("SpreadOperator")
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, context: InvocationContext, args: Array<out Any?>): FlowStateMachineHandle<T> {
         if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
@@ -484,4 +494,5 @@ internal class CordaRPCOpsImpl(
     }
 
     private fun InvocationContext.withClientId(clientId: String) = copy(clientId = clientId)
+    private fun InvocationContext.withExternalId(externalId: String) = copy(externalId = externalId)
 }
