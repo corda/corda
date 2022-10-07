@@ -77,6 +77,7 @@ interface TelemetryComponent {
     fun getCurrentBaggage(): Map<String, String>
 }
 
+@Suppress("TooManyFunctions")
 class TelemetryService : SingletonSerializeAsToken() {
 
     companion object {
@@ -153,6 +154,7 @@ class TelemetryService : SingletonSerializeAsToken() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     inline fun <R> span(name: String, attributes: Map<String, String> = emptyMap(), flowLogic: FlowLogic<*>? = null, block: () -> R): R {
         val telemetryId = startSpan(name, attributes, flowLogic)
         try {
@@ -169,6 +171,7 @@ class TelemetryService : SingletonSerializeAsToken() {
     }
 
     @CordaInternal
+    @Suppress("LongParameterList", "TooGenericExceptionCaught")
     inline fun <R> spanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, externalId: String? = null, remoteSerializedTelemetry: SerializedTelemetry? = null, block: () -> R): R {
         val telemetryId = startSpanForFlow(name, attributes, flowLogic, externalId, remoteSerializedTelemetry)
         try {

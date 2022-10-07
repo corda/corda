@@ -12,6 +12,7 @@ data class SimpleLogContext(val traceId: UUID, val baggage: Map<String, String>)
 
 // Simple telemetry class that creates a single UUID and uses this for the trace id. When the flow starts we use the trace is passed in. After this
 // though we must use the trace id propagated to us (if remote), or the trace id associated with thread local.
+@Suppress("TooManyFunctions")
 class SimpleLogTelemetryComponent : TelemetryComponent {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(SimpleLogTelemetryComponent::class.java)
@@ -37,6 +38,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         }
     }
 
+    @Suppress("LongParameterList")
     private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, externalId: String?, telemetryDataItem: TelemetryDataItem?) {
         val traceId = (telemetryDataItem as? SimpleLogContext)?.traceId ?: telemetryId
         val flowId = flowLogic?.runId

@@ -290,15 +290,15 @@ class TelemetryTests {
     @StartableByRPC
     class FlowWithSleep : FlowLogic<InvocationContext>() {
         companion object {
-            object TEST_STEP : ProgressTracker.Step("Custom progress step")
+            object TESTSTEP : ProgressTracker.Step("Custom progress step")
         }
-        override val progressTracker: ProgressTracker = ProgressTracker(TEST_STEP)
+        override val progressTracker: ProgressTracker = ProgressTracker(TESTSTEP)
 
         @Suspendable
         override fun call(): InvocationContext {
             // Do a sleep which invokes a suspend
             sleep(Duration.ofSeconds(1))
-            progressTracker.currentStep = TEST_STEP
+            progressTracker.currentStep = TESTSTEP
             return stateMachine.context
         }
     }
@@ -306,9 +306,9 @@ class TelemetryTests {
     @StartableByRPC
     class FlowWithSpanCallAndSleep : FlowLogic<InvocationContext>() {
         companion object {
-            object TEST_STEP : ProgressTracker.Step("Custom progress step")
+            object TESTSTEP : ProgressTracker.Step("Custom progress step")
         }
-        override val progressTracker: ProgressTracker = ProgressTracker(TEST_STEP)
+        override val progressTracker: ProgressTracker = ProgressTracker(TESTSTEP)
 
         @Suspendable
         override fun call(): InvocationContext {
@@ -316,7 +316,7 @@ class TelemetryTests {
             val context = telemetryService.span("${this::class.java.name}", emptyMap(), this) {
                 // Do a sleep which invokes a suspend
                 sleep(Duration.ofSeconds(1))
-                progressTracker.currentStep = TEST_STEP
+                progressTracker.currentStep = TESTSTEP
                 stateMachine.context
             }
             return context

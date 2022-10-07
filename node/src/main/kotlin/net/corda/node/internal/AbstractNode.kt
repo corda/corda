@@ -989,7 +989,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private class TelemetryComponentInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
-    @Suppress("ThrowsCount")
+    @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
     private fun installTelemetryComponents() {
         val loadedTelemetryComponents = cordappLoader.cordapps.flatMap { it.telemetryComponents }
 

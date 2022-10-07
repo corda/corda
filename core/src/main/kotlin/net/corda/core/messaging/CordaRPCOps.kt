@@ -650,6 +650,7 @@ inline fun <T, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExter
         arg2: C
 ): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1, arg2)
 
+@Suppress("LongParameterList")
 inline fun <T, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
         externalId: String,
         @Suppress("UNUSED_PARAMETER")
@@ -660,6 +661,7 @@ inline fun <T, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithEx
         arg3: D
 ): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1, arg2, arg3)
 
+@Suppress("LongParameterList")
 inline fun <T, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
         externalId: String,
         @Suppress("UNUSED_PARAMETER")
@@ -671,6 +673,7 @@ inline fun <T, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startFlowWit
         arg4: E
 ): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1, arg2, arg3, arg4)
 
+@Suppress("LongParameterList")
 inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
         externalId: String,
         @Suppress("UNUSED_PARAMETER")

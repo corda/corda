@@ -29,12 +29,14 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+const val TRACEIDHEX_LENGTH = 32
+const val SPANIDHEX_LENGTH = 16
 @CordaSerializable
 data class SerializableSpanContext(val traceIdHex : String, val spanIdHex : String, val traceFlagsHex : String, val traceStateMap : Map<String, String>) {
 
     constructor(spanContext: SpanContext) : this(spanContext.traceId, spanContext.spanId, spanContext.traceFlags.asHex(), spanContext.traceState.asMap().toMap())
 
-    constructor() : this("0".repeat(32), "0".repeat(16), TraceFlags.getDefault().asHex(), TraceState.getDefault().asMap())
+    constructor() : this("0".repeat(TRACEIDHEX_LENGTH), "0".repeat(SPANIDHEX_LENGTH), TraceFlags.getDefault().asHex(), TraceState.getDefault().asMap())
 
     fun createSpanContext() = SpanContext.create(traceIdHex, spanIdHex, TraceFlags.fromHex(traceFlagsHex, 0), createTraceState())
 
@@ -48,6 +50,7 @@ data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val st
 data class SpanInfo(val name: String, val childSpan: Span, val childSpanScope: Scope,
                     val rootSpan: Span?, val rootSpanScope: Scope?, val startedSpanContext: SerializableSpanContext?, val parentStartedSpanContext: SerializableSpanContext?)
 
+@Suppress("TooManyFunctions")
 class OpenTelemetryComponent : TelemetryComponent {
     val tracer: Tracer = GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
 
@@ -76,6 +79,7 @@ class OpenTelemetryComponent : TelemetryComponent {
         }
     }
 
+    @Suppress("LongParameterList")
     private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?,
                                  externalId: String?, telemetryDataItem: TelemetryDataItem?) {
         // add some baggage
