@@ -2,7 +2,6 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.node.services.StatusCode
 import net.corda.core.node.services.TelemetryService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize

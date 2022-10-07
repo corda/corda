@@ -284,8 +284,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findTelemetryComponents(scanResult: RestrictedScanResult): List<Class<out TelemetryComponent>> {
-        val telemetryClasses = scanResult.getClassesImplementing(TelemetryComponent::class)
-        println("${telemetryClasses.size}")
         return scanResult.getClassesImplementing(TelemetryComponent::class)
     }
 

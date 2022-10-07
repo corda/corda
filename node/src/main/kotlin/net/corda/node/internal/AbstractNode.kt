@@ -254,7 +254,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         NotaryLoader(it, versionInfo)
     }
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop(false)
-    // TODO: Make configurable, the SimpleLogTelemetry
     val telemetryService: TelemetryService = TelemetryService().also {
         val openTelemetryComponent = OpenTelemetryComponent()
         if (configuration.telemetry.openTelemetryEnabled && openTelemetryComponent.isEnabled()) {
@@ -990,13 +989,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private class TelemetryComponentInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
+    @Suppress("ThrowsCount")
     private fun installTelemetryComponents() {
         val loadedTelemetryComponents = cordappLoader.cordapps.flatMap { it.telemetryComponents }
 
-        // TODO: Do we need this for telemetry components?
-        // This sets the Cordapp classloader on the contextClassLoader of the current thread, prior to initializing services
-        // Needed because of bug CORDA-2653 - some Corda services can utilise third-party libraries that require access to
-        // the Thread context class loader
+        // This sets the Cordapp classloader on the contextClassLoader of the current thread, prior to initializing telemetry components
+        // Needed because of bug CORDA-2653 - some telemetry components can utilise third-party libraries that require access to
+        // the Thread context class loader. (Same as installCordaServices).
         val oldContextClassLoader: ClassLoader? = Thread.currentThread().contextClassLoader
         try {
             Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader

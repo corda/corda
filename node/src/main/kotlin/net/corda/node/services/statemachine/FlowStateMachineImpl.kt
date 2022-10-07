@@ -38,7 +38,6 @@ import net.corda.core.internal.toPath
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.ComponentTelemetryIds
 import net.corda.core.node.services.SerializedTelemetry
-import net.corda.core.node.services.StatusCode
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext

@@ -10,7 +10,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.checkParameterHash
-import net.corda.core.node.services.StatusCode
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.lang.IllegalStateException

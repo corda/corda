@@ -10,7 +10,6 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.checkPayloadIs
 import net.corda.core.node.services.SerializedTelemetry
-import net.corda.core.node.services.StatusCode
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize

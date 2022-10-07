@@ -1,6 +1,5 @@
 package net.corda.core.node.services
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
