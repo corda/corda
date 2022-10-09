@@ -250,6 +250,7 @@ class TelemetryTests {
             }
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, telemetryDataItem: TelemetryDataItem?) {
             retrievedTelemetryDataItem = telemetryDataItem
             startSpanForFlowName = name
@@ -263,6 +264,7 @@ class TelemetryTests {
             currentUUID.set(newUUID)
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun startSpan(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?) {
             startSpanName = name
             spanTelemetryIds.push(telemetryId)
@@ -279,9 +281,11 @@ class TelemetryTests {
             return dummyTelemetryItem
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun setStatus(telemetryId: UUID, statusCode: StatusCode, message: String) {
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun recordException(telemetryId: UUID, throwable: Throwable) {
         }
     }
