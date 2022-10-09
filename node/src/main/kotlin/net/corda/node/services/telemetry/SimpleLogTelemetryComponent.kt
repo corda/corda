@@ -27,23 +27,23 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
 
     override fun name(): String = "SimpleLogTelemetry"
 
-    override fun onTelemetryEvent(ev: TelemetryEvent) {
-        when (ev) {
-            is StartSpanForFlowEvent -> startSpanForFlow(ev.name, ev.attributes, ev.telemetryId, ev.flowLogic, ev.externalId, ev.telemetryDataItem)
-            is EndSpanForFlowEvent -> endSpanForFlow(ev.telemetryId)
-            is StartSpanEvent -> startSpan(ev.name, ev.attributes, ev.telemetryId, ev.flowLogic)
-            is EndSpanEvent -> endSpan(ev.telemetryId)
-            is SetStatusEvent -> setStatus(ev.telemetryId, ev.statusCode, ev.message)
-            is RecordExceptionEvent -> recordException(ev.telemetryId, ev.throwable)
+    override fun onTelemetryEvent(event: TelemetryEvent) {
+        when (event) {
+            is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.externalId, event.telemetryDataItem)
+            is EndSpanForFlowEvent -> endSpanForFlow(event.telemetryId)
+            is StartSpanEvent -> startSpan(event.name, event.attributes, event.telemetryId, event.flowLogic)
+            is EndSpanEvent -> endSpan(event.telemetryId)
+            is SetStatusEvent -> setStatus(event.telemetryId, event.statusCode, event.message)
+            is RecordExceptionEvent -> recordException(event.telemetryId, event.throwable)
         }
     }
 
     @Suppress("LongParameterList")
-    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, externalId: String?, telemetryDataItem: TelemetryDataItem?) {
+    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, externalIdParam: String?, telemetryDataItem: TelemetryDataItem?) {
         val traceId = (telemetryDataItem as? SimpleLogContext)?.traceId ?: telemetryId
         val flowId = flowLogic?.runId
         val clientId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("client.id") ?: flowLogic?.stateMachine?.clientId
-        val externalId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("external.id") ?: externalId
+        val externalId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("external.id") ?: externalIdParam
         traces.set(traceId)
         val baggageAttributes = (telemetryDataItem as? SimpleLogContext)?.baggage ?: populateBaggageWithFlowAttributes(flowLogic, externalId)
 
@@ -70,6 +70,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         MDC.clear()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun startSpan(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?) {
         val flowId = flowLogic?.runId
         val clientId = flowLogic?.stateMachine?.clientId
@@ -77,6 +78,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         log.info("startSpan: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: $attributes")
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun endSpan(telemetryId: UUID) {
         log.info("endSpan: traceId: ${traces.get()}")
     }
@@ -111,6 +113,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         return logContexts[uuid]?.baggage ?: emptyMap()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun setStatus(telemetryId: UUID, statusCode: StatusCode, message: String) {
         when(statusCode) {
             StatusCode.ERROR -> log.error("setStatus: traceId: ${traces.get()}, statusCode: ${statusCode}, message: message")
@@ -118,6 +121,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun recordException(telemetryId: UUID, throwable: Throwable) {
         log.error("recordException: traceId: ${traces.get()}, throwable: ${throwable}}")
     }
