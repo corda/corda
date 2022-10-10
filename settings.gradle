@@ -1,6 +1,7 @@
 pluginManagement {
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
 
+
     repositories {
         // Use system environment to activate caching with Artifactory,
         // because it is actually easier to pass that during parallel build.
