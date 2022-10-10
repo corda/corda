@@ -1,10 +1,13 @@
 package net.corda.core.identity
 
+import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.toAttributesMap
 import net.corda.core.internal.toX500Name
 import net.corda.core.internal.unspecifiedCountry
+import net.corda.core.internal.utilities.Internable
+import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.x500.style.BCStyle
 import java.util.*
@@ -68,7 +71,7 @@ data class CordaX500Name(val commonName: String?,
         }
     }
 
-    companion object {
+    companion object : Internable<CordaX500Name> {
         @Deprecated("Not Used")
         const val LENGTH_COUNTRY = 2
         const val MAX_LENGTH_ORGANISATION = 128
@@ -80,6 +83,9 @@ data class CordaX500Name(val commonName: String?,
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
         private val countryCodes: Set<String> = setOf(*Locale.getISOCountries(), unspecifiedCountry)
 
+        @CordaInternal
+        override val interner = PrivateInterner<CordaX500Name>()
+
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
             val attrsMap = principal.toAttributesMap(supportedAttributes)
@@ -89,7 +95,7 @@ data class CordaX500Name(val commonName: String?,
             val L = requireNotNull(attrsMap[BCStyle.L]) { "Corda X.500 names must include an L attribute" }
             val ST = attrsMap[BCStyle.ST]
             val C = requireNotNull(attrsMap[BCStyle.C]) { "Corda X.500 names must include an C attribute" }
-            return CordaX500Name(CN, OU, O, L, ST, C)
+            return interner.intern(CordaX500Name(CN, OU, O, L, ST, C))
         }
 
         @JvmStatic

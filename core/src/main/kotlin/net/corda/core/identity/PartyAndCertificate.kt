@@ -6,7 +6,11 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
-import java.security.cert.*
+import java.security.cert.CertPath
+import java.security.cert.CertPathValidatorException
+import java.security.cert.PKIXCertPathValidatorResult
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 
 /**
  * A full party plus the X.509 certificate and path linking the party back to a trust root. Equality of
@@ -29,7 +33,7 @@ class PartyAndCertificate(val certPath: CertPath) {
     }
 
     @Transient
-    val party: Party = Party(certificate)
+    val party: Party = Party.create(certificate)
 
     val owningKey: PublicKey get() = party.owningKey
     val name: CordaX500Name get() = party.name

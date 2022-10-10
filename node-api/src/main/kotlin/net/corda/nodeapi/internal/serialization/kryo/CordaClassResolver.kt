@@ -1,17 +1,23 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
-import com.esotericsoftware.kryo.*
+import com.esotericsoftware.kryo.DefaultSerializer
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
+import com.esotericsoftware.kryo.KryoSerializable
+import com.esotericsoftware.kryo.Registration
+import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.internal.kotlinObjectInstance
+import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.internal.writer
-import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.utilities.contextLogger
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.TransientClassWhiteList
 import net.corda.serialization.internal.amqp.hasCordaSerializable
@@ -19,8 +25,11 @@ import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
-import java.nio.file.StandardOpenOption.*
-import java.util.*
+import java.nio.file.StandardOpenOption.APPEND
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.WRITE
+import java.util.ArrayList
+import java.util.Collections
 
 /**
  * Corda specific class resolver which enables extra customisation for the purposes of serialization using Kryo
@@ -86,12 +95,17 @@ class CordaClassResolver(serializationContext: CheckpointSerializationContext) :
                 kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(targetType) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
                     FieldSerializer<Any>(kryo, targetType).apply { setIgnoreSyntheticFields(false) }
                 Throwable::class.java.isAssignableFrom(targetType) -> ThrowableSerializer(kryo, targetType)
-                else -> kryo.getDefaultSerializer(targetType)
+                else -> maybeWrapForInterning(kryo.getDefaultSerializer(targetType), targetType)
             }
             return register(Registration(targetType, serializer, NAME.toInt()))
         } finally {
             kryo.references = references
         }
+    }
+
+    private fun maybeWrapForInterning(serializer: Serializer<Any>, targetType: Class<*>): Serializer<Any> {
+        val interner = PrivateInterner.findFor(targetType)
+        return if (interner != null) InterningSerializer(serializer, interner) else serializer
     }
 
     override fun writeName(output: Output, type: Class<*>, registration: Registration) {
@@ -102,6 +116,11 @@ class CordaClassResolver(serializationContext: CheckpointSerializationContext) :
     private class KotlinObjectSerializer(private val objectInstance: Any) : Serializer<Any>() {
         override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any = objectInstance
         override fun write(kryo: Kryo, output: Output, obj: Any) = Unit
+    }
+
+    private class InterningSerializer(private val delegate: Serializer<Any>, private val interner: PrivateInterner<Any>) : Serializer<Any>() {
+        override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any = interner.intern(delegate.read(kryo, input, type))
+        override fun write(kryo: Kryo, output: Output, obj: Any) = delegate.write(kryo, output, obj)
     }
 
     // We don't allow the annotation for classes in attachments for now.  The class will be on the main classpath if we have the CorDapp installed.

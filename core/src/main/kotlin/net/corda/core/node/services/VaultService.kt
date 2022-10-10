@@ -176,7 +176,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                     Type.ALWAYS_ACCEPT -> ConstraintInfo(AlwaysAcceptAttachmentConstraint)
                     Type.HASH -> ConstraintInfo(HashAttachmentConstraint(SecureHash.create(data!!.toHexString())))
                     Type.CZ_WHITELISTED -> ConstraintInfo(WhitelistedByZoneAttachmentConstraint)
-                    Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint(Crypto.decodePublicKey(data!!)))
+                    Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint.create(Crypto.decodePublicKey(data!!)))
                 }
             }
         }
