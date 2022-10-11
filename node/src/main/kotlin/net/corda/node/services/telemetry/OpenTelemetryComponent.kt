@@ -47,8 +47,7 @@ data class SerializableSpanContext(val traceIdHex : String, val spanIdHex : Stri
 
 data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val startedSpanContext: SerializableSpanContext, val baggage: Map<String,String>): TelemetryDataItem
 
-data class SpanInfo(val name: String, val childSpan: Span, val childSpanScope: Scope,
-                    val rootSpan: Span?, val rootSpanScope: Scope?, val startedSpanContext: SerializableSpanContext?, val parentStartedSpanContext: SerializableSpanContext?)
+data class SpanInfo(val name: String, val span: Span, val spanScope: Scope, val spanEventContext: SerializableSpanContext? = null, val parentSpanEventContext: SerializableSpanContext? = null)
 
 @Suppress("TooManyFunctions")
 class OpenTelemetryComponent : TelemetryComponent {
@@ -59,6 +58,7 @@ class OpenTelemetryComponent : TelemetryComponent {
         private val log: Logger = LoggerFactory.getLogger(OpenTelemetryComponent::class.java)
     }
 
+    val rootSpans = ConcurrentHashMap<UUID, SpanInfo>()
     val spans = ConcurrentHashMap<UUID, SpanInfo>()
     val baggages = ConcurrentHashMap<UUID, Scope>()
 
@@ -112,9 +112,10 @@ class OpenTelemetryComponent : TelemetryComponent {
         val rootSpan = tracer.spanBuilder(name).setAllAttributes(attributesMap).setAllAttributes(Attributes.of(AttributeKey.stringKey("root.flow"), "true")).startSpan()
         val rootSpanScope = rootSpan.makeCurrent()
         val startedSpanContexts = createSpanToCaptureStartedSpanEvent(name, rootSpan, attributesMap)
-        val childSpan = tracer.spanBuilder("Child Spans").setParent(Context.current().with(rootSpan)).startSpan()
-        val childSpanScope = childSpan.makeCurrent()
-        spans[telemetryId] = SpanInfo(name, childSpan, childSpanScope, rootSpan, rootSpanScope, startedSpanContexts.first, startedSpanContexts.second)
+        val span = tracer.spanBuilder("Child Spans").setParent(Context.current().with(rootSpan)).startSpan()
+        val spanScope = span.makeCurrent()
+        rootSpans[telemetryId] = SpanInfo(name, rootSpan, rootSpanScope)
+        spans[telemetryId] = SpanInfo(name, span, spanScope, startedSpanContexts.first, startedSpanContexts.second)
     }
 
     private fun startSpanForFlowWithRemoteParent(name: String, attributesMap: Attributes, telemetryId: UUID, telemetryDataItem: TelemetryDataItem) {
@@ -122,9 +123,9 @@ class OpenTelemetryComponent : TelemetryComponent {
         val spanContext = parentContext.createRemoteSpanContext()
         val parentSpan = Span.wrap(spanContext)
         val span = tracer.spanBuilder(name).setParent(Context.current().with(parentSpan)).setAllAttributes(attributesMap).startSpan()
-        val rootSpanScope = span.makeCurrent()
+        val spanScope = span.makeCurrent()
         val contexts = createSpanToCaptureStartedSpanEventWithRemoteParent(name, telemetryDataItem, attributesMap)
-        spans[telemetryId] = SpanInfo(name, span, rootSpanScope, parentSpan, null, contexts.first, contexts.second)
+        spans[telemetryId] = SpanInfo(name, span, spanScope, contexts.first, contexts.second)
     }
 
     private fun createSpanToCaptureStartedSpanEvent(name: String, rootSpan: Span, attributesMap: Attributes): Pair<SerializableSpanContext, SerializableSpanContext> {
@@ -153,12 +154,14 @@ class OpenTelemetryComponent : TelemetryComponent {
 
     private fun endSpanForFlow(telemetryId: UUID){
         val spanInfo = spans[telemetryId]
+        val rootSpanInfo = rootSpans[telemetryId]
         createSpanToCaptureEndSpanEvent(spanInfo)
-        spanInfo?.childSpanScope?.close()
-        spanInfo?.childSpan?.end()
-        spanInfo?.rootSpanScope?.close()
-        spanInfo?.rootSpan?.end()
+        spanInfo?.spanScope?.close()
+        spanInfo?.span?.end()
+        rootSpanInfo?.spanScope?.close()
+        rootSpanInfo?.span?.end()
         spans.remove(telemetryId)
+        rootSpans.remove(telemetryId)
 
         val baggageScope = baggages[telemetryId]
         baggageScope?.close()
@@ -166,7 +169,7 @@ class OpenTelemetryComponent : TelemetryComponent {
     }
 
     private fun createSpanToCaptureEndSpanEvent(spanInfo: SpanInfo?) {
-        spanInfo?.parentStartedSpanContext?.let {
+        spanInfo?.parentSpanEventContext?.let {
             val startedSpanContext = it.createSpanContext()
             val startedSpanFromContext = Span.wrap(startedSpanContext)
             val startedSpanChild  = tracer.spanBuilder("${spanInfo.name}-end").setParent(Context.current().with(startedSpanFromContext)).startSpan()
@@ -183,10 +186,10 @@ class OpenTelemetryComponent : TelemetryComponent {
         val attributesMap = (attributes+baggageAttributes).toList().fold(Attributes.builder()) { builder, attribute -> builder.put(attribute.first, attribute.second) }.also {
             populateWithFlowAttributes(it, flowLogic)
         }.build()
-        val subFlowSpan = tracer.spanBuilder(name).setAllAttributes(attributesMap).startSpan()
-        val subFlowSpanScope = subFlowSpan.makeCurrent()
+        val span = tracer.spanBuilder(name).setAllAttributes(attributesMap).startSpan()
+        val spanScope = span.makeCurrent()
         val startedEventContexts = createStartedEventSpan(name, attributesMap, parentSpan)
-        spans[telemetryId] = SpanInfo(name, subFlowSpan, subFlowSpanScope, null, null, startedEventContexts.first, startedEventContexts.second)
+        spans[telemetryId] = SpanInfo(name, span, spanScope, startedEventContexts.first, startedEventContexts.second)
     }
 
     private fun populateWithFlowAttributes(attributesBuilder: AttributesBuilder, flowLogic: FlowLogic<*>?) {
@@ -206,12 +209,12 @@ class OpenTelemetryComponent : TelemetryComponent {
 
     private fun createStartedEventSpan(name: String, attributesMap: Attributes, parentSpan: Span): Pair<SerializableSpanContext?, SerializableSpanContext?> {
         // Fix up null contexts - make not null
-        val filteredSpans = spans.filter { it.value.childSpan == parentSpan }.toList()
+        val filteredSpans = spans.filter { it.value.span == parentSpan }.toList()
         var serializableSpanContext = SerializableSpanContext()
         var parentStartedSpanContext = SerializableSpanContext()
         if (filteredSpans.isNotEmpty()) {
-            parentStartedSpanContext = filteredSpans[0].second.startedSpanContext ?: SerializableSpanContext()
-            val startedSpanContext = parentStartedSpanContext.createRemoteSpanContext()
+            parentStartedSpanContext = filteredSpans[0].second.spanEventContext ?: SerializableSpanContext()
+            val startedSpanContext = parentStartedSpanContext.createSpanContext()
             val startedSpanFromContext = Span.wrap(startedSpanContext)
             val startedSpanChild  = tracer.spanBuilder("${name}-start").setAllAttributes(attributesMap)
                     .setParent(Context.current().with(startedSpanFromContext)).startSpan()
@@ -224,24 +227,22 @@ class OpenTelemetryComponent : TelemetryComponent {
     private fun endSpan(telemetryId: UUID){
         val spanInfo = spans[telemetryId]
         createSpanToCaptureEndSpanEvent(spanInfo)
-        spanInfo?.childSpanScope?.close()
-        spanInfo?.childSpan?.end()
-        spanInfo?.rootSpanScope?.close()
-        spanInfo?.rootSpan?.end()
+        spanInfo?.spanScope?.close()
+        spanInfo?.span?.end()
         spans.remove(telemetryId)
     }
 
     override fun getCurrentTelemetryData(): TelemetryDataItem {
         val currentSpan = Span.current()
         val spanContext = SerializableSpanContext(currentSpan.spanContext)
-        val filteredSpans = spans.filter { it.value.childSpan == currentSpan }.toList()
-        val startedSpanContext = filteredSpans.getOrNull(0)?.second?.startedSpanContext ?: SerializableSpanContext()
+        val filteredSpans = spans.filter { it.value.span == currentSpan }.toList()
+        val startedSpanContext = filteredSpans.getOrNull(0)?.second?.spanEventContext ?: SerializableSpanContext()
         return OpenTelemetryContext(spanContext, startedSpanContext, Baggage.current().asMap().mapValues { it.value.value })
     }
 
     override fun getCurrentTelemetryId(): UUID {
         val currentSpan = Span.current()
-        val filteredSpans = spans.filter { it.value.childSpan == currentSpan }.toList()
+        val filteredSpans = spans.filter { it.value.span == currentSpan }.toList()
         if (filteredSpans.isEmpty()) {
             return UUID(0, 0)
         }
@@ -251,9 +252,9 @@ class OpenTelemetryComponent : TelemetryComponent {
     override fun setCurrentTelemetryId(id: UUID) {
         val spanInfo = spans.get(id)
         spanInfo?.let {
-            it.childSpanScope.close()  // close the old scope
-            val childSpanScope = it.childSpan.makeCurrent()
-            val newSpanInfo = spanInfo.copy(childSpanScope = childSpanScope)
+            it.spanScope.close()  // close the old scope
+            val childSpanScope = it.span.makeCurrent()
+            val newSpanInfo = spanInfo.copy(spanScope = childSpanScope)
             spans[id] = newSpanInfo
         }
     }
@@ -272,7 +273,7 @@ class OpenTelemetryComponent : TelemetryComponent {
 
     private fun setStatus(telemetryId: UUID, statusCode: net.corda.core.node.services.StatusCode, message: String) {
         val spanInfo = spans[telemetryId]
-        spanInfo?.childSpan?.setStatus(toOpenTelemetryStatus(statusCode), message)
+        spanInfo?.span?.setStatus(toOpenTelemetryStatus(statusCode), message)
     }
 
     private fun toOpenTelemetryStatus(statusCode: net.corda.core.node.services.StatusCode): StatusCode {
@@ -285,6 +286,6 @@ class OpenTelemetryComponent : TelemetryComponent {
 
     private fun recordException(telemetryId: UUID, throwable: Throwable) {
         val spanInfo = spans[telemetryId]
-        spanInfo?.childSpan?.recordException(throwable)
+        spanInfo?.span?.recordException(throwable)
     }
 }

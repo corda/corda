@@ -1032,9 +1032,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             throw TelemetryComponentInstantiationException(e.cause)
         }
         cordappTelemetryComponents.putInstance(telemetryComponentClass, telemetryComponent)
-        telemetryService.addTelemetryComponent(telemetryComponent)
-//        telemetryComponent.tokenize()
-        log.info("Installed ${telemetryComponentClass.name} Telemetry service")
+        if (telemetryComponent.isEnabled()) {
+            telemetryService.addTelemetryComponent(telemetryComponent)
+            log.info("Installed ${telemetryComponentClass.name} Telemetry component")
+        }
+        else {
+            log.info("${telemetryComponentClass.name} not enabled so not installing")
+        }
         return telemetryComponent
     }
 
