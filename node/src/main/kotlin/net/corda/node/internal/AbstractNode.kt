@@ -255,7 +255,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop(false)
     val telemetryService: TelemetryService = TelemetryService().also {
-        val openTelemetryComponent = OpenTelemetryComponent()
+        val openTelemetryComponent = OpenTelemetryComponent(configuration.telemetry.spanStartEndEventsEnabled)
         if (configuration.telemetry.openTelemetryEnabled && openTelemetryComponent.isEnabled()) {
             it.addTelemetryComponent(openTelemetryComponent)
         }

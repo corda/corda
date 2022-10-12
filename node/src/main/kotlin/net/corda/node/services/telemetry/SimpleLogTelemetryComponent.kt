@@ -2,6 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.debug
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -51,8 +52,8 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         // check below re. the name - do we have some convention here?
         clientId?.let { MDC.put("client.id", it) }
         externalId?.let { MDC.put("external.id", it)}
-        MDC.put("corda.trace.id", traceId.toString())
-        log.info("startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}")
+        MDC.put("trace.id", traceId.toString())
+        log.debug {"startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}"}
     }
 
     private fun populateBaggageWithFlowAttributes(flowLogic: FlowLogic<*>?, externalId: String?): Map<String, String> {
@@ -65,7 +66,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
     // Check when you start a top level flow the startSpanForFlow appears just once, and so the endSpanForFlow also appears just once
     // So its valid to do the MDC clear here. For remotes nodes as well
     private fun endSpanForFlow(telemetryId: UUID) {
-        log.info("endSpanForFlow: traceId: ${traces.get()}")
+        log.debug {"endSpanForFlow: traceId: ${traces.get()}"}
         logContexts.remove(telemetryId)
         MDC.clear()
     }
@@ -75,12 +76,12 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         val flowId = flowLogic?.runId
         val clientId = flowLogic?.stateMachine?.clientId
         val traceId = traces.get()
-        log.info("startSpan: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: $attributes")
+        log.debug {"startSpan: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: $attributes"}
     }
 
     @Suppress("UNUSED_PARAMETER")
     private fun endSpan(telemetryId: UUID) {
-        log.info("endSpan: traceId: ${traces.get()}")
+        log.debug {"endSpan: traceId: ${traces.get()}"}
     }
 
     override fun getCurrentTelemetryData(): SimpleLogContext {
@@ -117,7 +118,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
     private fun setStatus(telemetryId: UUID, statusCode: StatusCode, message: String) {
         when(statusCode) {
             StatusCode.ERROR -> log.error("setStatus: traceId: ${traces.get()}, statusCode: ${statusCode}, message: message")
-            StatusCode.OK, StatusCode.UNSET -> log.info("setStatus: traceId: ${traces.get()}, statusCode: ${statusCode}, message: message")
+            StatusCode.OK, StatusCode.UNSET -> log.debug {"setStatus: traceId: ${traces.get()}, statusCode: ${statusCode}, message: message" }
         }
     }
 

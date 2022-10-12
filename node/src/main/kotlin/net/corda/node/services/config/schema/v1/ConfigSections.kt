@@ -228,10 +228,11 @@ internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowT
 internal object TelemetryConfigurationSpec : Configuration.Specification<TelemetryConfiguration>("TelemetryConfiguration") {
     private val openTelemetryEnabled by boolean()
     private val simpleLogTelemetryEnabled by boolean()
+    private val spanStartEndEventsEnabled by boolean()
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<TelemetryConfiguration> {
         val config = configuration.withOptions(options)
-        return valid(TelemetryConfiguration(config[openTelemetryEnabled], config[simpleLogTelemetryEnabled]))
+        return valid(TelemetryConfiguration(config[openTelemetryEnabled], config[simpleLogTelemetryEnabled], config[spanStartEndEventsEnabled]))
     }
 }
 
