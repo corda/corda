@@ -1,6 +1,16 @@
-package net.corda.core.node.services
+package net.corda.node.services.telemetry
 
 import net.corda.core.flows.FlowLogic
+import net.corda.core.node.services.EndSpanEvent
+import net.corda.core.node.services.EndSpanForFlowEvent
+import net.corda.core.node.services.RecordExceptionEvent
+import net.corda.core.node.services.SetStatusEvent
+import net.corda.core.node.services.StartSpanEvent
+import net.corda.core.node.services.StartSpanForFlowEvent
+import net.corda.core.node.services.StatusCode
+import net.corda.core.node.services.TelemetryComponent
+import net.corda.core.node.services.TelemetryDataItem
+import net.corda.core.node.services.TelemetryEvent
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.debug
 import org.slf4j.Logger

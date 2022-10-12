@@ -56,7 +56,7 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.SimpleLogTelemetryComponent
+import net.corda.node.services.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.node.services.TelemetryComponent
 import net.corda.node.services.telemetry.OpenTelemetryComponent
 import net.corda.core.node.services.TelemetryService
@@ -991,7 +991,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
     private fun installTelemetryComponents() {
-        val loadedTelemetryComponents = cordappLoader.cordapps.flatMap { it.telemetryComponents }
+        val loadedTelemetryComponents = cordappLoader.cordapps.flatMap { it.telemetryComponents }.filterNot {
+                  it.name == OpenTelemetryComponent::class.java.name ||
+                  it.name == SimpleLogTelemetryComponent::class.java.name }
 
         // This sets the Cordapp classloader on the contextClassLoader of the current thread, prior to initializing telemetry components
         // Needed because of bug CORDA-2653 - some telemetry components can utilise third-party libraries that require access to

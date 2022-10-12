@@ -74,7 +74,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
                               override val creationTime: Long = System.currentTimeMillis(),
-                              val serializedTelemetry: SerializedTelemetry?
+                              val serializedTelemetry: SerializedTelemetry? = null
 ) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R>, FlowFiber {
     companion object {
         /**
