@@ -16,10 +16,16 @@ import net.corda.core.utilities.debug
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.lang.IllegalStateException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 @CordaSerializable
 data class SimpleLogContext(val traceId: UUID, val baggage: Map<String, String>): TelemetryDataItem
+
+const val CLIENT_ID = "client.id"
+const val EXTERNAL_ID = "external.id"
+const val TRACE_ID = "trace.id"
 
 // Simple telemetry class that creates a single UUID and uses this for the trace id. When the flow starts we use the trace is passed in. After this
 // though we must use the trace id propagated to us (if remote), or the trace id associated with thread local.
@@ -30,7 +36,7 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
     }
 
     private val traces: InheritableThreadLocal<UUID> = InheritableThreadLocal()
-    private val logContexts = mutableMapOf<UUID, SimpleLogContext>()
+    private val logContexts = ConcurrentHashMap<UUID, SimpleLogContext>()
 
     override fun isEnabled(): Boolean {
         return true
@@ -51,25 +57,26 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
 
     @Suppress("LongParameterList")
     private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, externalIdParam: String?, telemetryDataItem: TelemetryDataItem?) {
-        val traceId = (telemetryDataItem as? SimpleLogContext)?.traceId ?: telemetryId
+        val simpleLogTelemetryDataItem = telemetryDataItem?.let {(telemetryDataItem as? SimpleLogContext) ?:
+                                throw IllegalStateException("Type of telemetryDataItem no a SimpleLogContext, actual class is ${telemetryDataItem::class.java.name}")}
+        val traceId = simpleLogTelemetryDataItem?.traceId ?: telemetryId
         val flowId = flowLogic?.runId
-        val clientId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("client.id") ?: flowLogic?.stateMachine?.clientId
-        val externalId = (telemetryDataItem as? SimpleLogContext)?.baggage?.get("external.id") ?: externalIdParam
+        val clientId = simpleLogTelemetryDataItem?.baggage?.get(CLIENT_ID) ?: flowLogic?.stateMachine?.clientId
+        val externalId = simpleLogTelemetryDataItem?.baggage?.get(EXTERNAL_ID) ?: externalIdParam
         traces.set(traceId)
-        val baggageAttributes = (telemetryDataItem as? SimpleLogContext)?.baggage ?: populateBaggageWithFlowAttributes(flowLogic, externalId)
+        val baggageAttributes = simpleLogTelemetryDataItem?.baggage ?: populateBaggageWithFlowAttributes(flowLogic, externalId)
 
         logContexts[traceId] = SimpleLogContext(traceId, baggageAttributes)
-        // check below re. the name - do we have some convention here?
-        clientId?.let { MDC.put("client.id", it) }
-        externalId?.let { MDC.put("external.id", it)}
-        MDC.put("trace.id", traceId.toString())
+        clientId?.let { MDC.put(CLIENT_ID, it) }
+        externalId?.let { MDC.put(EXTERNAL_ID, it)}
+        MDC.put(TRACE_ID, traceId.toString())
         log.debug {"startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}"}
     }
 
     private fun populateBaggageWithFlowAttributes(flowLogic: FlowLogic<*>?, externalId: String?): Map<String, String> {
         val baggageAttributes = mutableMapOf<String, String>()
-        flowLogic?.stateMachine?.clientId?.let { baggageAttributes["client.id"] = it }
-        externalId?.let { baggageAttributes["external.id"] = it }
+        flowLogic?.stateMachine?.clientId?.let { baggageAttributes[CLIENT_ID] = it }
+        externalId?.let { baggageAttributes[EXTERNAL_ID] = it }
         return baggageAttributes
     }
 
