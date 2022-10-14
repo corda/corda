@@ -1,4 +1,4 @@
-FROM amazoncorretto:8u322-al2
+FROM amazoncorretto:8u342-al2
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN yum -y install bash && \
