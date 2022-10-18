@@ -122,6 +122,7 @@ buildscript {
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
+    ext.commons_text_version = constants.getProperty("commonsTextVersion")
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
@@ -455,8 +456,12 @@ allprojects {
                         }
                     }
 
-                    if (details.requested.group == 'org.apache.commons' && details.requested.name == "commons-configuration2") {
-                        details.useVersion commons_configuration2_version
+                    if (details.requested.group == 'org.apache.commons') {
+                        if (details.requested.name == "commons-configuration2") {
+                            details.useVersion commons_configuration2_version
+                        } else if (details.requested.name == "commons-text") {
+                            details.useVersion commons_text_version
+                        }
                     }
                 }
 
