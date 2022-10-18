@@ -1,6 +1,7 @@
 import net.corda.gradle.jarfilter.JarFilterTask
 import net.corda.gradle.jarfilter.MetaFixerTask
 import proguard.gradle.ProGuardTask
+
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
@@ -77,6 +78,7 @@ def patchCore = tasks.register('patchCore', Zip) {
         exclude 'net/corda/core/serialization/internal/AttachmentsHolderImpl.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
+        exclude 'net/corda/core/internal/utilities/PrivateInterner*.class'
     }
 
     reproducibleFileOrder = true

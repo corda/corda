@@ -47,6 +47,9 @@ import java.util.Locale
 import java.util.ServiceLoader
 import java.util.WeakHashMap
 import java.util.function.Function
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -164,7 +167,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             if(read <= 0) break
             md.update(ctx.buffer, 0, read)
         }
-        return SecureHash.SHA256(md.digest())
+        return SecureHash.createSHA256(md.digest())
     }
 
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->

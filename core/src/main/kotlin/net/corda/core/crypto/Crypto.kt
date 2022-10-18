@@ -5,11 +5,12 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.internal.Instances.withSignature
-import net.corda.core.crypto.internal.`id-Curve25519ph`
 import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
+import net.corda.core.crypto.internal.`id-Curve25519ph`
 import net.corda.core.crypto.internal.providerMap
+import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -710,7 +711,8 @@ object Crypto {
             keyPairGenerator.initialize(signatureScheme.algSpec, newSecureRandom())
         else
             keyPairGenerator.initialize(signatureScheme.keySize!!, newSecureRandom())
-        return keyPairGenerator.generateKeyPair()
+        val newKeyPair = keyPairGenerator.generateKeyPair()
+        return KeyPair(internPublicKey(newKeyPair.public), newKeyPair.private)
     }
 
     /**
@@ -840,7 +842,7 @@ object Crypto {
         val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
         val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
 
-        return KeyPair(publicKeyD, privateKeyD)
+        return KeyPair(internPublicKey(publicKeyD), privateKeyD)
     }
 
     // Deterministically generate an EdDSA key.
@@ -853,7 +855,7 @@ object Crypto {
         val bytes = macBytes.copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
         val privateKeyD = EdDSAPrivateKeySpec(bytes, params)
         val publicKeyD = EdDSAPublicKeySpec(privateKeyD.a, params)
-        return KeyPair(EdDSAPublicKey(publicKeyD), EdDSAPrivateKey(privateKeyD))
+        return KeyPair(internPublicKey(EdDSAPublicKey(publicKeyD)), EdDSAPrivateKey(privateKeyD))
     }
 
     /**
@@ -892,7 +894,7 @@ object Crypto {
         val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
         val priv = EdDSAPrivateKeySpec(bytes, params)
         val pub = EdDSAPublicKeySpec(priv.a, params)
-        return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+        return KeyPair(internPublicKey(EdDSAPublicKey(pub)), EdDSAPrivateKey(priv))
     }
 
     // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
@@ -918,7 +920,7 @@ object Crypto {
         val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
         val pub = BCECPublicKey("EC", publicKeySpec, BouncyCastleProvider.CONFIGURATION)
 
-        return KeyPair(pub, priv)
+        return KeyPair(internPublicKey(pub), priv)
     }
 
     // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
@@ -990,11 +992,14 @@ object Crypto {
         }
     }
 
+    private val interner = PrivateInterner<PublicKey>()
+    private fun internPublicKey(key: PublicKey): PublicKey = interner.intern(key)
+
     private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
-        return when (key) {
+        return internPublicKey(when (key) {
             is BCEdDSAPublicKey -> EdDSAPublicKey(X509EncodedKeySpec(key.encoded))
             else -> key
-        }
+        })
     }
 
     private fun convertIfBCEdDSAPrivateKey(key: PrivateKey): PrivateKey {
@@ -1026,11 +1031,11 @@ object Crypto {
     @JvmStatic
     fun toSupportedPublicKey(key: PublicKey): PublicKey {
         return when (key) {
-            is BCECPublicKey -> key
-            is BCRSAPublicKey -> key
-            is BCSphincs256PublicKey -> key
-            is EdDSAPublicKey -> key
-            is CompositeKey -> key
+            is BCECPublicKey -> internPublicKey(key)
+            is BCRSAPublicKey -> internPublicKey(key)
+            is BCSphincs256PublicKey -> internPublicKey(key)
+            is EdDSAPublicKey -> internPublicKey(key)
+            is CompositeKey -> internPublicKey(key)
             is BCEdDSAPublicKey -> convertIfBCEdDSAPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }

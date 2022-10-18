@@ -58,7 +58,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Guava: Google utilities library.
-    testCompile "com.google.guava:guava:$guava_version"
+    compile "com.google.guava:guava:$guava_version"
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
