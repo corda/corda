@@ -108,7 +108,7 @@ buildscript {
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.4'
     ext.jsr305_version = constants.getProperty("jsr305Version")
-    ext.shiro_version = '1.9.1'
+    ext.shiro_version = '1.10.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.hikari_version = '3.3.1'
     ext.liquibase_version = '3.6.3'
@@ -130,6 +130,7 @@ buildscript {
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = "2.8.0"
+    ext.commons_text_version = "1.10.0"
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = '8.15'
         ext.fontawesomefx_fontawesome_version = '4.7.0-5'
@@ -463,8 +464,12 @@ allprojects {
                         }
                     }
 
-                    if (details.requested.group == 'org.apache.commons' && details.requested.name == "commons-configuration2") {
-                        details.useVersion commons_configuration2_version
+                    if (details.requested.group == 'org.apache.commons') {
+                        if (details.requested.name == "commons-configuration2") {
+                            details.useVersion commons_configuration2_version
+                        } else if (details.requested.name == "commons-text") {
+                            details.useVersion commons_text_version
+                        }
                     }
                 }
             }
