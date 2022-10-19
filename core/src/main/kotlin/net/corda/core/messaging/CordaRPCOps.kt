@@ -265,19 +265,6 @@ interface CordaRPCOps : RPCOps {
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     /**
-     * Start the given flow with the given arguments and an externalId. The externalId is attached to all telemetry spans resulting
-     * from this flow.
-     *
-     * [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
-     *
-     * @param externalId The external id that is sent to all telemetry spans resulting from this flow
-     * @param logicType The [FlowLogic] to start
-     * @param args The arguments to pass to the flow
-     */
-    @RPCReturnsObservables
-    fun <T> startFlowDynamicWithExternalId(externalId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
-
-    /**
      * Start the given flow with the given arguments and a [clientId].
      *
      * The flow's result/ exception will be available for the client to re-connect and retrieve even after the flow's lifetime,
@@ -629,64 +616,6 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlow
         arg4: E,
         arg5: F
 ): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
-
-/**
- * Extension function for type safe invocation of flows from Kotlin, for example:
- */
-inline fun <T, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
-        externalId: String,
-        @Suppress("UNUSED_PARAMETER")
-        flowConstructor: (A, B) -> R,
-        arg0: A,
-        arg1: B
-): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1)
-
-inline fun <T, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
-        externalId: String,
-        @Suppress("UNUSED_PARAMETER")
-        flowConstructor: (A, B, C) -> R,
-        arg0: A,
-        arg1: B,
-        arg2: C
-): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1, arg2)
-
-@Suppress("LongParameterList")
-inline fun <T, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
-        externalId: String,
-        @Suppress("UNUSED_PARAMETER")
-        flowConstructor: (A, B, C, D) -> R,
-        arg0: A,
-        arg1: B,
-        arg2: C,
-        arg3: D
-): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1, arg2, arg3)
-
-@Suppress("LongParameterList")
-inline fun <T, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
-        externalId: String,
-        @Suppress("UNUSED_PARAMETER")
-        flowConstructor: (A, B, C, D, E) -> R,
-        arg0: A,
-        arg1: B,
-        arg2: C,
-        arg3: D,
-        arg4: E
-): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1, arg2, arg3, arg4)
-
-@Suppress("LongParameterList")
-inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithExternalId(
-        externalId: String,
-        @Suppress("UNUSED_PARAMETER")
-        flowConstructor: (A, B, C, D, E, F) -> R,
-        arg0: A,
-        arg1: B,
-        arg2: C,
-        arg3: D,
-        arg4: E,
-        arg5: F
-): FlowHandle<T> = startFlowDynamicWithExternalId(externalId, R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
-
-
 
 /**
  * Extension function for type safe invocation of flows from Kotlin, with [clientId].

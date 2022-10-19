@@ -1,16 +1,6 @@
-package net.corda.node.services.telemetry
+package net.corda.core.internal.telemetry
 
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.services.EndSpanEvent
-import net.corda.core.node.services.EndSpanForFlowEvent
-import net.corda.core.node.services.RecordExceptionEvent
-import net.corda.core.node.services.SetStatusEvent
-import net.corda.core.node.services.StartSpanEvent
-import net.corda.core.node.services.StartSpanForFlowEvent
-import net.corda.core.node.services.StatusCode
-import net.corda.core.node.services.TelemetryComponent
-import net.corda.core.node.services.TelemetryDataItem
-import net.corda.core.node.services.TelemetryEvent
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.debug
 import org.slf4j.Logger
@@ -24,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap
 data class SimpleLogContext(val traceId: UUID, val baggage: Map<String, String>): TelemetryDataItem
 
 const val CLIENT_ID = "client.id"
-const val EXTERNAL_ID = "external.id"
 const val TRACE_ID = "trace.id"
 
 // Simple telemetry class that creates a single UUID and uses this for the trace id. When the flow starts we use the trace is passed in. After this
@@ -46,38 +35,29 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
 
     override fun onTelemetryEvent(event: TelemetryEvent) {
         when (event) {
-            is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.externalId, event.telemetryDataItem)
+            is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.telemetryDataItem)
             is EndSpanForFlowEvent -> endSpanForFlow(event.telemetryId)
             is StartSpanEvent -> startSpan(event.name, event.attributes, event.telemetryId, event.flowLogic)
             is EndSpanEvent -> endSpan(event.telemetryId)
-            is SetStatusEvent -> setStatus(event.telemetryId, event.statusCode, event.message)
+            is SetStatusEvent -> setStatus(event.telemetryId, event.telemetryStatusCode, event.message)
             is RecordExceptionEvent -> recordException(event.telemetryId, event.throwable)
         }
     }
 
     @Suppress("LongParameterList")
-    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, externalIdParam: String?, telemetryDataItem: TelemetryDataItem?) {
+    private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?, telemetryDataItem: TelemetryDataItem?) {
         val simpleLogTelemetryDataItem = telemetryDataItem?.let {(telemetryDataItem as? SimpleLogContext) ?:
                                 throw IllegalStateException("Type of telemetryDataItem no a SimpleLogContext, actual class is ${telemetryDataItem::class.java.name}")}
         val traceId = simpleLogTelemetryDataItem?.traceId ?: telemetryId
         val flowId = flowLogic?.runId
         val clientId = simpleLogTelemetryDataItem?.baggage?.get(CLIENT_ID) ?: flowLogic?.stateMachine?.clientId
-        val externalId = simpleLogTelemetryDataItem?.baggage?.get(EXTERNAL_ID) ?: externalIdParam
         traces.set(traceId)
-        val baggageAttributes = simpleLogTelemetryDataItem?.baggage ?: populateBaggageWithFlowAttributes(flowLogic, externalId)
+        val baggageAttributes = simpleLogTelemetryDataItem?.baggage ?: emptyMap()
 
         logContexts[traceId] = SimpleLogContext(traceId, baggageAttributes)
         clientId?.let { MDC.put(CLIENT_ID, it) }
-        externalId?.let { MDC.put(EXTERNAL_ID, it)}
         MDC.put(TRACE_ID, traceId.toString())
         log.debug {"startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}"}
-    }
-
-    private fun populateBaggageWithFlowAttributes(flowLogic: FlowLogic<*>?, externalId: String?): Map<String, String> {
-        val baggageAttributes = mutableMapOf<String, String>()
-        flowLogic?.stateMachine?.clientId?.let { baggageAttributes[CLIENT_ID] = it }
-        externalId?.let { baggageAttributes[EXTERNAL_ID] = it }
-        return baggageAttributes
     }
 
     // Check when you start a top level flow the startSpanForFlow appears just once, and so the endSpanForFlow also appears just once
@@ -132,10 +112,10 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun setStatus(telemetryId: UUID, statusCode: StatusCode, message: String) {
-        when(statusCode) {
-            StatusCode.ERROR -> log.error("setStatus: traceId: ${traces.get()}, statusCode: ${statusCode}, message: message")
-            StatusCode.OK, StatusCode.UNSET -> log.debug {"setStatus: traceId: ${traces.get()}, statusCode: ${statusCode}, message: message" }
+    private fun setStatus(telemetryId: UUID, telemetryStatusCode: TelemetryStatusCode, message: String) {
+        when(telemetryStatusCode) {
+            TelemetryStatusCode.ERROR -> log.error("setStatus: traceId: ${traces.get()}, statusCode: ${telemetryStatusCode}, message: message")
+            TelemetryStatusCode.OK, TelemetryStatusCode.UNSET -> log.debug {"setStatus: traceId: ${traces.get()}, statusCode: ${telemetryStatusCode}, message: message" }
         }
     }
 

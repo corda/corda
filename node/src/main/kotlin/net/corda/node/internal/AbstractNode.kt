@@ -56,10 +56,10 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.node.services.telemetry.SimpleLogTelemetryComponent
-import net.corda.core.node.services.TelemetryComponent
-import net.corda.node.services.telemetry.OpenTelemetryComponent
-import net.corda.core.node.services.TelemetryService
+import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.telemetry.OpenTelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.schemas.MappedSchema

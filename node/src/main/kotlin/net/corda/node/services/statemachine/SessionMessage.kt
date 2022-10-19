@@ -2,7 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
-import net.corda.core.node.services.SerializedTelemetry
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.SecureRandom

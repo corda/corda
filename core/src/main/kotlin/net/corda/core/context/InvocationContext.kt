@@ -25,8 +25,7 @@ data class InvocationContext(
     val externalTrace: Trace? = null,
     val impersonatedActor: Actor? = null,
     val arguments: List<Any?>? = emptyList(), // 'arguments' is nullable so that a - >= 4.6 version - RPC client can be backwards compatible against - < 4.6 version - nodes
-    val clientId: String? = null,
-    val externalId: String? = null
+    val clientId: String? = null
 ) {
 
     constructor(
@@ -52,9 +51,8 @@ data class InvocationContext(
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
             arguments: List<Any?> = emptyList(),
-            clientId: String? = null,
-            externalId: String? = null
-        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments, clientId, externalId)
+            clientId: String? = null
+        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments, clientId)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
@@ -118,8 +116,7 @@ data class InvocationContext(
             externalTrace = externalTrace,
             impersonatedActor = impersonatedActor,
             arguments = arguments,
-            clientId = clientId,
-            externalId = externalId
+            clientId = clientId
         )
     }
 }

@@ -1,4 +1,4 @@
-package net.corda.node.internal
+package net.corda.node.internal.telemetry
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.context.InvocationContext
@@ -6,37 +6,37 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.EndSpanEvent
-import net.corda.core.node.services.EndSpanForFlowEvent
-import net.corda.core.node.services.RecordExceptionEvent
-import net.corda.core.node.services.SetStatusEvent
-import net.corda.core.node.services.StartSpanEvent
-import net.corda.core.node.services.StartSpanForFlowEvent
-import net.corda.core.node.services.StatusCode
-import net.corda.core.node.services.TelemetryComponent
-import net.corda.core.node.services.TelemetryDataItem
-import net.corda.core.node.services.TelemetryEvent
+import net.corda.core.internal.telemetry.EndSpanEvent
+import net.corda.core.internal.telemetry.EndSpanForFlowEvent
+import net.corda.core.internal.telemetry.RecordExceptionEvent
+import net.corda.core.internal.telemetry.SetStatusEvent
+import net.corda.core.internal.telemetry.StartSpanEvent
+import net.corda.core.internal.telemetry.StartSpanForFlowEvent
+import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryDataItem
+import net.corda.core.internal.telemetry.TelemetryEvent
+import net.corda.core.internal.telemetry.TelemetryStatusCode
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
+import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.finance.flows.CashPaymentReceiverFlow
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.time.Duration
-import kotlin.test.assertEquals
-import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.finance.flows.CashPaymentReceiverFlow
-import net.corda.testing.driver.InProcess
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -54,7 +54,7 @@ class TelemetryTests {
     fun `test passing a block with suspend to span func`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
             val alice = startNode().getOrThrow()
-            val handle = alice.rpc.startFlow(::FlowWithSpanCallAndSleep)
+            val handle = alice.rpc.startFlow(TelemetryTests::FlowWithSpanCallAndSleep)
             handle.returnValue.getOrThrow()
             // assertion for test is in Component function setCurrentTelemetryId below.
         }
@@ -64,7 +64,7 @@ class TelemetryTests {
     fun `run flow with a suspend then check thread locals for fibre are the same`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
             val alice = startNode().getOrThrow()
-            val handle = alice.rpc.startFlow(::FlowWithSleep)
+            val handle = alice.rpc.startFlow(TelemetryTests::FlowWithSleep)
             handle.returnValue.getOrThrow()
             // assertion for test is in Component function setCurrentTelemetryId below.
         }
@@ -85,13 +85,13 @@ class TelemetryTests {
     fun `telemetryId is restored after flow is reloaded from its checkpoint after suspending when reloadCheckpointAfterSuspend is true`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
             val alice = startNode(
-                                providedName = ALICE_NAME,
-                                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)).getOrThrow()
+                    providedName = ALICE_NAME,
+                    customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)).getOrThrow()
             val telemetryComponentAlice: TestCordaTelemetryComponent = (alice as InProcess).services.cordaTelemetryComponent(TestCordaTelemetryComponent::class.java)
             val telemetryComponent2Alice: TestCordaTelemetryComponent2 = alice.services.cordaTelemetryComponent(TestCordaTelemetryComponent2::class.java)
             telemetryComponentAlice.restoredFromCheckpoint = true
             telemetryComponent2Alice.restoredFromCheckpoint = true
-            val handle = alice.rpc.startFlow(::FlowWithSleep)
+            val handle = alice.rpc.startFlow(TelemetryTests::FlowWithSleep)
             handle.returnValue.getOrThrow()
             // assertion for test is in Component function setCurrentTelemetryId below.
         }
@@ -112,17 +112,17 @@ class TelemetryTests {
             val flowName = CashIssueAndPaymentFlow::class.java.name
             val receiverFlowName = CashPaymentReceiverFlow::class.java.name
 
-            checkTelemetryComponentCounts(flowName, (nodeA as InProcess).services.cordaTelemetryComponent(TestCordaTelemetryComponent::class.java) )
+            checkTelemetryComponentCounts(flowName, (nodeA as InProcess).services.cordaTelemetryComponent(TestCordaTelemetryComponent::class.java))
             checkTelemetryComponentCounts(flowName, nodeA.services.cordaTelemetryComponent(TestCordaTelemetryComponent2::class.java))
 
             val nodeBTelemetryComponent = (nodeB as InProcess).services.cordaTelemetryComponent(TestCordaTelemetryComponent::class.java)
-            val nodeBTelemetryComponent2 = nodeB.services.cordaTelemetryComponent(TestCordaTelemetryComponent2::class.java )
+            val nodeBTelemetryComponent2 = nodeB.services.cordaTelemetryComponent(TestCordaTelemetryComponent2::class.java)
 
             assertTrue(nodeBTelemetryComponent.endSpanForFlowLatch.await(1, TimeUnit.MINUTES), "Timed out waiting for endSpanForFlow operation on node B")
             assertTrue(nodeBTelemetryComponent2.endSpanForFlowLatch.await(1, TimeUnit.MINUTES), "Timed out waiting for endSpanForFlow operation on node B")
 
             checkTelemetryComponentCounts(receiverFlowName, nodeB.services.cordaTelemetryComponent(TestCordaTelemetryComponent::class.java))
-            checkTelemetryComponentCounts(receiverFlowName, nodeB.services.cordaTelemetryComponent(TestCordaTelemetryComponent2::class.java ))
+            checkTelemetryComponentCounts(receiverFlowName, nodeB.services.cordaTelemetryComponent(TestCordaTelemetryComponent2::class.java))
         }
     }
 
@@ -241,7 +241,7 @@ class TelemetryTests {
                 }
                 is SetStatusEvent -> {
                     setStatusEvent++
-                    setStatus(event.telemetryId, event.statusCode, event.message)
+                    setStatus(event.telemetryId, event.telemetryStatusCode, event.message)
                 }
                 is RecordExceptionEvent -> {
                     recordExceptionEvent++
@@ -260,7 +260,7 @@ class TelemetryTests {
 
         fun endSpanForFlow(telemetryId: UUID) {
             assertEquals(spanTelemetryIds.pop(), telemetryId)
-            val newUUID = spanTelemetryIds.peek() ?: UUID(0,0)
+            val newUUID = spanTelemetryIds.peek() ?: UUID(0, 0)
             currentUUID.set(newUUID)
         }
 
@@ -273,7 +273,7 @@ class TelemetryTests {
 
         fun endSpan(telemetryId: UUID) {
             assertEquals(spanTelemetryIds.pop(), telemetryId)
-            val newUUID = spanTelemetryIds.peek() ?: UUID(0,0)
+            val newUUID = spanTelemetryIds.peek() ?: UUID(0, 0)
             currentUUID.set(newUUID)
         }
 
@@ -282,7 +282,7 @@ class TelemetryTests {
         }
 
         @Suppress("UNUSED_PARAMETER")
-        fun setStatus(telemetryId: UUID, statusCode: StatusCode, message: String) {
+        fun setStatus(telemetryId: UUID, statusCode: TelemetryStatusCode, message: String) {
         }
 
         @Suppress("UNUSED_PARAMETER")
@@ -317,7 +317,7 @@ class TelemetryTests {
         @Suspendable
         override fun call(): InvocationContext {
             val telemetryService = serviceHub.telemetryService
-            val context = telemetryService.span("${this::class.java.name}", emptyMap(), this) {
+            val context = telemetryService.span(this::class.java.name, emptyMap(), this) {
                 // Do a sleep which invokes a suspend
                 sleep(Duration.ofSeconds(1))
                 progressTracker.currentStep = TESTSTEP

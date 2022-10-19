@@ -36,8 +36,8 @@ import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.node.services.ComponentTelemetryIds
-import net.corda.core.node.services.SerializedTelemetry
+import net.corda.core.internal.telemetry.ComponentTelemetryIds
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -349,7 +349,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
             Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
 
-            val result = serviceHub.telemetryService.spanForFlow(logic.javaClass.name, emptyMap(), logic, context.externalId, serializedTelemetry) {
+            val result = serviceHub.telemetryService.spanForFlow(logic.javaClass.name, emptyMap(), logic, serializedTelemetry) {
                 val ret = logic.call()
                 // Note suspend stores the telemetry ids back in the components from checkpoint, so must be done, before we end the span
                 suspend(FlowIORequest.WaitForSessionConfirmations(), maySkipCheckpoint = true)

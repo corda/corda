@@ -17,7 +17,7 @@ import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.TelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer

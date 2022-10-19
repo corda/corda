@@ -8,7 +8,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.SerializedTelemetry
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
 

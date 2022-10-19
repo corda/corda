@@ -29,7 +29,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.declaredField
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
-import net.corda.core.node.services.SerializedTelemetry
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes

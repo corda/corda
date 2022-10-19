@@ -12,6 +12,8 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
+import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
@@ -193,7 +195,7 @@ interface ServiceHub : ServicesForResolution {
     fun <T : SerializeAsToken> cordaService(type: Class<T>): T
 
     /**
-     * Return the singleton instance of the given Corda telemetry component type. This is a class implemnets TelemetryComponent
+     * Return the singleton instance of the given Corda telemetry component type. This is a class that implements TelemetryComponent
      * and will have automatically been registered by the node.
      * @throws IllegalArgumentException If the instance is not found.
      */

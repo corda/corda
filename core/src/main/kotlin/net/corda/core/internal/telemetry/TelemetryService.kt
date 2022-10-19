@@ -1,4 +1,4 @@
-package net.corda.core.node.services
+package net.corda.core.internal.telemetry
 
 import net.corda.core.CordaInternal
 import net.corda.core.flows.FlowLogic
@@ -17,7 +17,7 @@ interface TelemetryDataItem
 @CordaSerializable
 data class SerializedTelemetry(val serializedTelemetryData: Map<String, OpaqueBytes>)
 
-enum class StatusCode {
+enum class TelemetryStatusCode {
     /** The default status.  */
     UNSET,
 
@@ -35,8 +35,8 @@ enum class StatusCode {
 data class TelemetryId(private val telemetryService: TelemetryService) {
     val id: UUID = UUID.randomUUID()
 
-    fun setStatus(statusCode: StatusCode, message: String) {
-        telemetryService.setStatus(this, statusCode, message)
+    fun setStatus(telemetryStatusCode: TelemetryStatusCode, message: String) {
+        telemetryService.setStatus(this, telemetryStatusCode, message)
     }
 
     fun recordException(throwable: Throwable) {
@@ -56,13 +56,13 @@ data class ComponentTelemetryIds(val componentTelemetryIds: Map<String, UUID>)
 interface TelemetryEvent
 
 class StartSpanForFlowEvent(val name: String,
-                       val attributes: Map<String, String>,
-                       val telemetryId: UUID, val flowLogic: FlowLogic<*>?,
-                       val externalId: String?, val telemetryDataItem: TelemetryDataItem?): TelemetryEvent
+                            val attributes: Map<String, String>,
+                            val telemetryId: UUID, val flowLogic: FlowLogic<*>?,
+                            val telemetryDataItem: TelemetryDataItem?): TelemetryEvent
 class EndSpanForFlowEvent(val telemetryId: UUID): TelemetryEvent
 class StartSpanEvent(val name: String, val attributes: Map<String, String>, val telemetryId: UUID, val flowLogic: FlowLogic<*>?): TelemetryEvent
 class EndSpanEvent(val telemetryId: UUID): TelemetryEvent
-class SetStatusEvent(val telemetryId: UUID, val statusCode: StatusCode, val message: String): TelemetryEvent
+class SetStatusEvent(val telemetryId: UUID, val telemetryStatusCode: TelemetryStatusCode, val message: String): TelemetryEvent
 class RecordExceptionEvent(val telemetryId: UUID, val throwable: Throwable): TelemetryEvent
 
 interface TelemetryComponent {
@@ -96,9 +96,9 @@ class TelemetryService : SingletonSerializeAsToken() {
         return telemetryComponents[telemetryComponentName]?.getCurrentBaggage()
     }
 
-    fun setStatus(telemetryId: TelemetryId, statusCode: StatusCode, message: String) {
+    fun setStatus(telemetryId: TelemetryId, telemetryStatusCode: TelemetryStatusCode, message: String) {
         telemetryComponents.values.forEach {
-            it.onTelemetryEvent(SetStatusEvent(telemetryId.id, statusCode, message))
+            it.onTelemetryEvent(SetStatusEvent(telemetryId.id, telemetryStatusCode, message))
         }
     }
 
@@ -121,13 +121,12 @@ class TelemetryService : SingletonSerializeAsToken() {
     }
 
     @CordaInternal
-    fun startSpanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, externalId: String? = null,
-                         remoteSerializedTelemetry: SerializedTelemetry? = null): TelemetryId {
+    fun startSpanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, remoteSerializedTelemetry: SerializedTelemetry? = null): TelemetryId {
         val telemetryId = TelemetryId(this)
         telemetryComponents.values.forEach {
             val bytes = remoteSerializedTelemetry?.serializedTelemetryData?.get(it.name())
             val telemetryDataItem = bytes?.let { deserialize(bytes) }
-            it.onTelemetryEvent(StartSpanForFlowEvent(name, attributes, telemetryId.id, flowLogic, externalId, telemetryDataItem))
+            it.onTelemetryEvent(StartSpanForFlowEvent(name, attributes, telemetryId.id, flowLogic, telemetryDataItem))
         }
         return telemetryId
     }
@@ -162,7 +161,7 @@ class TelemetryService : SingletonSerializeAsToken() {
         }
         catch(ex: Throwable) {
             recordException(telemetryId, ex)
-            setStatus(telemetryId, StatusCode.ERROR, "Exception raised: ${ex.message}")
+            setStatus(telemetryId, TelemetryStatusCode.ERROR, "Exception raised: ${ex.message}")
             throw ex
         }
         finally {
@@ -172,14 +171,14 @@ class TelemetryService : SingletonSerializeAsToken() {
 
     @CordaInternal
     @Suppress("LongParameterList", "TooGenericExceptionCaught")
-    inline fun <R> spanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, externalId: String? = null, remoteSerializedTelemetry: SerializedTelemetry? = null, block: () -> R): R {
-        val telemetryId = startSpanForFlow(name, attributes, flowLogic, externalId, remoteSerializedTelemetry)
+    inline fun <R> spanForFlow(name: String, attributes: Map<String, String>, flowLogic: FlowLogic<*>? = null, remoteSerializedTelemetry: SerializedTelemetry? = null, block: () -> R): R {
+        val telemetryId = startSpanForFlow(name, attributes, flowLogic, remoteSerializedTelemetry)
         try {
             return block()
         }
         catch(ex: Throwable) {
             recordException(telemetryId, ex)
-            setStatus(telemetryId, StatusCode.ERROR, "Exception raised: ${ex.message}")
+            setStatus(telemetryId, TelemetryStatusCode.ERROR, "Exception raised: ${ex.message}")
             throw ex
         }
         finally {

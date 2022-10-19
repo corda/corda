@@ -1,4 +1,4 @@
-package net.corda.node.services.telemetry
+package net.corda.core.internal.telemetry
 
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.baggage.Baggage
@@ -14,15 +14,6 @@ import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
 import io.opentelemetry.context.Scope
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.services.EndSpanEvent
-import net.corda.core.node.services.EndSpanForFlowEvent
-import net.corda.core.node.services.RecordExceptionEvent
-import net.corda.core.node.services.SetStatusEvent
-import net.corda.core.node.services.StartSpanEvent
-import net.corda.core.node.services.StartSpanForFlowEvent
-import net.corda.core.node.services.TelemetryComponent
-import net.corda.core.node.services.TelemetryDataItem
-import net.corda.core.node.services.TelemetryEvent
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -70,32 +61,26 @@ class OpenTelemetryComponent(val spanStartEndEventsEnabled: Boolean) : Telemetry
     override fun name(): String = "OpenTelemetry"
     override fun onTelemetryEvent(event: TelemetryEvent) {
         when (event) {
-            is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.externalId, event.telemetryDataItem)
+            is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.telemetryDataItem)
             is EndSpanForFlowEvent -> endSpanForFlow(event.telemetryId)
             is StartSpanEvent -> startSpan(event.name, event.attributes, event.telemetryId, event.flowLogic)
             is EndSpanEvent -> endSpan(event.telemetryId)
-            is SetStatusEvent -> setStatus(event.telemetryId, event.statusCode, event.message)
+            is SetStatusEvent -> setStatus(event.telemetryId, event.telemetryStatusCode, event.message)
             is RecordExceptionEvent -> recordException(event.telemetryId, event.throwable)
         }
     }
 
     @Suppress("LongParameterList")
     private fun startSpanForFlow(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?,
-                                 externalId: String?, telemetryDataItem: TelemetryDataItem?) {
-        // add some baggage
-        val baggageAttributes = if (telemetryDataItem == null) {
-            val baggageAttributes = mutableMapOf<String, String>()
-            populateBaggageWithFlowAttributes(baggageAttributes, flowLogic, externalId)
-            baggageAttributes
-        }
-        else {
-            (telemetryDataItem as OpenTelemetryContext).baggage
-        }
+                                 telemetryDataItem: TelemetryDataItem?) {
 
-        val baggageBuilder = baggageAttributes.toList().fold(Baggage.current().toBuilder()) {builder, attribute -> builder.put(attribute.first, attribute.second)}
-        baggages[telemetryId] = baggageBuilder.build().makeCurrent()
+        val baggageAttributes = (telemetryDataItem as? OpenTelemetryContext)?.baggage?.let {
+            val baggageBuilder = it.toList().fold(Baggage.current().toBuilder()) {builder, attribute -> builder.put(attribute.first, attribute.second)}
+            baggages[telemetryId] = baggageBuilder.build().makeCurrent()
+            it
+        } ?: emptyMap()
 
-        // Also add the baggage to the span
+        // Also add any baggage to the span
         val attributesMap = (attributes+baggageAttributes).toList()
                 .fold(Attributes.builder()) { builder, attribute -> builder.put(attribute.first, attribute.second) }.also {
                     populateWithFlowAttributes(it, flowLogic)
@@ -208,15 +193,8 @@ class OpenTelemetryComponent(val spanStartEndEventsEnabled: Boolean) : Telemetry
         flowLogic?.let {
             attributesBuilder.put("flow.id", flowLogic.runId.uuid.toString())
             attributesBuilder.put("creation.time", flowLogic.stateMachine.creationTime)
-            attributesBuilder.put("class.name", flowLogic.javaClass.name!!)
+            attributesBuilder.put("class.name", flowLogic.javaClass.name)
         }
-    }
-
-    private fun populateBaggageWithFlowAttributes(baggageAttributes: MutableMap<String, String>, flowLogic: FlowLogic<*>?, externalId: String?) {
-        flowLogic?.let {
-            baggageAttributes["client.id"] = "${flowLogic.stateMachine.clientId}"
-        }
-        externalId?.let { baggageAttributes["external.id"] = it }
     }
 
     private fun createStartedEventSpan(name: String, attributesMap: Attributes, parentSpan: Span): Pair<SerializableSpanContext?, SerializableSpanContext?> {
@@ -288,16 +266,16 @@ class OpenTelemetryComponent(val spanStartEndEventsEnabled: Boolean) : Telemetry
         return Baggage.current().asMap().mapValues { it.value.value }
     }
 
-    private fun setStatus(telemetryId: UUID, statusCode: net.corda.core.node.services.StatusCode, message: String) {
+    private fun setStatus(telemetryId: UUID, telemetryStatusCode: TelemetryStatusCode, message: String) {
         val spanInfo = spans[telemetryId]
-        spanInfo?.span?.setStatus(toOpenTelemetryStatus(statusCode), message)
+        spanInfo?.span?.setStatus(toOpenTelemetryStatus(telemetryStatusCode), message)
     }
 
-    private fun toOpenTelemetryStatus(statusCode: net.corda.core.node.services.StatusCode): StatusCode {
-        return when(statusCode) {
-            net.corda.core.node.services.StatusCode.ERROR -> StatusCode.ERROR
-            net.corda.core.node.services.StatusCode.OK -> StatusCode.OK
-            net.corda.core.node.services.StatusCode.UNSET -> StatusCode.UNSET
+    private fun toOpenTelemetryStatus(telemetryStatusCode: TelemetryStatusCode): StatusCode {
+        return when(telemetryStatusCode) {
+            TelemetryStatusCode.ERROR -> StatusCode.ERROR
+            TelemetryStatusCode.OK -> StatusCode.OK
+            TelemetryStatusCode.UNSET -> StatusCode.UNSET
         }
     }
 

@@ -4,7 +4,7 @@ import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
-import net.corda.core.node.services.SerializedTelemetry
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker

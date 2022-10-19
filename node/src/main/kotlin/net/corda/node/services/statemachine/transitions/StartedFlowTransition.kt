@@ -7,7 +7,7 @@ import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
-import net.corda.core.node.services.SerializedTelemetry
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toNonEmptySet
