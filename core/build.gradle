@@ -110,7 +110,7 @@ task copyQuasarJar(type: Copy) {
 jar {
     finalizedBy(copyQuasarJar)
     archiveBaseName = 'corda-core'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 }
 
 configurations {

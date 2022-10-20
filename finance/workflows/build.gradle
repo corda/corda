@@ -68,7 +68,7 @@ artifacts {
 
 jar {
     baseName 'corda-finance-workflows'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 }
 
 cordapp {

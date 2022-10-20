@@ -21,7 +21,7 @@ dependencies {
 
 jar {
     baseName = "corda-tools-cliutils"
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {

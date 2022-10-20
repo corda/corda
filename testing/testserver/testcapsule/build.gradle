@@ -27,7 +27,7 @@ capsule {
 task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.webserver.WebServer'
     archiveBaseName = 'corda-testserver'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
     archiveVersion = corda_release_version
     archiveName = archiveFileName.get()
     applicationSource = files(

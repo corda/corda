@@ -26,7 +26,6 @@ dependencies {
 }
 
 shadowJar {
-    archiveClassifier = jdkClassifier
     relocate 'kotlin', 'privatekotlin'
     exclude "**/Log4j2Plugins.dat"
     zip64 true

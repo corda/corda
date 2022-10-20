@@ -33,7 +33,7 @@ configurations {
 
 jar {
     archiveBaseName = 'corda-finance-contracts'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 
     manifest {
         attributes('Corda-Revision': 'n/a')

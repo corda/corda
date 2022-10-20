@@ -22,6 +22,7 @@ pluginManagement {
             mavenLocal()
             gradlePluginPortal()
             maven { url "${artifactory_contextUrl}/corda-dependencies" }
+            maven { url "${artifactory_contextUrl}/corda-dev" }
         }
     }
 }

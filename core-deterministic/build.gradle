@@ -56,7 +56,7 @@ dependencies {
 
 tasks.named('jar', Jar) {
     archiveBaseName = 'DOES-NOT-EXIST'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 
     // Don't build a jar here because it would be the wrong one.
     // The jar we really want will be built by the metafix task.
