@@ -28,7 +28,7 @@ dependencies {
 
 jar {
     baseName 'corda-mock'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
     manifest {
         attributes(
             'Automatic-Module-Name': 'net.corda.client.mock',

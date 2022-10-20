@@ -43,7 +43,7 @@ tasks.named('assemble') {
 
 tasks.named('jar', Jar)  {
     enabled = false
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 }
 
 artifacts {

@@ -45,7 +45,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     ]) {
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
     archiveVersion = corda_release_version
     archiveName = archiveFileName.get()
     applicationSource = files(

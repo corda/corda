@@ -69,7 +69,7 @@ artifacts {
 
 jar {
     baseName 'corda-serialization'
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {
