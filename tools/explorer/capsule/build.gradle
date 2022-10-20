@@ -51,7 +51,7 @@ artifacts {
 jar {
     classifier "ignore"
     enabled = false
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {

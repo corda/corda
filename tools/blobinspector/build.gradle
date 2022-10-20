@@ -24,7 +24,7 @@ jar {
         exclude "META-INF/*.RSA"
     }
     baseName "blob-inspector"
-    archiveAppendix = archive_appendix
+    archiveAppendix = corda_archive_appendix
     manifest {
         attributes(
                 'Main-Class': 'net.corda.blobinspector.BlobInspectorKt'
