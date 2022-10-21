@@ -19,6 +19,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import net.corda.opentelemetrydriver.OpenTelemetryDriver
 
 const val TRACEIDHEX_LENGTH = 32
 const val SPANIDHEX_LENGTH = 16
@@ -40,10 +41,21 @@ data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val st
 
 data class SpanInfo(val name: String, val span: Span, val spanScope: Scope, val spanEventContext: SerializableSpanContext? = null, val parentSpanEventContext: SerializableSpanContext? = null)
 
-@Suppress("TooManyFunctions")
-class OpenTelemetryComponent(val spanStartEndEventsEnabled: Boolean) : TelemetryComponent {
-    val tracer: Tracer = GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
+class TracerSetup {
 
+    fun getTracer(serviceName: String): Tracer {
+        return try {
+            OpenTelemetryDriver().getOpenTelemetry(serviceName).tracerProvider.get(OpenTelemetryComponent::class.java.name)
+        }
+        catch (ex: NoClassDefFoundError) {
+            GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
+        }
+    }
+}
+
+@Suppress("TooManyFunctions")
+class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnabled: Boolean) : TelemetryComponent {
+    val tracer: Tracer = TracerSetup().getTracer(serviceName)
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(OpenTelemetryComponent::class.java)

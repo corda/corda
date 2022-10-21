@@ -49,6 +49,7 @@ dependencies {
     deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
     deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
+    compileOnly project(':opentelemetry-driver')
 }
 
 tasks.named('jar', Jar) {
