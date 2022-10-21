@@ -5,6 +5,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.serialization.djvm.SandboxType.KOTLIN
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.amqp.CompositeType
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.RestrictedType
@@ -52,7 +53,7 @@ class DeserializeRemoteCustomisedEnumTest : TestBase(KOTLIN) {
                 name = toWorking(restrictedType.name)
             )
         }
-        return SerializedBytes(envelope.write())
+        return SerializedBytes(envelope.write(AMQP_STORAGE_CONTEXT))
     }
 
     @ParameterizedTest
@@ -102,7 +103,7 @@ class DeserializeRemoteCustomisedEnumTest : TestBase(KOTLIN) {
                 name = toWorking(restrictedType.name)
             )
         }
-        return SerializedBytes(envelope.write())
+        return SerializedBytes(envelope.write(AMQP_STORAGE_CONTEXT))
     }
 
     private fun toWorking(oldName: String): String = oldName.replace("Broken", "Working")

@@ -1,6 +1,7 @@
 @file:JvmName("TestHelpers")
 package net.corda.serialization.djvm
 
+import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.amqp.Envelope
 import net.corda.serialization.internal.amqp.alsoAsByteBuffer
@@ -10,9 +11,9 @@ import net.corda.serialization.internal.amqp.withList
 import org.apache.qpid.proton.codec.Data
 import java.io.ByteArrayOutputStream
 
-fun Envelope.write(): ByteArray {
+fun Envelope.write(context: SerializationContext): ByteArray {
     val data = Data.Factory.create()
-    data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
+    data.withDescribed(Envelope.DESCRIPTOR_OBJECT, context) {
         withList {
             putObject(obj)
             putObject(schema)

@@ -13,8 +13,7 @@ import java.io.NotSerializableException
 import java.io.OutputStream
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
-import java.util.*
-import kotlin.collections.LinkedHashSet
+import java.util.IdentityHashMap
 
 @KeepForDJVM
 data class BytesAndSchemas<T : Any>(
@@ -78,10 +77,10 @@ open class SerializationOutput constructor(
 
     internal fun <T : Any> _serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         val data = Data.Factory.create()
-        data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
+        data.withDescribed(Envelope.DESCRIPTOR_OBJECT, context) {
             withList {
                 writeObject(obj, this, context)
-                val schema = Schema(schemaHistory.toList())
+                val schema = Schema(schemaHistory.map { it.maybeConvertDescriptorToInteger(context) }.toList())
                 writeSchema(schema, this)
                 writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
             }

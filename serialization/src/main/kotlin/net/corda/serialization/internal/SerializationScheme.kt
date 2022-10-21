@@ -5,13 +5,23 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyBytes
-import net.corda.core.serialization.*
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.EncodingWhitelist
+import net.corda.core.serialization.ExternalSchema
+import net.corda.core.serialization.IntegerFingerprints
+import net.corda.core.serialization.ObjectWithCompatibleContext
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.core.serialization.SerializationEncoding
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationMagic
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getSchemeIdIfCustomSerializationMagic
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.slf4j.LoggerFactory
 import java.io.NotSerializableException
-import java.util.*
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 internal object NullEncodingWhitelist : EncodingWhitelist {
@@ -36,7 +46,9 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val lenientCarpenterEnabled: Boolean = false,
                                                               override val carpenterDisabled: Boolean = false,
                                                               override val preventDataLoss: Boolean = false,
-                                                              override val customSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet()) : SerializationContext {
+                                                              override val customSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet(),
+                                                              override val integerFingerprints: IntegerFingerprints? = null,
+                                                              override val externalSchema: ExternalSchema? = null) : SerializationContext {
     /**
      * {@inheritDoc}
      */
@@ -80,6 +92,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     override fun withPreferredSerializationVersion(magic: SerializationMagic) = copy(preferredSerializationVersion = magic)
     override fun withEncoding(encoding: SerializationEncoding?) = copy(encoding = encoding)
     override fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist) = copy(encodingWhitelist = encodingWhitelist)
+    override fun withIntegerFingerprint() = copy(integerFingerprints = IntegerFingerprints())
+    override fun withExternalSchema(externalSchema: ExternalSchema) = copy(externalSchema = externalSchema)
 }
 
 @KeepForDJVM

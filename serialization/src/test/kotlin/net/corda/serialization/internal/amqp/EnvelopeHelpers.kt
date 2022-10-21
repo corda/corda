@@ -8,7 +8,9 @@ import java.io.ByteArrayOutputStream
 
 fun Envelope.write(): ByteArray {
     val data = Data.Factory.create()
-    data.withDescribed(DESCRIPTOR_OBJECT) {
+    data.withDescribed(
+            DESCRIPTOR_OBJECT,
+    ) {
         withList {
             putObject(obj)
             putObject(schema)

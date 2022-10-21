@@ -1,9 +1,14 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.NotSerializableDetailedException
-import net.corda.serialization.internal.model.*
+import net.corda.serialization.internal.model.DefaultCacheProvider
+import net.corda.serialization.internal.model.EnumTransforms
+import net.corda.serialization.internal.model.InvalidEnumTransformsException
+import net.corda.serialization.internal.model.RemotePropertyInformation
+import net.corda.serialization.internal.model.RemoteTypeInformation
+import net.corda.serialization.internal.model.TypeDescriptor
+import net.corda.serialization.internal.model.TypeIdentifier
 import java.io.NotSerializableException
-import kotlin.collections.LinkedHashMap
 
 /**
  * Interprets AMQP [Schema] information to obtain [RemoteTypeInformation], caching by [TypeDescriptor].
@@ -192,8 +197,9 @@ class AMQPRemoteTypeModel {
     }
 }
 
-private val TypeNotation.typeDescriptor: String get() = descriptor.name?.toString() ?:
-throw NotSerializableException("Type notation has no type descriptor: $this")
+private val TypeNotation.typeDescriptor: String
+    get() = descriptor.code?.toString() ?: descriptor.name?.toString()
+    ?: throw NotSerializableException("Type notation has no type descriptor: $this")
 
 private val String.typeIdentifier get(): TypeIdentifier = AMQPTypeIdentifierParser.parse(this)
 

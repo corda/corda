@@ -11,8 +11,14 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
-import kotlin.collections.LinkedHashMap
+import java.util.Collections
+import java.util.Dictionary
+import java.util.EnumMap
+import java.util.HashMap
+import java.util.NavigableMap
+import java.util.SortedMap
+import java.util.TreeMap
+import java.util.WeakHashMap
 
 private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 
@@ -108,7 +114,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
     ) = ifThrowsAppend({ declaredType.typeName }) {
         obj.javaClass.checkSupportedMapType()
         // Write described
-        data.withDescribed(typeNotation.descriptor) {
+        data.withDescribed(typeNotation.descriptor, context) {
             // Write map
             data.putMap()
             data.enter()

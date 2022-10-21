@@ -76,7 +76,7 @@ class CorDappCustomSerializer(
         val proxy = uncheckedCast<SerializationCustomSerializer<*, *>,
                 SerializationCustomSerializer<Any?, Any?>>(serializer).toProxy(obj)
 
-        data.withDescribed(descriptor) {
+        data.withDescribed(descriptor, context) {
             data.withList {
                 proxySerializer.propertySerializers.forEach { (_, serializer) ->
                     serializer.writeProperty(proxy, this, output, context, debugIndent)

@@ -141,7 +141,7 @@ class ComposableObjectWriter(
             context: SerializationContext,
             debugIndent: Int
     ) {
-        data.withDescribed(typeNotation.descriptor) {
+        data.withDescribed(typeNotation.descriptor, context) {
             withList {
                 propertySerializers.values.forEach { propertySerializer ->
                     propertySerializer.writeProperty(obj, this, output, context, debugIndent + 1)

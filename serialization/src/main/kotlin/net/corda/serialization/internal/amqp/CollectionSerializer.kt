@@ -10,8 +10,10 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
-import kotlin.collections.LinkedHashSet
+import java.util.Collections
+import java.util.NavigableSet
+import java.util.SortedSet
+import java.util.TreeSet
 
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
@@ -108,7 +110,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
             context: SerializationContext,
             debugIndent: Int) = ifThrowsAppend({ declaredType.typeName }) {
         // Write described
-        data.withDescribed(typeNotation.descriptor) {
+        data.withDescribed(typeNotation.descriptor, context) {
             withList {
                 for (entry in obj as Collection<*>) {
                     output.writeObjectOrNull(entry, this, outboundType, context, debugIndent)

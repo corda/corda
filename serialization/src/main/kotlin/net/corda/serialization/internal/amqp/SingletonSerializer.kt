@@ -26,7 +26,7 @@ class SingletonSerializer(override val type: Class<*>, val singleton: Any, facto
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        data.withDescribed(typeNotation.descriptor) {
+        data.withDescribed(typeNotation.descriptor, context) {
             data.putBoolean(false)
         }
     }

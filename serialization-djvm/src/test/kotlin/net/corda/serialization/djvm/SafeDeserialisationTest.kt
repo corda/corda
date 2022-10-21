@@ -30,10 +30,10 @@ class SafeDeserialisationTest : TestBase(KOTLIN) {
         val envelope = DeserializationInput.getEnvelope(innocentData, context.encodingWhitelist).apply {
             val innocentType = schema.types[0] as CompositeType
             (schema.types as MutableList<TypeNotation>)[0] = innocentType.copy(
-                name = innocentType.name.replace("Innocent", "VeryEvil")
+                    name = innocentType.name.replace("Innocent", "VeryEvil")
             )
         }
-        val evilData = SerializedBytes<Any>(envelope.write())
+        val evilData = SerializedBytes<Any>(envelope.write(context))
 
         sandbox {
             _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))

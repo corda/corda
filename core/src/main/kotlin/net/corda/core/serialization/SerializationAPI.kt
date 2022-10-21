@@ -172,14 +172,20 @@ interface SerializationContext {
      * The default is false.
      */
     val preventDataLoss: Boolean
+
     /**
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
+
     /**
      * Additional custom serializers that will be made available during (de)serialization.
      */
     val customSerializers: Set<SerializationCustomSerializer<*, *>>
+
+    // EXPERIMENTAL
+    val integerFingerprints: IntegerFingerprints?
+    val externalSchema: ExternalSchema?
 
     /**
      * Helper method to return a new context based on this context with the property added.
@@ -250,6 +256,10 @@ interface SerializationContext {
      * A shallow copy of this context but with the given encoding whitelist.
      */
     fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist): SerializationContext
+
+    // EXPERIMENTAL
+    fun withIntegerFingerprint(): SerializationContext
+    fun withExternalSchema(externalSchema: ExternalSchema): SerializationContext
 
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
@@ -378,9 +388,18 @@ interface EncodingWhitelist {
  */
 fun SerializationContext.withWhitelist(classes: List<Class<*>>): SerializationContext {
     var currentContext = this
-    classes.forEach {
-        clazz -> currentContext = currentContext.withWhitelisted(clazz)
+    classes.forEach { clazz ->
+        currentContext = currentContext.withWhitelisted(clazz)
     }
 
     return currentContext
+}
+
+// EXPERIMENTAL
+@KeepForDJVM
+class ExternalSchema()
+
+@KeepForDJVM
+class IntegerFingerprints() {
+    val descriptorMappings: MutableMap<Any, Any> = mutableMapOf()
 }

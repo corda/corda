@@ -77,7 +77,7 @@ open class ArraySerializer(override val type: Type, factory: LocalSerializerFact
                              context: SerializationContext, debugIndent: Int
     ) {
         // Write described
-        data.withDescribed(typeNotation.descriptor) {
+        data.withDescribed(typeNotation.descriptor, context) {
             withList {
                 for (entry in obj as Array<*>) {
                     output.writeObjectOrNull(entry, this, elementType, context, debugIndent)
@@ -136,8 +136,8 @@ abstract class PrimArraySerializer(type: Type, factory: LocalSerializerFactory) 
         fun make(type: Type, factory: LocalSerializerFactory) = primTypes[type]!!(factory)
     }
 
-    fun localWriteObject(data: Data, func: () -> Unit) {
-        data.withDescribed(typeNotation.descriptor) { withList { func() } }
+    fun localWriteObject(data: Data, context: SerializationContext, func: () -> Unit) {
+        data.withDescribed(typeNotation.descriptor, context) { withList { func() } }
     }
 }
 
@@ -145,7 +145,7 @@ class PrimIntArraySerializer(factory: LocalSerializerFactory) : PrimArraySeriali
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        localWriteObject(data) {
+        localWriteObject(data, context) {
             (obj as IntArray).forEach { output.writeObjectOrNull(it, data, elementType, context, debugIndent + 1) }
         }
     }
@@ -155,7 +155,7 @@ class PrimCharArraySerializer(factory: LocalSerializerFactory) : PrimArraySerial
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        localWriteObject(data) {
+        localWriteObject(data, context) {
             (obj as CharArray).forEach {
                 output.writeObjectOrNull(it, data, elementType, context, debugIndent + 1)
             }
@@ -176,7 +176,7 @@ class PrimBooleanArraySerializer(factory: LocalSerializerFactory) : PrimArraySer
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        localWriteObject(data) {
+        localWriteObject(data, context) {
             (obj as BooleanArray).forEach { output.writeObjectOrNull(it, data, elementType, context, debugIndent + 1) }
         }
     }
@@ -187,7 +187,7 @@ class PrimDoubleArraySerializer(factory: LocalSerializerFactory) :
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        localWriteObject(data) {
+        localWriteObject(data, context) {
             (obj as DoubleArray).forEach { output.writeObjectOrNull(it, data, elementType, context, debugIndent + 1) }
         }
     }
@@ -197,7 +197,7 @@ class PrimFloatArraySerializer(factory: LocalSerializerFactory) :
         PrimArraySerializer(FloatArray::class.java, factory) {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int) {
-        localWriteObject(data) {
+        localWriteObject(data, context) {
             (obj as FloatArray).forEach { output.writeObjectOrNull(it, data, elementType, context, debugIndent + 1) }
         }
     }
@@ -208,7 +208,7 @@ class PrimShortArraySerializer(factory: LocalSerializerFactory) :
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        localWriteObject(data) {
+        localWriteObject(data, context) {
             (obj as ShortArray).forEach { output.writeObjectOrNull(it, data, elementType, context, debugIndent + 1) }
         }
     }
@@ -219,7 +219,7 @@ class PrimLongArraySerializer(factory: LocalSerializerFactory) :
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        localWriteObject(data) {
+        localWriteObject(data, context) {
             (obj as LongArray).forEach { output.writeObjectOrNull(it, data, elementType, context, debugIndent + 1) }
         }
     }

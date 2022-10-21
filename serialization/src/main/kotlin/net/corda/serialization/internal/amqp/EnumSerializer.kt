@@ -47,7 +47,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Local
     ) {
         if (obj !is Enum<*>) throw AMQPNotSerializableException(type, "Serializing $obj as enum when it isn't")
 
-        data.withDescribed(typeNotation.descriptor) {
+        data.withDescribed(typeNotation.descriptor, context) {
             withList {
                 data.putString(obj.name)
                 data.putInt(obj.ordinal)

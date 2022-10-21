@@ -1,22 +1,42 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.reflect.TypeToken
-import net.corda.core.serialization.*
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.TypeIdentifier
+import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.Data
-import java.lang.reflect.*
+import java.lang.reflect.GenericArrayType
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.lang.reflect.TypeVariable
+import java.lang.reflect.WildcardType
 
 /**
  * Extension helper for writing described objects.
  */
-fun Data.withDescribed(descriptor: Descriptor, block: Data.() -> Unit) {
+fun Data.withDescribed(descriptor: Descriptor, context: SerializationContext, block: Data.() -> Unit) {
     // Write described
     putDescribed()
     enter()
     // Write descriptor
-    putObject(descriptor.code ?: descriptor.name)
+    with(descriptor.maybeConvertToInteger(context)) {
+        putObject(this.code ?: this.name)
+    }
     block()
     exit() // exit described
+}
+
+// EXPERIMENTAL
+fun Descriptor.maybeConvertToInteger(context: SerializationContext): Descriptor {
+    if (this.code != null) return this
+    if (!this.name.toString().endsWith("==")) return this
+    val descriptorMappings = context.integerFingerprints?.descriptorMappings
+    if (descriptorMappings == null) return this
+    return context.integerFingerprints!!.descriptorMappings.computeIfAbsent(this) {
+        Descriptor(null, UnsignedLong(32L + descriptorMappings.size or DESCRIPTOR_TOP_32BITS))
+    } as Descriptor
 }
 
 /**

@@ -885,6 +885,7 @@ class CashTests {
         }
 
         val wtx = tx.toWireTransaction(ourServices)
+
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
         assertEquals(8, wtx.outputs.size)
 

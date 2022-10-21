@@ -50,7 +50,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        data.withDescribed(descriptor) {
+        data.withDescribed(descriptor, context) {
             @Suppress("unchecked_cast")
             writeDescribedObject(obj as T, data, type, output, context)
         }

@@ -9,10 +9,10 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.serialization.djvm.EvolvedEnum.ONE
-import net.corda.serialization.djvm.EvolvedEnum.TWO
-import net.corda.serialization.djvm.EvolvedEnum.THREE
 import net.corda.serialization.djvm.EvolvedEnum.FOUR
+import net.corda.serialization.djvm.EvolvedEnum.ONE
+import net.corda.serialization.djvm.EvolvedEnum.THREE
+import net.corda.serialization.djvm.EvolvedEnum.TWO
 import net.corda.serialization.djvm.OriginalEnum.One
 import net.corda.serialization.djvm.OriginalEnum.Two
 import net.corda.serialization.djvm.SandboxType.KOTLIN
@@ -77,7 +77,7 @@ class DeserializeEnumWithEvolutionTest : TestBase(KOTLIN) {
                 putAll(transforms)
             }
         }
-        return SerializedBytes(envelope.write())
+        return SerializedBytes(envelope.write(context))
     }
 
     @ParameterizedTest

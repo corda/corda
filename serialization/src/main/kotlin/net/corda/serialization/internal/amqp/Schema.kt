@@ -2,12 +2,17 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AMQPTypeIdentifiers.isPrimitive
 import net.corda.serialization.internal.model.TypeIdentifier
-import net.corda.serialization.internal.model.TypeIdentifier.TopType
 import net.corda.serialization.internal.model.TypeIdentifier.Companion.forGenericType
-import org.apache.qpid.proton.amqp.*
+import net.corda.serialization.internal.model.TypeIdentifier.TopType
+import org.apache.qpid.proton.amqp.Binary
+import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.amqp.Symbol
+import org.apache.qpid.proton.amqp.UnsignedInteger
+import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
 import java.lang.reflect.Type
@@ -183,6 +188,8 @@ sealed class TypeNotation : DescribedType {
     abstract val label: String?
     abstract val provides: List<String>
     abstract val descriptor: Descriptor
+
+    abstract fun maybeConvertDescriptorToInteger(context: SerializationContext): TypeNotation
 }
 
 @KeepForDJVM
@@ -215,6 +222,7 @@ data class CompositeType(
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, label, provides, descriptor, fields)
+    override fun maybeConvertDescriptorToInteger(context: SerializationContext): TypeNotation = copy(descriptor = descriptor.maybeConvertToInteger(context))
 
     override fun toString(): String {
         val sb = StringBuilder("<type class=\"composite\" name=\"$name\"")
@@ -265,6 +273,8 @@ data class RestrictedType(override val name: String,
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, label, provides, source, descriptor, choices)
+
+    override fun maybeConvertDescriptorToInteger(context: SerializationContext): TypeNotation = copy(descriptor = descriptor.maybeConvertToInteger(context))
 
     override fun toString(): String {
         val sb = StringBuilder("<type class=\"restricted\" name=\"$name\"")
