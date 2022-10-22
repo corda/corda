@@ -102,16 +102,16 @@ class CachingCustomSerializerRegistry(
                     "All serializers should be registered before the cache comes into use.")
         }
 
-        descriptorBasedSerializerRegistry.getOrBuild(customSerializer.typeDescriptor.toString()) {
+        descriptorBasedSerializerRegistry.getOrBuild(customSerializer.descriptor.name.toString()) {
             customSerializers += customSerializer
             for (additional in customSerializer.additionalSerializers) {
                 register(additional)
             }
 
             for (alias in customSerializer.deserializationAliases) {
-                val aliasDescriptor = typeDescriptorFor(alias)
-                if (aliasDescriptor != customSerializer.typeDescriptor) {
-                    descriptorBasedSerializerRegistry[aliasDescriptor.toString()] = customSerializer
+                val aliasDescriptor = Descriptor(typeDescriptorFor(alias))
+                if (aliasDescriptor != customSerializer.descriptor) {
+                    descriptorBasedSerializerRegistry[aliasDescriptor.name.toString()] = customSerializer
                 }
             }
 
@@ -128,7 +128,7 @@ class CachingCustomSerializerRegistry(
                     "All serializers must be registered before the cache comes into use.")
         }
 
-        descriptorBasedSerializerRegistry.getOrBuild(customSerializer.typeDescriptor.toString()) {
+        descriptorBasedSerializerRegistry.getOrBuild(customSerializer.descriptor.name.toString()) {
             customSerializers += customSerializer
             customSerializer
         }

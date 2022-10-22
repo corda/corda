@@ -97,7 +97,7 @@ class DefaultRemoteSerializerFactory(
 
         // Obtain a serializer and descriptor for the local type.
         val localSerializer = localSerializerFactory.get(localTypeInformation)
-        val localDescriptor = localSerializer.typeDescriptor.toString()
+        val localDescriptor = localSerializer.descriptor.name.toString()
 
         return when {
             // If descriptors match, we can return the local serializer straight away.

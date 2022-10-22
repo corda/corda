@@ -246,9 +246,9 @@ private class FingerPrintingState(
         }
 
         val customTypeDescriptor = customSerializerRegistry.findCustomSerializer(
-            clazz = observedClass,
-            declaredType = observedGenericType
-        )?.typeDescriptor?.toString()
+                clazz = observedClass,
+                declaredType = observedGenericType
+        )?.descriptor?.name?.toString()
         if (customTypeDescriptor != null) writer.write(customTypeDescriptor)
         else defaultAction()
     }

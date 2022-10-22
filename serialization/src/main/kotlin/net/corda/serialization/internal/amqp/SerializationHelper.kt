@@ -35,7 +35,7 @@ fun Descriptor.maybeConvertToInteger(context: SerializationContext): Descriptor 
     val descriptorMappings = context.integerFingerprints?.descriptorMappings
     if (descriptorMappings == null) return this
     return context.integerFingerprints!!.descriptorMappings.computeIfAbsent(this) {
-        Descriptor(null, UnsignedLong(32L + descriptorMappings.size or DESCRIPTOR_TOP_32BITS))
+        Descriptor(null, UnsignedLong(DESCRIPTOR_USER_START + descriptorMappings.size or DESCRIPTOR_TOP_32BITS))
     } as Descriptor
 }
 

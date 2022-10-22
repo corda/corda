@@ -2,8 +2,8 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
+import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
@@ -11,7 +11,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.ByteBufferInputStream
 import net.corda.serialization.internal.CordaSerializationEncoding
-import net.corda.serialization.internal.NullEncodingWhitelist
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.encodingNotPermittedFormat
 import net.corda.serialization.internal.model.TypeIdentifier
@@ -21,7 +20,6 @@ import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.InputStream
 import java.io.NotSerializableException
-import java.lang.Exception
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
@@ -73,8 +71,8 @@ class DeserializationInput constructor(
         }
 
         @Throws(AMQPNoTypeNotSerializableException::class)
-        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
-            return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
+        fun getEnvelope(byteSequence: ByteSequence, context: SerializationContext): Envelope {
+            return withDataBytes(byteSequence, context.encodingWhitelist) { dataBytes ->
                 val data = Data.Factory.create()
                 val expectedSize = dataBytes.remaining()
                 if (data.decode(dataBytes) != expectedSize.toLong()) {
@@ -82,14 +80,17 @@ class DeserializationInput constructor(
                             "Unexpected size of data",
                             "Blob is corrupted!.")
                 }
-                Envelope.get(data)
+                val envelope = Envelope.get(data)
+                if (context.externalSchema == null || envelope.schema.types.isNotEmpty()) {
+                    envelope
+                } else {
+                    Envelope(envelope.obj, context.externalSchema?.externalSchemaForDeserialization as? Schema
+                            ?: Schema.newInstance(listOf(context.externalSchema?.typeNotations?.flatten()
+                                    ?.toList() as List<TypeNotation>)), TransformsSchema.newInstance(null))
+                }
             }
         }
     }
-
-    @VisibleForTesting
-    @Throws(AMQPNoTypeNotSerializableException::class)
-    fun getEnvelope(byteSequence: ByteSequence, context: SerializationContext) = getEnvelope(byteSequence, context.encodingWhitelist)
 
     @Throws(
             AMQPNotSerializableException::class,
@@ -133,9 +134,9 @@ class DeserializationInput constructor(
                  */
                 @Suppress("unchecked_cast")
                 val envelope = (context.properties[AMQP_ENVELOPE_CACHE_PROPERTY] as? MutableMap<IdentityKey, Envelope>)
-                    ?.computeIfAbsent(IdentityKey(bytes)) { key ->
-                        getEnvelope(key.bytes, context.encodingWhitelist)
-                    } ?: getEnvelope(bytes, context.encodingWhitelist)
+                        ?.computeIfAbsent(IdentityKey(bytes)) { key ->
+                            getEnvelope(key.bytes, context)
+                        } ?: getEnvelope(bytes, context)
 
                 logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
 
@@ -148,7 +149,7 @@ class DeserializationInput constructor(
             clazz: Class<T>,
             context: SerializationContext
     ): ObjectAndEnvelope<T> = des {
-        val envelope = getEnvelope(bytes, context.encodingWhitelist)
+        val envelope = getEnvelope(bytes, context)
         // Now pick out the obj and schema from the envelope.
         ObjectAndEnvelope(doReadObject(envelope, clazz, context), envelope)
     }

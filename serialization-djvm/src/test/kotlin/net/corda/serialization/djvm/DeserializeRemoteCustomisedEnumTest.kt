@@ -47,10 +47,10 @@ class DeserializeRemoteCustomisedEnumTest : TestBase(KOTLIN) {
      */
     @Suppress("unchecked_cast")
     private fun SerializedBytes<Broken>.rewriteEnumAsWorking(): SerializedBytes<Working> {
-        val envelope = DeserializationInput.getEnvelope(this).apply {
+        val envelope = DeserializationInput.getEnvelope(this, AMQP_STORAGE_CONTEXT).apply {
             val restrictedType = schema.types[0] as RestrictedType
             (schema.types as MutableList<TypeNotation>)[0] = restrictedType.copy(
-                name = toWorking(restrictedType.name)
+                    name = toWorking(restrictedType.name)
             )
         }
         return SerializedBytes(envelope.write(AMQP_STORAGE_CONTEXT))
@@ -92,15 +92,15 @@ class DeserializeRemoteCustomisedEnumTest : TestBase(KOTLIN) {
      */
     @Suppress("unchecked_cast")
     private fun SerializedBytes<BrokenContainer>.rewriteContainerAsWorking(): SerializedBytes<WorkingContainer> {
-        val envelope = DeserializationInput.getEnvelope(this).apply {
+        val envelope = DeserializationInput.getEnvelope(this, AMQP_STORAGE_CONTEXT).apply {
             val compositeType = schema.types[0] as CompositeType
             (schema.types as MutableList<TypeNotation>)[0] = compositeType.copy(
-                name = toWorking(compositeType.name),
-                fields = compositeType.fields.map { it.copy(type = toWorking(it.type)) }
+                    name = toWorking(compositeType.name),
+                    fields = compositeType.fields.map { it.copy(type = toWorking(it.type)) }
             )
             val restrictedType = schema.types[1] as RestrictedType
             (schema.types as MutableList<TypeNotation>)[1] = restrictedType.copy(
-                name = toWorking(restrictedType.name)
+                    name = toWorking(restrictedType.name)
             )
         }
         return SerializedBytes(envelope.write(AMQP_STORAGE_CONTEXT))

@@ -20,7 +20,6 @@ import net.corda.serialization.internal.amqp.SerializationSchemas
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.typeDescriptorFor
 import net.corda.serialization.internal.model.TypeIdentifier
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -65,8 +64,7 @@ class SandboxCorDappCustomSerializer(
     private val deserializationAlias: TypeIdentifier get() =
         TypeIdentifier.Erased(AMQPTypeIdentifiers.nameForType(type).replace("sandbox.", ""), 0)
 
-    override val typeDescriptor: Symbol = typeDescriptorFor(type)
-    override val descriptor: Descriptor = Descriptor(typeDescriptor)
+    override val descriptor: Descriptor = Descriptor(typeDescriptorFor(type))
     override val deserializationAliases: Set<TypeIdentifier> = singleton(deserializationAlias)
 
     /**

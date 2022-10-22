@@ -62,7 +62,7 @@ class DeserializeEnumWithEvolutionTest : TestBase(KOTLIN) {
     }
 
     private fun SerializedBytes<*>.devolve(context: SerializationContext): SerializedBytes<Any> {
-        val envelope = DeserializationInput.getEnvelope(this, context.encodingWhitelist).apply {
+        val envelope = DeserializationInput.getEnvelope(this, context).apply {
             val schemaTypes = schema.types.map(::devolveType)
             with(schema.types as MutableList<TypeNotation>) {
                 clear()

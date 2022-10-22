@@ -7,7 +7,6 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.model.resolveAgainst
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
@@ -56,15 +55,13 @@ open class ArraySerializer(override val type: Type, factory: LocalSerializerFact
         }
     }
 
-    override val typeDescriptor: Symbol by lazy {
-        factory.createDescriptor(type)
-    }
-
     internal val elementType: Type by lazy { type.componentType().resolveAgainst(type) }
     internal open val typeName by lazy { calcTypeName(type) }
 
+    override val descriptor: Descriptor by lazy { Descriptor(factory.createDescriptor(type)) }
+
     internal val typeNotation: TypeNotation by lazy {
-        RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())
+        RestrictedType(typeName, null, emptyList(), "list", Descriptor(factory.createDescriptor(type)), emptyList())
     }
 
     override fun writeClassInfo(output: SerializationOutput) {

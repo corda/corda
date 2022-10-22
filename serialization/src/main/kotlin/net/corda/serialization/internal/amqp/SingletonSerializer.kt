@@ -11,13 +11,13 @@ import java.lang.reflect.Type
  * want converting back to that singleton instance on the receiving JVM.
  */
 class SingletonSerializer(override val type: Class<*>, val singleton: Any, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
-    override val typeDescriptor = factory.createDescriptor(type)
+    override val descriptor: Descriptor = Descriptor(factory.createDescriptor(type))
 
     private val interfaces = (factory.getTypeInformation(type) as LocalTypeInformation.Singleton).interfaces
 
     private fun generateProvides(): List<String> = interfaces.map { it.typeIdentifier.name }
 
-    internal val typeNotation: TypeNotation = RestrictedType(type.typeName, "Singleton", generateProvides(), "boolean", Descriptor(typeDescriptor), emptyList())
+    internal val typeNotation: TypeNotation = RestrictedType(type.typeName, "Singleton", generateProvides(), "boolean", descriptor, emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         output.writeTypeNotations(typeNotation)

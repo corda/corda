@@ -5,7 +5,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -22,8 +21,8 @@ import java.util.TreeSet
 class CollectionSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
 
-    override val typeDescriptor: Symbol by lazy {
-        factory.createDescriptor(type)
+    override val descriptor: Descriptor by lazy {
+        Descriptor(factory.createDescriptor(type))
     }
 
     companion object {
@@ -90,7 +89,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
 
     private val concreteBuilder: (List<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)
 
-    private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "list", descriptor, emptyList())
 
     private val outboundType = resolveTypeVariables(declaredType.actualTypeArguments[0], null)
     private val inboundType = declaredType.actualTypeArguments[0]

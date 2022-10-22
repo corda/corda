@@ -4,7 +4,6 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaType
@@ -62,8 +61,7 @@ class CorDappCustomSerializer(
 
     override val type = types[CORDAPP_TYPE]
     val proxyType = types[PROXY_TYPE]
-    override val typeDescriptor: Symbol = typeDescriptorFor(type)
-    val descriptor: Descriptor = Descriptor(typeDescriptor)
+    override val descriptor: Descriptor = Descriptor(typeDescriptorFor(type))
     private val proxySerializer: ObjectSerializer by lazy {
         ObjectSerializer.make(factory.getTypeInformation(proxyType), factory)
     }

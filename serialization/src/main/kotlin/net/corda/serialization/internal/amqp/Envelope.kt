@@ -19,6 +19,7 @@ data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: Tra
         val DESCRIPTOR_OBJECT = Descriptor(null, DESCRIPTOR)
 
         // described list should either be two or three elements long
+        private const val ENVELOPE_WITHOUT_SCHEMA = 1
         private const val ENVELOPE_WITHOUT_TRANSFORMS = 2
         private const val ENVELOPE_WITH_TRANSFORMS = 3
         private const val ENVELOPE_WITH_TRANSFORMS_AND_EXTERNAL_SCHEMA = 3
@@ -36,27 +37,39 @@ data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: Tra
             }
             val list = describedType.described as List<*>
 
+            // We need to cope with objects serialised without the schema header element in the
+            // envelope
+            val schema: Any? = when (list.size) {
+                ENVELOPE_WITHOUT_SCHEMA -> Schema(emptyList())
+                ENVELOPE_WITHOUT_TRANSFORMS -> Schema.get(list[SCHEMA_IDX]!!)
+                ENVELOPE_WITH_TRANSFORMS -> Schema.get(list[SCHEMA_IDX]!!)
+                ENVELOPE_WITH_TRANSFORMS_AND_EXTERNAL_SCHEMA -> Schema.get(list[SCHEMA_IDX]!!)
+                else -> throw AMQPNoTypeNotSerializableException(
+                        "Malformed list, bad length of ${list.size} (should be 1, 2, 3 or 4)")
+            }
             // We need to cope with objects serialised without the transforms header element in the
             // envelope
             val transformSchema: Any? = when (list.size) {
+                ENVELOPE_WITHOUT_SCHEMA -> null
                 ENVELOPE_WITHOUT_TRANSFORMS -> null
                 ENVELOPE_WITH_TRANSFORMS -> list[TRANSFORMS_SCHEMA_IDX]
                 ENVELOPE_WITH_TRANSFORMS_AND_EXTERNAL_SCHEMA -> list[TRANSFORMS_SCHEMA_IDX]
                 else -> throw AMQPNoTypeNotSerializableException(
-                        "Malformed list, bad length of ${list.size} (should be 2, 3 or 4)")
+                        "Malformed list, bad length of ${list.size} (should be 1, 2, 3 or 4)")
             }
-
+/*
             // We need to cope with objects serialised without the external schema header element in the
             // envelope
             val externalSchema: Any? = when (list.size) {
+                ENVELOPE_WITHOUT_SCHEMA -> null
                 ENVELOPE_WITHOUT_TRANSFORMS -> null
                 ENVELOPE_WITH_TRANSFORMS -> null
                 ENVELOPE_WITH_TRANSFORMS_AND_EXTERNAL_SCHEMA -> list[EXTERNAL_SCHEMA_IDX]
                 else -> throw AMQPNoTypeNotSerializableException(
-                        "Malformed list, bad length of ${list.size} (should be 2, 3 or 4)")
-            }
+                        "Malformed list, bad length of ${list.size} (should be 1, 2, 3 or 4)")
+            }*/
 
-            return newInstance(listOf(list[BLOB_IDX], Schema.get(list[SCHEMA_IDX]!!),
+            return newInstance(listOf(list[BLOB_IDX], schema,
                     TransformsSchema.newInstance(transformSchema)))
         }
 

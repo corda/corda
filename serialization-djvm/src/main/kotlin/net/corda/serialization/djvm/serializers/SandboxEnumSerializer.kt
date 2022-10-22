@@ -9,6 +9,7 @@ import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.AMQPNotSerializableException
 import net.corda.serialization.internal.amqp.AMQPSerializer
 import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.Descriptor
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.LocalSerializerFactory
 import net.corda.serialization.internal.amqp.Schema
@@ -17,7 +18,6 @@ import net.corda.serialization.internal.amqp.SerializationSchemas
 import net.corda.serialization.internal.model.EnumTransforms
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.util.function.Function
@@ -76,21 +76,21 @@ private class ConcreteEnumSerializer(
 ) : AMQPSerializer<Any> {
     override val type: Class<*> = declaredType
 
-    override val typeDescriptor: Symbol by lazy {
-        factory.createDescriptor(
-            /*
-             * Partially populated, providing just the information
-             * required by the fingerprinter.
-             */
-            LocalTypeInformation.AnEnum(
-                declaredType,
-                TypeIdentifier.forGenericType(declaredType),
-                memberNames,
-                emptyMap(),
-                emptyList(),
-                EnumTransforms.empty
-            )
-        )
+    override val descriptor: Descriptor by lazy {
+        Descriptor(factory.createDescriptor(
+                /*
+                 * Partially populated, providing just the information
+                 * required by the fingerprinter.
+                 */
+                LocalTypeInformation.AnEnum(
+                        declaredType,
+                        TypeIdentifier.forGenericType(declaredType),
+                        memberNames,
+                        emptyMap(),
+                        emptyList(),
+                        EnumTransforms.empty
+                )
+        ))
     }
 
     override fun readObject(

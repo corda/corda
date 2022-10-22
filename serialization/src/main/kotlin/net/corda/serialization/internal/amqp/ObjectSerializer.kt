@@ -102,11 +102,13 @@ interface ObjectSerializer : AMQPSerializer<Any> {
 
 class ComposableObjectSerializer(
         override val type: Type,
-        override val typeDescriptor: Symbol,
+        typeDescriptor: Symbol,
         override val propertySerializers: Map<PropertyName, PropertySerializer>,
         override val fields: List<Field>,
         private val reader: ComposableObjectReader,
         private val writer: ComposableObjectWriter): ObjectSerializer {
+
+    override val descriptor: Descriptor = Descriptor(typeDescriptor)
 
     override fun writeClassInfo(output: SerializationOutput) = writer.writeClassInfo(output)
 
@@ -178,25 +180,29 @@ class ComposableObjectReader(
 
 class AbstractObjectSerializer(
         override val type: Type,
-        override val typeDescriptor: Symbol,
+        typeDescriptor: Symbol,
         override val propertySerializers: Map<PropertyName, PropertySerializer>,
         override val fields: List<Field>,
         private val writer: ComposableObjectWriter): ObjectSerializer {
+
+    override val descriptor: Descriptor = Descriptor(typeDescriptor)
     override fun writeClassInfo(output: SerializationOutput) =
-        writer.writeClassInfo(output)
+            writer.writeClassInfo(output)
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
-        writer.writeObject(obj, data, type, output, context, debugIndent)
+            writer.writeObject(obj, data, type, output, context, debugIndent)
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
-        throw UnsupportedOperationException("Cannot deserialize abstract type ${type.typeName}")
+            throw UnsupportedOperationException("Cannot deserialize abstract type ${type.typeName}")
 }
 
 class EvolutionObjectSerializer(
         override val type: Type,
-        override val typeDescriptor: Symbol,
+        typeDescriptor: Symbol,
         override val propertySerializers: Map<PropertyName, PropertySerializer>,
         private val reader: ComposableObjectReader): ObjectSerializer {
+
+    override val descriptor: Descriptor = Descriptor(typeDescriptor)
 
     companion object {
         fun make(localTypeInformation: LocalTypeInformation.Composable,

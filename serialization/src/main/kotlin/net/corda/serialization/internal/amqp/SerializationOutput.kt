@@ -80,9 +80,22 @@ open class SerializationOutput constructor(
         data.withDescribed(Envelope.DESCRIPTOR_OBJECT, context) {
             withList {
                 writeObject(obj, this, context)
-                val schema = Schema(schemaHistory.map { it.maybeConvertDescriptorToInteger(context) }.toList())
-                writeSchema(schema, this)
-                writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
+                if (context.externalSchema == null) {
+                    val types = schemaHistory.map { it.maybeConvertDescriptorToInteger(context) }.toList()
+                    val schema = Schema(types)
+                    writeSchema(schema, this)
+                    writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
+                } else {
+                    context.externalSchema?.typeNotations?.add(schemaHistory.map { it.maybeConvertDescriptorToInteger(context) }.toList())
+                    if (context.externalSchema!!.flush) {
+                        val descriptors: MutableSet<Descriptor> = HashSet()
+                        val schema = Schema((context.externalSchema?.typeNotations?.flatten()?.toList() as List<TypeNotation>).filter {
+                            descriptors.add(it.descriptor)
+                        })
+                        writeSchema(schema, this)
+                        writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
+                    }
+                }
             }
         }
         return SerializedBytes(byteArrayOutput {

@@ -5,12 +5,16 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
-import net.corda.serialization.internal.model.*
-import net.corda.serialization.internal.model.TypeIdentifier.*
+import net.corda.serialization.internal.model.DefaultCacheProvider
+import net.corda.serialization.internal.model.FingerPrinter
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.LocalTypeModel
+import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.serialization.internal.model.TypeIdentifier.Parameterised
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
+import java.util.Optional
 import java.util.function.Function
 import java.util.function.Predicate
 import javax.annotation.concurrent.ThreadSafe
@@ -146,7 +150,7 @@ class DefaultLocalSerializerFactory(
     private fun makeAndCache(typeIdentifier: TypeIdentifier, build: () -> AMQPSerializer<Any>) =
         serializersByTypeId.getOrPut(typeIdentifier) {
             build().also { serializer ->
-                descriptorBasedSerializerRegistry[serializer.typeDescriptor.toString()] = serializer
+                descriptorBasedSerializerRegistry[serializer.descriptor.name.toString()] = serializer
             }
         }
 

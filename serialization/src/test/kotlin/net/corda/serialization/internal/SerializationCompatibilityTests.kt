@@ -9,6 +9,6 @@ class SerializationCompatibilityTests {
     @Test(timeout=300_000)
 	fun `fingerprint is stable`() {
         val factory = testDefaultFactoryNoEvolution().apply { register(ThrowableSerializer(this)) }
-        assertThat(factory.get(Exception::class.java).typeDescriptor.toString()).isEqualTo("net.corda:ApZ2a/36VVskaoDZMbiZ8A==")
+        assertThat(factory.get(Exception::class.java).descriptor.name.toString()).isEqualTo("net.corda:ApZ2a/36VVskaoDZMbiZ8A==")
     }
 }

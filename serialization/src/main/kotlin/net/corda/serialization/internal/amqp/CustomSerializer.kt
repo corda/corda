@@ -35,7 +35,6 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     open val deserializationAliases: Set<TypeIdentifier> = emptySet()
 
-    protected abstract val descriptor: Descriptor
     /**
      * This exists purely for documentation and cross-platform purposes. It is not used by our serialization / deserialization
      * code path.
@@ -82,12 +81,16 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         override val type: Type get() = clazz
 
-        override val typeDescriptor: Symbol by lazy {
+        override fun writeClassInfo(output: SerializationOutput) {
+            output.writeTypeNotations(typeNotation)
+        }
+
+        override val descriptor: Descriptor by lazy {
             val fingerprint = FingerprintWriter()
-                    .write(superClassSerializer.typeDescriptor)
+                    .write(superClassSerializer.descriptor.name!!)
                     .write(AMQPTypeIdentifiers.nameForType(clazz))
                     .fingerprint
-            Symbol.valueOf("$DESCRIPTOR_DOMAIN:$fingerprint")
+            Descriptor(Symbol.valueOf("$DESCRIPTOR_DOMAIN:$fingerprint"))
         }
 
         private val typeNotation: TypeNotation = RestrictedType(
@@ -95,15 +98,9 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                 null,
                 emptyList(),
                 AMQPTypeIdentifiers.nameForType(superClassSerializer.type),
-                Descriptor(typeDescriptor),
+                descriptor,
                 emptyList()
         )
-
-        override fun writeClassInfo(output: SerializationOutput) {
-            output.writeTypeNotations(typeNotation)
-        }
-
-        override val descriptor: Descriptor = Descriptor(typeDescriptor)
 
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
                                           context: SerializationContext
@@ -124,9 +121,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     abstract class CustomSerializerImp<T : Any>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
         override val type: Type get() = clazz
-        override val typeDescriptor: Symbol = typeDescriptorFor(clazz)
         override fun writeClassInfo(output: SerializationOutput) {}
-        override val descriptor: Descriptor = Descriptor(typeDescriptor)
+        override val descriptor: Descriptor = Descriptor(typeDescriptorFor(clazz))
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
     }
 

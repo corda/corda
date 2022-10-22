@@ -2,7 +2,6 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationContext
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
@@ -22,7 +21,8 @@ interface AMQPSerializer<out T> {
      *
      * This should be unique enough that we can use one global cache of [AMQPSerializer]s and use this as the look up key.
      */
-    val typeDescriptor: Symbol
+    //val typeDescriptor: Symbol
+    val descriptor: Descriptor
 
     /**
      * Add anything required to the AMQP schema via [SerializationOutput.writeTypeNotations] and any dependent serializers

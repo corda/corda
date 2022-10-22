@@ -22,7 +22,9 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.amqpMagic
-import picocli.CommandLine.*
+import picocli.CommandLine.ITypeConverter
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 import java.io.PrintStream
 import java.net.MalformedURLException
 import java.net.URL
@@ -59,7 +61,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
         initialiseSerialization()
 
         if (schema) {
-            val envelope = DeserializationInput.getEnvelope(bytes.sequence(), SerializationDefaults.STORAGE_CONTEXT.encodingWhitelist)
+            val envelope = DeserializationInput.getEnvelope(bytes.sequence(), SerializationDefaults.STORAGE_CONTEXT)
             out.println(envelope.schema)
             out.println()
             out.println(envelope.transformsSchema)

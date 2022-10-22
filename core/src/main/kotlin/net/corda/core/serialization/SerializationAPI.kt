@@ -397,7 +397,7 @@ fun SerializationContext.withWhitelist(classes: List<Class<*>>): SerializationCo
 
 // EXPERIMENTAL
 @KeepForDJVM
-class ExternalSchema()
+data class ExternalSchema(val flush: Boolean = false, val externalSchemaForDeserialization: Any? = null, val typeNotations: MutableList<List<Any>> = ArrayList())
 
 @KeepForDJVM
 class IntegerFingerprints() {

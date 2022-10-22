@@ -6,7 +6,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -29,7 +28,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 class MapSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
 
-    override val typeDescriptor: Symbol = factory.createDescriptor(type)
+    override val descriptor: Descriptor = Descriptor(factory.createDescriptor(type))
 
     companion object {
         // NB: Order matters in this map, the most specific classes should be listed at the end
@@ -90,7 +89,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
 
     private val concreteBuilder: MapCreationFunction = findConcreteType(declaredType.rawType as Class<*>)
 
-    private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "map", descriptor, emptyList())
 
     private val inboundKeyType = declaredType.actualTypeArguments[0]
     private val outboundKeyType = resolveTypeVariables(inboundKeyType, null)

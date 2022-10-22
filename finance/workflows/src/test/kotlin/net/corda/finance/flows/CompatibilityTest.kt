@@ -1,5 +1,6 @@
 package net.corda.finance.flows
 
+import net.corda.core.serialization.ExternalSchema
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
@@ -59,14 +60,15 @@ class CompatibilityTest {
         assertEquals(1, commands.size)
         assertTrue(commands.first().value is Cash.Commands.Issue)
 
+        val context = SerializationDefaults.STORAGE_CONTEXT.withExternalSchema(ExternalSchema()).withIntegerFingerprint()
         val newWtx = SerializationFactory.defaultFactory.asCurrent {
-            withCurrentContext(SerializationDefaults.STORAGE_CONTEXT) {
+            withCurrentContext(context) {
                 WireTransaction(transaction.tx.componentGroups.map { cg: ComponentGroup ->
                     ComponentGroup(cg.groupIndex, cg.components.map { bytes ->
                         val componentInput = DeserializationInput(serializerFactory)
                         val component = componentInput.deserialize(SerializedBytes<Any>(bytes.bytes), SerializationDefaults.STORAGE_CONTEXT)
                         val componentOutput = SerializationOutput(serializerFactory)
-                        val componentOutputBytes = componentOutput.serialize(component, SerializationDefaults.STORAGE_CONTEXT.withIntegerFingerprint()).bytes
+                        val componentOutputBytes = componentOutput.serialize(component, context).bytes
                         OpaqueBytes(componentOutputBytes)
                     })
                 })
@@ -76,8 +78,8 @@ class CompatibilityTest {
 
         // Serialize back and check that representation is byte-to-byte identical to what it was originally.
         val output = SerializationOutput(serializerFactory)
-        val outByteArray = output.serialize(newTransaction, SerializationDefaults.STORAGE_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)
-                .withIntegerFingerprint()).bytes
+        val outByteArray = output.serialize(newTransaction, context.withExternalSchema(context.externalSchema!!.copy(flush = true))
+                .withEncoding(CordaSerializationEncoding.SNAPPY)).bytes
         //val (serializedBytes, schema) = output.serializeAndReturnSchema(transaction, SerializationDefaults.STORAGE_CONTEXT)
         println("Output size = ${outByteArray.size}")
 

@@ -7,6 +7,7 @@ import net.corda.serialization.djvm.deserializers.CreateCollection
 import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.AMQPSerializer
 import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.Descriptor
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.LocalSerializerFactory
 import net.corda.serialization.internal.amqp.Schema
@@ -15,7 +16,6 @@ import net.corda.serialization.internal.amqp.SerializationSchemas
 import net.corda.serialization.internal.amqp.redescribe
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -92,18 +92,18 @@ private class ConcreteCollectionSerializer(
 ) : AMQPSerializer<Any> {
     override val type: ParameterizedType = declaredType
 
-    override val typeDescriptor: Symbol by lazy {
-        factory.createDescriptor(
-            LocalTypeInformation.ACollection(
-                observedType = declaredType,
-                typeIdentifier = TypeIdentifier.forGenericType(declaredType),
-                elementType = factory.getTypeInformation(declaredType.actualTypeArguments[0])
-            )
-        )
+    override val descriptor: Descriptor by lazy {
+        Descriptor(factory.createDescriptor(
+                LocalTypeInformation.ACollection(
+                        observedType = declaredType,
+                        typeIdentifier = TypeIdentifier.forGenericType(declaredType),
+                        elementType = factory.getTypeInformation(declaredType.actualTypeArguments[0])
+                )
+        ))
     }
 
     override fun readObject(
-        obj: Any,
+            obj: Any,
         schemas: SerializationSchemas,
         input: DeserializationInput,
         context: SerializationContext
