@@ -1,3 +1,5 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 plugins {
     // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
     id 'org.jetbrains.kotlin.jvm' // version '1.6.21'
@@ -6,6 +8,11 @@ plugins {
     id 'com.github.johnrengelman.shadow' // version '7.1.2'
     id 'net.corda.plugins.publish-utils'
 }
+
+description 'OpenTelemetry Driver'
+
+// This driver is required by core, so must always be 1.8. See core build.gradle.
+targetCompatibility = VERSION_1_8
 
 dependencies {
     // Use the Kotlin JDK 8 standard library.
