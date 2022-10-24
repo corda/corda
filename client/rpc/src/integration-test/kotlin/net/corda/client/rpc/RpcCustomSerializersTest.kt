@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
@@ -35,6 +36,7 @@ class RpcCustomSerializersTest {
 
             withSerializationEnvironmentsReset {
                 val client = CordaRPCClient(hostAndPort = server.rpcAddress)
+                Strand.sleep(5_000)
 
                 val serializers = client.getRegisteredCustomSerializers()
                 assertThat(serializers).hasSize(2)
