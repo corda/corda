@@ -36,7 +36,6 @@ class RpcCustomSerializersTest {
 
             withSerializationEnvironmentsReset {
                 val client = CordaRPCClient(hostAndPort = server.rpcAddress)
-                Strand.sleep(60_000)
 
                 val serializers = client.getRegisteredCustomSerializers()
                 assertThat(serializers).hasSize(2)
