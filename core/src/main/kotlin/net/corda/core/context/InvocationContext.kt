@@ -4,6 +4,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.CordaSerializable
 import java.security.Principal
 
@@ -25,7 +26,8 @@ data class InvocationContext(
     val externalTrace: Trace? = null,
     val impersonatedActor: Actor? = null,
     val arguments: List<Any?>? = emptyList(), // 'arguments' is nullable so that a - >= 4.6 version - RPC client can be backwards compatible against - < 4.6 version - nodes
-    val clientId: String? = null
+    val clientId: String? = null,
+    val serializedTelemetry: SerializedTelemetry? = null
 ) {
 
     constructor(
@@ -51,8 +53,9 @@ data class InvocationContext(
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
             arguments: List<Any?> = emptyList(),
-            clientId: String? = null
-        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments, clientId)
+            clientId: String? = null,
+            serializedTelemetry: SerializedTelemetry? = null
+        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments, clientId, serializedTelemetry)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
@@ -60,13 +63,15 @@ data class InvocationContext(
         @DeleteForDJVM
         @JvmStatic
         @JvmOverloads
+        @Suppress("LongParameterList")
         fun rpc(
             actor: Actor,
             trace: Trace = Trace.newInstance(),
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
-            arguments: List<Any?> = emptyList()
-        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, arguments)
+            arguments: List<Any?> = emptyList(),
+            serializedTelemetry: SerializedTelemetry? = null
+        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, arguments, serializedTelemetry = serializedTelemetry)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.

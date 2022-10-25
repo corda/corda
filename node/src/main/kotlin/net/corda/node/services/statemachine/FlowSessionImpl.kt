@@ -10,6 +10,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.checkPayloadIs
 import net.corda.core.internal.telemetry.SerializedTelemetry
+import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -49,7 +50,7 @@ class FlowSessionImpl(
             payload: Any,
             maySkipCheckpoint: Boolean
     ): UntrustworthyData<R> {
-        flowStateMachine.serviceHub.telemetryService.span("${this::class.java.name}#sendAndReceive", telemetryMap, flowLogic = flowStateMachine.logic) {
+        flowStateMachine.serviceHub.telemetryServiceInternal.span("${this::class.java.name}#sendAndReceive", telemetryMap, flowLogic = flowStateMachine.logic) {
             enforceNotPrimitive(receiveType)
             val request = FlowIORequest.SendAndReceive(
                     sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
@@ -66,7 +67,7 @@ class FlowSessionImpl(
 
     @Suspendable
     override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
-        flowStateMachine.serviceHub.telemetryService.span("${this::class.java.name}#receive", telemetryMap, flowStateMachine.logic ) {
+        flowStateMachine.serviceHub.telemetryServiceInternal.span("${this::class.java.name}#receive", telemetryMap, flowStateMachine.logic ) {
             enforceNotPrimitive(receiveType)
             val request = FlowIORequest.Receive(NonEmptySet.of(this))
             return flowStateMachine.suspend(request, maySkipCheckpoint).getValue(this).checkPayloadIs(receiveType)
@@ -78,7 +79,7 @@ class FlowSessionImpl(
 
     @Suspendable
     override fun send(payload: Any, maySkipCheckpoint: Boolean) {
-        flowStateMachine.serviceHub.telemetryService.span("${this::class.java.name}#send", telemetryMap, flowStateMachine.logic) {
+        flowStateMachine.serviceHub.telemetryServiceInternal.span("${this::class.java.name}#send", telemetryMap, flowStateMachine.logic) {
             val request = FlowIORequest.Send(
                     sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
             )

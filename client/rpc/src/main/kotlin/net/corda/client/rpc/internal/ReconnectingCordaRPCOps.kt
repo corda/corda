@@ -1,5 +1,6 @@
 package net.corda.client.rpc.internal
 
+import io.opentelemetry.api.OpenTelemetry
 import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
@@ -296,6 +297,9 @@ class ReconnectingCordaRPCOps private constructor(
             synchronized(this) {
                 currentRPCConnection?.forceClose()
             }
+        }
+        override fun getOpenTelemetry(): OpenTelemetry? {
+            return currentRPCConnection?.getOpenTelemetry()
         }
         fun isClosed(): Boolean = currentState == CLOSED
     }

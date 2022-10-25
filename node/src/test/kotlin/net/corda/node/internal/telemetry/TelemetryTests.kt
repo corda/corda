@@ -16,6 +16,7 @@ import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryDataItem
 import net.corda.core.internal.telemetry.TelemetryEvent
 import net.corda.core.internal.telemetry.TelemetryStatusCode
+import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
@@ -316,14 +317,12 @@ class TelemetryTests {
 
         @Suspendable
         override fun call(): InvocationContext {
-            val telemetryService = serviceHub.telemetryService
-            val context = telemetryService.span(this::class.java.name, emptyMap(), this) {
+            return serviceHub.telemetryServiceInternal.span(this::class.java.name, emptyMap(), this) {
                 // Do a sleep which invokes a suspend
                 sleep(Duration.ofSeconds(1))
                 progressTracker.currentStep = TESTSTEP
                 stateMachine.context
             }
-            return context
         }
     }
 }

@@ -1,6 +1,7 @@
 package net.corda.core.internal.telemetry
 
 import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.baggage.Baggage
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
@@ -42,10 +43,13 @@ data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val st
 data class SpanInfo(val name: String, val span: Span, val spanScope: Scope, val spanEventContext: SerializableSpanContext? = null, val parentSpanEventContext: SerializableSpanContext? = null)
 
 class TracerSetup {
-
+    var openTelemetry: OpenTelemetry? = null
     fun getTracer(serviceName: String): Tracer {
         return try {
-            OpenTelemetryDriver().getOpenTelemetry(serviceName).tracerProvider.get(OpenTelemetryComponent::class.java.name)
+            with(OpenTelemetryDriver.getOpenTelemetry(serviceName)) {
+                openTelemetry = this
+                tracerProvider.get(OpenTelemetryComponent::class.java.name)
+            }
         }
         catch (ex: NoClassDefFoundError) {
             GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
@@ -55,10 +59,12 @@ class TracerSetup {
 
 @Suppress("TooManyFunctions")
 class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnabled: Boolean) : TelemetryComponent {
-    val tracer: Tracer = TracerSetup().getTracer(serviceName)
+    val tracerSetup = TracerSetup()
+    val tracer: Tracer = tracerSetup.getTracer(serviceName)
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(OpenTelemetryComponent::class.java)
+        const val OPENTELEMETRY_COMPONENT_NAME = "OpenTelemetry"
     }
 
     val rootSpans = ConcurrentHashMap<UUID, SpanInfo>()
@@ -66,11 +72,16 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
     val baggages = ConcurrentHashMap<UUID, Scope>()
 
     override fun isEnabled(): Boolean {
+        if (tracerSetup.openTelemetry != null) {
+            // The SDK is on the classpath.
+            return true
+        }
+        // Now see if the open telemetry java agent is available
         val tracer = GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
         return tracer.javaClass.name != "io.opentelemetry.api.trace.DefaultTracer"
     }
 
-    override fun name(): String = "OpenTelemetry"
+    override fun name(): String = OPENTELEMETRY_COMPONENT_NAME
     override fun onTelemetryEvent(event: TelemetryEvent) {
         when (event) {
             is StartSpanForFlowEvent -> startSpanForFlow(event.name, event.attributes, event.telemetryId, event.flowLogic, event.telemetryDataItem)

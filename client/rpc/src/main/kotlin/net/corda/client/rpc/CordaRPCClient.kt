@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import io.opentelemetry.api.OpenTelemetry
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.client.rpc.internal.SerializationEnvironmentHelper
@@ -76,6 +77,10 @@ class CordaRPCConnection private constructor(
     override fun notifyServerAndClose() = doCloseLogic { actualConnection.notifyServerAndClose() }
 
     override fun forceClose() = doCloseLogic { actualConnection.forceClose() }
+
+    override fun getOpenTelemetry(): OpenTelemetry? {
+        return actualConnection.getOpenTelemetry()
+    }
 
     private inline fun doCloseLogic(close: () -> Unit) {
         try {
@@ -169,8 +174,13 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         /**
          * The cache expiry of a deduplication watermark per client. Default is 1 day.
          */
-        open val deduplicationCacheExpiry: Duration = 1.days
+        open val deduplicationCacheExpiry: Duration = 1.days,
 
+        open val openTelemetryEnabled: Boolean = true,
+
+        open val simpleLogTelemetryEnabled: Boolean = false,
+
+        open val spanStartEndEventsEnabled: Boolean = true
 ) {
 
     companion object {

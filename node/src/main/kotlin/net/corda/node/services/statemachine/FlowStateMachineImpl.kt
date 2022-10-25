@@ -38,6 +38,7 @@ import net.corda.core.internal.toPath
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.telemetry.ComponentTelemetryIds
 import net.corda.core.internal.telemetry.SerializedTelemetry
+import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -349,7 +350,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
             Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
 
-            val result = serviceHub.telemetryService.spanForFlow(logic.javaClass.name, emptyMap(), logic, serializedTelemetry) {
+            // context.serializedTelemetry is from an rpc client, serializedTelemetry is from a peer, otherwise nothing
+            val serializedTelemetrySrc = context.serializedTelemetry ?: serializedTelemetry
+            val result = serviceHub.telemetryServiceInternal.spanForFlow(logic.javaClass.name, emptyMap(), logic, serializedTelemetrySrc) {
                 val ret = logic.call()
                 // Note suspend stores the telemetry ids back in the components from checkpoint, so must be done, before we end the span
                 suspend(FlowIORequest.WaitForSessionConfirmations(), maySkipCheckpoint = true)
@@ -424,7 +427,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 isDbTransactionOpenOnExit = true
         )
         return try {
-            serviceHub.telemetryService.span(subFlow.javaClass.name, emptyMap(), subFlow) {
+            serviceHub.telemetryServiceInternal.span(subFlow.javaClass.name, emptyMap(), subFlow) {
                 subFlow.call()
             }
         }
@@ -467,7 +470,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun initiateFlow(destination: Destination, wellKnownParty: Party, serializedTelemetry: SerializedTelemetry): FlowSession {
+    override fun initiateFlow(destination: Destination, wellKnownParty: Party, serializedTelemetry: SerializedTelemetry?): FlowSession {
         require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
         val resume = processEventImmediately(
                 Event.InitiateFlow(destination, wellKnownParty, serializedTelemetry),
@@ -593,12 +596,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun retrieveTelemetryIds(): ComponentTelemetryIds? {
-        return serviceHub.telemetryService.getCurrentTelemetryIds()
+        return serviceHub.telemetryServiceInternal.getCurrentTelemetryIds()
     }
 
     private fun storeTelemetryIds(telemetryIds: ComponentTelemetryIds?) {
         telemetryIds?.let {
-            serviceHub.telemetryService.setCurrentTelemetryId(it)
+            serviceHub.telemetryServiceInternal.setCurrentTelemetryId(it)
         }
     }
 

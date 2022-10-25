@@ -13,7 +13,6 @@ import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.internal.telemetry.TelemetryComponent
-import net.corda.core.internal.telemetry.TelemetryService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction

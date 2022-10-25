@@ -1,5 +1,6 @@
 package net.corda.client.rpc.internal
 
+import io.opentelemetry.api.OpenTelemetry
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.UnrecoverableRPCException
@@ -98,10 +99,13 @@ class RPCClient<I : RPCOps>(
                 // Without this any type of "send" time failures will not be delivered back to the client
                 isBlockOnNonDurableSend = true
             }
+            val rpcClientTelemetry = RPCClientTelemetry("rpcClient-${targetLegalIdentity.toString()}", rpcConfiguration.openTelemetryEnabled,
+                    rpcConfiguration.simpleLogTelemetryEnabled, rpcConfiguration.spanStartEndEventsEnabled)
             val sessionId = Trace.SessionId.newInstance()
             val distributionMux = DistributionMux(listeners, username)
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator,
-                    rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor, targetLegalIdentity, distributionMux)
+                    rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor, targetLegalIdentity, distributionMux,
+                    rpcClientTelemetry)
             try {
                 proxyHandler.start()
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))
@@ -117,6 +121,10 @@ class RPCClient<I : RPCOps>(
                 val connection = object : RPCConnection<I> {
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
+
+                    override fun getOpenTelemetry(): OpenTelemetry? {
+                        return rpcClientTelemetry.telemetryService.getOpenTelemetry()
+                    }
 
                     private fun close(notify: Boolean) {
                         if (notify) {

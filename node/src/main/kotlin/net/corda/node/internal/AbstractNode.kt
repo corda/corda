@@ -59,7 +59,8 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.OpenTelemetryComponent
-import net.corda.core.internal.telemetry.TelemetryService
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
+import net.corda.core.node.services.TelemetryService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.schemas.MappedSchema
@@ -254,7 +255,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         NotaryLoader(it, versionInfo)
     }
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop(false)
-    val telemetryService: TelemetryService = TelemetryService().also {
+    val telemetryService: TelemetryServiceImpl = TelemetryServiceImpl().also {
         val openTelemetryComponent = OpenTelemetryComponent(configuration.myLegalName.toString(), configuration.telemetry.spanStartEndEventsEnabled)
         if (configuration.telemetry.openTelemetryEnabled && openTelemetryComponent.isEnabled()) {
             it.addTelemetryComponent(openTelemetryComponent)
@@ -991,7 +992,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
     private fun installTelemetryComponents() {
-        val loadedTelemetryComponents = cordappLoader.cordapps.flatMap { it.telemetryComponents }.filterNot {
+        val loadedTelemetryComponents: List<Class<out TelemetryComponent>> = cordappLoader.cordapps.flatMap { it.telemetryComponents }.filterNot {
                   it.name == OpenTelemetryComponent::class.java.name ||
                   it.name == SimpleLogTelemetryComponent::class.java.name }
 
@@ -1025,7 +1026,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    fun <T : TelemetryComponent> installTelemetryComponent(telemetryComponentClass: Class<T>): T {
+    private fun <T : TelemetryComponent> installTelemetryComponent(telemetryComponentClass: Class<T>) {
         val telemetryComponent = try {
             val extendedTelemetryComponentConstructor = telemetryComponentClass.getDeclaredConstructor().apply { isAccessible = true }
             val telemetryComponent = extendedTelemetryComponentConstructor.newInstance()
@@ -1041,7 +1042,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         else {
             log.info("${telemetryComponentClass.name} not enabled so not installing")
         }
-        return telemetryComponent
     }
 
     private fun registerCordappFlows() {

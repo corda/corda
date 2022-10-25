@@ -10,6 +10,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.checkParameterHash
+import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.lang.IllegalStateException
@@ -74,7 +75,7 @@ abstract class NotaryServiceFlow(
                     sleep(Duration.ZERO)
                 }
             }
-            serviceHub.telemetryService.span("${this::class.java.name}#call:commitInputStates", flowLogic = this) {
+            serviceHub.telemetryServiceInternal.span("${this::class.java.name}#call:commitInputStates", flowLogic = this) {
                 service.commitInputStates(
                         tx.inputs,
                         tx.id,

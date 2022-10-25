@@ -31,7 +31,7 @@ interface FlowStateMachine<FLOWRETURN> : FlowStateMachineHandle<FLOWRETURN> {
     fun serialize(payloads: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>>
 
     @Suspendable
-    fun initiateFlow(destination: Destination, wellKnownParty: Party, serializedTelemetry: SerializedTelemetry): FlowSession
+    fun initiateFlow(destination: Destination, wellKnownParty: Party, serializedTelemetry: SerializedTelemetry?): FlowSession
 
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
 

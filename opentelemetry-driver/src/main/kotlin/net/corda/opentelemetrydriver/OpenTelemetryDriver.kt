@@ -14,13 +14,13 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes
 
-class OpenTelemetryDriver {
-    fun getOpenTelemetry(serviceName: String): OpenTelemetry {
+object OpenTelemetryDriver {
+    private fun buildAndGetOpenTelemetry(serviceName: String): OpenTelemetry {
         val resource: Resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, serviceName)))
 
         val sdkTracerProvider: SdkTracerProvider = SdkTracerProvider.builder()
-                .addSpanProcessor(BatchSpanProcessor.builder(OtlpGrpcSpanExporter.builder().build()).build())
+                 .addSpanProcessor(BatchSpanProcessor.builder(OtlpGrpcSpanExporter.builder().build()).build())
                 .setResource(resource)
                 .build()
 
@@ -34,5 +34,16 @@ class OpenTelemetryDriver {
                 .setMeterProvider(sdkMeterProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal()
+    }
+
+    @Volatile
+    private var OPENTELEMETRY_INSTANCE: OpenTelemetry? = null
+
+    fun getOpenTelemetry(serviceName: String): OpenTelemetry {
+        return OPENTELEMETRY_INSTANCE ?: synchronized(this) {
+            OPENTELEMETRY_INSTANCE ?: buildAndGetOpenTelemetry(serviceName).also {
+                OPENTELEMETRY_INSTANCE = it
+            }
+        }
     }
 }

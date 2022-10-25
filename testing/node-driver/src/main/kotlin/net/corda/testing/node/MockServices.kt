@@ -21,7 +21,7 @@ import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.internal.telemetry.TelemetryComponent
-import net.corda.core.internal.telemetry.TelemetryService
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -215,7 +215,7 @@ open class MockServices private constructor(
                     TestingNamedCacheFactory(),
                     identityService,
                     persistence,
-                    MockCryptoService(aliasKeyMap), TelemetryService()
+                    MockCryptoService(aliasKeyMap), TelemetryServiceImpl()
             )
             persistence.transaction { keyManagementService.start(aliasedMoreKeys + aliasedIdentityKey) }
 
@@ -440,7 +440,7 @@ open class MockServices private constructor(
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
-    override val telemetryService: TelemetryService get() = throw java.lang.UnsupportedOperationException()
+    override val telemetryService: TelemetryServiceImpl get() = throw java.lang.UnsupportedOperationException()
     override val clock: TestClock get() = TestClock(Clock.systemUTC())
     override val myInfo: NodeInfo
         get() {

@@ -73,7 +73,7 @@ sealed class Event {
      * Initiate a flow. This causes a new session object to be created and returned to the flow. Note that no actual
      * communication takes place at this time, only on the first send/receive operation on the session.
      */
-    data class InitiateFlow(val destination: Destination, val wellKnownParty: Party, val serializedTelemetry: SerializedTelemetry) : Event()
+    data class InitiateFlow(val destination: Destination, val wellKnownParty: Party, val serializedTelemetry: SerializedTelemetry?) : Event()
 
     /**
      * Signal the entering into a subflow.

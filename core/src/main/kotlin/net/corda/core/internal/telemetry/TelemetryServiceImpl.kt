@@ -1,7 +1,10 @@
 package net.corda.core.internal.telemetry
 
+import io.opentelemetry.api.OpenTelemetry
 import net.corda.core.CordaInternal
 import net.corda.core.flows.FlowLogic
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.TelemetryService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -32,7 +35,7 @@ enum class TelemetryStatusCode {
 }
 
 @CordaSerializable
-data class TelemetryId(private val telemetryService: TelemetryService) {
+data class TelemetryId(private val telemetryService: TelemetryServiceImpl) {
     val id: UUID = UUID.randomUUID()
 
     fun setStatus(telemetryStatusCode: TelemetryStatusCode, message: String) {
@@ -66,8 +69,8 @@ class SetStatusEvent(val telemetryId: UUID, val telemetryStatusCode: TelemetrySt
 class RecordExceptionEvent(val telemetryId: UUID, val throwable: Throwable): TelemetryEvent
 
 interface TelemetryComponent {
-    fun isEnabled(): Boolean
     fun name(): String
+    fun isEnabled(): Boolean
     fun onTelemetryEvent(event: TelemetryEvent)
     fun getCurrentTelemetryData(): TelemetryDataItem
     fun getCurrentTelemetryId(): UUID
@@ -77,11 +80,15 @@ interface TelemetryComponent {
     fun getCurrentBaggage(): Map<String, String>
 }
 
+interface TelemetryComponentId {
+    fun name(): String
+}
+
 @Suppress("TooManyFunctions")
-class TelemetryService : SingletonSerializeAsToken() {
+class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
 
     companion object {
-        private val log: Logger = LoggerFactory.getLogger(TelemetryService::class.java)
+        private val log: Logger = LoggerFactory.getLogger(TelemetryServiceImpl::class.java)
     }
 
     fun getCurrentSpanId(telemetryComponentName: String): String? {
@@ -187,7 +194,10 @@ class TelemetryService : SingletonSerializeAsToken() {
     }
 
     @CordaInternal
-    fun getCurrentTelemetryData(): SerializedTelemetry {
+    fun getCurrentTelemetryData(): SerializedTelemetry? {
+        if (telemetryComponents.isEmpty()) {
+            return null
+        }
         val serializedTelemetryData = mutableMapOf<String, OpaqueBytes>()
         telemetryComponents.values.forEach {
             val currentTelemetryData = it.getCurrentTelemetryData()
@@ -214,4 +224,13 @@ class TelemetryService : SingletonSerializeAsToken() {
             it.setCurrentTelemetryId(telemetryIds.componentTelemetryIds[it.name()]!!)
         }
     }
+
+    override fun getOpenTelemetry(): OpenTelemetry? {
+        return telemetryComponents[OpenTelemetryComponent.OPENTELEMETRY_COMPONENT_NAME]?.let {
+            (it as? OpenTelemetryComponent)?.tracerSetup?.openTelemetry
+        }
+    }
 }
+
+val ServiceHub.telemetryServiceInternal
+    get() = this.telemetryService as TelemetryServiceImpl

@@ -40,6 +40,7 @@ import net.corda.nodeapi.internal.persistence.contextDatabaseOrNull
 import net.corda.nodeapi.internal.rpc.ObservableContextInterface
 import net.corda.nodeapi.internal.rpc.ObservableSubscription
 import net.corda.nodeapi.internal.serialization.amqp.RpcServerObservableSerializer
+import net.corda.nodeapi.serializedTelemetry
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -529,7 +530,8 @@ class RPCServer(
         val externalTrace = externalTrace()
         val rpcActor = actorFrom(this)
         val impersonatedActor = impersonatedActor()
-        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor, arguments), rpcActor.second)
+        val serializedTelemetry = serializedTelemetry()
+        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor, arguments, serializedTelemetry), rpcActor.second)
     }
 
     private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {

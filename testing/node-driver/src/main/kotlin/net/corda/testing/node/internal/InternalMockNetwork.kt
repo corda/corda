@@ -27,7 +27,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.internal.telemetry.TelemetryService
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -411,7 +411,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
-            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, TelemetryService())
+            return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, TelemetryServiceImpl())
         }
 
         override fun startShell() {
