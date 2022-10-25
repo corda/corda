@@ -12,6 +12,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class SecureHashSerializationTest {
@@ -29,6 +30,7 @@ class SecureHashSerializationTest {
         assertEquals(before.algorithm, after.algorithm)
         assertEquals(after.algorithm, SHA2_256)
         assertTrue(after is SecureHash.SHA256)
+        assertSame(before, after)
     }
 
     @Test(timeout = 300_000)
@@ -41,5 +43,6 @@ class SecureHashSerializationTest {
         assertEquals(before.algorithm, after.algorithm)
         assertEquals(after.algorithm, SHA2_512)
         assertTrue(after is SecureHash.HASH)
+        assertSame(before, after)
     }
 }
