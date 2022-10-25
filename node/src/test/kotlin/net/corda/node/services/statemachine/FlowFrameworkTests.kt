@@ -1104,7 +1104,7 @@ internal data class SessionTransfer(val from: Int, val message: SessionMessage, 
 }
 
 internal fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
-    return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize(), serializedTelemetry = SerializedTelemetry(emptyMap()))
+    return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize(), serializedTelemetry = null)
 }
 
 internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), DataSessionMessage(payload.serialize()))
