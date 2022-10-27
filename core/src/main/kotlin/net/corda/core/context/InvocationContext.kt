@@ -38,6 +38,15 @@ data class InvocationContext(
         impersonatedActor: Actor? = null
     ) : this(origin, trace, actor, externalTrace, impersonatedActor, emptyList())
 
+    constructor(
+            origin: InvocationOrigin,
+            trace: Trace,
+            actor: Actor?,
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null,
+            clientId: String?
+    ) : this(origin, trace, actor, externalTrace, impersonatedActor, emptyList(), clientId, serializedTelemetry = null)
+
     companion object {
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.

@@ -1,7 +1,7 @@
 package net.corda.client.rpc.internal
 
-import io.opentelemetry.api.OpenTelemetry
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.ext.RPCConnectionListener
@@ -122,8 +122,8 @@ class RPCClient<I : RPCOps>(
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
 
-                    override fun getOpenTelemetry(): OpenTelemetry? {
-                        return rpcClientTelemetry.telemetryService.getOpenTelemetry()
+                    override fun getOpenTelemetry(): OpenTelemetryHandle? {
+                        return rpcClientTelemetry.getOpenTelemetryHandle()
                     }
 
                     private fun close(notify: Boolean) {

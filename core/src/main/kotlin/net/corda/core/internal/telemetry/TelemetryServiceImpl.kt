@@ -1,6 +1,5 @@
 package net.corda.core.internal.telemetry
 
-import io.opentelemetry.api.OpenTelemetry
 import net.corda.core.CordaInternal
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
@@ -225,9 +224,9 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
         }
     }
 
-    override fun getOpenTelemetry(): OpenTelemetry? {
+    override fun getOpenTelemetry(): OpenTelemetryHandle? {
         return telemetryComponents[OpenTelemetryComponent.OPENTELEMETRY_COMPONENT_NAME]?.let {
-            (it as? OpenTelemetryComponent)?.tracerSetup?.openTelemetry
+            null // (it as? OpenTelemetryComponent)?.tracerSetup?.openTelemetry
         }
     }
 }

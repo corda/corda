@@ -1,12 +1,12 @@
 package net.corda.client.rpc.internal
 
-import io.opentelemetry.api.OpenTelemetry
 import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.MaxRpcRetryException
+import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
@@ -298,7 +298,7 @@ class ReconnectingCordaRPCOps private constructor(
                 currentRPCConnection?.forceClose()
             }
         }
-        override fun getOpenTelemetry(): OpenTelemetry? {
+        override fun getOpenTelemetry(): OpenTelemetryHandle? {
             return currentRPCConnection?.getOpenTelemetry()
         }
         fun isClosed(): Boolean = currentState == CLOSED

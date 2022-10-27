@@ -43,14 +43,15 @@ dependencies {
     api "javax.persistence:javax.persistence-api:2.2"
     api "com.google.code.findbugs:jsr305:$jsr305_version"
     api "org.slf4j:slf4j-api:$slf4j_version"
-    api "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+
+    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    compileOnly project(':opentelemetry-driver')
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
     deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
     deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
-    compileOnly project(':opentelemetry-driver')
 }
 
 tasks.named('jar', Jar) {

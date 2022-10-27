@@ -155,6 +155,8 @@ public final class net.corda.core.context.AuthServiceId extends java.lang.Object
 public final class net.corda.core.context.InvocationContext extends java.lang.Object
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, String)
+  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String, net.corda.core.internal.telemetry.SerializedTelemetry)
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List, String, net.corda.core.internal.telemetry.SerializedTelemetry, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
@@ -4394,7 +4396,7 @@ public final class net.corda.core.node.services.StatesNotAvailableException exte
 @DoNotImplement
 public interface net.corda.core.node.services.TelemetryService
   @Nullable
-  public abstract io.opentelemetry.api.OpenTelemetry getOpenTelemetry()
+  public abstract net.corda.core.internal.telemetry.OpenTelemetryHandle getOpenTelemetry()
 ##
 public final class net.corda.core.node.services.TimeWindowChecker extends java.lang.Object
   public <init>()
@@ -9450,7 +9452,7 @@ public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Obj
   public void close()
   public void forceClose()
   @Nullable
-  public io.opentelemetry.api.OpenTelemetry getOpenTelemetry()
+  public net.corda.core.internal.telemetry.OpenTelemetryHandle getOpenTelemetry()
   @NotNull
   public net.corda.core.messaging.CordaRPCOps getProxy()
   public int getServerProtocolVersion()
@@ -9486,7 +9488,7 @@ public interface net.corda.client.rpc.RPCConnection extends java.io.Closeable
   public abstract void close()
   public abstract void forceClose()
   @Nullable
-  public abstract io.opentelemetry.api.OpenTelemetry getOpenTelemetry()
+  public abstract net.corda.core.internal.telemetry.OpenTelemetryHandle getOpenTelemetry()
   @NotNull
   public abstract I getProxy()
   public abstract int getServerProtocolVersion()
