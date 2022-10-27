@@ -1,6 +1,5 @@
 package net.corda.client.rpc.internal
 
-import io.opentelemetry.api.GlobalOpenTelemetry
 import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.core.internal.telemetry.OpenTelemetryComponent
 import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
