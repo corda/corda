@@ -1,6 +1,7 @@
 package net.corda.client.rpc
 
 import net.corda.core.DoNotImplement
+import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.core.messaging.RPCOps
 import java.io.Closeable
 
@@ -20,6 +21,11 @@ interface RPCConnection<out I : RPCOps> : Closeable {
 
     /** The RPC protocol version reported by the server. */
     val serverProtocolVersion: Int
+
+    /**
+     * Returns the configured openTelemetry global. Returns null if opentelemetry has not been configured.
+     */
+    fun getOpenTelemetry(): OpenTelemetryHandle?
 
     /**
      * Closes this client gracefully by sending a notification to the server, so it can immediately clean up resources.

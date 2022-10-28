@@ -12,6 +12,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
+import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
@@ -166,6 +167,11 @@ interface ServiceHub : ServicesForResolution {
     val diagnosticsService: DiagnosticsService
 
     /**
+     * Provides operations to support telemetry and telemetry data between nodes.
+     */
+    val telemetryService: TelemetryService
+
+    /**
      * INTERNAL. DO NOT USE.
      * @suppress
      */
@@ -186,6 +192,13 @@ interface ServiceHub : ServicesForResolution {
      * @throws IllegalArgumentException If [type] is not annotated with [CordaService] or if the instance is not found.
      */
     fun <T : SerializeAsToken> cordaService(type: Class<T>): T
+
+    /**
+     * Return the singleton instance of the given Corda telemetry component type. This is a class that implements TelemetryComponent
+     * and will have automatically been registered by the node.
+     * @throws IllegalArgumentException If the instance is not found.
+     */
+    fun <T : TelemetryComponent> cordaTelemetryComponent(type: Class<T>): T
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for

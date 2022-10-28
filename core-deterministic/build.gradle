@@ -44,6 +44,9 @@ dependencies {
     api "com.google.code.findbugs:jsr305:$jsr305_version"
     api "org.slf4j:slf4j-api:$slf4j_version"
 
+    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    compileOnly project(':opentelemetry-driver')
+
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
     deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"

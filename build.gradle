@@ -57,7 +57,8 @@ buildscript {
     ]
 
     ext.capsule_version = constants.getProperty("capsuleVersion")
-
+    ext.open_telemetry_version = constants.getProperty("openTelemetryVersion")
+    ext.open_telemetry_sem_conv_version = constants.getProperty("openTelemetrySemConvVersion")
     ext.asm_version = constants.getProperty("asmVersion")
     ext.artemis_version = constants.getProperty("artemisVersion")
     ext.jackson_version = constants.getProperty("jacksonVersion")
@@ -643,6 +644,7 @@ bintrayConfig {
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
     publications = [
+            'corda-opentelemetry-driver',
             'corda-jfx',
             'corda-mock',
             'corda-rpc',

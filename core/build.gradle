@@ -27,7 +27,8 @@ configurations {
 dependencies {
 
     obfuscatorImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
+    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    compileOnly project(':opentelemetry-driver')
     testImplementation sourceSets.obfuscator.output
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -161,7 +162,8 @@ quasar {
             "org.w3c.**",
             "org.xml**",
             "org.yaml**",
-            "rx**")
+            "rx**",
+            "io.opentelemetry.**")
 }
 
 artifacts {
