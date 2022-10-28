@@ -155,6 +155,14 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             }
         }
 
+        @JvmStatic
+        internal fun deintern(hash: SecureHash): SecureHash {
+            return when (hash) {
+                is SHA256 -> SHA256(hash.bytes)
+                else -> HASH(hash.algorithm, hash.bytes)
+            }
+        }
+
         /**
          * @param algorithm [MessageDigest] algorithm name, in uppercase.
          * @param value Hash value as a hexadecimal string.
