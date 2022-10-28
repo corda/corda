@@ -238,6 +238,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
             trackRpcCallSites: Boolean = this.trackRpcCallSites,
             reapInterval: Duration = this.reapInterval,
             observationExecutorPoolSize: Int = this.observationExecutorPoolSize,
+            @Suppress("DEPRECATION")
             cacheConcurrencyLevel: Int = this.cacheConcurrencyLevel,
             connectionRetryInterval: Duration = this.connectionRetryInterval,
             connectionRetryIntervalMultiplier: Double = this.connectionRetryIntervalMultiplier,
