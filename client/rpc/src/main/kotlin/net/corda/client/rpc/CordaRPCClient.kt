@@ -224,7 +224,45 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 connectionRetryIntervalMultiplier,
                 maxReconnectAttempts,
                 maxFileSize,
-                deduplicationCacheExpiry
+                deduplicationCacheExpiry,
+                openTelemetryEnabled,
+                simpleLogTelemetryEnabled,
+                spanStartEndEventsEnabled
+        )
+    }
+
+    @Suppress("LongParameterList")
+    fun copy(
+            connectionMaxRetryInterval: Duration = this.connectionMaxRetryInterval,
+            minimumServerProtocolVersion: Int = this.minimumServerProtocolVersion,
+            trackRpcCallSites: Boolean = this.trackRpcCallSites,
+            reapInterval: Duration = this.reapInterval,
+            observationExecutorPoolSize: Int = this.observationExecutorPoolSize,
+            cacheConcurrencyLevel: Int = this.cacheConcurrencyLevel,
+            connectionRetryInterval: Duration = this.connectionRetryInterval,
+            connectionRetryIntervalMultiplier: Double = this.connectionRetryIntervalMultiplier,
+            maxReconnectAttempts: Int = this.maxReconnectAttempts,
+            maxFileSize: Int = this.maxFileSize,
+            deduplicationCacheExpiry: Duration = this.deduplicationCacheExpiry,
+            openTelemetryEnabled: Boolean = this.openTelemetryEnabled,
+            simpleLogTelemetryEnabled: Boolean = this.simpleLogTelemetryEnabled,
+            spanStartEndEventsEnabled: Boolean = this.spanStartEndEventsEnabled
+    ): CordaRPCClientConfiguration {
+        return CordaRPCClientConfiguration(
+                connectionMaxRetryInterval,
+                minimumServerProtocolVersion,
+                trackRpcCallSites,
+                reapInterval,
+                observationExecutorPoolSize,
+                cacheConcurrencyLevel,
+                connectionRetryInterval,
+                connectionRetryIntervalMultiplier,
+                maxReconnectAttempts,
+                maxFileSize,
+                deduplicationCacheExpiry,
+                openTelemetryEnabled,
+                simpleLogTelemetryEnabled,
+                spanStartEndEventsEnabled
         )
     }
 
@@ -245,6 +283,9 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         if (maxReconnectAttempts != other.maxReconnectAttempts) return false
         if (maxFileSize != other.maxFileSize) return false
         if (deduplicationCacheExpiry != other.deduplicationCacheExpiry) return false
+        if (openTelemetryEnabled != other.openTelemetryEnabled) return false
+        if (simpleLogTelemetryEnabled != other.simpleLogTelemetryEnabled) return false
+        if (spanStartEndEventsEnabled != other.spanStartEndEventsEnabled) return false
 
         return true
     }
@@ -262,6 +303,9 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         result = 31 * result + maxReconnectAttempts
         result = 31 * result + maxFileSize
         result = 31 * result + deduplicationCacheExpiry.hashCode()
+        result = 31 * result + openTelemetryEnabled.hashCode()
+        result = 31 * result + simpleLogTelemetryEnabled.hashCode()
+        result = 31 * result + spanStartEndEventsEnabled.hashCode()
         return result
     }
 
@@ -274,7 +318,10 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 "cacheConcurrencyLevel=$cacheConcurrencyLevel, connectionRetryInterval=$connectionRetryInterval, " +
                 "connectionRetryIntervalMultiplier=$connectionRetryIntervalMultiplier, " +
                 "maxReconnectAttempts=$maxReconnectAttempts, maxFileSize=$maxFileSize, " +
-                "deduplicationCacheExpiry=$deduplicationCacheExpiry)"
+                "deduplicationCacheExpiry=$deduplicationCacheExpiry, " +
+                "openTelemetryEnabled=$openTelemetryEnabled, " +
+                "simpleLogTelemetryEnabled=$simpleLogTelemetryEnabled, " +
+                "spanStartEndEventsEnabled=$spanStartEndEventsEnabled)"
     }
 
     // Left in for backwards compatibility with version 3.1

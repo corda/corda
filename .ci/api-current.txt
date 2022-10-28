@@ -155,8 +155,8 @@ public final class net.corda.core.context.AuthServiceId extends java.lang.Object
 public final class net.corda.core.context.InvocationContext extends java.lang.Object
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, String)
-  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String)
+  public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String, net.corda.core.internal.telemetry.SerializedTelemetry)
   public <init>(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List, String, net.corda.core.internal.telemetry.SerializedTelemetry, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
@@ -177,6 +177,8 @@ public final class net.corda.core.context.InvocationContext extends java.lang.Ob
   public final net.corda.core.internal.telemetry.SerializedTelemetry component8()
   @NotNull
   public final net.corda.core.context.InvocationContext copy(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor)
+  @NotNull
+  public final net.corda.core.context.InvocationContext copy(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String)
   @NotNull
   public final net.corda.core.context.InvocationContext copy(net.corda.core.context.InvocationOrigin, net.corda.core.context.Trace, net.corda.core.context.Actor, net.corda.core.context.Trace, net.corda.core.context.Actor, java.util.List<?>, String, net.corda.core.internal.telemetry.SerializedTelemetry)
   public boolean equals(Object)
@@ -9416,6 +9418,8 @@ public class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.
   public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int)
   @NotNull
   public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration)
+  @NotNull
+  public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean, boolean)
   public boolean equals(Object)
   public int getCacheConcurrencyLevel()
   @NotNull

@@ -44,8 +44,9 @@ data class InvocationContext(
             actor: Actor?,
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
-            clientId: String?
-    ) : this(origin, trace, actor, externalTrace, impersonatedActor, emptyList(), clientId, serializedTelemetry = null)
+            arguments: List<Any?>? = emptyList(),
+            clientId: String? = null
+    ) : this(origin, trace, actor, externalTrace, impersonatedActor, arguments, clientId, serializedTelemetry = null)
 
     companion object {
         /**
@@ -131,6 +132,28 @@ data class InvocationContext(
             impersonatedActor = impersonatedActor,
             arguments = arguments,
             clientId = clientId
+        )
+    }
+
+    @Suppress("LongParameterList")
+    fun copy(
+            origin: InvocationOrigin = this.origin,
+            trace: Trace = this.trace,
+            actor: Actor? = this.actor,
+            externalTrace: Trace? = this.externalTrace,
+            impersonatedActor: Actor? = this.impersonatedActor,
+            arguments: List<Any?>? = this.arguments,
+            clientId: String? = this.clientId
+    ): InvocationContext {
+        return copy(
+                origin = origin,
+                trace = trace,
+                actor = actor,
+                externalTrace = externalTrace,
+                impersonatedActor = impersonatedActor,
+                arguments = arguments,
+                clientId = clientId,
+                serializedTelemetry = serializedTelemetry
         )
     }
 }
