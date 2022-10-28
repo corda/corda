@@ -90,14 +90,12 @@ abstract class AbstractAMQPSerializationScheme(
         // registered dominates). As a result, when inside a context with attachments class loader, we prioritize serializers loaded
         // on-demand from attachments to serializers that had been loaded during node initialisation, by scanning the cordapps folder.
         context.customSerializers.forEach { customSerializer ->
-            println("AXM registering $customSerializer")
             factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
         }
         cordappCustomSerializers.forEach { customSerializer ->
             // We won't be able to use this custom serializer unless it also belongs to
             // the deserialization classloader.
             if (customSerializer::class.java.classLoader == context.deserializationClassLoader) {
-                println("AXM registering $customSerializer")
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
         }
