@@ -69,7 +69,7 @@ include 'core-test-utils'
 }
 include 'tools:explorer'
 include 'tools:explorer:capsule'
-//include 'tools:demobench'
+include 'tools:demobench'
 include 'tools:loadtest'
 include 'tools:graphs'
 include 'tools:bootstrapper'

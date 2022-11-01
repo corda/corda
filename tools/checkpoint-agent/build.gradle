@@ -9,6 +9,7 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
+        jcenter()
     }
 
     dependencies {
@@ -19,6 +20,7 @@ buildscript {
 repositories {
     mavenLocal()
     mavenCentral()
+    jcenter()
 }
 
 apply plugin: 'kotlin'
