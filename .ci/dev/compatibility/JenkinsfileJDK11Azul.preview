@@ -1,0 +1,106 @@
+#!groovy
+/**
+ * Jenkins pipeline to build Corda OS JDK11 preview
+ */
+
+/**
+ * Kill already started job.
+ * Assume new commit takes precendence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
+@Library('corda-shared-build-pipeline-steps')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+/**
+ * Common Gradle arguments for all Gradle executions
+ */
+String COMMON_GRADLE_PARAMS = [
+        '--no-daemon',
+        '--stacktrace',
+        '--info',
+        '-Pcompilation.warningsAsErrors=false',
+        '-Ptests.failFast=true',
+].join(' ')
+
+/**
+ * The name of subfolders to run tests previously on Another Agent and Same Agent
+ */
+String sameAgentFolder = 'sameAgent'
+
+pipeline {
+    agent {
+        dockerfile {
+            label 'standard'
+            additionalBuildArgs '--build-arg USER="${USER}"' // DON'T change quotation - USER variable is substituted by SHELL!!!!
+            filename "${sameAgentFolder}/.ci/dev/compatibility/DockerfileJDK11"
+        }
+    }
+
+    /*
+     * List options in alphabetical order
+     */
+    options {
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        checkoutToSubdirectory "${sameAgentFolder}"
+        parallelsAlwaysFailFast()
+        timeout(time: 6, unit: 'HOURS')
+        timestamps()
+    }
+
+    /*
+     * List environment variables in alphabetical order
+     */
+    environment {
+        ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish JDK 11 Preview to Artifactory :: ${env.BRANCH_NAME}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+    }
+
+    stages {
+
+        stage('Publish to Artifactory') {
+            steps {
+                dir(sameAgentFolder) {
+                    authenticateGradleWrapper()
+                    rtServer(
+                            id: 'R3-Artifactory',
+                            url: 'https://software.r3.com/artifactory',
+                            credentialsId: 'artifactory-credentials'
+                    )
+                    rtGradleDeployer(
+                            id: 'deployer',
+                            serverId: 'R3-Artifactory',
+                            repo: 'corda-dev'
+                    )
+                    withCredentials([
+                            usernamePassword(credentialsId: 'artifactory-credentials',
+                                             usernameVariable: 'CORDA_ARTIFACTORY_USERNAME',
+                                             passwordVariable: 'CORDA_ARTIFACTORY_PASSWORD')]) {
+                        rtGradleRun(
+                                usesPlugin: true,
+                                useWrapper: true,
+                                switches: '-s --info',
+                                tasks: 'artifactoryPublish',
+                                deployerId: 'deployer',
+                                buildName: env.ARTIFACTORY_BUILD_NAME
+                        )
+                    }
+                    rtPublishBuildInfo(
+                            serverId: 'R3-Artifactory',
+                            buildName: env.ARTIFACTORY_BUILD_NAME
+                    )
+                }
+            }
+        }
+    }
+
+    post {
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
