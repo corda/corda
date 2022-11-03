@@ -4,6 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
+import net.corda.core.flows.NotarisationRequest
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
@@ -16,11 +17,13 @@ import net.corda.serialization.internal.amqp.custom.InstantSerializer
 import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
+import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.amqp.testutils.testName
 import org.junit.Ignore
 import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertNotSame
 import java.io.File
 import java.io.NotSerializableException
 import java.math.BigInteger
@@ -839,5 +842,44 @@ class EvolvabilityTests {
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
         assertEquals("written<not provided>", deserializedCC.data)
+    }
+
+    @Test(timeout = 300_000)
+    fun notarisationRequestStabilityTest() {
+        val sf = testDefaultFactory()
+        val resource = "EvolvabilityTests.notarisationRequest"
+
+        // Stable form of NotarisationRequest from 4.9
+        /*
+        val txId = SecureHash.randomSHA256()
+        val inputTxId1 = SecureHash.randomSHA256()
+        val inputTxId2 = SecureHash.randomSHA256()
+        val notarisationRequest = NotarisationRequest(listOf(StateRef(inputTxId1, 0), StateRef(inputTxId1, 1), StateRef(inputTxId2, 0), StateRef(inputTxId2, 1)).map { it.copy(txhash = SecureHash.create(it.txhash.toString())) }, txId)
+        val currentForm = SerializationOutput(sf).serialize(notarisationRequest)
+        File(URI("$localPath/$resource")).writeBytes(currentForm.bytes)
+         */
+
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
+        val previousForm = SerializedBytes<NotarisationRequest>(sc2)
+        val deserialized = DeserializationInput(sf).deserialize(previousForm)
+
+        assertEquals(deserialized.statesToConsume[0].txhash, deserialized.statesToConsume[1].txhash)
+        assertEquals(deserialized.statesToConsume[2].txhash, deserialized.statesToConsume[3].txhash)
+        assertNotSame(deserialized.statesToConsume[0].txhash, deserialized.statesToConsume[1].txhash)
+        assertNotSame(deserialized.statesToConsume[2].txhash, deserialized.statesToConsume[3].txhash)
+
+        val serialized = SerializationOutput(sf).serialize(deserialized)
+
+        assertEquals(previousForm, serialized)
+
+        val deserialized2 = DeserializationInput(sf).deserialize(serialized)
+        assertEquals(deserialized.transactionId, deserialized2.transactionId)
+        assertEquals(deserialized.statesToConsume, deserialized2.statesToConsume)
+
+        assertEquals(deserialized2.statesToConsume[0].txhash, deserialized2.statesToConsume[1].txhash)
+        assertEquals(deserialized2.statesToConsume[2].txhash, deserialized2.statesToConsume[3].txhash)
+        assertNotSame(deserialized2.statesToConsume[0].txhash, deserialized2.statesToConsume[1].txhash)
+        assertNotSame(deserialized2.statesToConsume[2].txhash, deserialized2.statesToConsume[3].txhash)
     }
 }

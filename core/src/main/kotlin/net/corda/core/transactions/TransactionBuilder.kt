@@ -650,7 +650,8 @@ open class TransactionBuilder(
     }
 
     private fun makeSignatureAttachmentConstraint(attachmentSigners: List<PublicKey>) =
-            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners).build())
+            SignatureAttachmentConstraint.create(CompositeKey.Builder().addKeys(attachmentSigners)
+                    .build())
 
     private fun getInstalledContractAttachmentId(
             contractClassName: String,

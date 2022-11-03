@@ -3,7 +3,13 @@ package net.corda.core.crypto
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.deserialize
 import java.io.ByteArrayOutputStream
-import java.security.*
+import java.security.InvalidAlgorithmParameterException
+import java.security.InvalidKeyException
+import java.security.PrivateKey
+import java.security.Provider
+import java.security.PublicKey
+import java.security.Signature
+import java.security.SignatureException
 import java.security.spec.AlgorithmParameterSpec
 
 /**
@@ -80,7 +86,7 @@ class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
         fun engineVerify(sigBytes: ByteArray): Boolean {
             val sig = sigBytes.deserialize<CompositeSignaturesWithKeys>()
             return if (verifyKey.isFulfilledBy(sig.sigs.map { it.by })) {
-                val clearData = SecureHash.SHA256(buffer.toByteArray())
+                val clearData = SecureHash.createSHA256(buffer.toByteArray())
                 sig.sigs.all { it.isValid(clearData) }
             } else {
                 false

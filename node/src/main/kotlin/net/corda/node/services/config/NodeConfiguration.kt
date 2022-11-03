@@ -43,6 +43,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val flowTimeout: FlowTimeoutConfiguration
+    val telemetry: TelemetryConfiguration
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
@@ -218,6 +219,12 @@ data class FlowTimeoutConfiguration(
         val timeout: Duration,
         val maxRestartCount: Int,
         val backoffBase: Double
+)
+
+data class TelemetryConfiguration(
+        val openTelemetryEnabled: Boolean,
+        val simpleLogTelemetryEnabled: Boolean,
+        val spanStartEndEventsEnabled: Boolean
 )
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>

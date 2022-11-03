@@ -863,7 +863,7 @@ internal class SingleThreadedStateMachineManager(
         try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
             val initiatedSessionId = SessionId.createRandom(secureRandom)
-            val senderSession = FlowSessionImpl(sender, sender, initiatedSessionId)
+            val senderSession = FlowSessionImpl(sender, sender, initiatedSessionId, sessionMessage.serializedTelemetry)
             val flowLogic = initiatedFlowFactory.createFlow(senderSession)
             val initiatedFlowInfo = when (initiatedFlowFactory) {
                 is InitiatedFlowFactory.Core -> FlowInfo(serviceHub.myInfo.platformVersion, "corda")

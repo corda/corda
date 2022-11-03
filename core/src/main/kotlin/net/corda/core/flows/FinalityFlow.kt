@@ -9,6 +9,7 @@ import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.pushToLoggingContext
+import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
@@ -276,15 +277,17 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun notariseIfNotarySignatureIsRequired(): SignedTransaction {
-        val notarised = if (needsNotarySignature(transaction)) {
-            progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
-            transaction + notarySignatures
-        } else {
-            logger.info("No need to notarise this transaction.")
-            transaction
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#notariseIfNotarySignatureIsRequired", flowLogic = this) {
+            val notarised = if (needsNotarySignature(transaction)) {
+                progressTracker.currentStep = NOTARISING
+                val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
+                transaction + notarySignatures
+            } else {
+                logger.info("No need to notarise this transaction.")
+                transaction
+            }
+            return notarised
         }
-        return notarised
     }
 
     private fun extractExternalParticipants(ltx: LedgerTransaction): Set<Party> {

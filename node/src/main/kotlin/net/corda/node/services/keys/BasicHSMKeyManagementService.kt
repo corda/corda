@@ -2,6 +2,7 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -31,7 +32,8 @@ class BasicHSMKeyManagementService(
         cacheFactory: NamedCacheFactory,
         override val identityService: PersistentIdentityService,
         private val database: CordaPersistence,
-        private val cryptoService: SignOnlyCryptoService
+        private val cryptoService: SignOnlyCryptoService,
+        val telemetryService: TelemetryServiceImpl
 ) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
 
     @Entity
@@ -134,12 +136,14 @@ class BasicHSMKeyManagementService(
     }
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
-        val signingPublicKey = getSigningPublicKey(publicKey)
-        return if (signingPublicKey in originalKeysMap) {
-            DigitalSignature.WithKey(signingPublicKey, cryptoService.sign(originalKeysMap[signingPublicKey]!!, bytes))
-        } else {
-            val keyPair = getSigningKeyPair(signingPublicKey)
-            keyPair.sign(bytes)
+        telemetryService.span("${this::class.java.name}#sign") {
+            val signingPublicKey = getSigningPublicKey(publicKey)
+            return if (signingPublicKey in originalKeysMap) {
+                DigitalSignature.WithKey(signingPublicKey, cryptoService.sign(originalKeysMap[signingPublicKey]!!, bytes))
+            } else {
+                val keyPair = getSigningKeyPair(signingPublicKey)
+                keyPair.sign(bytes)
+            }
         }
     }
 

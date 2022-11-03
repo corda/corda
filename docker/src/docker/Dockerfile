@@ -1,4 +1,4 @@
-FROM azul/zulu-openjdk:8u322
+FROM azul/zulu-openjdk:8u352
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN apt-get update && \
