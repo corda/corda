@@ -81,12 +81,12 @@ pipeline {
                                              usernameVariable: 'CORDA_ARTIFACTORY_USERNAME',
                                              passwordVariable: 'CORDA_ARTIFACTORY_PASSWORD')]) {
                         rtGradleRun(
-                                usesPlugin: true,
-                                useWrapper: true,
-                                switches: '-s --info',
-                                tasks: 'artifactoryPublish',
-                                deployerId: 'deployer',
-                                buildName: env.ARTIFACTORY_BUILD_NAME
+                            usesPlugin: true,
+                            useWrapper: true,
+                            switches: "--no-daemon -s -PversionFromGit",
+                            tasks: 'artifactoryPublish',
+                            deployerId: 'deployer',
+                            buildName: env.ARTIFACTORY_BUILD_NAME
                         )
                     }
                     rtPublishBuildInfo(
