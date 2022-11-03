@@ -260,10 +260,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun recordTransactionLocally(tx: SignedTransaction): SignedTransaction {
-        logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(statesToRecord, listOf(tx))
-        logger.info("Recorded transaction locally successfully.")
-        return tx
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordTransactionLocally", flowLogic = this) {
+            logger.info("Recording transaction locally.")
+            serviceHub.recordTransactions(statesToRecord, listOf(tx))
+            logger.info("Recorded transaction locally successfully.")
+            return tx
+        }
     }
 
     @Suspendable
