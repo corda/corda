@@ -1,6 +1,7 @@
 import net.corda.gradle.jarfilter.JarFilterTask
 import net.corda.gradle.jarfilter.MetaFixerTask
 import proguard.gradle.ProGuardTask
+
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
@@ -43,6 +44,7 @@ dependencies {
 
     // These "implementation" dependencies will become "runtime" scoped in our published POM.
     implementation "org.iq80.snappy:snappy:$snappy_version"
+    implementation "com.github.luben:zstd-jni:1.5.2-5"
     implementation "com.google.guava:guava:$guava_version"
 }
 

@@ -106,7 +106,7 @@ open class SerializationOutput constructor(
                 if (encoding != null) {
                     SectionId.ENCODING.writeTo(stream)
                     (encoding as CordaSerializationEncoding).writeTo(stream)
-                    stream = encoding.wrap(stream)
+                    stream = encoding.wrap(stream, context.properties)
                 }
                 SectionId.DATA_AND_STOP.writeTo(stream)
                 stream.alsoAsByteBuffer(data.encodedSize().toInt(), data::encode)

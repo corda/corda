@@ -30,6 +30,9 @@ dependencies {
     // Pure-Java Snappy compression
     compile "org.iq80.snappy:snappy:$snappy_version"
 
+    // JNI based Zstandard compression
+    compile "com.github.luben:zstd-jni:1.5.2-5"
+
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 

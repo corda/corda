@@ -1,5 +1,7 @@
 package net.corda.serialization.internal
 
+import com.github.luben.zstd.ZstdInputStream
+import com.github.luben.zstd.ZstdOutputStream
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.utilities.ByteSequence
@@ -41,20 +43,33 @@ enum class SectionId : OrdinalWriter {
 @KeepForDJVM
 enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
     DEFLATE {
-        override fun wrap(stream: OutputStream) = DeflaterOutputStream(stream)
+        override fun wrap(stream: OutputStream, context: Map<Any, Any>) = DeflaterOutputStream(stream)
         override fun wrap(stream: InputStream) = InflaterInputStream(stream)
     },
     SNAPPY {
-        override fun wrap(stream: OutputStream) = FlushAverseOutputStream(SnappyFramedOutputStream(stream))
+        override fun wrap(stream: OutputStream, context: Map<Any, Any>) = FlushAverseOutputStream(SnappyFramedOutputStream(stream))
         override fun wrap(stream: InputStream) = SnappyFramedInputStream(stream, false)
+    },
+    ZSTANDARD {
+        override fun wrap(stream: OutputStream, context: Map<Any, Any>) = ZstdOutputStream(stream).apply {
+            val contextLevel = context[LEVEL_KEY] as Int?
+            if (contextLevel != null) setLevel(contextLevel)
+            val contextDictionary = context[DICTIONARY_KEY] as ByteArray?
+            if (contextDictionary != null) setDict(contextDictionary)
+        }
+
+        override fun wrap(stream: InputStream) = ZstdInputStream(stream)
     };
 
     companion object {
         val reader = OrdinalReader(values())
+
+        val LEVEL_KEY: String = "ZSTD_LEVEL_KEY"
+        val DICTIONARY_KEY: String = "ZSTD_DICTIONARY"
     }
 
     override val bits = OrdinalBits(ordinal)
-    abstract fun wrap(stream: OutputStream): OutputStream
+    abstract fun wrap(stream: OutputStream, context: Map<Any, Any>): OutputStream
     abstract fun wrap(stream: InputStream): InputStream
 }
 

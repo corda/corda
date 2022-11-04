@@ -159,7 +159,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 context.encoding?.let { encoding ->
                     SectionId.ENCODING.writeTo(this)
                     (encoding as CordaSerializationEncoding).writeTo(this)
-                    substitute(encoding::wrap)
+                    substitute { outputStream -> encoding.wrap(outputStream, context.properties) }
                 }
                 SectionId.ALT_DATA_AND_STOP.writeTo(this) // Forward-compatible in null-encoding case.
                 if (context.objectReferencesEnabled) {
