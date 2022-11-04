@@ -39,39 +39,42 @@ enum class SchemaType {
 // TODO: If this type of testing gets momentum, we can create a mini-framework that rides through list of files
 // and performs necessary validation on all of them.
 @RunWith(Parameterized::class)
-class CompatibilityTest(val encoding: CordaSerializationEncoding?, val schemaType: SchemaType, val useDictionary: Boolean, val useIntegerFingerprints: Boolean) {
+class CompatibilityTest(val encoding: CordaSerializationEncoding?, val schemaType: SchemaType, val useDictionary: Boolean, val useIntegerFingerprints: Boolean, val level: Int?) {
 
     companion object {
-        @Parameterized.Parameters(name = "encoding: {0}, schemaType: {1}, useDictionary: {2}, useIntegerFingerprints: {3}")
+        @Parameterized.Parameters(name = "encoding: {0}, schemaType: {1}, useDictionary: {2}, useIntegerFingerprints: {3}, level: {4}")
         @JvmStatic
         fun data(): List<Array<Any?>> = listOf(
-                arrayOf<Any?>(null, SchemaType.REPEAT, false, false),
-                arrayOf<Any?>(null, SchemaType.SINGLE, false, false),
-                arrayOf<Any?>(null, SchemaType.NONE, false, false),
-                arrayOf<Any?>(null, SchemaType.REPEAT, false, true),
-                arrayOf<Any?>(null, SchemaType.SINGLE, false, true),
-                arrayOf<Any?>(null, SchemaType.NONE, false, true),
-                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.REPEAT, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.SINGLE, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.NONE, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.REPEAT, false, true),
-                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.SINGLE, false, true),
-                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.NONE, false, true),
-                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.REPEAT, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.SINGLE, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.NONE, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.REPEAT, false, true),
-                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.SINGLE, false, true),
-                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.NONE, false, true),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.REPEAT, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.SINGLE, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.NONE, false, false),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.REPEAT, true, false),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.SINGLE, true, false),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.NONE, true, false),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.REPEAT, true, true),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.SINGLE, true, true),
-                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.NONE, true, true)
+                arrayOf<Any?>(null, SchemaType.REPEAT, false, false, null),
+                arrayOf<Any?>(null, SchemaType.SINGLE, false, false, null),
+                arrayOf<Any?>(null, SchemaType.NONE, false, false, null),
+                arrayOf<Any?>(null, SchemaType.REPEAT, false, true, null),
+                arrayOf<Any?>(null, SchemaType.SINGLE, false, true, null),
+                arrayOf<Any?>(null, SchemaType.NONE, false, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.REPEAT, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.SINGLE, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.NONE, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.REPEAT, false, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.SINGLE, false, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.DEFLATE, SchemaType.NONE, false, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.REPEAT, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.SINGLE, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.NONE, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.REPEAT, false, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.SINGLE, false, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.SNAPPY, SchemaType.NONE, false, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.REPEAT, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.SINGLE, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.NONE, false, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.REPEAT, true, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.SINGLE, true, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.NONE, true, false, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.REPEAT, true, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.SINGLE, true, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.NONE, true, true, null),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.REPEAT, true, true, 20),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.SINGLE, true, true, 20),
+                arrayOf<Any?>(CordaSerializationEncoding.ZSTANDARD, SchemaType.NONE, true, true, 20)
         )
     }
 
@@ -158,11 +161,17 @@ class CompatibilityTest(val encoding: CordaSerializationEncoding?, val schemaTyp
             } else {
                 it
             }
+        }.let {
+            if (level != null) {
+                it.withProperty(CordaSerializationEncoding.LEVEL_KEY, level)
+            } else {
+                it
+            }
         }
         val outByteArray = output.serialize(newTransaction, outerContext /*context.withExternalSchema(context.externalSchema!!.copy(flush = true))
                 .withEncoding(CordaSerializationEncoding.ZSTANDARD).withProperty(CordaSerializationEncoding.DICTIONARY_KEY, dict)*/).bytes
         //val (serializedBytes, schema) = output.serializeAndReturnSchema(transaction, SerializationDefaults.STORAGE_CONTEXT)
-        println("encoding: $encoding, schemaType: $schemaType, useDictionary: $useDictionary, useIntegerFingerprints: $useIntegerFingerprints, Output size = ${outByteArray.size}")
+        println("encoding: $encoding, schemaType: $schemaType, useDictionary: $useDictionary, useIntegerFingerprints: $useIntegerFingerprints, level: ${level ?: "Default"}, Output size = ${outByteArray.size}")
 
         //assertSchemasMatch(envelope.schema, schema)
 
