@@ -204,6 +204,8 @@
         </Logger>
         <Logger name="org.apache.activemq.artemis.core.server" level="warn" additivity="false">
             <Filters>
+                <RegexFilter regex=".*AMQ222061.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <RegexFilter regex=".*AMQ222107.*" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <RegexFilter regex=".*AMQ222165.*" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <RegexFilter regex=".*AMQ222166.*" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
