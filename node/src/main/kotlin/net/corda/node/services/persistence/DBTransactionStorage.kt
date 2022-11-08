@@ -318,20 +318,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    override fun addNotNotarizedTransactionSigs(transaction: SignedTransaction) {
-        database.transaction {
-            txStorage.locked {
-                val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
-                val addedOrUpdated = addOrUpdate(transaction.id, cacheValue) { k, _ -> updateTransaction(k) }
-                if (addedOrUpdated) {
-                    logger.debug { "Transaction ${transaction.id} recorded as not yet having notary signature." }
-                } else {
-                    logger.info("Transaction ${transaction.id} already exists so no need to record.")
-                }
-            }
-        }
-    }
-
     @VisibleForTesting
     val transactions: List<SignedTransaction>
         get() = database.transaction { snapshot() }

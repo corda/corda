@@ -72,8 +72,4 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     private class TxHolder(val stx: SignedTransaction, var isVerified: Boolean, var hasNotarySigs: Boolean = false)
 
-    override fun addNotNotarizedTransactionSigs(transaction: SignedTransaction) {
-        txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false, hasNotarySigs = false))
-    }
-
 }

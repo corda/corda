@@ -178,7 +178,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         progressTracker.currentStep = BROADCASTING
 
-        val (oldPlatformSessions, newPlatformSessions) = sessions.partition { serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < 13 }
+        val platformVersion = serviceHub.myInfo.platformVersion
+
+        val (oldPlatformSessions, newPlatformSessions) = sessions.partition { serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < platformVersion }
 
         recordTransactionWithoutNotarySignatureLocally(transaction)
         logger.debug("About to broadcast transaction to other parties (minus Notary signature)")
@@ -195,7 +197,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             logger.debug("All parties received the extra signatures successfully.")
         }
 
-        recordTransactionLocally(transaction)
+        recordTransactionLocally(notarised)
         broadcastToOtherParties(externalTxParticipants, oldPlatformSessions, notarised)
         logger.info("All parties received the transaction successfully.")
         return notarised

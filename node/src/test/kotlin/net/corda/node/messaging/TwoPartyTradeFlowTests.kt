@@ -795,11 +795,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
-        override fun addNotNotarizedTransactionSigs(transaction: SignedTransaction) {
-            database.transaction {
-                delegate.addNotNotarizedTransactionSigs(transaction)
-            }
-        }
     }
 
     interface TxRecord {

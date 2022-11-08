@@ -238,7 +238,24 @@ class CordaRPCOpsImplTest {
                             require(signaturePubKeys.size <= aliceKey.keys.size)
                             require(aliceKey.isFulfilledBy(signaturePubKeys))
                         },
+                        expect { stx ->
+                            require(stx.tx.inputs.isEmpty())
+                            require(stx.tx.outputs.size == 1)
+                            val signaturePubKeys = stx.sigs.map { it.by }.toSet()
+                            // Only Alice signed, as issuer
+                            val aliceKey = alice.owningKey
+                            require(signaturePubKeys.size <= aliceKey.keys.size)
+                            require(aliceKey.isFulfilledBy(signaturePubKeys))
+                        },
                         // MOVE
+                        expect { stx ->
+                            require(stx.tx.inputs.size == 1)
+                            require(stx.tx.outputs.size == 1)
+                            val signaturePubKeys = stx.sigs.map { it.by }.toSet()
+                            // Alice and Notary signed
+                            require(aliceNode.services.keyManagementService.filterMyKeys(signaturePubKeys).toList().isNotEmpty())
+                            require(alice.owningKey.isFulfilledBy(signaturePubKeys))
+                        },
                         expect { stx ->
                             require(stx.tx.inputs.size == 1)
                             require(stx.tx.outputs.size == 1)
