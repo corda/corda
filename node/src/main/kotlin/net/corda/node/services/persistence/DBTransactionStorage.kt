@@ -340,7 +340,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 status)
         constructor(stx: SignedTransaction, sigs: List<TransactionSignature>?, status: TransactionStatus) : this(
                 stx.txBits,
-                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs) + sigs,
+                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs),
                 status)
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }

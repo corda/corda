@@ -8,6 +8,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
@@ -178,38 +179,37 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         progressTracker.currentStep = BROADCASTING
 
-        val platformVersion = serviceHub.myInfo.platformVersion
-
-        val (oldPlatformSessions, newPlatformSessions) = sessions.partition { serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < platformVersion }
+        val (oldPlatformSessions, newPlatformSessions) = sessions.partition { serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY }
 
         recordTransactionWithoutNotarySignatureLocally(transaction)
         logger.debug("About to broadcast transaction to other parties (minus Notary signature)")
-        broadcastToOtherParties(externalTxParticipants, newPlatformSessions, transaction)
+        broadcastToOtherParties(externalTxParticipants, newPlatformSessions, transaction, false)
         logger.debug("All parties received the transaction successfully. (minus Notary signature)")
 
         val notarised = notariseIfNotarySignatureIsRequired()
 
         if (notarised.sigs != transaction.sigs) {
             val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
-            serviceHub.recordExtraSignatures(transaction.id, notarisedSigs)
             logger.debug("About to broadcast extra signatures to other parties")
             broadcastToOtherParties(notarisedSigs, newPlatformSessions)
             logger.debug("All parties received the extra signatures successfully.")
+            serviceHub.recordExtraSignatures(transaction.id, notarisedSigs)
         }
 
         recordTransactionLocally(notarised)
-        broadcastToOtherParties(externalTxParticipants, oldPlatformSessions, notarised)
+        broadcastToOtherParties(externalTxParticipants, oldPlatformSessions, notarised, true)
         logger.info("All parties received the transaction successfully.")
         return notarised
 
     }
     @Suspendable
-    private fun broadcastToOtherParties(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun broadcastToOtherParties(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction, transactionFullySigned: Boolean) {
         if (newApi) {
-            oldV3Broadcast(tx, oldParticipants.toSet())
+            if (transactionFullySigned) oldV3Broadcast(tx, oldParticipants.toSet())
             for (session in sessions) {
                 try {
                     subFlow(SendTransactionFlow(session, tx))
+                    session.receive<Unit>()
                     logger.info("Party ${session.counterparty} received the transaction.")
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -228,7 +228,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun broadcastToOtherParties(sigs: List<TransactionSignature>, sessions: Collection<FlowSession>) {
         for (session in sessions) {
             try {
-                session.sendAndReceive<String>(sigs)
+                session.sendAndReceive<Unit>(sigs)
                 logger.info("Party ${session.counterparty} received the extra signature.")
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
@@ -357,13 +357,13 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                     .unwrap { it }
             serviceHub.recordExtraSignatures(stx.id, signatures)
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
-            otherSideSession.send("Received signatures")
         } else {
             logger.info("Successfully received fully signed tx. Sending it to the vault for processing.")
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Successfully recorded received transaction locally.")
         }
 
+        otherSideSession.send(Unit)
         return stx
     }
 }
