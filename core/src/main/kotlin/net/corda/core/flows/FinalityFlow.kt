@@ -188,12 +188,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         val notarised = notariseIfNotarySignatureIsRequired()
 
-        if (notarised.sigs != transaction.sigs) {
-            val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
+        val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
+        if (notarisedSigs.isNotEmpty()) {
             logger.debug("About to broadcast extra signatures to other parties")
             broadcastToOtherParties(notarisedSigs, newPlatformSessions)
             logger.debug("All parties received the extra signatures successfully.")
-            serviceHub.finalizeTransactionWithExtraSignatures(ONLY_RELEVANT, listOf(notarised), notarisedSigs)
+            serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction), notarisedSigs)
         }
 
         recordTransactionLocally(notarised)
@@ -205,7 +205,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun broadcastToOtherParties(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction, transactionFullySigned: Boolean) {
         if (newApi) {
-            if (transactionFullySigned) oldV3Broadcast(tx, oldParticipants.toSet())
+            oldV3Broadcast(tx, oldParticipants.toSet(), transactionFullySigned)
             for (session in sessions) {
                 try {
                     subFlow(SendTransactionFlow(session, tx))
@@ -221,7 +221,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 }
             }
         } else {
-            if (transactionFullySigned) oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
+            oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet(), transactionFullySigned)
         }
     }
     @Suspendable
@@ -229,6 +229,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         for (session in sessions) {
             try {
                 session.send(sigs)
+                session.receive<Unit>()
                 logger.info("Party ${session.counterparty} received the extra signature.")
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
@@ -242,7 +243,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>) {
+    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>, transactionFullySigned: Boolean) {
         for (recipient in recipients) {
             if (!serviceHub.myInfo.isLegalIdentity(recipient)) {
                 logger.debug { "Sending transaction to party $recipient." }
