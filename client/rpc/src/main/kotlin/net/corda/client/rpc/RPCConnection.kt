@@ -1,7 +1,6 @@
 package net.corda.client.rpc
 
 import net.corda.core.DoNotImplement
-import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.core.messaging.RPCOps
 import java.io.Closeable
 
