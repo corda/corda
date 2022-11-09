@@ -84,7 +84,17 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
             is EndSpanEvent -> endSpan(event.telemetryId)
             is SetStatusEvent -> setStatus(event.telemetryId, event.telemetryStatusCode, event.message)
             is RecordExceptionEvent -> recordException(event.telemetryId, event.throwable)
+            is InitialiseTelemetryEvent -> initialiseTelemetry()
+            is ShutdownTelemetryEvent -> shutdownTelemetry()
         }
+    }
+
+    private fun initialiseTelemetry() {
+
+    }
+
+    private fun shutdownTelemetry() {
+
     }
 
     @Suppress("LongParameterList")
@@ -284,7 +294,7 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
     }
 
     override fun getTelemetryHandles(): List<Any> {
-        return tracerSetup?.openTelemetry?.let { listOf(it) }
+        return tracerSetup.openTelemetry.let { listOf(it) }
     }
 
     private fun setStatus(telemetryId: UUID, telemetryStatusCode: TelemetryStatusCode, message: String) {

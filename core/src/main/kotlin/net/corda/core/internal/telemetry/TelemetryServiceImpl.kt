@@ -67,6 +67,8 @@ class StartSpanEvent(val name: String, val attributes: Map<String, String>, val 
 class EndSpanEvent(val telemetryId: UUID): TelemetryEvent
 class SetStatusEvent(val telemetryId: UUID, val telemetryStatusCode: TelemetryStatusCode, val message: String): TelemetryEvent
 class RecordExceptionEvent(val telemetryId: UUID, val throwable: Throwable): TelemetryEvent
+class InitialiseTelemetryEvent(): TelemetryEvent
+class ShutdownTelemetryEvent(): TelemetryEvent
 
 interface TelemetryComponent {
     fun name(): String
@@ -233,6 +235,7 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
     override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
         getTelemetryHandles().forEach {
             if (telemetryClass.isInstance(it))
+                @Suppress("UNCHECKED_CAST")
                 return uncheckedCast(it as T)
         }
         return null
