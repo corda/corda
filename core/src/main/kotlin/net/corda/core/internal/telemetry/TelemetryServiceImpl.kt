@@ -67,8 +67,8 @@ class StartSpanEvent(val name: String, val attributes: Map<String, String>, val 
 class EndSpanEvent(val telemetryId: UUID): TelemetryEvent
 class SetStatusEvent(val telemetryId: UUID, val telemetryStatusCode: TelemetryStatusCode, val message: String): TelemetryEvent
 class RecordExceptionEvent(val telemetryId: UUID, val throwable: Throwable): TelemetryEvent
-class InitialiseTelemetryEvent(): TelemetryEvent
-class ShutdownTelemetryEvent(): TelemetryEvent
+class InitialiseTelemetryEvent: TelemetryEvent
+class ShutdownTelemetryEvent: TelemetryEvent
 
 interface TelemetryComponent {
     fun name(): String
@@ -124,6 +124,20 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
     }
 
     private val telemetryComponents: MutableMap<String, TelemetryComponent> = mutableMapOf()
+
+    @CordaInternal
+    fun initialiseTelemetry() {
+        telemetryComponents.values.forEach {
+            it.onTelemetryEvent(InitialiseTelemetryEvent())
+        }
+    }
+
+    @CordaInternal
+    fun shutdownTelemetry() {
+        telemetryComponents.values.forEach {
+            it.onTelemetryEvent(ShutdownTelemetryEvent())
+        }
+    }
 
     @CordaInternal
     fun addTelemetryComponent(telemetryComponent: TelemetryComponent) {
