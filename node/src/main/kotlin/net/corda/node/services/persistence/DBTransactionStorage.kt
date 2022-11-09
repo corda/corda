@@ -222,7 +222,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    override fun recordExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
+    override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
         return database.transaction {
             txStorage.locked {
                 val session = currentDBSession()
@@ -230,8 +230,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
                 val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
                 criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
+                criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 criteriaUpdate.where(criteriaBuilder.and(
-                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
+                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), transaction.id.toString()),
                         criteriaBuilder.notEqual(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 ))
                 criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())

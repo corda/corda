@@ -438,7 +438,7 @@ open class MockServices private constructor(
         TODO("Not yet implemented")
     }
 
-    override fun recordExtraSignatures(txId: SecureHash, sigs: Collection<TransactionSignature>) {
+    override fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>) {
         TODO("Not yet implemented")
     }
 

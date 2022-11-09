@@ -141,15 +141,37 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 txs.map(validatedTransactions::addTransactionWithoutNotarySignature)
             }
         }
-        fun recordExtraSignatures(txId: SecureHash,
-                                  sigs: Collection<TransactionSignature>,
-                                  validatedTransactions: WritableTransactionStorage,
-                                  database: CordaPersistence) {
+        fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord,
+                                                   txs: Collection<SignedTransaction>,
+                                                   sigs: Collection<TransactionSignature>,
+                                                   validatedTransactions: WritableTransactionStorage,
+                                                   stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
+                                                   vaultService: VaultServiceInternal,
+                                                   database: CordaPersistence) {
+            database.transaction {
+                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
+            }
 
             database.transaction {
                 require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
 
-                validatedTransactions.recordExtraSignatures(txId, sigs)
+                val orderedTxs = topologicalSort(txs)
+
+                val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
+                    orderedTxs.filter { validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs) } to emptyList()
+                } else {
+                    orderedTxs.partition { validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs) }
+                }
+                val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
+                if (stateMachineRunId != null) {
+                    recordedTransactions.forEach {
+                        stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+                    }
+                } else {
+                    log.warn("Transactions recorded from outside of a state machine")
+                }
+
+                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
             }
         }
     }
@@ -198,11 +220,17 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun recordExtraSignatures(txId: SecureHash, sigs: Collection<TransactionSignature>) {
-        recordExtraSignatures(txId,
+    override fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>) {
+        txs.forEach { requireSupportedHashType(it) }
+        finalizeTransactionWithExtraSignatures(
+                statesToRecord,
+                txs,
                 sigs,
                 validatedTransactions,
-                database)
+                stateMachineRecordedTransactionMapping,
+                vaultService,
+                database
+        )
     }
 
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
@@ -292,7 +320,7 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addTransaction(transaction: SignedTransaction): Boolean
 
     fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean
-    fun recordExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>) : Boolean
+    fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean
 
     /**
      * Add a new *unverified* transaction to the store.

@@ -6,7 +6,6 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
@@ -239,12 +238,12 @@ interface ServiceHub : ServicesForResolution {
     fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>)
 
     /**
-     * Stores missing signatures in the local transaction storage
+     * Stores [SignedTransaction] with extra signatures in the local transaction storage
      *
-     * @param txId The transaction to update.
      * @param sigs The signatures to add to the transaction.
+     * @param txs The transactions to record.
      */
-    fun recordExtraSignatures(txId: SecureHash, sigs: Collection<TransactionSignature>)
+    fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>)
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for

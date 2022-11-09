@@ -110,7 +110,7 @@ class DBTransactionStorageTests {
         val transaction = newTransaction()
         val notarySig = TransactionSignature(ByteArray(1), DUMMY_NOTARY_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY_PUBKEY).schemeNumberID))
         transactionStorage.addTransactionWithoutNotarySignature(transaction)
-        transactionStorage.recordExtraSignatures(transaction.id, listOf(notarySig))
+        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
         assertNotNull(readTransactionFromDB(transaction.id).signatures)
     }
 
