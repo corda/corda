@@ -179,7 +179,7 @@ scanApi {
 }
 
 publish {
-    name addArchiveAppendix(jar.baseName)
+    name addArchiveAppendix(jar.archiveBaseName)
 }
 
 tasks.register("writeTestResources", JavaExec) {
