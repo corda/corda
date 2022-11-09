@@ -2,6 +2,7 @@ package net.corda.core.internal.telemetry
 
 import net.corda.core.CordaInternal
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.TelemetryService
 import net.corda.core.serialization.CordaSerializable
@@ -77,6 +78,7 @@ interface TelemetryComponent {
     fun getCurrentSpanId(): String
     fun getCurrentTraceId(): String
     fun getCurrentBaggage(): Map<String, String>
+    fun getTelemetryHandles(): List<Any>
 }
 
 interface TelemetryComponentId {
@@ -223,11 +225,17 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
             it.setCurrentTelemetryId(telemetryIds.componentTelemetryIds[it.name()]!!)
         }
     }
+    
+    private fun getTelemetryHandles(): List<Any> {
+        return telemetryComponents.values.map { it.getTelemetryHandles() }.flatten()
+    }
 
-    override fun getOpenTelemetry(): OpenTelemetryHandle? {
-        return telemetryComponents[OpenTelemetryComponent.OPENTELEMETRY_COMPONENT_NAME]?.let {
-            null // (it as? OpenTelemetryComponent)?.tracerSetup?.openTelemetry
+    override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+        getTelemetryHandles().forEach {
+            if (telemetryClass.isInstance(it))
+                return uncheckedCast(it as T)
         }
+        return null
     }
 }
 

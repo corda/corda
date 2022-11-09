@@ -45,7 +45,7 @@ dependencies {
     api "org.slf4j:slf4j-api:$slf4j_version"
 
     compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
-    compileOnly project(':opentelemetry-driver')
+    compileOnly project(':opentelemetry')
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.

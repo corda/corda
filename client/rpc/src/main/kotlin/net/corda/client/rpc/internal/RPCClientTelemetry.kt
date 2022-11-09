@@ -35,8 +35,7 @@ class RPCClientTelemetry(val serviceName: String, val openTelemetryEnabled: Bool
         }
     }
 
-    fun getOpenTelemetryHandle(): OpenTelemetryHandle? {
-        // Will return a handle clients can use to interact with opentelemetry
-        return null
+    fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+        return telemetryService.getTelemetryHandle(telemetryClass)
     }
 }

@@ -11,7 +11,6 @@ import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -78,8 +77,8 @@ class CordaRPCConnection private constructor(
 
     override fun forceClose() = doCloseLogic { actualConnection.forceClose() }
 
-    override fun getOpenTelemetry(): OpenTelemetryHandle? {
-        return actualConnection.getOpenTelemetry()
+    override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+        return actualConnection.getTelemetryHandle(telemetryClass)
     }
 
     private inline fun doCloseLogic(close: () -> Unit) {
