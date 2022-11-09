@@ -204,12 +204,15 @@
         </Logger>
         <Logger name="org.apache.activemq.artemis.core.server" level="warn" additivity="false">
             <Filters>
-                <RegexFilter regex=".*AMQ222061.*" onMatch="DENY" onMismatch="NEUTRAL"/>
-                <RegexFilter regex=".*AMQ222107.*" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <RegexFilter regex=".*AMQ222165.*" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <RegexFilter regex=".*AMQ222166.*" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
-            <AppenderRef ref="Console-ErrorCode-Selector"/>
+            <AppenderRef ref="Console-ErrorCode-Selector">
+                <Filters>
+                    <RegexFilter regex=".*AMQ222061.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                    <RegexFilter regex=".*AMQ222107.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+                </Filters>
+            </AppenderRef>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
         <Logger name="org.apache.activemq.audit" level="error" additivity="false">
