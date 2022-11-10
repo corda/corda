@@ -498,18 +498,19 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
 
                 // Try and close the class loader at the head of the queue if the associated SerializationContext has gone out of scope
                 // and then remove it.  Repeat.
-                synchronized(toBeClosed) {
-                    while (true) {
-                        val peeked: ToBeClosed? = toBeClosed.peek()
-                        if (peeked == null || peeked.serializationContextReference.get() != null) break // Stop processing queue
+                while (true) {
+                    val head: ToBeClosed? = toBeClosed.poll()
+                    if (head == null || head.serializationContextReference.get() != null) {
+                        // Put back and stop processing queue.
+                        // By putting at the back any long-lived entries don't block processing of other queued entries next removal event.
+                        if(head != null) toBeClosed.add(head)
+                        break
+                    }
 
-                        // The reference has been cleared, so context has gone out of all scopes
-                        toBeClosed.poll() // We only peeked previously
-                        try {
-                            peeked.classLoaderToClose.close()
-                        } catch (e: Exception) {
-                            loggerFor<AttachmentsClassLoaderCacheImpl>().warn("Error destroying serialization context for ${peeked.cacheKey}", e)
-                        }
+                    try {
+                        head.classLoaderToClose.close()
+                    } catch (e: Exception) {
+                        loggerFor<AttachmentsClassLoaderCacheImpl>().warn("Error destroying serialization context for ${head.cacheKey}", e)
                     }
                 }
 
