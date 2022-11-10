@@ -88,7 +88,7 @@ tasks.named('javadoc', Javadoc) {
 }
 
 publish {
-    name addArchiveAppendix(jar.archiveBaseName)
+    name addArchiveAppendix(jar.baseName)
 }
 
 scanApi {

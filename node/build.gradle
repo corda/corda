@@ -329,7 +329,7 @@ jar {
 }
 
 publish {
-    name addArchiveAppendix(jar.archiveBaseName)
+    name addArchiveAppendix(jar.baseName)
 }
 
 tasks.named('test', Test) {

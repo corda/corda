@@ -25,6 +25,6 @@ jar {
 }
 
 publish {
-    name addArchiveAppendix(jar.archiveBaseName)
+    name addArchiveAppendix(jar.baseName)
 }
 
