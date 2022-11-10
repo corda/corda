@@ -508,6 +508,7 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
                     }
 
                     try {
+                        println("Closing class loader ${head.classLoaderToClose}")
                         head.classLoaderToClose.close()
                     } catch (e: Exception) {
                         loggerFor<AttachmentsClassLoaderCacheImpl>().warn("Error destroying serialization context for ${head.cacheKey}", e)
