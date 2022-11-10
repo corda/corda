@@ -485,14 +485,19 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
     private val toBeClosed: Queue<ToBeClosed> = LinkedBlockingQueue()
 
     private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(
-            // Close deserialization classloaders when we evict them
+            // Schedule for closing the deserialization classloaders when we evict them
             // to release any resources they may be holding.
             @Suppress("TooGenericExceptionCaught")
             Caffeine.newBuilder().removalListener { key, context, _ ->
                 val autoCloseable = context?.deserializationClassLoader as? AutoCloseable
                 if (autoCloseable != null) {
+                    // Queue to be closed once the BasicVerifier, which has a strong reference chain to this SerializationContext
+                    // has gone out of scope
                     toBeClosed += ToBeClosed(WeakReference(context!!), autoCloseable, key!!)
                 }
+
+                // Try and close the class loader at the head of the queue if the associated SerializationContext has gone out of scope
+                // and then remove it.  Repeat.
                 while (true) {
                     val peeked: ToBeClosed? = toBeClosed.peek()
                     if (peeked == null || peeked.serializationContextReference.get() != null) break // Stop processing queue
