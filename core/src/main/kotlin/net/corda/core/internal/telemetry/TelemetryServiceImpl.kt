@@ -137,6 +137,7 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
         telemetryComponents.values.forEach {
             it.onTelemetryEvent(ShutdownTelemetryEvent())
         }
+        telemetryComponents.clear()
     }
 
     @CordaInternal

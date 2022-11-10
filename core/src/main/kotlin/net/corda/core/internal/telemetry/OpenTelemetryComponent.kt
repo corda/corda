@@ -43,9 +43,11 @@ data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val st
 data class SpanInfo(val name: String, val span: Span, val spanScope: Scope, val spanEventContext: SerializableSpanContext? = null, val parentSpanEventContext: SerializableSpanContext? = null)
 
 class TracerSetup(serviceName: String) {
+    private var openTelemetryDriver: Any? = null
     val openTelemetry: OpenTelemetry by lazy {
         try {
-            OpenTelemetryDriver.getOpenTelemetry(serviceName)
+            openTelemetryDriver = OpenTelemetryDriver()
+            (openTelemetryDriver as OpenTelemetryDriver).getOpenTelemetry(serviceName)
         }
         catch (ex: NoClassDefFoundError) {
             GlobalOpenTelemetry.get()
@@ -53,6 +55,10 @@ class TracerSetup(serviceName: String) {
     }
     fun getTracer(): Tracer {
         return openTelemetry.tracerProvider.get(OpenTelemetryComponent::class.java.name)
+    }
+
+    fun shutdown() {
+        (openTelemetryDriver as? OpenTelemetryDriver)?.shutdown()
     }
 }
 
@@ -84,17 +90,12 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
             is EndSpanEvent -> endSpan(event.telemetryId)
             is SetStatusEvent -> setStatus(event.telemetryId, event.telemetryStatusCode, event.message)
             is RecordExceptionEvent -> recordException(event.telemetryId, event.throwable)
-            is InitialiseTelemetryEvent -> initialiseTelemetry()
             is ShutdownTelemetryEvent -> shutdownTelemetry()
         }
     }
 
-    private fun initialiseTelemetry() {
-
-    }
-
     private fun shutdownTelemetry() {
-
+        tracerSetup.shutdown()
     }
 
     @Suppress("LongParameterList")
