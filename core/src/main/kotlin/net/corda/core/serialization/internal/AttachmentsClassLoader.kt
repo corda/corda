@@ -49,6 +49,7 @@ import java.util.Queue
 import java.util.ServiceLoader
 import java.util.WeakHashMap
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Function
 
 /**
@@ -405,6 +406,8 @@ object AttachmentsClassLoaderBuilder {
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     internal const val attachmentScheme = "attachment"
 
+    private val uniqueness = AtomicLong(0)
+
     private val loadedAttachments: AttachmentsHolder = AttachmentsHolderImpl()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
@@ -415,14 +418,9 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
 
     @Synchronized
     fun toUrl(attachment: Attachment): URL {
-        val proposedURL = URL(attachmentScheme, "", -1, attachment.id.toString(), AttachmentURLStreamHandler)
-        val existingURL = loadedAttachments.getKey(proposedURL)
-        return if (existingURL == null) {
-            loadedAttachments[proposedURL] = attachment
-            proposedURL
-        } else {
-            existingURL
-        }
+        val uniqueURL = URL(attachmentScheme, "", -1, attachment.id.toString()+ "?" + uniqueness.getAndIncrement(), AttachmentURLStreamHandler)
+        loadedAttachments[uniqueURL] = attachment
+        return uniqueURL
     }
 
     @VisibleForTesting
@@ -508,7 +506,6 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
                     }
 
                     try {
-                        println("Closing class loader ${head.classLoaderToClose}")
                         head.classLoaderToClose.close()
                     } catch (e: Exception) {
                         loggerFor<AttachmentsClassLoaderCacheImpl>().warn("Error destroying serialization context for ${head.cacheKey}", e)

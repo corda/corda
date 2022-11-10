@@ -77,7 +77,6 @@ abstract class AbstractVerifier(
      */
     final override fun verify() {
         try {
-            println("Verifying class loader $transactionClassLoader")
             TransactionVerifier(transactionClassLoader).apply(transaction)
         } catch (e: TransactionVerificationException) {
             logger.error("Error validating transaction ${ltx.id}.", e.cause)
