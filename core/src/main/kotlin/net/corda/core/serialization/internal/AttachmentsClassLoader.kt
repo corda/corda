@@ -491,7 +491,7 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
                 if (autoCloseable != null) {
                     // Queue to be closed once the BasicVerifier, which has a strong reference chain to this SerializationContext
                     // has gone out of scope
-                    toBeClosed += ToBeClosed(WeakReference(context!!), autoCloseable, key!!)
+                    toBeClosed += ToBeClosed(WeakReference(context), autoCloseable, key!!)
                 }
 
                 // Try and close the class loader at the head of the queue if the associated SerializationContext has gone out of scope
