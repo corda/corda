@@ -46,8 +46,8 @@ class TracerSetup(serviceName: String) {
     private var openTelemetryDriver: Any? = null
     val openTelemetry: OpenTelemetry by lazy {
         try {
-            openTelemetryDriver = OpenTelemetryDriver()
-            (openTelemetryDriver as OpenTelemetryDriver).getOpenTelemetry(serviceName)
+            openTelemetryDriver = OpenTelemetryDriver(serviceName)
+            (openTelemetryDriver as OpenTelemetryDriver).openTelemetry
         }
         catch (ex: NoClassDefFoundError) {
             GlobalOpenTelemetry.get()

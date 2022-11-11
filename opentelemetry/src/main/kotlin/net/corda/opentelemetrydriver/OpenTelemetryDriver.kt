@@ -14,40 +14,26 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes
 
-class OpenTelemetryDriver {
-    private fun buildAndGetOpenTelemetry(serviceName: String): OpenTelemetry {
-        val resource: Resource = Resource.getDefault()
+class OpenTelemetryDriver(serviceName: String) {
+
+        private val resource: Resource = Resource.getDefault()
                 .merge(Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, serviceName)))
 
-        sdkTracerProvider = SdkTracerProvider.builder()
-                 .addSpanProcessor(BatchSpanProcessor.builder(OtlpGrpcSpanExporter.builder().build()).build())
+        private val sdkTracerProvider = SdkTracerProvider.builder()
+                .addSpanProcessor(BatchSpanProcessor.builder(OtlpGrpcSpanExporter.builder().build()).build())
                 .setResource(resource)
                 .build()
 
-        sdkMeterProvider = SdkMeterProvider.builder()
+        private val sdkMeterProvider = SdkMeterProvider.builder()
                 .registerMetricReader(PeriodicMetricReader.builder(OtlpGrpcMetricExporter.builder().build()).build())
                 .setResource(resource)
                 .build()
 
-        return OpenTelemetrySdk.builder()
+        val openTelemetry: OpenTelemetry = OpenTelemetrySdk.builder()
                 .setTracerProvider(sdkTracerProvider)
                 .setMeterProvider(sdkMeterProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .build()
-    }
-
-    @Volatile
-    private var OPENTELEMETRY_INSTANCE: OpenTelemetry? = null
-    private var sdkTracerProvider: SdkTracerProvider? = null
-    private var sdkMeterProvider: SdkMeterProvider? = null
-
-    fun getOpenTelemetry(serviceName: String): OpenTelemetry {
-        return OPENTELEMETRY_INSTANCE ?: synchronized(this) {
-            OPENTELEMETRY_INSTANCE ?: buildAndGetOpenTelemetry(serviceName).also {
-                OPENTELEMETRY_INSTANCE = it
-            }
-        }
-    }
 
     fun shutdown() {
         sdkTracerProvider?.forceFlush()
