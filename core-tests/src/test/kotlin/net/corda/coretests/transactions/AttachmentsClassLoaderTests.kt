@@ -75,7 +75,7 @@ class AttachmentsClassLoaderTests {
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val DUMMY_NOTARY get() = dummyNotary.party
-        val PROGRAM_ID: String = "net.corda.testing.contracts.MyDummyContract"
+        const val PROGRAM_ID = "net.corda.testing.contracts.MyDummyContract"
     }
 
     @Rule
@@ -576,6 +576,7 @@ class AttachmentsClassLoaderTests {
                         attachmentsClassLoaderCache = attachmentsClassLoaderCache
                 )
                 transactions.add(transaction)
+                System.gc()
                 Thread.sleep(1)
             }
 
@@ -607,7 +608,7 @@ class AttachmentsClassLoaderTests {
                 }
             """.trimIndent()
 
-        System.out.println(output)
+        println(output)
         return output
     }
 
@@ -615,6 +616,7 @@ class AttachmentsClassLoaderTests {
 
         val attachment = object : AbstractAttachment({contractJarPath.inputStream().readBytes()}, uploader = "app") {
             @Suppress("OverridingDeprecatedMember")
+            @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
             override val signers: List<Party> = emptyList()
             override val signerKeys: List<PublicKey> = emptyList()
             override val size: Int = 1234
@@ -625,6 +627,7 @@ class AttachmentsClassLoaderTests {
         return listOf(
                 object : AbstractAttachment({ISOLATED_CONTRACTS_JAR_PATH.openStream().readBytes()}, uploader = "app") {
                     @Suppress("OverridingDeprecatedMember")
+                    @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
                     override val signers: List<Party> = emptyList()
                     override val signerKeys: List<PublicKey> = emptyList()
                     override val size: Int = 1234
@@ -633,6 +636,7 @@ class AttachmentsClassLoaderTests {
                 object : AbstractAttachment({fakeAttachment("importantDoc.pdf", "I am a pdf!").inputStream().readBytes()
                                                                                                                    }, uploader = "app") {
                     @Suppress("OverridingDeprecatedMember")
+                    @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
                     override val signers: List<Party> = emptyList()
                     override val signerKeys: List<PublicKey> = emptyList()
                     override val size: Int = 1234

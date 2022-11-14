@@ -35,7 +35,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import java.io.IOException
 import java.io.InputStream
-import java.lang.ref.Reference
+import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 import java.net.URL
 import java.net.URLClassLoader
@@ -45,10 +45,9 @@ import java.net.URLStreamHandlerFactory
 import java.security.MessageDigest
 import java.security.Permission
 import java.util.Locale
-import java.util.Queue
 import java.util.ServiceLoader
 import java.util.WeakHashMap
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Function
 
@@ -478,44 +477,52 @@ interface AttachmentsClassLoaderCache {
 @DeleteForDJVM
 class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
 
-    private class ToBeClosed(val serializationContextReference: Reference<SerializationContext>, val classLoaderToClose: AutoCloseable, val cacheKey: AttachmentsClassLoaderKey)
+    private class ToBeClosed(
+        serializationContext: SerializationContext,
+        val classLoaderToClose: AutoCloseable,
+        val cacheKey: AttachmentsClassLoaderKey,
+        queue: ReferenceQueue<SerializationContext>
+   ) : WeakReference<SerializationContext>(serializationContext, queue)
 
-    private val toBeClosed: Queue<ToBeClosed> = LinkedBlockingQueue()
+    private val logger = loggerFor<AttachmentsClassLoaderCacheImpl>()
+    private val toBeClosed = ConcurrentHashMap.newKeySet<ToBeClosed>()
+    private val expiryQueue = ReferenceQueue<SerializationContext>()
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun purgeExpiryQueue() {
+        // Close the AttachmentsClassLoader for every SerializationContext
+        // that has already been garbage-collected.
+        while (true) {
+            val head = expiryQueue.poll() as? ToBeClosed ?: break
+            if (!toBeClosed.remove(head)) {
+                logger.warn("Reaped unexpected serialization context for {}", head.cacheKey)
+            }
+
+            try {
+                head.classLoaderToClose.close()
+            } catch (e: Exception) {
+                logger.warn("Error destroying serialization context for ${head.cacheKey}", e)
+            }
+        }
+    }
 
     private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(
             // Schedule for closing the deserialization classloaders when we evict them
             // to release any resources they may be holding.
-            @Suppress("TooGenericExceptionCaught")
             Caffeine.newBuilder().removalListener { key, context, _ ->
-                val autoCloseable = context?.deserializationClassLoader as? AutoCloseable
-                if (autoCloseable != null) {
-                    // Queue to be closed once the BasicVerifier, which has a strong reference chain to this SerializationContext
-                    // has gone out of scope
-                    toBeClosed += ToBeClosed(WeakReference(context), autoCloseable, key!!)
+                (context?.deserializationClassLoader as? AutoCloseable)?.also { autoCloseable ->
+                    // ClassLoader to be closed once the BasicVerifier, which has a strong
+                    // reference chain to this SerializationContext, has gone out of scope.
+                    toBeClosed += ToBeClosed(context, autoCloseable, key!!, expiryQueue)
                 }
 
-                // Try and close the class loader at the head of the queue if the associated SerializationContext has gone out of scope
-                // and then remove it.  Repeat.
-                while (true) {
-                    val head: ToBeClosed? = toBeClosed.poll()
-                    if (head == null || head.serializationContextReference.get() != null) {
-                        // Put back and stop processing queue.
-                        // By putting at the back any long-lived entries don't block processing of other queued entries next removal event.
-                        if(head != null) toBeClosed.add(head)
-                        break
-                    }
-
-                    try {
-                        head.classLoaderToClose.close()
-                    } catch (e: Exception) {
-                        loggerFor<AttachmentsClassLoaderCacheImpl>().warn("Error destroying serialization context for ${head.cacheKey}", e)
-                    }
-                }
-
+                // Reap any entries which have been garbage-collected.
+                purgeExpiryQueue()
             }, "AttachmentsClassLoader_cache"
     )
 
     override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+        purgeExpiryQueue()
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }
