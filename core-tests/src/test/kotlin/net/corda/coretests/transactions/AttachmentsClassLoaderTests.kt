@@ -24,8 +24,9 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
-import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -74,7 +75,7 @@ class AttachmentsClassLoaderTests {
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val DUMMY_NOTARY get() = dummyNotary.party
-        val PROGRAM_ID: String = "net.corda.testing.contracts.MyDummyContract"
+        const val PROGRAM_ID = "net.corda.testing.contracts.MyDummyContract"
     }
 
     @Rule
@@ -89,7 +90,7 @@ class AttachmentsClassLoaderTests {
     private lateinit var internalStorage: InternalMockAttachmentStorage
     private lateinit var attachmentTrustCalculator: AttachmentTrustCalculator
     private val networkParameters = testNetworkParameters()
-    private val cacheFactory = TestingNamedCacheFactory()
+    private val cacheFactory = TestingNamedCacheFactory(1)
 
     private fun createClassloader(
         attachment: AttachmentId,
@@ -541,6 +542,50 @@ class AttachmentsClassLoaderTests {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `class loader not closed after cache starts evicting`() {
+        tempFolder.root.toPath().let { path ->
+            val transactions = mutableListOf<LedgerTransaction>()
+            val iterations = 10
+
+            val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
+            val inputs = emptyList<StateAndRef<*>>()
+            val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
+            val commands = emptyList<CommandWithParties<CommandData>>()
+            val content = createContractString(PROGRAM_ID)
+            val timeWindow: TimeWindow? = null
+            val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory)
+            val contractJarPath = ContractJarTestUtils.makeTestContractJar(path, PROGRAM_ID, content = content)
+            val attachments = createAttachments(contractJarPath)
+
+            for(i in 1 .. iterations) {
+                val id = SecureHash.randomSHA256()
+                val privacySalt = PrivacySalt()
+                val transaction = createLedgerTransaction(
+                        inputs,
+                        outputs,
+                        commands,
+                        attachments,
+                        id,
+                        null,
+                        timeWindow,
+                        privacySalt,
+                        testNetworkParameters(),
+                        emptyList(),
+                        isAttachmentTrusted = { true },
+                        attachmentsClassLoaderCache = attachmentsClassLoaderCache
+                )
+                transactions.add(transaction)
+                System.gc()
+                Thread.sleep(1)
+            }
+
+            transactions.forEach {
+                it.verify()
+            }
+        }
+    }
+
     private fun createContractString(contractName: String, versionSeed: Int = 0): String {
         val pkgs = contractName.split(".")
         val className = pkgs.last()
@@ -563,7 +608,7 @@ class AttachmentsClassLoaderTests {
                 }
             """.trimIndent()
 
-        System.out.println(output)
+        println(output)
         return output
     }
 
@@ -571,6 +616,7 @@ class AttachmentsClassLoaderTests {
 
         val attachment = object : AbstractAttachment({contractJarPath.inputStream().readBytes()}, uploader = "app") {
             @Suppress("OverridingDeprecatedMember")
+            @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
             override val signers: List<Party> = emptyList()
             override val signerKeys: List<PublicKey> = emptyList()
             override val size: Int = 1234
@@ -581,6 +627,7 @@ class AttachmentsClassLoaderTests {
         return listOf(
                 object : AbstractAttachment({ISOLATED_CONTRACTS_JAR_PATH.openStream().readBytes()}, uploader = "app") {
                     @Suppress("OverridingDeprecatedMember")
+                    @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
                     override val signers: List<Party> = emptyList()
                     override val signerKeys: List<PublicKey> = emptyList()
                     override val size: Int = 1234
@@ -589,6 +636,7 @@ class AttachmentsClassLoaderTests {
                 object : AbstractAttachment({fakeAttachment("importantDoc.pdf", "I am a pdf!").inputStream().readBytes()
                                                                                                                    }, uploader = "app") {
                     @Suppress("OverridingDeprecatedMember")
+                    @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
                     override val signers: List<Party> = emptyList()
                     override val signerKeys: List<PublicKey> = emptyList()
                     override val size: Int = 1234
