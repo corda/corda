@@ -16,6 +16,7 @@ import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.api.SchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -83,9 +84,7 @@ class IdenityServiceKeyRotationMigrationTest {
         persist(bob2.party.dbParty())
         persist(charlie2.party.dbParty())
 
-        Liquibase("migration/node-core.changelog-v20.xml", object : ClassLoaderResourceAccessor() {
-            override fun getResourcesAsStream(path: String) = super.getResourcesAsStream(path)?.firstOrNull()?.let { setOf(it) }
-        }, liquibaseDB).update(Contexts().toString())
+        Liquibase("migration/node-core.changelog-v20.xml",  ClassLoaderResourceAccessor(), liquibaseDB).update(Contexts().toString())
 
         val dummyKey = Crypto.generateKeyPair().public
         val results = mutableMapOf<String, Pair<CordaX500Name, String>>()

@@ -14,8 +14,11 @@ import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.net.URL
 import java.nio.file.Path
 import java.sql.Connection
+import java.util.Enumeration
+import java.util.HashSet
 import java.util.concurrent.locks.ReentrantLock
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
@@ -36,6 +39,7 @@ open class SchemaMigration(
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
+
         @JvmStatic
         protected val mutex = ReentrantLock()
     }
@@ -46,31 +50,31 @@ open class SchemaMigration(
 
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
 
-     /**
+    /**
      * Will run the Liquibase migration on the actual database.
-      * @param existingCheckpoints Whether checkpoints exist that would prohibit running a migration
-      * @param schemas The set of MappedSchemas to check
-      * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
-      *                                      when allowing hibernate to create missing schemas in dev or tests.
+     * @param existingCheckpoints Whether checkpoints exist that would prohibit running a migration
+     * @param schemas The set of MappedSchemas to check
+     * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
+     *                                      when allowing hibernate to create missing schemas in dev or tests.
      */
-     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
-         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
+    fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
+        val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
 
-         // current version of Liquibase appears to be non-threadsafe
-         // this is apparent when multiple in-process nodes are all running migrations simultaneously
-         mutex.withLock {
-             dataSource.connection.use { connection ->
-                 val (runner, _, shouldBlockOnCheckpoints) = prepareRunner(connection, resourcesAndSourceInfo)
-                 if (shouldBlockOnCheckpoints && existingCheckpoints)
-                     throw CheckpointsException()
-                 try {
-                     runner.update(Contexts().toString())
-                 } catch (exp: LiquibaseException) {
-                     throw DatabaseMigrationException(exp.message, exp)
-                 }
-             }
-         }
-     }
+        // current version of Liquibase appears to be non-threadsafe
+        // this is apparent when multiple in-process nodes are all running migrations simultaneously
+        mutex.withLock {
+            dataSource.connection.use { connection ->
+                val (runner, _, shouldBlockOnCheckpoints) = prepareRunner(connection, resourcesAndSourceInfo)
+                if (shouldBlockOnCheckpoints && existingCheckpoints)
+                    throw CheckpointsException()
+                try {
+                    runner.update(Contexts().toString())
+                } catch (exp: LiquibaseException) {
+                    throw DatabaseMigrationException(exp.message, exp)
+                }
+            }
+        }
+    }
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
@@ -98,7 +102,7 @@ open class SchemaMigration(
      * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
      *                                      when allowing hibernate to create missing schemas in dev or tests.
      */
-    fun getPendingChangesCount(schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) : Int {
+    fun getPendingChangesCount(schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): Int {
         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
 
         // current version of Liquibase appears to be non-threadsafe
@@ -138,9 +142,11 @@ open class SchemaMigration(
     }
 
     /**  Create a resource accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
-    protected class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
+    open class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
             ClassLoaderResourceAccessor(classLoader) {
-        override fun getResourcesAsStream(path: String): Set<InputStream> {
+
+        @Override
+        fun getResourcesAsStream(path: String, classLoader: ClassLoader): Set<InputStream> {
             if (path == dynamicInclude) {
                 // Create a map in Liquibase format including all migration files.
                 val includeAllFiles = mapOf("databaseChangeLog"
@@ -152,7 +158,27 @@ open class SchemaMigration(
                 // Return the json as a stream.
                 return setOf(ByteArrayInputStream(includeAllFilesJson))
             }
-            return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
+
+            val resources: Enumeration<URL> = classLoader.getResources(path)
+
+            val seenUrls: MutableSet<String> = HashSet()
+            val returnSet: MutableSet<InputStream> = HashSet()
+            while (resources.hasMoreElements()) {
+                val url = resources.nextElement()
+                if (seenUrls.contains(url.toExternalForm())) {
+                    continue
+                }
+                seenUrls.add(url.toExternalForm())
+                val connection = url.openConnection()
+                connection.useCaches = false
+                val resourceAsStream = connection.getInputStream()
+                if (resourceAsStream != null) {
+                    returnSet.add(resourceAsStream)
+                }
+            }
+
+
+            return returnSet.take(1).toSet()
         }
     }
 

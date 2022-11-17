@@ -5,7 +5,7 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
     <changeSet author="R3.Corda" id="identity_service_key_rotation">
-        <addColumn tableName="node_identities_no_cert">
+        <addColumn tableName="node_identities_no_cert">ma
             <column name="owning_pk_hash" type="NVARCHAR(130)">
                 <constraints nullable="true"/>
             </column>
