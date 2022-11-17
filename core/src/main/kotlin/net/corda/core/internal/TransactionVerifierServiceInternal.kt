@@ -16,9 +16,9 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.ConflictingAttachmentsRejection
 import net.corda.core.contracts.TransactionVerificationException.ConstraintPropagationRejection
+import net.corda.core.contracts.TransactionVerificationException.ContractConstraintRejection
 import net.corda.core.contracts.TransactionVerificationException.ContractCreationError
 import net.corda.core.contracts.TransactionVerificationException.ContractRejection
-import net.corda.core.contracts.TransactionVerificationException.ContractConstraintRejection
 import net.corda.core.contracts.TransactionVerificationException.Direction
 import net.corda.core.contracts.TransactionVerificationException.DuplicateAttachmentsRejection
 import net.corda.core.contracts.TransactionVerificationException.InvalidConstraintRejection
