@@ -1,12 +1,15 @@
 package net.corda.nodeapi.internal.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.micrometer.core.instrument.Timer.resource
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
+import liquibase.resource.Resource
+import liquibase.resource.URIResource
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
@@ -14,11 +17,10 @@ import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.net.URI
 import java.net.URL
 import java.nio.file.Path
 import java.sql.Connection
-import java.util.Enumeration
-import java.util.HashSet
 import java.util.concurrent.locks.ReentrantLock
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
@@ -144,41 +146,24 @@ open class SchemaMigration(
     /**  Create a resource accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     open class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
             ClassLoaderResourceAccessor(classLoader) {
-
-        @Override
-        fun getResourcesAsStream(path: String, classLoader: ClassLoader): Set<InputStream> {
-            if (path == dynamicInclude) {
+        override fun get(path: String?): Resource {
+            if(path == dynamicInclude) {
                 // Create a map in Liquibase format including all migration files.
                 val includeAllFiles = mapOf("databaseChangeLog"
                         to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
-
-                // Transform it to json.
                 val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
 
                 // Return the json as a stream.
-                return setOf(ByteArrayInputStream(includeAllFilesJson))
-            }
+                val inputStream = ByteArrayInputStream(includeAllFilesJson)
 
-            val resources: Enumeration<URL> = classLoader.getResources(path)
-
-            val seenUrls: MutableSet<String> = HashSet()
-            val returnSet: MutableSet<InputStream> = HashSet()
-            while (resources.hasMoreElements()) {
-                val url = resources.nextElement()
-                if (seenUrls.contains(url.toExternalForm())) {
-                    continue
-                }
-                seenUrls.add(url.toExternalForm())
-                val connection = url.openConnection()
-                connection.useCaches = false
-                val resourceAsStream = connection.getInputStream()
-                if (resourceAsStream != null) {
-                    returnSet.add(resourceAsStream)
+                return object  : URIResource(path, URI(path)) {
+                    override fun openInputStream(): InputStream {
+                        return inputStream
+                    }
                 }
             }
-
-
-            return returnSet.take(1).toSet()
+            val url: URL = javaClass.classLoader.getResource(path)
+            return super.get(path)
         }
     }
 
