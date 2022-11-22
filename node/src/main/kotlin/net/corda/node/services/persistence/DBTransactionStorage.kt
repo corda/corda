@@ -225,6 +225,22 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
         return database.transaction {
             txStorage.locked {
+                val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED)
+                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> finalizeTransactionWithExtraSignatures(k, signatures) }
+                if (addedOrUpdated) {
+                    logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
+                    onNewTx(transaction)
+                } else {
+                    logger.debug { "Transaction ${transaction.id} is already recorded as verified, so no need to re-record" }
+                    false
+                }
+            }
+        }
+    }
+
+    private fun finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
+        return database.transaction {
+            txStorage.locked {
                 val session = currentDBSession()
                 val criteriaBuilder = session.criteriaBuilder
                 val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
@@ -232,7 +248,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
                 criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 criteriaUpdate.where(criteriaBuilder.and(
-                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), transaction.id.toString()),
+                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
                         criteriaBuilder.notEqual(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 ))
                 criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())

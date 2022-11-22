@@ -194,9 +194,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             broadcastToOtherParties(notarisedSigs, newPlatformSessions)
             logger.debug("All parties received the extra signatures successfully.")
             serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction), notarisedSigs)
+        } else {
+            recordTransactionLocally(transaction)
         }
 
-        recordTransactionLocally(notarised)
         broadcastToOtherParties(externalTxParticipants, oldPlatformSessions, notarised, true)
         logger.info("All parties received the transaction successfully.")
         return notarised
