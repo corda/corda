@@ -42,25 +42,30 @@ data class OpenTelemetryContext(val spanContext: SerializableSpanContext, val st
 
 data class SpanInfo(val name: String, val span: Span, val spanScope: Scope, val spanEventContext: SerializableSpanContext? = null, val parentSpanEventContext: SerializableSpanContext? = null)
 
-class TracerSetup {
-    var openTelemetry: OpenTelemetry? = null
-    fun getTracer(serviceName: String): Tracer {
-        return try {
-            with(OpenTelemetryDriver.getOpenTelemetry(serviceName)) {
-                openTelemetry = this
-                tracerProvider.get(OpenTelemetryComponent::class.java.name)
-            }
+class TracerSetup(serviceName: String) {
+    private var openTelemetryDriver: Any? = null
+    val openTelemetry: OpenTelemetry by lazy {
+        try {
+            openTelemetryDriver = OpenTelemetryDriver(serviceName)
+            (openTelemetryDriver as OpenTelemetryDriver).openTelemetry
         }
         catch (ex: NoClassDefFoundError) {
-            GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
+            GlobalOpenTelemetry.get()
         }
+    }
+    fun getTracer(): Tracer {
+        return openTelemetry.tracerProvider.get(OpenTelemetryComponent::class.java.name)
+    }
+
+    fun shutdown() {
+        (openTelemetryDriver as? OpenTelemetryDriver)?.shutdown()
     }
 }
 
 @Suppress("TooManyFunctions")
 class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnabled: Boolean) : TelemetryComponent {
-    val tracerSetup = TracerSetup()
-    val tracer: Tracer = tracerSetup.getTracer(serviceName)
+    val tracerSetup = TracerSetup(serviceName)
+    val tracer: Tracer = tracerSetup.getTracer()
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(OpenTelemetryComponent::class.java)
@@ -72,13 +77,8 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
     val baggages = ConcurrentHashMap<UUID, Scope>()
 
     override fun isEnabled(): Boolean {
-        if (tracerSetup.openTelemetry != null) {
-            // The SDK is on the classpath.
-            return true
-        }
-        // Now see if the open telemetry java agent is available
-        val tracer = GlobalOpenTelemetry.getTracerProvider().get(OpenTelemetryComponent::class.java.name)
-        return tracer.javaClass.name != "io.opentelemetry.api.trace.DefaultTracer"
+        // DefaultTracer is the NoOp tracer in the OT API
+        return tracerSetup.getTracer().javaClass.name != "io.opentelemetry.api.trace.DefaultTracer"
     }
 
     override fun name(): String = OPENTELEMETRY_COMPONENT_NAME
@@ -90,7 +90,12 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
             is EndSpanEvent -> endSpan(event.telemetryId)
             is SetStatusEvent -> setStatus(event.telemetryId, event.telemetryStatusCode, event.message)
             is RecordExceptionEvent -> recordException(event.telemetryId, event.throwable)
+            is ShutdownTelemetryEvent -> shutdownTelemetry()
         }
+    }
+
+    private fun shutdownTelemetry() {
+        tracerSetup.shutdown()
     }
 
     @Suppress("LongParameterList")
@@ -287,6 +292,10 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
 
     override fun getCurrentBaggage(): Map<String, String> {
         return Baggage.current().asMap().mapValues { it.value.value }
+    }
+
+    override fun getTelemetryHandles(): List<Any> {
+        return tracerSetup.openTelemetry.let { listOf(it) }
     }
 
     private fun setStatus(telemetryId: UUID, telemetryStatusCode: TelemetryStatusCode, message: String) {

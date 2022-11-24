@@ -111,6 +111,10 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         return logContexts[uuid]?.baggage ?: emptyMap()
     }
 
+    override fun getTelemetryHandles(): List<Any> {
+        return emptyList()
+    }
+
     @Suppress("UNUSED_PARAMETER")
     private fun setStatus(telemetryId: UUID, telemetryStatusCode: TelemetryStatusCode, message: String) {
         when(telemetryStatusCode) {

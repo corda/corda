@@ -5,44 +5,27 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' // version '1.6.21'
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
-    id 'com.github.johnrengelman.shadow' // version '7.1.2'
+    //id 'com.github.johnrengelman.shadow' // version '7.1.2'
     id 'net.corda.plugins.publish-utils'
 }
 
-description 'OpenTelemetry Driver'
+description 'OpenTelemetry SDK Bundle'
 
 // This driver is required by core, so must always be 1.8. See core build.gradle.
 targetCompatibility = VERSION_1_8
 
 dependencies {
-    // Use the Kotlin JDK 8 standard library.
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:4.9.1'
-    implementation "io.opentelemetry:opentelemetry-api:$open_telemetry_version"
-
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation platform("io.opentelemetry:opentelemetry-bom:$open_telemetry_version")
     implementation "io.opentelemetry:opentelemetry-sdk"
-    implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+    implementation "io.opentelemetry:opentelemetry-exporter-otlp"
     implementation "io.opentelemetry:opentelemetry-semconv:$open_telemetry_sem_conv_version"
-}
-
-shadowJar {
-    archiveClassifier = jdkClassifier
-    relocate 'kotlin', 'privatekotlin'
-    exclude "**/Log4j2Plugins.dat"
-    zip64 true
-}
-
-artifacts {
-    archives shadowJar
-    publish shadowJar
-}
-
-jar {
-    enabled = false
+    implementation ("com.squareup.okhttp3:okhttp:$okhttp_version") {
+        force = true
+    }
 }
 
 publish {
-    disableDefaultJar = true
-    name  'corda-opentelemetry-driver'
+    name  'corda-opentelemetry'
 }
 

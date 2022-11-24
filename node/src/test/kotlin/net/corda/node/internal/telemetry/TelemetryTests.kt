@@ -289,6 +289,10 @@ class TelemetryTests {
         @Suppress("UNUSED_PARAMETER")
         fun recordException(telemetryId: UUID, throwable: Throwable) {
         }
+
+        override fun getTelemetryHandles(): List<Any> {
+            return emptyList()
+        }
     }
 
 

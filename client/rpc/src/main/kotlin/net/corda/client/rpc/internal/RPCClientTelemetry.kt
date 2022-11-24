@@ -1,6 +1,5 @@
 package net.corda.client.rpc.internal
 
-import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.core.internal.telemetry.OpenTelemetryComponent
 import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
@@ -35,8 +34,7 @@ class RPCClientTelemetry(val serviceName: String, val openTelemetryEnabled: Bool
         }
     }
 
-    fun getOpenTelemetryHandle(): OpenTelemetryHandle? {
-        // Will return a handle clients can use to interact with opentelemetry
-        return null
+    fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+        return telemetryService.getTelemetryHandle(telemetryClass)
     }
 }

@@ -4398,7 +4398,7 @@ public final class net.corda.core.node.services.StatesNotAvailableException exte
 @DoNotImplement
 public interface net.corda.core.node.services.TelemetryService
   @Nullable
-  public abstract net.corda.core.internal.telemetry.OpenTelemetryHandle getOpenTelemetry()
+  public abstract T getTelemetryHandle(Class<T>)
 ##
 public final class net.corda.core.node.services.TimeWindowChecker extends java.lang.Object
   public <init>()
@@ -9455,11 +9455,11 @@ public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Obj
   public <init>(net.corda.client.rpc.RPCConnection, java.util.concurrent.ExecutorService, net.corda.client.rpc.internal.ReconnectingCordaRPCOps, kotlin.jvm.internal.DefaultConstructorMarker)
   public void close()
   public void forceClose()
-  @Nullable
-  public net.corda.core.internal.telemetry.OpenTelemetryHandle getOpenTelemetry()
   @NotNull
   public net.corda.core.messaging.CordaRPCOps getProxy()
   public int getServerProtocolVersion()
+  @Nullable
+  public T getTelemetryHandle(Class<T>)
   public void notifyServerAndClose()
   public static final net.corda.client.rpc.CordaRPCConnection$Companion Companion
 ##
@@ -9491,11 +9491,11 @@ public final class net.corda.client.rpc.PermissionException extends net.corda.co
 public interface net.corda.client.rpc.RPCConnection extends java.io.Closeable
   public abstract void close()
   public abstract void forceClose()
-  @Nullable
-  public abstract net.corda.core.internal.telemetry.OpenTelemetryHandle getOpenTelemetry()
   @NotNull
   public abstract I getProxy()
   public abstract int getServerProtocolVersion()
+  @Nullable
+  public abstract T getTelemetryHandle(Class<T>)
   public abstract void notifyServerAndClose()
 ##
 public class net.corda.client.rpc.RPCException extends net.corda.core.CordaRuntimeException

@@ -1,7 +1,6 @@
 package net.corda.client.rpc.internal
 
 import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.ext.RPCConnectionListener
@@ -24,6 +23,7 @@ import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
 import net.corda.nodeapi.internal.config.SslConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.lang.reflect.Proxy
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -99,7 +99,9 @@ class RPCClient<I : RPCOps>(
                 // Without this any type of "send" time failures will not be delivered back to the client
                 isBlockOnNonDurableSend = true
             }
-            val rpcClientTelemetry = RPCClientTelemetry("rpcClient-${targetLegalIdentity.toString()}", rpcConfiguration.openTelemetryEnabled,
+
+            val targetString = "${transport.params[TransportConstants.HOST_PROP_NAME]}:${transport.params[TransportConstants.PORT_PROP_NAME]}"
+            val rpcClientTelemetry = RPCClientTelemetry("rpcClient-$targetString", rpcConfiguration.openTelemetryEnabled,
                     rpcConfiguration.simpleLogTelemetryEnabled, rpcConfiguration.spanStartEndEventsEnabled)
             val sessionId = Trace.SessionId.newInstance()
             val distributionMux = DistributionMux(listeners, username)
@@ -122,8 +124,8 @@ class RPCClient<I : RPCOps>(
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
 
-                    override fun getOpenTelemetry(): OpenTelemetryHandle? {
-                        return rpcClientTelemetry.getOpenTelemetryHandle()
+                    override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+                        return rpcClientTelemetry.getTelemetryHandle(telemetryClass)
                     }
 
                     private fun close(notify: Boolean) {
@@ -133,6 +135,7 @@ class RPCClient<I : RPCOps>(
                             proxyHandler.forceClose()
                         }
                         serverLocator.close()
+                        rpcClientTelemetry.telemetryService.shutdownTelemetry()
                     }
 
                     override fun notifyServerAndClose() {
