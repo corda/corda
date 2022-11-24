@@ -154,7 +154,8 @@ class DriverDSLImpl(
         val djvmCordaSource: List<Path>,
         val environmentVariables: Map<String, String>,
         val allowHibernateToManageAppSchema: Boolean = true,
-        val premigrateH2Database: Boolean = true
+        val premigrateH2Database: Boolean = true,
+        val notaryHandleTimeout: Duration = Duration.ofMinutes(1)
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -854,7 +855,6 @@ class DriverDSLImpl(
         // While starting with inProcess mode, we need to have different names to avoid clashes
         private val inMemoryCounter = AtomicInteger()
 
-        private val notaryHandleTimeout = Duration.ofMinutes(1)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
 
