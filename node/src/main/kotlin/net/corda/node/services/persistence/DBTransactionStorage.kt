@@ -101,7 +101,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         // Rough estimate for the average of a public key and the transaction metadata - hard to get exact figures here,
         // as public keys can vary in size a lot, and if someone else is holding a reference to the key, it won't add
         // to the memory pressure at all here.
-        private const val transactionSignatureOverheadEstimate = 1024
+        private const val TRANSACTION_SIGNATURE_OVERHEAD_BYTES = 1024
+        private const val TXCACHEVALUE_OVERHEAD_BYTES = 80
+        private const val SECUREHASH_OVERHEAD_BYTES = 24
 
         private val logger = contextLogger()
 
@@ -134,13 +136,13 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
-                    weighingFunc = { hash, tx -> hash.size + weighTx(tx) }
+                    weighingFunc = { hash, tx -> SECUREHASH_OVERHEAD_BYTES + hash.size + weighTx(tx) }
             )
         }
 
-        private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
-            val actTx = tx.peekableValue ?: return 0
-            return actTx.sigs.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.txBits.size
+        private fun weighTx(actTx: TxCacheValue?): Int {
+            if (actTx == null) return 0
+            return TXCACHEVALUE_OVERHEAD_BYTES + actTx.sigs.sumBy { it.size + TRANSACTION_SIGNATURE_OVERHEAD_BYTES } + actTx.txBits.size
         }
 
         private val log = contextLogger()
