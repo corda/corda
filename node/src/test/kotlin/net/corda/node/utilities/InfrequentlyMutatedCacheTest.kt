@@ -25,6 +25,11 @@ class InfrequentlyMutatedCacheTest {
         database.close()
     }
 
+    @Test(timeout = 300_000)
+    fun `invalidate outside transaction should not hang`() {
+        cache.invalidate("Fred")
+    }
+
     @Test(timeout=300_000)
 	fun `get from empty cache returns result of loader`() {
         database.transaction {
