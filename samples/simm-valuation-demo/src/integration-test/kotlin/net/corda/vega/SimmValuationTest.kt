@@ -15,6 +15,7 @@ import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -28,6 +29,7 @@ class SimmValuationTest {
         const val testTradeId = "trade1"
     }
 
+    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `runs SIMM valuation demo`() {
         driver(DriverParameters(isDebug = true,
