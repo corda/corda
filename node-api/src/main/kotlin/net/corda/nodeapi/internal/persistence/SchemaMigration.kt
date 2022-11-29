@@ -22,6 +22,7 @@ import java.net.URI
 import java.net.URL
 import java.nio.file.Path
 import java.sql.Connection
+import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
@@ -150,13 +151,32 @@ open class SchemaMigration(
     /**  Create a resource accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     open class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
             ClassLoaderResourceAccessor(classLoader) {
-        override fun get(path: String?): Resource {
+        override fun getAll(path: String?): List<Resource> {
             if(path == dynamicInclude) {
                 // Create a map in Liquibase format including all migration files.
                 val includeAllFiles = mapOf("databaseChangeLog"
                         to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
                 val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
 
+                // Return the json as a stream.
+                val inputStream = ByteArrayInputStream(includeAllFilesJson)
+                val resource = object  : URIResource(path, URI(path)) {
+                    override fun openInputStream(): InputStream {
+                        return inputStream
+                    }
+                }
+                return Collections.singletonList(resource)
+            }
+            // Take 1 resource due to LiquidBase find duplicate files which throws an error
+            return super.getAll(path).take(1)
+        }
+
+        override fun get(path: String?): Resource {
+            if(path == dynamicInclude) {
+                // Create a map in Liquibase format including all migration files.
+                val includeAllFiles = mapOf("databaseChangeLog"
+                        to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
+                val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
                 // Return the json as a stream.
                 val inputStream = ByteArrayInputStream(includeAllFilesJson)
 
@@ -166,7 +186,6 @@ open class SchemaMigration(
                     }
                 }
             }
-            val url: URL = javaClass.classLoader.getResource(path)
             return super.get(path)
         }
     }
