@@ -5,6 +5,7 @@ import io.micrometer.core.instrument.Timer.resource
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
+import liquibase.Scope
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -61,6 +62,9 @@ open class SchemaMigration(
      */
     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
+
+        // Set the Class loader for the Liquidbase Scope
+        Scope.enter(mapOf(Scope.Attr.classLoader.name to classLoader))
 
         // current version of Liquibase appears to be non-threadsafe
         // this is apparent when multiple in-process nodes are all running migrations simultaneously
