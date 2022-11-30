@@ -25,14 +25,13 @@ import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
 import java.security.PublicKey
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class CertificateRotationTest {
     private val ref = OpaqueBytes.of(0x01)
