@@ -45,7 +45,6 @@ class ReferencedStatesFlowTests {
         mockNet.stopNodes()
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `with referenced states flow blocks until the reference state update is received`() {
         // 1. Create reference state.
@@ -120,7 +119,6 @@ class ReferencedStatesFlowTests {
         assertEquals(2, allRefStates.states.size)
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `check old ref state is consumed when update used in tx with relevant states`() {
         // 1. Create a state to be used as a reference state. Don't share it.

@@ -226,7 +226,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED)
+                val cachedValue = TxCacheValue(transaction, signatures.toList(), TransactionStatus.VERIFIED)
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> finalizeTransactionWithExtraSignatures(k, signatures) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
@@ -239,7 +239,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    private fun finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
+    private fun  finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
         return database.transaction {
             txStorage.locked {
                 val session = currentDBSession()

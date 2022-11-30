@@ -81,7 +81,6 @@ class ObserverNodeTransactionTests {
         }
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `Broadcasting an old transaction does not cause 2 unconsumed states`() {
         val node = mockNet.createPartyNode(ALICE_NAME)
@@ -98,7 +97,6 @@ class ObserverNodeTransactionTests {
         checkObserverTransactions(outputMessage, regulator)
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `Non relevant states are recorded if transaction is re-received with new states to record`() {
         val node = mockNet.createPartyNode(ALICE_NAME)

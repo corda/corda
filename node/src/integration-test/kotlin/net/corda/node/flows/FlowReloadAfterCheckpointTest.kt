@@ -304,7 +304,6 @@ class FlowReloadAfterCheckpointTest {
         }
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `more complicated flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true`() {
         val reloads = QueueWithCountdown<StateMachineRunId>(13)

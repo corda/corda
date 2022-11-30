@@ -75,7 +75,6 @@ class IdentitySyncFlowTests {
         assertEquals(expected, actual)
     }
 
-   @Ignore("ENT-6875 breaks this")
    @Test(timeout=300_000)
 	fun `don't offer other's identities confidential identities`() {
         // Set up values we'll need

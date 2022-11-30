@@ -46,7 +46,6 @@ class CertificateRotationTest {
         mockNet.stopNodes()
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `restart with the same identities`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = FINANCE_CORDAPPS)
@@ -82,7 +81,6 @@ class CertificateRotationTest {
         assertEquals(1300.POUNDS, bob2.services.getCashBalance(GBP))
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `restart with rotated key for one node`() {
         mockNet = InternalMockNetwork(
@@ -133,7 +131,6 @@ class CertificateRotationTest {
         }.hasMessageContaining("Failed to change node legal identity key")
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `backchain resolution with rotated issuer key`() {
         mockNet = InternalMockNetwork(
@@ -165,7 +162,6 @@ class CertificateRotationTest {
         assertEquals(1000.DOLLARS, charlie.services.getCashBalance(USD))
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `backchain resolution with issuer removed from network map`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = FINANCE_CORDAPPS, autoVisibleNodes = false)

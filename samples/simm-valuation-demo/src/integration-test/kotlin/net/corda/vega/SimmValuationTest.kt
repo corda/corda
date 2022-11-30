@@ -29,7 +29,6 @@ class SimmValuationTest {
         const val testTradeId = "trade1"
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `runs SIMM valuation demo`() {
         driver(DriverParameters(isDebug = true,

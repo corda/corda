@@ -72,7 +72,6 @@ class DeterministicContractWithSerializationWhitelistTest {
         }
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `test DJVM can fail verify using whitelist`() {
         driver(parametersFor(djvmSources, listOf(flowCordapp, contractCordapp))) {

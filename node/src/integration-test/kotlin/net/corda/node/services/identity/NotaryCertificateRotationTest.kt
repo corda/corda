@@ -52,7 +52,6 @@ class NotaryCertificateRotationTest(private val validating: Boolean) {
         mockNet.stopNodes()
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `rotate notary identity`() {
         mockNet = InternalMockNetwork(

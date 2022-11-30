@@ -217,7 +217,6 @@ class FlowHospitalTest {
         }
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `catching a notary error will cause a peer to fail with unexpected session end during ReceiveFinalityFlow that passes through user code`() {
         var dischargedCounter = 0
