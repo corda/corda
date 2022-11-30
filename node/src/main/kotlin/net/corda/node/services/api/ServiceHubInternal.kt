@@ -141,6 +141,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 txs.map(validatedTransactions::addTransactionWithoutNotarySignature)
             }
         }
+        @Suppress("LongParameterList")
         fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord,
                                                    txs: Collection<SignedTransaction>,
                                                    sigs: Collection<TransactionSignature>,

@@ -206,25 +206,30 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun broadcastToOtherParties(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction, transactionFullySigned: Boolean) {
         if (newApi) {
-            oldV3Broadcast(tx, oldParticipants.toSet(), transactionFullySigned)
+            oldV3Broadcast(tx, oldParticipants.toSet())
             for (session in sessions) {
-                try {
-                    subFlow(SendTransactionFlow(session, tx))
-                    if (!transactionFullySigned) session.receive<Unit>()
-                    logger.info("Party ${session.counterparty} received the transaction.")
-                } catch (e: UnexpectedFlowEndException) {
-                    throw UnexpectedFlowEndException(
-                            "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
-                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
-                            e.cause,
-                            e.originalErrorId
-                    )
-                }
+                broadcastToParties(session, tx, transactionFullySigned)
             }
         } else {
-            oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet(), transactionFullySigned)
+            oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
         }
     }
+    @Suspendable
+    private fun broadcastToParties(session: FlowSession, tx: SignedTransaction, transactionFullySigned: Boolean) {
+        try {
+            subFlow(SendTransactionFlow(session, tx))
+            if (!transactionFullySigned) session.receive<Unit>()
+            logger.info("Party ${session.counterparty} received the transaction.")
+        } catch (e: UnexpectedFlowEndException) {
+            throw UnexpectedFlowEndException(
+                    "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
+                            "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                    e.cause,
+                    e.originalErrorId
+            )
+        }
+    }
+
     @Suspendable
     private fun broadcastToOtherParties(sigs: List<TransactionSignature>, sessions: Collection<FlowSession>) {
         for (session in sessions) {
@@ -244,7 +249,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>, transactionFullySigned: Boolean) {
+    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>) {
         for (recipient in recipients) {
             if (!serviceHub.myInfo.isLegalIdentity(recipient)) {
                 logger.debug { "Sending transaction to party $recipient." }

@@ -30,6 +30,7 @@ import java.util.*
 import javax.persistence.*
 import kotlin.streams.toList
 
+@Suppress("TooManyFunctions")
 class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
                            private val clock: CordaClock) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
