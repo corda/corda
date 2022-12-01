@@ -51,7 +51,6 @@ open class SchemaMigration(
         protected val mutex = ReentrantLock()
     }
 
-
     init {
         loader.set(cordappLoader)
     }
@@ -152,18 +151,13 @@ open class SchemaMigration(
         }
     }
 
-    /**  Create a resource accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
+    /**  Create a resource accessor that aggregates the changelogs included in the schemas into a resource. */
     open class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
             ClassLoaderResourceAccessor(classLoader) {
         override fun getAll(path: String?): List<Resource> {
             if (path == dynamicInclude) {
-                // Create a map in Liquibase format including all migration files.
-                val includeAllFiles = mapOf("databaseChangeLog"
-                        to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
-                val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
-
                 // Return the json as a stream.
-                val inputStream = ByteArrayInputStream(includeAllFilesJson)
+                val inputStream = getPathAsStream()
                 val resource = object : URIResource(path, URI(path)) {
                     override fun openInputStream(): InputStream {
                         return inputStream
@@ -177,13 +171,8 @@ open class SchemaMigration(
 
         override fun get(path: String?): Resource {
             if (path == dynamicInclude) {
-                // Create a map in Liquibase format including all migration files.
-                val includeAllFiles = mapOf("databaseChangeLog"
-                        to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
-                val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
                 // Return the json as a stream.
-                val inputStream = ByteArrayInputStream(includeAllFilesJson)
-
+                val inputStream = getPathAsStream()
                 return object : URIResource(path, URI(path)) {
                     override fun openInputStream(): InputStream {
                         return inputStream
@@ -191,6 +180,15 @@ open class SchemaMigration(
                 }
             }
             return super.get(path)
+        }
+
+        private fun getPathAsStream(): InputStream {
+            // Create a map in Liquibase format including all migration files.
+            val includeAllFiles = mapOf("databaseChangeLog"
+                    to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
+            val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
+
+            return ByteArrayInputStream(includeAllFilesJson)
         }
     }
 
