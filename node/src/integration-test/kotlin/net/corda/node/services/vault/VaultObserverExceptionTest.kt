@@ -436,7 +436,6 @@ class VaultObserverExceptionTest {
     fun `Throw user error in VaultService rawUpdates during FinalityFlow blows up the flow but does not break the Observer - onNext check`() {
         var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
-
         val rawUpdatesCount = ConcurrentHashMap<Party, Int>()
         DbListenerService.onNextVisited = { party ->
             if (rawUpdatesCount.putIfAbsent(party, 1) != null) {

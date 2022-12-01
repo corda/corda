@@ -6,6 +6,8 @@ import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.Scope
+import liquibase.SingletonScopeManager
+import liquibase.ThreadLocalScopeManager
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
@@ -16,6 +18,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import org.apache.commons.logging.Log
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.net.URI
@@ -24,6 +27,7 @@ import java.nio.file.Path
 import java.sql.Connection
 import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
+import java.util.logging.Logger
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
 
@@ -44,14 +48,20 @@ open class SchemaMigration(
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
 
+        init {
+            Scope.setScopeManager(ThreadLocalScopeManager())
+        }
+
         @JvmStatic
         protected val mutex = ReentrantLock()
     }
+
 
     init {
         loader.set(cordappLoader)
     }
 
+    var boolean = false
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
 
     /**
@@ -63,8 +73,7 @@ open class SchemaMigration(
      */
     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
-
-        // Set the Class loader for the Liquidbase Scope
+        // Set the Class loader for the LiquidBase Scope
         Scope.enter(mapOf(Scope.Attr.classLoader.name to classLoader))
 
         // current version of Liquibase appears to be non-threadsafe
@@ -152,7 +161,7 @@ open class SchemaMigration(
     open class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
             ClassLoaderResourceAccessor(classLoader) {
         override fun getAll(path: String?): List<Resource> {
-            if(path == dynamicInclude) {
+            if (path == dynamicInclude) {
                 // Create a map in Liquibase format including all migration files.
                 val includeAllFiles = mapOf("databaseChangeLog"
                         to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
@@ -160,7 +169,7 @@ open class SchemaMigration(
 
                 // Return the json as a stream.
                 val inputStream = ByteArrayInputStream(includeAllFilesJson)
-                val resource = object  : URIResource(path, URI(path)) {
+                val resource = object : URIResource(path, URI(path)) {
                     override fun openInputStream(): InputStream {
                         return inputStream
                     }
@@ -172,7 +181,7 @@ open class SchemaMigration(
         }
 
         override fun get(path: String?): Resource {
-            if(path == dynamicInclude) {
+            if (path == dynamicInclude) {
                 // Create a map in Liquibase format including all migration files.
                 val includeAllFiles = mapOf("databaseChangeLog"
                         to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
@@ -180,7 +189,7 @@ open class SchemaMigration(
                 // Return the json as a stream.
                 val inputStream = ByteArrayInputStream(includeAllFilesJson)
 
-                return object  : URIResource(path, URI(path)) {
+                return object : URIResource(path, URI(path)) {
                     override fun openInputStream(): InputStream {
                         return inputStream
                     }
