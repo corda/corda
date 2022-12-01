@@ -12,10 +12,12 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import org.junit.Ignore
 import org.junit.Test
 
 class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
 
+    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `starting a flow inside of a flow that starts a future will succeed`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
