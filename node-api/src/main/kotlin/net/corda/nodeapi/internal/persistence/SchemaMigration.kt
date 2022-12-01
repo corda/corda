@@ -1,12 +1,10 @@
 package net.corda.nodeapi.internal.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.micrometer.core.instrument.Timer.resource
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
 import liquibase.Scope
-import liquibase.SingletonScopeManager
 import liquibase.ThreadLocalScopeManager
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.LiquibaseException
@@ -18,16 +16,13 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import org.apache.commons.logging.Log
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.net.URI
-import java.net.URL
 import java.nio.file.Path
 import java.sql.Connection
 import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
-import java.util.logging.Logger
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
 

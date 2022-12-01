@@ -17,7 +17,6 @@ import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.api.SchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
