@@ -4,9 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import liquibase.Contexts
 import liquibase.LabelExpression
 import liquibase.Liquibase
+import liquibase.Scope
+import liquibase.ThreadLocalScopeManager
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.LiquibaseException
 import liquibase.resource.ClassLoaderResourceAccessor
+import liquibase.resource.Resource
+import liquibase.resource.URIResource
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
@@ -14,8 +18,10 @@ import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.net.URI
 import java.nio.file.Path
 import java.sql.Connection
+import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
@@ -36,6 +42,9 @@ open class SchemaMigration(
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
+        init {
+            Scope.setScopeManager(ThreadLocalScopeManager())
+        }
         @JvmStatic
         protected val mutex = ReentrantLock()
     }
@@ -140,19 +149,41 @@ open class SchemaMigration(
     /**  Create a resource accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     protected class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
             ClassLoaderResourceAccessor(classLoader) {
-        override fun getResourcesAsStream(path: String): Set<InputStream> {
+        override fun getAll(path: String?): List<Resource> {
             if (path == dynamicInclude) {
-                // Create a map in Liquibase format including all migration files.
-                val includeAllFiles = mapOf("databaseChangeLog"
-                        to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
-
-                // Transform it to json.
-                val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
-
                 // Return the json as a stream.
-                return setOf(ByteArrayInputStream(includeAllFilesJson))
+                val inputStream = getPathAsStream()
+                val resource = object : URIResource(path, URI(path)) {
+                    override fun openInputStream(): InputStream {
+                        return inputStream
+                    }
+                }
+                return Collections.singletonList(resource)
             }
-            return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
+            // Take 1 resource due to LiquidBase find duplicate files which throws an error
+            return super.getAll(path).take(1)
+        }
+
+        override fun get(path: String?): Resource {
+            if (path == dynamicInclude) {
+                // Return the json as a stream.
+                val inputStream = getPathAsStream()
+                return object : URIResource(path, URI(path)) {
+                    override fun openInputStream(): InputStream {
+                        return inputStream
+                    }
+                }
+            }
+            return super.get(path)
+        }
+
+        private fun getPathAsStream(): InputStream {
+            // Create a map in Liquibase format including all migration files.
+            val includeAllFiles = mapOf("databaseChangeLog"
+                    to changelogList.filterNotNull().map { file -> mapOf("include" to mapOf("file" to file)) })
+            val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
+
+            return ByteArrayInputStream(includeAllFilesJson)
         }
     }
 
