@@ -1,0 +1,14 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-JAVA-ORGAPACHESHIRO-3043119:
+    - '*':
+        reason: >-
+          Shiro prior to version 1.10.0 is vulnerable to Authentication Bypass
+          when forwarding or including requests via the RequestDispatcher
+          interface. Corda does not use the RequestDispatcher interface and so
+          is not susceptible to this vulnerability.
+        expires: 2023-04-30T00:00:00.000Z
+        created: 2022-12-04T15:49:49.513Z
+patch: {}
