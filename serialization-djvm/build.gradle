@@ -74,7 +74,7 @@ tasks.withType(Test).configureEach {
 }
 
 publish {
-    name addArchiveAppendix(jar.baseName)
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }
 
 idea {

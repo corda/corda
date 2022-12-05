@@ -45,7 +45,7 @@ publish {
     dependenciesFrom(configurations.runtimeArtifacts) {
         defaultScope = 'compile'
     }
-    name addArchiveAppendix(jar.baseName)
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }
 
 idea {

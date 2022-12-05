@@ -51,10 +51,11 @@ artifacts {
 jar {
     classifier "ignore"
     enabled = false
+    archiveBaseName = 'corda-tools-explorer'
     archiveAppendix = corda_archive_appendix
 }
 
 publish {
     disableDefaultJar = true
-    name addArchiveAppendix('corda-tools-explorer')
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }

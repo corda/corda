@@ -68,10 +68,10 @@ artifacts {
 }
 
 jar {
-    baseName 'corda-serialization'
+    archiveBaseName = 'corda-serialization'
     archiveAppendix = corda_archive_appendix
 }
 
 publish {
-    name addArchiveAppendix(jar.baseName)
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }
