@@ -4398,7 +4398,7 @@ public final class net.corda.core.node.services.StatesNotAvailableException exte
 @DoNotImplement
 public interface net.corda.core.node.services.TelemetryService
   @Nullable
-  public abstract T getTelemetryHandle(Class<T>)
+  public abstract T getTelemetryHandle(Class)
 ##
 public final class net.corda.core.node.services.TimeWindowChecker extends java.lang.Object
   public <init>()
@@ -9474,7 +9474,7 @@ public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Obj
   public net.corda.core.messaging.CordaRPCOps getProxy()
   public int getServerProtocolVersion()
   @Nullable
-  public T getTelemetryHandle(Class<T>)
+  public T getTelemetryHandle(Class)
   public void notifyServerAndClose()
   public static final net.corda.client.rpc.CordaRPCConnection$Companion Companion
 ##
@@ -9510,7 +9510,7 @@ public interface net.corda.client.rpc.RPCConnection extends java.io.Closeable
   public abstract I getProxy()
   public abstract int getServerProtocolVersion()
   @Nullable
-  public abstract T getTelemetryHandle(Class<T>)
+  public abstract T getTelemetryHandle(Class)
   public abstract void notifyServerAndClose()
 ##
 public class net.corda.client.rpc.RPCException extends net.corda.core.CordaRuntimeException
