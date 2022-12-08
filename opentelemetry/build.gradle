@@ -4,6 +4,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'java-library'
     id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
 }
 
 description 'OpenTelemetry SDK Bundle'

@@ -5,6 +5,7 @@ plugins {
     id 'java-library'
     id 'com.github.johnrengelman.shadow'
     id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
 }
 
 description 'OpenTelemetry Driver'
@@ -36,4 +37,3 @@ publish {
     disableDefaultJar = true
     name  'corda-opentelemetry-driver'
 }
-
