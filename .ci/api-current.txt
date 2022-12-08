@@ -9391,7 +9391,8 @@ public class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.
   public <init>(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean)
   public <init>(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean)
   public <init>(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean, boolean)
-  public <init>(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean, boolean, boolean)
+  public <init>(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final java.time.Duration component1()
   @NotNull
@@ -9419,7 +9420,7 @@ public class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.
   @NotNull
   public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration)
   @NotNull
-  public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean, boolean)
+  public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration, int, boolean, java.time.Duration, int, int, java.time.Duration, double, int, int, java.time.Duration, boolean, boolean, boolean, boolean)
   public boolean equals(Object)
   public int getCacheConcurrencyLevel()
   @NotNull
@@ -9427,6 +9428,7 @@ public class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.
   @NotNull
   public java.time.Duration getConnectionRetryInterval()
   public double getConnectionRetryIntervalMultiplier()
+  public boolean getCopyBaggageToTags()
   @NotNull
   public java.time.Duration getDeduplicationCacheExpiry()
   public int getMaxFileSize()
