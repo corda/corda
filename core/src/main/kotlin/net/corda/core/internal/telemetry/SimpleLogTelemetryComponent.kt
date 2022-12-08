@@ -2,7 +2,6 @@ package net.corda.core.internal.telemetry
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.debug
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
