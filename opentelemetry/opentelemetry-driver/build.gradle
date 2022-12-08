@@ -1,11 +1,9 @@
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
-    // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
-    id 'org.jetbrains.kotlin.jvm' // version '1.6.21'
-    // Apply the java-library plugin for API and implementation separation.
+    id 'org.jetbrains.kotlin.jvm'
     id 'java-library'
-    id 'com.github.johnrengelman.shadow' // version '7.1.2'
+    id 'com.github.johnrengelman.shadow'
     id 'net.corda.plugins.publish-utils'
 }
 

@@ -134,7 +134,7 @@ data class NodeConfigurationImpl(
         fun database(devMode: Boolean) = DatabaseConfig(
                 exportHibernateJMXStatistics = devMode
         )
-        val telemetry = TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = true)
+        val telemetry = TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = false, copyBaggageToTags = false)
     }
 
     companion object {

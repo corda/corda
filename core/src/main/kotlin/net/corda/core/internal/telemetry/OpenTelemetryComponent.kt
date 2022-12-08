@@ -53,7 +53,7 @@ class TracerSetup(serviceName: String) {
 }
 
 @Suppress("TooManyFunctions")
-class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnabled: Boolean) : TelemetryComponent {
+class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnabled: Boolean, val copyBaggageToTags: Boolean) : TelemetryComponent {
     val tracerSetup = TracerSetup(serviceName)
     val tracer: Tracer = tracerSetup.getTracer()
 
@@ -118,8 +118,14 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
             it
         } ?: emptyMap()
 
-        // Also add any baggage to the span
-        val attributesMap = (attributes+baggageAttributes).toList()
+        val allAttributes = if (copyBaggageToTags) {
+            attributes + baggageAttributes
+        }
+        else {
+            attributes
+        }
+
+        val attributesMap = allAttributes.toList()
                 .fold(Attributes.builder()) { builder, attribute -> builder.put(attribute.first, attribute.second) }.also {
                     populateWithFlowAttributes(it, flowLogic)
                 }.build()
@@ -212,7 +218,9 @@ class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnab
     private fun startSpan(name: String, attributes: Map<String, String>, telemetryId: UUID, flowLogic: FlowLogic<*>?) {
         val currentBaggage = Baggage.current()
         val baggageAttributes = mutableMapOf<String,String>()
-        currentBaggage.forEach { t, u -> baggageAttributes[t] = u.value }
+        if (copyBaggageToTags) {
+            currentBaggage.forEach { t, u -> baggageAttributes[t] = u.value }
+        }
         val parentSpan = Span.current()
         val attributesMap = (attributes+baggageAttributes).toList().fold(Attributes.builder()) { builder, attribute -> builder.put(attribute.first, attribute.second) }.also {
             populateWithFlowAttributes(it, flowLogic)
