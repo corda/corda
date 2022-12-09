@@ -23,6 +23,7 @@ import java.nio.file.Path
 import java.sql.Connection
 import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
+import java.util.logging.Logger
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
 
@@ -45,6 +46,7 @@ open class SchemaMigration(
         init {
             Scope.setScopeManager(ThreadLocalScopeManager())
         }
+
         @JvmStatic
         protected val mutex = ReentrantLock()
     }
@@ -55,31 +57,31 @@ open class SchemaMigration(
 
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
 
-     /**
+    /**
      * Will run the Liquibase migration on the actual database.
-      * @param existingCheckpoints Whether checkpoints exist that would prohibit running a migration
-      * @param schemas The set of MappedSchemas to check
-      * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
-      *                                      when allowing hibernate to create missing schemas in dev or tests.
+     * @param existingCheckpoints Whether checkpoints exist that would prohibit running a migration
+     * @param schemas The set of MappedSchemas to check
+     * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
+     *                                      when allowing hibernate to create missing schemas in dev or tests.
      */
-     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
-         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
-
-         // current version of Liquibase appears to be non-threadsafe
-         // this is apparent when multiple in-process nodes are all running migrations simultaneously
-         mutex.withLock {
-             dataSource.connection.use { connection ->
-                 val (runner, _, shouldBlockOnCheckpoints) = prepareRunner(connection, resourcesAndSourceInfo)
-                 if (shouldBlockOnCheckpoints && existingCheckpoints)
-                     throw CheckpointsException()
-                 try {
-                     runner.update(Contexts().toString())
-                 } catch (exp: LiquibaseException) {
-                     throw DatabaseMigrationException(exp.message, exp)
-                 }
-             }
-         }
-     }
+    fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
+        val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
+        Scope.enter(mapOf(Scope.Attr.classLoader.name to classLoader))
+        // current version of Liquibase appears to be non-threadsafe
+        // this is apparent when multiple in-process nodes are all running migrations simultaneously
+        mutex.withLock {
+            dataSource.connection.use { connection ->
+                val (runner, _, shouldBlockOnCheckpoints) = prepareRunner(connection, resourcesAndSourceInfo)
+                if (shouldBlockOnCheckpoints && existingCheckpoints)
+                    throw CheckpointsException()
+                try {
+                    runner.update(Contexts().toString())
+                } catch (exp: LiquibaseException) {
+                    throw DatabaseMigrationException(exp.message, exp)
+                }
+            }
+        }
+    }
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
@@ -107,7 +109,7 @@ open class SchemaMigration(
      * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
      *                                      when allowing hibernate to create missing schemas in dev or tests.
      */
-    fun getPendingChangesCount(schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) : Int {
+    fun getPendingChangesCount(schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): Int {
         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
 
         // current version of Liquibase appears to be non-threadsafe
@@ -150,6 +152,7 @@ open class SchemaMigration(
     protected class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) :
             ClassLoaderResourceAccessor(classLoader) {
         override fun getAll(path: String?): List<Resource> {
+
             if (path == dynamicInclude) {
                 // Return the json as a stream.
                 val inputStream = getPathAsStream()
@@ -215,6 +218,7 @@ open class SchemaMigration(
         if (ourName != null) {
             System.setProperty(NODE_X500_NAME, ourName.toString())
         }
+        Scope.enter(mapOf(Scope.Attr.classLoader.name to classLoader))
         val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
         checkResourcesInClassPath(changelogList)
         return listOf(Pair(customResourceAccessor, ""))
