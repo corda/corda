@@ -5,7 +5,9 @@ import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.utilities.contextLogger
 
-class RPCClientTelemetry(val serviceName: String, val openTelemetryEnabled: Boolean, val simpleLogTelemetryEnabled: Boolean, val spanStartEndEventsEnabled: Boolean) {
+class RPCClientTelemetry(val serviceName: String, val openTelemetryEnabled: Boolean,
+                         val simpleLogTelemetryEnabled: Boolean, val spanStartEndEventsEnabled: Boolean,
+                         val copyBaggageToTags: Boolean) {
 
     companion object {
         private val log = contextLogger()
@@ -16,7 +18,7 @@ class RPCClientTelemetry(val serviceName: String, val openTelemetryEnabled: Bool
     init {
         if (openTelemetryEnabled) {
             try {
-                val openTelemetryComponent = OpenTelemetryComponent(serviceName, spanStartEndEventsEnabled)
+                val openTelemetryComponent = OpenTelemetryComponent(serviceName, spanStartEndEventsEnabled, copyBaggageToTags)
                 if (openTelemetryComponent.isEnabled()) {
                     telemetryService.addTelemetryComponent(openTelemetryComponent)
                     log.debug("OpenTelemetry enabled")

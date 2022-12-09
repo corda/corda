@@ -102,7 +102,7 @@ class RPCClient<I : RPCOps>(
 
             val targetString = "${transport.params[TransportConstants.HOST_PROP_NAME]}:${transport.params[TransportConstants.PORT_PROP_NAME]}"
             val rpcClientTelemetry = RPCClientTelemetry("rpcClient-$targetString", rpcConfiguration.openTelemetryEnabled,
-                    rpcConfiguration.simpleLogTelemetryEnabled, rpcConfiguration.spanStartEndEventsEnabled)
+                    rpcConfiguration.simpleLogTelemetryEnabled, rpcConfiguration.spanStartEndEventsEnabled, rpcConfiguration.copyBaggageToTags)
             val sessionId = Trace.SessionId.newInstance()
             val distributionMux = DistributionMux(listeners, username)
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator,

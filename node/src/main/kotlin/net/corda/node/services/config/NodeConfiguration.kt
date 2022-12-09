@@ -224,7 +224,8 @@ data class FlowTimeoutConfiguration(
 data class TelemetryConfiguration(
         val openTelemetryEnabled: Boolean,
         val simpleLogTelemetryEnabled: Boolean,
-        val spanStartEndEventsEnabled: Boolean
+        val spanStartEndEventsEnabled: Boolean,
+        val copyBaggageToTags: Boolean
 )
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
