@@ -11,6 +11,14 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
+    /*
+     * List environment variables in alphabetical order
+     */
+    environment {
+        SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret')
+        C4_OS_SNYK_ORG_ID = credentials('c4-os-snyk-org-id')
+    }
+
     stages {
         stage('Detekt check') {
             steps {
@@ -22,6 +30,25 @@ pipeline {
         stage('Compilation warnings check') {
             steps {
                 sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=true compileAll"
+            }
+        }
+
+        stage('Snyk Delta') {
+            agent {
+                docker {
+                    image 'build-zulu-openjdk:8'
+                    reuseNode true
+                    registryUrl 'https://engineering-docker.software.r3.com/'
+                    registryCredentialsId 'artifactory-credentials'
+                    args '-v /tmp:/host_tmp'
+                }
+            }
+            environment {
+                GRADLE_USER_HOME = "/host_tmp/gradle"
+            }
+            steps {
+                sh 'mkdir -p ${GRADLE_USER_HOME}'
+                snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }
         }
 
