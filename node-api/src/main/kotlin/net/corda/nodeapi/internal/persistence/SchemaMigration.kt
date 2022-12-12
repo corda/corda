@@ -23,7 +23,6 @@ import java.nio.file.Path
 import java.sql.Connection
 import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
-import java.util.logging.Logger
 import javax.sql.DataSource
 import kotlin.concurrent.withLock
 
