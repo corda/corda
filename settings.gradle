@@ -133,7 +133,7 @@ include 'opentelemetry:opentelemetry-driver'
 //include 'core-deterministic:testing:verifier'
 //include 'serialization-deterministic'
 //
-//include 'detekt-plugins'
 //include 'tools:error-tool'
+include 'detekt-plugins'
 
 

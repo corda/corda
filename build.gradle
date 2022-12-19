@@ -551,7 +551,7 @@ configurations {
 }
 
 // Required for building out the fat JAR.
-//dependencies {
+dependencies {
 //    implementation project(':node')
 //    implementation "com.google.guava:guava:$guava_version"
 //
@@ -569,8 +569,8 @@ configurations {
 //    runtimeOnly project(':finance:contracts')
 //    runtimeOnly project(':testing:testserver')
 //    testImplementation project(':test-utils')
-//    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
-//}
+    detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
+}
 
 jar {
     // Prevent the root project from building an unwanted dummy CorDapp.
