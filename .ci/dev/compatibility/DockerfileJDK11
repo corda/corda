@@ -4,6 +4,14 @@ RUN apt-get update && apt-get install -y curl apt-transport-https \
                                               curl \
                                               gnupg2 \
                                               software-properties-common \
-                                              wget
+                                              wget \
+                                              unzip
+
+WORKDIR /opt/gradle
+RUN curl -L https://services.gradle.org/distributions/gradle-7.6-bin.zip -o gradle-7.6-bin.zip
+RUN unzip gradle-7.6-bin.zip
+ENV GRADLE_HOME=/opt/gradle/gradle-7.6
+ENV PATH=$PATH:$GRADLE_HOME/bin
+
 ARG USER="stresstester"
 RUN useradd -m ${USER}

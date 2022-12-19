@@ -104,6 +104,12 @@ pipeline {
                 dir(sameAgentFolder) {
                     authenticateGradleWrapper()
                     sh script: [
+                        'gradle',
+                        'wrapper',
+                        '--gradle-version',
+                        '7.6'
+                    ].join(' ')
+                    sh script: [
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
                             'clean',

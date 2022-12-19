@@ -30,6 +30,9 @@ buildscript {
         ext.kotlin_version = ext.kotlin_jdk8_version
         ext.kotlin_language_version = constants.getProperty("kotlinLanguageVersion")
         ext.kotlin_api_version = constants.getProperty("kotlinApiVersion")
+        ext.kotlin_plugin_name = constants.getProperty("kotlinPluginName")
+        ext.kotlin_allopen_plugin_name = constants.getProperty("kotlinAllOpenPluginName")
+        ext.kotlin_jpa_plugin_name = constants.getProperty("kotlinJpaPluginName")
 
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
@@ -39,6 +42,9 @@ buildscript {
         ext.kotlin_version = ext.kotlin_jdk11_version
         ext.kotlin_language_version = constants.getProperty("jdk11KotlinLanguageVersion")
         ext.kotlin_api_version = constants.getProperty("jdk11KotlinApiVersion")
+        ext.kotlin_plugin_name = constants.getProperty("jdk11KotlinPluginName")
+        ext.kotlin_allopen_plugin_name = constants.getProperty("jdk11KotlinAllOpenPluginName")
+        ext.kotlin_jpa_plugin_name = constants.getProperty("jdk11KotlinJpaPluginName")
 
         ext.quasar_version = constants.getProperty("quasarVersion11")
         ext.quasar_classifier = constants.getProperty("quasarClassifier11")
@@ -229,21 +235,16 @@ plugins {
     id "com.github.johnrengelman.shadow" version "2.0.4" apply false
     id "com.gradle.build-scan" version "2.2.1" apply false
     id "org.ajoberstar.grgit" version "4.0.0"
-
-    // Gradle 7 plugins
-//    id "org.jetbrains.kotlin.jvm" version "$kotlin_jdk11_version" apply false
-//    id "org.jetbrains.kotlin.plugin.allopen" version "$kotlin_jdk11_version" apply false
-//    id "org.jetbrains.kotlin.plugin.jpa" version "$kotlin_jdk11_version" apply false
-//    id "com.gradle.enterprise" version "3.12" apply false
 }
 
 if (JavaVersion.current().isJava8()) {
-    apply plugin: "com.github.johnrengelman.shadow"
     apply plugin: "com.gradle.build-scan"
-} else {
-    //AXM apply plugin: "com.gradle.enterprise"
 }
 
+apply plugin: "$kotlin_plugin_name"
+apply plugin: "$kotlin_allopen_plugin_name"
+apply plugin: "$kotlin_jpa_plugin_name"
+apply plugin: "com.github.johnrengelman.shadow"
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -280,13 +281,8 @@ logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
 logger.lifecycle("Building Corda version: {}", corda_release_version)
 
 allprojects {
-    if (JavaVersion.current().isJava8()) {
-        apply plugin: 'kotlin'
-        apply plugin: 'kotlin-allopen'
-    } else {
-        apply plugin: 'org.jetbrains.kotlin.jvm'
-        apply plugin: 'org.jetbrains.kotlin.plugin.allopen'
-    }
+    apply plugin: "$kotlin_plugin_name"
+    apply plugin: "$kotlin_allopen_plugin_name"
 
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
