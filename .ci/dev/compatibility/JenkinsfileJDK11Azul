@@ -102,13 +102,13 @@ pipeline {
         stage('Compile') {
             steps {
                 dir(sameAgentFolder) {
-                    authenticateGradleWrapper()
                     sh script: [
-                        'gradle',
-                        'wrapper',
-                        '--gradle-version',
-                        '7.6'
+                            'gradle',
+                            'wrapper',
+                            '--gradle-version',
+                            '7.6'
                     ].join(' ')
+                    authenticateGradleWrapper()
                     sh script: [
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
