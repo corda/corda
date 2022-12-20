@@ -74,11 +74,11 @@ processSmokeTestResources {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    compile project(':core')
-    compile project(':node-api')
+    implementation project(':core')
+    implementation project(':node-api')
 
     // For caches rather than guava
-    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     testImplementation "junit:junit:$junit_version"
 
@@ -86,11 +86,11 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // Unit testing helpers.
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.assertj:assertj-core:${assertj_version}"
 
-    testCompile project(':node-driver')
-    testCompile project(':client:mock')
+    testImplementation project(':node-driver')
+    testImplementation project(':client:mock')
     integrationTestCompile project(path: ':node-api', configuration: 'testArtifacts')
 
     // Smoke tests do NOT have any Node code on the classpath!

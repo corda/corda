@@ -56,8 +56,8 @@ dependencies {
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-product:$strata_version"
-    compile "com.opengamma.strata:strata-market:$strata_version"
+    implementation "com.opengamma.strata:strata-product:$strata_version"
+    implementation "com.opengamma.strata:strata-market:$strata_version"
 }
 
 def cordappDependencies = file("${sourceSets['main'].output.resourcesDir}/META-INF/Cordapp-Dependencies")

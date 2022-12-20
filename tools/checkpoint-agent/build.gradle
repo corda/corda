@@ -42,8 +42,8 @@ dependencies {
     }
 
     // Unit testing helpers.
-    testCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
 
     // SLF4J: commons-logging bindings for a SLF4J back end
     compileOnly "org.slf4j:slf4j-api:$slf4j_version"

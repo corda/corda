@@ -28,7 +28,7 @@ dependencies {
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"
 
-    testCompile "org.apache.commons:commons-lang3:3.9"
+    testImplementation "org.apache.commons:commons-lang3:3.9"
 }
 
 jar {

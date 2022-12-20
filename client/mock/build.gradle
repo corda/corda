@@ -9,9 +9,9 @@ description 'Corda client mock modules'
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    compile project(":core")
-    compile project(':finance:workflows')
-    compile project(':finance:contracts')
+    implementation project(":core")
+    implementation project(':finance:workflows')
+    implementation project(':finance:contracts')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -21,9 +21,9 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // Unit testing helpers.
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testImplementation "org.assertj:assertj-core:${assertj_version}"
 
-    testCompile project(':test-utils')
+    testImplementation project(':test-utils')
 }
 
 jar {

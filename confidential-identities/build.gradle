@@ -11,7 +11,7 @@ description 'Corda Experimental Confidential Identities'
 dependencies {
     cordaCompile project(':core')
 
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
@@ -20,13 +20,13 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // Guava: Google test library (collections test suite)
-    testCompile "com.google.guava:guava-testlib:$guava_version"
+    testImplementation "com.google.guava:guava-testlib:$guava_version"
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
-    testCompile project(":node-driver")
+    testImplementation project(":node-driver")
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {

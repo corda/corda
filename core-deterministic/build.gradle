@@ -5,12 +5,12 @@ import proguard.gradle.ProGuardTask
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
-    id 'org.jetbrains.kotlin.jvm'
     id 'net.corda.plugins.publish-utils'
     id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
 }
+
 apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Corda core (deterministic)'
@@ -215,7 +215,7 @@ tasks.named('assemble') {
     dependsOn checkDeterminism
 }
 
-def deterministicJar = metafix.map { it.outputs.files.singleFile }
+def deterministicJar = [] //AXM metafix.map { it.outputs.files.singleFile }
 artifacts {
     deterministicArtifacts deterministicJar
     publish deterministicJar

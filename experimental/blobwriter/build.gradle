@@ -4,12 +4,12 @@ apply plugin : 'application'
 mainClassName = "net.corda.blobwriter.BlobWriter.kt"
 
 dependencies {
-    compile project(':tools:cliutils')
-    compile project(":common-logging")
-    compile project(':serialization')
+    implementation project(':tools:cliutils')
+    implementation project(":common-logging")
+    implementation project(':serialization')
 
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }
 
 jar {

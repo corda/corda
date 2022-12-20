@@ -40,26 +40,26 @@ configurations {
 }
 
 dependencies {
-    compile "com.microsoft.azure:azure:1.22.0"
-    compile "com.github.docker-java:docker-java:$docker_java_version"
+    implementation "com.microsoft.azure:azure:1.22.0"
+    implementation "com.github.docker-java:docker-java:$docker_java_version"
 
-    testCompile "org.jetbrains.kotlin:kotlin-test"
-    testCompile "org.jetbrains.kotlin:kotlin-test-junit"
+    testImplementation "org.jetbrains.kotlin:kotlin-test"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
 
-    compile project(':node-api')
-    compile project(':node')
+    implementation project(':node-api')
+    implementation project(':node')
 
-    compile "com.typesafe:config:$typesafe_config_version"
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
-    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version"
-    compile "info.picocli:picocli:$picocli_version"
+    implementation "com.typesafe:config:$typesafe_config_version"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version"
+    implementation "info.picocli:picocli:$picocli_version"
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile "no.tornado:tornadofx:$tornadofx_version"
+    implementation "no.tornado:tornadofx:$tornadofx_version"
 
     // ControlsFX: Extra controls for JavaFX.
-    compile "org.controlsfx:controlsfx:$controlsfx_version"
+    implementation "org.controlsfx:controlsfx:$controlsfx_version"
 }
 
 tasks.withType(JavaCompile).configureEach {

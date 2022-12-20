@@ -4,10 +4,10 @@ apply plugin: 'kotlin'
 description 'NetworkParameters signing tool'
 
 dependencies {
-    compile project(':tools:cliutils')
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+    implementation project(':tools:cliutils')
+    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    implementation "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
     compile project(':core')
     compile project(':node-api')
 }

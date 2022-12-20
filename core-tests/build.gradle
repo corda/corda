@@ -54,32 +54,32 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
-    testCompile project(":core")
-    testCompile project(path: ':core', configuration: 'testArtifacts')
+    testImplementation "commons-fileupload:commons-fileupload:$fileupload_version"
+    testImplementation project(":core")
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
     
     // Guava: Google test library (collections test suite)
-    testCompile "com.google.guava:guava-testlib:$guava_version"
+    testImplementation "com.google.guava:guava-testlib:$guava_version"
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
-    testCompile project(":node-driver")
+    testImplementation project(":node-driver")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Hamkrest, for fluent, composable matchers
-    testCompile "com.natpryce:hamkrest:$hamkrest_version"
+    testImplementation "com.natpryce:hamkrest:$hamkrest_version"
 
     // SLF4J: commons-logging bindings for a SLF4J back end
     compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
     compile "org.slf4j:slf4j-api:$slf4j_version"
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testImplementation "org.assertj:assertj-core:${assertj_version}"
 
     // Guava: Google utilities library.
-    testCompile "com.google.guava:guava:$guava_version"
+    testImplementation "com.google.guava:guava:$guava_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

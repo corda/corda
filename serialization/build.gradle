@@ -10,28 +10,28 @@ description 'Corda serialization'
 targetCompatibility = VERSION_1_8
 
 dependencies {
-    compile project(":core")
+    implementation project(":core")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
-    compile "org.apache.activemq:artemis-commons:${artemis_version}"
+    implementation "org.apache.activemq:artemis-commons:${artemis_version}"
 
-    compile "org.ow2.asm:asm:$asm_version"
+    implementation "org.ow2.asm:asm:$asm_version"
 
-    compile "com.google.guava:guava:$guava_version"
+    implementation "com.google.guava:guava:$guava_version"
 
     // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:$protonj_version"
+    implementation "org.apache.qpid:proton-j:$protonj_version"
 
     // ClassGraph: classpath scanning
-    compile "io.github.classgraph:classgraph:$class_graph_version"
+    implementation "io.github.classgraph:classgraph:$class_graph_version"
 
     // Pure-Java Snappy compression
-    compile "org.iq80.snappy:snappy:$snappy_version"
+    implementation "org.iq80.snappy:snappy:$snappy_version"
 
     // For caches rather than guava
-    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -41,11 +41,11 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
     testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
-    testCompile "org.assertj:assertj-core:$assertj_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "org.mockito:mockito-core:$mockito_version"
-    testCompile 'org.hamcrest:hamcrest-library:2.1'
-    testCompile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.mockito:mockito-core:$mockito_version"
+    testImplementation 'org.hamcrest:hamcrest-library:2.1'
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 }
 
 configurations {

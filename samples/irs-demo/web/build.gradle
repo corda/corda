@@ -64,24 +64,24 @@ configurations {
 }
 
 dependencies {
-    compile('org.springframework.boot:spring-boot-starter-web') {
+    implementation('org.springframework.boot:spring-boot-starter-web') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
     compile('org.springframework.boot:spring-boot-starter-log4j2')
     runtimeOnly("org.apache.logging.log4j:log4j-web:$log4j_version")
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
-    compile project(":client:rpc")
-    compile project(":client:jackson")
-    compile project(":finance:workflows")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
+    implementation project(":client:rpc")
+    implementation project(":client:jackson")
+    implementation project(":finance:workflows")
     // TODO In the future remove -irs bit from the directory name. Currently it clashes with :finance:workflows (same for contracts).
-    compile project(":samples:irs-demo:cordapp:workflows-irs")
+    implementation project(":samples:irs-demo:cordapp:workflows-irs")
 
-    testCompile project(":test-utils")
-    testCompile project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
+    testImplementation project(":test-utils")
+    testImplementation project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
 
     // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     testCompile('org.springframework.boot:spring-boot-starter-test') {
         exclude module: "spring-boot-starter-logging"

@@ -24,7 +24,7 @@ dependencies {
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
-    testCompile "co.paralleluniverse:capsule:$capsule_version"
+    testImplementation "co.paralleluniverse:capsule:$capsule_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

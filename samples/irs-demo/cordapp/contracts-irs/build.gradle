@@ -9,11 +9,11 @@ dependencies {
     cordapp project(':finance:contracts')
 
     // Apache JEXL: An embeddable expression evaluation library.
-    compile "org.apache.commons:commons-jexl3:3.1"
+    implementation "org.apache.commons:commons-jexl3:3.1"
     
-    compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
+    implementation "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
 
-    testCompile project(':node-driver')
+    testImplementation project(':node-driver')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 

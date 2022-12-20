@@ -31,9 +31,9 @@ dependencies {
 //    integrationTestRuntime group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
 
     // Integration test helpers
-    testCompile "org.assertj:assertj-core:$assertj_version"
-    integrationTestImplementation "junit:junit:$junit_version"
-    integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    integrationTestCompile "junit:junit:$junit_version"
+    integrationTestCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
 
     integrationTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

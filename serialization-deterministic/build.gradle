@@ -196,7 +196,7 @@ tasks.named('assemble') {
     dependsOn checkDeterminism
 }
 
-def deterministicJar = metafix.map { it.outputs.files.singleFile }
+def deterministicJar = [] // AXM metafix.map { it.outputs.files.singleFile }
 artifacts {
     deterministicArtifacts deterministicJar
     publish deterministicJar

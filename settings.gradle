@@ -22,118 +22,107 @@ pluginManagement {
             mavenLocal()
             gradlePluginPortal()
             maven { url "${artifactory_contextUrl}/corda-dependencies" }
-            maven {
-                url "${artifactory_contextUrl}/corda-dev"
-                content {
-                    includeGroupByRegex 'net\\.corda(\\..*)?'
-                    includeGroupByRegex 'com\\.r3(\\..*)?'
-                }
-            }
         }
     }
 }
-
-apply from: 'buildCacheSettings.gradle'
-
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
 // output JAR from the capsule then the buildCordaJAR task goes into an infinite loop.
 rootProject.name = 'corda-project'
-include 'core'
 include 'opentelemetry'
 include 'opentelemetry:opentelemetry-driver'
+include 'confidential-identities'
+include 'finance:contracts'
+include 'finance:workflows'
+include 'core'
+include 'core-tests'
+include 'docs'
+include 'node-api'
+include 'node-api-tests'
+include 'node'
+include 'node:capsule'
+include 'node:djvm'
+include 'client:jackson'
+include 'client:jfx'
+include 'client:mock'
+include 'client:rpc'
+include 'docker'
+include 'testing:testserver'
+include 'testing:testserver:testcapsule:'
+include 'experimental'
+include 'experimental:avalanche'
+include 'experimental:blobwriter'
+include 'experimental:quasar-hook'
+include 'experimental:corda-utils'
+include 'experimental:nodeinfo'
+include 'experimental:netparams'
+include 'jdk8u-deterministic'
+include 'test-common'
+include 'test-cli'
+include 'test-utils'
+include 'test-db'
+include 'smoke-test-utils'
+include 'node-driver'
+include 'core-test-utils'
+// Avoid making 'testing' a project, and allow build.gradle files to refer to these by their simple names:
+['test-common', 'core-test-utils', 'test-utils', 'test-cli', 'test-db', 'smoke-test-utils', 'node-driver'].each {
+    project(":$it").projectDir = new File("$settingsDir/testing/$it")
+}
+include 'tools:explorer'
+include 'tools:explorer:capsule'
+include 'tools:demobench'
+include 'tools:loadtest'
+include 'tools:graphs'
+include 'tools:bootstrapper'
+include 'tools:blobinspector'
+include 'tools:network-builder'
+include 'tools:cliutils'
+include 'tools:worldmap'
+include 'tools:checkpoint-agent'
+include 'samples:attachment-demo:contracts'
+include 'samples:attachment-demo:workflows'
+include 'samples:trader-demo:workflows-trader'
+include 'samples:irs-demo'
+include 'samples:irs-demo:cordapp:contracts-irs'
+include 'samples:irs-demo:cordapp:workflows-irs'
+include 'samples:irs-demo:web'
+include 'samples:simm-valuation-demo'
+include 'samples:simm-valuation-demo:flows'
+include 'samples:simm-valuation-demo:contracts-states'
+include 'samples:notary-demo:contracts'
+include 'samples:notary-demo:workflows'
+include 'samples:bank-of-corda-demo'
+include 'samples:cordapp-configuration:workflows'
+include 'samples:network-verifier:contracts'
+include 'samples:network-verifier:workflows'
+include 'serialization'
+include 'serialization-djvm'
+include 'serialization-djvm:deserializers'
+include 'serialization-tests'
+include 'testing:cordapps:dbfailure:dbfcontracts'
+include 'testing:cordapps:dbfailure:dbfworkflows'
+include 'testing:cordapps:missingmigration'
+include 'testing:cordapps:sleeping'
 
-//include 'core-tests'
-//include 'confidential-identities'
-//include 'finance:contracts'
-//include 'finance:workflows'
-//include 'docs'
-//include 'node-api'
-//include 'node-api-tests'
-//include 'node'
-//include 'node:capsule'
-//include 'node:djvm'
-//include 'client:jackson'
-//include 'client:jfx'
-//include 'client:mock'
-//include 'client:rpc'
-//include 'docker'
-//include 'testing:testserver'
-//include 'testing:testserver:testcapsule:'
-//include 'experimental'
-//include 'experimental:avalanche'
-//include 'experimental:blobwriter'
-//include 'experimental:quasar-hook'
-//include 'experimental:corda-utils'
-//include 'experimental:nodeinfo'
-//include 'experimental:netparams'
-//include 'jdk8u-deterministic'
-//include 'test-common'
-//include 'test-cli'
-//include 'test-utils'
-//include 'test-db'
-//include 'smoke-test-utils'
-//include 'node-driver'
-//include 'core-test-utils'
-//// Avoid making 'testing' a project, and allow build.gradle files to refer to these by their simple names:
-//['test-common', 'core-test-utils', 'test-utils', 'test-cli', 'test-db', 'smoke-test-utils', 'node-driver'].each {
-//    project(":$it").projectDir = new File("$settingsDir/testing/$it")
-//}
-//include 'tools:explorer'
-//include 'tools:explorer:capsule'
-//include 'tools:demobench'
-//include 'tools:loadtest'
-//include 'tools:graphs'
-//include 'tools:bootstrapper'
-//include 'tools:blobinspector'
-//include 'tools:network-builder'
-//include 'tools:cliutils'
-//include 'tools:worldmap'
-//include 'tools:checkpoint-agent'
-//include 'samples:attachment-demo:contracts'
-//include 'samples:attachment-demo:workflows'
-//include 'samples:trader-demo:workflows-trader'
-//include 'samples:irs-demo'
-//include 'samples:irs-demo:cordapp:contracts-irs'
-//include 'samples:irs-demo:cordapp:workflows-irs'
-//include 'samples:irs-demo:web'
-//include 'samples:simm-valuation-demo'
-//include 'samples:simm-valuation-demo:flows'
-//include 'samples:simm-valuation-demo:contracts-states'
-//include 'samples:notary-demo:contracts'
-//include 'samples:notary-demo:workflows'
-//include 'samples:bank-of-corda-demo'
-//include 'samples:cordapp-configuration:workflows'
-//include 'samples:network-verifier:contracts'
-//include 'samples:network-verifier:workflows'
-//include 'serialization'
-//include 'serialization-djvm'
-//include 'serialization-djvm:deserializers'
-//include 'serialization-tests'
-//include 'testing:cordapps:dbfailure:dbfcontracts'
-//include 'testing:cordapps:dbfailure:dbfworkflows'
-//include 'testing:cordapps:missingmigration'
-//include 'testing:cordapps:sleeping'
-//
-//// Common libraries - start
-//include 'common-validation'
-//project(":common-validation").projectDir = new File("$settingsDir/common/validation")
-//
-//include 'common-configuration-parsing'
-//project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
-//
-//
-//include 'common-logging'
-//project(":common-logging").projectDir = new File("$settingsDir/common/logging")
-//// Common libraries - end
-//
-//
-//include 'core-deterministic'
-//include 'core-deterministic:testing'
-//include 'core-deterministic:testing:data'
-//include 'core-deterministic:testing:verifier'
-//include 'serialization-deterministic'
-//
-//include 'tools:error-tool'
+// Common libraries - start
+include 'common-validation'
+project(":common-validation").projectDir = new File("$settingsDir/common/validation")
+
+include 'common-configuration-parsing'
+project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
+
+
+include 'common-logging'
+project(":common-logging").projectDir = new File("$settingsDir/common/logging")
+// Common libraries - end
+
+apply from: 'buildCacheSettings.gradle'
+
+include 'core-deterministic'
+include 'core-deterministic:testing'
+include 'core-deterministic:testing:data'
+include 'core-deterministic:testing:verifier'
+include 'serialization-deterministic'
+
 include 'detekt-plugins'
-
+include 'tools:error-tool'
 

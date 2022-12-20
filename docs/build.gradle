@@ -6,7 +6,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
-    compile rootProject
+    implementation rootProject
 }
 
 def internalPackagePrefixes(sourceDirs) {

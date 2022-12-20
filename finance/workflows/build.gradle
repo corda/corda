@@ -37,9 +37,9 @@ dependencies {
     
     cordapp project(':finance:contracts')
 
-    testCompile project(':test-utils')
-    testCompile project(path: ':core', configuration: 'testArtifacts')
-    testCompile project(':node-driver')
+    testImplementation project(':test-utils')
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':node-driver')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -49,7 +49,7 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 task testJar(type: Jar) {
