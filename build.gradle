@@ -27,6 +27,8 @@ buildscript {
     // Set version of Quasar according to version of Java used:
     if (JavaVersion.current().isJava8()) {
         ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
+        ext.capsule_plugin_version = constants.getProperty("capsulePLuginVersion")
+
         ext.kotlin_version = ext.kotlin_jdk8_version
         ext.kotlin_language_version = constants.getProperty("kotlinLanguageVersion")
         ext.kotlin_api_version = constants.getProperty("kotlinApiVersion")
@@ -39,6 +41,8 @@ buildscript {
         ext.jdkClassifier = constants.getProperty("jdkClassifier")
     } else {
         ext.gradle_plugins_version = constants.getProperty("jdk11GradlePluginsVersion")
+        ext.capsule_plugin_version = constants.getProperty("jdk11CapsulePLuginVersion")
+
         ext.kotlin_version = ext.kotlin_jdk11_version
         ext.kotlin_language_version = constants.getProperty("jdk11KotlinLanguageVersion")
         ext.kotlin_api_version = constants.getProperty("jdk11KotlinApiVersion")
@@ -219,7 +223,7 @@ buildscript {
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
-        classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
+        classpath "us.kirchmeier:gradle-capsule-plugin:$capsule_plugin_version"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: '1.3.0'
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }

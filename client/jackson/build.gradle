@@ -5,18 +5,18 @@ apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
-    compile project(':serialization')
+    implementation project(':serialization')
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version") {
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version") {
         exclude module: "jackson-databind"
     }
     // Yaml is useful for parsing strings to method calls.
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
     // This adds support for java.time types.
-    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
-    compile "com.google.guava:guava:$guava_version"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+    implementation "com.google.guava:guava:$guava_version"
 
     testImplementation project(':test-utils')
     testImplementation project(path: ':core', configuration: 'testArtifacts')

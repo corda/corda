@@ -111,7 +111,7 @@ dependencies {
     implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    runtimeOnly "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    // AXM runtimeOnly "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
