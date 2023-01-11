@@ -32,7 +32,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
-import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLTransientConnectionException
 import java.time.Duration
@@ -304,7 +303,6 @@ class FlowReloadAfterCheckpointTest {
         }
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `more complicated flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true`() {
         val reloads = QueueWithCountdown<StateMachineRunId>(13)

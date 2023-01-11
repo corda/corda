@@ -60,7 +60,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
@@ -173,7 +172,6 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
     @Suppress("DEPRECATION")
     fun `issue and move`() {

@@ -435,11 +435,15 @@ open class MockServices private constructor(
     }
 
     override fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>) {
-        TODO("Not yet implemented")
+        txs.forEach {
+            (validatedTransactions as WritableTransactionStorage).addTransactionWithoutNotarySignature(it)
+        }
     }
 
     override fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>) {
-        TODO("Not yet implemented")
+        txs.forEach {
+            (validatedTransactions as WritableTransactionStorage).finalizeTransactionWithExtraSignatures(it, sigs)
+        }
     }
 
     override val networkParameters: NetworkParameters

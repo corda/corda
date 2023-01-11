@@ -10,7 +10,6 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.Test
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -24,15 +23,12 @@ class AddressBindingFailureTests {
     @Test(timeout=300_000)
 	fun `p2p address`() = assertBindExceptionForOverrides { address -> mapOf("p2pAddress" to address.toString()) }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `rpc address`() = assertBindExceptionForOverrides { address -> mapOf("rpcSettings" to mapOf("address" to address.toString())) }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `rpc admin address`() = assertBindExceptionForOverrides { address -> mapOf("rpcSettings" to mapOf("adminAddress" to address.toString())) }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout=300_000)
 	fun `H2 address`() = assertBindExceptionForOverrides { address -> mapOf("h2Settings" to mapOf("address" to address.toString()), "dataSourceProperties.dataSource.password" to "password") }
 

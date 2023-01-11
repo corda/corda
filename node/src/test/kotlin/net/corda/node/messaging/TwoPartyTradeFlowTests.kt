@@ -769,11 +769,18 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
 
         override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
-            TODO("Not yet implemented")
+            database.transaction {
+                records.add(TxRecord.Add(transaction))
+                delegate.addTransactionWithoutNotarySignature(transaction)
+            }
+            return true
         }
 
         override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean {
-            TODO("Not yet implemented")
+            database.transaction {
+                delegate.finalizeTransactionWithExtraSignatures(transaction, signatures)
+            }
+            return true
         }
 
         override fun addUnverifiedTransaction(transaction: SignedTransaction) {

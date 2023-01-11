@@ -45,7 +45,6 @@ import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLException
 import java.util.*
@@ -66,7 +65,6 @@ class FlowHospitalTest {
         CreateTransactionButDontFinalizeResponderFlow.exceptionSeenInUserFlow = false
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `when double spend occurs, the flow is successfully deleted on the counterparty`() {
         driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
@@ -217,7 +215,6 @@ class FlowHospitalTest {
         }
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `catching a notary error will cause a peer to fail with unexpected session end during ReceiveFinalityFlow that passes through user code`() {
         var dischargedCounter = 0
@@ -241,7 +238,6 @@ class FlowHospitalTest {
         assertTrue(SpendStateAndCatchDoubleSpendResponderFlow.exceptionSeenInUserFlow)
     }
 
-    @Ignore("ENT-6875 breaks this")
     @Test(timeout = 300_000)
     fun `unexpected session end errors outside of ReceiveFinalityFlow are not handled`() {
         var dischargedCounter = 0

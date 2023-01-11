@@ -55,11 +55,21 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
     }
 
     override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
-        TODO("Not yet implemented")
+        val current = txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false))
+        return if (current == null) {
+            notify(transaction)
+        } else {
+            false
+        }
     }
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
-        TODO("Not yet implemented")
+        val current = txns.replace(transaction.id, TxHolder(transaction, isVerified = true, hasNotarySigs = true))
+        return if (current != null) {
+            notify(transaction)
+        } else {
+            false
+        }
     }
 
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
