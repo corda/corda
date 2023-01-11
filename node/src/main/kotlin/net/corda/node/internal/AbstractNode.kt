@@ -256,13 +256,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop(false)
     val telemetryService: TelemetryServiceImpl = TelemetryServiceImpl().also {
-        val openTelemetryComponent = OpenTelemetryComponent(configuration.myLegalName.toString(), configuration.telemetry.spanStartEndEventsEnabled)
+        val openTelemetryComponent = OpenTelemetryComponent(configuration.myLegalName.toString(), configuration.telemetry.spanStartEndEventsEnabled, configuration.telemetry.copyBaggageToTags)
         if (configuration.telemetry.openTelemetryEnabled && openTelemetryComponent.isEnabled()) {
             it.addTelemetryComponent(openTelemetryComponent)
         }
         if (configuration.telemetry.simpleLogTelemetryEnabled) {
             it.addTelemetryComponent(SimpleLogTelemetryComponent())
         }
+        runOnStop += { it.shutdownTelemetry() }
     }.tokenize()
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()

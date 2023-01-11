@@ -2,7 +2,6 @@ package net.corda.core.internal.telemetry
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.debug
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -57,13 +56,13 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         logContexts[traceId] = SimpleLogContext(traceId, baggageAttributes)
         clientId?.let { MDC.put(CLIENT_ID, it) }
         MDC.put(TRACE_ID, traceId.toString())
-        log.debug {"startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}"}
+        log.info("startSpanForFlow: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: ${attributes+baggageAttributes}")
     }
 
     // Check when you start a top level flow the startSpanForFlow appears just once, and so the endSpanForFlow also appears just once
     // So its valid to do the MDC clear here. For remotes nodes as well
     private fun endSpanForFlow(telemetryId: UUID) {
-        log.debug {"endSpanForFlow: traceId: ${traces.get()}"}
+        log.info("endSpanForFlow: traceId: ${traces.get()}")
         logContexts.remove(telemetryId)
         MDC.clear()
     }
@@ -73,12 +72,12 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         val flowId = flowLogic?.runId
         val clientId = flowLogic?.stateMachine?.clientId
         val traceId = traces.get()
-        log.debug {"startSpan: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: $attributes"}
+        log.info("startSpan: name: $name, traceId: $traceId, flowId: $flowId, clientId: $clientId, attributes: $attributes")
     }
 
     @Suppress("UNUSED_PARAMETER")
     private fun endSpan(telemetryId: UUID) {
-        log.debug {"endSpan: traceId: ${traces.get()}"}
+        log.info("endSpan: traceId: ${traces.get()}")
     }
 
     override fun getCurrentTelemetryData(): SimpleLogContext {
@@ -111,11 +110,15 @@ class SimpleLogTelemetryComponent : TelemetryComponent {
         return logContexts[uuid]?.baggage ?: emptyMap()
     }
 
+    override fun getTelemetryHandles(): List<Any> {
+        return emptyList()
+    }
+
     @Suppress("UNUSED_PARAMETER")
     private fun setStatus(telemetryId: UUID, telemetryStatusCode: TelemetryStatusCode, message: String) {
         when(telemetryStatusCode) {
             TelemetryStatusCode.ERROR -> log.error("setStatus: traceId: ${traces.get()}, statusCode: ${telemetryStatusCode}, message: message")
-            TelemetryStatusCode.OK, TelemetryStatusCode.UNSET -> log.debug {"setStatus: traceId: ${traces.get()}, statusCode: ${telemetryStatusCode}, message: message" }
+            TelemetryStatusCode.OK, TelemetryStatusCode.UNSET -> log.info("setStatus: traceId: ${traces.get()}, statusCode: ${telemetryStatusCode}, message: message")
         }
     }
 

@@ -1,0 +1,228 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-JAVA-COMGOOGLEGUAVA-1015415:
+    - '*':
+        reason: >-
+          Guava’s Files.createTempDir() is used during integration tests only.
+          Users of Corda are advised not to use Guava’s Files.createTempDir()
+          when building applications on Corda.
+        expires: 2023-03-21T11:38:11.478Z
+        created: 2022-12-29T11:38:11.489Z
+  SNYK-JAVA-COMH2DATABASE-31685:
+    - '*':
+        reason: >-
+          H2 console is not enabled for any of the applications we are running.
+
+          When it comes to DB connectivity parameters, we do not allow changing 
+          them as they are supplied by Corda Node configuration file.
+        expires: 2023-03-21T11:39:26.763Z
+        created: 2022-12-29T11:39:26.775Z
+  SNYK-JAVA-COMH2DATABASE-2331071:
+    - '*':
+        reason: >-
+          H2 console is not enabled for any of the applications we are running.
+
+          When it comes to DB connectivity parameters, we do not allow changing 
+          them as they are supplied by Corda Node configuration file.
+        expires: 2023-03-21T11:41:05.707Z
+        created: 2022-12-29T11:41:05.723Z
+  SNYK-JAVA-COMSQUAREUPOKHTTP3-2958044:
+    - '*':
+        reason: >-
+          The vulnerability in okhttp’s error handling is only exploitable in
+          services that receive and parse HTTP requests. Corda does not receive
+          HTTP requests and thus is not exposed to this issue.
+        expires: 2023-03-21T11:42:55.546Z
+        created: 2022-12-29T11:42:55.556Z
+  SNYK-JAVA-IONETTY-1042268:
+    - '*':
+        reason: >-
+          Corda does not rely on hostname verification in the P2P protocol to
+          identify a host, so is not impacted by this vulnerability. Corda uses
+          its own SSL identity check logic for the network model. Corda
+          validates based on the full X500 subject name and the fact that P2P
+          links use mutually authenticated TLS with the same trust roots. For
+          RPC SSL client connections Artemis is used which calls into netty. The
+          default value for verifyHost is true for Artemis client connectors so
+          verification of the host name in netty does occur.
+        expires: 2023-03-21T11:45:42.976Z
+        created: 2022-12-29T11:45:42.981Z
+  SNYK-JAVA-ORGJETBRAINSKOTLIN-2628385:
+    - '*':
+        reason: >-
+          This is a build time vulnerability. It relates to the inability to
+          lock dependencies for Kotlin Multiplatform Gradle Projects. At build
+          time for Corda we do not use Multiplatform Gradle Projects so are not
+          affected by this vulnerability. In addition as it is a build time
+          vulnerability released artifacts are not affected.
+        expires: 2023-03-21T11:52:35.855Z
+        created: 2022-12-29T11:52:35.870Z
+  SNYK-JAVA-ORGJETBRAINSKOTLIN-2393744:
+    - '*':
+        reason: >-
+          This vulnerability relates to information exposure via creation of
+          temporary files (via Kotlin functions) with insecure permissions.
+          Corda does not use any of the vulnerable functions so it not
+          susceptible to this vulnerability.
+        expires: 2023-03-21T13:39:03.244Z
+        created: 2022-12-29T13:39:03.262Z
+  SNYK-JAVA-ORGYAML-3016888:
+    - '*':
+        reason: >-
+          Snakeyaml is being used by Jackson and liquidbase. Corda does not use
+          Jackson for deserialization except in the optional shell which we
+          recommend using standalone. The Corda node itself is not exposed.
+          Corda does however provide mappings of Corda types to allow CorDapps
+          to use Jackson, and CorDapps using Jackson should make their own
+          assessment. Liquibase is used to apply the database migration changes.
+          XML files are used here to define the changes not YAML and therefore
+          the Corda node itself is not exposed to this deserialisation
+          vulnerability.
+        expires: 2023-03-21T13:39:49.450Z
+        created: 2022-12-29T13:39:49.470Z
+  SNYK-JAVA-ORGYAML-2806360:
+    - '*':
+        reason: >-
+          Snakeyaml is being used by Jackson and liquidbase. Corda does not use
+          Jackson except in the optional shell which we recommend using
+          standalone. The Corda node itself is not exposed. Corda does however
+          provide mappings of Corda types to allow CorDapps to use Jackson, and
+          CorDapps using Jackson should make their own assessment. Liquibase is
+          used to apply the database migration changes. XML files are used here
+          to define the changes not YAML and therefore the Corda node itself is
+          not exposed to this DOS vulnerability.
+        expires: 2023-03-21T13:40:55.262Z
+        created: 2022-12-29T13:40:55.279Z
+  SNYK-JAVA-ORGLIQUIBASE-2419059:
+    - '*':
+        reason: >-
+          This component is used to upgrade the node database schema either at
+          node startup or via the database migration tool. The XML input for the
+          database migration is generated by Corda from either R3 supplied XML
+          files included in corda.jar or those XML files written by the CorDapp
+          author included in a CorDapp that is installed in the node CorDapps
+          directory. Contract CorDapps received over the network are not a
+          source of XML files for this generation step.  An attacker trying to
+          exploit this vulnerability would need access to the server with the
+          XML input files, and specifically the access and ability to change JAR
+          files on the file system that make up the Corda installation.
+        expires: 2023-03-21T13:42:11.552Z
+        created: 2022-12-29T13:42:11.570Z
+  SNYK-JAVA-ORGYAML-3113851:
+    - '*':
+        reason: >-
+          Snakeyaml is being used by Jackson and liquidbase. Corda does not use
+          Jackson for deserialization except in the optional shell which we
+          recommend using standalone. The Corda node itself is not exposed.
+          Corda does however provide mappings of Corda types to allow CorDapps
+          to use Jackson, and CorDapps using Jackson should make their own
+          assessment. Liquibase is used to apply the database migration changes.
+          XML files are used here to define the changes not YAML and therefore
+          the Corda node itself is not exposed to this deserialisation
+          vulnerability.
+        expires: 2024-04-30T00:00:00.000Z
+        created: 2022-12-29T14:55:03.623Z
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-3038426:
+    - '*':
+        reason: >-
+          Corda does not use Jackson for deserialization except in the optional
+          shell which we recommend using standalone. The Corda node itself is
+          not exposed. Corda does however provide mappings of Corda types to
+          allow CorDapps to use Jackson, and CorDapps using Jackson should make
+          their own assessment. This vulnerability relates to deeply nested
+          untyped Object or Array values (3000 levels deep). Only CorDapps with
+          these types at this level of nesting are potentially susceptible.
+        expires: 2023-03-12T16:50:57.921Z
+        created: 2022-12-29T16:50:57.943Z
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-3038424:
+    - '*':
+        reason: >-
+          Corda does not use Jackson for deserialization except in the optional
+          shell which we recommend using standalone. The Corda node itself is
+          not exposed. Corda does however provide mappings of Corda types to
+          allow CorDapps to use Jackson, and CorDapps using Jackson should make
+          their own assessment. This vulnerability relates to deeply nested
+          untyped Object or Array values (3000 levels deep). Only CorDapps with
+          these types at this level of nesting are potentially susceptible.
+        expires: 2023-03-12T16:52:30.722Z
+        created: 2022-12-29T16:52:30.747Z
+  SNYK-JAVA-ORGYAML-3016891:
+    - '*':
+        reason: >-
+          Snakeyaml is being used by Jackson and liquidbase. Corda does not use
+          Jackson for deserialization except in the optional shell which we
+          recommend using standalone. The Corda node itself is not exposed.
+          Corda does however provide mappings of Corda types to allow CorDapps
+          to use Jackson, and CorDapps using Jackson should make their own
+          assessment. Liquibase is used to apply the database migration changes.
+          XML files are used here to define the changes not YAML and therefore
+          the Corda node itself is not exposed to this deserialisation
+          vulnerability. 
+        expires: 2023-03-12T17:00:51.957Z
+        created: 2022-12-29T17:00:51.970Z
+  SNYK-JAVA-ORGYAML-3016889:
+    - '*':
+        reason: >-
+          Snakeyaml is being used by Jackson and liquidbase. Corda does not use
+          Jackson for deserialization except in the optional shell which we
+          recommend using standalone. The Corda node itself is not exposed.
+          Corda does however provide mappings of Corda types to allow CorDapps
+          to use Jackson, and CorDapps using Jackson should make their own
+          assessment. Liquibase is used to apply the database migration changes.
+          XML files are used here to define the changes not YAML and therefore
+          the Corda node itself is not exposed to this deserialisation
+          vulnerability.
+        expires: 2023-03-12T17:02:02.538Z
+        created: 2022-12-29T17:02:02.564Z
+  SNYK-JAVA-COMH2DATABASE-2348247:
+    - '*':
+        reason: >-
+          H2 console is not enabled for any of the applications we are running.
+          When it comes to DB connectivity parameters, we do not allow changing 
+          them as they are supplied by Corda Node configuration file.
+        expires: 2023-03-28T11:36:39.068Z
+        created: 2022-12-29T11:36:39.089Z
+  SNYK-JAVA-COMH2DATABASE-1769238:
+    - '*':
+        reason: >-
+          H2 is not invoked by Corda unless the node deployment configures an H2
+          database.  This is not a supported configuration in Production and so
+          this vulnerability should be irrelevant except during development on
+          Corda. Corda itself does not store XML data within the database so
+          Corda is not susceptible to this vulnerability. If CorDapp developers
+          store XML data to the database they need to ascertain themselves that
+          they are not susceptible.
+        expires: 2023-03-28T11:40:29.871Z
+        created: 2022-12-29T11:40:29.896Z
+  SNYK-JAVA-ORGYAML-3152153:
+    - '*':
+        reason: >-
+          There is a transitive dependency on snakeyaml from the third party
+          components jackson-dataformat-yaml and liquidbase-core. The
+          jackson-dataformat-yaml component does not use the snakeyaml
+          databinding layer. For liquidbase we use xml in the changelog files
+          not yaml. So given this Corda is not susceptible to this
+          vulnerability.Cordapp authors should exercise their own judgment if
+          using this library directly in their cordapp.
+        expires: 2023-03-03T11:35:04.385Z
+        created: 2023-01-04T11:35:04.414Z
+  SNYK-JAVA-IONETTY-3167773:
+    - '*':
+        reason: >-
+          Corda does not use Netty HTTP (and does not use HTTP in the P2P
+          protocol) . This is a transitive dependency of Netty comms library,
+          but it is not used in Corda, which uses a custom binary protocol
+          secured by mutually authenticated TLS. The vulnerability relating to
+          HTTP Response splitting is not exposed.
+        expires: 2023-03-03T11:40:51.456Z
+        created: 2023-01-04T11:40:51.467Z
+  SNYK-JAVA-COMH2DATABASE-3146851:
+    - '*':
+        reason: >-
+          Corda does not make use of the H2 web admin console, so it not
+          susceptible to this reported vulnerability
+        expires: 2023-03-03T11:45:11.295Z
+        created: 2023-01-04T11:45:11.322Z
+patch: {}

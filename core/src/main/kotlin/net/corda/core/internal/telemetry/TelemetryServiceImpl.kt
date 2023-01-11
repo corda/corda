@@ -2,6 +2,7 @@ package net.corda.core.internal.telemetry
 
 import net.corda.core.CordaInternal
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.TelemetryService
 import net.corda.core.serialization.CordaSerializable
@@ -66,6 +67,8 @@ class StartSpanEvent(val name: String, val attributes: Map<String, String>, val 
 class EndSpanEvent(val telemetryId: UUID): TelemetryEvent
 class SetStatusEvent(val telemetryId: UUID, val telemetryStatusCode: TelemetryStatusCode, val message: String): TelemetryEvent
 class RecordExceptionEvent(val telemetryId: UUID, val throwable: Throwable): TelemetryEvent
+class InitialiseTelemetryEvent: TelemetryEvent
+class ShutdownTelemetryEvent: TelemetryEvent
 
 interface TelemetryComponent {
     fun name(): String
@@ -77,6 +80,7 @@ interface TelemetryComponent {
     fun getCurrentSpanId(): String
     fun getCurrentTraceId(): String
     fun getCurrentBaggage(): Map<String, String>
+    fun getTelemetryHandles(): List<Any>
 }
 
 interface TelemetryComponentId {
@@ -120,6 +124,21 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
     }
 
     private val telemetryComponents: MutableMap<String, TelemetryComponent> = mutableMapOf()
+
+    @CordaInternal
+    fun initialiseTelemetry() {
+        telemetryComponents.values.forEach {
+            it.onTelemetryEvent(InitialiseTelemetryEvent())
+        }
+    }
+
+    @CordaInternal
+    fun shutdownTelemetry() {
+        telemetryComponents.values.forEach {
+            it.onTelemetryEvent(ShutdownTelemetryEvent())
+        }
+        telemetryComponents.clear()
+    }
 
     @CordaInternal
     fun addTelemetryComponent(telemetryComponent: TelemetryComponent) {
@@ -223,11 +242,18 @@ class TelemetryServiceImpl : SingletonSerializeAsToken(), TelemetryService {
             it.setCurrentTelemetryId(telemetryIds.componentTelemetryIds[it.name()]!!)
         }
     }
+    
+    private fun getTelemetryHandles(): List<Any> {
+        return telemetryComponents.values.map { it.getTelemetryHandles() }.flatten()
+    }
 
-    override fun getOpenTelemetry(): OpenTelemetryHandle? {
-        return telemetryComponents[OpenTelemetryComponent.OPENTELEMETRY_COMPONENT_NAME]?.let {
-            null // (it as? OpenTelemetryComponent)?.tracerSetup?.openTelemetry
+    override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+        getTelemetryHandles().forEach {
+            if (telemetryClass.isInstance(it))
+                @Suppress("UNCHECKED_CAST")
+                return uncheckedCast(it as T)
         }
+        return null
     }
 }
 

@@ -645,6 +645,7 @@ bintrayConfig {
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
     publications = [
+            'corda-opentelemetry',
             'corda-opentelemetry-driver',
             'corda-jfx',
             'corda-mock',

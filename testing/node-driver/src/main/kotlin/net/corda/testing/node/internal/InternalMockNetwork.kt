@@ -492,7 +492,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
             doReturn(emptyList<String>()).whenever(it).quasarExcludePackages
-            doReturn(TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = true)).whenever(it).telemetry
+            doReturn(TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = false, copyBaggageToTags = false)).whenever(it).telemetry
             parameters.configOverrides(it)
         }
 

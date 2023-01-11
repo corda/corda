@@ -11,7 +11,6 @@ import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.telemetry.OpenTelemetryHandle
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -78,8 +77,8 @@ class CordaRPCConnection private constructor(
 
     override fun forceClose() = doCloseLogic { actualConnection.forceClose() }
 
-    override fun getOpenTelemetry(): OpenTelemetryHandle? {
-        return actualConnection.getOpenTelemetry()
+    override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+        return actualConnection.getTelemetryHandle(telemetryClass)
     }
 
     private inline fun doCloseLogic(close: () -> Unit) {
@@ -180,7 +179,9 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
 
         open val simpleLogTelemetryEnabled: Boolean = false,
 
-        open val spanStartEndEventsEnabled: Boolean = true
+        open val spanStartEndEventsEnabled: Boolean = false,
+
+        open val copyBaggageToTags: Boolean = false
 ) {
 
     companion object {
@@ -227,7 +228,8 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 deduplicationCacheExpiry,
                 openTelemetryEnabled,
                 simpleLogTelemetryEnabled,
-                spanStartEndEventsEnabled
+                spanStartEndEventsEnabled,
+                copyBaggageToTags
         )
     }
 
@@ -247,7 +249,8 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
             deduplicationCacheExpiry: Duration = this.deduplicationCacheExpiry,
             openTelemetryEnabled: Boolean = this.openTelemetryEnabled,
             simpleLogTelemetryEnabled: Boolean = this.simpleLogTelemetryEnabled,
-            spanStartEndEventsEnabled: Boolean = this.spanStartEndEventsEnabled
+            spanStartEndEventsEnabled: Boolean = this.spanStartEndEventsEnabled,
+            copyBaggageToTags: Boolean = this.copyBaggageToTags
     ): CordaRPCClientConfiguration {
         return CordaRPCClientConfiguration(
                 connectionMaxRetryInterval,
@@ -263,7 +266,8 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 deduplicationCacheExpiry,
                 openTelemetryEnabled,
                 simpleLogTelemetryEnabled,
-                spanStartEndEventsEnabled
+                spanStartEndEventsEnabled,
+                copyBaggageToTags
         )
     }
 
@@ -287,6 +291,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         if (openTelemetryEnabled != other.openTelemetryEnabled) return false
         if (simpleLogTelemetryEnabled != other.simpleLogTelemetryEnabled) return false
         if (spanStartEndEventsEnabled != other.spanStartEndEventsEnabled) return false
+        if (copyBaggageToTags != other.copyBaggageToTags) return false
 
         return true
     }
@@ -307,6 +312,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         result = 31 * result + openTelemetryEnabled.hashCode()
         result = 31 * result + simpleLogTelemetryEnabled.hashCode()
         result = 31 * result + spanStartEndEventsEnabled.hashCode()
+        result = 31 * result + copyBaggageToTags.hashCode()
         return result
     }
 
@@ -322,7 +328,8 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 "deduplicationCacheExpiry=$deduplicationCacheExpiry, " +
                 "openTelemetryEnabled=$openTelemetryEnabled, " +
                 "simpleLogTelemetryEnabled=$simpleLogTelemetryEnabled, " +
-                "spanStartEndEventsEnabled=$spanStartEndEventsEnabled)"
+                "spanStartEndEventsEnabled=$spanStartEndEventsEnabled, " +
+                "copyBaggageToTags=$copyBaggageToTags )"
     }
 
     // Left in for backwards compatibility with version 3.1

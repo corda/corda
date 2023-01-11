@@ -73,7 +73,7 @@ class InfrequentlyMutatedCache<K : Any, V : Any>(name: String, cacheFactory: Nam
         backingCache.invalidateAll()
     }
 
-    private fun invalidate(key: K, value: Wrapper.Invalidated<V>): Wrapper.Invalidated<V> {
+    private fun invalidate(key: K, value: Wrapper.Invalidated<V>): Wrapper.Invalidated<V>? {
         val tx = contextTransactionOrNull
         value.invalidators.incrementAndGet()
         currentlyInvalid[key] = value
@@ -81,7 +81,10 @@ class InfrequentlyMutatedCache<K : Any, V : Any>(name: String, cacheFactory: Nam
             // When we close, we can't start using caching again until all simultaneously open transactions are closed.
             tx.onClose { tx.database.onAllOpenTransactionsClosed { decrementInvalidators(key, value) } }
         } else {
-            decrementInvalidators(key, value)
+            if (value.invalidators.decrementAndGet() == 0) {
+                currentlyInvalid.remove(key)
+                return null
+            }
         }
         return value
     }
