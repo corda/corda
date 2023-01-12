@@ -177,22 +177,30 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         return rowsUpdated != 0
     }
 
-    override fun addTransaction(transaction: SignedTransaction): Boolean {
+    override fun addTransaction(transaction: SignedTransaction) =
+            addTransaction(transaction, TransactionStatus.VERIFIED) { updateTransaction(transaction.id) }
+
+    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction) =
+            addTransaction(transaction, TransactionStatus.MISSING_NOTARY_SIG) { updateTransactionWithoutNotarySignature(transaction.id) }
+
+    override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
+            addTransaction(transaction, TransactionStatus.VERIFIED) { finalizeTransactionWithExtraSignatures(transaction.id, signatures) }
+
+    private fun addTransaction(transaction: SignedTransaction, status: TransactionStatus, updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED)
-                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateTransaction(k) }
+                val cachedValue = TxCacheValue(transaction, status)
+                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
-                    logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
+                    logger.debug { "Transaction ${transaction.id} has been recorded as $status" }
                     onNewTx(transaction)
                 } else {
-                    logger.debug { "Transaction ${transaction.id} is already recorded as verified, so no need to re-record" }
+                    logger.debug { "Transaction ${transaction.id} is already recorded as $status, so no need to re-record" }
                     false
                 }
             }
         }
     }
-
 
     private fun updateTransactionWithoutNotarySignature(txId: SecureHash): Boolean {
         val session = currentDBSession()
@@ -209,38 +217,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         return rowsUpdated != 0
     }
 
-    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
-        return database.transaction {
-            txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, TransactionStatus.MISSING_NOTARY_SIG)
-                val addedOrUpdatedSignatures = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateTransactionWithoutNotarySignature(k) }
-                if (addedOrUpdatedSignatures) {
-                    logger.debug { "Transaction ${transaction.id} has been recorded as unverified with all signatures except notary's" }
-                    onNewTx(transaction)
-                } else {
-                    logger.debug { "Transaction ${transaction.id} is already recorded as unverified with all signatures except notary's" }
-                    false
-                }
-            }
-        }
-    }
-
-    override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
-        return database.transaction {
-            txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, signatures.toList(), TransactionStatus.VERIFIED)
-                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> finalizeTransactionWithExtraSignatures(k, signatures) }
-                if (addedOrUpdated) {
-                    logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
-                    onNewTx(transaction)
-                } else {
-                    logger.debug { "Transaction ${transaction.id} is already recorded as verified, so no need to re-record" }
-                    false
-                }
-            }
-        }
-    }
-
     private fun  finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
         return database.transaction {
             txStorage.locked {
@@ -252,7 +228,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 criteriaUpdate.where(criteriaBuilder.and(
                         criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                        criteriaBuilder.notEqual(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+                        criteriaBuilder.notEqual(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED),
+                        criteriaBuilder.isNotNull(updateRoot.get<ByteArray>(DBTransaction::signatures.name))
                 ))
                 criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
                 val update = session.createQuery(criteriaUpdate)
