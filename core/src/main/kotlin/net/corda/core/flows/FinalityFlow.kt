@@ -137,11 +137,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
         }
 
-        object BROADCASTING_PRE_NOTARISATION : ProgressTracker.Step("Broadcasting transaction to participants (pre notarisation)")
-        object BROADCASTING_POST_NOTARISATION : ProgressTracker.Step("Broadcasting transaction to participants (post notarisation)")
+        object BROADCASTING1 : ProgressTracker.Step("Broadcasting transaction to participants (pre notarisation)")
+        object BROADCASTING2 : ProgressTracker.Step("Broadcasting transaction to participants (post notarisation)")
 
         @JvmStatic
-        fun tracker() = ProgressTracker(NOTARISING, BROADCASTING_PRE_NOTARISATION, BROADCASTING_POST_NOTARISATION)
+        fun tracker() = ProgressTracker(NOTARISING, BROADCASTING1, BROADCASTING2)
     }
 
     @Suspendable
@@ -181,12 +181,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
             serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY }
 
-        progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
+        progressTracker.currentStep = BROADCASTING1
         broadcastAndRecord(newPlatformSessions, transaction)
 
         val notarised = notariseIfNotarySignatureIsRequired()
 
-        progressTracker.currentStep = BROADCASTING_POST_NOTARISATION
+        progressTracker.currentStep = BROADCASTING2
         val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
         if (notarisedSigs.isNotEmpty()) {
             broadcastSignaturesAndFinalize(newPlatformSessions, transaction, notarisedSigs)
