@@ -159,16 +159,15 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     private val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
 
-    private fun updateTransaction(txId: SecureHash): Boolean {
+    private fun updateTransaction(txId: SecureHash, status: TransactionStatus, expectedStatus: Set<TransactionStatus>): Boolean {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
-        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), status)
         criteriaUpdate.where(criteriaBuilder.and(
-                criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                criteriaBuilder.or(criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED),
-                        criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG))
+                criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString())
+//                criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(expectedStatus))
 
         ))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
@@ -178,10 +177,34 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     override fun addTransaction(transaction: SignedTransaction) =
-            addTransaction(transaction, TransactionStatus.VERIFIED) { updateTransaction(transaction.id) }
+            addTransaction(transaction, TransactionStatus.VERIFIED) {
+                updateTransaction(transaction.id, TransactionStatus.VERIFIED,
+                        expectedStatus = setOf(TransactionStatus.MISSING_NOTARY_SIG, TransactionStatus.UNVERIFIED))
+            }
 
-    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction) =
-            addTransaction(transaction, TransactionStatus.MISSING_NOTARY_SIG) { updateTransactionWithoutNotarySignature(transaction.id) }
+    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
+        _addTransactionWithoutNotarySignature(transaction)
+        return true
+    }
+//            addTransaction(transaction, TransactionStatus.MISSING_NOTARY_SIG) {
+//                updateTransaction(transaction.id, TransactionStatus.MISSING_NOTARY_SIG,
+//                        expectedStatus = setOf(TransactionStatus.UNVERIFIED))
+////                updateTransactionWithoutNotarySignature(transaction.id)
+//            }
+
+    fun _addTransactionWithoutNotarySignature(transaction: SignedTransaction) {
+        database.transaction {
+            txStorage.locked {
+                val cacheValue = TxCacheValue(transaction, status = TransactionStatus.MISSING_NOTARY_SIG)
+                val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
+                if (added) {
+                    logger.info ( "Transaction ${transaction.id} recorded as missing notary signature." )
+                } else {
+                    logger.info("Transaction ${transaction.id} already exists so no need to record as missing notary signature.")
+                }
+            }
+        }
+    }
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
             addTransaction(transaction, TransactionStatus.VERIFIED) { finalizeTransactionWithExtraSignatures(transaction.id, signatures) }
@@ -192,10 +215,12 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val cachedValue = TxCacheValue(transaction, status)
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
-                    logger.debug { "Transaction ${transaction.id} has been recorded as $status" }
-                    onNewTx(transaction)
+                    logger.info ( "Transaction ${transaction.id} has been recorded as $status [${updateFn::class}]" )
+                    if (status.isVerified()) {
+                        onNewTx(transaction)
+                    } else true
                 } else {
-                    logger.debug { "Transaction ${transaction.id} is already recorded as $status, so no need to re-record" }
+                    logger.info ( "Transaction ${transaction.id} is already recorded as $status, so no need to re-record [${updateFn::class}]" )
                     false
                 }
             }
@@ -227,9 +252,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
                 criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 criteriaUpdate.where(criteriaBuilder.and(
-                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                        criteriaBuilder.notEqual(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED),
-                        criteriaBuilder.isNotNull(updateRoot.get<ByteArray>(DBTransaction::signatures.name))
+                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString())
+//                        criteriaBuilder.notEqual(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED),
+//                        criteriaBuilder.isNotNull(updateRoot.get<ByteArray>(DBTransaction::signatures.name))
                 ))
                 criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
                 val update = session.createQuery(criteriaUpdate)
@@ -256,7 +281,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
                 val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
                 if (added) {
-                    logger.debug { "Transaction ${transaction.id} recorded as unverified." }
+                    logger.info ( "Transaction ${transaction.id} recorded as unverified." )
                 } else {
                     logger.info("Transaction ${transaction.id} already exists so no need to record.")
                 }

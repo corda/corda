@@ -527,7 +527,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
                     .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
             return strippedStacktrace.isNotEmpty()
-                    && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!!)
+//                    && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!!)
+                    && strippedStacktrace.first().className.startsWith(ReceiveFinalityFlow::class.qualifiedName!!)
         }
 
         /**
