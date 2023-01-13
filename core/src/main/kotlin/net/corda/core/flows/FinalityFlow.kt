@@ -379,27 +379,22 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 }
             }
         })
-        try {
-            if (needsNotarySignature(stx)) {
-                serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
-                logger.info("Peer recorded transaction without notary signature.")
-                otherSideSession.send(Unit)
-                val signatures = otherSideSession.receive<List<TransactionSignature>>()
-                        .unwrap { it }
-                logger.info("Peer received notarised signatures.")
-                serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx), signatures)
-                logger.info("Peer finalized transaction.")
-            } else {
-                serviceHub.recordTransactions(statesToRecord, setOf(stx))
-                logger.info("Peer successfully recorded received transaction.")
-            }
-
-            val newNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-            if (newNode) otherSideSession.send(Unit)
-        } catch (e: Exception) {
-            logger.error("ReceiveFinalityFlow exception: $e")
-            throw e
+        if (needsNotarySignature(stx)) {
+            serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
+            logger.info("Peer recorded transaction without notary signature.")
+            otherSideSession.send(Unit)
+            val signatures = otherSideSession.receive<List<TransactionSignature>>()
+                    .unwrap { it }
+            logger.info("Peer received notarised signatures.")
+            serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx), signatures)
+            logger.info("Peer finalized transaction.")
+        } else {
+            serviceHub.recordTransactions(statesToRecord, setOf(stx))
+            logger.info("Peer successfully recorded received transaction.")
         }
+
+        val newNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (newNode) otherSideSession.send(Unit)
         return stx
     }
 }
