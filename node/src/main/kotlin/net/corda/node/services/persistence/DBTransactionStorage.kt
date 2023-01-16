@@ -170,6 +170,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         predicateSet.add(criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()))
         if (expectedStatus.isNotEmpty())
             predicateSet.add(criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(expectedStatus)))
+        @Suppress("SpreadOperator")
         criteriaUpdate.where(*predicateSet.toTypedArray())
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
         val update = session.createQuery(criteriaUpdate)
