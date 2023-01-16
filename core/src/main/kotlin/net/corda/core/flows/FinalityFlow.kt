@@ -385,10 +385,10 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
             logger.info("Peer recorded transaction without notary signature.")
             otherSideSession.send(Unit)
-            val signatures = otherSideSession.receive<List<TransactionSignature>>()
+            val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
                     .unwrap { it }
             logger.info("Peer received notarised signatures.")
-            serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx), signatures)
+            serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx + notarySignatures), notarySignatures)
             logger.info("Peer finalized transaction.")
         } else {
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
