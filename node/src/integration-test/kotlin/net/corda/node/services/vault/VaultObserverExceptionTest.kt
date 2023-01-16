@@ -605,7 +605,7 @@ class VaultObserverExceptionTest {
      *
      * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
      */
-    @Ignore()
+    @Ignore("Investigate why SendStateFlow::PassErroneousOwnableState is timing out")
     @Test(timeout=300_000)
     fun `Throw user error in VaultService rawUpdates during counterparty FinalityFlow blows up the flow but does not break the Observer`() {
         var observationCounter = 0
@@ -652,7 +652,7 @@ class VaultObserverExceptionTest {
                     stateId,
                     errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError),
                     bobNode.nodeInfo.legalIdentities.first()
-                ).returnValue.getOrThrow(20.seconds)    // TODO: investigate why flow is not returning!!!
+                ).returnValue.getOrThrow(20.seconds)
 
                 stateId
             }
