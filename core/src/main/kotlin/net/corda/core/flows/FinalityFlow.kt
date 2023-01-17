@@ -8,6 +8,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.telemetry.telemetryServiceInternal
@@ -137,11 +138,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
         }
 
-        object BROADCASTING1 : ProgressTracker.Step("Broadcasting transaction to participants (pre notarisation)")
+        object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to participants (pre notarisation)")
         object BROADCASTING2 : ProgressTracker.Step("Broadcasting transaction to participants (post notarisation)")
 
         @JvmStatic
-        fun tracker() = ProgressTracker(NOTARISING, BROADCASTING1, BROADCASTING2)
+        fun tracker() = ProgressTracker(NOTARISING, BROADCASTING, BROADCASTING2)
     }
 
     @Suspendable
@@ -186,15 +187,33 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
             serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY }
 
-        progressTracker.currentStep = BROADCASTING1
-        broadcastAndRecord(newPlatformSessions, transaction)
+        val useTwoPhaseFinality = (serviceHub.networkMapCache.getNodeByLegalName(ourIdentity.name)?.platformVersion ?: PLATFORM_VERSION) >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (useTwoPhaseFinality) {
+            progressTracker.currentStep = BROADCASTING
+            broadcastAndRecord(newPlatformSessions, transaction)
+        }
 
         val notarised = notariseAndRecord()
 
         progressTracker.currentStep = BROADCASTING2
         val notarisedSigs = notarised.sigs - transaction.sigs.toSet()
-        if (notarisedSigs.isNotEmpty()) {
+        if (notarisedSigs.isNotEmpty() && useTwoPhaseFinality) {
             broadcastSignaturesAndFinalize(newPlatformSessions, notarisedSigs)
+        }
+        if (!useTwoPhaseFinality) {
+            newPlatformSessions.forEach { session ->
+                try {
+                    subFlow(SendTransactionFlow(session, notarised))
+                    logger.info("Party ${session.counterparty} received the transaction.")
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
+                }
+            }
         }
 
         broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, oldPlatformSessions, notarised)
@@ -314,10 +333,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
                 val notarisedTxn = transaction + notarySignatures
                 serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(notarisedTxn), notarySignatures)
-                logger.info("Finalized transaction.")
+                logger.info("Finalised transaction locally.")
                 notarisedTxn
             } else {
-                logger.info("No need to notarise this transaction.")
+                logger.info("No need to notarise this transaction. Recording locally.")
                 recordTransactionLocally(transaction)
                 transaction
             }
@@ -381,23 +400,23 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 }
             }
         })
-        if (needsNotarySignature(stx)) {
-            serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
-            logger.info("Peer recorded transaction without notary signature.")
-            otherSideSession.send(Unit)
-            val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
-                    .unwrap { it }
-            logger.info("Peer received notarised signatures.")
-            serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx + notarySignatures), notarySignatures)
-            logger.info("Peer finalized transaction.")
-        } else {
-            serviceHub.recordTransactions(statesToRecord, setOf(stx))
-            logger.info("Peer successfully recorded received transaction.")
-            otherSideSession.send(Unit)
+        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (fromTwoPhaseFinalityNode) {
+            if (needsNotarySignature(stx)) {
+                serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
+                logger.info("Peer recorded transaction without notary signature.")
+                otherSideSession.send(Unit)
+                val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
+                        .unwrap { it }
+                logger.info("Peer received notarised signatures.")
+                serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx + notarySignatures), notarySignatures)
+                logger.info("Peer finalized transaction.")
+            } else {
+                serviceHub.recordTransactions(statesToRecord, setOf(stx))
+                logger.info("Peer successfully recorded received transaction.")
+                otherSideSession.send(Unit)
+            }
         }
-
-//        val newNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-//        if (newNode) otherSideSession.send(Unit)
         return stx
     }
 }
