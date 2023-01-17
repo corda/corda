@@ -236,7 +236,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 logger.info("Sending notarised signatures.")
                 session.send(notarisedSigs)
                 // remote will finalise txn with notary signatures
-                session.receive<Unit>()
+//                session.receive<Unit>()
                 logger.info("Party ${session.counterparty} received notary signature(s).")
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
@@ -393,10 +393,11 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         } else {
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Peer successfully recorded received transaction.")
+            otherSideSession.send(Unit)
         }
 
-        val newNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        if (newNode) otherSideSession.send(Unit)
+//        val newNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+//        if (newNode) otherSideSession.send(Unit)
         return stx
     }
 }
