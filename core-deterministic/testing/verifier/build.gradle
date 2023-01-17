@@ -31,6 +31,7 @@ dependencies {
 
 jar {
     archiveBaseName = 'corda-deterministic-verifier'
+    archiveAppendix = corda_archive_appendix
 }
 
 artifacts {
@@ -44,7 +45,7 @@ publish {
     dependenciesFrom(configurations.runtimeArtifacts) {
         defaultScope = 'compile'
     }
-    name jar.archiveBaseName.get()
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }
 
 idea {

@@ -1,6 +1,7 @@
 package net.corda.testing.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -8,6 +9,7 @@ import net.corda.core.toFuture
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.node.internal.TestStartedNode
 import rx.Observable
 import kotlin.reflect.KClass
@@ -95,4 +97,13 @@ fun <T : FlowLogic<*>> TestStartedNode.registerCoreFlowFactory(initiatingFlowCla
                                                                initiatedFlowClass: Class<T>,
                                                                flowFactory: (FlowSession) -> T, track: Boolean): Observable<T> {
     return this.internals.registerInitiatedFlowFactory(initiatingFlowClass, initiatedFlowClass, InitiatedFlowFactory.Core(flowFactory), track)
+}
+
+fun waitForAllFlowsToComplete(nodeHandle: NodeHandle, maxIterations: Int = 60, iterationDelay: Long = 500) {
+    (0..maxIterations).forEach {
+        if (nodeHandle.rpc.stateMachinesSnapshot().isEmpty()) {
+            return
+        }
+        Strand.sleep(iterationDelay)
+    }
 }

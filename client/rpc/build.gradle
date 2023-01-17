@@ -122,11 +122,12 @@ task smokeTest(type: Test) {
 
 jar {
     baseName 'corda-rpc'
+    archiveAppendix = corda_archive_appendix
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.rpc'
     }
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }

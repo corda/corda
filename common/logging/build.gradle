@@ -36,8 +36,9 @@ compileKotlin.dependsOn generateSource
 
 jar {
     baseName 'corda-common-logging'
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }

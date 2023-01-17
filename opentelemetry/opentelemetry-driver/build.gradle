@@ -31,9 +31,11 @@ artifacts {
 
 jar {
     enabled = false
+    archiveBaseName = 'corda-opentelemetry-driver'
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {
     disableDefaultJar = true
-    name  'corda-opentelemetry-driver'
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }

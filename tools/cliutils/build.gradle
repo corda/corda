@@ -20,10 +20,11 @@ dependencies {
 }
 
 jar {
-    baseName = "corda-tools-cliutils"
+    archiveBaseName = "corda-tools-cliutils"
+    archiveAppendix = corda_archive_appendix
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName.map { addArchiveAppendix(it) }
 }
 

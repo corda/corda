@@ -24,6 +24,6 @@ dependencies {
 }
 
 publish {
-    name  'corda-opentelemetry'
+    name  addArchiveAppendix('corda-opentelemetry')
 }
 

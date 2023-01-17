@@ -48,6 +48,8 @@ pipeline {
             }
             steps {
                 sh 'mkdir -p ${GRADLE_USER_HOME}'
+
+                authenticateGradleWrapper()
                 snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }
         }
