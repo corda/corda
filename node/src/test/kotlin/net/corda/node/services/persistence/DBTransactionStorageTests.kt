@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
@@ -91,6 +92,28 @@ class DBTransactionStorageTests {
     }
 
     @Test(timeout = 300_000)
+    fun `create transaction missing notary signature and validate status in db`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        transactionStorage.addTransactionWithoutNotarySignature(transaction)
+        assertEquals(DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+    }
+
+    @Test(timeout = 300_000)
+    fun `update transaction with extra signatures and validate signatures is not null in db`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        val notarySig = TransactionSignature(ByteArray(1), DUMMY_NOTARY.owningKey, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.owningKey).schemeNumberID))
+        transactionStorage.addTransactionWithoutNotarySignature(transaction)
+        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
+        assertNotNull(readTransactionFromDB(transaction.id).signatures)
+    }
+
+    @Test(timeout = 300_000)
     fun `create unverified then verified transaction and validate timestamps in db`() {
         val unverifiedTime = Instant.ofEpochSecond(555666777L)
         val verifiedTime = Instant.ofEpochSecond(888999111L)
@@ -173,6 +196,16 @@ class DBTransactionStorageTests {
         }
         assertEquals(1, fromDb.size)
         return fromDb[0].timestamp
+    }
+    private fun readTransactionFromDB(id: SecureHash): DBTransactionStorage.DBTransaction {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorage.DBTransaction::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        assertEquals(1, fromDb.size)
+        return fromDb[0]
     }
 
     @Test(timeout = 300_000)

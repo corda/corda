@@ -6,6 +6,7 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
@@ -430,6 +431,18 @@ open class MockServices private constructor(
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             (validatedTransactions as WritableTransactionStorage).addTransaction(it)
+        }
+    }
+
+    override fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>) {
+        txs.forEach {
+            (validatedTransactions as WritableTransactionStorage).addTransactionWithoutNotarySignature(it)
+        }
+    }
+
+    override fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>) {
+        txs.forEach {
+            (validatedTransactions as WritableTransactionStorage).finalizeTransactionWithExtraSignatures(it, sigs)
         }
     }
 

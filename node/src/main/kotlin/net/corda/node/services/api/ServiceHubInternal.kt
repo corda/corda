@@ -3,6 +3,7 @@ package net.corda.node.services.api
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
@@ -63,12 +64,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             return sort.complete()
         }
 
+        @Suppress("LongParameterList")
         fun recordTransactions(statesToRecord: StatesToRecord,
                                txs: Collection<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
-                               database: CordaPersistence) {
+                               database: CordaPersistence,
+                               updateFn: (SignedTransaction) -> Boolean = validatedTransactions::addTransaction
+        ) {
 
             database.transaction {
                 require(txs.isNotEmpty()) { "No transactions passed in for recording" }
@@ -79,9 +83,9 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
                 // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
                 val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
-                    orderedTxs.filter(validatedTransactions::addTransaction) to emptyList()
+                    orderedTxs.filter(updateFn) to emptyList()
                 } else {
-                    orderedTxs.partition(validatedTransactions::addTransaction)
+                    orderedTxs.partition(updateFn)
                 }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
                 if (stateMachineRunId != null) {
@@ -129,6 +133,33 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
             }
         }
+
+        fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>,
+                                                    validatedTransactions: WritableTransactionStorage,
+                                                    database: CordaPersistence) {
+
+            database.transaction {
+                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
+
+                txs.map(validatedTransactions::addTransactionWithoutNotarySignature)
+            }
+        }
+        @Suppress("LongParameterList")
+        fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord,
+                                                   txs: Collection<SignedTransaction>,
+                                                   sigs: Collection<TransactionSignature>,
+                                                   validatedTransactions: WritableTransactionStorage,
+                                                   stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
+                                                   vaultService: VaultServiceInternal,
+                                                   database: CordaPersistence) {
+            database.transaction {
+                require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
+            }
+
+            recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
+                validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs)
+            }
+        }
     }
 
     override val attachments: AttachmentStorageInternal
@@ -160,6 +191,27 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         recordTransactions(
                 statesToRecord,
                 txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
+                validatedTransactions,
+                stateMachineRecordedTransactionMapping,
+                vaultService,
+                database
+        )
+    }
+
+    override fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>) {
+        txs.forEach { requireSupportedHashType(it) }
+        recordTransactionWithoutNotarySignature(txs,
+                validatedTransactions,
+                database
+        )
+    }
+
+    override fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>) {
+        txs.forEach { requireSupportedHashType(it) }
+        finalizeTransactionWithExtraSignatures(
+                statesToRecord,
+                txs,
+                sigs,
                 validatedTransactions,
                 stateMachineRecordedTransactionMapping,
                 vaultService,
@@ -252,6 +304,21 @@ interface WritableTransactionStorage : TransactionStorage {
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean
+
+    /**
+     * Add an un-notarised transaction to the store with a status of *MISSING_TRANSACTION_SIG*.
+     * @param transaction The transaction to be recorded.
+     * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
+     */
+    fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean
+
+    /**
+     * Update a previously un-notarised transaction including associated notary signatures.
+     * @param transaction The notarised transaction to be finalized.
+     * @param signatures The notary signatures.
+     * @return true if the transaction is recorded as a *finalized* transaction, false if the transaction already exists.
+     */
+    fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean
 
     /**
      * Add a new *unverified* transaction to the store.

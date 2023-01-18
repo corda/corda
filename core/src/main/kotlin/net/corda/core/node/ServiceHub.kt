@@ -230,6 +230,22 @@ interface ServiceHub : ServicesForResolution {
     fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>)
 
     /**
+     * Stores [SignedTransaction] and signatures without the notary signature in the local transaction storage
+     * This is expected to be run within a database transaction.
+     *
+     * @param txs The transactions to record.
+     */
+    fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>)
+
+    /**
+     * Stores [SignedTransaction] with extra signatures in the local transaction storage
+     *
+     * @param sigs The signatures to add to the transaction.
+     * @param txs The transactions to record.
+     */
+    fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>)
+
+    /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
      */

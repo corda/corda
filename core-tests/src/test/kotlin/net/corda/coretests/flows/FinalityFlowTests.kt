@@ -2,10 +2,14 @@ package net.corda.coretests.flows
 
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
+import net.corda.core.contracts.Amount
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.identity.Party
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.coretests.flows.WithFinality.FinalityInvoker
 import net.corda.finance.POUNDS
@@ -14,6 +18,9 @@ import net.corda.finance.issuedBy
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.matchers.flow.willReturn
 import net.corda.coretesting.internal.matchers.flow.willThrow
+import net.corda.finance.GBP
+import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -24,7 +31,7 @@ class FinalityFlowTests : WithFinality {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
     }
 
-    override val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, enclosedCordapp(),
+    override val mockNet = InternalMockNetwork(cordappsForAllNodes = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP, enclosedCordapp(),
                                                        CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
 
     private val aliceNode = makeNode(ALICE_NAME)
@@ -80,8 +87,42 @@ class FinalityFlowTests : WithFinality {
         assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
     }
 
-    private fun createBob(cordapps: List<TestCordappInternal> = emptyList()): TestStartedNode {
-        return mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, additionalCordapps = cordapps))
+    @Test(timeout=300_000)
+    fun `two phase finality flow transaction`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        val stx = aliceNode.startFlow(CashIssueFlow(Amount(1000L, GBP), OpaqueBytes.of(1), notary)).resultFuture.getOrThrow().stx
+        aliceNode.startFlowAndRunNetwork(CashPaymentFlow(Amount(100, GBP), bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+    }
+
+    @Test(timeout=300_000)
+    fun `two phase finality flow initiator to pre-2PF peer`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY - 1)
+
+        val stx = aliceNode.startFlow(CashIssueFlow(Amount(1000L, GBP), OpaqueBytes.of(1), notary)).resultFuture.getOrThrow().stx
+        aliceNode.startFlowAndRunNetwork(CashPaymentFlow(Amount(100, GBP), bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+    }
+
+    @Test(timeout=300_000)
+    fun `pre-2PF initiator to two phase finality flow peer`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY - 1)
+
+        val stx = bobNode.startFlow(CashIssueFlow(Amount(1000L, GBP), OpaqueBytes.of(1), notary)).resultFuture.getOrThrow().stx
+        bobNode.startFlowAndRunNetwork(CashPaymentFlow(Amount(100, GBP), aliceNode.info.singleIdentity())).resultFuture.getOrThrow()
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+    }
+
+    private fun createBob(cordapps: List<TestCordappInternal> = emptyList(), platformVersion: Int = PLATFORM_VERSION): TestStartedNode {
+        return mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, additionalCordapps = cordapps,
+            version = MOCK_VERSION_INFO.copy(platformVersion = platformVersion)))
     }
 
     private fun TestStartedNode.issuesCashTo(recipient: TestStartedNode): SignedTransaction {

@@ -336,8 +336,8 @@ class FlowReloadAfterCheckpointTest {
                 .toSet()
                 .single()
             reloads.await(DEFAULT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
-            assertEquals(7, reloads.filter { it == flowStartedByAlice }.size)
-            assertEquals(6, reloads.filter { it == flowStartedByBob }.size)
+            assertEquals(10, reloads.filter { it == flowStartedByAlice }.size)
+            assertEquals(9, reloads.filter { it == flowStartedByBob }.size)
         }
     }
 

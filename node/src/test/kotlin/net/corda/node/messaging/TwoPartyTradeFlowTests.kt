@@ -768,6 +768,21 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
+        override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
+            database.transaction {
+                records.add(TxRecord.Add(transaction))
+                delegate.addTransactionWithoutNotarySignature(transaction)
+            }
+            return true
+        }
+
+        override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean {
+            database.transaction {
+                delegate.finalizeTransactionWithExtraSignatures(transaction, signatures)
+            }
+            return true
+        }
+
         override fun addUnverifiedTransaction(transaction: SignedTransaction) {
             database.transaction {
                 delegate.addUnverifiedTransaction(transaction)
@@ -786,6 +801,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 delegate.getTransactionInternal(id)
             }
         }
+
     }
 
     interface TxRecord {

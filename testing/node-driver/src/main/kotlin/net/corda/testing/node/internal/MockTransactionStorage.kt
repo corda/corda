@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -53,6 +54,24 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         }
     }
 
+    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
+        val current = txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false))
+        return if (current == null) {
+            notify(transaction)
+        } else {
+            false
+        }
+    }
+
+    override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
+        val current = txns.replace(transaction.id, TxHolder(transaction, isVerified = true, hasNotarySigs = true))
+        return if (current != null) {
+            notify(transaction)
+        } else {
+            false
+        }
+    }
+
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
         txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false))
     }
@@ -61,5 +80,6 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? = txns[id]?.let { Pair(it.stx, it.isVerified) }
 
-    private class TxHolder(val stx: SignedTransaction, var isVerified: Boolean)
+    private class TxHolder(val stx: SignedTransaction, var isVerified: Boolean, var hasNotarySigs: Boolean = false)
+
 }

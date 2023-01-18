@@ -39,7 +39,6 @@ import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
-import java.lang.IllegalStateException
 import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
