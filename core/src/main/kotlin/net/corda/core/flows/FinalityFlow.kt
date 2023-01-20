@@ -242,18 +242,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun broadcastSignaturesAndFinalize(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
-        if (sessions.isEmpty()) {
-            serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction + notarySignatures), notarySignatures)
-            logger.info("Finalised transaction locally.")
-        }
-        sessions.forEachIndexed { i, session ->
+        serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction + notarySignatures), notarySignatures)
+        logger.info("Finalised transaction locally.")
+
+        sessions.forEach { session ->
             try {
                 logger.info("Sending notarised signatures.")
                 session.send(notarySignatures)
-                if (i == 0) {
-                    serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction + notarySignatures), notarySignatures)
-                    logger.info("Finalised transaction locally.")
-                }
                 // remote will finalise txn with notary signatures
                 session.receive<Unit>()
                 logger.info("Party ${session.counterparty} received notary signature(s).")
@@ -410,21 +405,27 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 }
             }
         })
-        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
-            serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
-            logger.info("Peer recorded transaction without notary signature.")
-            otherSideSession.send(Unit)
-            val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
-                    .unwrap { it }
-            logger.info("Peer received notarised signatures.")
-            serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx + notarySignatures), notarySignatures)
-            logger.info("Peer finalized transaction.")
-            otherSideSession.send(Unit)
-        } else {
-            serviceHub.recordTransactions(statesToRecord, setOf(stx))
-            logger.info("Peer successfully recorded received transaction.")
-            otherSideSession.send(Unit)
+        try {
+            val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+            if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
+                serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
+                logger.info("Peer recorded transaction without notary signature.")
+                otherSideSession.send(Unit)
+                val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
+                        .unwrap { it }
+                logger.info("Peer received notarised signatures.")
+                serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx + notarySignatures), notarySignatures)
+                logger.info("Peer finalised transaction.")
+                otherSideSession.send(Unit)
+            } else {
+                serviceHub.recordTransactions(statesToRecord, setOf(stx))
+                logger.info("Peer successfully recorded received transaction.")
+                otherSideSession.send(Unit)
+            }
+        }
+        catch (e: FlowException) {
+            logger.error("Peer failure upon recording or finalising transaction: $e")
+            otherSideSession.send(Unit) // why doesn't this make it back to the waiting sender side???
         }
         return stx
     }
