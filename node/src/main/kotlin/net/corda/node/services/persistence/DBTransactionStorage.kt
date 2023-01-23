@@ -228,7 +228,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
                 val update = session.createQuery(criteriaUpdate)
                 val rowsUpdated = update.executeUpdate()
-                assert(rowsUpdated > 0)
                 rowsUpdated != 0
             }
         }

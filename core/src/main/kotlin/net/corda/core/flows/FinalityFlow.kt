@@ -211,7 +211,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         if (useTwoPhaseFinality) {
             val notarySignatures = notarised.sigs - transaction.sigs.toSet()
             if (notarySignatures.isNotEmpty()) {
-                broadcastSignaturesAndFinalize(newPlatformSessions, notarySignatures)
+                broadcastSignatures(newPlatformSessions, notarySignatures)
             }
         }
 
@@ -249,10 +249,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastSignaturesAndFinalize(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
-        serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction + notarySignatures), notarySignatures)
-        logger.info("Finalised transaction locally.")
-
+    private fun broadcastSignatures(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
         sessions.forEach { session ->
             try {
                 logger.info("Sending notarised signatures.")
@@ -335,6 +332,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 progressTracker.currentStep = NOTARISING
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
                 logger.info("Transaction notarised.")
+                serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction + notarySignatures), notarySignatures)
+                logger.info("Finalised transaction locally.")
                 transaction + notarySignatures
             } else {
                 logger.info("No need to notarise this transaction. Recording locally.")
