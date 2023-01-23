@@ -21,6 +21,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
+import java.sql.SQLException
 
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
@@ -402,6 +403,7 @@ object NotarySigCheck {
 class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
                                                     private val expectedTxId: SecureHash? = null,
                                                     private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
+    @Suppress("ComplexMethod")
     @Suspendable
     override fun call(): SignedTransaction {
         val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord) {
@@ -419,7 +421,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 logger.info("Peer recorded transaction without notary signature.")
                 otherSideSession.send(Unit)
             }
-            catch (e: Exception) {
+            catch (e: SQLException) {
                 logger.error("Peer failure upon recording transaction: $e")
                 otherSideSession.send(Unit)
                 throw UnexpectedFlowEndException("Peer failure upon recording transaction.").apply {
@@ -441,7 +443,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 logger.info("Peer finalised transaction.")
                 otherSideSession.send(Unit)
             }
-            catch (e: Exception) {
+            catch (e: SQLException) {
                 logger.error("Peer failure upon finalising transaction: $e")
                 otherSideSession.send(Unit)
                 throw UnexpectedFlowEndException("Peer failure upon finalising transaction.").apply {
