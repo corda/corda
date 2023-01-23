@@ -208,13 +208,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 throw e
             }
         progressTracker.currentStep = BROADCASTING2
-        val notarySignatures = notarised.sigs - transaction.sigs.toSet()
-        if (notarySignatures.isNotEmpty()) {
-            if (useTwoPhaseFinality) {
+        if (useTwoPhaseFinality) {
+            val notarySignatures = notarised.sigs - transaction.sigs.toSet()
+            if (notarySignatures.isNotEmpty()) {
                 broadcastSignaturesAndFinalize(newPlatformSessions, notarySignatures)
-            } else {
-                serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction + notarySignatures), notarySignatures)
-                logger.info("Finalised transaction locally.")
             }
         }
 
