@@ -455,7 +455,6 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         } else {
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Peer successfully recorded received transaction.")
-            otherSideSession.send(Unit)
         }
         return stx
     }
