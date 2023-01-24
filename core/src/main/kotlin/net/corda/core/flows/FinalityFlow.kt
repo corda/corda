@@ -197,30 +197,24 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             recordLocallyAndBroadcast(newPlatformSessions, transaction)
         }
 
-        try {
-            val notarised = notariseAndRecord()
-            progressTracker.currentStep = BROADCASTING2
-            if (useTwoPhaseFinality) {
-                val notarySignatures = notarised.sigs - transaction.sigs.toSet()
-                if (notarySignatures.isNotEmpty()) {
-                    broadcastSignatures(newPlatformSessions, notarySignatures)
-                }
+        val notarised = notariseAndRecord()
+        progressTracker.currentStep = BROADCASTING2
+        if (useTwoPhaseFinality) {
+            val notarySignatures = notarised.sigs - transaction.sigs.toSet()
+            if (notarySignatures.isNotEmpty()) {
+                broadcastSignatures(newPlatformSessions, notarySignatures)
             }
-
-            if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
-                broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
-            } else {
-                broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, oldPlatformSessions, notarised)
-            }
-
-            logger.info("All parties received the transaction successfully.")
-
-            return notarised
         }
-        catch (e: NotaryException) {
-            logger.error("Notarisation exception detected in initiator: ${e.error}.")
-            throw e
+
+        if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
+            broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
+        } else {
+            broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, oldPlatformSessions, notarised)
         }
+
+        logger.info("All parties received the transaction successfully.")
+
+        return notarised
     }
 
     @Suspendable
@@ -429,10 +423,6 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
 
                 val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
                         .unwrap { it }
-                if (notarySignatures.isEmpty()) {
-                    logger.error("Peer missing notary signatures. Exiting flow...")
-                    throw FlowException("Peer transaction missing notary signatures.")
-                }
                 logger.info("Peer received notarised signatures.")
 
                 logger.info("Peer finalising transaction without notary signature.")
