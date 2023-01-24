@@ -8,7 +8,6 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
-import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.pushToLoggingContext
@@ -188,44 +187,40 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // - broadcast notary signatures to external participants (finalise remotely)
 
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
-            serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY }
+            serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
+        }
 
-        val useTwoPhaseFinality = (serviceHub.networkMapCache.getNodeByLegalName(ourIdentity.name)?.platformVersion ?: PLATFORM_VERSION) >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        val useTwoPhaseFinality = (serviceHub.networkMapCache.getNodeByLegalName(ourIdentity.name)?.platformVersion
+                ?: PLATFORM_VERSION) >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (useTwoPhaseFinality && needsNotarySignature(transaction)) {
             progressTracker.currentStep = BROADCASTING1
             recordLocallyAndBroadcast(newPlatformSessions, transaction)
         }
 
-        val notarised =
-            try {
-                notariseAndRecord()
-            }
-            catch (e: NotaryException) {
-                if (useTwoPhaseFinality) {
-                    newPlatformSessions.forEach {
-                        it.send(emptyList<TransactionSignature>(), true)
-                    }
+        try {
+            val notarised = notariseAndRecord()
+            progressTracker.currentStep = BROADCASTING2
+            if (useTwoPhaseFinality) {
+                val notarySignatures = notarised.sigs - transaction.sigs.toSet()
+                if (notarySignatures.isNotEmpty()) {
+                    broadcastSignatures(newPlatformSessions, notarySignatures)
                 }
-                throw e
             }
-        progressTracker.currentStep = BROADCASTING2
-        if (useTwoPhaseFinality) {
-            val notarySignatures = notarised.sigs - transaction.sigs.toSet()
-            if (notarySignatures.isNotEmpty()) {
-                broadcastSignatures(newPlatformSessions, notarySignatures)
+
+            if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
+                broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
+            } else {
+                broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, oldPlatformSessions, notarised)
             }
-        }
 
-        if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
-            broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
-        }
-        else {
-            broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, oldPlatformSessions, notarised)
-        }
+            logger.info("All parties received the transaction successfully.")
 
-        logger.info("All parties received the transaction successfully.")
-
-        return notarised
+            return notarised
+        }
+        catch (e: NotaryException) {
+            logger.error("Notarisation exception detected in initiator: ${e.error}.")
+            throw e
+        }
     }
 
     @Suspendable
@@ -256,12 +251,22 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 logger.info("Sending notarised signatures.")
                 session.send(notarySignatures)
                 // remote will finalise txn with notary signatures
-                session.receive<Unit>()
-                logger.info("Party ${session.counterparty} received notary signature(s).")
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
                         "${session.counterparty} has finished prematurely and we're trying to send them the notary signature(s). " +
                                 "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                        e.cause,
+                        e.originalErrorId
+                )
+            }
+
+            try {
+                session.receive<Unit>()
+                logger.info("Party ${session.counterparty} received notary signature(s).")
+            } catch (e: UnexpectedFlowEndException) {
+                throw UnexpectedFlowEndException(
+                        "${session.counterparty} has finished prematurely whilst we await acknowledgement of receipt of notary signature(s)." +
+                                ": (${e.message})",
                         e.cause,
                         e.originalErrorId
                 )
@@ -415,45 +420,35 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             }
         })
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
-            try {
+        try {
+            if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
+                logger.info("Peer recording transaction without notary signature.")
                 serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
                 logger.info("Peer recorded transaction without notary signature.")
                 otherSideSession.send(Unit)
-            }
-            catch (e: SQLException) {
-                logger.error("Peer failure upon recording transaction: $e")
-                otherSideSession.send(Unit)
-                throw UnexpectedFlowEndException("Peer failure upon recording transaction.").apply {
-                    DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value = otherSideSession.counterparty
+
+                val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
+                        .unwrap { it }
+                if (notarySignatures.isEmpty()) {
+                    logger.error("Peer missing notary signatures. Exiting flow...")
+                    throw FlowException("Peer transaction missing notary signatures.")
                 }
-            }
-            val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
-                    .unwrap { it }
-            if (notarySignatures.isEmpty()) {
-                logger.error("Peer missing notary signatures. Exiting flow...")
-                otherSideSession.send(Unit)
-                throw UnexpectedFlowEndException("Peer transaction missing notary signatures.").apply {
-                    DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value = otherSideSession.counterparty
-                }
-            }
-            logger.info("Peer received notarised signatures.")
-            try {
+                logger.info("Peer received notarised signatures.")
+
+                logger.info("Peer finalising transaction without notary signature.")
                 serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx + notarySignatures), notarySignatures)
                 logger.info("Peer finalised transaction.")
                 otherSideSession.send(Unit)
+            } else {
+                serviceHub.recordTransactions(statesToRecord, setOf(stx))
+                logger.info("Peer successfully recorded received transaction.")
             }
-            catch (e: SQLException) {
-                logger.error("Peer failure upon finalising transaction: $e")
-                otherSideSession.send(Unit)
-                throw UnexpectedFlowEndException("Peer failure upon finalising transaction.").apply {
-                    DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", this).value = otherSideSession.counterparty
-                }
-            }
-        } else {
-            serviceHub.recordTransactions(statesToRecord, setOf(stx))
-            logger.info("Peer successfully recorded received transaction.")
         }
+        catch (e: SQLException) {
+            logger.error("Peer failure upon recording or finalising transaction: $e")
+            throw FlowException("Peer failure upon recording or finalising transaction.")
+        }
+
         return stx
     }
 }
