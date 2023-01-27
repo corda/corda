@@ -6,7 +6,7 @@
 
     <changeSet author="R3.Corda" id="add_signatures_column">
         <addColumn tableName="node_transactions">
-            <column name="signatures" type="BINARY(33554432)"/>
+            <column name="signatures" type="VARBINARY(33554432)"/>
         </addColumn>
     </changeSet>
 </databaseChangeLog>
