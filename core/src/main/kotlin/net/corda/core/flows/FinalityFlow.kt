@@ -225,6 +225,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         sessions.forEach { session ->
             try {
                 subFlow(SendTransactionFlow(session, tx))
+                logger.info("Awaiting acknowledgement from party ${session.counterparty} to indicate successful receipt of un-notarised transaction.")
                 session.receive<Unit>()
                 logger.info("Party ${session.counterparty} received the transaction without notary signature(s).")
             } catch (e: UnexpectedFlowEndException) {
@@ -255,6 +256,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
 
             try {
+                logger.info("Awaiting acknowledgement from party ${session.counterparty} to indicate successful receipt of notary signature(s).")
                 session.receive<Unit>()
                 logger.info("Party ${session.counterparty} received notary signature(s).")
             } catch (e: UnexpectedFlowEndException) {
@@ -436,7 +438,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         }
         catch (e: SQLException) {
             logger.error("Peer failure upon recording or finalising transaction: $e")
-            throw FlowException("Peer failure upon recording or finalising transaction.")
+            throw UnexpectedFlowEndException("Peer failure upon recording or finalising transaction.", e.cause)
         }
 
         return stx
