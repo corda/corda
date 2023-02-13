@@ -143,7 +143,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     @Converter
     class StringListConverter : AttributeConverter<List<String>?, String?> {
         override fun convertToDatabaseColumn(stringList: List<String>?): String? {
-            return stringList?.joinToString(SPLIT_CHAR)
+            return stringList?.let { if (it.isEmpty()) null else it.joinToString(SPLIT_CHAR) }
         }
 
         override fun convertToEntityAttribute(string: String?): List<String>? {
