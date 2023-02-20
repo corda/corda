@@ -604,7 +604,7 @@ class VaultObserverExceptionTest {
      *
      * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
      */
-    @Ignore("Investigate why FinalityFlow blocks indefinitely on initiator side awaiting ack from receiver after finalizing transaction with extra signatures")
+    @Ignore("Ref ENT-7040: FlowException is not propagated to the @InitiatedFlow.")
     @Test(timeout=300_000)
     fun `Throw user error in VaultService rawUpdates during counterparty FinalityFlow blows up the flow but does not break the Observer`() {
         var observationCounter = 0

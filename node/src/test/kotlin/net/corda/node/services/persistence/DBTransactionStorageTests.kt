@@ -16,6 +16,8 @@ import net.corda.node.SimpleClock
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG
+import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -39,6 +41,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class DBTransactionStorageTests {
     private companion object {
@@ -98,7 +101,7 @@ class DBTransactionStorageTests {
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction()
         transactionStorage.addTransactionWithoutNotarySignature(transaction)
-        assertEquals(DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
     }
 
     @Test(timeout = 300_000)
@@ -109,8 +112,13 @@ class DBTransactionStorageTests {
         val transaction = newTransaction()
         val notarySig = TransactionSignature(ByteArray(1), DUMMY_NOTARY.owningKey, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.owningKey).schemeNumberID))
         transactionStorage.addTransactionWithoutNotarySignature(transaction)
+        assertNull(transactionStorage.getTransaction(transaction.id))
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
         transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
-        assertNotNull(readTransactionFromDB(transaction.id).signatures)
+        readTransactionFromDB(transaction.id).let {
+            assertNotNull(it.signatures)
+            assertEquals(VERIFIED, it.status)
+        }
     }
 
     @Test(timeout = 300_000)
@@ -197,6 +205,7 @@ class DBTransactionStorageTests {
         assertEquals(1, fromDb.size)
         return fromDb[0].timestamp
     }
+
     private fun readTransactionFromDB(id: SecureHash): DBTransactionStorage.DBTransaction {
         val fromDb = database.transaction {
             session.createQuery(
