@@ -20,35 +20,6 @@ data class FlowTransaction(
 
     fun isInitiator(myCordaX500Name: CordaX500Name) =
         this.metadata?.initiator == myCordaX500Name
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as FlowTransaction
-
-        if (stateMachineRunId != other.stateMachineRunId) return false
-        if (txId != other.txId) return false
-        if (status != other.status) return false
-        if (signatures != null) {
-            if (other.signatures == null) return false
-            if (!signatures.contentEquals(other.signatures)) return false
-        } else if (other.signatures != null) return false
-        if (timestamp != other.timestamp) return false
-        if (metadata != other.metadata) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = stateMachineRunId.hashCode()
-        result = 31 * result + txId.hashCode()
-        result = 31 * result + status.hashCode()
-        result = 31 * result + (signatures?.contentHashCode() ?: 0)
-        result = 31 * result + timestamp.hashCode()
-        result = 31 * result + (metadata?.hashCode() ?: 0)
-        return result
-    }
 }
 
 @CordaSerializable
