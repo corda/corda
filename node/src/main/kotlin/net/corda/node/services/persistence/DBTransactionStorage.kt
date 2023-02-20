@@ -28,7 +28,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
-import net.corda.nodeapi.flow.FlowTransactionMetadata
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit

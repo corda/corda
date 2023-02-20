@@ -9,7 +9,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.nodeapi.flow.FlowTransactionMetadata
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject

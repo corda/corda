@@ -20,7 +20,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
-import net.corda.nodeapi.flow.FlowTransactionMetadata
 import java.sql.SQLException
 
 /**

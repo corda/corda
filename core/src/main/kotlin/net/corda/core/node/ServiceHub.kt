@@ -18,7 +18,7 @@ import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.nodeapi.flow.FlowTransactionMetadata
+import net.corda.core.flows.FlowTransactionMetadata
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock

@@ -26,7 +26,7 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.flow.FlowTransactionMetadata
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
 import java.util.*

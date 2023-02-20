@@ -15,7 +15,7 @@ import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.nodeapi.flow.FlowTransactionMetadata
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME

@@ -52,7 +52,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.nodeapi.flow.FlowTransactionMetadata
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
