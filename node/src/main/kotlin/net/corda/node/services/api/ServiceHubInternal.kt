@@ -26,6 +26,7 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
 import java.util.*
@@ -134,19 +135,9 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             }
         }
 
-        fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>,
-                                                    validatedTransactions: WritableTransactionStorage,
-                                                    database: CordaPersistence) {
-
-            database.transaction {
-                require(txs.isNotEmpty()) { "No transactions passed in for recording" }
-
-                txs.map(validatedTransactions::addTransactionWithoutNotarySignature)
-            }
-        }
         @Suppress("LongParameterList")
         fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord,
-                                                   txs: Collection<SignedTransaction>,
+                                                   txn: SignedTransaction,
                                                    sigs: Collection<TransactionSignature>,
                                                    validatedTransactions: WritableTransactionStorage,
                                                    stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
@@ -156,7 +147,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
             }
 
-            recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
+            recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
                 validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs)
             }
         }
@@ -198,25 +189,23 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>) {
-        txs.forEach { requireSupportedHashType(it) }
-        recordTransactionWithoutNotarySignature(txs,
-                validatedTransactions,
-                database
-        )
-    }
-
-    override fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>) {
-        txs.forEach { requireSupportedHashType(it) }
+    override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {
+        requireSupportedHashType(txn)
         finalizeTransactionWithExtraSignatures(
                 statesToRecord,
-                txs,
+                txn,
                 sigs,
                 validatedTransactions,
                 stateMachineRecordedTransactionMapping,
                 vaultService,
                 database
         )
+    }
+
+    override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {
+        database.transaction {
+            validatedTransactions.addUnnotarisedTransaction(txn, metadata)
+        }
     }
 
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
@@ -307,10 +296,12 @@ interface WritableTransactionStorage : TransactionStorage {
 
     /**
      * Add an un-notarised transaction to the store with a status of *MISSING_TRANSACTION_SIG*.
+     * Optionally add finality flow recovery metadata.
      * @param transaction The transaction to be recorded.
+     * @param metadata Finality flow recovery metadata.
      * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
      */
-    fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean
+    fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata? = null): Boolean
 
     /**
      * Update a previously un-notarised transaction including associated notary signatures.

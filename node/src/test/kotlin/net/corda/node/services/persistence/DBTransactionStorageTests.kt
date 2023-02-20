@@ -8,17 +8,20 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.node.StatesToRecord
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -45,7 +48,10 @@ import kotlin.test.assertNull
 
 class DBTransactionStorageTests {
     private companion object {
-        val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
+        val ALICE = TestIdentity(ALICE_NAME, 70)
+        val ALICE_PUBKEY = ALICE.publicKey
+        val ALICE_PARTY = ALICE.party
+        val BOB_PARTY = TestIdentity(BOB_NAME, 80).party
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
     }
 
@@ -100,8 +106,22 @@ class DBTransactionStorageTests {
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction()
-        transactionStorage.addTransactionWithoutNotarySignature(transaction)
-        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+        transactionStorage.addUnnotarisedTransaction(transaction)
+        assertEquals(DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+    }
+
+    @Test(timeout = 300_000)
+    fun `create un-notarised transaction with flow metadata and validate status in db`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        transactionStorage.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE_PARTY.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
+        val txn = readTransactionFromDB(transaction.id)
+        assertEquals(DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG, txn.status)
+        assertEquals(StatesToRecord.ALL_VISIBLE, txn.statesToRecord)
+        assertEquals(ALICE_NAME.toString(), txn.initiator)
+        assertEquals(listOf(BOB_NAME.toString()), txn.participants)
     }
 
     @Test(timeout = 300_000)
@@ -111,7 +131,7 @@ class DBTransactionStorageTests {
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction()
         val notarySig = TransactionSignature(ByteArray(1), DUMMY_NOTARY.owningKey, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.owningKey).schemeNumberID))
-        transactionStorage.addTransactionWithoutNotarySignature(transaction)
+        transactionStorage.addUnnotarisedTransaction(transaction)
         assertNull(transactionStorage.getTransaction(transaction.id))
         assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
         transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
@@ -411,7 +431,7 @@ class DBTransactionStorageTests {
 
         // Assert
 
-        assertThat(result).isNotNull()
+        assertThat(result).isNotNull
         assertThat(result?.get(20, TimeUnit.SECONDS)?.id).isEqualTo(signedTransaction.id)
     }
 

@@ -47,6 +47,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -434,16 +435,12 @@ open class MockServices private constructor(
         }
     }
 
-    override fun recordTransactionWithoutNotarySignature(txs: Collection<SignedTransaction>) {
-        txs.forEach {
-            (validatedTransactions as WritableTransactionStorage).addTransactionWithoutNotarySignature(it)
-        }
+    override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {
+        (validatedTransactions as WritableTransactionStorage).addUnnotarisedTransaction(txn)
     }
 
-    override fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord, txs: Collection<SignedTransaction>, sigs: Collection<TransactionSignature>) {
-        txs.forEach {
-            (validatedTransactions as WritableTransactionStorage).finalizeTransactionWithExtraSignatures(it, sigs)
-        }
+    override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {
+        (validatedTransactions as WritableTransactionStorage).finalizeTransactionWithExtraSignatures(txn, sigs)
     }
 
     override val networkParameters: NetworkParameters

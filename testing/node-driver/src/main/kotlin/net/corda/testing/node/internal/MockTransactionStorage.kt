@@ -9,6 +9,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -54,13 +55,8 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         }
     }
 
-    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction): Boolean {
-        val current = txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false))
-        return if (current == null) {
-            notify(transaction)
-        } else {
-            false
-        }
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean {
+        return txns.putIfAbsent(transaction.id, TxHolder(transaction, isVerified = false)) == null
     }
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {

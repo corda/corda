@@ -3,14 +3,21 @@ package net.corda.node.services.persistence
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
+import net.corda.core.node.StatesToRecord
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -21,15 +28,27 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Instant
-import java.util.*
-import javax.persistence.*
+import java.util.Collections
+import javax.persistence.AttributeConverter
+import javax.persistence.Column
+import javax.persistence.Convert
+import javax.persistence.Converter
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.Table
 import kotlin.streams.toList
-import javax.persistence.criteria.Predicate
 
 @Suppress("TooManyFunctions")
 class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
@@ -38,7 +57,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     @Suppress("MagicNumber") // database column width
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
-    class DBTransaction(
+    data class DBTransaction(
             @Id
             @Column(name = "tx_id", length = 144, nullable = false)
             val txId: String,
@@ -58,8 +77,26 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val timestamp: Instant,
 
             @Column(name = "signatures")
-            val signatures: ByteArray?
-            )
+            val signatures: ByteArray?,
+
+            /**
+             * Flow finality metadata used for recovery
+             * TODO: create association table solely for Flow metadata and recovery purposes.
+             */
+
+            /** X500Name of flow initiator **/
+            @Column(name = "initiator")
+            val initiator: String? = null,
+
+            /** X500Name of flow participant parties **/
+            @Column(name = "participants")
+            @Convert(converter = StringListConverter::class)
+            val participants: List<String>? = null,
+
+            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
+            @Column(name = "states_to_record")
+            val statesToRecord: StatesToRecord? = null
+    )
 
     enum class TransactionStatus {
         UNVERIFIED,
@@ -103,6 +140,21 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
+    @Converter
+    class StringListConverter : AttributeConverter<List<String>?, String?> {
+        override fun convertToDatabaseColumn(stringList: List<String>?): String? {
+            return stringList?.let { if (it.isEmpty()) null else it.joinToString(SPLIT_CHAR) }
+        }
+
+        override fun convertToEntityAttribute(string: String?): List<String>? {
+            return string?.split(SPLIT_CHAR)
+        }
+
+        companion object {
+            private const val SPLIT_CHAR = ";"
+        }
+    }
+
     internal companion object {
         const val TRANSACTION_ALREADY_IN_PROGRESS_WARNING = "trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions."
 
@@ -129,11 +181,19 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     cacheFactory = cacheFactory,
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = SecureHash::toString,
-                    fromPersistentEntity = {
-                        SecureHash.create(it.txId) to TxCacheValue(
-                                it.transaction.deserialize<SignedTransaction>(context = contextToUse()),
-                                it.signatures?.deserialize(context = contextToUse()),
-                                it.status)
+                    fromPersistentEntity = { dbTxn ->
+                        SecureHash.create(dbTxn.txId) to TxCacheValue(
+                                dbTxn.transaction.deserialize(context = contextToUse()),
+                                dbTxn.status,
+                                dbTxn.signatures?.deserialize(context = contextToUse()),
+                                dbTxn.initiator?.let { initiator ->
+                                    FlowTransactionMetadata(
+                                            CordaX500Name.parse(initiator),
+                                            dbTxn.statesToRecord!!,
+                                            dbTxn.participants?.let { it.map { CordaX500Name.parse(it) }.toSet() }
+                                    )
+                                }
+                        )
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction(
@@ -142,7 +202,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 status = value.status,
                                 timestamp = clock.instant(),
-                                signatures = null
+                                signatures = null,
+                                statesToRecord = value.metadata?.statesToRecord,
+                                initiator = value.metadata?.initiator?.toString(),
+                                participants = value.metadata?.peers?.map { it.toString() }
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -160,18 +223,16 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     private val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
 
-    private fun updateTransaction(txId: SecureHash, status: TransactionStatus, expectedStatus: Set<TransactionStatus> = emptySet()): Boolean {
+    private fun updateTransaction(txId: SecureHash): Boolean {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
-        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), status)
-        val predicateSet = mutableSetOf<Predicate>()
-        predicateSet.add(criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()))
-        if (expectedStatus.isNotEmpty())
-            predicateSet.add(criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(expectedStatus)))
-        @Suppress("SpreadOperator")
-        criteriaUpdate.where(*predicateSet.toTypedArray())
+        criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+        criteriaUpdate.where(criteriaBuilder.and(
+                criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
+                criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(setOf(TransactionStatus.UNVERIFIED, TransactionStatus.MISSING_NOTARY_SIG))
+        )))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
         val update = session.createQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
@@ -179,33 +240,39 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     override fun addTransaction(transaction: SignedTransaction) =
-            addTransaction(transaction, TransactionStatus.VERIFIED) {
-                updateTransaction(transaction.id, TransactionStatus.VERIFIED,
-                        expectedStatus = setOf(TransactionStatus.MISSING_NOTARY_SIG, TransactionStatus.UNVERIFIED))
+            addTransaction(transaction) {
+                updateTransaction(transaction.id)
             }
 
-    override fun addTransactionWithoutNotarySignature(transaction: SignedTransaction) =
-            addTransaction(transaction, TransactionStatus.MISSING_NOTARY_SIG) {
-                updateTransaction(transaction.id, TransactionStatus.MISSING_NOTARY_SIG)
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
+            database.transaction {
+                txStorage.locked {
+                    val cacheValue = TxCacheValue(transaction, status = TransactionStatus.MISSING_NOTARY_SIG, metadata = metadata)
+                    val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
+                    if (added) {
+                        logger.info ("Transaction ${transaction.id} recorded as un-notarised.")
+                    } else {
+                        logger.info("Transaction ${transaction.id} (un-notarised) already exists so no need to record.")
+                    }
+                    added
+                }
             }
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
-            addTransaction(transaction, TransactionStatus.VERIFIED) {
+            addTransaction(transaction) {
                 finalizeTransactionWithExtraSignatures(transaction.id, signatures)
             }
 
-    private fun addTransaction(transaction: SignedTransaction, status: TransactionStatus, updateFn: (SecureHash) -> Boolean): Boolean {
+    private fun addTransaction(transaction: SignedTransaction, updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, status)
+                val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED)
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
-                    logger.debug { "Transaction ${transaction.id} has been recorded as $status" }
-                    if (status.isVerified()) {
-                        onNewTx(transaction)
-                    } else true
+                    logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
+                    onNewTx(transaction)
                 } else {
-                    logger.debug { "Transaction ${transaction.id} is already recorded as $status, so no need to re-record" }
+                    logger.debug { "Transaction ${transaction.id} is already recorded as verified, so no need to re-record" }
                     false
                 }
             }
@@ -320,19 +387,30 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     // Cache value type to just store the immutable bits of a signed transaction plus conversion helpers
-    private data class TxCacheValue(
+    private class TxCacheValue(
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
-            val status: TransactionStatus
+            val status: TransactionStatus,
+            // flow metadata recorded for recovery
+            val metadata: FlowTransactionMetadata? = null
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
-                status)
-        constructor(stx: SignedTransaction, sigs: List<TransactionSignature>?, status: TransactionStatus) : this(
+                status
+        )
+        constructor(stx: SignedTransaction, status: TransactionStatus, metadata: FlowTransactionMetadata?) : this(
+                stx.txBits,
+                Collections.unmodifiableList(stx.sigs),
+                status,
+                metadata
+        )
+        constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?, metadata: FlowTransactionMetadata?) : this(
                 stx.txBits,
                 if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs),
-                status)
+                status,
+                metadata
+        )
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }
 }

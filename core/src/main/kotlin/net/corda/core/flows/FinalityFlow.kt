@@ -219,9 +219,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
-
-        recordTransactionWithoutNotarySignatureLocally(transaction)
-
+        recordUnnotarisedTransaction(tx, sessions)
         sessions.forEach { session ->
             try {
                 subFlow(SendTransactionFlow(session, tx))
@@ -321,8 +319,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun recordTransactionWithoutNotarySignatureLocally(tx: SignedTransaction): SignedTransaction {
-        serviceHub.recordTransactionWithoutNotarySignature(listOf(tx))
+    private fun recordUnnotarisedTransaction(tx: SignedTransaction, sessions: Collection<FlowSession>): SignedTransaction {
+        serviceHub.recordUnnotarisedTransaction(tx,
+                FlowTransactionMetadata(
+                        serviceHub.myInfo.legalIdentities.first().name,
+                        statesToRecord,
+                        sessions.map { it.counterparty.name }.toSet())
+        )
         logger.info("Recorded transaction without notary signature(s) locally.")
         return tx
     }
@@ -334,7 +337,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 progressTracker.currentStep = NOTARISING
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
                 logger.info("Transaction notarised.")
-                serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, listOf(transaction + notarySignatures), notarySignatures)
+                serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
                 logger.info("Finalised transaction locally.")
                 transaction + notarySignatures
             } else {
@@ -419,7 +422,8 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         try {
             if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
                 logger.info("Peer recording transaction without notary signature.")
-                serviceHub.recordTransactionWithoutNotarySignature(setOf(stx))
+                serviceHub.recordUnnotarisedTransaction(stx,
+                        FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
                 logger.info("Peer recorded transaction without notary signature.")
                 otherSideSession.send(Unit)
 
@@ -428,7 +432,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 logger.info("Peer received notarised signatures.")
 
                 logger.info("Peer finalising transaction with notary signature.")
-                serviceHub.finalizeTransactionWithExtraSignatures(statesToRecord, setOf(stx + notarySignatures), notarySignatures)
+                serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
                 logger.info("Peer finalised transaction with notary signature.")
                 otherSideSession.send(Unit)
             } else {
