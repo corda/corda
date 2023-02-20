@@ -139,7 +139,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // TODO: Verify that the result was inserted into the transaction database.
             // assertEquals(bobResult.get(), aliceNode.storage.validatedTransactions[aliceResult.get().id])
-            assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
+            assertEquals(aliceResult.getOrThrow().id, (bobStateMachine.getOrThrow().resultFuture.getOrThrow() as SignedTransaction).id)
 
             aliceNode.dispose()
             bobNode.dispose()
