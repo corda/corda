@@ -5,7 +5,6 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowTransaction
 import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.TransactionStatus

@@ -17,9 +17,11 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -52,7 +54,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -828,7 +829,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
-        override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
+        override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>? {
             return database.transaction {
                 delegate.getTransactionInternal(id)
             }
