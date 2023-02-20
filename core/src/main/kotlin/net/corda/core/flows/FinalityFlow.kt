@@ -21,6 +21,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
 import java.sql.SQLException
+import java.time.Duration
 
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
@@ -220,6 +221,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         recordUnnotarisedTransaction(tx, sessions)
+        if (sessions.isEmpty()) sleep(Duration.ZERO)
         sessions.forEach { session ->
             try {
                 subFlow(SendTransactionFlow(session, tx))
