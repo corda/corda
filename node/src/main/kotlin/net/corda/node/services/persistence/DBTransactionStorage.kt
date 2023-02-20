@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
@@ -28,7 +29,6 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
-import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
@@ -113,6 +113,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         fun isVerified(): Boolean {
             return this == VERIFIED
+        }
+
+        fun toTransactionStatus(): net.corda.core.flows.TransactionStatus {
+            return when(this) {
+                UNVERIFIED -> net.corda.core.flows.TransactionStatus.UNVERIFIED
+                VERIFIED -> net.corda.core.flows.TransactionStatus.VERIFIED
+                MISSING_NOTARY_SIG -> net.corda.core.flows.TransactionStatus.MISSING_NOTARY_SIG
+            }
         }
 
         companion object {
@@ -317,7 +325,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
                 val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
                 if (added) {
-                    logger.info ( "Transaction ${transaction.id} recorded as unverified." )
+                    logger.info ("Transaction ${transaction.id} recorded as unverified." )
                 } else {
                     logger.info("Transaction ${transaction.id} already exists so no need to record.")
                 }
@@ -325,9 +333,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
+    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, net.corda.core.flows.TransactionStatus>? {
         return database.transaction {
-            txStorage.content[id]?.let { it.toSignedTx() to it.status.isVerified() }
+            txStorage.content[id]?.let { it.toSignedTx() to it.status.toTransactionStatus() }
         }
     }
 

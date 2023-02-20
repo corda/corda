@@ -1,9 +1,21 @@
 package net.corda.coretests.flows
 
+import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.Party
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.PlatformVersionSwitches
@@ -11,27 +23,45 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.coretests.flows.WithFinality.FinalityInvoker
-import net.corda.finance.POUNDS
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.issuedBy
-import net.corda.testing.core.*
 import net.corda.coretesting.internal.matchers.flow.willReturn
 import net.corda.coretesting.internal.matchers.flow.willThrow
+import net.corda.coretests.flows.WithFinality.FinalityInvoker
 import net.corda.finance.GBP
+import net.corda.finance.POUNDS
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.testing.node.internal.*
+import net.corda.finance.issuedBy
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.MOCK_VERSION_INFO
+import net.corda.testing.node.internal.TestCordappInternal
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.cordappWithPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
+import java.util.Random
+import kotlin.test.assertEquals
+import kotlin.test.fail
 
 class FinalityFlowTests : WithFinality {
     companion object {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
     }
 
-    override val mockNet = InternalMockNetwork(cordappsForAllNodes = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP, enclosedCordapp(),
+    override val mockNet = InternalMockNetwork(cordappsForAllNodes = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP, DUMMY_CONTRACTS_CORDAPP, enclosedCordapp(),
                                                        CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
 
     private val aliceNode = makeNode(ALICE_NAME)
@@ -69,7 +99,7 @@ class FinalityFlowTests : WithFinality {
         val stx = aliceNode.issuesCashTo(oldBob)
         @Suppress("DEPRECATION")
         aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture.getOrThrow()
-        assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
+        assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull
     }
 
     @Test(timeout=300_000)
@@ -83,8 +113,8 @@ class FinalityFlowTests : WithFinality {
                 oldRecipients = setOf(oldBob.info.singleIdentity())
         )).resultFuture
         resultFuture.getOrThrow()
-        assertThat(newCharlie.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
-        assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
+        assertThat(newCharlie.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull
     }
 
     @Test(timeout=300_000)
@@ -118,6 +148,69 @@ class FinalityFlowTests : WithFinality {
 
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+    }
+
+    @Test(timeout=300_000)
+    fun `two phase finality flow double spend transaction`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
+        val stx = aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
+
+        try {
+            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+        }
+        catch (e: NotaryException) {
+            val stxId = (e.error as NotaryError.Conflict).txId
+            val (_, txnDsStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusAlice)
+            val (_, txnDsStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusBob)
+        }
+    }
+
+    @StartableByRPC
+    class IssueFlow(val notary: Party) : FlowLogic<StateAndRef<DummyContract.SingleOwnerState>>() {
+
+        @Suspendable
+        override fun call(): StateAndRef<DummyContract.SingleOwnerState> {
+            val partyAndReference = PartyAndReference(ourIdentity, OpaqueBytes.of(1))
+            val txBuilder = DummyContract.generateInitial(Random().nextInt(), notary, partyAndReference)
+            val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
+            val notarised = subFlow(FinalityFlow(signedTransaction, emptySet<FlowSession>()))
+            return notarised.coreTransaction.outRef(0)
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class SpendFlow(private val stateAndRef: StateAndRef<DummyContract.SingleOwnerState>, private val newOwner: Party) : FlowLogic<SignedTransaction>() {
+
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val txBuilder = DummyContract.move(stateAndRef, newOwner)
+            val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
+            val sessionWithCounterParty = initiateFlow(newOwner)
+            sessionWithCounterParty.sendAndReceive<String>("initial-message")
+            return subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty)))
+        }
+    }
+
+    @InitiatedBy(SpendFlow::class)
+    class AcceptSpendFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            otherSide.receive<String>()
+            otherSide.send("initial-response")
+
+            subFlow(ReceiveFinalityFlow(otherSide))
+        }
     }
 
     private fun createBob(cordapps: List<TestCordappInternal> = emptyList(), platformVersion: Int = PLATFORM_VERSION): TestStartedNode {

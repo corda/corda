@@ -5,9 +5,18 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowTransaction
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.*
+import net.corda.core.flows.TransactionStatus
+import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.internal.TransactionsResolver
 import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.dependencies
+import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
@@ -26,10 +35,13 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
-import java.util.*
+import java.util.ArrayList
+import java.util.Collections
+import java.util.HashMap
+import java.util.HashSet
+import java.util.LinkedHashSet
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     override val nodeReady: OpenFuture<Void?>
@@ -317,10 +329,10 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addUnverifiedTransaction(transaction: SignedTransaction)
 
     /**
-     * Return the transaction with the given ID from the store, and a flag of whether it's verified. Returns null if no transaction with the
-     * ID exists.
+     * Return the transaction with the given ID from the store, and its associated [TransactionStatus].
+     * Returns null if no transaction with the ID exists.
      */
-    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>?
+    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>?
 
     /**
      * Returns a future that completes with the transaction corresponding to [id] once it has been committed. Do not warn when run inside
