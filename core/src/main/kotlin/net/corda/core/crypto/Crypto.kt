@@ -285,7 +285,7 @@ object Crypto {
      */
     @JvmStatic
     fun findSignatureScheme(key: PublicKey): SignatureScheme {
-        val keyInfo = SubjectPublicKeyInfo.getInstance(key.encoded)
+        val keyInfo = SubjectPublicKeyInfo.getInstance(encodePublicKey(key))
         return findSignatureScheme(keyInfo.algorithm)
     }
 

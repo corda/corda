@@ -1,6 +1,10 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
-import com.esotericsoftware.kryo.*
+import com.esotericsoftware.kryo.ClassResolver
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
+import com.esotericsoftware.kryo.Registration
+import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.factories.ReflectionSerializerFactory
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
@@ -17,7 +21,13 @@ import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.transactions.*
+import net.corda.core.transactions.ComponentGroup
+import net.corda.core.transactions.ContractUpgradeFilteredTransaction
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.SgxSupport
 import net.corda.serialization.internal.serializationContextKey
@@ -302,7 +312,7 @@ object PrivateKeySerializer : Serializer<PrivateKey>() {
 object PublicKeySerializer : Serializer<PublicKey>() {
     override fun write(kryo: Kryo, output: Output, obj: PublicKey) {
         // TODO: Instead of encoding to the default X509 format, we could have a custom per key type (space-efficient) serialiser.
-        output.writeBytesWithLength(obj.encoded)
+        output.writeBytesWithLength(Crypto.encodePublicKey(obj))
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<PublicKey>): PublicKey {

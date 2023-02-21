@@ -3,14 +3,33 @@ package net.corda.nodeapi.internal.crypto
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.internal.reader
+import net.corda.core.internal.signWithCert
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.validate
+import net.corda.core.internal.writer
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
-import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.ASN1EncodableVector
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.ASN1Sequence
+import org.bouncycastle.asn1.DERSequence
+import org.bouncycastle.asn1.DERUTF8String
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
-import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.BasicConstraints
+import org.bouncycastle.asn1.x509.CRLDistPoint
+import org.bouncycastle.asn1.x509.DistributionPoint
+import org.bouncycastle.asn1.x509.DistributionPointName
 import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralNames
+import org.bouncycastle.asn1.x509.KeyPurposeId
+import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
@@ -28,12 +47,17 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
-import java.security.cert.*
+import java.security.cert.CertPath
 import java.security.cert.Certificate
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.ArrayList
+import java.util.Date
 import javax.security.auth.x500.X500Principal
 import kotlin.experimental.and
 import kotlin.experimental.or
@@ -189,7 +213,7 @@ object X509Utilities {
                                  crlIssuer: X500Name? = null): X509v3CertificateBuilder {
         val serial = generateCertificateSerialNumber()
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
-        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
+        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(Crypto.encodePublicKey(subjectPublicKey)))
         val role = certificateType.role
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)

@@ -4,7 +4,14 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
 import net.corda.core.utilities.sequence
-import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.ASN1EncodableVector
+import org.bouncycastle.asn1.ASN1Encoding
+import org.bouncycastle.asn1.ASN1Integer
+import org.bouncycastle.asn1.ASN1Object
+import org.bouncycastle.asn1.ASN1Primitive
+import org.bouncycastle.asn1.ASN1Sequence
+import org.bouncycastle.asn1.DERBitString
+import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.PublicKey
@@ -162,7 +169,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         override fun toASN1Primitive(): ASN1Primitive {
             val vector = ASN1EncodableVector()
-            vector.add(DERBitString(node.encoded))
+            vector.add(DERBitString(Crypto.encodePublicKey(node)))
             vector.add(ASN1Integer(weight.toLong()))
             return DERSequence(vector)
         }
