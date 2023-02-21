@@ -5,6 +5,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.internal.Instances.withSignature
+import net.corda.core.crypto.internal.PublicKeyCache
 import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
@@ -53,8 +54,6 @@ import org.bouncycastle.math.ec.WNafUtil
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
-import java.lang.ref.ReferenceQueue
-import java.lang.ref.WeakReference
 import java.math.BigInteger
 import java.security.InvalidKeyException
 import java.security.Key
@@ -68,7 +67,6 @@ import java.security.SignatureException
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -377,7 +375,7 @@ object Crypto {
      */
     @JvmStatic
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        return publicKeyForCachedBytes(ByteSequence.of(encodedKey)) ?: {
+        return PublicKeyCache.publicKeyForCachedBytes(ByteSequence.of(encodedKey)) ?: {
             val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
             val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
             val keyFactory = keyFactory(signatureScheme)
@@ -387,7 +385,7 @@ object Crypto {
 
     @JvmStatic
     fun encodePublicKey(key: PublicKey): ByteArray {
-        return bytesForCachedPublicKey(key)?.bytes ?: key.encoded
+        return PublicKeyCache.bytesForCachedPublicKey(key)?.bytes ?: key.encoded
     }
 
     /**
@@ -1004,51 +1002,8 @@ object Crypto {
     }
 
     private val interner = PrivateInterner<PublicKey>()
-    private fun internPublicKey(key: PublicKey): PublicKey = cachePublicKey(interner.intern(key))
+    private fun internPublicKey(key: PublicKey): PublicKey = PublicKeyCache.cachePublicKey(interner.intern(key))
 
-    private val collectedWeakPubKeys = ReferenceQueue<PublicKey>()
-    private class WeakPubKey(key: PublicKey, val bytes: ByteSequence? = null) : WeakReference<PublicKey>(key, collectedWeakPubKeys) {
-        private val hashCode = key.hashCode()
-
-        override fun hashCode(): Int = hashCode
-        override fun equals(other: Any?): Boolean {
-            if(this === other) return true
-            if(other !is WeakPubKey) return false
-            if(this.hashCode != other.hashCode) return false
-            val thisGet = this.get()
-            val otherGet = other.get()
-            if(thisGet == null || otherGet == null) return false
-            return thisGet == otherGet
-        }
-    }
-
-    private val pubKeyToBytes = ConcurrentHashMap<WeakPubKey, ByteSequence>()
-    private val bytesToPubKey = ConcurrentHashMap<ByteSequence, WeakPubKey>()
-
-    private fun reapCollectedWeakPubKeys() {
-        while(true) {
-            val weakPubKey = (collectedWeakPubKeys.poll() as? WeakPubKey) ?: break
-            pubKeyToBytes.remove(weakPubKey)
-            bytesToPubKey.remove(weakPubKey.bytes!!)
-        }
-    }
-
-    private fun bytesForCachedPublicKey(key: PublicKey): ByteSequence? {
-        val weakPubKey = WeakPubKey(key)
-        return pubKeyToBytes[weakPubKey]
-    }
-
-    private fun publicKeyForCachedBytes(bytes: ByteSequence): PublicKey? {
-        return bytesToPubKey[bytes]?.get()
-    }
-
-    private fun cachePublicKey(key: PublicKey): PublicKey {
-        reapCollectedWeakPubKeys()
-        val weakPubKey = WeakPubKey(key, ByteSequence.of(key.encoded))
-        pubKeyToBytes.putIfAbsent(weakPubKey, weakPubKey.bytes!!)
-        bytesToPubKey.putIfAbsent(weakPubKey.bytes!!, weakPubKey)
-        return key
-    }
 
     private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
         return internPublicKey(when (key) {

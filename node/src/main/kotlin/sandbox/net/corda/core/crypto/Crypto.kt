@@ -1,7 +1,6 @@
 package sandbox.net.corda.core.crypto
 
-import sandbox.net.corda.core.crypto.DJVM.fromDJVM
-import sandbox.net.corda.core.crypto.DJVM.toDJVM
+import sandbox.java.lang.Object
 import sandbox.java.lang.String
 import sandbox.java.lang.doCatch
 import sandbox.java.math.BigInteger
@@ -10,7 +9,8 @@ import sandbox.java.security.PrivateKey
 import sandbox.java.security.PublicKey
 import sandbox.java.util.ArrayList
 import sandbox.java.util.List
-import sandbox.java.lang.Object
+import sandbox.net.corda.core.crypto.DJVM.fromDJVM
+import sandbox.net.corda.core.crypto.DJVM.toDJVM
 import sandbox.org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import sandbox.org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.GeneralSecurityException
@@ -147,6 +147,11 @@ object Crypto : Object() {
     @JvmStatic
     fun decodePublicKey(signatureScheme: SignatureScheme, encodedKey: ByteArray): PublicKey {
         return decodePublicKey(signatureScheme.schemeCodeName, encodedKey)
+    }
+
+    @JvmStatic
+    fun encodePublicKey(key: java.security.PublicKey): ByteArray {
+        return key.encoded
     }
 
     @JvmStatic
