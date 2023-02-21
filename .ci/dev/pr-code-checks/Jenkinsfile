@@ -20,6 +20,19 @@ pipeline {
     }
 
     stages {
+        stage('Detekt check') {
+            steps {
+                authenticateGradleWrapper()
+                sh "./gradlew --no-daemon clean detekt"
+            }
+        }
+
+        stage('Compilation warnings check') {
+            steps {
+                sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=true compileAll"
+            }
+        }
+
         stage('Snyk Delta') {
             agent {
                 docker {
@@ -35,20 +48,8 @@ pipeline {
             }
             steps {
                 sh 'mkdir -p ${GRADLE_USER_HOME}'
-                snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
-            }
-        }
-        
-        stage('Detekt check') {
-            steps {
                 authenticateGradleWrapper()
-                sh "./gradlew --no-daemon clean detekt"
-            }
-        }
-
-        stage('Compilation warnings check') {
-            steps {
-                sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=true compileAll"
+                snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }
         }
 
