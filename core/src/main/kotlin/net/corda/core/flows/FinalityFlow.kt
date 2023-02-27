@@ -140,11 +140,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
         }
 
+        object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to other participants")
         object BROADCASTING1 : ProgressTracker.Step("Broadcasting transaction to participants (pre notarisation)")
         object BROADCASTING2 : ProgressTracker.Step("Broadcasting transaction to participants (post notarisation)")
 
         @JvmStatic
-        fun tracker() = ProgressTracker(BROADCASTING1, NOTARISING, BROADCASTING2)
+        fun tracker() = ProgressTracker(BROADCASTING1, NOTARISING, BROADCASTING2, BROADCASTING)
     }
 
     @Suspendable
@@ -206,8 +207,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
 
         if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
+            progressTracker.currentStep = BROADCASTING
             broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
         } else {
+            progressTracker.currentStep = BROADCASTING
             broadcastToPreTwoPhaseFinalityParticipants(externalTxParticipants, oldPlatformSessions, notarised)
         }
 
