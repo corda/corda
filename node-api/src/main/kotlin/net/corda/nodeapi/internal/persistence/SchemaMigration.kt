@@ -154,25 +154,23 @@ open class SchemaMigration(
 
             if (path == dynamicInclude) {
                 // Return the json as a stream.
-                val inputStream = getPathAsStream()
                 val resource = object : URIResource(path, URI(path)) {
                     override fun openInputStream(): InputStream {
-                        return inputStream
+                        return getPathAsStream()
                     }
                 }
                 return Collections.singletonList(resource)
             }
-            // Take 1 resource due to LiquidBase find duplicate files which throws an error
+            // Take 1 resource due to Liquibase find duplicate files which throws an error
             return super.getAll(path).take(1)
         }
 
         override fun get(path: String?): Resource {
             if (path == dynamicInclude) {
                 // Return the json as a stream.
-                val inputStream = getPathAsStream()
                 return object : URIResource(path, URI(path)) {
                     override fun openInputStream(): InputStream {
-                        return inputStream
+                        return getPathAsStream()
                     }
                 }
             }
