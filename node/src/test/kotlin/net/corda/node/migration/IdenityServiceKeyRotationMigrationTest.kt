@@ -86,7 +86,7 @@ class IdenityServiceKeyRotationMigrationTest {
 
         Liquibase("migration/node-core.changelog-v20.xml", object : ClassLoaderResourceAccessor() {
             override fun getAll(path: String?): List<Resource> {
-                return super.getAll(path).take(1).toList()
+                return if(path != null) super.getAll(path).take(1).toList() else emptyList()
             }
         }, liquibaseDB).update(Contexts().toString())
 
