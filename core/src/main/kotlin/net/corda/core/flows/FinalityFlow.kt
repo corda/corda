@@ -340,7 +340,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 progressTracker.currentStep = NOTARISING
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
                 logger.info("Transaction notarised.")
-                serviceHub.finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
+                serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
                 logger.info("Finalised transaction locally.")
                 transaction + notarySignatures
             } else {
@@ -435,7 +435,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 logger.info("Peer received notarised signatures.")
 
                 logger.info("Peer finalising transaction with notary signature.")
-                serviceHub.finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
+                serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
                 logger.info("Peer finalised transaction with notary signature.")
                 otherSideSession.send(Unit)
             } else {
