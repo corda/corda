@@ -198,11 +198,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             recordLocallyAndBroadcast(newPlatformSessions, transaction)
         }
 
-        val notarised = notariseAndRecord()
+        val notarised = notariseOrRecord()
         if (useTwoPhaseFinality) {
             val notarySignatures = notarised.sigs - transaction.sigs.toSet()
             if (notarySignatures.isNotEmpty()) {
-                broadcastSignatures(newPlatformSessions, notarySignatures)
+                broadcastSignaturesAndFinalise(newPlatformSessions, notarySignatures)
             }
         }
 
@@ -241,7 +241,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastSignatures(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
+    private fun broadcastSignaturesAndFinalise(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
         progressTracker.currentStep = BROADCASTING2
         sessions.forEach { session ->
             try {
@@ -256,7 +256,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                         e.originalErrorId
                 )
             }
-
+        }
+        serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
+        logger.info("Finalised transaction locally.")
+        sessions.forEach { session ->
             try {
                 logger.info("Awaiting acknowledgement from party ${session.counterparty} to indicate successful receipt of notary signature(s).")
                 session.receive<Unit>()
@@ -334,14 +337,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun notariseAndRecord(): SignedTransaction {
+    private fun notariseOrRecord(): SignedTransaction {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#notariseAndRecord", flowLogic = this) {
             return if (needsNotarySignature(transaction)) {
                 progressTracker.currentStep = NOTARISING
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
                 logger.info("Transaction notarised.")
-                serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
-                logger.info("Finalised transaction locally.")
                 transaction + notarySignatures
             } else {
                 logger.info("No need to notarise this transaction. Recording locally.")
