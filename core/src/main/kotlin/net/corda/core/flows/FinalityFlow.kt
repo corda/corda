@@ -194,7 +194,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // - broadcast notary signatures to external participants (finalise remotely)
 
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
-            serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
+            serviceHub.myInfo.platformVersion < PlatformVersionSwitches.TWO_PHASE_FINALITY
         }
 
         val useTwoPhaseFinality = (serviceHub.networkMapCache.getNodeByLegalName(ourIdentity.name)?.platformVersion
@@ -257,9 +257,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun broadcastSignaturesAndFinalise(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
         progressTracker.currentStep = BROADCASTING_POST_NOTARISATION
+        logger.info("Sending notarised signatures.")
         sessions.forEach { session ->
             try {
-                logger.info("Sending notarised signatures.")
                 session.send(notarySignatures)
                 // remote will finalise txn with notary signatures
             } catch (e: UnexpectedFlowEndException) {
@@ -449,9 +449,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
 
                 val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
                         .unwrap { it }
-                logger.info("Peer received notarised signatures.")
-
-                logger.info("Peer finalising transaction with notary signature.")
+                logger.info("Peer received notarised signatures and finalising transaction.")
                 serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
                 logger.debug { "Peer finalised transaction with notary signature." }
                 otherSideSession.send(Unit)

@@ -325,7 +325,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
                 val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
                 if (added) {
-                    logger.info ("Transaction ${transaction.id} recorded as unverified." )
+                    logger.debug { "Transaction ${transaction.id} recorded as unverified." }
                 } else {
                     logger.info("Transaction ${transaction.id} already exists so no need to record.")
                 }

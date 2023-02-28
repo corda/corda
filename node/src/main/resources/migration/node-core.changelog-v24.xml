@@ -6,12 +6,12 @@
 
     <changeSet author="R3.Corda" id="add_flow_metadata_columns">
         <addColumn tableName="node_transactions">
-            <column name="initiator" type="NVARCHAR(1024)">
+            <column name="initiator" type="NVARCHAR(128)">
                 <constraints nullable="true"/>
             </column>
         </addColumn>
         <addColumn tableName="node_transactions">
-            <column name="participants" type="NVARCHAR(64000)">
+            <column name="participants" type="NVARCHAR(1280)">
                 <constraints nullable="true"/>
             </column>
         </addColumn>
