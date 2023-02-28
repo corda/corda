@@ -1,5 +1,5 @@
 apply plugin: 'kotlin'
-apply plugin: 'com.github.johnrengelman.shadow'
+//apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies {
     implementation project(":common-logging")
@@ -12,18 +12,18 @@ dependencies {
 
 jar {
     enabled = false
-    classifier = 'ignore'
+    archiveClassifier = 'ignore'
 }
-
-shadowJar {
-    baseName = "corda-tools-error-utils"
-    manifest {
-        attributes(
-                'Main-Class': "net.corda.errorUtilities.ErrorToolKt"
-        )
-    }
-}
-
-artifacts {
-    archives shadowJar
-}
+//
+//shadowJar {
+//    baseName = "corda-tools-error-utils"
+//    manifest {
+//        attributes(
+//                'Main-Class': "net.corda.errorUtilities.ErrorToolKt"
+//        )
+//    }
+//}
+//
+//artifacts {
+//    archives shadowJar
+//}

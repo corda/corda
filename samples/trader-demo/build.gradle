@@ -27,7 +27,7 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
@@ -46,7 +46,7 @@ dependencies {
 
     // We only need this for its DUMMY_BANK constants, and
     // DO NOT want it added to Gradle's runtime classpath.
-    compileOnly project(':test-utils')
+    implementation project(':test-utils')
 
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
@@ -57,7 +57,7 @@ dependencies {
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
     testImplementation "org.slf4j:slf4j-simple:$slf4j_version"
-    testCompile(project(':node-driver')) {
+    testImplementation(project(':node-driver')) {
         // We already have a SLF4J implementation on our runtime classpath,
         // and we don't need another one.
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
@@ -79,8 +79,8 @@ task integrationTest(type: Test, dependsOn: []) {
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
+def rpcUsersList = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
-    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
     nodeDefaults {
         projectCordapp {
             deploy = false // TODO This is a bug, project cordapp should be disabled if no cordapp plugin is applied.
@@ -105,7 +105,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUsersList
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
@@ -115,7 +115,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUsersList
         rpcSettings {
             address "localhost:10009"
             adminAddress "localhost:10010"
@@ -125,7 +125,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=BankOfCorda,L=New York,C=US"
         p2pPort 10011
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUsersList
         rpcSettings {
             address "localhost:10012"
             adminAddress "localhost:10013"
@@ -137,7 +137,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     node {
         name "O=NonLogging Bank,L=London,C=GB"
         p2pPort 10025
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUsersList
         rpcSettings {
             address "localhost:10026"
             adminAddress "localhost:10027"

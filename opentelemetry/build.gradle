@@ -3,7 +3,7 @@ import static org.gradle.api.JavaVersion.VERSION_1_8
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'java-library'
-    id 'net.corda.plugins.publish-utils'
+//    id 'net.corda.plugins.publish-utils'
     id 'com.jfrog.artifactory'
 }
 
@@ -19,7 +19,7 @@ dependencies {
     implementation "io.opentelemetry:opentelemetry-exporter-otlp"
     implementation "io.opentelemetry:opentelemetry-semconv:$open_telemetry_sem_conv_version"
     implementation ("com.squareup.okhttp3:okhttp:$okhttp_version") {
-        force = true
+//        force = true
     }
 }
 

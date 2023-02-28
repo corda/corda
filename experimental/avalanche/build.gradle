@@ -3,11 +3,11 @@ apply plugin: 'application'
 // We need to set mainClassName before applying the shadow plugin.
 mainClassName = "net.corda.avalanche.MainKt"
 
-apply plugin: 'com.github.johnrengelman.shadow'
+//apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "info.picocli:picocli:$picocli_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "info.picocli:picocli:$picocli_version"
     
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -19,10 +19,10 @@ dependencies {
 
 jar.enabled = false
 
-shadowJar {
-    baseName = "avalanche"
-}
+//shadowJar {
+//    baseName = "avalanche"
+//}
 
-artifacts {
-    archives shadowJar
-}
+//artifacts {
+//    archives shadowJar
+//}

@@ -13,12 +13,12 @@ dependencies {
 }
 
 jar {
-    from (configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
-        exclude "META-INF/*.SF"
-        exclude "META-INF/*.DSA"
-        exclude "META-INF/*.RSA"
-    }
-    baseName = "blobwriter"
+//    from (configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) }) {
+//        exclude "META-INF/*.SF"
+//        exclude "META-INF/*.DSA"
+//        exclude "META-INF/*.RSA"
+//    }
+    archiveBaseName = "blobwriter"
     manifest {
         attributes(
                 'Main-Class': 'net.corda.blobwriter.BlobWriterKt'

@@ -25,12 +25,12 @@ apply plugin: 'application'
 // We need to set mainClassName before applying the shadow plugin.
 mainClassName = 'net.corda.networkbuilder.Main'
 
-apply plugin: 'com.github.johnrengelman.shadow'
+//apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 configurations {
-    compile {
+    implementation {
         exclude group: "log4j", module: "log4j"
         exclude group: "org.apache.logging.log4j"
 
@@ -71,21 +71,21 @@ processResources {
     from file("$rootDir/config/dev/log4j2.xml")
 }
 
-shadowJar {
-    baseName = 'network-builder'
-    archiveClassifier = jdkClassifier
-    version = null
-    zip64 true
-}
+//shadowJar {
+//    baseName = 'network-builder'
+//    archiveClassifier = jdkClassifier
+//    version = null
+//    zip64 true
+//}
+//
+//tasks.register('buildNetworkBuilder') {
+//    dependsOn shadowJar
+//}
 
-tasks.register('buildNetworkBuilder') {
-    dependsOn shadowJar
-}
-
-artifacts {
-    archives shadowJar
-    publish shadowJar
-}
+//artifacts {
+//    archives shadowJar
+//    publish shadowJar
+//}
 
 jar {
     enabled = false

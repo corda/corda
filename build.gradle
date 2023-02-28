@@ -248,7 +248,7 @@ if (JavaVersion.current().isJava8()) {
 apply plugin: "$kotlin_plugin_name"
 apply plugin: "$kotlin_allopen_plugin_name"
 apply plugin: "$kotlin_jpa_plugin_name"
-apply plugin: "com.github.johnrengelman.shadow"
+//apply plugin: "com.github.johnrengelman.shadow"
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -493,20 +493,20 @@ allprojects {
                 dependencySubstitution {
                     // We want to use SLF4J's version of these bindings: jcl-over-slf4j
                     // Remove any transitive dependency on Apache's version.
-                    substitute module('commons-logging:commons-logging') with module("org.slf4j:jcl-over-slf4j:$slf4j_version")
+                    substitute module('commons-logging:commons-logging') using module("org.slf4j:jcl-over-slf4j:$slf4j_version")
 
                     // Remove any transitive dependency on Logback (e.g. Liquibase 3.6 introduces this dependency)
-                    substitute module('ch.qos.logback:logback-classic') with module("org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version")
+                    substitute module('ch.qos.logback:logback-classic') using module("org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version")
 
                     // Netty-All is an uber-jar which contains every Netty module.
                     // Exclude it to force us to use the individual Netty modules instead.
-                    substitute module('io.netty:netty-all') with module("io.netty:netty-common:$netty_version")
+                    substitute module('io.netty:netty-all') using module("io.netty:netty-common:$netty_version")
 
                     // Force dependencies to use the same version of Guava as Corda.
-                    substitute module('com.google.guava:guava') with module("com.google.guava:guava:$guava_version")
+                    substitute module('com.google.guava:guava') using module("com.google.guava:guava:$guava_version")
 
                     // Effectively delete this unused and unwanted transitive dependency of Artemis.
-                    substitute module('org.jgroups:jgroups') with module("org.apache.activemq:artemis-commons:$artemis_version")
+                    substitute module('org.jgroups:jgroups') using module("org.apache.activemq:artemis-commons:$artemis_version")
                 }
             }
         }
@@ -517,11 +517,11 @@ allprojects {
             cfg.resolutionStrategy {
                 dependencySubstitution {
                     // Force dependencies to use the same version of Kotlin as Corda.
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk8') with module("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk7') with module("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') with module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
-                    substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk8') using module("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk7') using module("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') using module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib') using module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-reflect') using module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
                 }
 
                 // FORCE Gradle to use latest SNAPSHOT dependencies.
@@ -723,7 +723,7 @@ bintrayConfig {
 // Note: corda.jar is used at runtime so no runtime ZIP is necessary.
 // Resulting ZIP can be found in "build/distributions"
 task buildCordappDependenciesZip(type: Zip) {
-    baseName 'corda-deps'
+    archiveBaseName = 'corda-deps'
     from configurations.runtimeOnly
     from configurations.implementation
     from configurations.testImplementation
@@ -744,7 +744,7 @@ artifactory {
         defaults {
             // Root project applies the plugin (for this block) but does not need to be published
             if (project != rootProject) {
-                publications(project.extensions.publish.name())
+//                publications(project.extensions.publish.name())
             }
         }
     }

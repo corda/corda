@@ -15,7 +15,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-test-db'
+    archiveBaseName = 'corda-test-db'
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
@@ -24,5 +24,5 @@ jar {
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

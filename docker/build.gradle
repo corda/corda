@@ -18,19 +18,19 @@ apply plugin: 'application'
 
 // We need to set mainClassName before applying the shadow plugin.
 mainClassName = 'net.corda.core.ConfigExporterMain'
-apply plugin: 'com.github.johnrengelman.shadow'
+//apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies{
-    compile project(':node')
+    implementation project(':node')
 }
 
-shadowJar {
-    baseName = 'config-exporter'
-    classifier = null
-    version = null
-    zip64 true
-    exclude '**/Log4j2Plugins.dat'
-}
+//shadowJar {
+//    baseName = 'config-exporter'
+//    classifier = null
+//    version = null
+//    zip64 true
+//    exclude '**/Log4j2Plugins.dat'
+//}
 
 enum ImageVariant {
     UBUNTU_ZULU("Dockerfile", "1.8", "zulu-openjdk8"),

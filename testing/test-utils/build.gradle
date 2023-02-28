@@ -8,31 +8,31 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Testing utilities for Corda'
 
 dependencies {
-    compile project(':test-common')
-    compile project(':core-test-utils')
-    compile(project(':node')) {
+    implementation project(':test-common')
+    implementation project(':core-test-utils')
+    implementation(project(':node')) {
         // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
     }
-    compile project(':client:mock')
+    implementation project(':client:mock')
 
-    compile "com.google.guava:guava:$guava_version"
+    implementation "com.google.guava:guava:$guava_version"
 
     // Guava: Google test library (collections test suite)
-    compile "com.google.guava:guava-testlib:$guava_version"
+    implementation "com.google.guava:guava-testlib:$guava_version"
 
     // OkHTTP: Simple HTTP library.
-    compile "com.squareup.okhttp3:okhttp:$okhttp_version"
-    compile project(':confidential-identities')
+    implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
+    implementation project(':confidential-identities')
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
-    compile "com.google.jimfs:jimfs:1.1"
+    implementation "com.google.jimfs:jimfs:1.1"
 
     testImplementation "org.apache.commons:commons-lang3:3.9"
 }
 
 jar {
-    baseName 'corda-test-utils'
+    archiveBaseName = 'corda-test-utils'
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
@@ -41,5 +41,5 @@ jar {
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

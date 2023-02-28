@@ -7,8 +7,8 @@ apply plugin: 'com.jfrog.artifactory'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestCompile.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
@@ -25,9 +25,9 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':test-utils')
+    implementation project(':test-utils')
 
-    compile group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
+    implementation group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
 //    integrationTestRuntime group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
 
     // Integration test helpers
@@ -41,16 +41,16 @@ dependencies {
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets
-    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
-    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
-    compile "javax.servlet:javax.servlet-api:${servlet_version}"
+    implementation "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    implementation "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    implementation "javax.servlet:javax.servlet-api:${servlet_version}"
 
-    compile "org.gradle:gradle-tooling-api:${gradle.gradleVersion}"
+    implementation "org.gradle:gradle-tooling-api:${gradle.gradleVersion}"
     
     // Jersey for JAX-RS implementation for use in Jetty
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+    implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    implementation "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    implementation "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 }
 
 compileJava {
@@ -68,7 +68,7 @@ task integrationTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-node-driver'
+    archiveBaseName = 'corda-node-driver'
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
@@ -87,7 +87,7 @@ tasks.named('javadoc', Javadoc) {
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }
 
 scanApi {

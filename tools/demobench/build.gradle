@@ -42,40 +42,40 @@ applicationDefaultJvmArgs = [
 ]
 
 configurations {
-    compile {
+    implementation {
         // We don't need Hibernate just for its @Type annotation.
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }
 }
 
 dependencies {
-    compile project(':client:rpc')
-    compile project(':finance:contracts')
-    compile project(':finance:workflows')
-    compile project(':tools:worldmap')
+    implementation project(':client:rpc')
+    implementation project(':finance:contracts')
+    implementation project(':finance:workflows')
+    implementation project(':tools:worldmap')
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
-    compile "no.tornado:tornadofx:$tornadofx_version"
+    implementation "no.tornado:tornadofx:$tornadofx_version"
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
-    compile "org.controlsfx:controlsfx:$controlsfx_version"
+    implementation "org.controlsfx:controlsfx:$controlsfx_version"
 
-    compile "com.h2database:h2:$h2_version"
-    compile "net.java.dev.jna:jna-platform:$jna_version"
-    compile "com.google.guava:guava:$guava_version"
+    implementation "com.h2database:h2:$h2_version"
+    implementation "net.java.dev.jna:jna-platform:$jna_version"
+    implementation "com.google.guava:guava:$guava_version"
 
-    compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
-    compile "com.typesafe:config:$typesafe_config_version"
+    implementation "org.slf4j:log4j-over-slf4j:$slf4j_version"
+    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
+    implementation "com.typesafe:config:$typesafe_config_version"
 
     // FontAwesomeFX: icons in the form of a font.
-    compile "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
-    compile "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
+    implementation "de.jensd:fontawesomefx-fontawesome:$fontawesomefx_fontawesome_version"
+    implementation "de.jensd:fontawesomefx-commons:$fontawesomefx_commons_version"
 
-    compile "org.jetbrains.jediterm:jediterm-pty:$jediterm_version"
-    compile("org.jetbrains.pty4j:pty4j:$pty4j_version") {
+    implementation "org.jetbrains.jediterm:jediterm-pty:$jediterm_version"
+    implementation("org.jetbrains.pty4j:pty4j:$pty4j_version") {
         exclude group: 'log4j'
     }
 
@@ -112,21 +112,21 @@ test {
 distributions {
     main() {
         contents {
-            from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
-                rename 'node-explorer-(.*)', 'node-explorer.jar'
-                into 'explorer'
-                fileMode = 0444
-            }
-            from(project(':node:capsule').tasks.buildCordaJAR) {
-                rename 'corda-(.*)', 'corda.jar'
-                into 'corda'
-                fileMode = 0444
-            }
-            from(project(':testing:testserver:testcapsule:').tasks.buildWebserverJar) {
-                rename 'corda-testserver-(.*)', 'corda-testserver.jar'
-                into 'corda'
-                fileMode = 0444
-            }
+//            from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
+//                rename 'node-explorer-(.*)', 'node-explorer.jar'
+//                into 'explorer'
+//                fileMode = 0444
+//            }
+//            from(project(':node:capsule').tasks.buildCordaJAR) {
+//                rename 'corda-(.*)', 'corda.jar'
+//                into 'corda'
+//                fileMode = 0444
+//            }
+//            from(project(':testing:testserver:testcapsule:').tasks.buildWebserverJar) {
+//                rename 'corda-testserver-(.*)', 'corda-testserver.jar'
+//                into 'corda'
+//                fileMode = 0444
+//            }
             from(project(':finance:contracts').tasks.jar) {
                 rename 'corda-finance-contracts(.*)', 'corda-finance-contracts.jar'
                 into 'cordapps'

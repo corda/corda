@@ -34,5 +34,5 @@ cordapp {
 }
 
 jar {
-    baseName 'corda-irs-demo-contracts'
+    archiveBaseName = 'corda-irs-demo-contracts'
 }

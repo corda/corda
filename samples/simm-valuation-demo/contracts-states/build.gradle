@@ -76,7 +76,7 @@ task generateDependencies {
 processResources.finalizedBy generateDependencies
 
 jar {
-    classifier = 'fat'
+    archiveClassifier = 'fat'
 }
 
 import proguard.gradle.ProGuardTask
@@ -127,6 +127,6 @@ task sign(type: net.corda.plugins.SignJar) {
 jar.finalizedBy shrink
 shrink.finalizedBy sign
 
-artifacts {
-    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
-}
+//artifacts {
+//    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
+//}

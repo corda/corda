@@ -10,11 +10,11 @@ repositories {
 }
 
 dependencies {
-    compile project(":core")
+    implementation project(":core")
 }
 
 jar {
-    baseName "testing-dbfailure-contracts"
+    archiveBaseName = "testing-dbfailure-contracts"
     manifest {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.

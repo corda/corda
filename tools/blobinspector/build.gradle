@@ -4,26 +4,26 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
-    compile project(':client:jackson')
-    compile project(':tools:cliutils')
-    compile project(":common-logging")
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+    implementation project(':client:jackson')
+    implementation project(':tools:cliutils')
+    implementation project(":common-logging")
+    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    implementation "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
-    testCompile(project(':test-utils')) {
+    testImplementation(project(':test-utils')) {
         exclude module: 'node-api'
         exclude module: 'contracts'
     }
 }
 
 jar {
-    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
-        exclude "META-INF/*.SF"
-        exclude "META-INF/*.DSA"
-        exclude "META-INF/*.RSA"
-    }
-    baseName = "blob-inspector"
+//    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+//        exclude "META-INF/*.SF"
+//        exclude "META-INF/*.DSA"
+//        exclude "META-INF/*.RSA"
+//    }
+    archiveBaseName = "blob-inspector"
     manifest {
         attributes(
                 'Main-Class': 'net.corda.blobinspector.BlobInspectorKt'

@@ -23,9 +23,9 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-common-configuration-parsing'
+    archiveBaseName = 'corda-common-configuration-parsing'
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

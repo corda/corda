@@ -26,7 +26,7 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
@@ -34,10 +34,10 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
-    compile "javax.servlet:javax.servlet-api:${servlet_version}"
-    compile "javax.ws.rs:javax.ws.rs-api:2.1.1"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    implementation "javax.servlet:javax.servlet-api:${servlet_version}"
+    implementation "javax.ws.rs:javax.ws.rs-api:2.1.1"
     cordaCompile project(':client:rpc')
 
     // Cordformation needs a SLF4J implementation when executing the Network
@@ -52,7 +52,7 @@ dependencies {
     cordapp project(':samples:attachment-demo:contracts')
     cordapp project(':samples:attachment-demo:workflows')
 
-    testCompile(project(':node-driver')) {
+    testImplementation(project(':node-driver')) {
         // We already have a SLF4J implementation on our runtime classpath,
         // and we don't need another one.
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
@@ -77,17 +77,17 @@ task integrationTest(type: Test, dependsOn: []) {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
-    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
-                                                                             "InvokeRpc.partiesFromName",
-                                                                             "InvokeRpc.notaryPartyFromX500Name",
-                                                                             "InvokeRpc.attachmentExists",
-                                                                             "InvokeRpc.openAttachment",
-                                                                             "InvokeRpc.uploadAttachment",
-                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
-                                                                             "InvokeRpc.startTrackedFlowDynamic",
-                                                                             "InvokeRpc.nodeInfo"]]]
+def rpcUserList = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                                                                            "InvokeRpc.partiesFromName",
+                                                                            "InvokeRpc.notaryPartyFromX500Name",
+                                                                            "InvokeRpc.attachmentExists",
+                                                                            "InvokeRpc.openAttachment",
+                                                                            "InvokeRpc.uploadAttachment",
+                                                                            "InvokeRpc.internalVerifiedTransactionsFeed",
+                                                                            "InvokeRpc.startTrackedFlowDynamic",
+                                                                            "InvokeRpc.nodeInfo"]]]
 
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     nodeDefaults {
         projectCordapp {
             deploy = false
@@ -103,7 +103,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         ]
         p2pPort 10002
         cordapps = []
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUserList
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10004"
@@ -114,7 +114,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         cordapps = []
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUserList
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
@@ -130,7 +130,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         }
         webPort 10010
         cordapps = []
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUserList
         extraConfig = ['h2Settings.address': 'localhost:10014']
     }
 }

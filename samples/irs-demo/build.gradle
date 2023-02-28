@@ -1,5 +1,5 @@
 plugins {
-    id "org.springframework.boot" version "1.5.21.RELEASE"
+//    id "org.springframework.boot" version "1.5.21.RELEASE"
     id 'io.spring.dependency-management' version '1.0.9.RELEASE' apply false
 }
 
@@ -39,19 +39,19 @@ sourceSets {
 }
 
 configurations {
-    slowIntegrationTestCompile.extendsFrom testCompile
+    slowIntegrationTestCompile.extendsFrom testImplementation
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
     demoArtifacts.extendsFrom testRuntimeClasspath
-    systemTestCompile.extendsFrom testCompile
+    systemTestCompile.extendsFrom testImplementation
 }
 
 evaluationDependsOn("cordapp")
 evaluationDependsOn("web")
 
 dependencies {
-    compile "commons-io:commons-io:$commons_io_version"
-    compile project(":samples:irs-demo:web")
-    compile('org.springframework.boot:spring-boot-starter-web') {
+    implementation "commons-io:commons-io:$commons_io_version"
+    implementation project(":samples:irs-demo:web")
+    implementation('org.springframework.boot:spring-boot-starter-web') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
@@ -67,15 +67,15 @@ dependencies {
 
     testImplementation "org.assertj:assertj-core:${assertj_version}"
 
-    slowIntegrationtestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")
+//    slowIntegrationtestCompile project(path: ":samples:irs-demo:web", configuration: "demoArtifacts")
     testImplementation "com.palantir.docker.compose:docker-compose-rule-junit4:$docker_compose_rule_version"
     testImplementation "org.seleniumhq.selenium:selenium-java:$selenium_version"
     testImplementation "com.github.detro:ghostdriver:$ghostdriver_version"
 }
 
-bootRepackage {
-    enabled = false
-}
+//bootRepackage {
+//    enabled = false
+//}
 
 task slowIntegrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
@@ -87,7 +87,7 @@ task systemTest(type: Test, dependsOn: ["cordapp:prepareDockerNodes", "web:gener
     classpath = sourceSets.systemTest.runtimeClasspath
 
     systemProperty "CORDAPP_DOCKER_COMPOSE", tasks.getByPath("cordapp:prepareDockerNodes").dockerComposePath.toString()
-    systemProperty "WEB_DOCKER_COMPOSE", tasks.getByPath("web:generateDockerCompose").dockerComposePath.toString()
+//    systemProperty "WEB_DOCKER_COMPOSE", tasks.getByPath("web:generateDockerCompose").dockerComposePath.toString()
 
     def phantomJsPath = System.getProperty("phantomjs.binary.path") ?: System.getenv("PHANTOMJS_BINARY_PATH")
     if (phantomJsPath != null) {

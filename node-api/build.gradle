@@ -73,7 +73,7 @@ configurations {
 }
 
 task testJar(type: Jar) {
-    classifier "tests"
+    archiveClassifier = "tests"
     from sourceSets.test.output
 }
 
@@ -83,9 +83,9 @@ artifacts {
 }
 
 jar {
-    baseName 'corda-node-api'
+    archiveBaseName = 'corda-node-api'
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

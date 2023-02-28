@@ -95,7 +95,7 @@ task archiveApiDocs(type: Tar) {
     dependsOn apidocs
     from buildDir
     include 'html/**'
-    extension 'tgz'
+    archiveExtension = 'tgz'
     compression Compression.GZIP
 }
 

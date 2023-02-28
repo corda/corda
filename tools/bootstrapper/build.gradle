@@ -11,11 +11,11 @@ dependencies {
     implementation project(':common-configuration-parsing')
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 
-    testCompile(project(':test-utils')) {
+    testImplementation(project(':test-utils')) {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
     }
 
-    testCompile(project(':test-cli'))
+    testImplementation(project(':test-cli'))
     testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "org.mockito:mockito-core:$mockito_version"
 }
@@ -30,10 +30,10 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
-    baseName = "network-bootstrapper"
+//    from(project(':node:capsule').tasks['buildCordaJAR']) {
+//        rename 'corda-(.*)', 'corda.jar'
+//    }
+    archiveBaseName = "network-bootstrapper"
     manifest {
         attributes(
                 'Main-Class': 'net.corda.bootstrapper.MainKt'

@@ -31,8 +31,8 @@ dependencies {
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
+def rpcUsersList = [['username': "default", 'password': "default", 'permissions': ['ALL']]]
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
-    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     nodeDefaults{
         projectCordapp {
             deploy = false
@@ -57,7 +57,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
         cordapps = []
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUsersList
         rpcSettings {
             port 10007
             adminPort 10008
@@ -68,7 +68,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         name "O=Bank B,L=New York,C=US"
         p2pPort 10009
         cordapps = []
-        rpcUsers = ext.rpcUsers
+        rpcUsers = rpcUsersList
         rpcSettings {
             port 10011
             adminPort 10012

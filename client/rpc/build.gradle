@@ -8,7 +8,7 @@ description 'Corda client RPC modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     smokeTestCompile.extendsFrom compile
@@ -56,9 +56,9 @@ sourceSets {
 }
 
 processSmokeTestResources {
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
+//    from(project(':node:capsule').tasks['buildCordaJAR']) {
+//        rename 'corda-(.*)', 'corda.jar'
+//    }
     from(project(':finance:workflows').tasks['jar']) {
         rename '.*finance-workflows-.*', 'cordapp-finance-workflows.jar'
     }
@@ -121,12 +121,12 @@ task smokeTest(type: Test) {
 }
 
 jar {
-    baseName 'corda-rpc'
+    archiveBaseName = 'corda-rpc'
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.rpc'
     }
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

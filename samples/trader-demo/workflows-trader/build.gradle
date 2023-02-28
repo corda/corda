@@ -3,7 +3,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     cordaCompile project(':core')
 
     // The trader demo CorDapp depends upon Cash CorDapp features
@@ -23,7 +23,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-trader-demo-workflows'
+    archiveBaseName = 'corda-trader-demo-workflows'
 }
 
 cordapp {

@@ -32,7 +32,7 @@ configurations {
 }
 
 dependencies {
-    compileOnly project(':core')
+    implementation project(':core')
 
     // Configure these by hand. It should be a minimal subset of core's dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
@@ -44,8 +44,8 @@ dependencies {
     api "com.google.code.findbugs:jsr305:$jsr305_version"
     api "org.slf4j:slf4j-api:$slf4j_version"
 
-    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
-    compileOnly project(':opentelemetry')
+    implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    implementation project(':opentelemetry')
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.

@@ -14,7 +14,7 @@ buildscript {
 plugins {
     id 'com.craigburke.client-dependencies' version '1.4.0'
     id 'io.spring.dependency-management'
-    id 'org.springframework.boot'
+//    id 'org.springframework.boot'
 }
 
 group = "${parent.group}.irs-demo"
@@ -29,16 +29,16 @@ dependencyManagement {
 
 clientDependencies {
     registry 'realBower', type:'bower', url:'https://registry.bower.io'
-    realBower {
-        "angular"("1.5.8")
-        "jquery"("^3.0.0")
-        "angular-route"("1.5.8")
-        "lodash"("^4.13.1")
-        "angular-fcsa-number"("^1.5.3")
-        "jquery.maskedinput"("^1.4.1")
-        "requirejs"("^2.2.0")
-        "semantic-ui"("^2.2.2", into: "semantic")
-    }
+//    realBower {
+//        "angular"("1.5.8")
+//        "jquery"("^3.0.0")
+//        "angular-route"("1.5.8")
+//        "lodash"("^4.13.1")
+//        "angular-fcsa-number"("^1.5.3")
+//        "jquery.maskedinput"("^1.4.1")
+//        "requirejs"("^2.2.0")
+//        "semantic-ui"("^2.2.2", into: "semantic")
+//    }
 
     // put the JS dependencies into src directory so it can easily be referenced
     // from HTML files in webapp frontend, useful for testing/development
@@ -68,7 +68,7 @@ dependencies {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
-    compile('org.springframework.boot:spring-boot-starter-log4j2')
+    implementation('org.springframework.boot:spring-boot-starter-log4j2')
     runtimeOnly("org.apache.logging.log4j:log4j-web:$log4j_version")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
     implementation project(":client:rpc")
@@ -83,7 +83,7 @@ dependencies {
     // JOpt: for command line flags.
     implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
-    testCompile('org.springframework.boot:spring-boot-starter-test') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
@@ -111,7 +111,7 @@ task deployWebapps(type: Copy, dependsOn: ['jar', 'bootRepackage']) {
 }
 
 task demoJar(type: Jar) {
-    classifier "test"
+    archiveClassifier = "test"
     from sourceSets.test.output
 }
 
@@ -119,55 +119,55 @@ artifacts {
     demoArtifacts demoJar
 }
 
-task createDockerfile(type: com.bmuschko.gradle.docker.tasks.image.Dockerfile, dependsOn: [bootRepackage]) {
-    destFile = file("$docker_dir/Dockerfile")
+//task createDockerfile(type: com.bmuschko.gradle.docker.tasks.image.Dockerfile, dependsOn: [bootRepackage]) {
+//    destFile = file("$docker_dir/Dockerfile")
+//
+//    from 'azul/zulu-openjdk-alpine:8u152'
+//    copyFile jar.archiveName, "/opt/irs/web/"
+//    workingDir "/opt/irs/web/"
+//    defaultCommand "sh", "-c", "java -Dcorda.host=\$CORDA_HOST -jar ${jar.archiveName}"
+//}
 
-    from 'azul/zulu-openjdk-alpine:8u152'
-    copyFile jar.archiveName, "/opt/irs/web/"
-    workingDir "/opt/irs/web/"
-    defaultCommand "sh", "-c", "java -Dcorda.host=\$CORDA_HOST -jar ${jar.archiveName}"
-}
+//task prepareDockerDir(type: Copy, dependsOn: [bootRepackage, createDockerfile]) {
+//    from jar
+//    into docker_dir
+//}
 
-task prepareDockerDir(type: Copy, dependsOn: [bootRepackage, createDockerfile]) {
-    from jar
-    into docker_dir
-}
-
-task generateDockerCompose(dependsOn: [prepareDockerDir]) {
-
-    def outFile = new File(project.buildDir, "docker-compose.yml")
-
-    ext['dockerComposePath'] = outFile
-
-    doLast {
-        def dockerComposeObject = [
-            "version": "3",
-            "services": [
-                "web-a": [
-                    "build": "$docker_dir".toString(),
-                    "environment": [
-                        "CORDA_HOST": "bank-a:10003"
-                    ],
-                    "ports": ["8080"]
-                ],
-                "web-b": [
-                    "build": "$docker_dir".toString(),
-                    "environment": [
-                        "CORDA_HOST": "bank-b:10003"
-                    ],
-                    "ports": ["8080"]
-                ]
-            ]
-        ]
-
-        def options = new org.yaml.snakeyaml.DumperOptions()
-        options.indent = 2
-        options.defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
-
-        def dockerComposeContent = new org.yaml.snakeyaml.Yaml(options).dump(dockerComposeObject)
-
-        Files.write(outFile.toPath(), dockerComposeContent.getBytes(StandardCharsets.UTF_8))
-    }
-
-    outputs.file(outFile)
-}
+//task generateDockerCompose(dependsOn: [prepareDockerDir]) {
+//
+//    def outFile = new File(project.buildDir, "docker-compose.yml")
+//
+//    ext['dockerComposePath'] = outFile
+//
+//    doLast {
+//        def dockerComposeObject = [
+//            "version": "3",
+//            "services": [
+//                "web-a": [
+//                    "build": "$docker_dir".toString(),
+//                    "environment": [
+//                        "CORDA_HOST": "bank-a:10003"
+//                    ],
+//                    "ports": ["8080"]
+//                ],
+//                "web-b": [
+//                    "build": "$docker_dir".toString(),
+//                    "environment": [
+//                        "CORDA_HOST": "bank-b:10003"
+//                    ],
+//                    "ports": ["8080"]
+//                ]
+//            ]
+//        ]
+//
+//        def options = new org.yaml.snakeyaml.DumperOptions()
+//        options.indent = 2
+//        options.defaultFlowStyle = DumperOptions.FlowStyle.BLOCK
+//
+//        def dockerComposeContent = new org.yaml.snakeyaml.Yaml(options).dump(dockerComposeObject)
+//
+//        Files.write(outFile.toPath(), dockerComposeContent.getBytes(StandardCharsets.UTF_8))
+//    }
+//
+//    outputs.file(outFile)
+//}

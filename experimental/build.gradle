@@ -12,13 +12,13 @@ compileTestKotlin {
 
 dependencies {
     implementation project(':core')
-    compile project(':finance:contracts')
-    compile project(':finance:workflows')
+    implementation project(':finance:contracts')
+    implementation project(':finance:workflows')
 
     // ObjectWeb Asm: a library for synthesising and working with JVM bytecode.
-    compile "org.ow2.asm:asm:$asm_version"
+    implementation "org.ow2.asm:asm:$asm_version"
 
-    compile "com.google.guava:guava:$guava_version"
+    implementation "com.google.guava:guava:$guava_version"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

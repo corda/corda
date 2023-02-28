@@ -20,10 +20,10 @@ dependencies {
 }
 
 jar {
-    baseName = "corda-tools-cliutils"
+    archiveBaseName = "corda-tools-cliutils"
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }
 

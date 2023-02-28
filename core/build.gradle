@@ -17,7 +17,7 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     smokeTestCompile.extendsFrom compile
@@ -133,7 +133,7 @@ test {
 }
 
 task testJar(type: Jar) {
-    classifier "tests"
+    archiveClassifier = "tests"
     from sourceSets.test.output
 }
 
@@ -180,7 +180,7 @@ scanApi {
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }
 
 tasks.register("writeTestResources", JavaExec) {

@@ -14,7 +14,7 @@ configurations {
     }
 
     // Compile against the deterministic artifacts to ensure that we use only the deterministic API subset.
-    compileOnly.extendsFrom deterministicArtifacts
+    implementation.extendsFrom deterministicArtifacts
     runtimeArtifacts.extendsFrom api
 }
 

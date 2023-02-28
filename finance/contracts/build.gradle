@@ -54,5 +54,5 @@ cordapp {
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

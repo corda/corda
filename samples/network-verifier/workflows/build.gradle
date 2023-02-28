@@ -23,5 +23,5 @@ cordapp {
 }
 
 jar {
-    baseName 'corda-network-verifier-workflows'
+    archiveBaseName = 'corda-network-verifier-workflows'
 }

@@ -1,7 +1,7 @@
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
 apply plugin: 'kotlin'
-apply plugin: 'net.corda.plugins.publish-utils'
+//apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda serialization'
@@ -64,7 +64,7 @@ task testJar(type: Jar) {
 
 artifacts {
     testArtifacts testJar
-    publish testJar
+//    publish testJar
 }
 
 jar {

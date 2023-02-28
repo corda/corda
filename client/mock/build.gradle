@@ -27,7 +27,7 @@ dependencies {
 }
 
 jar {
-    baseName 'corda-mock'
+    archiveBaseName = 'corda-mock'
     manifest {
         attributes(
             'Automatic-Module-Name': 'net.corda.client.mock',
@@ -40,5 +40,5 @@ jar {
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }

@@ -21,16 +21,16 @@ ext {
 }
 
 evaluationDependsOn(':core-deterministic')
-evaluationDependsOn(':serialization-deterministic')
+//evaluationDependsOn(':serialization-deterministic')
 evaluationDependsOn(':serialization-djvm:deserializers')
 evaluationDependsOn(':node:djvm')
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
     
-    slowIntegrationTestCompile.extendsFrom testCompile
+    slowIntegrationTestCompile.extendsFrom testImplementation
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     jdkRt
@@ -206,7 +206,7 @@ dependencies {
     integrationTestCompile "org.apache.qpid:qpid-jms-client:${protonj_version}"
 
     // BFT-Smart dependencies
-    implementation 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
+//    implementation 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
     // Java Atomix: RAFT library
     implementation 'io.atomix.copycat:copycat-client:1.2.3'
@@ -238,19 +238,19 @@ dependencies {
     // The actual Byteman agent which should only be in the classpath of the out of process nodes
     slowIntegrationTestCompile "org.jboss.byteman:byteman:4.0.11"
 
-    testCompile(project(':test-cli'))
-    testCompile(project(':test-utils'))
+    testImplementation(project(':test-cli'))
+    testImplementation(project(':test-utils'))
 
     slowIntegrationTestImplementation sourceSets.main.output
     slowIntegrationTestImplementation sourceSets.test.output
-    slowIntegrationTestImplementation configurations.implementation
-    slowIntegrationTestImplementation configurations.testImplementation
-    slowIntegrationTestRuntimeOnly configurations.runtimeOnly
-    slowIntegrationTestRuntimeOnly configurations.testRuntimeOnly
+//    slowIntegrationTestImplementation configurations.implementation
+//    slowIntegrationTestImplementation configurations.testImplementation
+//    slowIntegrationTestRuntimeOnly configurations.runtimeOnly
+//    slowIntegrationTestRuntimeOnly configurations.testRuntimeOnly
 
     integrationTestCompile(project(":testing:cordapps:missingmigration"))
 
-    testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
+    testImplementation project(':testing:cordapps:dbfailure:dbfworkflows')
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -315,7 +315,7 @@ quasar {
 }
 
 jar {
-    baseName 'corda-node'
+    archiveBaseName = 'corda-node'
     exclude 'sandbox/java/**'
     exclude 'sandbox/org/**'
     exclude 'sandbox/net/corda/core/crypto/SecureHash.class'
@@ -328,7 +328,7 @@ jar {
 }
 
 publish {
-    name jar.baseName
+    name jar.archiveBaseName
 }
 
 tasks.named('test', Test) {

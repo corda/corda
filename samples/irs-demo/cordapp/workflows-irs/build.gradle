@@ -16,15 +16,15 @@ dependencies {
     cordaCompile project(':core')
     
 
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
     
     // only included to control the `DemoClock` as part of the demo application
     // normally `:node` should not be depended on in any CorDapps
-    compileOnly project(':node')
+    implementation project(':node')
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "commons-io:commons-io:$commons_io_version"
+    implementation "commons-io:commons-io:$commons_io_version"
 
     testImplementation project(':node-driver')
     
@@ -52,11 +52,11 @@ cordapp {
 }
 
 jar {
-    baseName 'corda-irs-demo-workflows'
+    archiveBaseName = 'corda-irs-demo-workflows'
 }
 
 task testJar(type: Jar) {
-    classifier "tests"
+    archiveClassifier = "tests"
     from sourceSets.main.output
     from sourceSets.test.output
 }

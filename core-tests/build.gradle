@@ -5,7 +5,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 description 'Corda core tests'
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     smokeTestCompile.extendsFrom compile
@@ -41,9 +41,9 @@ sourceSets {
 
 processSmokeTestResources {
     // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
+//    from(project(':node:capsule').tasks['buildCordaJAR']) {
+//        rename 'corda-(.*)', 'corda.jar'
+//    }
 }
 
 dependencies {
@@ -64,16 +64,16 @@ dependencies {
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testImplementation project(":node-driver")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Hamkrest, for fluent, composable matchers
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"
 
     // SLF4J: commons-logging bindings for a SLF4J back end
-    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
-    compile "org.slf4j:slf4j-api:$slf4j_version"
+    implementation "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     // AssertJ: for fluent assertions for testing
     testImplementation "org.assertj:assertj-core:${assertj_version}"
@@ -104,7 +104,7 @@ tasks.withType(Test).configureEach {
 }
 
 task testJar(type: Jar) {
-    classifier "tests"
+    archiveClassifier = "tests"
     from sourceSets.test.output
 }
 
@@ -114,7 +114,7 @@ task integrationTest(type: Test) {
 }
 
 task smokeTestJar(type: Jar) {
-    classifier 'smokeTests'
+    archiveClassifier = 'smokeTests'
     from sourceSets.smokeTest.output
 }
 

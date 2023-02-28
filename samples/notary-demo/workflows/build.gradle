@@ -10,7 +10,7 @@ dependencies {
     // We need to compile against the Node, but also DO NOT
     // want the Node bundled inside the CorDapp or added to
     // Gradle's runtime classpath.
-    compileOnly project(':node')
+    implementation project(':node')
 
     cordapp project(':samples:notary-demo:contracts')
 }
@@ -27,5 +27,5 @@ cordapp {
 }
 
 jar {
-    baseName 'corda-notary-demo-workflows'
+    archiveBaseName = 'corda-notary-demo-workflows'
 }
