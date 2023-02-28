@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
+import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
@@ -446,6 +447,10 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         catch (e: SQLException) {
             logger.error("Peer failure upon recording or finalising transaction: $e")
             throw UnexpectedFlowEndException("Peer failure upon recording or finalising transaction.", e.cause)
+        }
+        catch (c: CordaRuntimeException) {
+            println("CRE: ${c.message}")
+            otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
         }
 
         return stx
