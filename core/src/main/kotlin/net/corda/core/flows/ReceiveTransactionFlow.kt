@@ -27,10 +27,13 @@ import java.security.SignatureException
  * @property otherSideSession session to the other side which is calling [SendTransactionFlow].
  * @property checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
  * @property statesToRecord which transaction states should be recorded in the vault, if any.
+ * @property overrideAutoAck if set then the caller of this flow is responsible for explicitly sending a FetchDataFlow.Request.End
+ *           acknowledgement to indicate transaction resolution is complete. See usage within [FinalityFlow].
  */
 open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
                                                             private val checkSufficientSignatures: Boolean = true,
-                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE) : FlowLogic<SignedTransaction>() {
+                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
+                                                            private val overrideAutoAck: Boolean = false) : FlowLogic<SignedTransaction>() {
     @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
@@ -47,7 +50,7 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
             it.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(it.networkParametersHash)
-            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord))
+            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord, overrideAutoAck))
             logger.info("Transaction dependencies resolution completed.")
             try {
                 it.verify(serviceHub, checkSufficientSignatures)

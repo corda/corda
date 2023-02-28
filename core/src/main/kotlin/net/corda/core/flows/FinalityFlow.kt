@@ -8,6 +8,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.pushToLoggingContext
@@ -239,9 +240,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             sessions.forEach { session ->
                 try {
                     subFlow(SendTransactionFlow(session, tx))
-                    logger.info("Awaiting acknowledgement from party ${session.counterparty} to indicate successful receipt of un-notarised transaction.")
-                    session.receive<Unit>()
-                    logger.info("Party ${session.counterparty} received the transaction without notary signature(s).")
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "${session.counterparty} has finished prematurely and we're trying to send them a transaction without notary signature(s). " +
@@ -274,20 +272,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         progressTracker.currentStep = FINALISING_TRANSACTION
         serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
         logger.info("Finalised transaction locally.")
-        sessions.forEach { session ->
-            try {
-                logger.info("Awaiting acknowledgement from party ${session.counterparty} to indicate successful receipt of notary signature(s).")
-                session.receive<Unit>()
-                logger.info("Party ${session.counterparty} received notary signature(s).")
-            } catch (e: UnexpectedFlowEndException) {
-                throw UnexpectedFlowEndException(
-                        "${session.counterparty} has finished prematurely whilst we await acknowledgement of receipt of notary signature(s)." +
-                                ": (${e.message})",
-                        e.cause,
-                        e.originalErrorId
-                )
-            }
-        }
     }
 
     @Suspendable
@@ -430,7 +414,8 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod")
     @Suspendable
     override fun call(): SignedTransaction {
-        val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord) {
+        val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession,
+                checkSufficientSignatures = false, statesToRecord = statesToRecord, overrideAutoAck = true) {
             override fun checkBeforeRecording(stx: SignedTransaction) {
                 require(expectedTxId == null || expectedTxId == stx.id) {
                     "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
@@ -444,17 +429,17 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 logger.info("Peer recording transaction without notary signature.")
                 serviceHub.recordUnnotarisedTransaction(stx,
                         FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
-                logger.debug { "Peer recorded transaction without notary signature." }
-                otherSideSession.send(Unit)
+                otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
+                logger.info("Peer recorded transaction without notary signature.")
 
                 val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
                         .unwrap { it }
                 logger.info("Peer received notarised signature.")
                 serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
-                otherSideSession.send(Unit)
                 logger.info("Peer finalised transaction with notary signature.")
             } else {
                 serviceHub.recordTransactions(statesToRecord, setOf(stx))
+                otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
                 logger.info("Peer successfully recorded received transaction.")
             }
         }
