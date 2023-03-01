@@ -10,7 +10,6 @@ import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.telemetry.telemetryServiceInternal
