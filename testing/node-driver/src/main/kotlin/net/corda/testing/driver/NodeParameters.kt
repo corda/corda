@@ -3,6 +3,7 @@ package net.corda.testing.driver
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
@@ -36,7 +37,8 @@ data class NodeParameters(
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
         val logLevelOverride: String? = null,
-        val rpcAddress: NetworkHostAndPort? = null
+        val rpcAddress: NetworkHostAndPort? = null,
+        val platformVersion: Int = PLATFORM_VERSION
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
@@ -53,6 +55,7 @@ data class NodeParameters(
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
     fun withLogLevelOverride(logLevelOverride: String?): NodeParameters = copy(logLevelOverride = logLevelOverride)
+    fun withPlatformVersion(platformVersion: Int): NodeParameters = copy(platformVersion = platformVersion)
 
     constructor(
             providedName: CordaX500Name?,
