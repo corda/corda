@@ -3,7 +3,9 @@ package net.corda.coretests.flows
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -53,6 +55,13 @@ class ReceiveFinalityFlowTest {
 
         val paymentReceiverId = paymentReceiverFuture.getOrThrow()
         assertThat(bob.services.vaultService.queryBy<FungibleAsset<*>>().states).isEmpty()
+        println("ALICE: ${alice.services.vaultService.queryBy<FungibleAsset<*>>(QueryCriteria.VaultQueryCriteria(
+                status = Vault.StateStatus.ALL
+        )).states}")
+        println("BOB  : ${bob.services.vaultService.queryBy<FungibleAsset<*>>(QueryCriteria.VaultQueryCriteria(
+                status = Vault.StateStatus.ALL
+        )).states}")
+
         bob.assertFlowSentForObservationDueToUntrustedAttachmentsException(paymentReceiverId)
 
         // Restart Bob with the contracts CorDapp so that it can recover from the error
@@ -60,6 +69,14 @@ class ReceiveFinalityFlowTest {
                 parameters = InternalMockNodeParameters(additionalCordapps = listOf(FINANCE_CONTRACTS_CORDAPP)),
                 nodeFactory = { args -> InternalMockNetwork.MockNode(args, allowAppSchemaUpgradeWithCheckpoints = true) })
         mockNet.runNetwork()
+
+        println("ALICE AFTER: ${alice.services.vaultService.queryBy<FungibleAsset<*>>(QueryCriteria.VaultQueryCriteria(
+                status = Vault.StateStatus.ALL
+        )).statesMetadata}")
+        println("BOB   AFTER: ${bob.services.vaultService.queryBy<FungibleAsset<*>>(QueryCriteria.VaultQueryCriteria(
+                status = Vault.StateStatus.ALL
+        )).statesMetadata}")
+
         assertThat(bob.services.getCashBalance(GBP)).isEqualTo(100.POUNDS)
     }
 
