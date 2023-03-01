@@ -22,7 +22,7 @@ class ResolveTransactionsFlow private constructor(
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
         val statesToRecord: StatesToRecord,
-        val overrideAutoAck: Boolean = false
+        val deferredAck: Boolean = false
 ) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
@@ -64,7 +64,7 @@ class ResolveTransactionsFlow private constructor(
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
         resolver.downloadDependencies(batchMode)
 
-        if (!overrideAutoAck) {
+        if (!deferredAck) {
             logger.trace { "ResolveTransactionsFlow: Sending END." }
             otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
         }

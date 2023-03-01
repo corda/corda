@@ -2,7 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
-import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
@@ -415,17 +415,17 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod")
     @Suspendable
     override fun call(): SignedTransaction {
-        val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession,
-                checkSufficientSignatures = false, statesToRecord = statesToRecord, overrideAutoAck = true) {
-            override fun checkBeforeRecording(stx: SignedTransaction) {
-                require(expectedTxId == null || expectedTxId == stx.id) {
-                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
-                            "not recorded and nor its states sent to the vault."
-                }
-            }
-        })
-        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         try {
+            val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession,
+                    checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true) {
+                override fun checkBeforeRecording(stx: SignedTransaction) {
+                    require(expectedTxId == null || expectedTxId == stx.id) {
+                        "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
+                                "not recorded and nor its states sent to the vault."
+                    }
+                }
+            })
+            val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
             if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
                 logger.info("Peer recording transaction without notary signature.")
                 serviceHub.recordUnnotarisedTransaction(stx,
@@ -443,16 +443,16 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
                 logger.info("Peer successfully recorded received transaction.")
             }
-        }
-        catch (e: SQLException) {
+            return stx
+        } catch (e: SQLException) {
             logger.error("Peer failure upon recording or finalising transaction: $e")
-            throw UnexpectedFlowEndException("Peer failure upon recording or finalising transaction.", e.cause)
-        }
-        catch (c: CordaRuntimeException) {
-            println("CRE: ${c.message}")
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
+            throw UnexpectedFlowEndException("Peer failure upon recording or finalising transaction.", e.cause)
+        } catch (uae: TransactionVerificationException.UntrustedAttachmentsException) {
+            logger.error("Peer failure upon receiving transaction: $uae")
+            // without this send() the flow blocks indefinitely:
+            otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
+            throw uae
         }
-
-        return stx
     }
 }
