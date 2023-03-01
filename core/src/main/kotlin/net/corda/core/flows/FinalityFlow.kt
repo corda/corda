@@ -196,11 +196,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // - broadcast notary signatures to external participants (finalise remotely)
 
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
-            serviceHub.myInfo.platformVersion < PlatformVersionSwitches.TWO_PHASE_FINALITY
+            serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
         }
 
-        val useTwoPhaseFinality = (serviceHub.networkMapCache.getNodeByLegalName(ourIdentity.name)?.platformVersion
-                ?: PLATFORM_VERSION) >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (useTwoPhaseFinality && needsNotarySignature(transaction)) {
             recordLocallyAndBroadcast(newPlatformSessions, transaction)
         }

@@ -54,6 +54,7 @@ import org.junit.After
 import org.junit.Test
 import java.util.Random
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.fail
 
 class FinalityFlowTests : WithFinality {
@@ -171,6 +172,51 @@ class FinalityFlowTests : WithFinality {
             assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusAlice)
             val (_, txnDsStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
             assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusBob)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `two phase finality flow double spend transaction from pre-2PF initiator`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY - 1)
+
+        val ref = bobNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
+        val stx = bobNode.startFlowAndRunNetwork(SpendFlow(ref, aliceNode.info.singleIdentity())).resultFuture.getOrThrow()
+
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
+
+        try {
+            bobNode.startFlowAndRunNetwork(SpendFlow(ref, aliceNode.info.singleIdentity())).resultFuture.getOrThrow()
+        }
+        catch (e: NotaryException) {
+            val stxId = (e.error as NotaryError.Conflict).txId
+            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `two phase finality flow double spend transaction to pre-2PF peer`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY - 1)
+
+        val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
+        val stx = aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
+
+        try {
+            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+        }
+        catch (e: NotaryException) {
+            val stxId = (e.error as NotaryError.Conflict).txId
+            val (_, txnDsStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusAlice)
+            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
         }
     }
 
