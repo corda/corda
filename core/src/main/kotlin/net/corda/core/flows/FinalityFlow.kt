@@ -271,20 +271,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         progressTracker.currentStep = FINALISING_TRANSACTION
         serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
         logger.info("Finalised transaction locally.")
-        sessions.forEach { session ->
-            try {
-                logger.info("Awaiting acknowledgement from party ${session.counterparty} to indicate successful receipt of notary signature(s).")
-                session.receive<Unit>()
-                logger.info("Party ${session.counterparty} received notary signature(s).")
-            } catch (e: UnexpectedFlowEndException) {
-                throw UnexpectedFlowEndException(
-                        "${session.counterparty} has finished prematurely whilst we await acknowledgement of receipt of notary signature(s)." +
-                                ": (${e.message})",
-                        e.cause,
-                        e.originalErrorId
-                )
-            }
-        }
     }
 
     @Suspendable
@@ -449,7 +435,6 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                         .unwrap { it }
                 logger.info("Peer received notarised signature.")
                 serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
-                otherSideSession.send(Unit)
                 logger.info("Peer finalised transaction with notary signature.")
             } else {
                 serviceHub.recordTransactions(statesToRecord, setOf(stx))

@@ -210,7 +210,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 status = value.status,
                                 timestamp = clock.instant(),
-                                signatures = null,
+                                signatures = value.sigs.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 statesToRecord = value.metadata?.statesToRecord,
                                 initiator = value.metadata?.initiator?.toString(),
                                 participants = value.metadata?.peers?.map { it.toString() }

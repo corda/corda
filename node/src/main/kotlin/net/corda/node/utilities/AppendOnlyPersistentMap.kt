@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
@@ -148,7 +149,13 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         return set(key, value, logWarning) { k, v ->
             val session = currentDBSession()
             val existingEntry = session.find(persistentEntityClass, toPersistentEntityKey(k))
-            if (existingEntry == null) {
+            if (existingEntry is DBTransactionStorage.DBTransaction &&
+                existingEntry.status == DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG) {
+                    // TODO verify signatures on passed in transaction include notary
+                    session.merge(toPersistentEntity(k, v))
+                    null
+            }
+            else if (existingEntry == null) {
                 session.save(toPersistentEntity(k, v))
                 null
             } else {
