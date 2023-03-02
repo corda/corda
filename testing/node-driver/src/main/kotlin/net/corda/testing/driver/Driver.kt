@@ -29,6 +29,7 @@ import rx.Observable
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -216,7 +217,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     djvmCordaSource = defaultParameters.djvmCordaSource,
                     environmentVariables = defaultParameters.environmentVariables,
                     allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
-                    premigrateH2Database = defaultParameters.premigrateH2Database
+                    premigrateH2Database = defaultParameters.premigrateH2Database,
+                    notaryHandleTimeout = defaultParameters.notaryHandleTimeout
             ),
             coerce = { it },
             dsl = dsl
@@ -256,6 +258,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property djvmBootstrapSource Location of a JAR containing the Java APIs for the DJVM to use.
  * @property djvmCordaSource Locations of JARs of user-supplied classes to execute within the DJVM sandbox.
  * @property premigrateH2Database Whether to use a prebuilt H2 database schema or start from an empty schema.
+ * @property notaryHandleTimeout Specifies how long to wait to receive a notary handle. This waiting includes waiting for
+ * the notary to start.
  * This can save time for tests which do not need to migrate from a blank schema.
  */
 @Suppress("unused")
@@ -281,7 +285,8 @@ data class DriverParameters(
         val djvmCordaSource: List<Path> = emptyList(),
         val environmentVariables: Map<String, String> = emptyMap(),
         val allowHibernateToManageAppSchema: Boolean = true,
-        val premigrateH2Database: Boolean = true
+        val premigrateH2Database: Boolean = true,
+        val notaryHandleTimeout: Duration = Duration.ofMinutes(1)
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
@@ -487,6 +492,7 @@ data class DriverParameters(
     fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
     fun withEnvironmentVariables(variables: Map<String, String>): DriverParameters = copy(environmentVariables = variables)
     fun withAllowHibernateToManageAppSchema(value: Boolean): DriverParameters = copy(allowHibernateToManageAppSchema = value)
+    fun withNotaryHandleTimeout(value: Duration): DriverParameters = copy(notaryHandleTimeout = value)
 
     fun copy(
             isDebug: Boolean,
