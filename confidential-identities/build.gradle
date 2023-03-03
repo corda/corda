@@ -11,6 +11,8 @@ description 'Corda Experimental Confidential Identities'
 dependencies {
     cordaCompile project(':core')
 
+    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

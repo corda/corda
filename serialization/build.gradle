@@ -12,6 +12,8 @@ targetCompatibility = VERSION_1_8
 dependencies {
     implementation project(":core")
 
+    implementation "io.reactivex:rxjava:$rxjava_version"
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 

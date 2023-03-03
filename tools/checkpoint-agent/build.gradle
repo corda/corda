@@ -61,7 +61,7 @@ jar {
                 'Implementation-Version': rootProject.version
         )
     }
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
 publish {
