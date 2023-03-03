@@ -469,6 +469,51 @@ data class DriverParameters(
             cordappsForAllNodes = null
     )
 
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            notaryCustomOverrides: Map<String, Any?>,
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: Collection<TestCordapp>?,
+            djvmBootstrapSource: Path?,
+            djvmCordaSource: List<Path>,
+            environmentVariables: Map<String, String>,
+            allowHibernateToManageAppSchema: Boolean,
+            premigrateH2Database: Boolean
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            notaryCustomOverrides,
+            inMemoryDB,
+            cordappsForAllNodes,
+            djvmBootstrapSource,
+            djvmCordaSource,
+            environmentVariables,
+            allowHibernateToManageAppSchema,
+            premigrateH2Database,
+            notaryHandleTimeout = Duration.ofMinutes(1)
+    )
+
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
     fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
     fun withPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
