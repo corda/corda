@@ -469,6 +469,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     object FinalityDoctor : Staff {
+        @Suppress("ComplexMethod")
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             return if (currentState.flowLogic is FinalityHandler) {
                 log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
