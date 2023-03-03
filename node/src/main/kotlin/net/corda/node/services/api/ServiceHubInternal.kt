@@ -156,10 +156,9 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                                                    database: CordaPersistence) {
             database.transaction {
                 require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
-            }
-
-            recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
-                validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs)
+                recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
+                    validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs)
+                }
             }
         }
     }

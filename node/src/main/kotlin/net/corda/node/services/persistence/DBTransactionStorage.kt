@@ -323,7 +323,13 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         database.transaction {
             txStorage.locked {
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
-                val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
+                val added = addWithDuplicatesAllowed(transaction.id, cacheValue) { k, v, existingEntry ->
+                    if (existingEntry.status == TransactionStatus.MISSING_NOTARY_SIG) {
+                        // TODO verify signatures on passed in transaction include notary
+                        session.merge(toPersistentEntity(k, v))
+                        true
+                    } else false
+                }
                 if (added) {
                     logger.debug { "Transaction ${transaction.id} recorded as unverified." }
                 } else {
