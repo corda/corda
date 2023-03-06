@@ -141,7 +141,7 @@ data class NodeParameters(
             additionalCordapps: Collection<TestCordapp>,
             flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
             logLevelOverride: String?,
-            rpcAddress: NetworkHostAndPort?
+            rpcAddress: NetworkHostAndPort? = null
     ): this(providedName,
             rpcUsers,
             verifierType,
