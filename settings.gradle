@@ -28,6 +28,8 @@ pluginManagement {
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
 // output JAR from the capsule then the buildCordaJAR task goes into an infinite loop.
 rootProject.name = 'corda-project'
+include 'opentelemetry'
+include 'opentelemetry:opentelemetry-driver'
 include 'confidential-identities'
 include 'finance:contracts'
 include 'finance:workflows'

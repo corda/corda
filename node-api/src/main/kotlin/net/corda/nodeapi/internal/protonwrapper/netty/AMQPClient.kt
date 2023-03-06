@@ -26,6 +26,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
 import java.net.InetSocketAddress
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -70,6 +71,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         private const val MAX_RETRY_INTERVAL = 60000L
         private const val BACKOFF_MULTIPLIER = 2L
         private val NUM_CLIENT_THREADS = Integer.getInteger(CORDA_AMQP_NUM_CLIENT_THREAD_PROP_NAME, 2)
+        private val handshakeRetryIntervals = List(5) { Duration.ofMinutes(5) }
     }
 
     private val lock = ReentrantLock()
@@ -82,7 +84,9 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
     private var retryInterval = MIN_RETRY_INTERVAL
-    private val badCertTargets = mutableSetOf<NetworkHostAndPort>()
+    private val handshakeFailureRetryTargets = mutableSetOf<NetworkHostAndPort>()
+    private var retryingHandshakeFailures = false
+    private var retryOffset = 0
     @Volatile
     private var amqpActive = false
     @Volatile
@@ -91,22 +95,67 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     val localAddressString: String
         get() = clientChannel?.localAddress()?.toString() ?: "<unknownLocalAddress>"
 
-    private fun nextTarget() {
+    /*
+        Figure out the index of the next address to try to connect to
+     */
+    private fun setTargetIndex() {
         val origIndex = targetIndex
         targetIndex = -1
         for (offset in 1..targets.size) {
             val newTargetIndex = (origIndex + offset).rem(targets.size)
-            if (targets[newTargetIndex] !in badCertTargets) {
+            if (targets[newTargetIndex] !in handshakeFailureRetryTargets ) {
                 targetIndex = newTargetIndex
                 break
             }
         }
-        if (targetIndex == -1) {
-            log.error("No targets have presented acceptable certificates for $allowedRemoteLegalNames. Halting retries")
-            return
+    }
+
+    /*
+        Set how long to wait until trying to connect to the next address
+     */
+    private fun setTargetRetryInterval() {
+        retryInterval = if (retryingHandshakeFailures) {
+            if (retryOffset < handshakeRetryIntervals.size) {
+                handshakeRetryIntervals[retryOffset++].toMillis()
+            } else {
+                Duration.ofDays(1).toMillis()
+            }
+        } else {
+            min(MAX_RETRY_INTERVAL, retryInterval * BACKOFF_MULTIPLIER)
         }
-        log.info("Retry connect to ${targets[targetIndex]}")
-        retryInterval = min(MAX_RETRY_INTERVAL, retryInterval * BACKOFF_MULTIPLIER)
+    }
+
+    /*
+        Once a connection is made, reset all the retry-connection info so if there is another connection failure
+        then this node tries to reconnect quickly.
+     */
+    private fun successfullyConnected() {
+        log.info("Successfully connected to [${targets[targetIndex]}]; resetting the target connection-retry interval")
+        retryingHandshakeFailures = false
+        retryInterval = MIN_RETRY_INTERVAL
+        retryOffset = 0
+    }
+
+    /*
+        Set the next target to connect to
+     */
+    private fun nextTarget() {
+        setTargetIndex()
+
+        if (targetIndex == -1) {
+            if (handshakeFailureRetryTargets.isNotEmpty()) {
+                log.info("Failed to connect to any targets. Retrying targets that previously failed to handshake.")
+                handshakeFailureRetryTargets.clear()
+                retryingHandshakeFailures = true
+                setTargetIndex()
+            } else {
+                log.error("Attempted connection to targets: $targets, but none of them have presented acceptable certificates" +
+                        " for $allowedRemoteLegalNames. Halting retries.")
+                return
+            }
+        }
+        setTargetRetryInterval()
+        log.info("Retry connect to ${targets[targetIndex]} in [$retryInterval] ms")
     }
 
     private val connectListener = object : ChannelFutureListener {
@@ -212,7 +261,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                     onOpen = { _, change ->
                         parent.run {
                             amqpActive = true
-                            retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
+                            successfullyConnected()
                             _onConnection.onNext(change)
                         }
                     },
@@ -220,9 +269,9 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                         if (parent.amqpChannelHandler == amqpChannelHandler) {
                             parent.run {
                                 _onConnection.onNext(change)
-                                if (change.badCert) {
-                                    log.error("Blocking future connection attempts to $target due to bad certificate on endpoint")
-                                    badCertTargets += target
+                                if (change.connectionResult == ConnectionResult.HANDSHAKE_FAILURE) {
+                                    log.warn("Handshake failure with $target target; will retry later")
+                                    handshakeFailureRetryTargets += target
                                 }
 
                                 if (started && amqpActive) {

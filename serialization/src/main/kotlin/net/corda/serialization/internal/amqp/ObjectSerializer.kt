@@ -71,7 +71,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
         private fun makeForComposable(typeInformation: LocalTypeInformation.Composable,
                                       typeNotation: CompositeType,
                                       typeDescriptor: Symbol,
-                                      factory: LocalSerializerFactory): ComposableObjectSerializer {
+                                      factory: LocalSerializerFactory): ObjectSerializer {
             val propertySerializers = makePropertySerializers(typeInformation.properties, factory)
             val reader = ComposableObjectReader(
                     typeInformation.typeIdentifier,
@@ -83,13 +83,13 @@ interface ObjectSerializer : AMQPSerializer<Any> {
                     typeInformation.interfaces,
                     propertySerializers)
 
-            return ComposableObjectSerializer(
+            return InterningSerializer.maybeWrapForInterning(ComposableObjectSerializer(
                     typeInformation.observedType,
                     typeDescriptor,
                     propertySerializers,
                     typeNotation.fields,
                     reader,
-                    writer)
+                    writer))
         }
 
         private fun makePropertySerializers(properties: Map<PropertyName, LocalPropertyInformation>,

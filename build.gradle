@@ -54,7 +54,8 @@ buildscript {
     ]
 
     ext.capsule_version = constants.getProperty("capsuleVersion")
-
+    ext.open_telemetry_version = constants.getProperty("openTelemetryVersion")
+    ext.open_telemetry_sem_conv_version = constants.getProperty("openTelemetrySemConvVersion")
     ext.asm_version = constants.getProperty("asmVersion")
     ext.artemis_version = constants.getProperty("artemisVersion")
     ext.jackson_version = constants.getProperty("jacksonVersion")
@@ -103,7 +104,6 @@ buildscript {
     ext.hikari_version = constants.getProperty("hikariVersion")
     ext.liquibase_version = constants.getProperty("liquibaseVersion")
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
-    ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
     ext.selenium_version = constants.getProperty("seleniumVersion")
     ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
@@ -121,6 +121,7 @@ buildscript {
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.docker_plugin_version = constants.getProperty('docker_plugin_version')
+    ext.commons_text_version = constants.getProperty("commonsTextVersion")
 
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
@@ -453,8 +454,12 @@ allprojects {
                         }
                     }
 
-                    if (details.requested.group == 'org.apache.commons' && details.requested.name == "commons-configuration2") {
-                        details.useVersion commons_configuration2_version
+                    if (details.requested.group == 'org.apache.commons') {
+                        if (details.requested.name == "commons-configuration2") {
+                            details.useVersion commons_configuration2_version
+                        } else if (details.requested.name == "commons-text") {
+                            details.useVersion commons_text_version
+                        }
                     }
                 }
 
@@ -636,6 +641,8 @@ bintrayConfig {
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
     publications = [
+            'corda-opentelemetry',
+            'corda-opentelemetry-driver',
             'corda-jfx',
             'corda-mock',
             'corda-rpc',

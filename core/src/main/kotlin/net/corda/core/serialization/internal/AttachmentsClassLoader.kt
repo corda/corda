@@ -35,6 +35,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import java.io.IOException
 import java.io.InputStream
+import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 import java.net.URL
 import java.net.URLClassLoader
@@ -46,7 +47,12 @@ import java.security.Permission
 import java.util.Locale
 import java.util.ServiceLoader
 import java.util.WeakHashMap
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Function
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -164,7 +170,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             if(read <= 0) break
             md.update(ctx.buffer, 0, read)
         }
-        return SecureHash.SHA256(md.digest())
+        return SecureHash.createSHA256(md.digest())
     }
 
     private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
@@ -333,6 +339,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 @VisibleForTesting
 object AttachmentsClassLoaderBuilder {
     private const val CACHE_SIZE = 16
+    private const val STRONG_REFERENCE_TO_CACHED_SERIALIZATION_CONTEXT = "cachedSerializationContext"
 
     private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl(CACHE_SIZE)
 
@@ -352,16 +359,15 @@ object AttachmentsClassLoaderBuilder {
         val attachmentIds = attachments.mapTo(LinkedHashSet(), Attachment::id)
 
         val cache = attachmentsClassLoaderCache ?: fallBackCache
-        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
+        val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
                         JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
-                }
-                catch(ex: UnsupportedClassVersionError) {
-                    throw TransactionVerificationException.UnsupportedClassVersionError(txId, ex.message!!, ex)
-                }
+            } catch (ex: UnsupportedClassVersionError) {
+                throw TransactionVerificationException.UnsupportedClassVersionError(txId, ex.message!!, ex)
+            }
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap(SerializationWhitelist::whitelist)
 
@@ -375,11 +381,17 @@ object AttachmentsClassLoaderBuilder {
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        }).withProperties(mapOf<Any, Any>(
-            // Duplicate the SerializationContext from the cache and give
-            // it these extra properties, just for this transaction.
-            AMQP_ENVELOPE_CACHE_PROPERTY to HashMap<Any, Any>(AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY),
-            DESERIALIZATION_CACHE_PROPERTY to HashMap<Any, Any>()
+        })
+
+        val serializationContext = cachedSerializationContext.withProperties(mapOf<Any, Any>(
+                // Duplicate the SerializationContext from the cache and give
+                // it these extra properties, just for this transaction.
+                // However, keep a strong reference to the cached SerializationContext so we can
+                // leverage the power of WeakReferences in the AttachmentsClassLoaderCacheImpl to figure
+                // out when all these have gone out of scope by the BasicVerifier going out of scope.
+                AMQP_ENVELOPE_CACHE_PROPERTY to HashMap<Any, Any>(AMQP_ENVELOPE_CACHE_INITIAL_CAPACITY),
+                DESERIALIZATION_CACHE_PROPERTY to HashMap<Any, Any>(),
+                STRONG_REFERENCE_TO_CACHED_SERIALIZATION_CONTEXT to cachedSerializationContext
         ))
 
         // Deserialize all relevant classes in the transaction classloader.
@@ -396,6 +408,8 @@ object AttachmentsClassLoaderBuilder {
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     internal const val attachmentScheme = "attachment"
 
+    private val uniqueness = AtomicLong(0)
+
     private val loadedAttachments: AttachmentsHolder = AttachmentsHolderImpl()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
@@ -406,14 +420,9 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
 
     @Synchronized
     fun toUrl(attachment: Attachment): URL {
-        val proposedURL = URL(attachmentScheme, "", -1, attachment.id.toString(), AttachmentURLStreamHandler)
-        val existingURL = loadedAttachments.getKey(proposedURL)
-        return if (existingURL == null) {
-            loadedAttachments[proposedURL] = attachment
-            proposedURL
-        } else {
-            existingURL
-        }
+        val uniqueURL = URL(attachmentScheme, "", -1, attachment.id.toString()+ "?" + uniqueness.getAndIncrement(), AttachmentURLStreamHandler)
+        loadedAttachments[uniqueURL] = attachment
+        return uniqueURL
     }
 
     @VisibleForTesting
@@ -471,20 +480,52 @@ interface AttachmentsClassLoaderCache {
 @DeleteForDJVM
 class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
 
-    private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(
-        // Close deserialization classloaders when we evict them
-        // to release any resources they may be holding.
-        @Suppress("TooGenericExceptionCaught")
-        Caffeine.newBuilder().removalListener { key, context, _ ->
-            try {
-                (context?.deserializationClassLoader as? AutoCloseable)?.close()
-            } catch (e: Exception) {
-                loggerFor<AttachmentsClassLoaderCacheImpl>().warn("Error destroying serialization context for $key", e)
+    private class ToBeClosed(
+        serializationContext: SerializationContext,
+        val classLoaderToClose: AutoCloseable,
+        val cacheKey: AttachmentsClassLoaderKey,
+        queue: ReferenceQueue<SerializationContext>
+   ) : WeakReference<SerializationContext>(serializationContext, queue)
+
+    private val logger = loggerFor<AttachmentsClassLoaderCacheImpl>()
+    private val toBeClosed = ConcurrentHashMap.newKeySet<ToBeClosed>()
+    private val expiryQueue = ReferenceQueue<SerializationContext>()
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun purgeExpiryQueue() {
+        // Close the AttachmentsClassLoader for every SerializationContext
+        // that has already been garbage-collected.
+        while (true) {
+            val head = expiryQueue.poll() as? ToBeClosed ?: break
+            if (!toBeClosed.remove(head)) {
+                logger.warn("Reaped unexpected serialization context for {}", head.cacheKey)
             }
-        }, "AttachmentsClassLoader_cache"
+
+            try {
+                head.classLoaderToClose.close()
+            } catch (e: Exception) {
+                logger.warn("Error destroying serialization context for ${head.cacheKey}", e)
+            }
+        }
+    }
+
+    private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(
+            // Schedule for closing the deserialization classloaders when we evict them
+            // to release any resources they may be holding.
+            Caffeine.newBuilder().removalListener { key, context, _ ->
+                (context?.deserializationClassLoader as? AutoCloseable)?.also { autoCloseable ->
+                    // ClassLoader to be closed once the BasicVerifier, which has a strong
+                    // reference chain to this SerializationContext, has gone out of scope.
+                    toBeClosed += ToBeClosed(context, autoCloseable, key!!, expiryQueue)
+                }
+
+                // Reap any entries which have been garbage-collected.
+                purgeExpiryQueue()
+            }, "AttachmentsClassLoader_cache"
     )
 
     override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+        purgeExpiryQueue()
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }

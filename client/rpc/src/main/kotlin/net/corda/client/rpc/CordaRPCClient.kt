@@ -77,6 +77,10 @@ class CordaRPCConnection private constructor(
 
     override fun forceClose() = doCloseLogic { actualConnection.forceClose() }
 
+    override fun <T> getTelemetryHandle(telemetryClass: Class<T>): T? {
+        return actualConnection.getTelemetryHandle(telemetryClass)
+    }
+
     private inline fun doCloseLogic(close: () -> Unit) {
         try {
             close.invoke()
@@ -169,8 +173,15 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         /**
          * The cache expiry of a deduplication watermark per client. Default is 1 day.
          */
-        open val deduplicationCacheExpiry: Duration = 1.days
+        open val deduplicationCacheExpiry: Duration = 1.days,
 
+        open val openTelemetryEnabled: Boolean = true,
+
+        open val simpleLogTelemetryEnabled: Boolean = false,
+
+        open val spanStartEndEventsEnabled: Boolean = false,
+
+        open val copyBaggageToTags: Boolean = false
 ) {
 
     companion object {
@@ -214,7 +225,49 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 connectionRetryIntervalMultiplier,
                 maxReconnectAttempts,
                 maxFileSize,
-                deduplicationCacheExpiry
+                deduplicationCacheExpiry,
+                openTelemetryEnabled,
+                simpleLogTelemetryEnabled,
+                spanStartEndEventsEnabled,
+                copyBaggageToTags
+        )
+    }
+
+    @Suppress("LongParameterList")
+    fun copy(
+            connectionMaxRetryInterval: Duration = this.connectionMaxRetryInterval,
+            minimumServerProtocolVersion: Int = this.minimumServerProtocolVersion,
+            trackRpcCallSites: Boolean = this.trackRpcCallSites,
+            reapInterval: Duration = this.reapInterval,
+            observationExecutorPoolSize: Int = this.observationExecutorPoolSize,
+            @Suppress("DEPRECATION")
+            cacheConcurrencyLevel: Int = this.cacheConcurrencyLevel,
+            connectionRetryInterval: Duration = this.connectionRetryInterval,
+            connectionRetryIntervalMultiplier: Double = this.connectionRetryIntervalMultiplier,
+            maxReconnectAttempts: Int = this.maxReconnectAttempts,
+            maxFileSize: Int = this.maxFileSize,
+            deduplicationCacheExpiry: Duration = this.deduplicationCacheExpiry,
+            openTelemetryEnabled: Boolean = this.openTelemetryEnabled,
+            simpleLogTelemetryEnabled: Boolean = this.simpleLogTelemetryEnabled,
+            spanStartEndEventsEnabled: Boolean = this.spanStartEndEventsEnabled,
+            copyBaggageToTags: Boolean = this.copyBaggageToTags
+    ): CordaRPCClientConfiguration {
+        return CordaRPCClientConfiguration(
+                connectionMaxRetryInterval,
+                minimumServerProtocolVersion,
+                trackRpcCallSites,
+                reapInterval,
+                observationExecutorPoolSize,
+                cacheConcurrencyLevel,
+                connectionRetryInterval,
+                connectionRetryIntervalMultiplier,
+                maxReconnectAttempts,
+                maxFileSize,
+                deduplicationCacheExpiry,
+                openTelemetryEnabled,
+                simpleLogTelemetryEnabled,
+                spanStartEndEventsEnabled,
+                copyBaggageToTags
         )
     }
 
@@ -235,6 +288,10 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         if (maxReconnectAttempts != other.maxReconnectAttempts) return false
         if (maxFileSize != other.maxFileSize) return false
         if (deduplicationCacheExpiry != other.deduplicationCacheExpiry) return false
+        if (openTelemetryEnabled != other.openTelemetryEnabled) return false
+        if (simpleLogTelemetryEnabled != other.simpleLogTelemetryEnabled) return false
+        if (spanStartEndEventsEnabled != other.spanStartEndEventsEnabled) return false
+        if (copyBaggageToTags != other.copyBaggageToTags) return false
 
         return true
     }
@@ -252,6 +309,10 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         result = 31 * result + maxReconnectAttempts
         result = 31 * result + maxFileSize
         result = 31 * result + deduplicationCacheExpiry.hashCode()
+        result = 31 * result + openTelemetryEnabled.hashCode()
+        result = 31 * result + simpleLogTelemetryEnabled.hashCode()
+        result = 31 * result + spanStartEndEventsEnabled.hashCode()
+        result = 31 * result + copyBaggageToTags.hashCode()
         return result
     }
 
@@ -264,7 +325,11 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 "cacheConcurrencyLevel=$cacheConcurrencyLevel, connectionRetryInterval=$connectionRetryInterval, " +
                 "connectionRetryIntervalMultiplier=$connectionRetryIntervalMultiplier, " +
                 "maxReconnectAttempts=$maxReconnectAttempts, maxFileSize=$maxFileSize, " +
-                "deduplicationCacheExpiry=$deduplicationCacheExpiry)"
+                "deduplicationCacheExpiry=$deduplicationCacheExpiry, " +
+                "openTelemetryEnabled=$openTelemetryEnabled, " +
+                "simpleLogTelemetryEnabled=$simpleLogTelemetryEnabled, " +
+                "spanStartEndEventsEnabled=$spanStartEndEventsEnabled, " +
+                "copyBaggageToTags=$copyBaggageToTags )"
     }
 
     // Left in for backwards compatibility with version 3.1

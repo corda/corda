@@ -14,6 +14,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
+import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionResult
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.protonwrapper.netty.initialiseTrustStoreAndEnableCrlChecking
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
@@ -29,6 +30,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -211,7 +213,7 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
                 val clientConnect = clientConnected.get()
                 assertFalse(clientConnect.connected)
                 // Not a badCert, but a timeout during handshake
-                assertFalse(clientConnect.badCert)
+                assertEquals(ConnectionResult.NO_ERROR, clientConnect.connectionResult)
             }
         }
         assertFalse(serverThread.isActive)
