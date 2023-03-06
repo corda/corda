@@ -140,50 +140,6 @@ data class NodeParameters(
             maximumHeapSize: String,
             additionalCordapps: Collection<TestCordapp>,
             flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
-            logLevelOverride: String?
-    ): this(providedName,
-            rpcUsers,
-            verifierType,
-            customOverrides,
-            startInSameProcess,
-            maximumHeapSize,
-            additionalCordapps,
-            flowOverrides,
-            logLevelOverride,
-            rpcAddress = null)
-
-    @Suppress("LongParameterList")
-    fun copy(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            additionalCordapps: Collection<TestCordapp> = emptySet(),
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
-            logLevelOverride: String?
-    ) = this.copy(
-            providedName = providedName,
-            rpcUsers = rpcUsers,
-            verifierType = verifierType,
-            customOverrides = customOverrides,
-            startInSameProcess = startInSameProcess,
-            maximumHeapSize = maximumHeapSize,
-            additionalCordapps = additionalCordapps,
-            flowOverrides = flowOverrides,
-            logLevelOverride = logLevelOverride,
-            rpcAddress = rpcAddress)
-
-    constructor(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            additionalCordapps: Collection<TestCordapp>,
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
             logLevelOverride: String?,
             rpcAddress: NetworkHostAndPort?
     ): this(providedName,
