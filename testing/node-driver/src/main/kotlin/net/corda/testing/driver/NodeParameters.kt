@@ -152,6 +152,7 @@ data class NodeParameters(
             logLevelOverride,
             rpcAddress = null)
 
+    @Suppress("LongParameterList")
     fun copy(
             providedName: CordaX500Name?,
             rpcUsers: List<User>,
@@ -197,6 +198,7 @@ data class NodeParameters(
             rpcAddress,
             platformVersion = PLATFORM_VERSION)
 
+    @Suppress("LongParameterList")
     fun copy(
             providedName: CordaX500Name?,
             rpcUsers: List<User>,
