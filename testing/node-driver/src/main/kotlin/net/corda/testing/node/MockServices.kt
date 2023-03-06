@@ -114,7 +114,7 @@ open class MockServices private constructor(
             }
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:file:$dbPath;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
+            props.setProperty("dataSource.url", "jdbc:h2:file:$dbPath;NON_KEYWORDS=KEY,VALUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
             props.setProperty("dataSource.user", "sa")
             props.setProperty("dataSource.password", "")
             return props

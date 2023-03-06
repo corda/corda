@@ -1,9 +1,11 @@
 package net.corda.opentelemetrydriver
 
 import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.api.baggage.propagation.W3CBaggagePropagator
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.context.propagation.ContextPropagators
+import io.opentelemetry.context.propagation.TextMapPropagator
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
 import io.opentelemetry.sdk.OpenTelemetrySdk
@@ -32,7 +34,8 @@ class OpenTelemetryDriver(serviceName: String) {
         val openTelemetry: OpenTelemetry = OpenTelemetrySdk.builder()
                 .setTracerProvider(sdkTracerProvider)
                 .setMeterProvider(sdkMeterProvider)
-                .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
+                .setPropagators(ContextPropagators.create(TextMapPropagator.composite(W3CTraceContextPropagator.getInstance(),
+                                                                                      W3CBaggagePropagator.getInstance())))
                 .build()
 
     fun shutdown() {
