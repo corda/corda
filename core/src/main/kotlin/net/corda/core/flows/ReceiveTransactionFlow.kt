@@ -29,6 +29,7 @@ import java.security.SignatureException
  * @property statesToRecord which transaction states should be recorded in the vault, if any.
  * @property deferredAck if set then the caller of this flow is responsible for explicitly sending a FetchDataFlow.Request.End
  *           acknowledgement to indicate transaction resolution is complete. See usage within [FinalityFlow].
+ *           Not recommended for 3rd party use.
  */
 open class ReceiveTransactionFlow constructor(private val otherSideSession: FlowSession,
                                               private val checkSufficientSignatures: Boolean = true,
