@@ -3,7 +3,6 @@ package net.corda.testing.driver
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
@@ -25,7 +24,6 @@ import net.corda.testing.node.User
  * @property logLevelOverride log level to be passed as parameter to an out of process node. ERROR, WARN, INFO, DEBUG, TRACE. This overrides debug port
  * log level argument.
  * @property rpcAddress optional override for RPC address on which node will be accepting RPC connections from the clients. Port provided must be vacant.
- * @property platformVersion optional override for default latest PLATFORM_VERSION
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -38,8 +36,7 @@ data class NodeParameters(
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
         val logLevelOverride: String? = null,
-        val rpcAddress: NetworkHostAndPort? = null,
-        val platformVersion: Int = PLATFORM_VERSION
+        val rpcAddress: NetworkHostAndPort? = null
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
@@ -56,7 +53,6 @@ data class NodeParameters(
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
     fun withLogLevelOverride(logLevelOverride: String?): NodeParameters = copy(logLevelOverride = logLevelOverride)
-    fun withPlatformVersion(platformVersion: Int): NodeParameters = copy(platformVersion = platformVersion)
 
     constructor(
             providedName: CordaX500Name?,
@@ -131,51 +127,4 @@ data class NodeParameters(
             flowOverrides = flowOverrides,
             logLevelOverride = logLevelOverride)
 
-    constructor(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            additionalCordapps: Collection<TestCordapp>,
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
-            logLevelOverride: String?,
-            rpcAddress: NetworkHostAndPort? = null
-    ): this(providedName,
-            rpcUsers,
-            verifierType,
-            customOverrides,
-            startInSameProcess,
-            maximumHeapSize,
-            additionalCordapps,
-            flowOverrides,
-            logLevelOverride,
-            rpcAddress,
-            platformVersion = PLATFORM_VERSION)
-
-    @Suppress("LongParameterList")
-    fun copy(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            additionalCordapps: Collection<TestCordapp> = emptySet(),
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
-            logLevelOverride: String?,
-            rpcAddress: NetworkHostAndPort? = null
-    ) = this.copy(
-            providedName = providedName,
-            rpcUsers = rpcUsers,
-            verifierType = verifierType,
-            customOverrides = customOverrides,
-            startInSameProcess = startInSameProcess,
-            maximumHeapSize = maximumHeapSize,
-            additionalCordapps = additionalCordapps,
-            flowOverrides = flowOverrides,
-            logLevelOverride = logLevelOverride,
-            rpcAddress = rpcAddress,
-            platformVersion = platformVersion)
 }

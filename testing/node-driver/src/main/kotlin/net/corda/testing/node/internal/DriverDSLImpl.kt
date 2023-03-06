@@ -15,6 +15,7 @@ import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.doneFuture
@@ -283,7 +284,7 @@ class DriverDSLImpl(
         }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            createSchema(config, false).flatMap { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config(), parameters.platformVersion) }
+            createSchema(config, false).flatMap { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config()) }
         } else {
             doneFuture(config)
         }
@@ -369,11 +370,10 @@ class DriverDSLImpl(
     private fun startNodeRegistration(
             config: NodeConfig,
             rootCert: X509Certificate,
-            networkServicesConfig: NetworkServicesConfig,
-            platformVersion: Int
+            networkServicesConfig: NetworkServicesConfig
     ): CordaFuture<NodeConfig> {
 
-        val versionInfo = VersionInfo(platformVersion, "1", "1", "1")
+        val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
         val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
@@ -564,7 +564,7 @@ class DriverDSLImpl(
     ): CordaFuture<Pair<NodeConfig, NotaryInfo>> {
         val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
         return createSchema(createConfig(spec.name, parameters), false).flatMap { config ->
-            startNodeRegistration(config, rootCert, compatibilityZone.config(), parameters.platformVersion)
+            startNodeRegistration(config, rootCert, compatibilityZone.config())
         }.flatMap { config ->
             // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
             // startup or when the node is told to just generate its node info file. We do that here.
@@ -720,7 +720,7 @@ class DriverDSLImpl(
         )
 
         val nodeFuture = if (parameters.startInSameProcess ?: startNodesInProcess) {
-            val nodeAndThreadFuture = startInProcessNode(executorService, config, allowHibernateToManageAppSchema, parameters.platformVersion)
+            val nodeAndThreadFuture = startInProcessNode(executorService, config, allowHibernateToManageAppSchema)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
@@ -925,8 +925,7 @@ class DriverDSLImpl(
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig,
-                allowHibernateToManageAppSchema: Boolean,
-                platformVersion: Int
+                allowHibernateToManageAppSchema: Boolean
         ): CordaFuture<Pair<NodeWithInfo, Thread>> {
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             return executorService.fork {
@@ -936,7 +935,8 @@ class DriverDSLImpl(
                 }
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
-                val node = InProcessNode(config.corda, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
+                // TODO pass the version in?
+                val node = InProcessNode(config.corda, MOCK_VERSION_INFO, allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
                 val nodeInfo = node.start()
                 val nodeWithInfo = NodeWithInfo(node, nodeInfo)
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
