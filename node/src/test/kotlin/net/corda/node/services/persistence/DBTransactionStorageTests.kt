@@ -16,10 +16,12 @@ import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
+import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.UNVERIFIED
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -125,7 +127,7 @@ class DBTransactionStorageTests {
     }
 
     @Test(timeout = 300_000)
-    fun `update transaction with extra signatures and validate signatures is not null in db`() {
+    fun `finalize transaction with extra signatures and validate signatures is not null in db`() {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
@@ -137,6 +139,24 @@ class DBTransactionStorageTests {
         transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
         readTransactionFromDB(transaction.id).let {
             assertNotNull(it.signatures)
+            assertEquals(VERIFIED, it.status)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `finalize unverified transaction and verify no additional signatures are added`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val notarySig = TransactionSignature(ByteArray(1), DUMMY_NOTARY.owningKey, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.owningKey).schemeNumberID))
+        val transaction = newTransaction().withAdditionalSignature(notarySig)   // Alice + Notary signatures
+        transactionStorage.addUnverifiedTransaction(transaction)
+        assertNull(transactionStorage.getTransaction(transaction.id))
+        assertEquals(UNVERIFIED, readTransactionFromDB(transaction.id).status)
+        // attempt to finalise with another notary signature
+        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
+        readTransactionFromDB(transaction.id).let {
+            assertEquals(2, it.signatures?.deserialize<List<TransactionSignature>>(context = DBTransactionStorage.contextToUse())?.size)
             assertEquals(VERIFIED, it.status)
         }
     }

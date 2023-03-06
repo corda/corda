@@ -37,8 +37,8 @@ class ResolveTransactionsFlow private constructor(
     constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(transaction, transaction.dependencies, otherSide, statesToRecord)
 
-    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, overrideAutoAck: Boolean = false)
-            : this(transaction, transaction.dependencies, otherSide, statesToRecord, overrideAutoAck)
+    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, deferredAck: Boolean = false)
+            : this(transaction, transaction.dependencies, otherSide, statesToRecord, deferredAck)
 
     private var fetchNetParamsFromCounterpart = false
 

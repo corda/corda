@@ -25,6 +25,7 @@ import net.corda.testing.node.User
  * @property logLevelOverride log level to be passed as parameter to an out of process node. ERROR, WARN, INFO, DEBUG, TRACE. This overrides debug port
  * log level argument.
  * @property rpcAddress optional override for RPC address on which node will be accepting RPC connections from the clients. Port provided must be vacant.
+ * @property platformVersion optional override for default latest PLATFORM_VERSION
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -130,4 +131,93 @@ data class NodeParameters(
             flowOverrides = flowOverrides,
             logLevelOverride = logLevelOverride)
 
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp>,
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String?
+    ): this(providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            additionalCordapps,
+            flowOverrides,
+            logLevelOverride,
+            rpcAddress = null)
+
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String?
+    ) = this.copy(
+            providedName = providedName,
+            rpcUsers = rpcUsers,
+            verifierType = verifierType,
+            customOverrides = customOverrides,
+            startInSameProcess = startInSameProcess,
+            maximumHeapSize = maximumHeapSize,
+            additionalCordapps = additionalCordapps,
+            flowOverrides = flowOverrides,
+            logLevelOverride = logLevelOverride,
+            rpcAddress = rpcAddress)
+
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp>,
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String?,
+            rpcAddress: NetworkHostAndPort?
+    ): this(providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            additionalCordapps,
+            flowOverrides,
+            logLevelOverride,
+            rpcAddress,
+            platformVersion = PLATFORM_VERSION)
+
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String?,
+            rpcAddress: NetworkHostAndPort? = null
+    ) = this.copy(
+            providedName = providedName,
+            rpcUsers = rpcUsers,
+            verifierType = verifierType,
+            customOverrides = customOverrides,
+            startInSameProcess = startInSameProcess,
+            maximumHeapSize = maximumHeapSize,
+            additionalCordapps = additionalCordapps,
+            flowOverrides = flowOverrides,
+            logLevelOverride = logLevelOverride,
+            rpcAddress = rpcAddress,
+            platformVersion = platformVersion)
 }

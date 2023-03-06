@@ -175,7 +175,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         private val logger = contextLogger()
 
-        private fun contextToUse(): SerializationContext {
+        fun contextToUse(): SerializationContext {
             return if (effectiveSerializationEnv.serializationFactory.currentContext?.useCase == SerializationContext.UseCase.Storage) {
                 effectiveSerializationEnv.serializationFactory.currentContext!!
             } else {
@@ -298,12 +298,24 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 criteriaUpdate.where(criteriaBuilder.and(
                         criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                        criteriaBuilder.notEqual(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+                        criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG)
                 ))
                 criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
                 val update = session.createQuery(criteriaUpdate)
                 val rowsUpdated = update.executeUpdate()
-                rowsUpdated != 0
+                if (rowsUpdated == 0) {
+                    val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
+                    val updateRootUnverified = criteriaUpdateUnverified.from(DBTransaction::class.java)
+                    criteriaUpdateUnverified.set(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+                    criteriaUpdateUnverified.where(criteriaBuilder.and(
+                            criteriaBuilder.equal(updateRootUnverified.get<String>(DBTransaction::txId.name), txId.toString()),
+                            criteriaBuilder.equal(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
+                    ))
+                    criteriaUpdateUnverified.set(updateRootUnverified.get<Instant>(DBTransaction::timestamp.name), clock.instant())
+                    val updateUnverified = session.createQuery(criteriaUpdateUnverified)
+                    val rowsUpdatedUnverified = updateUnverified.executeUpdate()
+                    rowsUpdatedUnverified != 0
+                } else true
             }
         }
     }
@@ -421,7 +433,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         )
         constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?, metadata: FlowTransactionMetadata?) : this(
                 stx.txBits,
-                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs),
+                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs).distinct(),
                 status,
                 metadata
         )

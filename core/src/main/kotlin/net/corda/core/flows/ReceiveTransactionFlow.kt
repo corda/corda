@@ -30,10 +30,16 @@ import java.security.SignatureException
  * @property deferredAck if set then the caller of this flow is responsible for explicitly sending a FetchDataFlow.Request.End
  *           acknowledgement to indicate transaction resolution is complete. See usage within [FinalityFlow].
  */
-open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
-                                                            private val checkSufficientSignatures: Boolean = true,
-                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
-                                                            private val deferredAck: Boolean = false) : FlowLogic<SignedTransaction>() {
+open class ReceiveTransactionFlow constructor(private val otherSideSession: FlowSession,
+                                              private val checkSufficientSignatures: Boolean = true,
+                                              private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
+                                              private val deferredAck: Boolean = false) : FlowLogic<SignedTransaction>() {
+    @JvmOverloads constructor(
+            otherSideSession: FlowSession,
+            checkSufficientSignatures: Boolean = true,
+            statesToRecord: StatesToRecord = StatesToRecord.NONE
+    ) : this(otherSideSession, checkSufficientSignatures, statesToRecord, false)
+
     @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
