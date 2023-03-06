@@ -1,8 +1,8 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaException
 import net.corda.core.CordaInternal
-import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
@@ -226,18 +226,18 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             logger.info("All parties received the transaction successfully.")
         }
 
-        logger.info("Finality flow transaction completed successfully.")
-
         return notarised
     }
 
     @Suspendable
     private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         recordUnnotarisedTransaction(tx)
+        logger.info("Broadcasting un-notarised transaction.")
         if (sessions.isEmpty()) sleep(Duration.ZERO) else {
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
             sessions.forEach { session ->
                 try {
+                    logger.debug { "Sending transaction to party $session." }
                     subFlow(SendTransactionFlow(session, tx))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -257,6 +257,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         logger.info("Sending notarised signatures.")
         sessions.forEach { session ->
             try {
+                logger.debug { "Sending transaction to party $session." }
                 session.send(notarySignatures)
                 // remote will finalise txn with notary signatures
             } catch (e: UnexpectedFlowEndException) {
@@ -279,8 +280,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             oldV3Broadcast(tx, oldParticipants.toSet())
             for (session in sessions) {
                 try {
+                    logger.debug { "Sending transaction to party $session." }
                     subFlow(SendTransactionFlow(session, tx))
-                    logger.info("Party ${session.counterparty} received the finalised transaction.")
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
@@ -446,11 +447,11 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             logger.error("Peer failure upon recording or finalising transaction: $e")
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
             throw UnexpectedFlowEndException("Peer failure upon recording or finalising transaction.", e.cause)
-        } catch (uae: TransactionVerificationException.UntrustedAttachmentsException) {
-            logger.error("Peer failure upon receiving transaction: $uae")
+        } catch (ce: CordaException) {
+            logger.error("Peer failure within finality: $ce")
             // without this send() the flow blocks indefinitely:
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
-            throw uae
+            throw ce
         }
     }
 }
