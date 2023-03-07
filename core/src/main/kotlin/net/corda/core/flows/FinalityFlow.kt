@@ -216,14 +216,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
         }
 
-        if (externalTxParticipants.isNotEmpty() || oldPlatformSessions.isNotEmpty() || newPlatformSessions.isNotEmpty()) {
-            progressTracker.currentStep = BROADCASTING
-            if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
-                broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
-            } else {
-                broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, notarised)
-            }
-            logger.info("All parties received the transaction successfully.")
+        if (useTwoPhaseFinality && oldPlatformSessions.isNotEmpty()) {
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, notarised)
+        }
+        else if (!useTwoPhaseFinality) {
+            broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
         }
 
         return notarised
@@ -276,6 +273,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
+        progressTracker.currentStep = BROADCASTING
         if (newApi) {
             oldV3Broadcast(tx, oldParticipants.toSet())
             for (session in sessions) {
@@ -294,6 +292,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         } else {
             oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
         }
+        logger.info("All other parties received the transaction successfully.")
     }
 
     @Suspendable
