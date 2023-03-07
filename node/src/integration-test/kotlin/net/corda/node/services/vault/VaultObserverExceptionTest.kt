@@ -38,7 +38,6 @@ import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLException
 import java.util.concurrent.ConcurrentHashMap
@@ -610,7 +609,6 @@ class VaultObserverExceptionTest {
      *
      * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
      */
-    @Ignore("Ref ENT-7040: FlowException is not propagated to the @InitiatedFlow.")
     @Test(timeout=300_000)
     fun `Throw user error in VaultService rawUpdates during counterparty FinalityFlow blows up the flow but does not break the Observer`() {
         var observationCounter = 0
