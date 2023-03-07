@@ -1,7 +1,6 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.CordaException
 import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -21,7 +20,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
-import java.sql.SQLException
 import java.time.Duration
 
 /**
@@ -422,30 +420,24 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 }
             }
         })
-        try {
-            val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-            if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
-                logger.info("Peer recording transaction without notary signature.")
-                serviceHub.recordUnnotarisedTransaction(stx,
-                        FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
-                otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
-                logger.info("Peer recorded transaction without notary signature.")
+        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
+            logger.info("Peer recording transaction without notary signature.")
+            serviceHub.recordUnnotarisedTransaction(stx,
+                    FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
+            otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
+            logger.info("Peer recorded transaction without notary signature.")
 
-                val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
-                        .unwrap { it }
-                logger.info("Peer received notarised signature.")
-                serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
-                logger.info("Peer finalised transaction with notary signature.")
-            } else {
-                serviceHub.recordTransactions(statesToRecord, setOf(stx))
-                otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
-                logger.info("Peer successfully recorded received transaction.")
-            }
-            return stx
-        } catch (e: SQLException) {
-            logger.error("Peer failure upon recording or finalising transaction: $e")
-            otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
-            throw UnexpectedFlowEndException("Peer failure upon recording or finalising transaction.", e.cause)
+            val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
+                    .unwrap { it }
+            logger.info("Peer received notarised signature.")
+            serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
+            logger.info("Peer finalised transaction with notary signature.")
+        } else {
+            serviceHub.recordTransactions(statesToRecord, setOf(stx))
+            otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
+            logger.info("Peer successfully recorded received transaction.")
         }
+        return stx
     }
 }
