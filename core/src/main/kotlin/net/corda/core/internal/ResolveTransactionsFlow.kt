@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -72,7 +73,13 @@ class ResolveTransactionsFlow private constructor(
         // If transaction resolution is performed for a transaction where some states are relevant, then those should be
         // recorded if this has not already occurred.
         val usedStatesToRecord = if (statesToRecord == StatesToRecord.NONE) StatesToRecord.ONLY_RELEVANT else statesToRecord
-        resolver.recordDependencies(usedStatesToRecord)
+        try {
+            resolver.recordDependencies(usedStatesToRecord)
+        } catch (e: TransactionVerificationException.UntrustedAttachmentsException) {
+            // Flow will be hospitalised
+            otherSide.send(FetchDataFlow.Request.End)   // Auto-ack waiting receiver
+            resolver.recordDependencies(usedStatesToRecord)
+        }
     }
 
     /**

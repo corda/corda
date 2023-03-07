@@ -22,7 +22,6 @@ import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
-import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 
@@ -34,7 +33,6 @@ class ReceiveFinalityFlowTest {
         mockNet.stopNodes()
     }
 
-    @Ignore("Investigate why failing since using Deferred Ack")
     @Test(timeout=300_000)
 	fun `sent to flow hospital on error and retry on node restart`() {
         val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))

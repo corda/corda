@@ -413,16 +413,16 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod")
     @Suspendable
     override fun call(): SignedTransaction {
-        try {
-            val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession,
-                    checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true) {
-                override fun checkBeforeRecording(stx: SignedTransaction) {
-                    require(expectedTxId == null || expectedTxId == stx.id) {
-                        "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
-                                "not recorded and nor its states sent to the vault."
-                    }
+        val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession,
+                checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true) {
+            override fun checkBeforeRecording(stx: SignedTransaction) {
+                require(expectedTxId == null || expectedTxId == stx.id) {
+                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
+                            "not recorded and nor its states sent to the vault."
                 }
-            })
+            }
+        })
+        try {
             val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
             if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
                 logger.info("Peer recording transaction without notary signature.")
@@ -446,11 +446,6 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             logger.error("Peer failure upon recording or finalising transaction: $e")
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
             throw UnexpectedFlowEndException("Peer failure upon recording or finalising transaction.", e.cause)
-        } catch (ce: CordaException) {
-            logger.error("Peer failure within finality: $ce")
-            // without this send() the flow blocks indefinitely:
-            otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
-            throw ce
         }
     }
 }
