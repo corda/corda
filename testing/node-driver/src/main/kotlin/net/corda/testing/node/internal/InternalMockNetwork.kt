@@ -569,12 +569,14 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         val allActiveFlows = allNodes.flatMap { it.smm.snapshot() }
 
         return allActiveFlows.any {
-            val flowState = it.snapshot().checkpoint.flowState
-            flowState is FlowState.Started && when (flowState.flowIORequest) {
-                is FlowIORequest.ExecuteAsyncOperation -> true
-                is FlowIORequest.Sleep -> true
-                else -> false
-            }
+            val flowSnapshot = it.snapshot()
+            if (!flowSnapshot.isFlowResumed) {
+                val flowState = flowSnapshot.checkpoint.flowState
+                flowState is FlowState.Started && when (flowState.flowIORequest) {
+                    is FlowIORequest.ExecuteAsyncOperation -> true
+                    else -> false
+                }
+            } else false
         }
     }
 
