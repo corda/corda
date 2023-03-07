@@ -489,7 +489,7 @@ data class DriverParameters(
             djvmCordaSource: List<Path>,
             environmentVariables: Map<String, String>,
             allowHibernateToManageAppSchema: Boolean,
-            premigrateH2Database: Boolean
+            premigrateH2Database: Boolean = true
     ) : this(
             isDebug,
             driverDirectory,
@@ -681,5 +681,51 @@ data class DriverParameters(
             environmentVariables = environmentVariables,
             allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
             premigrateH2Database = true
+    )
+
+    @Suppress("LongParameterList")
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            notaryCustomOverrides: Map<String, Any?>,
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: Collection<TestCordapp>?,
+            djvmBootstrapSource: Path?,
+            djvmCordaSource: List<Path>,
+            environmentVariables: Map<String, String>,
+            allowHibernateToManageAppSchema: Boolean,
+            premigrateH2Database: Boolean
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = notaryCustomOverrides,
+            inMemoryDB = inMemoryDB,
+            cordappsForAllNodes = cordappsForAllNodes,
+            djvmBootstrapSource = djvmBootstrapSource,
+            djvmCordaSource = djvmCordaSource,
+            environmentVariables = environmentVariables,
+            allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
+            premigrateH2Database = premigrateH2Database,
+            notaryHandleTimeout = Duration.ofMinutes(1)
     )
 }
