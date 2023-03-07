@@ -214,11 +214,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
         }
 
-        if (useTwoPhaseFinality && oldPlatformSessions.isNotEmpty()) {
-            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, notarised)
-        }
-        else if (!useTwoPhaseFinality) {
+        if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
             broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
+        } else if (useTwoPhaseFinality && oldPlatformSessions.isNotEmpty()) {
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, notarised)
         }
 
         return notarised
