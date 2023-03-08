@@ -1,5 +1,5 @@
 FROM azul/zulu-openjdk:17.0.6
-RUN apt update && apt upgrade -y && apt install -y curl apt-transport-https \
+RUN apt update && apt upgrade -y && apt install -V -y curl apt-transport-https \
 ca-certificates \
 curl \
 gnupg2 \
