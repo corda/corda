@@ -1,6 +1,5 @@
 plugins {
     id 'java-library'
-    id 'net.corda.plugins.publish-utils'
     id 'com.jfrog.artifactory'
     id 'idea'
 }
@@ -14,7 +13,7 @@ configurations {
     }
 
     // Compile against the deterministic artifacts to ensure that we use only the deterministic API subset.
-    compileOnly.extendsFrom deterministicArtifacts
+    implementation.extendsFrom deterministicArtifacts
     runtimeArtifacts.extendsFrom api
 }
 
@@ -36,7 +35,7 @@ jar {
 artifacts {
     deterministicArtifacts jar
     runtimeArtifacts jar
-    publish jar
+//    publish jar
 }
 
 publish {

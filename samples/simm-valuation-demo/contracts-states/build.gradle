@@ -45,22 +45,23 @@ configurations {
 }
 
 dependencies {
-    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaProvided "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
 
     // Corda integration dependencies
-    cordaCompile project(':core')
+    cordaProvided project(':core')
 
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-product:$strata_version"
-    compile "com.opengamma.strata:strata-market:$strata_version"
+    implementation "com.opengamma.strata:strata-product:$strata_version"
+    implementation "com.opengamma.strata:strata-market:$strata_version"
 }
 
 def cordappDependencies = file("${sourceSets['main'].output.resourcesDir}/META-INF/Cordapp-Dependencies")
+configurations.cordapp.canBeResolved = true
 task generateDependencies {
     dependsOn project(':finance:contracts').tasks.jar
     inputs.files(configurations.cordapp)
@@ -84,12 +85,7 @@ task shrink(type: ProGuardTask) {
     injars jar
     outjars shrinkJar
 
-    if (JavaVersion.current().isJava9Compatible()) {
-        libraryjars "$javaHome/jmods"
-    } else {
-        libraryjars "$javaHome/lib/rt.jar"
-        libraryjars "$javaHome/lib/jce.jar"
-    }
+    libraryjars "$javaHome/jmods"
     configurations.runtimeClasspath.forEach {
         libraryjars it.path, filter: '!META-INF/versions/**'
     }
@@ -128,5 +124,5 @@ jar.finalizedBy shrink
 shrink.finalizedBy sign
 
 artifacts {
-    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
+//    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
 }

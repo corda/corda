@@ -4,11 +4,11 @@ apply plugin: 'net.corda.plugins.cordapp'
 description 'Corda Network Verifier - Workflows'
 
 dependencies {
-    cordaCompile project(':core')
+    cordaProvided project(':core')
     cordapp project(':samples:network-verifier:contracts')
 
-    testCompile project(":test-utils")
-    testCompile "junit:junit:$junit_version"
+    testImplementation project(":test-utils")
+    testImplementation "junit:junit:$junit_version"
 }
 
 cordapp {

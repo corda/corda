@@ -2,7 +2,6 @@ apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
 apply plugin: 'kotlin-jpa'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
@@ -23,8 +22,8 @@ sourceSets {
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntimeClasspath
-    integrationTestCompile.extendsFrom testCompile
+    testArtifacts.extendsFrom testRuntimeOnlyClasspath
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
@@ -32,14 +31,14 @@ dependencies {
     // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
-    cordaCompile project(':core')
-    cordaCompile project(':confidential-identities')
+    cordaProvided project(':core')
+    cordaProvided project(':confidential-identities')
     
     cordapp project(':finance:contracts')
 
-    testCompile project(':test-utils')
-    testCompile project(path: ':core', configuration: 'testArtifacts')
-    testCompile project(':node-driver')
+    testImplementation project(':test-utils')
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':node-driver')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -49,7 +48,7 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 task testJar(type: Jar) {

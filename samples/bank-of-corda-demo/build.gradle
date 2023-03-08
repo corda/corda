@@ -9,7 +9,7 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The bank of corda CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
@@ -18,23 +18,23 @@ dependencies {
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
     // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
-    cordaCompile project(':core')
-    cordaCompile project(':client:jfx')
-    cordaCompile project(':client:rpc')
-    cordaCompile(project(':testing:testserver')) {
+    cordaRuntimeOnly project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntimeOnly project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+    cordaProvided project(':core')
+    cordaProvided project(':client:jfx')
+    cordaProvided project(':client:rpc')
+    cordaProvided(project(':testing:testserver')) {
         exclude group: "org.apache.logging.log4j"
     }
-    cordaCompile (project(':node-driver')) {
+    cordaProvided (project(':node-driver')) {
         exclude group: "org.apache.logging.log4j"
     }
 
     // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 
     // Test dependencies
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
@@ -47,6 +47,7 @@ dependencies {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
+configurations.cordaCordapp.canBeResolved = true
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     nodeDefaults {
         cordapp project(':finance:workflows')
@@ -112,12 +113,11 @@ task runRPCCashIssue(type: JavaExec) {
     args 20000
     args '--currency'
     args 'USD'
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.time=ALL-UNNAMED'
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.io=ALL-UNNAMED'
-    }
+
+    jvmArgs '--add-opens'
+    jvmArgs 'java.base/java.time=ALL-UNNAMED'
+    jvmArgs '--add-opens'
+    jvmArgs 'java.base/java.io=ALL-UNNAMED'
 }
 
 task runWebCashIssue(type: JavaExec) {
@@ -129,12 +129,11 @@ task runWebCashIssue(type: JavaExec) {
     args 30000
     args '--currency'
     args 'GBP'
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.time=ALL-UNNAMED'
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.io=ALL-UNNAMED'
-    }
+
+    jvmArgs '--add-opens'
+    jvmArgs 'java.base/java.time=ALL-UNNAMED'
+    jvmArgs '--add-opens'
+    jvmArgs 'java.base/java.io=ALL-UNNAMED'
 }
 
 jar {
@@ -145,12 +144,12 @@ jar {
     }
 }
 
-cordapp {
-    targetPlatformVersion corda_platform_version.toInteger()
-    minimumPlatformVersion 1
-    info {
-        name "Bank of Corda Demo"
-        version "1"
-        vendor "R3"
-    }
-}
+//cordapp {
+//    targetPlatformVersion corda_platform_version.toInteger()
+//    minimumPlatformVersion 1
+//    info {
+//        name "Bank of Corda Demo"
+//        version "1"
+//        vendor "R3"
+//    }
+//}

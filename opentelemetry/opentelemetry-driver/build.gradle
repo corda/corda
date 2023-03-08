@@ -4,7 +4,6 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'java-library'
     id 'com.github.johnrengelman.shadow'
-    id 'net.corda.plugins.publish-utils'
     id 'com.jfrog.artifactory'
 }
 
@@ -26,7 +25,7 @@ shadowJar {
 
 artifacts {
     archives shadowJar
-    publish shadowJar
+//    publish shadowJar
 }
 
 jar {
@@ -34,6 +33,6 @@ jar {
 }
 
 publish {
-    disableDefaultJar = true
+//    disableDefaultJar = true
     name  'corda-opentelemetry-driver'
 }

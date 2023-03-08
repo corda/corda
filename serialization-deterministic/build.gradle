@@ -5,7 +5,6 @@ import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'net.corda.plugins.publish-utils'
     id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
@@ -31,7 +30,7 @@ configurations {
 }
 
 dependencies {
-    compileOnly project(':serialization')
+    implementation project(':serialization')
 
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
@@ -84,13 +83,7 @@ def predeterminise = tasks.register('predeterminise', ProGuardTask) {
     injars patchSerialization
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    if (JavaVersion.current().isJava9Compatible()) {
-        libraryjars "$javaHome/jmods"
-    } else {
-        libraryjars file("$javaHome/lib/rt.jar")
-        libraryjars file("$javaHome/lib/jce.jar")
-        libraryjars file("$javaHome/lib/ext/sunec.jar")
-    }
+    libraryjars "$javaHome/jmods"
     configurations.compileClasspath.forEach {
         if (originalJar != it) {
             libraryjars it, filter: '!META-INF/versions/**'
@@ -196,21 +189,21 @@ tasks.named('assemble') {
     dependsOn checkDeterminism
 }
 
-def deterministicJar = metafix.map { it.outputs.files.singleFile }
+//def deterministicJar = metafix.map { it.outputs.files.singleFile }
 artifacts {
-    deterministicArtifacts deterministicJar
-    publish deterministicJar
+//    deterministicArtifacts deterministicJar
+//    publish deterministicJar
 }
 
-tasks.named('sourceJar', Jar) {
-    from 'README.md'
-    include 'README.md'
-}
+//tasks.named('sourceJar', Jar) {
+//    from 'README.md'
+//    include 'README.md'
+//}
 
-tasks.named('javadocJar', Jar) {
-    from 'README.md'
-    include 'README.md'
-}
+//tasks.named('javadocJar', Jar) {
+//    from 'README.md'
+//    include 'README.md'
+//}
 
 publish {
     dependenciesFrom(configurations.deterministicArtifacts) {
