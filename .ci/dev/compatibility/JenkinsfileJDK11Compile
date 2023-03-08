@@ -39,7 +39,9 @@ pipeline {
 
     post {
         cleanup {
-            deleteDir() /* clean up our workspace */
+            script {
+                deleteDir() /* clean up our workspace */
+            }
         }
     }
 }
