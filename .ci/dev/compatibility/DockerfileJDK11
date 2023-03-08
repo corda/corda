@@ -1,7 +1,7 @@
 FROM azul/zulu-openjdk:17.0.6
-RUN apt update && apt upgrade -y && apt install -V -y curl apt-transport-https \
-ca-certificates \
+RUN apt update && apt upgrade -y && apt install -V -y apt-transport-https \
 curl \
+ca-certificates \
 gnupg2 \
 software-properties-common \
 wget
