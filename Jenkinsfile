@@ -48,6 +48,7 @@ pipeline {
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_USE_CACHE = "corda-remotes"
+        JAVA_HOME="/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {
@@ -109,6 +110,24 @@ pipeline {
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
                                         'test'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Smoke Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'smokeTest'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Slow Integration Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'slowIntegrationTest'
                                 ].join(' ')
                             }
                         }

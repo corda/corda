@@ -1,4 +1,4 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
@@ -7,12 +7,7 @@ apply plugin: 'net.corda.plugins.cordformation'
 description 'Corda attachment demo'
 
 cordapp {
-    info {
-        name "Corda Attachment Demo"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
-    }
+    targetPlatformVersion corda_platform_version.toInteger()
 }
 
 sourceSets {
@@ -26,33 +21,37 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {
-        cordaDriver "net.corda:corda-shell:$corda_release_version"
+        cordaDriver "net.corda:corda-shell:$corda_shell_version"
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
-    compile "javax.servlet:javax.servlet-api:${servlet_version}"
-    compile "javax.ws.rs:javax.ws.rs-api:2.1.1"
-    cordaCompile project(':client:rpc')
+
+    cordaProvided project(':core')
+    cordaProvided project(':client:rpc')
+
+    implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    implementation "javax.servlet:javax.servlet-api:${servlet_version}"
+    implementation "javax.ws.rs:javax.ws.rs-api:2.1.1"
 
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
     // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper project(":node-api")
 
     // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    corda project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
 
     cordapp project(':samples:attachment-demo:contracts')
     cordapp project(':samples:attachment-demo:workflows')
 
-    testCompile(project(':node-driver')) {
+    testImplementation(project(':node-driver')) {
         // We already have a SLF4J implementation on our runtime classpath,
         // and we don't need another one.
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
@@ -65,28 +64,42 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 
-    integrationTestCompile project(':testing:testserver')
+    integrationTestImplementation project(':core')
+    integrationTestImplementation project(':node')
+    integrationTestImplementation project(':client:rpc')
+    integrationTestImplementation project(':core-test-utils')
+    integrationTestImplementation project(':testing:testserver')
+
+    integrationTestImplementation "junit:junit:$junit_version"
 }
 
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
+configurations.cordaCordapp.canBeResolved = true
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
-    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
-                                                                             "InvokeRpc.partiesFromName",
-                                                                             "InvokeRpc.notaryPartyFromX500Name",
-                                                                             "InvokeRpc.attachmentExists",
-                                                                             "InvokeRpc.openAttachment",
-                                                                             "InvokeRpc.uploadAttachment",
-                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
-                                                                             "InvokeRpc.startTrackedFlowDynamic",
-                                                                             "InvokeRpc.nodeInfo"]]]
+    def users = [
+            ['username': "demo", 'password': "demo", 'permissions': [
+                    "StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
+                    "InvokeRpc.partiesFromName",
+                    "InvokeRpc.notaryPartyFromX500Name",
+                    "InvokeRpc.attachmentExists",
+                    "InvokeRpc.openAttachment",
+                    "InvokeRpc.uploadAttachment",
+                    "InvokeRpc.internalVerifiedTransactionsFeed",
+                    "InvokeRpc.startTrackedFlowDynamic",
+                    "InvokeRpc.nodeInfo"]
+            ]
+    ]
 
     nodeDefaults {
         projectCordapp {
@@ -95,6 +108,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         cordapp project(':samples:attachment-demo:contracts')
         cordapp project(':samples:attachment-demo:workflows')
         runSchemaMigration = true
+        rpcUsers = users
     }
     node {
         name "O=Notary Node,L=Zurich,C=CH"
@@ -102,8 +116,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                   serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
         ]
         p2pPort 10002
-        cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10004"
@@ -113,8 +125,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
-        cordapps = []
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10006"
             adminAddress "localhost:10007"
@@ -129,8 +139,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             adminAddress "localhost:10011"
         }
         webPort 10010
-        cordapps = []
-        rpcUsers = ext.rpcUsers
         extraConfig = ['h2Settings.address': 'localhost:10014']
     }
 }
@@ -138,6 +146,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
 task runSender(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'SENDER'
 }
@@ -145,6 +157,10 @@ task runSender(type: JavaExec, dependsOn: jar) {
 task runRecipient(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'RECIPIENT'
 }

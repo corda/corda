@@ -44,7 +44,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PublicKey
 import java.time.Duration
-import kotlin.streams.toList
 
 class NetworkBootstrapperTest {
     @Rule

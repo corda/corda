@@ -1,11 +1,12 @@
-apply plugin: 'kotlin'
-apply plugin: 'kotlin-jpa'
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'idea'
 
 description 'Corda core tests'
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     smokeTestCompile.extendsFrom compile
@@ -41,47 +42,65 @@ sourceSets {
 
 processSmokeTestResources {
     // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
+    from(project(":node:capsule").tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
 }
 
 dependencies {
-
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
-    testCompile project(":core")
-    testCompile project(path: ':core', configuration: 'testArtifacts')
-    
+    testImplementation "commons-fileupload:commons-fileupload:$fileupload_version"
+    testImplementation project(":core")
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+
+    testImplementation project(":node")
+    testImplementation project(":node-api")
+    testImplementation project(":client:rpc")
+    testImplementation project(":serialization")
+    testImplementation project(":common-configuration-parsing")
+    testImplementation project(":finance:contracts")
+    testImplementation project(":finance:workflows")
+    testImplementation project(":core-test-utils")
+    testImplementation project(":test-utils")
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+
+
     // Guava: Google test library (collections test suite)
-    testCompile "com.google.guava:guava-testlib:$guava_version"
+    testImplementation "com.google.guava:guava-testlib:$guava_version"
+    testImplementation "com.google.jimfs:jimfs:1.1"
+    testImplementation group: "com.typesafe", name: "config", version: typesafe_config_version
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
-    testCompile project(":node-driver")
+    testImplementation project(":node-driver")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Hamkrest, for fluent, composable matchers
-    testCompile "com.natpryce:hamkrest:$hamkrest_version"
+    testImplementation "com.natpryce:hamkrest:$hamkrest_version"
 
     // SLF4J: commons-logging bindings for a SLF4J back end
-    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
-    compile "org.slf4j:slf4j-api:$slf4j_version"
+    implementation "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testImplementation "org.assertj:assertj-core:${assertj_version}"
 
     // Guava: Google utilities library.
-    testCompile "com.google.guava:guava:$guava_version"
+    testImplementation "com.google.guava:guava:$guava_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestImplementation project(":core")
+    smokeTestImplementation project(":node-api")
+    smokeTestImplementation project(":client:rpc")
+
+    smokeTestImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    smokeTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     smokeTestImplementation "junit:junit:$junit_version"
 
@@ -93,11 +112,16 @@ dependencies {
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
 
     // used by FinalityFlowTests
-    testCompile project(':testing:cordapps:cashobservers')
+    testImplementation project(':testing:cordapps:cashobservers')
+}
+
+test {
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntimeClasspath
+    testArtifacts.extendsFrom testRuntimeOnlyClasspath
 }
 
 tasks.withType(Test).configureEach {
@@ -124,6 +148,16 @@ task smokeTest(type: Test) {
     dependsOn smokeTestJar
     testClassesDirs = sourceSets.smokeTest.output.classesDirs
     classpath = sourceSets.smokeTest.runtimeClasspath
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
 }
 
 // quasar exclusions upon agent code instrumentation at run-time

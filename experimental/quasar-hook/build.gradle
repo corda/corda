@@ -2,17 +2,17 @@ ext {
     javaassist_version = "3.12.1.GA"
 }
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 
 description 'A javaagent to allow hooking into the instrumentation by Quasar'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "javassist:javassist:$javaassist_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "javassist:javassist:$javaassist_version"
 }
 
+configurations.implementation.canBeResolved = true
 jar {
     archiveName = "${project.name}.jar"
     manifest {
@@ -25,5 +25,6 @@ jar {
                 'Implementation-Version': rootProject.version
         )
     }
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    from { configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) } }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

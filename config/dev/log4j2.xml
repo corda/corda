@@ -2,64 +2,26 @@
 <Configuration status="info" shutdownHook="disable">
 
     <Properties>
-        <Property name="log-path">${sys:log-path:-logs}</Property>
-        <Property name="log-name">node-${hostName}</Property>
-        <Property name="diagnostic-log-name">diagnostic-${hostName}</Property>
-        <Property name="archive">${log-path}/archive</Property>
-        <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
-        <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
+        <Property name="log_path">${sys:log-path:-logs}</Property>
+        <Property name="log_name">node-${hostName}</Property>
+        <Property name="diagnostic_log_name">diagnostic-${hostName}</Property>
+        <Property name="archive">${log_path}/archive</Property>
+        <Property name="default_log_level">${sys:defaultLogLevel:-info}</Property>
+        <Property name="console_log_level">${sys:consoleLogLevel:-error}</Property>
     </Properties>
 
     <Appenders>
-        <ScriptAppenderSelector name="Console-Selector">
-            <Script language="nashorn"><![CDATA[
-                var System = Java.type('java.lang.System');
-                var level = System.getProperty("consoleLogLevel");
-                var enabled = System.getProperty("consoleLoggingEnabled");
-                enabled == "true" && (level == "debug" || level == "trace") ? "Console-Debug-Appender" : "Console-Appender";
-            ]]></Script>
-            <AppenderSet>
+        <!-- The default console appender - prints no exception information -->
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout
+                    pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}"/>
+        </Console>
 
-                <!-- The default console appender - prints no exception information -->
-                <Console name="Console-Appender" target="SYSTEM_OUT">
-                    <PatternLayout>
-                        <ScriptPatternSelector
-                                defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}">
-                            <Script name="MDCSelector" language="javascript"><![CDATA[
-                                result = null;
-                                if (!logEvent.getContextData().size() == 0) {
-                                    result = "WithMDC";
-                                } else {
-                                    result = null;
-                                }
-                                result;
-                                ]]>
-                            </Script>
-                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}"/>
-                        </ScriptPatternSelector>
-                    </PatternLayout>
-                </Console>
-
-                <!-- The console appender when debug or trace level logging is specified. Prints full stack trace -->
-                <Console name="Console-Debug-Appender" target="SYSTEM_OUT">
-                    <PatternLayout>
-                        <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}">
-                            <Script name="MDCSelector" language="javascript"><![CDATA[
-                                result = null;
-                                if (!logEvent.getContextData().size() == 0) {
-                                    result = "WithMDC";
-                                } else {
-                                    result = null;
-                                }
-                                result;
-                                ]]>
-                            </Script>
-                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}"/>
-                        </ScriptPatternSelector>
-                    </PatternLayout>
-                </Console>
-            </AppenderSet>
-        </ScriptAppenderSelector>
+        <!-- The console appender when debug or trace level logging is specified. Prints full stack trace -->
+        <Console name="Console-Debug-Appender" target="SYSTEM_OUT">
+            <PatternLayout
+                    pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}"/>
+        </Console>
 
         <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
@@ -69,24 +31,10 @@
         <!-- Will generate up to 500 log files for a given day. Adjust this number according to the available storage.
              During every rollover it will delete those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="RollingFile-Appender"
-                     fileName="${log-path}/${log-name}.log"
-                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+                                 fileName="${log_path}/${log_name}.log"
+                                 filePattern="${archive}/${log_name}.%date{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>
@@ -95,7 +43,7 @@
 
             <DefaultRolloverStrategy min="1" max="500">
                 <Delete basePath="${archive}" maxDepth="1">
-                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfFileName glob="${log_name}*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
@@ -109,24 +57,10 @@
         <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="Diagnostic-RollingFile-Appender"
-                     fileName="${log-path}/${diagnostic-log-name}.log"
-                     filePattern="${archive}/${diagnostic-log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+                                 fileName="${log_path}/${diagnostic_log_name}.log"
+                                 filePattern="${archive}/${diagnostic_log_name}.%date{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>
@@ -135,7 +69,7 @@
 
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
-                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfFileName glob="${log_name}*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
@@ -147,7 +81,7 @@
         </RollingRandomAccessFile>
 
         <RollingFile name="Checkpoint-Agent-RollingFile-Appender"
-                     fileName="${log-path}/checkpoints_agent-${date:yyyyMMdd-HHmmss}.log"
+                     fileName="${log_path}/checkpoints_agent-${date:yyyyMMdd-HHmmss}.log"
                      filePattern="${archive}/checkpoints_agent.%date{yyyy-MM-dd}-%i.log.gz">
 
             <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg%n"/>
@@ -159,7 +93,7 @@
 
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
-                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfFileName glob="${log_name}*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
@@ -187,8 +121,8 @@
     </Appenders>
 
     <Loggers>
-        <Root level="${defaultLogLevel}">
-            <AppenderRef ref="Console-ErrorCode-Selector" level="${consoleLogLevel}"/>
+        <Root level="${default_log_level}">
+            <AppenderRef ref="Console-ErrorCode-Selector" level="${console_log_level}"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Root>
         <Logger name="BasicInfo" additivity="false">

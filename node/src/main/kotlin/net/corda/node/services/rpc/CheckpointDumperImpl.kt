@@ -285,7 +285,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                             // the driver jars in the driver folder of the node to the driver folder of the dump file
                             val pairs = listOf(
                                 "lib" to FileSystems.newFileSystem(
-                                        Paths.get(System.getProperty("capsule.jar")), null).getPath("/"),
+                                        Paths.get(System.getProperty("capsule.jar"))).getPath("/"),
                                 "drivers" to baseDirectory.resolve("drivers")
                             )
                             for((dest, source) in pairs) {
@@ -594,6 +594,6 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             gen.writeEndArray()
         }
 
-        override fun handledType(): Class<Map<Any, Any>> = uncheckedCast(Map::class.java)
+        override fun handledType(): Class<Map<Any, Any>> = uncheckedCast(Map::class.java) as Class<Map<Any, Any>>
     }
 }

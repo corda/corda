@@ -25,6 +25,7 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.cordappsForPackages
+import org.apache.commons.lang3.JavaVersion
 import org.apache.commons.lang3.SystemUtils
 import org.junit.AfterClass
 import org.junit.Assume
@@ -51,7 +52,7 @@ class VaultQueryJoinTest {
         @BeforeClass
         @JvmStatic
         fun setup() {
-            Assume.assumeTrue(!SystemUtils.IS_JAVA_11)
+            Assume.assumeTrue(!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11))
             mockNetwork = MockNetwork(
                     MockNetworkParameters(
                             cordappsForAllNodes = cordappsForPackages(

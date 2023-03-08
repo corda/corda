@@ -8,6 +8,7 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.updateJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.addIndexList
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import org.apache.commons.lang3.JavaVersion
 import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -154,7 +155,7 @@ class JarSignatureCollectorTest {
     // JDK11: Warning:  Different store and key passwords not supported for PKCS12 KeyStores. Ignoring user-specified -keypass value.
     // TODO: use programmatic API support to implement signing (see https://docs.oracle.com/javase/9/docs/api/jdk/security/jarsigner/JarSigner.html)
     private fun signAs(alias: String, keyPassword: String = alias) : PublicKey {
-        return if (SystemUtils.IS_JAVA_11)
+        return if (SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11))
             dir.signJar(FILENAME, alias, "storepass", "storepass")
         else
             dir.signJar(FILENAME, alias, "storepass", keyPassword)

@@ -1,8 +1,8 @@
 package net.corda.coretests.transactions
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty

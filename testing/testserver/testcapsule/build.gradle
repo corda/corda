@@ -2,9 +2,8 @@
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
  * webserver project because the bintray plugin cannot publish two modules from one project.
  */
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda node web server capsule'
 
@@ -24,6 +23,7 @@ capsule {
     version capsule_version
 }
 
+configurations.runtimeOnly.canBeResolved = true
 task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.webserver.WebServer'
     archiveBaseName = 'corda-testserver'
@@ -43,10 +43,9 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
 
     capsuleManifest {
         applicationVersion = corda_release_version
-        javaAgents = quasar_classifier ? ["quasar-core-${quasar_version}-${quasar_classifier}.jar"] : ["quasar-core-${quasar_version}.jar"]
+        javaAgents = quasar_classifier ? ["quasar-core-${quasar_version}-${quasar_classifier}.jar=m"] : ["quasar-core-${quasar_version}.jar=m"]
         systemProperties['visualvm.display.name'] = 'Corda Webserver'
-        minJavaVersion = '1.8.0'
-        minUpdateVersion['1.8'] = java8_minUpdateVersion
+        minJavaVersion = '17.0'
         caplets = ['CordaWebserverCaplet']
 
         // JVM configuration:
@@ -58,21 +57,21 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
     }
 
     manifest {
-        if (JavaVersion.current() == JavaVersion.VERSION_11) {
-            attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
-        }
+        attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
     }
 }
 
 artifacts {
-    archives buildWebserverJar
     runtimeArtifacts buildWebserverJar
-    publish buildWebserverJar {
-        classifier ''
-    }
 }
 
-publish {
-    disableDefaultJar = true
-    name 'corda-testserver'
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-testserver'
+            artifact(buildWebserverJar) {
+                classifier ''
+            }
+        }
+    }
 }

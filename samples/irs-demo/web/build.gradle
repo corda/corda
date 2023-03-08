@@ -13,8 +13,8 @@ buildscript {
 
 plugins {
     id 'com.craigburke.client-dependencies' version '1.4.0'
+    id 'org.springframework.boot' version '3.0.4'
     id 'io.spring.dependency-management'
-    id 'org.springframework.boot'
 }
 
 group = "${parent.group}.irs-demo"
@@ -29,16 +29,16 @@ dependencyManagement {
 
 clientDependencies {
     registry 'realBower', type:'bower', url:'https://registry.bower.io'
-    realBower {
-        "angular"("1.5.8")
-        "jquery"("^3.0.0")
-        "angular-route"("1.5.8")
-        "lodash"("^4.13.1")
-        "angular-fcsa-number"("^1.5.3")
-        "jquery.maskedinput"("^1.4.1")
-        "requirejs"("^2.2.0")
-        "semantic-ui"("^2.2.2", into: "semantic")
-    }
+//    realBower {
+//        "angular"("1.5.8")
+//        "jquery"("^3.0.0")
+//        "angular-route"("1.5.8")
+//        "lodash"("^4.13.1")
+//        "angular-fcsa-number"("^1.5.3")
+//        "jquery.maskedinput"("^1.4.1")
+//        "requirejs"("^2.2.0")
+//        "semantic-ui"("^2.2.2", into: "semantic")
+//    }
 
     // put the JS dependencies into src directory so it can easily be referenced
     // from HTML files in webapp frontend, useful for testing/development
@@ -53,37 +53,31 @@ ext['artemis.version'] = artemis_version
 ext['hibernate.version'] = hibernate_version
 ext['jackson.version'] = jackson_version
 
-apply plugin: 'kotlin'
-apply plugin: 'kotlin-spring'
-apply plugin: 'eclipse'
-apply plugin: 'project-report'
-apply plugin: 'application'
-
 configurations {
-    demoArtifacts.extendsFrom testRuntime
+    demoArtifacts.extendsFrom testRuntimeOnly
 }
 
 dependencies {
-    compile('org.springframework.boot:spring-boot-starter-web') {
+    implementation('org.springframework.boot:spring-boot-starter-web:3.0.4') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
-    compile('org.springframework.boot:spring-boot-starter-log4j2')
+    implementation('org.springframework.boot:spring-boot-starter-log4j2')
     runtimeOnly("org.apache.logging.log4j:log4j-web:$log4j_version")
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
-    compile project(":client:rpc")
-    compile project(":client:jackson")
-    compile project(":finance:workflows")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
+    implementation project(":client:rpc")
+    implementation project(":client:jackson")
+    implementation project(":finance:workflows")
     // TODO In the future remove -irs bit from the directory name. Currently it clashes with :finance:workflows (same for contracts).
-    compile project(":samples:irs-demo:cordapp:workflows-irs")
+    implementation project(":samples:irs-demo:cordapp:workflows-irs")
 
-    testCompile project(":test-utils")
-    testCompile project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
+    testImplementation project(":test-utils")
+    testImplementation project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
 
     // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
-    testCompile('org.springframework.boot:spring-boot-starter-test') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
@@ -97,7 +91,7 @@ jar {
 
 def docker_dir = file("$project.buildDir/docker")
 
-task deployWebapps(type: Copy, dependsOn: ['jar', 'bootRepackage']) {
+task deployWebapps(type: Copy, dependsOn: ['jar', 'bootJar']) {
     ext.webappDir = file("build/webapps")
 
     from(jar.outputs)
@@ -119,7 +113,7 @@ artifacts {
     demoArtifacts demoJar
 }
 
-task createDockerfile(type: com.bmuschko.gradle.docker.tasks.image.Dockerfile, dependsOn: [bootRepackage]) {
+task createDockerfile(type: com.bmuschko.gradle.docker.tasks.image.Dockerfile, dependsOn: [bootJar]) {
     destFile = file("$docker_dir/Dockerfile")
 
     from 'azul/zulu-openjdk-alpine:8u152'
@@ -128,7 +122,7 @@ task createDockerfile(type: com.bmuschko.gradle.docker.tasks.image.Dockerfile, d
     defaultCommand "sh", "-c", "java -Dcorda.host=\$CORDA_HOST -jar ${jar.archiveName}"
 }
 
-task prepareDockerDir(type: Copy, dependsOn: [bootRepackage, createDockerfile]) {
+task prepareDockerDir(type: Copy, dependsOn: [bootJar, createDockerfile]) {
     from jar
     into docker_dir
 }
