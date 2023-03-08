@@ -1,7 +1,7 @@
 package net.corda.testing.http
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -24,17 +24,17 @@ object HttpUtils {
     }
 
     fun putJson(url: URL, data: String) {
-        val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
+        val body = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), data)
         makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").put(body).build())
     }
 
     fun postJson(url: URL, data: String) {
-        val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
+        val body = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), data)
         makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
     }
 
     fun postPlain(url: URL, data: String) {
-        val body = RequestBody.create(MediaType.parse("text/plain; charset=utf-8"), data)
+        val body = RequestBody.create("text/plain; charset=utf-8".toMediaTypeOrNull(), data)
         makeRequest(Request.Builder().url(url).post(body).build())
     }
 
@@ -47,7 +47,7 @@ object HttpUtils {
     private fun makeRequest(request: Request) {
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
-            throw IOException("${request.method()} to ${request.url()} returned a ${response.code()}: ${response.body()?.string()}")
+            throw IOException("${request.method} to ${request.url} returned a ${response.code}: ${response.body?.string()}")
         }
     }
 }

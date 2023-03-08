@@ -5,10 +5,10 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
@@ -104,7 +104,7 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     override fun write(kryo: Kryo, output: Output, obj: DefaultSerializable) {
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<DefaultSerializable>): DefaultSerializable {
+    override fun read(kryo: Kryo, input: Input, type: Class<out DefaultSerializable>): DefaultSerializable {
         return DefaultSerializable()
     }
 }

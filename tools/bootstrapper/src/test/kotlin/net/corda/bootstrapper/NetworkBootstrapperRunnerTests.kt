@@ -1,7 +1,7 @@
 package net.corda.bootstrapper
 
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div

@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.BelongsToContract
@@ -296,6 +297,8 @@ class CustomSerializationSchemeDriverTest {
         }
 
         private fun customiseKryo(kryo: Kryo, classLoader: ClassLoader) {
+            kryo.references = true
+            kryo.isRegistrationRequired = false
             kryo.instantiatorStrategy = CustomInstantiatorStrategy()
             kryo.classLoader = classLoader
             kryo.register(Arrays.asList("").javaClass, ArraysAsListSerializer())
@@ -307,7 +310,7 @@ class CustomSerializationSchemeDriverTest {
 
             // Use this to allow construction of objects using a JVM backdoor that skips invoking the constructors, if there
             // is no no-arg constructor available.
-            private val defaultStrategy = Kryo.DefaultInstantiatorStrategy(fallbackStrategy)
+            private val defaultStrategy = DefaultInstantiatorStrategy(fallbackStrategy)
 
             override fun <T> newInstantiatorOf(type: Class<T>): ObjectInstantiator<T> {
                 // However this doesn't work for non-public classes in the java. namespace

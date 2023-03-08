@@ -28,9 +28,9 @@ fun <V, W> firstOf(vararg futures: CordaFuture<out V>, handler: (CordaFuture<out
 
 private val defaultLog = LoggerFactory.getLogger("net.corda.core.concurrent")
 @VisibleForTesting
-internal const val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
+const val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 
-internal fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
+fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
     val resultFuture = openFuture<W>()
     val winnerChosen = AtomicBoolean()
     futures.forEach {

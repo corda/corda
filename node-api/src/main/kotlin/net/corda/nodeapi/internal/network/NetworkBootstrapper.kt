@@ -46,7 +46,6 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
 import kotlin.concurrent.schedule
-import kotlin.streams.toList
 
 /**
  * Class to bootstrap a local network of Corda nodes on the same filesystem.

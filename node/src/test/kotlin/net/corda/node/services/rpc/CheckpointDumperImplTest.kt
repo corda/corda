@@ -2,9 +2,9 @@ package net.corda.node.services.rpc
 
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.containsSubstring
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import junit.framework.TestCase.assertNull
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic

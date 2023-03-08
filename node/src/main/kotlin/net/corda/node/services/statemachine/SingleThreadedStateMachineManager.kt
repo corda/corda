@@ -61,7 +61,6 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
-import kotlin.streams.toList
 
 /**
  * The StateMachineManagerImpl will always invoke the flow fibers on the given [AffinityExecutor], regardless of which
@@ -1062,6 +1061,7 @@ internal class SingleThreadedStateMachineManager(
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
             is FlowState.Finished -> throw IllegalStateException("Cannot start (or resume) a finished flow.")
+            is FlowState.Paused -> { /* AXM TODO */ }
         }
     }
 
