@@ -287,7 +287,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    private fun  finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
+    private fun finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
         return database.transaction {
             txStorage.locked {
                 val session = currentDBSession()
