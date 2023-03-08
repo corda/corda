@@ -1,51 +1,12 @@
 #!groovy
 /**
- * Jenkins pipeline to build Corda OS release with JDK11
+ * Jenkins pipeline to build Corda Opensource Pull Requests.
  */
 
-/**
- * Kill already started job.
- * Assume new commit takes precendence and results from previous
- * unfinished builds are not required.
- * This feature doesn't play well with disableConcurrentBuilds() option
- */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
-
-/**
- * Sense environment
- */
-boolean isReleaseTag = (env.TAG_NAME =~ /^release.*JDK17$/)
-
-/*
-** calculate the stage for NexusIQ evaluation
-**  * build for snapshots
-**  * stage-release:  for release candidates and for health checks
-**  * release: for GA release
-*/
-def nexusDefaultIqStage = "build"
-if (isReleaseTag) {
-    switch (env.TAG_NAME) {
-        case ~/.*-RC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
-        case ~/.*-HC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
-        default: nexusDefaultIqStage = "release"
-    }
-}
-
-/**
- * make sure calculated default value of NexusIQ stage is first in the list
- * thus making it default for the `choice` parameter
- */
-def nexusIqStageChoices = [nexusDefaultIqStage].plus(
-                [
-                        'develop',
-                        'build',
-                        'stage-release',
-                        'release',
-                        'operate'
-                ].minus([nexusDefaultIqStage]))
 
 /**
  * Common Gradle arguments for all Gradle executions
@@ -54,45 +15,35 @@ String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
         '--stacktrace',
         '--info',
+        /*
+        ** revert default behavour for `ignoreFailures` and
+        ** do not ignore test failures in PR builds
+        */
+        '-Ptests.ignoreFailures=false',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
+        '-Ddependx.branch.origin="${GIT_COMMIT}"',    // DON'T change quotation - GIT_COMMIT variable is substituted by SHELL!!!!
+        '-Ddependx.branch.target="${CHANGE_TARGET}"', // DON'T change quotation - CHANGE_TARGET variable is substituted by SHELL!!!!
 ].join(' ')
 
-/**
- * The name of subfolders to run tests previously on Another Agent and Same Agent
- */
-String sameAgentFolder = 'sameAgent'
-String anotherAgentFolder = 'anotherAgent'
-
 pipeline {
-    agent {
-        dockerfile {
-            label 'standard'
-            additionalBuildArgs '--build-arg USER="${USER}"' // DON'T change quotation - USER variable is substituted by SHELL!!!!
-            filename "${sameAgentFolder}/Dockerfile"
-        }
-    }
+    agent { label 'standard' }
 
     /*
      * List options in alphabetical order
      */
     options {
+        ansiColor('xterm')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
-        checkoutToSubdirectory "${sameAgentFolder}"
         parallelsAlwaysFailFast()
         timeout(time: 6, unit: 'HOURS')
         timestamps()
-    }
-
-    parameters {
-        choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
 
     /*
      * List environment variables in alphabetical order
      */
     environment {
-        ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish JDK 11 Release to Artifactory :: ${env.BRANCH_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
@@ -101,88 +52,63 @@ pipeline {
     stages {
         stage('Compile') {
             steps {
-                dir(sameAgentFolder) {
-                    authenticateGradleWrapper()
-                    sh script: [
-                            './gradlew',
-                            COMMON_GRADLE_PARAMS,
-                            'clean',
-                            'jar'
-                    ].join(' ')
-                }
+                authenticateGradleWrapper()
+                sh script: [
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        'clean',
+                        'jar'
+                ].join(' ')
             }
         }
 
-        stage('Copy') {
+        stage('Stash') {
             steps {
-                sh "rm -rf ${anotherAgentFolder} && mkdir -p ${anotherAgentFolder} &&  cd ${sameAgentFolder} && cp -aR . ../${anotherAgentFolder}"
-            }
-        }
-
-        stage('Sonatype Check') {
-            steps {
-                dir(sameAgentFolder) {
-                    script {
-                        sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
-                        /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
-                        def version = sh(returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\(\\.[0-9]\\+\\)\\+\\).*\$/\\1/'").trim()
-                        def groupId = sh(returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
-                        def artifactId = 'corda'
-                        nexusAppId = "${groupId}-${artifactId}-${version}"
-                    }
-                    nexusPolicyEvaluation(
-                            failBuildOnNetworkError: false,
-                            iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
-                            iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
-                            iqStage: params.nexusIqStage
-                    )
-                }
+                stash name: 'compiled', useDefaultExcludes: false
             }
         }
 
         stage('All Tests') {
             parallel {
                 stage('Another agent') {
+                    agent {
+                        label 'standard'
+                    }
+                    options {
+                        skipDefaultCheckout true
+                    }
                     post {
                         always {
-                            dir(anotherAgentFolder) {
-                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-                            }
+                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
                         }
                     }
                     stages {
+                        stage('Unstash') {
+                            steps {
+                                unstash 'compiled'
+                            }
+                        }
+                        stage('Recompile') {
+                            steps {
+                                authenticateGradleWrapper()
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'jar'
+                                ].join(' ')
+                            }
+                        }
                         stage('Unit Test') {
                             steps {
-                                dir(anotherAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'test'
-                                    ].join(' ')
-                                }
-                            }
-                        }
-                        stage('Smoke Test') {
-                            steps {
-                                dir(anotherAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'smokeTest'
-                                    ].join(' ')
-                                }
-                            }
-                        }
-                        stage('Slow Integration Test') {
-                            steps {
-                                dir(anotherAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'slowIntegrationTest'
-                                    ].join(' ')
-                                }
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'test'
+                                ].join(' ')
                             }
                         }
                     }
@@ -190,69 +116,21 @@ pipeline {
                 stage('Same agent') {
                     post {
                         always {
-                            dir(sameAgentFolder) {
-                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-                            }
+                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
                         }
                     }
                     stages {
                         stage('Integration Test') {
                             steps {
-                                dir(sameAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'integrationTest'
-                                    ].join(' ')
-                                }
-                            }
-                        }
-
-                        stage('Deploy Node') {
-                            steps {
-                                dir(sameAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'deployNode'
-                                    ].join(' ')
-                                }
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'integrationTest'
+                                ].join(' ')
                             }
                         }
                     }
-                }
-            }
-        }
-
-        stage('Publish to Artifactory') {
-            when {
-                expression { isReleaseTag }
-            }
-            steps {
-                dir(sameAgentFolder) {
-                    rtServer(
-                            id: 'R3-Artifactory',
-                            url: 'https://software.r3.com/artifactory',
-                            credentialsId: 'artifactory-credentials'
-                    )
-                    rtGradleDeployer(
-                            id: 'deployer',
-                            serverId: 'R3-Artifactory',
-                            repo: 'corda-releases'
-                    )
-                    rtGradleRun(
-                            usesPlugin: true,
-                            useWrapper: true,
-                            switches: '-s --info',
-                            tasks: 'artifactoryPublish',
-                            deployerId: 'deployer',
-                            buildName: env.ARTIFACTORY_BUILD_NAME
-                    )
-                    rtPublishBuildInfo(
-                            serverId: 'R3-Artifactory',
-                            buildName: env.ARTIFACTORY_BUILD_NAME
-                    )
                 }
             }
         }
