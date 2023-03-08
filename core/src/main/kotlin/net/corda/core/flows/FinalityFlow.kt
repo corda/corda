@@ -248,7 +248,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun broadcastSignaturesAndFinalise(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
         progressTracker.currentStep = BROADCASTING_POST_NOTARISATION
-        logger.info("Sending notarised signatures.")
+        logger.info("Broadcasting notarised signatures.")
         sessions.forEach { session ->
             try {
                 logger.debug { "Sending transaction to party $session." }
@@ -271,6 +271,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
         progressTracker.currentStep = BROADCASTING
+        logger.info("Broadcasting notarised transaction to other participants.")
         if (newApi) {
             oldV3Broadcast(tx, oldParticipants.toSet())
             for (session in sessions) {
