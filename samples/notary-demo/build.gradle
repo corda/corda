@@ -5,28 +5,28 @@ apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
-cordapp {
-    info {
-        name "Corda Notary Demo"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
-    }
-}
+//cordapp {
+//    info {
+//        name "Corda Notary Demo"
+//        vendor "R3"
+//        targetPlatformVersion corda_platform_version.toInteger()
+//        minimumPlatformVersion 1
+//    }
+//}
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    cordaCompile project(':client:rpc')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaProvided project(':client:rpc')
     // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntimeOnly project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
     // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     // Notary implementations
     cordapp project(':samples:notary-demo:contracts')
@@ -38,6 +38,7 @@ def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
+configurations.cordaCordapp.canBeResolved = true
 task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes/nodesSingle")
     nodeDefaults {

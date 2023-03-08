@@ -6,7 +6,6 @@ import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'net.corda.plugins.publish-utils'
     id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
@@ -32,7 +31,7 @@ configurations {
 }
 
 dependencies {
-    compileOnly project(':core')
+    implementation project(':core')
 
     // Configure these by hand. It should be a minimal subset of core's dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
@@ -44,8 +43,8 @@ dependencies {
     api "com.google.code.findbugs:jsr305:$jsr305_version"
     api "org.slf4j:slf4j-api:$slf4j_version"
 
-    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
-    compileOnly project(':opentelemetry')
+    implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    implementation project(':opentelemetry')
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
@@ -92,12 +91,7 @@ def predeterminise = tasks.register('predeterminise', ProGuardTask) {
     injars patchCore
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    if (JavaVersion.current().isJava9Compatible()) {
-        libraryjars "$javaHome/jmods"
-    } else {
-        libraryjars "$javaHome/lib/rt.jar"
-        libraryjars "$javaHome/lib/jce.jar"
-    }
+    libraryjars "$javaHome/jmods"
     configurations.compileClasspath.forEach {
         if (originalJar != it) {
             libraryjars it, filter: '!META-INF/versions/**'
@@ -215,21 +209,21 @@ tasks.named('assemble') {
     dependsOn checkDeterminism
 }
 
-def deterministicJar = metafix.map { it.outputs.files.singleFile }
+//def deterministicJar = metafix.map { it.outputs.files.singleFile }
 artifacts {
-    deterministicArtifacts deterministicJar
-    publish deterministicJar
+//    deterministicArtifacts deterministicJar
+//    publish deterministicJar
 }
 
-tasks.named('sourceJar', Jar) {
-    from 'README.md'
-    include 'README.md'
-}
+//tasks.named('sourceJar', Jar) {
+//    from 'README.md'
+//    include 'README.md'
+//}
 
-tasks.named('javadocJar', Jar) {
-    from 'README.md'
-    include 'README.md'
-}
+//tasks.named('javadocJar', Jar) {
+//    from 'README.md'
+//    include 'README.md'
+//}
 
 publish {
     dependenciesFrom configurations.deterministicArtifacts

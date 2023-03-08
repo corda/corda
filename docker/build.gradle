@@ -21,7 +21,7 @@ mainClassName = 'net.corda.core.ConfigExporterMain'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies{
-    compile project(':node')
+    implementation project(':node')
 }
 
 shadowJar {

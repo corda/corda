@@ -21,7 +21,7 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestCompile.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
@@ -29,7 +29,7 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaProvided "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
@@ -39,34 +39,34 @@ dependencies {
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
     // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
-    cordaCompile project(':core')
-    cordaCompile(project(':testing:testserver')) {
+    cordaRuntimeOnly project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntimeOnly project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+    cordaProvided project(':core')
+    cordaProvided(project(':testing:testserver')) {
         exclude group: "org.apache.logging.log4j"
     }
 
     // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
+    implementation "org.glassfish.jersey.core:jersey-server:$jersey_version"
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-basics:$strata_version"
-    compile "com.opengamma.strata:strata-product:$strata_version"
-    compile "com.opengamma.strata:strata-data:$strata_version"
-    compile "com.opengamma.strata:strata-calc:$strata_version"
-    compile "com.opengamma.strata:strata-pricer:$strata_version"
-    compile "com.opengamma.strata:strata-report:$strata_version"
-    compile "com.opengamma.strata:strata-market:$strata_version"
-    compile "com.opengamma.strata:strata-collect:$strata_version"
-    compile "com.opengamma.strata:strata-loader:$strata_version"
-    compile "com.opengamma.strata:strata-math:$strata_version"
+    implementation "com.opengamma.strata:strata-basics:$strata_version"
+    implementation "com.opengamma.strata:strata-product:$strata_version"
+    implementation "com.opengamma.strata:strata-data:$strata_version"
+    implementation "com.opengamma.strata:strata-calc:$strata_version"
+    implementation "com.opengamma.strata:strata-pricer:$strata_version"
+    implementation "com.opengamma.strata:strata-report:$strata_version"
+    implementation "com.opengamma.strata:strata-market:$strata_version"
+    implementation "com.opengamma.strata:strata-collect:$strata_version"
+    implementation "com.opengamma.strata:strata-loader:$strata_version"
+    implementation "com.opengamma.strata:strata-math:$strata_version"
 
     // Test dependencies
-    testCompile project(':node-driver')
+    testImplementation project(':node-driver')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -75,7 +75,7 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {
@@ -85,6 +85,7 @@ jar {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
+configurations.cordaCordapp.canBeResolved = true
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes")
     nodeDefaults {

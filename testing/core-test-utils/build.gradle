@@ -1,6 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'net.corda.plugins.publish-utils'
     id 'net.corda.plugins.api-scanner'
     id 'com.jfrog.artifactory'
     id 'java-library'

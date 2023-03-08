@@ -4,13 +4,13 @@ apply plugin: 'net.corda.plugins.cordapp'
 description 'Corda Notary Demo - Workflows'
 
 dependencies {
-    cordaCompile project(':core')
-    cordaCompile project(':client:rpc')
+    cordaProvided project(':core')
+    cordaProvided project(':client:rpc')
 
-    // We need to compile against the Node, but also DO NOT
+    // We need to implementation against the Node, but also DO NOT
     // want the Node bundled inside the CorDapp or added to
     // Gradle's runtime classpath.
-    compileOnly project(':node')
+    implementation project(':node')
 
     cordapp project(':samples:notary-demo:contracts')
 }

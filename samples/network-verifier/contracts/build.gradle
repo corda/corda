@@ -4,7 +4,7 @@ apply plugin: 'net.corda.plugins.cordapp'
 description 'Corda Network Verifier - Contracts'
 
 dependencies {
-    cordaCompile project(':core')
+    cordaProvided project(':core')
 }
 
 cordapp {

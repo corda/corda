@@ -6,6 +6,6 @@ repositories {
 }
 
 dependencies {
-    compile group: 'com.github.docker-java', name: 'docker-java', version: constants.dockerJavaVersion
-    compile group: 'com.github.docker-java', name: 'docker-java-transport-httpclient5', version: constants.dockerJavaVersion
+    implementation group: 'com.github.docker-java', name: 'docker-java', version: constants.dockerJavaVersion
+    implementation group: 'com.github.docker-java', name: 'docker-java-transport-httpclient5', version: constants.dockerJavaVersion
 }

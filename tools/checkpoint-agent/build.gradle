@@ -25,30 +25,30 @@ repositories {
 
 apply plugin: 'kotlin'
 apply plugin: 'idea'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'A javaagent to allow hooking into Kryo checkpoints'
 
 dependencies {
-    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compileOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compileOnly "javassist:javassist:$javaassist_version"
-    compileOnly "com.esotericsoftware:kryo:$kryo_version"
-    compileOnly "co.paralleluniverse:quasar-core:$quasar_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    implementation "javassist:javassist:$javaassist_version"
+    implementation "com.esotericsoftware:kryo:$kryo_version"
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
 
-    compileOnly (project(':core')) {
+    implementation (project(':core')) {
         transitive = false
     }
 
     // Unit testing helpers.
-    testCompile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    testCompile "junit:junit:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
 
     // SLF4J: commons-logging bindings for a SLF4J back end
-    compileOnly "org.slf4j:slf4j-api:$slf4j_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 }
 
+configurations.implementation.canBeResolved = true
 jar {
     archiveBaseName = "${project.name}"
     manifest {
@@ -61,7 +61,7 @@ jar {
                 'Implementation-Version': rootProject.version
         )
     }
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    from { configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
 publish {
