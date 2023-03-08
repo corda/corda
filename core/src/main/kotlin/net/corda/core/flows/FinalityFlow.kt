@@ -144,9 +144,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         @Suppress("ClassNaming")
         object BROADCASTING_PRE_NOTARISATION : ProgressTracker.Step("Broadcasting un-notarised transaction to participants")
         @Suppress("ClassNaming")
-        object BROADCASTING_POST_NOTARISATION : ProgressTracker.Step("Broadcasting notary signatures to participants")
+        object BROADCASTING_POST_NOTARISATION : ProgressTracker.Step("Broadcasting notary signature to participants")
         @Suppress("ClassNaming")
-        object FINALISING_TRANSACTION : ProgressTracker.Step("Recording finalised transaction locally with notary signatures")
+        object FINALISING_TRANSACTION : ProgressTracker.Step("Recording finalised transaction locally with notary signature")
         object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to other participants")
 
         @JvmStatic
@@ -190,7 +190,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // As of platform version 13 we introduce a 2-phase finality protocol whereby
         // - record un-notarised transaction locally and broadcast to external participants to record
         // - notarise transaction + finalise locally
-        // - broadcast notary signatures to external participants (finalise remotely)
+        // - broadcast notary signature to external participants (finalise remotely)
 
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
             serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
@@ -235,7 +235,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     subFlow(SendTransactionFlow(session, tx))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
-                            "${session.counterparty} has finished prematurely and we're trying to send them a transaction without notary signature(s). " +
+                            "${session.counterparty} has finished prematurely and we're trying to send them a transaction without notary signature. " +
                                     "Did they forget to call ReceiveFinalityFlow? (${e.message})",
                             e.cause,
                             e.originalErrorId
@@ -253,10 +253,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             try {
                 logger.debug { "Sending transaction to party $session." }
                 session.send(notarySignatures)
-                // remote will finalise txn with notary signatures
+                // remote will finalise txn with notary signature
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
-                        "${session.counterparty} has finished prematurely and we're trying to send them the notary signature(s). " +
+                        "${session.counterparty} has finished prematurely and we're trying to send them the notary signature. " +
                                 "Did they forget to call ReceiveFinalityFlow? (${e.message})",
                         e.cause,
                         e.originalErrorId
@@ -329,7 +329,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                         serviceHub.myInfo.legalIdentities.first().name,
                         statesToRecord,
                         sessions.map { it.counterparty.name }.toSet()))
-        logger.info("Recorded transaction without notary signature(s) locally.")
+        logger.info("Recorded transaction without notary signatures locally.")
         return tx
     }
 
@@ -426,7 +426,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             serviceHub.recordUnnotarisedTransaction(stx,
                     FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
-            logger.info("Peer recorded transaction without notary signature.")
+            logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
 
             val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
                     .unwrap { it }
