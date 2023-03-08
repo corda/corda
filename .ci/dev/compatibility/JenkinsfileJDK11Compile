@@ -37,11 +37,11 @@ pipeline {
         }
     }
 
-    post {
-        cleanup {
-            script {
-                deleteDir() /* clean up our workspace */
-            }
-        }
-    }
+//    post {
+//        cleanup {
+//            script {
+//                deleteDir() /* clean up our workspace */
+//            }
+//        }
+//    }
 }
