@@ -804,7 +804,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean {
             database.transaction {
                 records.add(TxRecord.Add(transaction))
-                delegate.addUnverifiedTransaction(transaction)
+                delegate.addUnnotarisedTransaction(transaction)
             }
             return true
         }
