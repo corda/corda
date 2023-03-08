@@ -46,6 +46,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class DBTransactionStorageTests {
@@ -109,7 +110,7 @@ class DBTransactionStorageTests {
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction()
         transactionStorage.addUnnotarisedTransaction(transaction)
-        assertEquals(DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
     }
 
     @Test(timeout = 300_000)
@@ -120,7 +121,7 @@ class DBTransactionStorageTests {
         val transaction = newTransaction()
         transactionStorage.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE_PARTY.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
         val txn = readTransactionFromDB(transaction.id)
-        assertEquals(DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG, txn.status)
+        assertEquals(MISSING_NOTARY_SIG, txn.status)
         assertEquals(StatesToRecord.ALL_VISIBLE, txn.statesToRecord)
         assertEquals(ALICE_NAME.toString(), txn.initiator)
         assertEquals(listOf(BOB_NAME.toString()), txn.participants)
@@ -157,6 +158,68 @@ class DBTransactionStorageTests {
         transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
         readTransactionFromDB(transaction.id).let {
             assertEquals(2, it.signatures?.deserialize<List<TransactionSignature>>(context = DBTransactionStorage.contextToUse())?.size)
+            assertEquals(VERIFIED, it.status)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `simulate finalize race condition where first transaction trumps follow-up transaction`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        val notarySig = TransactionSignature(ByteArray(1), DUMMY_NOTARY.owningKey, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.owningKey).schemeNumberID))
+
+        // txn recorded as un-notarised (simulate ReceiverFinalityFlow in initial flow)
+        transactionStorage.addUnnotarisedTransaction(transaction)
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+
+        // txn then recorded as unverified (simulate ResolveTransactionFlow in follow-up flow)
+        transactionStorage.addUnverifiedTransaction(transaction)
+        assertEquals(UNVERIFIED, readTransactionFromDB(transaction.id).status)
+
+        // txn finalised with notary signatures (even though in UNVERIFIED state)
+        assertTrue(transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig)))
+        readTransactionFromDB(transaction.id).let {
+            assertNotNull(it.signatures)
+            assertEquals(VERIFIED, it.status)
+        }
+
+        // attempt to record follow-up txn
+        assertFalse(transactionStorage.addTransaction(transaction + notarySig))
+        readTransactionFromDB(transaction.id).let {
+            assertNotNull(it.signatures)
+            assertEquals(VERIFIED, it.status)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `simulate finalize race condition where follow-up transaction races ahead of initial transaction`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction()
+        val notarySig = TransactionSignature(ByteArray(1), DUMMY_NOTARY.owningKey, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.owningKey).schemeNumberID))
+
+        // txn recorded as un-notarised (simulate ReceiverFinalityFlow in initial flow)
+        transactionStorage.addUnnotarisedTransaction(transaction)
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+
+        // txn then recorded as unverified (simulate ResolveTransactionFlow in follow-up flow)
+        transactionStorage.addUnverifiedTransaction(transaction)
+        assertEquals(UNVERIFIED, readTransactionFromDB(transaction.id).status)
+
+        // txn then recorded as verified (simulate ResolveTransactions recording in follow-up flow)
+        assertTrue(transactionStorage.addTransaction(transaction + notarySig))
+        readTransactionFromDB(transaction.id).let {
+            assertNotNull(it.signatures)
+            assertEquals(VERIFIED, it.status)
+        }
+
+        // // attempt to finalise original txn
+        assertFalse(transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig)))
+        readTransactionFromDB(transaction.id).let {
+            assertNotNull(it.signatures)
             assertEquals(VERIFIED, it.status)
         }
     }
