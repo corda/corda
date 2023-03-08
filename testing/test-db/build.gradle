@@ -1,9 +1,8 @@
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
@@ -21,8 +20,4 @@ jar {
         // Driver will not include it as part of an out-of-process node.
         attributes('Corda-Testing': true)
     }
-}
-
-publish {
-    name jar.baseName
 }

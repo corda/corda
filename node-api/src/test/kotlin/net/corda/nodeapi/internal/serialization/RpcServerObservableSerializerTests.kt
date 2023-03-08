@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal.serialization
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.context.Trace
 import net.corda.nodeapi.internal.serialization.testutils.TestObservableContext
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext

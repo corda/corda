@@ -1,9 +1,9 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash

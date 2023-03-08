@@ -2,7 +2,6 @@ import com.r3.testing.DistributeTestsBy
 import com.r3.testing.PodLogLevel
 
 import static org.gradle.api.JavaVersion.VERSION_11
-import static org.gradle.api.JavaVersion.VERSION_1_8
 
 buildscript {
     // For sharing constants between builds
@@ -15,6 +14,7 @@ buildscript {
 
     ext.corda_build_edition = System.getenv("CORDA_BUILD_EDITION")?.trim() ?: "Corda Open Source"
     ext.corda_platform_version = constants.getProperty("platformVersion")
+    ext.corda_shell_version = constants.getProperty("cordaShellVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
@@ -25,15 +25,9 @@ buildscript {
 
     ext.quasar_group = 'co.paralleluniverse'
     // Set version of Quasar according to version of Java used:
-    if (JavaVersion.current().isJava8()) {
-        ext.quasar_version = constants.getProperty("quasarVersion")
-        ext.quasar_classifier = constants.getProperty("quasarClassifier")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier")
-    } else {
-        ext.quasar_version = constants.getProperty("quasarVersion11")
-        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
-    }
+    ext.quasar_version = constants.getProperty("quasarVersion")
+    ext.quasar_classifier = constants.getProperty("quasarClassifier")
+    ext.jdkClassifier = constants.getProperty("jdkClassifier")
     ext.cordaScanApiClassifier = jdkClassifier
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
@@ -49,7 +43,7 @@ buildscript {
             'org.junit**',
             'org.slf4j**',
             'worker.org.gradle.**',
-            'com.nhaarman.mockito_kotlin**',
+            'org.mockito.kotlin**',
             'org.assertj**',
             'org.hamcrest**',
             'org.mockito**',
@@ -106,7 +100,7 @@ buildscript {
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.hikari_version = constants.getProperty("hikariVersion")
     ext.liquibase_version = constants.getProperty("liquibaseVersion")
-    ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
+    ext.artifactory_contextUrl = constants.getProperty("artifactoryContextUrl")
     ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
     ext.selenium_version = constants.getProperty("seleniumVersion")
     ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
@@ -117,7 +111,6 @@ buildscript {
     ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = constants.getProperty("jcabiManifestsVersion")
     ext.picocli_version = constants.getProperty("picocliVersion")
-    ext.commons_lang_version = constants.getProperty("commonsLangVersion")
     ext.commons_io_version = constants.getProperty("commonsIoVersion")
     ext.controlsfx_version = constants.getProperty("controlsfxVersion")
     ext.detekt_version = constants.getProperty('detektVersion')
@@ -125,21 +118,9 @@ buildscript {
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
-    if (JavaVersion.current().isJava8()) {
-        ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
-        ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
-    } else {
-        ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
-        ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
-    }
+    ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
+    ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
 
-    // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
-    // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
-
-    // Update 121 is required for ObjectInputFilter.
-    // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
-    // when the java version in NodeStartup.hasMinimumJavaVersion() changes, so must this check
-    ext.java8_minUpdateVersion = constants.getProperty('java8MinUpdateVersion')
     ext.corda_revision = {
         try {
             "git rev-parse HEAD".execute().text.trim()
@@ -173,6 +154,7 @@ buildscript {
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
+                    includeGroup 'co.paralleluniverse'
                 }
             }
             maven {
@@ -187,24 +169,21 @@ buildscript {
         }
     }
     dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
-        classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
         classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
         classpath "net.corda.plugins:jar-filter:$gradle_plugins_version"
-        classpath "net.sf.proguard:proguard-gradle:$proguard_version"
+        classpath "com.guardsquare:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
-        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
-        classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
-        classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
+//        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
+//        classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
+        classpath "org.owasp:dependency-check-gradle:$dependency_checker_version"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
-        // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
-        // See https://github.com/corda/gradle-capsule-plugin
-        classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
+//        // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
+//        // See https://github.com/corda/gradle-capsule-plugin
+        classpath "us.kirchmeier:gradle-capsule-plugin:1.0.5_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: '1.3.0'
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }
@@ -216,20 +195,19 @@ buildscript {
 }
 
 plugins {
-    // Add the shadow plugin to the plugins classpath for the entire project.
+    id 'org.jetbrains.kotlin.jvm' apply false
+    id 'org.jetbrains.kotlin.plugin.allopen' apply false
+    id 'org.jetbrains.kotlin.plugin.jpa' apply false
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
-    id "com.gradle.build-scan" version "2.2.1"
     id "org.ajoberstar.grgit" version "4.0.0"
+    id 'corda.root-publish'
 }
 
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'com.r3.testing.distributed-testing'
 
-
-// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
+// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve
 // the latest git commit hash and timestamp and create a version postfix from that
 if (project.hasProperty("versionFromGit")){
     ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
@@ -249,19 +227,20 @@ if (ext.versionSuffix != ""){
 apply plugin: 'java'
 
 logger.lifecycle("Java version: {}", JavaVersion.current())
-sourceCompatibility = VERSION_1_8
-targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
+sourceCompatibility = VERSION_11
+targetCompatibility = VERSION_11
 logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
 logger.lifecycle("Java target compatibility: {}", targetCompatibility)
 logger.lifecycle("Quasar version: {}", quasar_version)
 logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
 logger.lifecycle("Building Corda version: {}", corda_release_version)
+logger.lifecycle("User Home: |{}|", System.getProperty('user.home'))
 
 allprojects {
-    apply plugin: 'kotlin'
+    apply plugin: 'org.jetbrains.kotlin.jvm'
+    apply plugin: 'kotlin-allopen'
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
-    apply plugin: 'kotlin-allopen'
     apply plugin: 'org.sonarqube'
 
     allOpen {
@@ -286,12 +265,12 @@ allprojects {
             nugetconfEnabled = false
         }
     }
-    sourceCompatibility = VERSION_1_8
-    targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
+    sourceCompatibility = VERSION_11
+    targetCompatibility = VERSION_11
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
-        toolVersion = "0.8.3"
+        toolVersion = "0.8.7"
     }
 
     tasks.withType(JavaCompile).configureEach {
@@ -308,11 +287,11 @@ allprojects {
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
-            languageVersion = "1.2"
-            apiVersion = "1.2"
-            jvmTarget = VERSION_1_8
+            languageVersion = "1.8"
+            apiVersion = "1.8"
+            jvmTarget = VERSION_11
             javaParameters = true   // Useful for reflection.
-            freeCompilerArgs = ['-Xjvm-default=compatibility']
+            freeCompilerArgs = ['-Xjvm-default=all-compatibility']
             allWarningsAsErrors = warnings_as_errors
         }
     }
@@ -350,7 +329,7 @@ allprojects {
         // Required to use Gradle build cache (until Gradle 5.0 is released with default value of "append" set to false)
         // See https://github.com/gradle/gradle/issues/5269 and https://github.com/gradle/gradle/pull/6419
         extensions.configure(TypeOf.typeOf(JacocoTaskExtension)) { ex ->
-            ex.append = false
+//            ex.append = false
         }
 
         maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_TESTING_FORKS".toInteger()
@@ -408,6 +387,16 @@ allprojects {
                     includeGroup 'org.crashub'
                     includeGroup 'com.github.bft-smart'
                     includeGroup 'com.github.detro'
+                }
+                metadataSources {
+                    mavenPom()
+                    artifact()
+                }
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-dependencies-dev"
+                content {
+                    includeGroup 'co.paralleluniverse'
                 }
             }
             maven {
@@ -522,37 +511,29 @@ sonarqube {
     }
 }
 
-// Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
-// guarantee this because those are properties checked by the Java plugin, but we're using Kotlin.
-//
-// We recommend a specific minor version (unfortunately, not checkable directly) because JavaFX adds APIs in
-// minor releases, so we can't work with just any Java 8, it has to be a recent one.
-if (!JavaVersion.current().java8Compatible)
-    throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_$java8_minUpdateVersion")
-
 configurations {
     detekt
 }
 
 // Required for building out the fat JAR.
 dependencies {
-    compile project(':node')
-    compile "com.google.guava:guava:$guava_version"
+    implementation project(':node')
+    implementation "com.google.guava:guava:$guava_version"
 
-    // Set to corda compile to ensure it exists now deploy nodes no longer relies on build
-    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+    // Set to corda implementation to ensure it exists now deploy nodes no longer relies on build
+    implementation project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    implementation project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
-    runtime project(':client:jfx')
-    runtime project(':client:mock')
-    runtime project(':client:rpc')
-    runtime project(':core')
-    runtime project(':confidential-identities')
-    runtime project(':finance:workflows')
-    runtime project(':finance:contracts')
-    runtime project(':testing:testserver')
-    testCompile project(':test-utils')
+    runtimeOnly project(':client:jfx')
+    runtimeOnly project(':client:mock')
+    runtimeOnly project(':client:rpc')
+    runtimeOnly project(':core')
+    runtimeOnly project(':confidential-identities')
+    runtimeOnly project(':finance:workflows')
+    runtimeOnly project(':finance:contracts')
+    runtimeOnly project(':testing:testserver')
+    testImplementation project(':test-utils')
     detekt 'io.gitlab.arturbosch.detekt:detekt-cli:1.0.1'
 }
 
@@ -563,10 +544,10 @@ jar {
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     dependsOn = subprojects.test
-    additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
-    sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
-    classDirectories = files(subprojects.sourceSets.main.output)
-    executionData = files(subprojects.jacocoTestReport.executionData)
+//    additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
+//    sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
+//    classDirectories = files(subprojects.sourceSets.main.output)
+//    executionData = files(subprojects.jacocoTestReport.executionData)
     reports {
         html.enabled = true
         xml.enabled = true
@@ -581,26 +562,26 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
         })
     }
     afterEvaluate {
-        classDirectories = files(classDirectories.files.collect {
-            fileTree(dir: it,
-                    // these exclusions are necessary because jacoco gets confused by same class names
-                    // which occur due to deterministic versions of non deterministic classes
-                    exclude: ['**/net/corda/core/crypto/DigestSupplier**',
-                    '**/net/corda/core/crypto/DelegatingSecureRandomService',
-                    '**/net/corda/core/internal/ThreadLocalToggleField**',
-                    '**/net/corda/core/internal/InheritableThreadLocalToggleField**',
-                    '**/net/corda/core/internal/ToggleField**',
-                    'net/corda/core/internal/rules/StateContractValidationEnforcementRule**',
-                    'net/corda/core/internal/SimpleToggleField**',
-                    'net/corda/core/serialization/SerializationFactory**',
-                    'net/corda/serialization/internal/amqp/AMQPStreams**',
-                    'net/corda/serialization/internal/amqp/AMQPSerializerFactories**',
-                    'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext**',
-                    'net/corda/serialization/internal/ByteBufferStreams**',
-                    'net/corda/serialization/internal/model/DefaultCacheProvider**',
-                    'net/corda/serialization/internal/DefaultWhitelist**'
-                    ])
-        })
+//        classDirectories = files(classDirectories.files.collect {
+//            fileTree(dir: it,
+//                    // these exclusions are necessary because jacoco gets confused by same class names
+//                    // which occur due to deterministic versions of non deterministic classes
+//                    exclude: ['**/net/corda/core/crypto/DigestSupplier**',
+//                    '**/net/corda/core/crypto/DelegatingSecureRandomService',
+//                    '**/net/corda/core/internal/ThreadLocalToggleField**',
+//                    '**/net/corda/core/internal/InheritableThreadLocalToggleField**',
+//                    '**/net/corda/core/internal/ToggleField**',
+//                    'net/corda/core/internal/rules/StateContractValidationEnforcementRule**',
+//                    'net/corda/core/internal/SimpleToggleField**',
+//                    'net/corda/core/serialization/SerializationFactory**',
+//                    'net/corda/serialization/internal/amqp/AMQPStreams**',
+//                    'net/corda/serialization/internal/amqp/AMQPSerializerFactories**',
+//                    'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext**',
+//                    'net/corda/serialization/internal/ByteBufferStreams**',
+//                    'net/corda/serialization/internal/model/DefaultCacheProvider**',
+//                    'net/corda/serialization/internal/DefaultWhitelist**'
+//                    ])
+//        })
     }
 }
 
@@ -637,97 +618,17 @@ task testReport(type: TestReport) {
     reportOn subprojects*.test
 }
 
-bintrayConfig {
-    user = System.getenv('CORDA_BINTRAY_USER')
-    key = System.getenv('CORDA_BINTRAY_KEY')
-    repo = 'corda'
-    org = 'r3'
-    licenses = ['Apache-2.0']
-    vcsUrl = 'https://github.com/corda/corda'
-    projectUrl = 'https://github.com/corda/corda'
-    gpgSign = true
-    gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = [
-            'corda-opentelemetry',
-            'corda-opentelemetry-driver',
-            'corda-jfx',
-            'corda-mock',
-            'corda-rpc',
-            'corda-core',
-            'corda-core-deterministic',
-            'corda-deterministic-verifier',
-            'corda-deserializers-djvm',
-            'corda',
-            'corda-finance-workflows',
-            'corda-finance-contracts',
-            'corda-node',
-            'corda-node-api',
-            'corda-node-djvm',
-            'corda-test-common',
-            'corda-core-test-utils',
-            'corda-test-utils',
-            'corda-test-db',
-            'corda-jackson',
-            'corda-testserver-impl',
-            'corda-testserver',
-            'corda-node-driver',
-            'corda-confidential-identities',
-            'corda-shell',
-            'corda-tools-shell-cli',
-            'corda-serialization',
-            'corda-serialization-deterministic',
-            'corda-serialization-djvm',
-            'corda-tools-blob-inspector',
-            'corda-tools-explorer',
-            'corda-tools-network-bootstrapper',
-            'corda-tools-cliutils',
-            'corda-common-configuration-parsing',
-            'corda-common-validation',
-            'corda-common-logging',
-            'corda-tools-network-builder',
-            'corda-tools-checkpoint-agent'
-    ]
-    license {
-        name = 'Apache-2.0'
-        url = 'https://www.apache.org/licenses/LICENSE-2.0'
-        distribution = 'repo'
-    }
-    developer {
-        id = 'R3'
-        name = 'R3'
-        email = 'dev@corda.net'
-    }
-}
-
-// Build a ZIP of all JARs required to compile the Cordapp template
+// Build a ZIP of all JARs required to implementation the Cordapp template
 // Note: corda.jar is used at runtime so no runtime ZIP is necessary.
 // Resulting ZIP can be found in "build/distributions"
 task buildCordappDependenciesZip(type: Zip) {
     baseName 'corda-deps'
-    from configurations.runtime
-    from configurations.compile
-    from configurations.testCompile
+    from configurations.runtimeOnly
+    from configurations.implementation
+    from configurations.testImplementation
     from buildscript.configurations.classpath
     from 'node/capsule/NOTICE' // CDDL notice
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-artifactory {
-    publish {
-        contextUrl = artifactory_contextUrl
-        repository {
-            repoKey = 'corda-dev'
-            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
-            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
-        }
-
-        defaults {
-            // Root project applies the plugin (for this block) but does not need to be published
-            if (project != rootProject) {
-                publications(project.extensions.publish.name())
-            }
-        }
-    }
 }
 
 tasks.register('generateApi', net.corda.plugins.apiscanner.GenerateApi) {
@@ -768,11 +669,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 wrapper {
     gradleVersion = '5.6.4'
     distributionType = Wrapper.DistributionType.ALL
-}
-
-buildScan {
-    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-    termsOfServiceAgree = 'yes'
 }
 
 distributedTesting {

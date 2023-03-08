@@ -4,7 +4,7 @@ allprojects {
     }
 }
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
@@ -21,71 +21,76 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {
-        cordaDriver "net.corda:corda-shell:$corda_release_version"
+        cordaDriver "net.corda:corda-shell:$corda_shell_version"
     }
-    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    implementation project(':core-test-utils')
+
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
-    cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
+    cordapp project(':samples:simm-valuation-demo:contracts-states')
     cordapp project(':samples:simm-valuation-demo:flows')
 
-    // Cordformation needs a SLF4J implementation when executing the Network
-    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
-    // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper project(":node-api")
 
     // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
-    cordaCompile project(':core')
-    cordaCompile(project(':testing:testserver')) {
+    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    corda project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+
+    cordaProvided project(':core')
+    cordaProvided(project(':testing:testserver')) {
         exclude group: "org.apache.logging.log4j"
     }
 
     // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
+    implementation "org.glassfish.jersey.core:jersey-server:$jersey_version"
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-basics:$strata_version"
-    compile "com.opengamma.strata:strata-product:$strata_version"
-    compile "com.opengamma.strata:strata-data:$strata_version"
-    compile "com.opengamma.strata:strata-calc:$strata_version"
-    compile "com.opengamma.strata:strata-pricer:$strata_version"
-    compile "com.opengamma.strata:strata-report:$strata_version"
-    compile "com.opengamma.strata:strata-market:$strata_version"
-    compile "com.opengamma.strata:strata-collect:$strata_version"
-    compile "com.opengamma.strata:strata-loader:$strata_version"
-    compile "com.opengamma.strata:strata-math:$strata_version"
+    implementation "com.opengamma.strata:strata-basics:$strata_version"
+    implementation "com.opengamma.strata:strata-product:$strata_version"
+    implementation "com.opengamma.strata:strata-data:$strata_version"
+    implementation "com.opengamma.strata:strata-calc:$strata_version"
+    implementation "com.opengamma.strata:strata-pricer:$strata_version"
+    implementation "com.opengamma.strata:strata-report:$strata_version"
+    implementation "com.opengamma.strata:strata-market:$strata_version"
+    implementation "com.opengamma.strata:strata-collect:$strata_version"
+    implementation "com.opengamma.strata:strata-loader:$strata_version"
+    implementation "com.opengamma.strata:strata-math:$strata_version"
 
     // Test dependencies
-    testCompile project(':node-driver')
+    testImplementation project(':core')
+    testImplementation project(':node-driver')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {
     // A CorDapp does not configure the Node's logging!
     exclude "**/log4j2*.xml"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-def nodeTask = tasks.getByPath(':node:capsule:assemble')
-def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+configurations.cordaCordapp.canBeResolved = true
+task deployNodes(type: net.corda.plugins.Cordform) {
     directory file("$buildDir/nodes")
     nodeDefaults {
         cordapp project(':finance:contracts')
@@ -163,6 +168,14 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+    jvmArgs += [
+            '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.nio=ALL-UNNAMED', '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.security.cert=ALL-UNNAMED', '--add-opens', 'java.base/javax.net.ssl=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util.concurrent=ALL-UNNAMED', '--add-opens', 'java.sql/java.sql=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
+    ]
 }
 
 cordapp {

@@ -29,6 +29,7 @@ val cordaSecurityProvider = CordaSecurityProvider().also {
     // a SecureRandom implementation.
     Security.insertProviderAt(it, 1) // The position is 1-based.
 }
+
 // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
 val `id-Curve25519ph` = ASN1ObjectIdentifier("1.3.101.112")
 val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
@@ -46,6 +47,23 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     // This registration is needed for reading back EdDSA key from java keystore.
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
     Security.addProvider(it)
+
+    // Remove providers that class with bouncy castle
+    val bcProviders = it.keys
+
+    // JDK 17: Add SunEC provider as lowest priority, as we use Bouncycastle for EDDSA
+    // and remove amy algorithms that conflict with Bouncycastle
+    val sunEC = Security.getProvider("SunEC")
+    if (sunEC != null) {
+        Security.removeProvider("SunEC")
+        Security.addProvider(sunEC)
+
+        for(alg in sunEC.keys) {
+            if (bcProviders.contains(alg)) {
+                sunEC.remove(alg)
+            }
+        }
+    }
 }
 
 val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {

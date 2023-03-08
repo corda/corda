@@ -1,8 +1,8 @@
 package net.corda.node.amqp
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.core.internal.JavaVersion
 import net.corda.core.internal.div
 import net.corda.core.toFuture

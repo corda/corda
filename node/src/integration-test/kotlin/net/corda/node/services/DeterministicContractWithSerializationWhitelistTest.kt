@@ -25,8 +25,8 @@ import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
+@Ignore("TODO JDK17: Remove me")
 @Suppress("FunctionName")
-@Ignore
 class DeterministicContractWithSerializationWhitelistTest {
     companion object {
         val logger = loggerFor<DeterministicContractWithSerializationWhitelistTest>()

@@ -1,6 +1,6 @@
 package net.corda.node.services.config
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions

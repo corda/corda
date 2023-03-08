@@ -1,10 +1,9 @@
 plugins {
     id 'java-library'
-    id 'net.corda.plugins.publish-utils'
-    id 'com.jfrog.artifactory'
     id 'idea'
+    id 'corda.common-publishing'
 }
-apply from: "${rootProject.projectDir}/deterministic.gradle"
+//apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Test utilities for deterministic contract verification'
 
@@ -14,7 +13,7 @@ configurations {
     }
 
     // Compile against the deterministic artifacts to ensure that we use only the deterministic API subset.
-    compileOnly.extendsFrom deterministicArtifacts
+    implementation.extendsFrom deterministicArtifacts
     runtimeArtifacts.extendsFrom api
 }
 
@@ -36,15 +35,7 @@ jar {
 artifacts {
     deterministicArtifacts jar
     runtimeArtifacts jar
-    publish jar
-}
-
-publish {
-    // Our published POM will contain dependencies on the non-deterministic Corda artifacts.
-    dependenciesFrom(configurations.runtimeArtifacts) {
-        defaultScope = 'compile'
-    }
-    name jar.archiveBaseName.get()
+//    publish jar
 }
 
 idea {

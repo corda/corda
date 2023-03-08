@@ -1,44 +1,38 @@
 import net.corda.plugins.Cordform
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
 cordapp {
-    info {
-        name "Corda Notary Demo"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
-    }
+    targetPlatformVersion corda_platform_version.toInteger()
 }
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {
-        cordaDriver "net.corda:corda-shell:$corda_release_version"
+        cordaDriver "net.corda:corda-shell:$corda_shell_version"
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    cordaCompile project(':client:rpc')
-    // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 
-    // Cordformation needs a SLF4J implementation when executing the Network
-    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
-    // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaProvided project(':core')
+    cordaProvided project(':client:rpc')
+
+    cordaBootstrapper "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper project(":node-api")
+
+    // Corda integration dependencies
+    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    corda project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
 
     // Notary implementations
     cordapp project(':samples:notary-demo:contracts')
     cordapp project(':samples:notary-demo:workflows')
 }
 
-def nodeTask = tasks.getByPath(':node:capsule:assemble')
-def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
-
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
-task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+configurations.cordaCordapp.canBeResolved = true
+task deployNodesSingle(type: Cordform) {
     directory file("$buildDir/nodes/nodesSingle")
     nodeDefaults {
         projectCordapp {
@@ -71,7 +65,7 @@ task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     }
 }
 
-task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+task deployNodesCustom(type: Cordform) {
     directory file("$buildDir/nodes/nodesCustom")
     nodeDefaults {
         projectCordapp {
@@ -105,7 +99,7 @@ task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     }
 }
 
-task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+task deployNodesRaft(type: Cordform) {
     directory file("$buildDir/nodes/nodesRaft")
     nodeDefaults {
         projectCordapp {
@@ -173,7 +167,7 @@ task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     }
 }
 
-task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+task deployNodesBFT(type: Cordform) {
     def clusterAddresses = ["localhost:11000", "localhost:11010", "localhost:11020", "localhost:11030"]
     directory file("$buildDir/nodes/nodesBFT")
     nodeDefaults {

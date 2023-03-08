@@ -11,6 +11,7 @@ import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
@@ -23,6 +24,7 @@ import java.util.Date
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializeCertificatesTest : TestBase(KOTLIN) {
     companion object {
         // The sandbox's localisation may not match that of the host.

@@ -1,9 +1,9 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.atLeast
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort

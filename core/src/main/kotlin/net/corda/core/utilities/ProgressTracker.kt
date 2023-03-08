@@ -6,7 +6,9 @@ import net.corda.core.internal.warnOnce
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
+import rx.functions.Action1
 import rx.subjects.ReplaySubject
+import java.io.Serializable
 import java.util.*
 
 /**
@@ -38,6 +40,8 @@ class ProgressTracker(vararg inputSteps: Step) {
     private companion object {
         private val log = contextLogger()
     }
+
+    internal fun interface SerializableAction<T>: Action1<T>, Serializable
 
     @CordaSerializable
     @DeleteForDJVM
@@ -151,10 +155,10 @@ class ProgressTracker(vararg inputSteps: Step) {
             stepIndex = index
             _changes.onNext(Change.Position(this, steps[index]))
             recalculateStepsTreeIndex()
-            curChangeSubscription = currentStep.changes.subscribe({
+            curChangeSubscription = currentStep.changes.subscribe((SerializableAction<Change> {
                 _changes.onNext(it)
                 if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-            }, { _changes.onError(it) })
+            }), (SerializableAction { _changes.onError(it) }))
 
             if (currentStep == DONE) {
                 _changes.onCompleted()
@@ -338,5 +342,6 @@ class ProgressTracker(vararg inputSteps: Step) {
      */
     val hasEnded: Boolean get() = _changes.hasCompleted() || _changes.hasThrowable()
 }
+
 // TODO: Expose the concept of errors.
 // TODO: It'd be helpful if this class was at least partly thread safe.

@@ -88,6 +88,7 @@ import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
+import org.apache.commons.lang3.JavaVersion
 import org.apache.commons.lang3.SystemUtils
 import org.h2.jdbc.JdbcSQLNonTransientConnectionException
 import org.slf4j.Logger
@@ -196,7 +197,7 @@ open class Node(configuration: NodeConfiguration,
         private fun hasMinimumJavaVersion(): Boolean {
             // JDK 11: review naming convention and checking of 'minUpdateVersion' and 'distributionType` (OpenJDK, Oracle, Zulu, AdoptOpenJDK, Cornetto)
             return try {
-                if (SystemUtils.IS_JAVA_11)
+                if (SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11))
                     return true
                 else {
                     val update = getJavaUpdateVersion(SystemUtils.JAVA_VERSION) // To filter out cases like 1.8.0_202-ea
@@ -612,6 +613,7 @@ open class Node(configuration: NodeConfiguration,
         when (configuration.jmxReporterType) {
             JmxReporterType.JOLOKIA -> registerJolokiaReporter(metrics)
             JmxReporterType.NEW_RELIC -> registerNewRelicReporter(metrics)
+            null -> log.info("JMX Reeporter not registered")
         }
     }
 

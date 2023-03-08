@@ -100,7 +100,7 @@ class DeterministicVerifier(
 
                 val createSandboxTx = taskFactory.apply(LtxSupplierFactory::class.java)
                 createSandboxTx.apply(arrayOf(
-                    classLoader.createForImport(Function { serializer.deserialize(serializedInputs) }),
+                    // TODO AXM - classLoader.createForImport(Function { serializer.deserialize(serializedInputs) }),
                     componentFactory.toSandbox(OUTPUTS_GROUP, TransactionState::class.java),
                     CommandFactory(taskFactory).toSandbox(
                         componentFactory.toSandbox(SIGNERS_GROUP, List::class.java),
@@ -113,7 +113,7 @@ class DeterministicVerifier(
                     serializer.deserialize(timeWindowData),
                     serializer.deserialize(privacySaltData),
                     serializer.deserialize(networkingParametersData),
-                    classLoader.createForImport(Function { serializer.deserialize(serializedReferences) }),
+                    // TODO AXM - classLoader.createForImport(Function { serializer.deserialize(serializedReferences) }),
                     serializer.deserialize(digestServiceData)
                 ))
             }

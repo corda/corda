@@ -1,8 +1,8 @@
 package net.corda.deterministic.data
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name

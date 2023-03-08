@@ -29,7 +29,6 @@ import javax.persistence.Id
 import javax.persistence.Lob
 import javax.persistence.Table
 import javax.persistence.criteria.Predicate
-import kotlin.streams.toList
 
 class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
                                          val clock: CordaClock,

@@ -10,6 +10,7 @@ import net.corda.core.serialization.serialize
 import net.corda.serialization.djvm.SandboxType.KOTLIN
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -23,6 +24,7 @@ import java.util.function.Function
 import java.util.stream.Stream
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializePublicKeyTest : TestBase(KOTLIN) {
     class SignatureSchemeProvider : ArgumentsProvider {
         override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {

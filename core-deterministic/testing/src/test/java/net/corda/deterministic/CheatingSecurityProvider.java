@@ -33,7 +33,7 @@ public class CheatingSecurityProvider extends Provider implements AutoCloseable 
     private class SunSecureRandom extends SecureRandom {
         public SunSecureRandom() {
             // JDK11 upgrade: rewritten in Java to gain access to private internal JDK classes via open module directive
-            super(new sun.security.provider.SecureRandom(), null);
+            // TODO - Fix for JDK 17 super(new sun.security.provider.SecureRandom(), null);
         }
     }
 

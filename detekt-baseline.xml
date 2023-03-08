@@ -1818,7 +1818,7 @@
     <ID>WildcardImport:AMQPTestUtils.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:AMQPTypeIdentifierParser.kt$import org.apache.qpid.proton.amqp.*</ID>
     <ID>WildcardImport:AMQPTypeIdentifiers.kt$import org.apache.qpid.proton.amqp.*</ID>
-    <ID>WildcardImport:ANSIProgressRendererTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
+    <ID>WildcardImport:ANSIProgressRendererTest.kt$import org.mockito.kotlin.*</ID>
     <ID>WildcardImport:AbstractCashFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:AbstractCashSelection.kt$import net.corda.core.utilities.*</ID>
     <ID>WildcardImport:AdvancedExceptionDialog.kt$import javafx.scene.control.*</ID>
@@ -1906,7 +1906,7 @@
     <ID>WildcardImport:CompositeKeyFactory.kt$import java.security.*</ID>
     <ID>WildcardImport:CompositeKeyTests.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:CompositeSignature.kt$import java.security.*</ID>
-    <ID>WildcardImport:ConcurrencyUtilsTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
+    <ID>WildcardImport:ConcurrencyUtilsTest.kt$import org.mockito.kotlin.*</ID>
     <ID>WildcardImport:ConfigParsingTest.kt$import org.assertj.core.api.Assertions.*</ID>
     <ID>WildcardImport:ConfigUtilities.kt$import com.typesafe.config.*</ID>
     <ID>WildcardImport:Configuration.kt$import com.typesafe.config.*</ID>
@@ -1937,7 +1937,7 @@
     <ID>WildcardImport:CordaCliWrapper.kt$import picocli.CommandLine.*</ID>
     <ID>WildcardImport:CordaExceptionTest.kt$import net.corda.core.contracts.TransactionVerificationException.*</ID>
     <ID>WildcardImport:CordaExceptionTest.kt$import org.junit.Assert.*</ID>
-    <ID>WildcardImport:CordaFutureImplTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
+    <ID>WildcardImport:CordaFutureImplTest.kt$import org.mockito.kotlin.*</ID>
     <ID>WildcardImport:CordaInternal.kt$import kotlin.annotation.AnnotationTarget.*</ID>
     <ID>WildcardImport:CordaModule.kt$import com.fasterxml.jackson.annotation.*</ID>
     <ID>WildcardImport:CordaModule.kt$import com.fasterxml.jackson.databind.*</ID>
@@ -2023,7 +2023,7 @@
     <ID>WildcardImport:GuiUtilities.kt$import tornadofx.*</ID>
     <ID>WildcardImport:HTTPNetworkRegistrationService.kt$import java.net.HttpURLConnection.*</ID>
     <ID>WildcardImport:HardRestartTest.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:HibernateConfigurationTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
+    <ID>WildcardImport:HibernateConfigurationTest.kt$import org.mockito.kotlin.*</ID>
     <ID>WildcardImport:HibernateConfigurationTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:HibernateConfigurationTest.kt$import org.junit.*</ID>
     <ID>WildcardImport:HibernateQueryCriteriaParser.kt$import javax.persistence.criteria.*</ID>
@@ -2166,7 +2166,7 @@
     <ID>WildcardImport:NodeInterestRatesTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:NodeRegistrationTest.kt$import javax.ws.rs.*</ID>
     <ID>WildcardImport:NodeSchedulerService.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:NodeSchedulerServiceTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
+    <ID>WildcardImport:NodeSchedulerServiceTest.kt$import org.mockito.kotlin.*</ID>
     <ID>WildcardImport:NodeSchedulerServiceTest.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:NodeSchedulerServiceTest.kt$import org.junit.*</ID>
     <ID>WildcardImport:NodeSchemaService.kt$import net.corda.core.schemas.*</ID>
@@ -2418,7 +2418,7 @@
     <ID>WildcardImport:VaultService.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:VaultService.kt$import net.corda.core.node.services.Vault.RelevancyStatus.*</ID>
     <ID>WildcardImport:VaultService.kt$import net.corda.core.node.services.vault.*</ID>
-    <ID>WildcardImport:VaultSoftLockManagerTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
+    <ID>WildcardImport:VaultSoftLockManagerTest.kt$import org.mockito.kotlin.*</ID>
     <ID>WildcardImport:VaultSoftLockManagerTest.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:VaultStateMigration.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:VaultStateMigration.kt$import net.corda.core.serialization.internal.*</ID>

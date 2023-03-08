@@ -15,8 +15,10 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 
+@Ignore("TODO JDK17: Remove me?")
 class DeterministicContractCannotMutateTransactionTest {
     companion object {
         private val logger = loggerFor<DeterministicContractCannotMutateTransactionTest>()

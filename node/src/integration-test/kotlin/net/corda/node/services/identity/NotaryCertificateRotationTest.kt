@@ -1,7 +1,7 @@
 package net.corda.node.services.identity
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.internal.createDirectories
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.DOLLARS

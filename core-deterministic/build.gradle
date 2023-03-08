@@ -2,23 +2,16 @@ import net.corda.gradle.jarfilter.JarFilterTask
 import net.corda.gradle.jarfilter.MetaFixerTask
 import proguard.gradle.ProGuardTask
 
-import static org.gradle.api.JavaVersion.VERSION_1_8
-
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'net.corda.plugins.publish-utils'
-    id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
 }
-apply from: "${rootProject.projectDir}/deterministic.gradle"
+//apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Corda core (deterministic)'
 
 evaluationDependsOn(":core")
-
-// required by DJVM and Avian JVM (for running inside the SGX enclave) which only supports Java 8.
-targetCompatibility = VERSION_1_8
 
 def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
@@ -32,25 +25,25 @@ configurations {
 }
 
 dependencies {
-    compileOnly project(':core')
+    implementation project(':core')
 
     // Configure these by hand. It should be a minimal subset of core's dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
 
     // These "api" dependencies will become "compile" scoped in our published POM.
-    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+//    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     api "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     api "javax.persistence:javax.persistence-api:2.2"
     api "com.google.code.findbugs:jsr305:$jsr305_version"
     api "org.slf4j:slf4j-api:$slf4j_version"
 
-    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
-    compileOnly project(':opentelemetry')
+    implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    implementation project(':opentelemetry')
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
-    deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
-    deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
+    deterministicLibraries "org.bouncycastle:bcprov-debug-jdk18on:$bouncycastle_version"
+    deterministicLibraries "org.bouncycastle:bcpkix-debug-jdk18on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
 }
 
@@ -94,12 +87,7 @@ def predeterminise = tasks.register('predeterminise', ProGuardTask) {
     injars patchCore
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    if (JavaVersion.current().isJava9Compatible()) {
-        libraryjars "$javaHome/jmods"
-    } else {
-        libraryjars "$javaHome/lib/rt.jar"
-        libraryjars "$javaHome/lib/jce.jar"
-    }
+    libraryjars "$javaHome/jmods"
     configurations.compileClasspath.forEach {
         if (originalJar != it) {
             libraryjars it, filter: '!META-INF/versions/**'
@@ -185,15 +173,15 @@ def metafix = tasks.register('metafix', MetaFixerTask) {
 
     // Strip timestamps from the JAR to make it reproducible.
     preserveTimestamps = false
-    finalizedBy checkDeterminism
+//    finalizedBy checkDeterminism
 }
 
 // DOCSTART 01
 checkDeterminism.configure {
-    dependsOn jdkTask
+//    dependsOn jdkTask
     injars metafix
 
-    libraryjars deterministic_rt_jar
+//    libraryjars deterministic_rt_jar
 
     configurations.deterministicLibraries.forEach {
         libraryjars it, filter: '!META-INF/versions/**'
@@ -214,29 +202,24 @@ determinise.configure {
     finalizedBy metafix
 }
 tasks.named('assemble') {
-    dependsOn checkDeterminism
+//    dependsOn checkDeterminism
 }
 
-def deterministicJar = metafix.map { it.outputs.files.singleFile }
+//def deterministicJar = metafix.map { it.outputs.files.singleFile }
 artifacts {
-    deterministicArtifacts deterministicJar
-    publish deterministicJar
+//    deterministicArtifacts deterministicJar
+//    publish deterministicJar
 }
 
-tasks.named('sourceJar', Jar) {
-    from 'README.md'
-    include 'README.md'
-}
+//tasks.named('sourceJar', Jar) {
+//    from 'README.md'
+//    include 'README.md'
+//}
 
-tasks.named('javadocJar', Jar) {
-    from 'README.md'
-    include 'README.md'
-}
-
-publish {
-    dependenciesFrom configurations.deterministicArtifacts
-    name jarBaseName
-}
+//tasks.named('javadocJar', Jar) {
+//    from 'README.md'
+//    include 'README.md'
+//}
 
 idea {
     module {

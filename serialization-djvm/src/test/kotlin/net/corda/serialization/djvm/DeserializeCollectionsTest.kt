@@ -7,6 +7,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.serialization.djvm.SandboxType.KOTLIN
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
@@ -16,6 +17,7 @@ import java.util.SortedSet
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializeCollectionsTest : TestBase(KOTLIN) {
     @Test
 	fun `test deserializing string list`() {

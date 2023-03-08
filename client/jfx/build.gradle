@@ -1,28 +1,27 @@
 // JDK 11 JavaFX
 plugins {
     id 'org.openjfx.javafxplugin' version '0.0.7' apply false
+    id 'corda.common-publishing'
 }
 
-if (JavaVersion.current().isJava9Compatible()) {
-    apply plugin: 'org.openjfx.javafxplugin'
-    javafx {
-        version = "11.0.2"
-        modules = ['javafx.controls',
-                   'javafx.fxml'
-        ]
-    }
+apply plugin: 'org.openjfx.javafxplugin'
+javafx {
+    version = "11.0.2"
+    modules = [
+        'javafx.controls',
+        'javafx.fxml'
+    ]
 }
-apply plugin: 'kotlin'
+
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda client JavaFX modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
@@ -39,23 +38,26 @@ sourceSets {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    compile project(':core')
-    compile project(':finance:contracts')
-    compile project(':finance:workflows')
-    compile project(':client:rpc')
+    implementation project(':core')
+    implementation project(':finance:contracts')
+    implementation project(':finance:workflows')
+    implementation project(':client:rpc')
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "com.google.guava:guava:$guava_version"
+    implementation "com.google.guava:guava:$guava_version"
+    implementation "io.reactivex:rxjava:$rxjava_version"
+
+    // For caches rather than guava
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // ReactFX: Functional reactive UI programming.
-    compile 'org.reactfx:reactfx:2.0-M5'
-    compile 'org.fxmisc.easybind:easybind:1.0.3'
+    implementation 'org.reactfx:reactfx:2.0-M5'
+    implementation 'org.fxmisc.easybind:easybind:1.0.3'
 
     // Artemis Client: ability to connect to an Artemis broker and control it.
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
-    compile "org.apache.commons:commons-collections4:${commons_collections_version}"
-    compile "commons-beanutils:commons-beanutils:${beanutils_version}"
-    compile("org.apache.activemq:artemis-core-client:${artemis_version}") {
+    implementation "org.apache.commons:commons-collections4:${commons_collections_version}"
+    implementation "commons-beanutils:commons-beanutils:${beanutils_version}"
+    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
 
@@ -67,13 +69,18 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.assertj:assertj-core:${assertj_version}"
 
-    testCompile project(':test-utils')
+    testImplementation project(':test-utils')
 
     // Integration test helpers
-    integrationTestCompile "junit:junit:$junit_version"
-    integrationTestCompile project(':node-driver')
+    integrationTestImplementation "junit:junit:$junit_version"
+    integrationTestImplementation project(':node-driver')
+}
+
+test {
+    jvmArgs '--add-exports', 'javafx.base/com.sun.javafx.collections=ALL-UNNAMED'
 }
 
 task integrationTest(type: Test) {
@@ -86,8 +93,4 @@ jar {
     manifest {
         attributes 'Automatic-Module-Name': 'net.corda.client.jfx'
     }
-}
-
-publish {
-    name jar.baseName
 }

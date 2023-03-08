@@ -12,7 +12,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.util.stream.Stream
-import kotlin.streams.toList
 
 /**
  * Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform

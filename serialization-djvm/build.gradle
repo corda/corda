@@ -1,15 +1,14 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'net.corda.plugins.publish-utils'
-    id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
+    id 'corda.common-publishing'
 }
 
 // The DJVM only supports Java 8 byte-code, so the tests must
 // be compiled for Java 8. The main artifact is only compiled
 // for Java 8 because it belongs to "Open Core".
-apply from: "${rootProject.projectDir}/java8.gradle"
+//apply from: "${rootProject.projectDir}/java8.gradle"
 
 description 'Serialization support for the DJVM'
 
@@ -26,11 +25,19 @@ dependencies {
     api project(':core')
     api project(':serialization')
     api "net.corda.djvm:corda-djvm:$djvm_version"
-    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+//    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation(project(':serialization-djvm:deserializers')) {
         transitive = false
     }
+    implementation "org.apache.qpid:proton-j:$protonj_version"
+    implementation "com.google.guava:guava:$guava_version"
+
+    // Bouncy castle support needed for X509 certificate manipulation
+    implementation "org.bouncycastle:bcprov-debug-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-debug-jdk18on:${bouncycastle_version}"
+
+    testImplementation project(':serialization')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"
@@ -43,7 +50,6 @@ dependencies {
 
     // The DJVM will need this classpath to run the unit tests.
     sandboxTesting files(sourceSets.getByName("test").output)
-    sandboxTesting project(':serialization-djvm:deserializers')
     sandboxTesting project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
     sandboxTesting "org.slf4j:slf4j-nop:$slf4j_version"
 }
@@ -55,6 +61,11 @@ jar {
         attributes('Automatic-Module-Name': 'net.corda.serialization.djvm')
         attributes('Sealed': true)
     }
+}
+
+test {
+    jvmArgs '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.time=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED'
 }
 
 tasks.withType(Javadoc).configureEach {
@@ -69,10 +80,6 @@ tasks.withType(Test).configureEach {
 
     // Configure the host timezone to match the DJVM's.
     systemProperty 'user.timezone', 'UTC'
-}
-
-publish {
-    name jar.archiveBaseName
 }
 
 idea {

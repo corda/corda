@@ -1,11 +1,10 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
-apply plugin: 'kotlin-jpa'
-apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda finance module - flows'
 
@@ -23,8 +22,8 @@ sourceSets {
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntimeClasspath
-    integrationTestCompile.extendsFrom testCompile
+    testArtifacts.extendsFrom testRuntimeOnlyClasspath
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
@@ -32,24 +31,29 @@ dependencies {
     // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
-    cordaCompile project(':core')
-    cordaCompile project(':confidential-identities')
+    cordaProvided project(':core')
+    cordaProvided project(':confidential-identities')
     
     cordapp project(':finance:contracts')
 
-    testCompile project(':test-utils')
-    testCompile project(path: ':core', configuration: 'testArtifacts')
-    testCompile project(':node-driver')
+    testImplementation project(':node')
+    testImplementation project(':node-api')
+    testImplementation project(':node-driver')
+    testImplementation project(':serialization')
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
+    testImplementation "org.apache.qpid:proton-j:$protonj_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 task testJar(type: Jar) {
@@ -60,14 +64,29 @@ task testJar(type: Jar) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+    jvmArgs += [
+            '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.nio=ALL-UNNAMED', '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.security.cert=ALL-UNNAMED', '--add-opens', 'java.base/javax.net.ssl=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util.concurrent=ALL-UNNAMED', '--add-opens', 'java.sql/java.sql=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
+    ]
+}
+
+jar {
+    archiveBaseName = 'corda-finance-workflows'
+    archiveClassifier = ''
 }
 
 artifacts {
     testArtifacts testJar
 }
 
-jar {
-    baseName 'corda-finance-workflows'
+test {
+    jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED', '--add-opens', 'java.base/java.security.cert=ALL-UNNAMED'
 }
 
 cordapp {
@@ -83,6 +102,11 @@ cordapp {
     // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 }
 
-publish {
-    name jar.baseName
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-finance-workflows'
+            from components.cordapp
+        }
+    }
 }

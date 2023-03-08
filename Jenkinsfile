@@ -26,8 +26,29 @@ String COMMON_GRADLE_PARAMS = [
         '-Ddependx.branch.target="${CHANGE_TARGET}"', // DON'T change quotation - CHANGE_TARGET variable is substituted by SHELL!!!!
 ].join(' ')
 
+/**
+ * The name of subfolders to run tests previously on Another Agent and Same Agent
+ */
+String sameAgentFolder = 'sameAgent'
+String anotherAgentFolder = 'anotherAgent'
+
 pipeline {
-    agent { label 'standard' }
+    agent {
+        dockerfile {
+            label 'standard'
+            additionalBuildArgs '--build-arg USER="${USER}"' // DON'T change quotation - USER variable is substituted by SHELL!!!!
+            filename "${sameAgentFolder}/Dockerfile"
+        }
+//         docker {
+//                 registryUrl 'https://engineering-docker.software.r3.com/'
+//                 registryCredentialsId 'artifactory-credentials'
+//                 image "build-zulu-openjdk:17"
+//                 label "standard"
+//                 // Used to mount storage from the host as a volume to persist the cache between builds
+//                 args '-v /tmp:/host_tmp'
+//                 alwaysPull true
+//         }
+    }
 
     /*
      * List options in alphabetical order
@@ -36,6 +57,7 @@ pipeline {
         ansiColor('xterm')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
         parallelsAlwaysFailFast()
+        checkoutToSubdirectory "${sameAgentFolder}"
         timeout(time: 6, unit: 'HOURS')
         timestamps()
     }
@@ -47,68 +69,66 @@ pipeline {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+//         GRADLE_USER_HOME = "/host_tmp/gradle"
     }
 
     stages {
         stage('Compile') {
             steps {
-                authenticateGradleWrapper()
-                sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        'clean',
-                        'jar'
-                ].join(' ')
+                dir(sameAgentFolder) {
+                    authenticateGradleWrapper()
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'clean',
+                            'jar'
+                    ].join(' ')
+                }
             }
         }
 
         stage('Stash') {
             steps {
-                stash name: 'compiled', useDefaultExcludes: false
+                sh "rm -rf ${anotherAgentFolder} && mkdir -p ${anotherAgentFolder} &&  cd ${sameAgentFolder} && cp -aR . ../${anotherAgentFolder}"
             }
         }
 
-        stage('All Tests') {
-            parallel {
+//         stages('All Tests') {
+//             parallel {
                 stage('Another agent') {
-                    agent {
-                        label 'standard'
-                    }
                     options {
                         skipDefaultCheckout true
                     }
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-                        }
-                        cleanup {
-                            deleteDir() /* clean up our workspace */
+                            dir(anotherAgentFolder) {
+                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            }
                         }
                     }
                     stages {
-                        stage('Unstash') {
-                            steps {
-                                unstash 'compiled'
-                            }
-                        }
                         stage('Recompile') {
                             steps {
-                                authenticateGradleWrapper()
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'jar'
-                                ].join(' ')
+                                dir(anotherAgentFolder) {
+                                    authenticateGradleWrapper()
+                                    sh script: [
+                                            './gradlew',
+                                            COMMON_GRADLE_PARAMS,
+                                            'jar'
+                                    ].join(' ')
+                               }
                             }
                         }
                         stage('Unit Test') {
                             steps {
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'test'
-                                ].join(' ')
+                                dir(anotherAgentFolder) {
+                                    sh script: [
+                                            './gradlew',
+                                            COMMON_GRADLE_PARAMS,
+                                            'test'
+                                    ].join(' ')
+                                }
                             }
                         }
                     }
@@ -116,24 +136,28 @@ pipeline {
                 stage('Same agent') {
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            dir(sameAgentFolder) {
+                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            }
                         }
                     }
                     stages {
                         stage('Integration Test') {
                             steps {
-                                sh script: [
-                                        './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'integrationTest'
-                                ].join(' ')
+                                dir(sameAgentFolder) {
+                                    sh script: [
+                                            './gradlew',
+                                            COMMON_GRADLE_PARAMS,
+                                            'integrationTest'
+                                    ].join(' ')
+                                }
                             }
                         }
                     }
                 }
-            }
-        }
+//             }
+//         }
     }
 
     post {

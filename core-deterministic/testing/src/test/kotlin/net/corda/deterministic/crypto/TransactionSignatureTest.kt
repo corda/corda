@@ -5,6 +5,7 @@ import net.corda.deterministic.KeyStoreProvider
 import net.corda.deterministic.CheatingSecurityProvider
 import net.corda.deterministic.verifier.LocalSerializationRule
 import org.junit.*
+import org.junit.Test
 import org.junit.rules.RuleChain
 import java.security.*
 import kotlin.test.*
@@ -48,7 +49,7 @@ class TransactionSignatureTest {
     }
 
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
-    @Test(expected = SignatureException::class)
+    @Test(timeout=300_000, expected=SignatureException::class)
     fun `Signature metadata full failure clearData has changed`() {
         val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         val transactionSignature = CheatingSecurityProvider().use {
