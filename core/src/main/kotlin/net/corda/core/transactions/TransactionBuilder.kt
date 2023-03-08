@@ -178,7 +178,7 @@ open class TransactionBuilder(
     }
 
     @CordaInternal
-    internal fun toWireTransactionWithContext(
+    fun toWireTransactionWithContext(
         services: ServicesForResolution,
         serializationContext: SerializationContext?
     ) : WireTransaction = toWireTransactionWithContext(services, serializationContext, 0)
@@ -665,7 +665,7 @@ open class TransactionBuilder(
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
 
-    internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
+    fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
         return toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
     }
 

@@ -300,7 +300,7 @@ internal class RPCClientProxyHandler(
     class FailoverHandler(private val detected: () -> Unit = {},
                           private val completed: () -> Unit = {},
                           private val failed: () -> Unit = {}): FailoverEventListener {
-        override fun failoverEvent(eventType: FailoverEventType?) {
+        override fun failoverEvent(eventType: FailoverEventType) {
             when (eventType) {
                 FailoverEventType.FAILURE_DETECTED -> { detected() }
                 FailoverEventType.FAILOVER_COMPLETED -> { completed() }

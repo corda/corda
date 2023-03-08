@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.factories.ReflectionSerializerFactory
+import com.esotericsoftware.kryo.SerializerFactory
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
@@ -39,7 +39,6 @@ import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.util.Collections
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
@@ -68,7 +67,7 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
         obj.writeTo(output)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<SerializedBytes<Any>>): SerializedBytes<Any> {
+    override fun read(kryo: Kryo, input: Input, type: Class<out SerializedBytes<Any>>): SerializedBytes<Any> {
         return SerializedBytes(input.readBytes(input.readVarInt(true)))
     }
 }
@@ -123,7 +122,8 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
         }
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
+    @Suppress("ComplexMethod")
+    override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
         require(type.kotlin == klass)
         val numFields = input.readVarInt(true)
         val fieldTypeHash = input.readInt()
@@ -177,7 +177,7 @@ object InputStreamSerializer : Serializer<InputStream>() {
         }
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<InputStream>): InputStream {
+    override fun read(kryo: Kryo, input: Input, type: Class<out InputStream>): InputStream {
         val chunks = ArrayList<ByteArray>()
         while (true) {
             val chunk = input.readBytesWithLength()
@@ -227,7 +227,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.digestService)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
+    override fun read(kryo: Kryo, input: Input, type: Class<out WireTransaction>): WireTransaction {
         val componentGroups: List<ComponentGroup> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
         val digestService = kryo.readClassAndObject(input) as? DigestService
@@ -242,7 +242,7 @@ object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransa
         kryo.writeClassAndObject(output, obj.digestService)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
+    override fun read(kryo: Kryo, input: Input, type: Class<out NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
         val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
         val digestService = kryo.readClassAndObject(input) as? DigestService
         return NotaryChangeWireTransaction(components, digestService ?: DigestService.sha2_256)
@@ -257,7 +257,7 @@ object ContractUpgradeWireTransactionSerializer : Serializer<ContractUpgradeWire
         kryo.writeClassAndObject(output, obj.digestService)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<ContractUpgradeWireTransaction>): ContractUpgradeWireTransaction {
+    override fun read(kryo: Kryo, input: Input, type: Class<out ContractUpgradeWireTransaction>): ContractUpgradeWireTransaction {
         val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
         val privacySalt = kryo.readClassAndObject(input) as PrivacySalt
         val digestService = kryo.readClassAndObject(input) as? DigestService
@@ -272,7 +272,7 @@ object ContractUpgradeFilteredTransactionSerializer : Serializer<ContractUpgrade
         kryo.writeClassAndObject(output, obj.hiddenComponents)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<ContractUpgradeFilteredTransaction>): ContractUpgradeFilteredTransaction {
+    override fun read(kryo: Kryo, input: Input, type: Class<out ContractUpgradeFilteredTransaction>): ContractUpgradeFilteredTransaction {
         val visibleComponents: Map<Int, ContractUpgradeFilteredTransaction.FilteredComponent> = uncheckedCast(kryo.readClassAndObject(input))
         val hiddenComponents: Map<Int, SecureHash> = uncheckedCast(kryo.readClassAndObject(input))
         return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents)
@@ -286,7 +286,7 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
         kryo.writeClassAndObject(output, obj.sigs)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<SignedTransaction>): SignedTransaction {
+    override fun read(kryo: Kryo, input: Input, type: Class<out SignedTransaction>): SignedTransaction {
         return SignedTransaction(
                 uncheckedCast<Any?, SerializedBytes<CoreTransaction>>(kryo.readClassAndObject(input)),
                 uncheckedCast<Any?, List<TransactionSignature>>(kryo.readClassAndObject(input))
@@ -300,7 +300,7 @@ object PrivateKeySerializer : Serializer<PrivateKey>() {
         output.writeBytesWithLength(obj.encoded)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<PrivateKey>): PrivateKey {
+    override fun read(kryo: Kryo, input: Input, type: Class<out PrivateKey>): PrivateKey {
         val A = input.readBytesWithLength()
         return Crypto.decodePrivateKey(A)
     }
@@ -314,7 +314,7 @@ object PublicKeySerializer : Serializer<PublicKey>() {
         output.writeBytesWithLength(Crypto.encodePublicKey(obj))
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<PublicKey>): PublicKey {
+    override fun read(kryo: Kryo, input: Input, type: Class<out PublicKey>): PublicKey {
         val A = input.readBytesWithLength()
         return Crypto.decodePublicKey(A)
     }
@@ -382,7 +382,7 @@ inline fun <T : Any> Kryo.register(
     return register(
             type.java,
             object : Serializer<T>() {
-                override fun read(kryo: Kryo, input: Input, clazz: Class<T>): T = read(kryo, input)
+                override fun read(kryo: Kryo, input: Input, clazz: Class<out T>): T = read(kryo, input)
                 override fun write(kryo: Kryo, output: Output, obj: T) = write(kryo, output, obj)
             }
     )
@@ -399,7 +399,7 @@ inline fun <reified T : Any> Kryo.noReferencesWithin() {
 
 class NoReferencesSerializer<T>(private val baseSerializer: Serializer<T>) : Serializer<T>() {
 
-    override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
+    override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
         return kryo.withoutReferences { baseSerializer.read(kryo, input, type) }
     }
 
@@ -424,13 +424,13 @@ object LoggerSerializer : Serializer<Logger>() {
         output.writeString(obj.name)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<Logger>): Logger {
+    override fun read(kryo: Kryo, input: Input, type: Class<out Logger>): Logger {
         return LoggerFactory.getLogger(input.readString())
     }
 }
 
 object ClassSerializer : Serializer<Class<*>>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<Class<*>>): Class<*> {
+    override fun read(kryo: Kryo, input: Input, type: Class<out Class<*>>): Class<*> {
         val className = input.readString()
         return if (className == "void") Void.TYPE else Class.forName(className, true, kryo.classLoader)
     }
@@ -442,7 +442,7 @@ object ClassSerializer : Serializer<Class<*>>() {
 
 @ThreadSafe
 object CertPathSerializer : Serializer<CertPath>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<CertPath>): CertPath {
+    override fun read(kryo: Kryo, input: Input, type: Class<out CertPath>): CertPath {
         val factory = CertificateFactory.getInstance(input.readString())
         return factory.generateCertPath(input.readBytesWithLength().inputStream())
     }
@@ -455,7 +455,7 @@ object CertPathSerializer : Serializer<CertPath>() {
 
 @ThreadSafe
 object X509CertificateSerializer : Serializer<X509Certificate>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<X509Certificate>): X509Certificate {
+    override fun read(kryo: Kryo, input: Input, type: Class<out X509Certificate>): X509Certificate {
         return CertificateFactory.getInstance("X.509").generateCertificate(input.readBytesWithLength().inputStream()) as X509Certificate
     }
 
@@ -464,7 +464,7 @@ object X509CertificateSerializer : Serializer<X509Certificate>() {
     }
 }
 
-fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializationContextKey) as? SerializeAsTokenContext
+fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get<SerializeAsTokenContext>(serializationContextKey) as? SerializeAsTokenContext
 
 /**
  * For serializing instances if [Throwable] honoring the fact that [java.lang.Throwable.suppressedExceptions]
@@ -477,18 +477,12 @@ fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializ
 class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>(false, true) {
 
     private companion object {
-        private val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
         private val suppressedField = Throwable::class.java.getDeclaredField("suppressedExceptions")
 
         private val sentinelValue = let {
-            if (!IS_OPENJ9) {
-                val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
-                sentinelField.isAccessible = true
-                sentinelField.get(null)
-            }
-            else {
-                Collections.EMPTY_LIST
-            }
+            val sentinelField = Throwable::class.java.getDeclaredField("SUPPRESSED_SENTINEL")
+            sentinelField.isAccessible = true
+            sentinelField.get(null)
         }
 
         init {
@@ -496,13 +490,13 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
         }
     }
 
-    private val delegate: Serializer<Throwable> = uncheckedCast(ReflectionSerializerFactory.makeSerializer(kryo, FieldSerializer::class.java, type))
+    private val delegate: Serializer<Throwable> = uncheckedCast(SerializerFactory.ReflectionSerializerFactory.newSerializer(kryo, FieldSerializer::class.java, type)) as Serializer<Throwable>
 
     override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
         delegate.write(kryo, output, throwable)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<Throwable>): Throwable {
+    override fun read(kryo: Kryo, input: Input, type: Class<out Throwable>): Throwable {
         val throwableRead = delegate.read(kryo, input, type)
         if (throwableRead.suppressed.isEmpty()) {
             throwableRead.setSuppressedToSentinel()
@@ -519,5 +513,5 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
 object LazyMappedListSerializer : Serializer<List<*>>() {
     // Using a MutableList so that Kryo will always write an instance of java.util.ArrayList.
     override fun write(kryo: Kryo, output: Output, obj: List<*>) = kryo.writeClassAndObject(output, obj.toMutableList())
-    override fun read(kryo: Kryo, input: Input, type: Class<List<*>>) = kryo.readClassAndObject(input) as? List<*>
+    override fun read(kryo: Kryo, input: Input, type: Class<out List<*>>) = kryo.readClassAndObject(input) as? List<*>
 }

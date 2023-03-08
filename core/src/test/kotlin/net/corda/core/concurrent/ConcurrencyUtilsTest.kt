@@ -1,6 +1,6 @@
 package net.corda.core.concurrent
 
-import com.nhaarman.mockito_kotlin.*
+import org.mockito.kotlin.*
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow
 import org.assertj.core.api.Assertions.assertThatThrownBy

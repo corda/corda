@@ -35,6 +35,7 @@ pipeline {
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Nightly to Artifactory"
                 .replaceAll("/", " :: ")
         DOCKER_URL = "https://index.docker.io/v1/"
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {

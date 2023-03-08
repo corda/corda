@@ -11,7 +11,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.PortAllocation
 import java.util.*
-import kotlin.streams.toList
 
 private val log = loggerFor<ConnectionManager>()
 

@@ -81,7 +81,6 @@ interface ServicesForResolution {
     /**
      * Provides a callback for the Node to customise the [LedgerTransaction].
      */
-    @JvmDefault
     fun specialise(ltx: LedgerTransaction): LedgerTransaction = ltx
 }
 

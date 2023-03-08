@@ -1,8 +1,8 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort

@@ -34,7 +34,6 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.streams.toList
 
 class CordappSmokeTest {
     private companion object {

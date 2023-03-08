@@ -1,8 +1,8 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.delete
 import net.corda.core.internal.getJavaUpdateVersion
@@ -24,6 +24,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.apache.commons.lang3.JavaVersion
 import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
@@ -159,7 +160,7 @@ class NodeTest {
     // JDK 11 check
     @Test(timeout=300_000)
 	fun `test getJavaRuntimeVersion`() {
-        assertTrue(SystemUtils.IS_JAVA_1_8 || SystemUtils.IS_JAVA_11)
+        assertTrue(SystemUtils.IS_JAVA_1_8 || SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11))
     }
 
     // JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)

@@ -286,7 +286,7 @@ private fun IntProgression.toSpliterator(): Spliterator.OfInt {
 fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.intStream(toSpliterator(), parallel)
 
 // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
-inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
+inline fun <reified T> Stream<out T>.toTypedArray(): Array<out T?>? = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
 
 inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): Stream<R> {
     return flatMap {
@@ -335,7 +335,10 @@ val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
         field?.let {
             if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
                 it.isAccessible = true
-                uncheckedCast(it.get(null))
+
+                // TODO JDK17: Why does uncheckedCast(...) cause class cast exception?
+                // uncheckedCast(it.get(null))
+                it.get(null) as T
             } else {
                 null
             }
@@ -614,4 +617,4 @@ fun Logger.warnOnce(warning: String) {
 }
 
 const val JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
-const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52
+const val JDK11_CLASS_FILE_FORMAT_MAJOR_VERSION = 55
