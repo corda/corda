@@ -142,12 +142,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         @Suppress("ClassNaming")
         object RECORD_UNNOTARISED : ProgressTracker.Step("Recording un-notarised transaction locally")
         @Suppress("ClassNaming")
-        object BROADCASTING_PRE_NOTARISATION : ProgressTracker.Step("Broadcasting un-notarised transaction to participants")
+        object BROADCASTING_PRE_NOTARISATION : ProgressTracker.Step("Broadcasting un-notarised transaction")
         @Suppress("ClassNaming")
-        object BROADCASTING_POST_NOTARISATION : ProgressTracker.Step("Broadcasting notary signature to participants")
+        object BROADCASTING_POST_NOTARISATION : ProgressTracker.Step("Broadcasting notary signature")
         @Suppress("ClassNaming")
-        object FINALISING_TRANSACTION : ProgressTracker.Step("Recording finalised transaction locally with notary signature")
-        object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to other participants")
+        object FINALISING_TRANSACTION : ProgressTracker.Step("Finalising transaction locally")
+        object BROADCASTING : ProgressTracker.Step("Broadcasting notarised transaction to other participants")
 
         @JvmStatic
         fun tracker() = ProgressTracker(RECORD_UNNOTARISED, BROADCASTING_PRE_NOTARISATION, NOTARISING, BROADCASTING_POST_NOTARISATION, FINALISING_TRANSACTION, BROADCASTING)
@@ -248,7 +248,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     private fun broadcastSignaturesAndFinalise(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
         progressTracker.currentStep = BROADCASTING_POST_NOTARISATION
-        logger.info("Broadcasting notarised signatures.")
+        logger.info("Broadcasting notary signature.")
         sessions.forEach { session ->
             try {
                 logger.debug { "Sending transaction to party $session." }
@@ -329,7 +329,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                         serviceHub.myInfo.legalIdentities.first().name,
                         statesToRecord,
                         sessions.map { it.counterparty.name }.toSet()))
-        logger.info("Recorded transaction without notary signatures locally.")
+        logger.info("Recorded transaction without notary signature locally.")
         return tx
     }
 
