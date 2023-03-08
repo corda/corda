@@ -1,4 +1,4 @@
-FROM azul/zulu-openjdk:17.0.6
+FROM azul/zulu-openjdk:17.0.4
 RUN apt-get update
 RUN apt-get install -y apt-transport-https \
 curl \
