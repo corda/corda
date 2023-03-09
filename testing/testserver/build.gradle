@@ -25,6 +25,7 @@ processResources {
 
 dependencies {
     implementation project(':core')
+    implementation project(':node-api')
     implementation project(':client:rpc')
     implementation project(':client:jackson')
     implementation project(':tools:cliutils')
@@ -58,6 +59,11 @@ dependencies {
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to implementation our Caplet against.
     implementation "co.paralleluniverse:capsule:$capsule_version"
+
+    implementation group: "com.typesafe", name: "config", version: typesafe_config_version
+    implementation "com.google.guava:guava:$guava_version"
+
+    implementation "io.netty:netty-transport-native-unix-common:4.1.77.Final.jar"
 
     integrationTestCompile project(':node-driver')
 

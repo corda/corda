@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import javafx.collections.transformation.FilteredList
 import net.corda.client.jfx.utils.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.NodeInfo
@@ -35,7 +36,7 @@ class NetworkIdentityModel {
                 publicKey.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
     val notaries = ChosenList(rpcProxy.map { FXCollections.observableList(it?.notaryIdentities() ?: emptyList()) }, "notaries")
-    val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
+    val notaryNodes: FilteredList<NodeInfo?>? = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
     val parties: ObservableList<NodeInfo> = networkIdentities
             .filtered { it.legalIdentities.all { it !in notaries } }.unique()
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }

@@ -43,8 +43,11 @@ dependencies {
     implementation project(':finance:workflows')
     implementation project(':client:rpc')
 
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "com.google.guava:guava:$guava_version"
+    implementation "io.reactivex:rxjava:$rxjava_version"
+
+    // For caches rather than guava
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // ReactFX: Functional reactive UI programming.
     implementation 'org.reactfx:reactfx:2.0-M5'

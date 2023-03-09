@@ -24,7 +24,20 @@ sourceSets {
 }
 
 dependencies {
+    implementation project(':core')
+    implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':serialization')
+    implementation project(':client:rpc')
+    implementation project(':client:mock')
+    implementation project(':common-configuration-parsing')
+    implementation project(':common-validation')
+    implementation project(':core-test-utils')
+    implementation project(':test-common')
     implementation project(':test-utils')
+    implementation project(':tools:cliutils')
+
+    implementation "net.corda.djvm:corda-djvm:$djvm_version"
 
     implementation group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
 //    integrationTestRuntime group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
@@ -45,11 +58,40 @@ dependencies {
     implementation "javax.servlet:javax.servlet-api:${servlet_version}"
 
     implementation "org.gradle:gradle-tooling-api:${gradle.gradleVersion}"
-    
+
     // Jersey for JAX-RS implementation for use in Jetty
     implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
     implementation "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     implementation "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
+
+    // Bouncy castle support needed for X509 certificate manipulation
+    implementation "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
+
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
+    implementation "com.google.jimfs:jimfs:1.1"
+    implementation group: "com.typesafe", name: "config", version: typesafe_config_version
+    implementation "io.github.classgraph:classgraph:$class_graph_version"
+    implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
+    implementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    implementation "com.esotericsoftware:kryo:$kryo_version"
+    implementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
+    implementation "org.apache.commons:commons-lang3:3.9"
+    implementation "org.assertj:assertj-core:${assertj_version}"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
+    implementation "junit:junit:$junit_version"
+
+    implementation("org.apache.activemq:artemis-server:${artemis_version}") {
+        exclude group: 'org.apache.commons', module: 'commons-dbcp2'
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
+
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 compileJava {

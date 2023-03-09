@@ -1062,6 +1062,7 @@ internal class SingleThreadedStateMachineManager(
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
             is FlowState.Finished -> throw IllegalStateException("Cannot start (or resume) a finished flow.")
+            is FlowState.Paused -> { /* AXM TODO */ }
         }
     }
 

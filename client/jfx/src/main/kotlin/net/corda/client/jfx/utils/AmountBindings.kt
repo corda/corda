@@ -20,7 +20,7 @@ object AmountBindings {
                     require(it.token == token)
                     it.quantity
                 })
-            }, arrayOf(amounts))
+            }, *arrayOf(amounts))
     ) { sum -> Amount(sum.toLong(), token) }
 
     fun exchange(
@@ -45,7 +45,7 @@ object AmountBindings {
             EasyBind.map(
                     Bindings.createLongBinding({
                         amounts.stream().collect(Collectors.summingLong { exchange(it) })
-                    }, arrayOf(amounts))
+                    }, *arrayOf(amounts))
             ) { Amount(it.toLong(), currencyValue) }
         }
     }

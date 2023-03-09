@@ -30,6 +30,7 @@ configurations {
 }
 
 dependencies {
+    implementation project(':core')
     implementation project(':serialization')
 
     // Configure these by hand. It should be a minimal subset of dependencies,
@@ -78,115 +79,115 @@ def patchSerialization = tasks.register('patchSerialization', Zip) {
     includeEmptyDirs = false
 }
 
-def predeterminise = tasks.register('predeterminise', ProGuardTask) {
-    dependsOn project(':core-deterministic').tasks.named('assemble')
-    injars patchSerialization
-    outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
+//def predeterminise = tasks.register('predeterminise', ProGuardTask) {
+//    dependsOn project(':core-deterministic').tasks.named('assemble')
+//    injars patchSerialization
+//    outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
+//
+//    libraryjars "$javaHome/jmods"
+//    configurations.compileClasspath.forEach {
+//        if (originalJar != it) {
+//            libraryjars it, filter: '!META-INF/versions/**'
+//        }
+//    }
+//
+//    keepattributes '*'
+//    keepdirectories
+//    dontpreverify
+//    dontobfuscate
+//    dontoptimize
+//    dontnote
+//    printseeds
+//    verbose
+//
+//    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
+//    keepclassmembers 'class net.corda.serialization.** { public synthetic <methods>; }'
+//}
 
-    libraryjars "$javaHome/jmods"
-    configurations.compileClasspath.forEach {
-        if (originalJar != it) {
-            libraryjars it, filter: '!META-INF/versions/**'
-        }
-    }
+//def jarFilter = tasks.register('jarFilter', JarFilterTask) {
+//    jars predeterminise
+//    annotations {
+//        forDelete = [
+//            "net.corda.core.DeleteForDJVM"
+//        ]
+//        forStub = [
+//            "net.corda.core.StubOutForDJVM"
+//        ]
+//        forRemove = [
+//            "co.paralleluniverse.fibers.Suspendable"
+//        ]
+//        forSanitise = [
+//            "net.corda.core.DeleteForDJVM"
+//        ]
+//    }
+//}
 
-    keepattributes '*'
-    keepdirectories
-    dontpreverify
-    dontobfuscate
-    dontoptimize
-    dontnote
-    printseeds
-    verbose
+//def determinise = tasks.register('determinise', ProGuardTask) {
+//    injars jarFilter
+//    outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
+//
+//    if (JavaVersion.current().isJava9Compatible()) {
+//        libraryjars "$javaHome/jmods"
+//    } else {
+//        libraryjars file("$javaHome/lib/rt.jar")
+//        libraryjars file("$javaHome/lib/jce.jar")
+//    }
+//    configurations.deterministicLibraries.forEach {
+//        libraryjars it, filter: '!META-INF/versions/**'
+//    }
+//
+//    // Analyse the JAR for dead code, and remove (some of) it.
+//    optimizations 'code/removal/simple,code/removal/advanced'
+//    printconfiguration
+//
+//    keepattributes '*'
+//    keepdirectories
+//    dontobfuscate
+//    dontnote
+//    printseeds
+//    verbose
+//
+//    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
+//    keepclassmembers 'class net.corda.serialization.** { public synthetic <methods>; }'
+//}
 
-    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
-    keepclassmembers 'class net.corda.serialization.** { public synthetic <methods>; }'
-}
+//def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask)
 
-def jarFilter = tasks.register('jarFilter', JarFilterTask) {
-    jars predeterminise
-    annotations {
-        forDelete = [
-            "net.corda.core.DeleteForDJVM"
-        ]
-        forStub = [
-            "net.corda.core.StubOutForDJVM"
-        ]
-        forRemove = [
-            "co.paralleluniverse.fibers.Suspendable"
-        ]
-        forSanitise = [
-            "net.corda.core.DeleteForDJVM"
-        ]
-    }
-}
+//def metafix = tasks.register('metafix', MetaFixerTask) {
+//    outputDir = layout.buildDirectory.dir('libs')
+//    jars determinise
+//    suffix ""
+//
+//    // Strip timestamps from the JAR to make it reproducible.
+//    preserveTimestamps = false
+//    finalizedBy checkDeterminism
+//}
 
-def determinise = tasks.register('determinise', ProGuardTask) {
-    injars jarFilter
-    outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
+//checkDeterminism.configure {
+//    dependsOn jdkTask
+//    injars metafix
+//
+//    libraryjars deterministic_rt_jar
+//
+//    configurations.deterministicLibraries.forEach {
+//        libraryjars it, filter: '!META-INF/versions/**'
+//    }
+//
+//    keepattributes '*'
+//    dontpreverify
+//    dontobfuscate
+//    dontoptimize
+//    verbose
+//
+//    keep 'class *'
+//}
 
-    if (JavaVersion.current().isJava9Compatible()) {
-        libraryjars "$javaHome/jmods"
-    } else {
-        libraryjars file("$javaHome/lib/rt.jar")
-        libraryjars file("$javaHome/lib/jce.jar")
-    }
-    configurations.deterministicLibraries.forEach {
-        libraryjars it, filter: '!META-INF/versions/**'
-    }
-
-    // Analyse the JAR for dead code, and remove (some of) it.
-    optimizations 'code/removal/simple,code/removal/advanced'
-    printconfiguration
-
-    keepattributes '*'
-    keepdirectories
-    dontobfuscate
-    dontnote
-    printseeds
-    verbose
-
-    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
-    keepclassmembers 'class net.corda.serialization.** { public synthetic <methods>; }'
-}
-
-def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask)
-
-def metafix = tasks.register('metafix', MetaFixerTask) {
-    outputDir = layout.buildDirectory.dir('libs')
-    jars determinise
-    suffix ""
-
-    // Strip timestamps from the JAR to make it reproducible.
-    preserveTimestamps = false
-    finalizedBy checkDeterminism
-}
-
-checkDeterminism.configure {
-    dependsOn jdkTask
-    injars metafix
-
-    libraryjars deterministic_rt_jar
-
-    configurations.deterministicLibraries.forEach {
-        libraryjars it, filter: '!META-INF/versions/**'
-    }
-
-    keepattributes '*'
-    dontpreverify
-    dontobfuscate
-    dontoptimize
-    verbose
-
-    keep 'class *'
-}
-
-defaultTasks "determinise"
-determinise.configure {
-    finalizedBy metafix
-}
+//defaultTasks "determinise"
+//determinise.configure {
+//    finalizedBy metafix
+//}
 tasks.named('assemble') {
-    dependsOn checkDeterminism
+//    dependsOn checkDeterminism
 }
 
 //def deterministicJar = metafix.map { it.outputs.files.singleFile }
@@ -206,9 +207,9 @@ artifacts {
 //}
 
 publish {
-    dependenciesFrom(configurations.deterministicArtifacts) {
-        defaultScope = 'compile'
-    }
+//    dependenciesFrom(configurations.deterministicArtifacts) {
+//        defaultScope = 'compile'
+//    }
     name jarBaseName
 }
 

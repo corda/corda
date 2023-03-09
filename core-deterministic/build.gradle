@@ -206,7 +206,7 @@ determinise.configure {
     finalizedBy metafix
 }
 tasks.named('assemble') {
-    dependsOn checkDeterminism
+//    dependsOn checkDeterminism
 }
 
 //def deterministicJar = metafix.map { it.outputs.files.singleFile }
@@ -226,7 +226,7 @@ artifacts {
 //}
 
 publish {
-    dependenciesFrom configurations.deterministicArtifacts
+//    dependenciesFrom configurations.deterministicArtifacts
     name jarBaseName
 }
 

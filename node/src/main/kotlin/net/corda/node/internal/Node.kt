@@ -612,6 +612,7 @@ open class Node(configuration: NodeConfiguration,
         when (configuration.jmxReporterType) {
             JmxReporterType.JOLOKIA -> registerJolokiaReporter(metrics)
             JmxReporterType.NEW_RELIC -> registerNewRelicReporter(metrics)
+            null -> log.info("JMX Reeporter not registered")
         }
     }
 

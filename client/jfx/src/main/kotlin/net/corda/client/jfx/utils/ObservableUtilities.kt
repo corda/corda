@@ -118,7 +118,7 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
  * val dogs: ObservableList<Dog> = (..)
  * val owners: ObservableList<Person> = dogs.map(Dog::owner).filterNotNull()
  */
-fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
+fun <A> ObservableList<out A?>.filterNotNull(): FilteredList<A?>? {
     //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works.
     return uncheckedCast(uncheckedCast<Any, ObservableList<A?>>(this).filtered { t -> t != null })
 }
@@ -135,7 +135,7 @@ fun <A, B> ObservableList<out A>.foldObservable(initial: B, folderFunction: (B, 
             current = folderFunction(current, it)
         }
         current
-    }, arrayOf(this))
+    }, *arrayOf(this))
 }
 
 /**
@@ -292,7 +292,7 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
         } else {
             null
         }
-    }, arrayOf(this))
+    }, *arrayOf(this))
 }
 
 fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
@@ -304,7 +304,7 @@ fun <T : Any, K : Any> ObservableList<T>.distinctBy(toKey: (T) -> K): Observable
 }
 
 fun ObservableValue<*>.isNotNull(): BooleanBinding {
-    return Bindings.createBooleanBinding({ this.value != null }, arrayOf(this))
+    return Bindings.createBooleanBinding({ this.value != null }, *arrayOf(this))
 }
 
 /**
@@ -312,7 +312,7 @@ fun ObservableValue<*>.isNotNull(): BooleanBinding {
  * Return provided default value if the list is empty.
  */
 fun <A> ObservableList<A>.firstOrDefault(default: ObservableValue<A?>, predicate: (A) -> Boolean): ObservableValue<A?> {
-    return Bindings.createObjectBinding({ this.firstOrNull(predicate) ?: default.value }, arrayOf(this, default))
+    return Bindings.createObjectBinding({ this.firstOrNull(predicate) ?: default.value }, *arrayOf(this, default))
 }
 
 /**
@@ -320,7 +320,7 @@ fun <A> ObservableList<A>.firstOrDefault(default: ObservableValue<A?>, predicate
  * Return ObservableValue(null) if the list is empty.
  */
 fun <A> ObservableList<A>.firstOrNullObservable(predicate: (A) -> Boolean): ObservableValue<A?> {
-    return Bindings.createObjectBinding({ this.firstOrNull(predicate) }, arrayOf(this))
+    return Bindings.createObjectBinding({ this.firstOrNull(predicate) }, *arrayOf(this))
 }
 
 /**

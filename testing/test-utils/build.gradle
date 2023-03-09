@@ -7,24 +7,44 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Testing utilities for Corda'
 
 dependencies {
+    implementation project(':core')
     implementation project(':test-common')
     implementation project(':core-test-utils')
     implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':serialization')
+    implementation project(':client:jackson')
     implementation project(':client:mock')
+    implementation project(':confidential-identities')
 
     implementation "com.google.guava:guava:$guava_version"
 
     // Guava: Google test library (collections test suite)
     implementation "com.google.guava:guava-testlib:$guava_version"
 
+    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+
     // OkHTTP: Simple HTTP library.
     implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
-    implementation project(':confidential-identities')
+
+    implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation project(':finance:contracts')
+    implementation project(':finance:workflows')
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     implementation "com.google.jimfs:jimfs:1.1"
+    implementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
+    implementation group: "com.typesafe", name: "config", version: typesafe_config_version
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+
+    // Bouncy castle support needed for X509 certificate manipulation
+    implementation "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
 
     testImplementation "org.apache.commons:commons-lang3:3.9"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {

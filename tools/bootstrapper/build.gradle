@@ -29,9 +29,9 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
+//    from(project(':node:capsule').tasks['buildCordaJAR']) {
+//        rename 'corda-(.*)', 'corda.jar'
+//    }
     baseName = "network-bootstrapper"
     manifest {
         attributes(

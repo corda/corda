@@ -55,9 +55,9 @@ sourceSets {
 }
 
 processSmokeTestResources {
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
+//    from(project(':node:capsule').tasks['buildCordaJAR']) {
+//        rename 'corda-(.*)', 'corda.jar'
+//    }
     from(project(':finance:workflows').tasks['jar']) {
         rename '.*finance-workflows-.*', 'cordapp-finance-workflows.jar'
     }
@@ -75,9 +75,12 @@ processSmokeTestResources {
 dependencies {
     implementation project(':core')
     implementation project(':node-api')
+    implementation project(':serialization')
 
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     testImplementation "junit:junit:$junit_version"
 
@@ -107,6 +110,12 @@ dependencies {
 
     // JDK11: required by Quasar at run-time
     smokeTestRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
+
+    implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
+    implementation "com.google.guava:guava-testlib:$guava_version"
 }
 
 task integrationTest(type: Test) {

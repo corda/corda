@@ -41,9 +41,9 @@ sourceSets {
 
 processSmokeTestResources {
     // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
+//    from(project(':node:capsule').tasks['buildCordaJAR']) {
+//        rename 'corda-(.*)', 'corda.jar'
+//    }
 }
 
 dependencies {

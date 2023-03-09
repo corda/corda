@@ -173,7 +173,7 @@ buildscript {
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
         classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
         classpath "net.corda.plugins:jar-filter:$gradle_plugins_version"
-        classpath "net.sf.proguard:proguard-gradle:$proguard_version"
+        classpath "com.guardsquare:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
 //        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
@@ -237,9 +237,9 @@ logger.lifecycle("Building Corda version: {}", corda_release_version)
 
 allprojects {
     apply plugin: 'org.jetbrains.kotlin.jvm'
+    apply plugin: 'kotlin-allopen'
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
-    apply plugin: 'kotlin-allopen'
     apply plugin: 'org.sonarqube'
 
     allOpen {
@@ -386,6 +386,10 @@ allprojects {
                     includeGroup 'org.crashub'
                     includeGroup 'com.github.bft-smart'
                     includeGroup 'com.github.detro'
+                }
+                metadataSources {
+                    mavenPom()
+                    artifact()
                 }
             }
             maven {
