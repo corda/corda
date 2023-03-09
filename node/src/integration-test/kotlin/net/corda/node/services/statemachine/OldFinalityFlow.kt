@@ -146,6 +146,7 @@ class OldFinalityFlow private constructor(val transaction: SignedTransaction,
         fun tracker() = ProgressTracker(NOTARISING, BROADCASTING)
     }
 
+    @Suppress("ComplexMethod")
     @Suspendable
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
