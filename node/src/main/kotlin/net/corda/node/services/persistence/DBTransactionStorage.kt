@@ -305,7 +305,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val rowsUpdated = update.executeUpdate()
                 if (rowsUpdated == 0) {
                     // indicates race condition whereby ReceiverFinality MISSING_NOTARY_SIG overwritten to UNVERIFIED by ResolveTransactionsFlow (in follow-up txn)
-                    // TODO: validate that unverified txn does indeed verify correctly before changing status
+                    // TO DO: validate that unverified txn does verify correctly before changing status
                     val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
                     val updateRootUnverified = criteriaUpdateUnverified.from(DBTransaction::class.java)
                     criteriaUpdateUnverified.set(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
