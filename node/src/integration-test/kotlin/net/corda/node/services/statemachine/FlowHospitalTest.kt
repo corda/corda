@@ -19,7 +19,10 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.UnexpectedFlowEndException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -40,8 +43,16 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.MOCK_VERSION_INFO
+import net.corda.testing.node.internal.TestCordappInternal
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.findCordapp
+import net.corda.testing.node.testContext
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
@@ -58,6 +69,11 @@ import kotlin.test.assertTrue
 class FlowHospitalTest {
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
+
+    companion object {
+        private val mockNet = InternalMockNetwork(cordappsForAllNodes = setOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp(),
+                CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
+    }
 
     @Before
     fun before() {
@@ -236,6 +252,78 @@ class FlowHospitalTest {
         // 2 is the receiving flow failing due to the unexpected session end error
         assertEquals(2, dischargedCounter)
         assertTrue(SpendStateAndCatchDoubleSpendResponderFlow.exceptionSeenInUserFlow)
+    }
+
+    @Test(timeout=300_000)
+    fun `catching a notary error - two phase finality flow initiator to pre-2PF peer`() {
+        var dischargedCounter = 0
+        StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
+            ++dischargedCounter
+        }
+        val aliceNode = createNode(ALICE_NAME, platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+        val bobNode = createNode(BOB_NAME, platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY - 1)
+
+        val handle = aliceNode.services.startFlow(CreateTransactionFlow(bobNode.info.singleIdentity()), testContext())
+        mockNet.runNetwork()
+        val ref = handle.getOrThrow().resultFuture.get()
+        aliceNode.services.startFlow(SpendStateAndCatchDoubleSpendFlow(bobNode.info.singleIdentity(), ref), testContext()).getOrThrow()
+        aliceNode.services.startFlow(SpendStateAndCatchDoubleSpendFlow(bobNode.info.singleIdentity(), ref), testContext()).getOrThrow()
+        mockNet.runNetwork()
+
+        // 1 is the notary failing to notarise and propagating the error
+        // 2 is the receiving flow failing due to the unexpected session end error
+        assertEquals(2, dischargedCounter)
+        assertTrue(SpendStateAndCatchDoubleSpendResponderFlow.exceptionSeenInUserFlow)
+    }
+
+    @Test(timeout=300_000)
+    fun `catching a notary error - pre-2PF initiator to two phase finality flow peer`() {
+        var dischargedCounter = 0
+        StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
+            ++dischargedCounter
+        }
+        val aliceNode = createNode(ALICE_NAME, platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY - 1)
+        val bobNode = createNode(BOB_NAME, platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        val handle = aliceNode.services.startFlow(CreateTransactionFlow(bobNode.info.singleIdentity()), testContext())
+        mockNet.runNetwork()
+        val ref = handle.getOrThrow().resultFuture.get()
+        aliceNode.services.startFlow(SpendStateAndCatchDoubleSpendFlow(bobNode.info.singleIdentity(), ref), testContext()).getOrThrow()
+        aliceNode.services.startFlow(SpendStateAndCatchDoubleSpendFlow(bobNode.info.singleIdentity(), ref), testContext()).getOrThrow()
+        mockNet.runNetwork()
+
+        // 1 is the notary failing to notarise and propagating the error
+        // 2 is the receiving flow failing due to the unexpected session end error
+        assertEquals(2, dischargedCounter)
+        assertTrue(SpendStateAndCatchDoubleSpendResponderFlow.exceptionSeenInUserFlow)
+    }
+
+    private fun createNode(legalName: CordaX500Name, cordapps: List<TestCordappInternal> = emptyList(), platformVersion: Int = PLATFORM_VERSION): TestStartedNode {
+        return mockNet.createNode(InternalMockNodeParameters(legalName = legalName, additionalCordapps = cordapps,
+                version = MOCK_VERSION_INFO.copy(platformVersion = platformVersion)))
+    }
+
+    @Test(timeout = 300_000)
+    fun `old finality flow catching a notary error will cause a peer to fail with unexpected session end during ReceiveFinalityFlow that passes through user code`() {
+        var dischargedCounter = 0
+        StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
+            ++dischargedCounter
+        }
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(isDebug = false, startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            nodeAHandle.rpc.let {
+                val ref = it.startFlow(::CreateTransactionFlow, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow(20.seconds)
+                it.startFlow(::SpendStateAndCatchDoubleSpendOldFinalityFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
+                it.startFlow(::SpendStateAndCatchDoubleSpendOldFinalityFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
+            }
+        }
+        // 1 is the notary failing to notarise and propagating the error
+        // 2 is the receiving flow failing due to the unexpected session end error
+        assertEquals(2, dischargedCounter)
+        assertTrue(SpendStateAndCatchDoubleSpendResponderOldFinalityFlow.exceptionSeenInUserFlow)
     }
 
     @Test(timeout = 300_000)
@@ -474,6 +562,62 @@ class FlowHospitalTest {
             })
             try {
                 subFlow(ReceiveFinalityFlow(session, stx.id))
+            } catch (e: UnexpectedFlowEndException) {
+                exceptionSeenInUserFlow = true
+                if (!consumeError) {
+                    throw e
+                }
+            }
+        }
+    }
+
+    @InitiatingFlow
+    @StartableByRPC
+    class SpendStateAndCatchDoubleSpendOldFinalityFlow(
+            private val peer: Party,
+            private val ref: StateAndRef<DummyState>,
+            private val consumePeerError: Boolean
+    ) : FlowLogic<StateAndRef<DummyState>>() {
+
+        constructor(peer: Party, ref: StateAndRef<DummyState>): this(peer, ref, false)
+
+        @Suspendable
+        override fun call(): StateAndRef<DummyState> {
+            val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
+                addInputState(ref)
+                addOutputState(DummyState(participants = listOf(ourIdentity)))
+                addCommand(DummyContract.Commands.Move(), listOf(ourIdentity.owningKey, peer.owningKey))
+            }
+            val stx = serviceHub.signInitialTransaction(tx)
+            val session = initiateFlow(peer)
+            session.send(consumePeerError)
+            val ftx = subFlow(CollectSignaturesFlow(stx, listOf(session)))
+            try {
+                subFlow(OldFinalityFlow(ftx, session))
+            } catch(e: NotaryException) {
+                logger.info("Caught notary exception")
+            }
+            return ftx.coreTransaction.outRef(0)
+        }
+    }
+
+    @InitiatedBy(SpendStateAndCatchDoubleSpendOldFinalityFlow::class)
+    class SpendStateAndCatchDoubleSpendResponderOldFinalityFlow(private val session: FlowSession) : FlowLogic<Unit>() {
+
+        companion object {
+            var exceptionSeenInUserFlow = false
+        }
+
+        @Suspendable
+        override fun call() {
+            val consumeError = session.receive<Boolean>().unwrap { it }
+            val stx = subFlow(object : SignTransactionFlow(session) {
+                override fun checkTransaction(stx: SignedTransaction) {
+
+                }
+            })
+            try {
+                subFlow(OldReceiveFinalityFlow(session, stx.id))
             } catch (e: UnexpectedFlowEndException) {
                 exceptionSeenInUserFlow = true
                 if (!consumeError) {
