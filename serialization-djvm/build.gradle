@@ -25,11 +25,17 @@ dependencies {
     api project(':core')
     api project(':serialization')
     api "net.corda.djvm:corda-djvm:$djvm_version"
-    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+//    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation(project(':serialization-djvm:deserializers')) {
         transitive = false
     }
+    implementation "org.apache.qpid:proton-j:$protonj_version"
+    implementation "com.google.guava:guava:$guava_version"
+
+    // Bouncy castle support needed for X509 certificate manipulation
+    implementation "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_jupiter_version"

@@ -11,6 +11,8 @@ repositories {
 
 dependencies {
     implementation project(":core")
+
+    api "javax.persistence:javax.persistence-api:2.2"
 }
 
 jar {

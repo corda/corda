@@ -6,7 +6,7 @@ mainClassName = "net.corda.avalanche.MainKt"
 apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "info.picocli:picocli:$picocli_version"
     
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

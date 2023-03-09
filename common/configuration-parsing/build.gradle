@@ -3,7 +3,7 @@ apply plugin: 'kotlin'
 apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
-    implementation group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
+//    implementation group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
     implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
 
     implementation group: "com.typesafe", name: "config", version: typesafe_config_version

@@ -9,9 +9,11 @@ apply from: "${rootProject.projectDir}/deterministic.gradle"
 description 'Deserializers for the DJVM'
 
 dependencies {
+    implementation project(':core')
+
     api project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     api project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
-    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+//    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
 }
 
 jar {

@@ -5,6 +5,10 @@ apply plugin: 'kotlin'
 dependencies {
     implementation project(":core")
     implementation project(":testing:cordapps:dbfailure:dbfcontracts")
+
+    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 jar {

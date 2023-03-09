@@ -5,7 +5,9 @@ apply plugin: 'java-library'
 description 'Internal Corda Node modules for deterministic contract verification.'
 
 dependencies {
-    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    implementation project(':core')
+
+//    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     api project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     api project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
 }

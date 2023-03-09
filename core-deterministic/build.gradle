@@ -37,7 +37,7 @@ dependencies {
     // and without any obviously non-deterministic ones such as Hibernate.
 
     // These "api" dependencies will become "compile" scoped in our published POM.
-    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+//    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     api "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     api "javax.persistence:javax.persistence-api:2.2"
     api "com.google.code.findbugs:jsr305:$jsr305_version"

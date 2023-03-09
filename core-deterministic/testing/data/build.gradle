@@ -14,7 +14,7 @@ dependencies {
     testImplementation project(':node-driver')
     testImplementation project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
 
-    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+//    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     testImplementation "org.jetbrains.kotlin:kotlin-reflect"
 
     testImplementation "junit:junit:$junit_version"

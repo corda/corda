@@ -21,7 +21,7 @@ sourceCompatibility = 1.8
 mainClassName = 'net.corda.explorer.Main'
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     testImplementation "junit:junit:$junit_version"
 

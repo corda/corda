@@ -8,6 +8,7 @@ dependencies {
     // Unit testing helpers.
     implementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     implementation "junit:junit:$junit_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     runtimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     runtimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

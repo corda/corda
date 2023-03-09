@@ -34,7 +34,7 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
     implementation "javax.servlet:javax.servlet-api:${servlet_version}"
     implementation "javax.ws.rs:javax.ws.rs-api:2.1.1"

@@ -9,8 +9,16 @@ description 'Core test types and helpers for testing Corda'
 
 dependencies {
     implementation project(':core')
+    implementation project(':node-api')
+    implementation project(':serialization')
     api project(':test-common')
+    implementation "io.netty:netty-handler-proxy:$netty_version"
+
     api "org.jetbrains.kotlin:kotlin-test"
+
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
+    implementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    implementation "org.mockito:mockito-core:$mockito_version"
 }
 
 jar {

@@ -7,7 +7,8 @@ description 'CLI Utilities'
 dependencies {
     implementation project(":core")
     implementation project(":common-logging")
-    
+
+    implementation "org.apache.commons:commons-lang3:3.9"
     implementation "info.picocli:picocli:$picocli_version"
     implementation "commons-io:commons-io:$commons_io_version"
     implementation "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
@@ -15,7 +16,8 @@ dependencies {
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     implementation "org.fusesource.jansi:jansi:$jansi_version"
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 }
 
 jar {
