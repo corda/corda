@@ -189,8 +189,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // Recoverability
         // As of platform version 13 we introduce a 2-phase finality protocol whereby
         // - record un-notarised transaction locally and broadcast to external participants to record
-        // - notarise transaction + finalise locally
+        // - notarise transaction
         // - broadcast notary signature to external participants (finalise remotely)
+        // - finalise locally
 
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
             serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
@@ -229,7 +230,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
-            logger.info("Broadcasting un-notarised transaction.")
+            logger.info("Recorded transaction without notary signature locally.")
             if (sessions.isEmpty()) sleep(Duration.ZERO) else {
                 progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
                 sessions.forEach { session ->
@@ -253,10 +254,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun broadcastSignaturesAndFinalise(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
         progressTracker.currentStep = BROADCASTING_POST_NOTARISATION
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastSignaturesAndFinalise", flowLogic = this) {
-            logger.info("Broadcasting notary signature.")
+            logger.info("Transaction notarised and broadcasting notary signature.")
             sessions.forEach { session ->
                 try {
-                    logger.debug { "Sending transaction to party $session." }
+                    logger.debug { "Sending notary signature to party $session." }
                     session.send(notarySignatures)
                     // remote will finalise txn with notary signature
                 } catch (e: UnexpectedFlowEndException) {
@@ -271,7 +272,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             progressTracker.currentStep = FINALISING_TRANSACTION
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
                 serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
-                logger.info("Finalised transaction locally.")
+                logger.info("Finalised transaction locally with notary signature.")
             }
         }
     }
@@ -280,7 +281,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
         progressTracker.currentStep = BROADCASTING
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastToOtherParticipants", flowLogic = this) {
-            logger.info("Broadcasting notarised transaction to other participants.")
+            logger.info("Broadcasting complete transaction to other participants.")
             if (newApi) {
                 oldV3Broadcast(tx, oldParticipants.toSet())
                 for (session in sessions) {
@@ -299,7 +300,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             } else {
                 oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
             }
-            logger.info("All other parties received the transaction successfully.")
+            logger.info("Broadcasted complete transaction to other participants.")
         }
     }
 
@@ -340,7 +341,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                             serviceHub.myInfo.legalIdentities.first().name,
                             statesToRecord,
                             sessions.map { it.counterparty.name }.toSet()))
-            logger.info("Recorded transaction without notary signature locally.")
             return tx
         }
     }
@@ -351,7 +351,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             return if (needsNotarySignature(transaction)) {
                 progressTracker.currentStep = NOTARISING
                 val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
-                logger.info("Transaction notarised.")
                 transaction + notarySignatures
             } else {
                 logger.info("No need to notarise this transaction. Recording locally.")
@@ -435,7 +434,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
-                logger.info("Peer recording transaction without notary signature.")
+                logger.debug { "Peer recording transaction without notary signature." }
                 serviceHub.recordUnnotarisedTransaction(stx,
                         FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
             }
@@ -444,7 +443,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
                     .unwrap { it }
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                logger.info("Peer received notarised signature.")
+                logger.debug { "Peer received notarised signature." }
                 serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
                 logger.info("Peer finalised transaction with notary signature.")
             }

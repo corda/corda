@@ -231,12 +231,13 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     private val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
 
-    private fun updateTransaction(txId: SecureHash): Boolean {
+    private fun updateTransaction(txId: SecureHash, signatures: List<TransactionSignature>): Boolean {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
         val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
         criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+        criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
         criteriaUpdate.where(criteriaBuilder.and(
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
                 criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(setOf(TransactionStatus.UNVERIFIED, TransactionStatus.MISSING_NOTARY_SIG))
@@ -249,7 +250,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     override fun addTransaction(transaction: SignedTransaction) =
             addTransaction(transaction) {
-                updateTransaction(transaction.id)
+                updateTransaction(transaction.id, transaction.sigs)
             }
 
     override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
@@ -267,8 +268,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             }
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
-            addTransaction(transaction) {
-                finalizeTransactionWithExtraSignatures(transaction.id, signatures)
+            addTransaction(transaction + signatures) {
+                finalizeTransactionWithExtraSignatures(transaction.id, (transaction.sigs + signatures).distinct())
             }
 
     private fun addTransaction(transaction: SignedTransaction, updateFn: (SecureHash) -> Boolean): Boolean {
@@ -307,6 +308,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 // TO DO: validate that unverified txn does verify correctly before changing status
                 val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
                 val updateRootUnverified = criteriaUpdateUnverified.from(DBTransaction::class.java)
+                criteriaUpdateUnverified.set(updateRootUnverified.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
                 criteriaUpdateUnverified.set(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
                 criteriaUpdateUnverified.where(criteriaBuilder.and(
                         criteriaBuilder.equal(updateRootUnverified.get<String>(DBTransaction::txId.name), txId.toString()),
