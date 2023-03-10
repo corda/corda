@@ -269,7 +269,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
             addTransaction(transaction + signatures) {
-                finalizeTransactionWithExtraSignatures(transaction.id, (transaction.sigs + signatures).distinct())
+                finalizeTransactionWithExtraSignatures(transaction.id, signatures)
             }
 
     private fun addTransaction(transaction: SignedTransaction, updateFn: (SecureHash) -> Boolean): Boolean {

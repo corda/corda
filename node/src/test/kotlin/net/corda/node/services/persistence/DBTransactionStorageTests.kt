@@ -137,7 +137,7 @@ class DBTransactionStorageTests {
         val transaction = newTransaction()
         transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.signatures)
+            assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -153,7 +153,7 @@ class DBTransactionStorageTests {
         assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
         transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.signatures)
+            assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -170,7 +170,7 @@ class DBTransactionStorageTests {
         // attempt to finalise with another notary signature
         transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.signatures)
+            assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -193,14 +193,14 @@ class DBTransactionStorageTests {
         // txn finalised with notary signatures (even though in UNVERIFIED state)
         assertTrue(transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE)))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.signatures)
+            assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
         }
 
         // attempt to record follow-up txn
         assertFalse(transactionStorage.addTransaction(transaction + NOTARY_SIGNATURE))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.signatures)
+            assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -223,14 +223,14 @@ class DBTransactionStorageTests {
         // txn then recorded as verified (simulate ResolveTransactions recording in follow-up flow)
         assertTrue(transactionStorage.addTransaction(transaction + NOTARY_SIGNATURE))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.signatures)
+            assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
         }
 
-        // // attempt to finalise original txn
+        // attempt to finalise original txn
         assertFalse(transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE)))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.signatures)
+            assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -570,8 +570,10 @@ class DBTransactionStorageTests {
         )
     }
 
-    private fun assertSignatures(signatures: ByteArray?) {
-        assertNotNull(signatures)
-        assertEquals(listOf(ALICE_SIGNATURE, NOTARY_SIGNATURE), signatures!!.deserialize())
+    private fun assertSignatures(transaction: ByteArray, extraSigs: ByteArray?) {
+        assertNotNull(extraSigs)
+        assertEquals(listOf(ALICE_SIGNATURE, NOTARY_SIGNATURE),
+                (transaction.deserialize<SignedTransaction>(context = DBTransactionStorage.contextToUse()).sigs +
+                extraSigs!!.deserialize<List<TransactionSignature>>()).distinct())
     }
 }
