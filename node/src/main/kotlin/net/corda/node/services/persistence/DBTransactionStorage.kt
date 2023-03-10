@@ -82,6 +82,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             /**
              * Flow finality metadata used for recovery
              * TODO: create association table solely for Flow metadata and recovery purposes.
+             * See https://r3-cev.atlassian.net/browse/ENT-9521
              */
 
             /** X500Name of flow initiator **/
@@ -305,7 +306,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val rowsUpdated = update.executeUpdate()
             if (rowsUpdated == 0) {
                 // indicates race condition whereby ReceiverFinality MISSING_NOTARY_SIG overwritten to UNVERIFIED by ResolveTransactionsFlow (in follow-up txn)
-                // TO DO: validate that unverified txn does verify correctly before changing status
+                // TO-DO: ensure unverified txn signatures are validated prior to recording  (https://r3-cev.atlassian.net/browse/ENT-9566)
                 val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
                 val updateRootUnverified = criteriaUpdateUnverified.from(DBTransaction::class.java)
                 criteriaUpdateUnverified.set(updateRootUnverified.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
@@ -339,7 +340,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
                 val added = addWithDuplicatesAllowed(transaction.id, cacheValue) { k, v, existingEntry ->
                     if (existingEntry.status == TransactionStatus.MISSING_NOTARY_SIG) {
-                        // TODO verify signatures on passed in transaction include notary
+                        // TODO verify signatures on passed in transaction include notary (See https://r3-cev.atlassian.net/browse/ENT-9566))
                         session.merge(toPersistentEntity(k, v))
                         true
                     } else false
