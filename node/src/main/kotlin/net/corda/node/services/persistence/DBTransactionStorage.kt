@@ -288,37 +288,35 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     private fun finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
-        return database.transaction {
-            txStorage.locked {
-                val session = currentDBSession()
-                val criteriaBuilder = session.criteriaBuilder
-                val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
-                val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
-                criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
-                criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
-                criteriaUpdate.where(criteriaBuilder.and(
-                        criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                        criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG)
+        return txStorage.locked {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
+            val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
+            criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
+            criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+            criteriaUpdate.where(criteriaBuilder.and(
+                    criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
+                    criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG)
+            ))
+            criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
+            val update = session.createQuery(criteriaUpdate)
+            val rowsUpdated = update.executeUpdate()
+            if (rowsUpdated == 0) {
+                // indicates race condition whereby ReceiverFinality MISSING_NOTARY_SIG overwritten to UNVERIFIED by ResolveTransactionsFlow (in follow-up txn)
+                // TO DO: validate that unverified txn does verify correctly before changing status
+                val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
+                val updateRootUnverified = criteriaUpdateUnverified.from(DBTransaction::class.java)
+                criteriaUpdateUnverified.set(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+                criteriaUpdateUnverified.where(criteriaBuilder.and(
+                        criteriaBuilder.equal(updateRootUnverified.get<String>(DBTransaction::txId.name), txId.toString()),
+                        criteriaBuilder.equal(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
                 ))
-                criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-                val update = session.createQuery(criteriaUpdate)
-                val rowsUpdated = update.executeUpdate()
-                if (rowsUpdated == 0) {
-                    // indicates race condition whereby ReceiverFinality MISSING_NOTARY_SIG overwritten to UNVERIFIED by ResolveTransactionsFlow (in follow-up txn)
-                    // TO DO: validate that unverified txn does verify correctly before changing status
-                    val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
-                    val updateRootUnverified = criteriaUpdateUnverified.from(DBTransaction::class.java)
-                    criteriaUpdateUnverified.set(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
-                    criteriaUpdateUnverified.where(criteriaBuilder.and(
-                            criteriaBuilder.equal(updateRootUnverified.get<String>(DBTransaction::txId.name), txId.toString()),
-                            criteriaBuilder.equal(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
-                    ))
-                    criteriaUpdateUnverified.set(updateRootUnverified.get<Instant>(DBTransaction::timestamp.name), clock.instant())
-                    val updateUnverified = session.createQuery(criteriaUpdateUnverified)
-                    val rowsUpdatedUnverified = updateUnverified.executeUpdate()
-                    rowsUpdatedUnverified != 0
-                } else true
-            }
+                criteriaUpdateUnverified.set(updateRootUnverified.get<Instant>(DBTransaction::timestamp.name), clock.instant())
+                val updateUnverified = session.createQuery(criteriaUpdateUnverified)
+                val rowsUpdatedUnverified = updateUnverified.executeUpdate()
+                rowsUpdatedUnverified != 0
+            } else true
         }
     }
 
