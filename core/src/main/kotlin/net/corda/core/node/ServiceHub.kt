@@ -18,7 +18,6 @@ import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.flows.FlowTransactionMetadata
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
@@ -229,24 +228,6 @@ interface ServiceHub : ServicesForResolution {
      * @param statesToRecord how the vault should treat the output states of the transaction.
      */
     fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>)
-
-    /**
-     * Stores [SignedTransaction] and participant signatures without the notary signature in the local transaction storage.
-     * Optionally add finality flow recovery metadata.
-     * This is expected to be run within a database transaction.
-     *
-     * @param txn The transaction to record.
-     */
-    fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?= null)
-
-    /**
-     * Stores [SignedTransaction] with extra signatures in the local transaction storage
-     *
-     * @param sigs The signatures to add to the transaction.
-     * @param txs The transactions to record.
-     * @param statesToRecord how the vault should treat the output states of the transaction.
-     */
-    fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord)
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for

@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.PlatformVersionSwitches
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
@@ -211,7 +212,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             else {
                 progressTracker.currentStep = FINALISING_TRANSACTION
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                    serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
+                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
                     logger.info("Finalised transaction locally.")
                 }
             }
@@ -271,7 +272,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             progressTracker.currentStep = FINALISING_TRANSACTION
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                serviceHub.finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
+                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
                 logger.info("Finalised transaction locally with notary signature.")
             }
         }
@@ -336,7 +337,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun recordUnnotarisedTransaction(tx: SignedTransaction): SignedTransaction {
         progressTracker.currentStep = RECORD_UNNOTARISED
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
-            serviceHub.recordUnnotarisedTransaction(tx,
+            (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(tx,
                     FlowTransactionMetadata(
                             serviceHub.myInfo.legalIdentities.first().name,
                             statesToRecord,
@@ -435,7 +436,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
                 logger.debug { "Peer recording transaction without notary signature." }
-                serviceHub.recordUnnotarisedTransaction(stx,
+                (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
                         FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
             }
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
@@ -444,7 +445,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                     .unwrap { it }
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
                 logger.debug { "Peer received notarised signature." }
-                serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
+                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
                 logger.info("Peer finalised transaction with notary signature.")
             }
         } else {

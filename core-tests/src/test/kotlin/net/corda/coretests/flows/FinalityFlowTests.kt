@@ -29,6 +29,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.PlatformVersionSwitches
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -341,7 +342,7 @@ class FinalityFlowTests : WithFinality {
                         checkSufficientSignatures = false, statesToRecord = StatesToRecord.ONLY_RELEVANT, deferredAck = true))
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
-                serviceHub.recordUnnotarisedTransaction(stx,
+                (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
                         FlowTransactionMetadata(otherSideSession.counterparty.name, StatesToRecord.ONLY_RELEVANT))
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
                 logger.info("Peer recorded transaction without notary signature.")
@@ -349,7 +350,7 @@ class FinalityFlowTests : WithFinality {
                 val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
                         .unwrap { it }
                 logger.info("Peer received notarised signature.")
-                serviceHub.finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, StatesToRecord.ONLY_RELEVANT)
+                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, StatesToRecord.ONLY_RELEVANT)
                 throw FinalisationFailedException(stx + notarySignatures)
             }
             catch (e: SQLException) {
@@ -371,7 +372,7 @@ class FinalityFlowTests : WithFinality {
         override fun call(): SignedTransaction {
             // Mimic ReceiveFinalityFlow finalisation
             val stx = serviceHub.validatedTransactions.getTransaction(id) ?: throw FlowException("Missing transaction: $id")
-            serviceHub.finalizeTransactionWithExtraSignatures(stx + sigs, sigs, StatesToRecord.ONLY_RELEVANT)
+            (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx + sigs, sigs, StatesToRecord.ONLY_RELEVANT)
             logger.info("Peer finalised transaction with notary signature.")
 
             return stx + sigs

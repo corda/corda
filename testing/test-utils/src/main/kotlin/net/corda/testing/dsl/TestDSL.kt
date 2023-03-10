@@ -6,12 +6,15 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
@@ -134,6 +137,10 @@ data class TestTransactionDSLInterpreter private constructor(
         override val notaryService: NotaryService? = null
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
+
+        override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {}
+
+        override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {}
     }
 
     private fun copy(): TestTransactionDSLInterpreter =
