@@ -203,8 +203,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             recordLocallyAndBroadcast(newPlatformSessions, transaction)
         }
 
-        val notarised = notariseOrRecord()
-        val notarySignatures = notarised.sigs - transaction.sigs.toSet()
+        val stxn = notariseOrRecord()
+        val notarySignatures = stxn.sigs - transaction.sigs.toSet()
         if (notarySignatures.isNotEmpty()) {
             if (useTwoPhaseFinality && newPlatformSessions.isNotEmpty()) {
                 broadcastSignaturesAndFinalise(newPlatformSessions, notarySignatures)
@@ -212,19 +212,19 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             else {
                 progressTracker.currentStep = FINALISING_TRANSACTION
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
+                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
                     logger.info("Finalised transaction locally.")
                 }
             }
         }
 
         if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
-            broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, notarised)
+            broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, stxn)
         } else if (useTwoPhaseFinality && oldPlatformSessions.isNotEmpty()) {
-            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, notarised)
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
         }
 
-        return notarised
+        return stxn
     }
 
     @Suspendable
@@ -272,7 +272,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             progressTracker.currentStep = FINALISING_TRANSACTION
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction + notarySignatures, notarySignatures, statesToRecord)
+                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction , notarySignatures, statesToRecord)
                 logger.info("Finalised transaction locally with notary signature.")
             }
         }
@@ -445,7 +445,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                     .unwrap { it }
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
                 logger.debug { "Peer received notarised signature." }
-                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx + notarySignatures, notarySignatures, statesToRecord)
+                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
                 logger.info("Peer finalised transaction with notary signature.")
             }
         } else {
