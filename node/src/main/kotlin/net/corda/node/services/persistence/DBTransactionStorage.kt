@@ -435,7 +435,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         )
         constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?, metadata: FlowTransactionMetadata?) : this(
                 stx.txBits,
-                sigs ?: emptyList(),
+                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs).distinct(),
                 status,
                 metadata
         )
