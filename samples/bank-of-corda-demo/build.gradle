@@ -9,7 +9,10 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    implementation project(":core-test-utils")
+    implementation project(":test-utils")
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     // The bank of corda CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
@@ -35,6 +38,8 @@ dependencies {
 
     // Javax is required for webapis
     implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     // Test dependencies
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
@@ -144,12 +149,6 @@ jar {
     }
 }
 
-//cordapp {
-//    targetPlatformVersion corda_platform_version.toInteger()
-//    minimumPlatformVersion 1
-//    info {
-//        name "Bank of Corda Demo"
-//        version "1"
-//        vendor "R3"
-//    }
-//}
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+}

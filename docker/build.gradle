@@ -22,6 +22,11 @@ apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies{
     implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':common-configuration-parsing')
+    implementation project(':common-validation')
+
+    implementation "com.typesafe:config:$typesafe_config_version"
 }
 
 shadowJar {

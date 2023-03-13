@@ -3,6 +3,7 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 dependencies {
     cordaProvided project(':core')
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 cordapp {

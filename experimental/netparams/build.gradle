@@ -4,12 +4,16 @@ apply plugin: 'kotlin'
 description 'NetworkParameters signing tool'
 
 dependencies {
+    implementation project(':core')
+    implementation project(':node-api')
+    implementation project(':serialization')
     implementation project(':tools:cliutils')
+
     implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     implementation "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
-    implementation project(':core')
-    implementation project(':node-api')
+    implementation "com.typesafe:config:$typesafe_config_version"
+    implementation "info.picocli:picocli:$picocli_version"
 }
 
 configurations.implementation.canBeResolved = true
@@ -26,6 +30,7 @@ jar {
                 'Main-Class': 'net.corda.netparams.NetParamsKt'
         )
     }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 processResources {

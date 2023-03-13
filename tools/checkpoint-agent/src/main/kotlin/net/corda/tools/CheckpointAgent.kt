@@ -389,6 +389,7 @@ object CheckpointHook : ClassFileTransformer {
                     builder.append("\n")
                 }
             }
+            is StatsTree.Loop -> log.info("StatsTree.Loop ignored")
         }
     }
 }

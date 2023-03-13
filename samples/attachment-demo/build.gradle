@@ -6,14 +6,9 @@ apply plugin: 'net.corda.plugins.cordformation'
 
 description 'Corda attachment demo'
 
-//cordapp {
-//    info {
-//        name "Corda Attachment Demo"
-//        vendor "R3"
-//        targetPlatformVersion corda_platform_version.toInteger()
-//        minimumPlatformVersion 1
-//    }
-//}
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+}
 
 sourceSets {
     integrationTest {
@@ -34,11 +29,14 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    cordaProvided project(':core')
+    cordaProvided project(':client:rpc')
+
+    implementation "io.reactivex:rxjava:$rxjava_version"
     implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
     implementation "javax.servlet:javax.servlet-api:${servlet_version}"
     implementation "javax.ws.rs:javax.ws.rs-api:2.1.1"
-    cordaProvided project(':client:rpc')
 
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.

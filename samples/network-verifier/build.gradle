@@ -2,14 +2,13 @@ apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
-//cordapp {
-//    info {
-//        name "Corda Network Verifier"
-//        vendor "R3"
-//        targetPlatformVersion corda_platform_version.toInteger()
-//        minimumPlatformVersion 1
-//    }
-//}
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {

@@ -4,8 +4,13 @@ description 'Utilities needed for smoke tests in Corda'
 
 dependencies {
     // Smoke tests do NOT have any Node code on the classpath!
+    implementation project(':core')
+    implementation project(':node-api')
     implementation project(':test-common')
     implementation project(':client:rpc')
+
+    implementation "com.typesafe:config:$typesafe_config_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 }
 
 tasks.named('jar', Jar) {

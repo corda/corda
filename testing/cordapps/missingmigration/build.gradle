@@ -4,6 +4,8 @@ apply plugin: 'kotlin'
 
 dependencies {
     implementation project(":core")
+    implementation "javax.persistence:javax.persistence-api:2.2"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 }
 
 jar {

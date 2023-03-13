@@ -7,6 +7,8 @@ dependencies {
     cordaProvided project(':core')
     cordapp project(':samples:network-verifier:contracts')
 
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
+
     testImplementation project(":test-utils")
     testImplementation "junit:junit:$junit_version"
 }

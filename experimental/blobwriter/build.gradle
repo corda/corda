@@ -4,6 +4,7 @@ apply plugin : 'application'
 mainClassName = "net.corda.blobwriter.BlobWriter.kt"
 
 dependencies {
+    implementation project(':core')
     implementation project(':tools:cliutils')
     implementation project(":common-logging")
     implementation project(':serialization')
@@ -26,4 +27,5 @@ jar {
                 'Main-Class': 'net.corda.blobwriter.BlobWriterKt'
         )
     }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

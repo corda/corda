@@ -15,12 +15,17 @@ dependencies {
     // Corda integration dependencies
     cordaProvided project(':core')
 
-
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version")
-    
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
+    implementation "com.google.guava:guava-testlib:$guava_version"
+
     // only included to control the `DemoClock` as part of the demo application
     // normally `:node` should not be depended on in any CorDapps
     implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':core-test-utils')
+    implementation project(':test-utils')
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
@@ -53,6 +58,7 @@ cordapp {
 
 jar {
     baseName 'corda-irs-demo-workflows'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 task testJar(type: Jar) {

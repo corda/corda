@@ -2,6 +2,7 @@ apply plugin: 'kotlin'
 
 dependencies {
     implementation project(":core")
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 jar {

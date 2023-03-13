@@ -50,7 +50,7 @@ evaluationDependsOn("web")
 dependencies {
     implementation "commons-io:commons-io:$commons_io_version"
     implementation project(":samples:irs-demo:web")
-    implementation('org.springframework.boot:spring-boot-starter-web') {
+    implementation('org.springframework.boot:spring-boot-starter-web:3.0.4') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
