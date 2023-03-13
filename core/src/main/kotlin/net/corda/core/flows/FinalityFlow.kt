@@ -272,7 +272,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             progressTracker.currentStep = FINALISING_TRANSACTION
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction , notarySignatures, statesToRecord)
+                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
                 logger.info("Finalised transaction locally with notary signature.")
             }
         }
