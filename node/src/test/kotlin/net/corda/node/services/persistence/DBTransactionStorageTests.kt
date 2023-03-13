@@ -217,11 +217,11 @@ class DBTransactionStorageTests {
         assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
 
         // txn then recorded as unverified (simulate ResolveTransactionFlow in follow-up flow)
-        transactionStorage.addUnverifiedTransaction(transaction)
+        transactionStorage.addUnverifiedTransaction(transaction + NOTARY_SIGNATURE)
         assertEquals(UNVERIFIED, readTransactionFromDB(transaction.id).status)
 
         // txn then recorded as verified (simulate ResolveTransactions recording in follow-up flow)
-        assertTrue(transactionStorage.addTransaction(transaction + NOTARY_SIGNATURE))
+        assertTrue(transactionStorage.addTransaction(transaction))
         readTransactionFromDB(transaction.id).let {
             assertSignatures(it.transaction, it.signatures)
             assertEquals(VERIFIED, it.status)
@@ -570,9 +570,10 @@ class DBTransactionStorageTests {
         )
     }
 
-    private fun assertSignatures(transaction: ByteArray, extraSigs: ByteArray?) {
+    private fun assertSignatures(transaction: ByteArray, extraSigs: ByteArray?,
+                                 expectedSigs: List<TransactionSignature> = listOf(ALICE_SIGNATURE, NOTARY_SIGNATURE)) {
         assertNotNull(extraSigs)
-        assertEquals(listOf(ALICE_SIGNATURE, NOTARY_SIGNATURE),
+        assertEquals(expectedSigs,
                 (transaction.deserialize<SignedTransaction>(context = DBTransactionStorage.contextToUse()).sigs +
                 extraSigs!!.deserialize<List<TransactionSignature>>()).distinct())
     }
