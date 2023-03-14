@@ -30,7 +30,7 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'standard' }
+    agent { label 'standard-latest-ami' }
 
     /*
      * List options in alphabetical order
