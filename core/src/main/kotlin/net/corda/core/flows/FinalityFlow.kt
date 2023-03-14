@@ -232,20 +232,18 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
             logger.info("Recorded transaction without notary signature locally.")
-            if (sessions.isEmpty()) sleep(Duration.ZERO) else {
-                progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
-                sessions.forEach { session ->
-                    try {
-                        logger.debug { "Sending transaction to party $session." }
-                        subFlow(SendTransactionFlow(session, tx))
-                    } catch (e: UnexpectedFlowEndException) {
-                        throw UnexpectedFlowEndException(
-                                "${session.counterparty} has finished prematurely and we're trying to send them a transaction without notary signature. " +
-                                        "Did they forget to call ReceiveFinalityFlow? (${e.message})",
-                                e.cause,
-                                e.originalErrorId
-                        )
-                    }
+            progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
+            sessions.forEach { session ->
+                try {
+                    logger.debug { "Sending transaction to party $session." }
+                    subFlow(SendTransactionFlow(session, tx))
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "${session.counterparty} has finished prematurely and we're trying to send them a transaction without notary signature. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
                 }
             }
         }
