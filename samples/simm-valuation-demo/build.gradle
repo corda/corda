@@ -29,11 +29,13 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-//    cordaProvided "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    implementation project(':core-test-utils')
+
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
-    cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
+    cordapp project(':samples:simm-valuation-demo:contracts-states')
     cordapp project(':samples:simm-valuation-demo:flows')
 
     // Cordformation needs a SLF4J implementation when executing the Network
@@ -81,6 +83,7 @@ dependencies {
 jar {
     // A CorDapp does not configure the Node's logging!
     exclude "**/log4j2*.xml"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')

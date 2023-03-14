@@ -21,8 +21,6 @@ sourceCompatibility = 1.8
 mainClassName = 'net.corda.explorer.Main'
 
 dependencies {
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
     testImplementation "junit:junit:$junit_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
@@ -35,6 +33,7 @@ dependencies {
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     implementation project(':core')
+    implementation project(':client:rpc')
     implementation project(':client:jfx')
     implementation project(':finance:contracts')
     implementation project(':finance:workflows')
@@ -68,6 +67,9 @@ dependencies {
 
     // JOpt: for command line flags.
     implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
+    implementation "org.apache.commons:commons-lang3:3.9"
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 }
 
 tasks.withType(JavaCompile).configureEach {

@@ -4,14 +4,9 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
-//cordapp {
-//    info {
-//        name "Trader Demo"
-//        vendor "R3"
-//        targetPlatformVersion corda_platform_version.toInteger()
-//        minimumPlatformVersion 1
-//    }
-//}
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+}
 
 sourceSets {
     integrationTest {
@@ -35,18 +30,19 @@ dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
+    cordaProvided project(':core')
+    cordaProvided project(':node')
     cordaProvided project(':client:rpc')
+    cordaProvided project(':core-test-utils')
+    implementation project(':test-utils')
+
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
     // Use a much simpler SLF4J implementation here instead.
     cordaRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
-
-    // We only need this for its DUMMY_BANK constants, and
-    // DO NOT want it added to Gradle's runtime classpath.
-    implementation project(':test-utils')
 
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
@@ -55,6 +51,8 @@ dependencies {
 
     // Corda integration dependencies
     cordaRuntimeOnly project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     testImplementation "org.slf4j:slf4j-simple:$slf4j_version"
     testImplementation(project(':node-driver')) {

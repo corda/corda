@@ -48,7 +48,14 @@ configurations {
 }
 
 dependencies {
+    implementation project(':core')
+    implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':serialization')
+    implementation project(':common-configuration-parsing')
+    implementation project(':common-validation')
     implementation project(':client:rpc')
+
     implementation project(':finance:contracts')
     implementation project(':finance:workflows')
     implementation project(':tools:worldmap')
@@ -62,6 +69,7 @@ dependencies {
     implementation "com.h2database:h2:$h2_version"
     implementation "net.java.dev.jna:jna-platform:$jna_version"
     implementation "com.google.guava:guava:$guava_version"
+    implementation "io.reactivex:rxjava:$rxjava_version"
 
     implementation "org.slf4j:log4j-over-slf4j:$slf4j_version"
     implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
@@ -78,12 +86,14 @@ dependencies {
         exclude group: 'log4j'
     }
 
+    testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')
     testImplementation project(':testing:testserver')
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
+    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "junit:junit:$junit_version"

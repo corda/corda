@@ -5,21 +5,17 @@ apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
-//cordapp {
-//    info {
-//        name "Corda Notary Demo"
-//        vendor "R3"
-//        targetPlatformVersion corda_platform_version.toInteger()
-//        minimumPlatformVersion 1
-//    }
-//}
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+}
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {
         cordaDriver "net.corda:corda-shell:$corda_release_version"
     }
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaProvided project(':core')
     cordaProvided project(':client:rpc')
+
     // Corda integration dependencies
     cordaRuntimeOnly project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 

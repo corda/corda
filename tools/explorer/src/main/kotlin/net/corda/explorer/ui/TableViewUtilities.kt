@@ -20,7 +20,7 @@ fun <S> TableView<S>.setColumnPrefWidthPolicy(
         width -
                 (if (padding != null) padding.left + padding.right else 0.0) -
                 (if (borderInsets != null) borderInsets.left + borderInsets.right else 0.0)
-    }, arrayOf(columns, widthProperty(), paddingProperty(), borderProperty()))
+    }, *arrayOf(columns, widthProperty(), paddingProperty(), borderProperty()))
 
     columns.forEach {
         it.setPrefWidthPolicy(tableWidthWithoutPaddingAndBorder, getColumnWidth)
@@ -55,7 +55,7 @@ fun <S> TableView<S>.singleRowSelection(): ObjectBinding<SingleRowSelection<S>> 
     } else {
         SingleRowSelection.Selected(selectionModel.selectedItems[0])
     }
-}, arrayOf(selectionModel.selectedItems))
+}, *arrayOf(selectionModel.selectedItems))
 
 fun <S, T> TableColumn<S, T>.setCustomCellFactory(toNode: (T) -> Node) {
     setCellFactory {

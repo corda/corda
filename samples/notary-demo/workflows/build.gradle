@@ -11,8 +11,11 @@ dependencies {
     // want the Node bundled inside the CorDapp or added to
     // Gradle's runtime classpath.
     implementation project(':node')
+    implementation project(':node-api')
 
     cordapp project(':samples:notary-demo:contracts')
+
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 cordapp {
@@ -28,4 +31,5 @@ cordapp {
 
 jar {
     baseName 'corda-notary-demo-workflows'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

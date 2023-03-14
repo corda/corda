@@ -10,7 +10,6 @@ import javafx.scene.control.Label
 import javafx.scene.control.TextField
 import net.corda.client.jfx.model.objectProperty
 import net.corda.client.jfx.model.observableList
-import net.corda.client.jfx.utils.map
 import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.IssuerModel
 import net.corda.explorer.model.SettingsModel
