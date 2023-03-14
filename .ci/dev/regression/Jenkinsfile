@@ -5,6 +5,10 @@
  */
 @Library('corda-shared-build-pipeline-steps')
 
+import com.r3.build.utils.GitUtils
+
+GitUtils gitUtils = new GitUtils(this)
+
 /**
  * Sense environment
  */
@@ -295,6 +299,9 @@ pipeline {
     post {
         always {
             script {
+                if (gitUtils.isReleaseTag()) {
+                    gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''), scm.userRemoteConfigs[0].credentialsId)
+                }
                 try {
                     if (params.DO_TEST) {
                         unstash 'allure-input'
