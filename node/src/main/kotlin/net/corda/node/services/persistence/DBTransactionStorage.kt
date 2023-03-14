@@ -334,6 +334,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
+        transaction.notary?.let { notary ->
+            transaction.verifySignaturesExcept(notary.owningKey)
+        } ?: transaction.verifyRequiredSignatures()
         database.transaction {
             txStorage.locked {
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)

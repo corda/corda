@@ -201,6 +201,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
 
     override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {
         requireSupportedHashType(txn)
+        txn.verifyRequiredSignatures()
         finalizeTransactionWithExtraSignatures(
                 statesToRecord,
                 txn,
@@ -213,6 +214,9 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     }
 
     override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {
+        txn.notary?.let { notary ->
+            txn.verifySignaturesExcept(notary.owningKey)
+        } ?: txn.verifyRequiredSignatures()
         database.transaction {
             validatedTransactions.addUnnotarisedTransaction(txn, metadata)
         }

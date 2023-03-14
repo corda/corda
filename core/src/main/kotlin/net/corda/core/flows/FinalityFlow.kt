@@ -421,15 +421,8 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod")
     @Suspendable
     override fun call(): SignedTransaction {
-        val stx = subFlow(object : ReceiveTransactionFlow(otherSideSession,
-                checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true) {
-            override fun checkBeforeRecording(stx: SignedTransaction) {
-                require(expectedTxId == null || expectedTxId == stx.id) {
-                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
-                            "not recorded and nor its states sent to the vault."
-                }
-            }
-        })
+        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true))
+
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
