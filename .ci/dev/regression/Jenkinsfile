@@ -5,6 +5,10 @@
  */
 @Library('corda-shared-build-pipeline-steps')
 
+import com.r3.build.utils.GitUtils
+
+GitUtils gitUtils = new GitUtils(this)
+
 /**
  * Sense environment
  */
@@ -13,34 +17,6 @@ boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 boolean isReleaseCandidate = (env.TAG_NAME =~ /^(release-.*(RC|HC).*(?<!_JDK11))$/)
 boolean isReleasePatch = (env.TAG_NAME =~ /^release.*([1-9]\d*|0)(\.([1-9]\d*|0)){2}$/)
-
-/*
-** calculate the stage for NexusIQ evaluation
-**  * build for snapshots
-**  * stage-release:  for release candidates and for health checks
-**  * release: for GA release
-*/
-def nexusDefaultIqStage = "build"
-if (isReleaseTag) {
-    switch (env.TAG_NAME) {
-        case ~/.*-RC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
-        case ~/.*-HC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
-        default: nexusDefaultIqStage = "release"
-    }
-}
-
-/**
- * make sure calculated default value of NexusIQ stage is first in the list
- * thus making it default for the `choice` parameter
- */
-def nexusIqStageChoices = [nexusDefaultIqStage].plus(
-                [
-                        'develop',
-                        'build',
-                        'stage-release',
-                        'release',
-                        'operate'
-                ].minus([nexusDefaultIqStage]))
 
 /**
  * Common Gradle arguments for all Gradle executions
@@ -54,7 +30,7 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'standard' }
+    agent { label 'standard-latest-ami' }
 
     /*
      * List options in alphabetical order
@@ -67,7 +43,6 @@ pipeline {
     }
 
     parameters {
-        choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
         booleanParam defaultValue: true, description: 'Run tests during this build?', name: 'DO_TEST'
     }
 
@@ -81,7 +56,9 @@ pipeline {
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         DOCKER_URL = "https://index.docker.io/v1/"
         EMAIL_RECIPIENTS = credentials('corda4-email-recipient')
-        SNYK_API_KEY = "c4-os-snyk"
+        SNYK_API_KEY = "c4-os-snyk" //Jenkins credential type: Snyk Api token
+        SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
+        C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
     }
 
     stages {
@@ -105,93 +82,8 @@ pipeline {
                 stash name: 'compiled', useDefaultExcludes: false
             }
         }
-        stage('Sonatype Check') {
-            steps {
-                script {
-                    sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
-                    /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
-                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\(\\.[0-9]\\+\\)\\+\\).*\$/\\1/'").trim()
-                    def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
-                    def artifactId = 'corda'
-                    nexusAppId = "${groupId}-${artifactId}-${version}"
-                }
-                nexusPolicyEvaluation (
-                        failBuildOnNetworkError: false,
-                        iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
-                        iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
-                        iqStage: params.nexusIqStage
-                )
-            }
-        }
-        stage('Generate Wiki Report') {
-            when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate }
-                beforeAgent true
-            }
-            agent {
-                docker {
-                    image 'nexusiq-sonatype-cli:latest'
-                    reuseNode true
-                    registryUrl 'https://engineering-docker.software.r3.com/'
-                    registryCredentialsId 'artifactory-credentials'
-                }
-            }
-            options {
-                retry(3)
-            }
-            environment {
-                NEXUS_APP_ID="${nexusAppId}"
-                NEXUS_APP_STAGE="${params.nexusIqStage}"
-                NEXUSIQ_CREDENTIALS = credentials('jenkins-nexusiq-credentials')
-            }
-            steps {
-                sh '''\
-                    rm -f wiki-report.md
-                    env NEXUSIQ_USERNAME="${NEXUSIQ_CREDENTIALS_USR}" \
-                        NEXUSIQ_PASSWORD="${NEXUSIQ_CREDENTIALS_PSW}" \
-                            /opt/app/wrapper wiki-report \
-                                --app "${NEXUS_APP_ID}" \
-                                --stage "${NEXUS_APP_STAGE}" >wiki-report.md
-                '''.stripIndent()
-                archiveArtifacts 'wiki-report.md'
-            }
-        }
-        stage('Generate Licence Report') {
-            when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate }
-                beforeAgent true
-            }
-            agent {
-                docker {
-                    image 'nexusiq-licence-report:latest'
-                    reuseNode true
-                    registryUrl 'https://engineering-docker.software.r3.com/'
-                    registryCredentialsId 'artifactory-credentials'
-                }
-            }
-            options {
-                retry(3)
-            }
-            environment {
-                NEXUS_APP_ID="${nexusAppId}"
-                NEXUS_APP_STAGE="${params.nexusIqStage}"
-                NEXUSIQ_CREDENTIALS = credentials('jenkins-nexusiq-credentials')
-            }
-            steps {
-                sh '''\
-                    rm -rf report
-                    env NEXUSIQ_USERNAME="${NEXUSIQ_CREDENTIALS_USR}" \
-                        NEXUSIQ_PASSWORD="${NEXUSIQ_CREDENTIALS_PSW}" \
-                            /opt/app/wrapper --write --outdir report \
-                                --force \
-                                --app "${NEXUS_APP_ID}" \
-                                --stage "${NEXUS_APP_STAGE}"
-                '''.stripIndent()
-                archiveArtifacts 'report/*.md'
-            }
-        }
 
-       stage('Snyk Security') {
+        stage('Snyk Security') {
             when {
                 expression { isReleaseTag || isReleaseCandidate || isReleaseBranch }
             }
@@ -201,6 +93,22 @@ pipeline {
                     def modulesToScan = ['node', 'capsule', 'bridge', 'bridgecapsule']
                     modulesToScan.each { module ->
                         snykSecurityScan("${env.SNYK_API_KEY}", "--sub-project=$module --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --debug --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+","_")}'")
+                    }
+                }
+            }
+        }
+
+        stage('Generate Snyk License Report') {
+            when {
+                expression { isReleaseTag || isReleaseCandidate || isReleaseBranch }
+            }
+            steps {
+                snykLicenseGeneration(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
+            }
+            post {
+                always {
+                    script {
+                        archiveArtifacts artifacts: 'snyk-license-report/*-snyk-license-report.html', allowEmptyArchive: true, fingerprint: true
                     }
                 }
             }
@@ -417,6 +325,9 @@ pipeline {
     post {
         always {
             script {
+                if (gitUtils.isReleaseTag()) {
+                    gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''), scm.userRemoteConfigs[0].credentialsId)
+                }
                 try {
                     if (params.DO_TEST) {
                         unstash 'allure-input'
@@ -481,7 +392,10 @@ pipeline {
         }
         unstable {
         	script {
-        		sendSlackNotifications("warning", "BUILD UNSTABLE - Unstable Builds are likely a result of Nexus Sonar Scanner violations", false, "#corda-corda4-open-source-build-notifications")
+        		sendSlackNotifications("warning", "BUILD UNSTABLE", false, "#corda-corda4-open-source-build-notifications")
+                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+                    snykSecurityScan.generateHtmlElements()
+                }
                 if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
                     snykSecurityScan.generateHtmlElements()
                 }
