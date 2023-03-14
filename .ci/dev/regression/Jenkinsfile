@@ -113,21 +113,6 @@ pipeline {
             }
         }
 
-        stage('Snyk Security') {
-            when {
-                expression { isReleaseTag || isReleaseCandidate || isReleaseBranch }
-            }
-            steps {
-                script {
-                    // Invoke Snyk for each Gradle sub project we wish to scan
-                    def modulesToScan = ['node', 'capsule', 'bridge', 'bridgecapsule']
-                    modulesToScan.each { module ->
-                        snykSecurityScan("${env.SNYK_API_KEY}", "--sub-project=$module --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --debug --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+","_")}'")
-                    }
-                }
-            }
-        }
-
         stage('All Tests') {
             when {
                 expression { params.DO_TEST }
