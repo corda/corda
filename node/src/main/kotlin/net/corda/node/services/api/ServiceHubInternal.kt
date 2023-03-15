@@ -201,7 +201,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
 
     override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {
         requireSupportedHashType(txn)
-        txn.verifyRequiredSignatures()
+        (txn + sigs).verifyRequiredSignatures()
         finalizeTransactionWithExtraSignatures(
                 statesToRecord,
                 txn,
