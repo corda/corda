@@ -10,6 +10,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.TransactionsResolver
@@ -24,6 +25,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
@@ -188,7 +190,12 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val cacheFactory: NamedCacheFactory
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-        txs.forEach { requireSupportedHashType(it) }
+        txs.forEach {
+            requireSupportedHashType(it)
+            if (getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY) {
+                it.verifyRequiredSignatures()
+            }
+        }
         recordTransactions(
                 statesToRecord,
                 txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
@@ -201,7 +208,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
 
     override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {
         requireSupportedHashType(txn)
-        (txn + sigs).verifyRequiredSignatures()
+        if (txn.coreTransaction is WireTransaction)
+            (txn + sigs).verifyRequiredSignatures()
         finalizeTransactionWithExtraSignatures(
                 statesToRecord,
                 txn,
@@ -214,9 +222,11 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     }
 
     override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {
-        txn.notary?.let { notary ->
-            txn.verifySignaturesExcept(notary.owningKey)
-        } ?: txn.verifyRequiredSignatures()
+        if (txn.coreTransaction is WireTransaction) {
+            txn.notary?.let { notary ->
+                txn.verifySignaturesExcept(notary.owningKey)
+            } ?: txn.verifyRequiredSignatures()
+        }
         database.transaction {
             validatedTransactions.addUnnotarisedTransaction(txn, metadata)
         }

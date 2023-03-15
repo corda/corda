@@ -22,6 +22,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.CordaClock
@@ -334,7 +335,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
-        transaction.verifyRequiredSignatures()
+        if (transaction.coreTransaction is WireTransaction)
+            transaction.verifyRequiredSignatures()
         database.transaction {
             txStorage.locked {
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
