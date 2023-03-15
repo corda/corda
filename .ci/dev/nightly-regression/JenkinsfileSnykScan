@@ -1,4 +1,4 @@
-@Library('corda-shared-build-pipeline-steps')
+@Library('corda-shared-build-pipeline-steps') _
 
 cordaSnykScanPipeline (
     snykTokenId: 'c4-os-snyk-api-token-secret',
