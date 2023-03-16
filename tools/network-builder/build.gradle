@@ -35,14 +35,19 @@ configurations {
 }
 
 dependencies {
+    implementation project(':core')
+    implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':serialization')
+    implementation project(':common-configuration-parsing')
+    implementation project(':common-validation')
+
     implementation "com.microsoft.azure:azure:1.22.0"
     implementation "com.github.docker-java:docker-java:$docker_java_version"
 
     testImplementation "org.jetbrains.kotlin:kotlin-test"
     testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
 
-    implementation project(':node-api')
-    implementation project(':node')
 
     implementation "com.typesafe:config:$typesafe_config_version"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
@@ -55,6 +60,10 @@ dependencies {
 
     // ControlsFX: Extra controls for JavaFX.
     implementation "org.controlsfx:controlsfx:$controlsfx_version"
+
+    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {

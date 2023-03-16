@@ -12,7 +12,7 @@ buildscript {
 }
 
 plugins {
-//    id 'com.craigburke.client-dependencies' version '1.4.0'
+    id 'com.craigburke.client-dependencies' version '1.4.0'
     id 'org.springframework.boot' version '3.0.4'
     id 'io.spring.dependency-management'
 }
@@ -27,8 +27,8 @@ dependencyManagement {
     }
 }
 
-//clientDependencies {
-//    registry 'realBower', type:'bower', url:'https://registry.bower.io'
+clientDependencies {
+    registry 'realBower', type:'bower', url:'https://registry.bower.io'
 //    realBower {
 //        "angular"("1.5.8")
 //        "jquery"("^3.0.0")
@@ -39,12 +39,12 @@ dependencyManagement {
 //        "requirejs"("^2.2.0")
 //        "semantic-ui"("^2.2.2", into: "semantic")
 //    }
-//
-//    // put the JS dependencies into src directory so it can easily be referenced
-//    // from HTML files in webapp frontend, useful for testing/development
-//    // Note that this dir is added to .gitignore
-//    installDir = 'src/main/resources/static/js/bower_components'
-//}
+
+    // put the JS dependencies into src directory so it can easily be referenced
+    // from HTML files in webapp frontend, useful for testing/development
+    // Note that this dir is added to .gitignore
+    installDir = 'src/main/resources/static/js/bower_components'
+}
 
 // Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
 // causing the problems in runtime. Those can be changed by manipulating above properties
@@ -52,12 +52,6 @@ dependencyManagement {
 ext['artemis.version'] = artemis_version
 ext['hibernate.version'] = hibernate_version
 ext['jackson.version'] = jackson_version
-
-//apply plugin: 'kotlin'
-//apply plugin: 'kotlin-spring'
-//apply plugin: 'eclipse'
-//apply plugin: 'project-report'
-//apply plugin: 'application'
 
 configurations {
     demoArtifacts.extendsFrom testRuntimeOnly
@@ -91,7 +85,7 @@ dependencies {
 
 jar {
     from sourceSets.main.output
-//    dependsOn clientInstall
+    dependsOn clientInstall
     archiveClassifier = 'thin'
 }
 
