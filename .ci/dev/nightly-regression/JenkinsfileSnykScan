@@ -1,0 +1,7 @@
+@Library('corda-shared-build-pipeline-steps') _
+
+cordaSnykScanPipeline (
+    snykTokenId: 'c4-os-snyk-api-token-secret',
+    // specify the Gradle submodules to scan and monitor on snyk Server
+    modulesToScan: ['node', 'capsule', 'bridge', 'bridgecapsule']
+)
