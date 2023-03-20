@@ -5,7 +5,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
-import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransportFromList
 import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.*
@@ -41,7 +40,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
     override fun start(): Started = synchronized(this) {
         check(started == null) { "start can't be called twice" }
         val tcpTransport = p2pConnectorTcpTransport(serverAddress, config)
-        val backupTransports = p2pConnectorTcpTransportFromList(backupServerAddressPool, config)
+        val backupTransports = backupServerAddressPool.map { p2pConnectorTcpTransport(it, config) }
 
         log.info("Connecting to message broker: $serverAddress")
         if (backupTransports.isNotEmpty()) {

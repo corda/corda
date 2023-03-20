@@ -7,6 +7,8 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -22,8 +24,6 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
@@ -57,7 +57,6 @@ class ArtemisMessagingTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    // THe
     private val portAllocation = incrementalPortAllocation()
     private val serverPort = portAllocation.nextPort()
     private val identity = generateKeyPair()
@@ -200,7 +199,9 @@ class ArtemisMessagingTest {
         messagingClient!!.start(identity.public, null, maxMessageSize)
     }
 
-    private fun createAndStartClientAndServer(platformVersion: Int = 1, serverMaxMessageSize: Int = MAX_MESSAGE_SIZE, clientMaxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
+    private fun createAndStartClientAndServer(platformVersion: Int = 1,
+                                              serverMaxMessageSize: Int = MAX_MESSAGE_SIZE,
+                                              clientMaxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
         val receivedMessages = LinkedBlockingQueue<ReceivedMessage>()
 
         createMessagingServer(maxMessageSize = serverMaxMessageSize).start()
@@ -239,7 +240,7 @@ class ArtemisMessagingTest {
     }
 
     private fun createMessagingServer(local: Int = serverPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, NetworkHostAndPort("0.0.0.0", local), maxMessageSize, null).apply {
+        return ArtemisMessagingServer(config, NetworkHostAndPort("0.0.0.0", local), maxMessageSize, null, true).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

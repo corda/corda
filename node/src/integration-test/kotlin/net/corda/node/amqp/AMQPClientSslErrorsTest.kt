@@ -27,6 +27,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.time.Duration
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import kotlin.test.assertFalse
@@ -123,7 +124,7 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val maxMessageSize: Int = MAX_MESSAGE_SIZE
-            override val sslHandshakeTimeout: Long = 3000
+            override val sslHandshakeTimeout: Duration = 3.seconds
         }
 
         clientKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())

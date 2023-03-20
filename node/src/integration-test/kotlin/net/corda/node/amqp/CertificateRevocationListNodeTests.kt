@@ -5,13 +5,21 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
+import net.corda.core.internal.rootCause
+import net.corda.core.internal.times
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -20,19 +28,14 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
-import net.corda.coretesting.internal.DEV_ROOT_CA
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
-import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.nodeapi.internal.ArtemisMessagingClient
-import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.RoutingType
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
@@ -56,17 +59,21 @@ import org.junit.rules.TemporaryFolder
 import java.io.Closeable
 import java.math.BigInteger
 import java.net.InetSocketAddress
+import java.net.SocketTimeoutException
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
+import java.time.Duration
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
 import kotlin.test.assertEquals
 
+@Suppress("LongParameterList")
 class CertificateRevocationListNodeTests {
     @Rule
     @JvmField
@@ -78,7 +85,9 @@ class CertificateRevocationListNodeTests {
     private val portAllocation = incrementalPortAllocation()
     private val serverPort = portAllocation.nextPort()
 
-    private lateinit var server: CrlServer
+    private lateinit var crlServer: CrlServer
+    private lateinit var amqpServer: AMQPServer
+    private lateinit var amqpClient: AMQPClient
 
     private val revokedNodeCerts: MutableList<BigInteger> = mutableListOf()
     private val revokedIntermediateCerts: MutableList<BigInteger> = mutableListOf()
@@ -86,14 +95,28 @@ class CertificateRevocationListNodeTests {
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
     companion object {
-
         const val FORBIDDEN_CRL = "forbidden.crl"
 
-        fun createRevocationList(clrServer: CrlServer, signatureAlgorithm: String, caCertificate: X509Certificate,
-                                 caPrivateKey: PrivateKey,
-                                 endpoint: String,
-                                 indirect: Boolean,
-                                 vararg serialNumbers: BigInteger): X509CRL {
+        private val unreachableIpCounter = AtomicInteger(1)
+
+        private val crlTimeout = Duration.ofSeconds(System.getProperty("com.sun.security.crl.timeout").toLong())
+
+        /**
+         * Use this method to get a unqiue unreachable IP address. Subsequent uses of the same IP for connection timeout testing purposes
+         * may not work as the OS process may cache the timeout result.
+         */
+        private fun newUnreachableIpAddress(): String {
+            check(unreachableIpCounter.get() != 255)
+            return "10.255.255.${unreachableIpCounter.getAndIncrement()}"
+        }
+
+        private fun createRevocationList(clrServer: CrlServer,
+                                         signatureAlgorithm: String,
+                                         caCertificate: X509Certificate,
+                                         caPrivateKey: PrivateKey,
+                                         endpoint: String,
+                                         indirect: Boolean,
+                                         serialNumbers: List<BigInteger>): X509CRL {
             println("Generating CRL for $endpoint")
             val builder = JcaX509v2CRLBuilder(caCertificate.subjectX500Principal, Date(System.currentTimeMillis() - 1.minutes.toMillis()))
             val extensionUtils = JcaX509ExtensionUtils()
@@ -118,253 +141,268 @@ class CertificateRevocationListNodeTests {
     fun setUp() {
         // Do not use Security.addProvider(BouncyCastleProvider()) to avoid EdDSA signature disruption in other tests.
         Crypto.findProvider(BouncyCastleProvider.PROVIDER_NAME)
-        revokedNodeCerts.clear()
-        server = CrlServer(NetworkHostAndPort("localhost", 0))
-        server.start()
+        crlServer = CrlServer(NetworkHostAndPort("localhost", 0))
+        crlServer.start()
         INTERMEDIATE_CA = CertificateAndKeyPair(replaceCrlDistPointCaCertificate(
                 DEV_INTERMEDIATE_CA.certificate,
                 CertificateType.INTERMEDIATE_CA,
                 ROOT_CA.keyPair,
-                "http://${server.hostAndPort}/crl/intermediate.crl"), DEV_INTERMEDIATE_CA.keyPair)
+                "http://${crlServer.hostAndPort}/crl/intermediate.crl"), DEV_INTERMEDIATE_CA.keyPair)
     }
 
     @After
     fun tearDown() {
-        server.close()
-        revokedNodeCerts.clear()
-    }
-
-    @Test(timeout=300_000)
-	fun `Simple AMPQ Client to Server connection works and soft fail is enabled`() {
-        val crlCheckSoftFail = true
-        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
-        amqpServer.use {
-            amqpServer.start()
-            val receiveSubs = amqpServer.onReceive.subscribe {
-                assertEquals(BOB_NAME.toString(), it.sourceLegalName)
-                assertEquals(P2P_PREFIX + "Test", it.topic)
-                assertEquals("Test", String(it.payload))
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                val clientConnected = amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(true, serverConnect.connected)
-                val clientConnect = clientConnected.get()
-                assertEquals(true, clientConnect.connected)
-                val msg = amqpClient.createMessage("Test".toByteArray(),
-                        P2P_PREFIX + "Test",
-                        ALICE_NAME.toString(),
-                        emptyMap())
-                amqpClient.write(msg)
-                assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
-                receiveSubs.unsubscribe()
-            }
+        if (::amqpClient.isInitialized) {
+            println("Client soft fail exceptions:")
+            amqpClient.softFailExceptions.forEach { it.printStackTrace(System.out) }
+            amqpClient.close()
+        }
+        if (::amqpServer.isInitialized) {
+            println("Server soft fail exceptions:")
+            amqpServer.softFailExceptions.forEach { it.printStackTrace(System.out) }
+            amqpServer.close()
+        }
+        if (::crlServer.isInitialized) {
+            crlServer.close()
         }
     }
 
     @Test(timeout=300_000)
-	fun `Simple AMPQ Client to Server connection works and soft fail is disabled`() {
-        val crlCheckSoftFail = false
-        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
-        amqpServer.use {
-            amqpServer.start()
-            val receiveSubs = amqpServer.onReceive.subscribe {
-                assertEquals(BOB_NAME.toString(), it.sourceLegalName)
-                assertEquals(P2P_PREFIX + "Test", it.topic)
-                assertEquals("Test", String(it.payload))
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                val clientConnected = amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(true, serverConnect.connected)
-                val clientConnect = clientConnected.get()
-                assertEquals(true, clientConnect.connected)
-                val msg = amqpClient.createMessage("Test".toByteArray(),
-                        P2P_PREFIX + "Test",
-                        ALICE_NAME.toString(),
-                        emptyMap())
-                amqpClient.write(msg)
-                assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
-                receiveSubs.unsubscribe()
-            }
-        }
+	fun `AMQP server connection works and soft fail is enabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                expectedConnectStatus = true
+        )
     }
 
     @Test(timeout=300_000)
-	fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is enabled`() {
-        val crlCheckSoftFail = true
-        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, clientCert) = createClient(serverPort, crlCheckSoftFail)
-            revokedNodeCerts.add(clientCert.serialNumber)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(false, serverConnect.connected)
-            }
-        }
+	fun `AMQP server connection works and soft fail is disabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = false,
+                expectedConnectStatus = true
+        )
     }
 
     @Test(timeout=300_000)
-	fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is disabled`() {
-        val crlCheckSoftFail = false
-        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, clientCert) = createClient(serverPort, crlCheckSoftFail)
-            revokedNodeCerts.add(clientCert.serialNumber)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(false, serverConnect.connected)
-            }
-        }
+	fun `AMQP server connection fails when client's certificate is revoked and soft fail is enabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                revokeClientCert = true,
+                expectedConnectStatus = false
+        )
     }
 
     @Test(timeout=300_000)
-	fun `AMPQ Client to Server connection fails when servers's certificate is revoked`() {
-        val crlCheckSoftFail = true
-        val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
-        revokedNodeCerts.add(serverCert.serialNumber)
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(false, serverConnect.connected)
-            }
-        }
+	fun `AMQP server connection fails when client's certificate is revoked and soft fail is disabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = false,
+                revokeClientCert = true,
+                expectedConnectStatus = false
+        )
     }
 
     @Test(timeout=300_000)
-	fun `AMPQ Client to Server connection fails when servers's certificate is revoked and soft fail is enabled`() {
-        val crlCheckSoftFail = true
-        val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
-        revokedNodeCerts.add(serverCert.serialNumber)
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(false, serverConnect.connected)
-            }
-        }
+	fun `AMQP server connection fails when servers's certificate is revoked and soft fail is enabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                revokeServerCert = true,
+                expectedConnectStatus = false
+        )
     }
 
     @Test(timeout=300_000)
-	fun `AMPQ Client to Server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
-        val crlCheckSoftFail = true
-        val (amqpServer, _) = createServer(
-                serverPort,
-                crlCheckSoftFail = crlCheckSoftFail,
-                nodeCrlDistPoint = "http://${server.hostAndPort}/crl/invalid.crl")
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(
-                    serverPort,
-                    crlCheckSoftFail,
-                    nodeCrlDistPoint = "http://${server.hostAndPort}/crl/invalid.crl")
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(true, serverConnect.connected)
-            }
-        }
+    fun `AMQP server connection fails when servers's certificate is revoked and soft fail is disabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = false,
+                revokeServerCert = true,
+                expectedConnectStatus = false
+        )
     }
 
     @Test(timeout=300_000)
-	fun `Revocation status check fails when the CRL distribution point is not set and soft fail is disabled`() {
-        val crlCheckSoftFail = false
-        val (amqpServer, _) = createServer(
-                serverPort,
-                crlCheckSoftFail = crlCheckSoftFail,
-                tlsCrlDistPoint = null)
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(
-                    serverPort,
-                    crlCheckSoftFail,
-                    tlsCrlDistPoint = null)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(false, serverConnect.connected)
-            }
-        }
+	fun `AMQP server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                nodeCrlDistPoint = "http://${crlServer.hostAndPort}/crl/invalid.crl",
+                expectedConnectStatus = true
+        )
     }
 
     @Test(timeout=300_000)
-	fun `Revocation status chceck succeds when the CRL distribution point is not set and soft fail is enabled`() {
-        val crlCheckSoftFail = true
-        val (amqpServer, _) = createServer(
-                serverPort,
-                crlCheckSoftFail = crlCheckSoftFail,
-                tlsCrlDistPoint = null)
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(
-                    serverPort,
-                    crlCheckSoftFail,
-                    tlsCrlDistPoint = null)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(true, serverConnect.connected)
-            }
-        }
+    fun `AMQP server connection fails when CRL cannot be obtained and soft fail is disabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = false,
+                nodeCrlDistPoint = "http://${crlServer.hostAndPort}/crl/invalid.crl",
+                expectedConnectStatus = false
+        )
     }
 
-    private fun createClient(targetPort: Int,
-                             crlCheckSoftFail: Boolean,
-                             nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
-                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
-                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
+    @Test(timeout=300_000)
+    fun `AMQP server connection succeeds when CRL is not defined and soft fail is enabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                nodeCrlDistPoint = null,
+                expectedConnectStatus = true
+        )
+    }
+
+    @Test(timeout=300_000)
+	fun `AMQP server connection fails when CRL is not defined and soft fail is disabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = false,
+                nodeCrlDistPoint = null,
+                expectedConnectStatus = false
+        )
+    }
+
+    @Test(timeout=300_000)
+    fun `AMQP server connection succeeds when CRL retrieval is forbidden and soft fail is enabled`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                nodeCrlDistPoint = "http://${crlServer.hostAndPort}/crl/$FORBIDDEN_CRL",
+                expectedConnectStatus = true
+        )
+    }
+
+    @Test(timeout=300_000)
+    fun `AMQP server connection succeeds when CRL endpoint is unreachable, soft fail is enabled and CRL timeouts are within SSL handshake timeout`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
+                sslHandshakeTimeout = crlTimeout * 2,
+                expectedConnectStatus = true
+        )
+        val timeoutExceptions = amqpClient.softFailExceptions.map { it.rootCause }.filterIsInstance<SocketTimeoutException>()
+        assertThat(timeoutExceptions).isNotEmpty
+    }
+
+    @Test(timeout=300_000)
+    fun `AMQP server connection fails when CRL endpoint is unreachable, despite soft fail enabled, when CRL timeouts are not within SSL handshake timeout`() {
+        verifyAMQPConnection(
+                crlCheckSoftFail = true,
+                nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
+                sslHandshakeTimeout = crlTimeout / 2,
+                expectedConnectStatus = false
+        )
+    }
+
+    @Test(timeout=300_000)
+	fun `verify CRL algorithms`() {
+        val emptyCrl = "empty.crl"
+
+        val crl = createRevocationList(
+                crlServer,
+                "SHA256withECDSA",
+                ROOT_CA.certificate,
+                ROOT_CA.keyPair.private,
+                emptyCrl,
+                true,
+                emptyList()
+        )
+        // This should pass.
+        crl.verify(ROOT_CA.keyPair.public)
+
+        // Try changing the algorithm to EC will fail.
+        assertThatIllegalArgumentException().isThrownBy {
+            createRevocationList(
+                    crlServer,
+                    "EC",
+                    ROOT_CA.certificate,
+                    ROOT_CA.keyPair.private,
+                    emptyCrl,
+                    true,
+                    emptyList()
+            )
+        }.withMessage("Unknown signature type requested: EC")
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with soft fail CRL check`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = true,
+                crlCheckArtemisServer = true,
+                expectedStatus = MessageStatus.Acknowledged
+        )
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with hard fail CRL check`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = false,
+                crlCheckArtemisServer = true,
+                expectedStatus = MessageStatus.Acknowledged
+        )
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with soft fail CRL check on unavailable URL`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = true,
+                crlCheckArtemisServer = true,
+                expectedStatus = MessageStatus.Acknowledged,
+                nodeCrlDistPoint = "http://${crlServer.hostAndPort}/crl/$FORBIDDEN_CRL"
+        )
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with soft fail CRL check on unreachable URL if CRL timeout is within SSL handshake timeout`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = true,
+                crlCheckArtemisServer = true,
+                expectedStatus = MessageStatus.Acknowledged,
+                nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
+                sslHandshakeTimeout = crlTimeout * 3
+        )
+        val timeoutExceptions = amqpClient.softFailExceptions.map { it.rootCause }.filterIsInstance<SocketTimeoutException>()
+        assertThat(timeoutExceptions).isNotEmpty
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection fails with soft fail CRL check on unreachable URL if CRL timeout is not within SSL handshake timeout`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = true,
+                crlCheckArtemisServer = true,
+                expectedConnected = false,
+                nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
+                sslHandshakeTimeout = crlTimeout / 2
+        )
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection fails with hard fail CRL check on unavailable URL`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = false,
+                crlCheckArtemisServer = true,
+                expectedStatus = MessageStatus.Rejected,
+                nodeCrlDistPoint = "http://${crlServer.hostAndPort}/crl/$FORBIDDEN_CRL"
+        )
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection fails with soft fail CRL check on revoked node certificate`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = true,
+                crlCheckArtemisServer = true,
+                expectedStatus = MessageStatus.Rejected,
+                revokedNodeCert = true
+        )
+    }
+
+    @Test(timeout = 300_000)
+    fun `Artemis server connection succeeds with disabled CRL check on revoked node certificate`() {
+        verifyArtemisConnection(
+                crlCheckSoftFail = false,
+                crlCheckArtemisServer = false,
+                expectedStatus = MessageStatus.Acknowledged,
+                revokedNodeCert = true
+        )
+    }
+
+    private fun createAMQPClient(targetPort: Int,
+                                 crlCheckSoftFail: Boolean,
+                                 nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
+                                 tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/empty.crl",
+                                 maxMessageSize: Int = MAX_MESSAGE_SIZE): X509Certificate {
         val baseDirectory = temporaryFolder.root.toPath() / "client"
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
@@ -386,17 +424,18 @@ class CertificateRevocationListNodeTests {
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val maxMessageSize: Int = maxMessageSize
         }
-        return Pair(AMQPClient(
-                listOf(NetworkHostAndPort("localhost", targetPort)),
-                setOf(ALICE_NAME, CHARLIE_NAME),
-                amqpConfig), nodeCert)
+        amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", targetPort)), setOf(ALICE_NAME, CHARLIE_NAME), amqpConfig)
+
+        return nodeCert
     }
 
-    private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME,
-                             crlCheckSoftFail: Boolean,
-                             nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
-                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
-                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
+    private fun createAMQPServer(port: Int, name: CordaX500Name = ALICE_NAME,
+                                 crlCheckSoftFail: Boolean,
+                                 nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
+                                 tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/empty.crl",
+                                 maxMessageSize: Int = MAX_MESSAGE_SIZE,
+                                 sslHandshakeTimeout: Duration? = null): X509Certificate {
+        check(!::amqpServer.isInitialized)
         val baseDirectory = temporaryFolder.root.toPath() / "server"
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
@@ -416,14 +455,13 @@ class CertificateRevocationListNodeTests {
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
             override val revocationConfig = crlCheckSoftFail.toRevocationConfig()
             override val maxMessageSize: Int = maxMessageSize
+            override val sslHandshakeTimeout: Duration = sslHandshakeTimeout ?: super.sslHandshakeTimeout
         }
-        return Pair(AMQPServer(
-                "0.0.0.0",
-                port,
-                amqpConfig), nodeCert)
+        amqpServer = AMQPServer("0.0.0.0", port, amqpConfig)
+        return nodeCert
     }
 
-    private fun Pair<CertificateStoreSupplier, MutualSslConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
+    private fun Pair<CertificateStoreSupplier, MutualSslConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String?, tlsCrlDistPoint: String?): X509Certificate {
 
         val signingCertificateStore = first
         val p2pSslConfiguration = second
@@ -479,23 +517,20 @@ class CertificateRevocationListNodeTests {
     inner class CrlServlet(private val server: CrlServer) {
 
         private val SIGNATURE_ALGORITHM = "SHA256withECDSA"
-        private val NODE_CRL = "node.crl"
-        private val INTEMEDIATE_CRL = "intermediate.crl"
-        private val EMPTY_CRL = "empty.crl"
 
         @GET
         @Path("node.crl")
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
-            return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
+            return Response.ok(createRevocationList(
                     server,
                     SIGNATURE_ALGORITHM,
                     INTERMEDIATE_CA.certificate,
                     INTERMEDIATE_CA.keyPair.private,
-                    NODE_CRL,
+                    "node.crl",
                     false,
-                    *revokedNodeCerts.toTypedArray()).encoded)
-                    .build()
+                    revokedNodeCerts
+            ).encoded).build()
         }
 
         @GET
@@ -514,10 +549,10 @@ class CertificateRevocationListNodeTests {
                     SIGNATURE_ALGORITHM,
                     ROOT_CA.certificate,
                     ROOT_CA.keyPair.private,
-                    INTEMEDIATE_CRL,
+                    "intermediate.crl",
                     false,
-                    *revokedIntermediateCerts.toTypedArray()).encoded)
-                    .build()
+                    revokedIntermediateCerts
+            ).encoded).build()
         }
 
         @GET
@@ -529,9 +564,9 @@ class CertificateRevocationListNodeTests {
                     SIGNATURE_ALGORITHM,
                     ROOT_CA.certificate,
                     ROOT_CA.keyPair.private,
-                    EMPTY_CRL,
-                    true).encoded)
-                    .build()
+                    "empty.crl",
+                    true, emptyList()
+            ).encoded).build()
         }
     }
 
@@ -572,82 +607,61 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `verify CRL algorithms`() {
-        val ECDSA_ALGORITHM = "SHA256withECDSA"
-        val EC_ALGORITHM = "EC"
-        val EMPTY_CRL = "empty.crl"
-
-        val crl = createRevocationList(
-                server,
-                ECDSA_ALGORITHM,
-                ROOT_CA.certificate,
-                ROOT_CA.keyPair.private,
-                EMPTY_CRL,
-                true)
-        // This should pass.
-        crl.verify(ROOT_CA.keyPair.public)
-
-        // Try changing the algorithm to EC will fail.
-        assertThatIllegalArgumentException().isThrownBy {
-            createRevocationList(
-                    server,
-                    EC_ALGORITHM,
-                    ROOT_CA.certificate,
-                    ROOT_CA.keyPair.private,
-                    EMPTY_CRL,
-                    true
-            )
-        }.withMessage("Unknown signature type requested: EC")
-    }
-
-    @Test(timeout=300_000)
-	fun `AMPQ Client to Server connection succeeds when CRL retrieval is forbidden and soft fail is enabled`() {
-        val crlCheckSoftFail = true
-        val forbiddenUrl = "http://${server.hostAndPort}/crl/$FORBIDDEN_CRL"
-        val (amqpServer, _) = createServer(
+    private fun verifyAMQPConnection(crlCheckSoftFail: Boolean,
+                                     nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
+                                     revokeServerCert: Boolean = false,
+                                     revokeClientCert: Boolean = false,
+                                     sslHandshakeTimeout: Duration? = null,
+                                     expectedConnectStatus: Boolean) {
+        val serverCert = createAMQPServer(
                 serverPort,
                 crlCheckSoftFail = crlCheckSoftFail,
-                nodeCrlDistPoint = forbiddenUrl,
-                tlsCrlDistPoint = forbiddenUrl)
-        amqpServer.use {
-            amqpServer.start()
-            amqpServer.onReceive.subscribe {
-                it.complete(true)
-            }
-            val (amqpClient, _) = createClient(
-                    serverPort,
-                    crlCheckSoftFail,
-                    nodeCrlDistPoint = forbiddenUrl,
-                    tlsCrlDistPoint = forbiddenUrl)
-            amqpClient.use {
-                val serverConnected = amqpServer.onConnection.toFuture()
-                amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val serverConnect = serverConnected.get()
-                assertEquals(true, serverConnect.connected)
-            }
+                nodeCrlDistPoint = nodeCrlDistPoint,
+                sslHandshakeTimeout = sslHandshakeTimeout
+        )
+        if (revokeServerCert) {
+            revokedNodeCerts.add(serverCert.serialNumber)
         }
+        amqpServer.start()
+        amqpServer.onReceive.subscribe {
+            it.complete(true)
+        }
+        val clientCert = createAMQPClient(
+                serverPort,
+                crlCheckSoftFail = crlCheckSoftFail,
+                nodeCrlDistPoint = nodeCrlDistPoint
+        )
+        if (revokeClientCert) {
+            revokedNodeCerts.add(clientCert.serialNumber)
+        }
+        val serverConnected = amqpServer.onConnection.toFuture()
+        amqpClient.start()
+        val serverConnect = serverConnected.get()
+        assertThat(serverConnect.connected).isEqualTo(expectedConnectStatus)
     }
 
-    private fun createArtemisServerAndClient(port: Int, crlCheckSoftFail: Boolean, crlCheckArtemisServer: Boolean):
-            Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+    private fun createArtemisServerAndClient(crlCheckSoftFail: Boolean,
+                                             crlCheckArtemisServer: Boolean,
+                                             nodeCrlDistPoint: String,
+                                             sslHandshakeTimeout: Duration?): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val baseDirectory = temporaryFolder.root.toPath() / "artemis"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, sslHandshakeTimeout = sslHandshakeTimeout)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(CHARLIE_NAME).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
-            doReturn(NetworkHostAndPort("0.0.0.0", port)).whenever(it).p2pAddress
+            doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
             doReturn(crlCheckArtemisServer).whenever(it).crlCheckArtemisServer
         }
         artemisConfig.configureWithDevSSLCertificate()
+        (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, null)
+
         val server = ArtemisMessagingServer(artemisConfig, artemisConfig.p2pAddress, MAX_MESSAGE_SIZE, null)
         val client = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisConfig.p2pAddress, MAX_MESSAGE_SIZE)
         server.start()
@@ -655,65 +669,33 @@ class CertificateRevocationListNodeTests {
         return server to client
     }
 
-    private fun verifyMessageToArtemis(crlCheckSoftFail: Boolean,
-                                       crlCheckArtemisServer: Boolean,
-                                       expectedStatus: MessageStatus,
-                                       revokedNodeCert: Boolean = false,
-                                       nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl") {
+    private fun verifyArtemisConnection(crlCheckSoftFail: Boolean,
+                                        crlCheckArtemisServer: Boolean,
+                                        expectedConnected: Boolean = true,
+                                        expectedStatus: MessageStatus? = null,
+                                        revokedNodeCert: Boolean = false,
+                                        nodeCrlDistPoint: String = "http://${crlServer.hostAndPort}/crl/node.crl",
+                                        sslHandshakeTimeout: Duration? = null) {
         val queueName = P2P_PREFIX + "Test"
-        val (artemisServer, artemisClient) = createArtemisServerAndClient(serverPort, crlCheckSoftFail, crlCheckArtemisServer)
+        val (artemisServer, artemisClient) = createArtemisServerAndClient(crlCheckSoftFail, crlCheckArtemisServer, nodeCrlDistPoint, sslHandshakeTimeout)
         artemisServer.use {
             artemisClient.started!!.session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
 
-            val (amqpClient, nodeCert) = createClient(serverPort, true, nodeCrlDistPoint)
+            val nodeCert = createAMQPClient(serverPort, true, nodeCrlDistPoint)
             if (revokedNodeCert) {
                 revokedNodeCerts.add(nodeCert.serialNumber)
             }
-            amqpClient.use {
-                val clientConnected = amqpClient.onConnection.toFuture()
-                amqpClient.start()
-                val clientConnect = clientConnected.get()
-                assertEquals(true, clientConnect.connected)
+            val clientConnected = amqpClient.onConnection.toFuture()
+            amqpClient.start()
+            val clientConnect = clientConnected.get()
+            assertThat(clientConnect.connected).isEqualTo(expectedConnected)
 
+            if (expectedConnected) {
                 val msg = amqpClient.createMessage("Test".toByteArray(), queueName, CHARLIE_NAME.toString(), emptyMap())
                 amqpClient.write(msg)
                 assertEquals(expectedStatus, msg.onComplete.get())
             }
             artemisClient.stop()
         }
-    }
-
-    @Test(timeout = 300_000)
-    fun `Artemis server connection succeeds with soft fail CRL check`() {
-        verifyMessageToArtemis(crlCheckSoftFail = true, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Acknowledged)
-    }
-
-    @Test(timeout = 300_000)
-    fun `Artemis server connection succeeds with hard fail CRL check`() {
-        verifyMessageToArtemis(crlCheckSoftFail = false, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Acknowledged)
-    }
-
-    @Test(timeout = 300_000)
-    fun `Artemis server connection succeeds with soft fail CRL check on unavailable URL`() {
-        verifyMessageToArtemis(crlCheckSoftFail = true, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Acknowledged,
-                nodeCrlDistPoint = "http://${server.hostAndPort}/crl/$FORBIDDEN_CRL")
-    }
-
-    @Test(timeout = 300_000)
-    fun `Artemis server connection fails with hard fail CRL check on unavailable URL`() {
-        verifyMessageToArtemis(crlCheckSoftFail = false, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Rejected,
-                nodeCrlDistPoint = "http://${server.hostAndPort}/crl/$FORBIDDEN_CRL")
-    }
-
-    @Test(timeout = 300_000)
-    fun `Artemis server connection fails with soft fail CRL check on revoked node certificate`() {
-        verifyMessageToArtemis(crlCheckSoftFail = true, crlCheckArtemisServer = true, expectedStatus = MessageStatus.Rejected,
-                revokedNodeCert = true)
-    }
-
-    @Test(timeout = 300_000)
-    fun `Artemis server connection succeeds with disabled CRL check on revoked node certificate`() {
-        verifyMessageToArtemis(crlCheckSoftFail = false, crlCheckArtemisServer = false, expectedStatus = MessageStatus.Acknowledged,
-                revokedNodeCert = true)
     }
 }

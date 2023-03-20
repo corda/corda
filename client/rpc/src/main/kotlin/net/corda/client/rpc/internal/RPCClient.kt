@@ -17,7 +17,6 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
 import net.corda.nodeapi.internal.config.SslConfiguration
@@ -61,8 +60,12 @@ class RPCClient<I : RPCOps>(
             sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-    ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
-            configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration))
+    ) : this(
+            rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
+            configuration,
+            serializationContext,
+            haAddressPool.map { rpcConnectorTcpTransport(it, sslConfiguration) }
+    )
 
     companion object {
         private val log = contextLogger()

@@ -55,7 +55,8 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
                              private val maxMessageSize: Int,
-                             private val journalBufferTimeout : Int?) : ArtemisBroker, SingletonSerializeAsToken() {
+                             private val journalBufferTimeout : Int?,
+                             private val trace: Boolean = false) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
@@ -131,7 +132,11 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         // The transaction cache is configurable, and drives other cache sizes.
         globalMaxSize = max(config.transactionCacheSizeBytes, 10L * maxMessageSize)
 
-        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config.p2pSslOptions))
+        acceptorConfigurations.add(p2pAcceptorTcpTransport(
+                NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port),
+                config.p2pSslOptions,
+                trace = trace
+        ))
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
