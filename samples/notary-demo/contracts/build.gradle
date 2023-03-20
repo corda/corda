@@ -20,4 +20,5 @@ cordapp {
 
 jar {
     baseName 'corda-notary-demo-contracts'
+    archiveAppendix = corda_archive_appendix
 }
