@@ -6,22 +6,25 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.sign
+import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.node.StatesToRecord
+import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
+import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG
+import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.UNVERIFIED
+import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.core.flows.FlowTransactionMetadata
-import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.MISSING_NOTARY_SIG
-import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
-import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.UNVERIFIED
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -40,6 +43,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import rx.plugins.RxJavaHooks
+import java.security.KeyPair
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.Semaphore
@@ -52,12 +56,8 @@ import kotlin.test.assertNull
 class DBTransactionStorageTests {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70)
-        val ALICE_PUBKEY = ALICE.publicKey
-        val ALICE_PARTY = ALICE.party
         val BOB_PARTY = TestIdentity(BOB_NAME, 80).party
-        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
-        val ALICE_SIGNATURE = TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))
-        val NOTARY_SIGNATURE = TransactionSignature(ByteArray(2), DUMMY_NOTARY.owningKey, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.owningKey).schemeNumberID))
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20)
     }
 
     @Rule
@@ -121,7 +121,7 @@ class DBTransactionStorageTests {
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction()
-        transactionStorage.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE_PARTY.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
+        transactionStorage.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
         val txn = readTransactionFromDB(transaction.id)
         assertEquals(MISSING_NOTARY_SIG, txn.status)
         assertEquals(StatesToRecord.ALL_VISIBLE, txn.statesToRecord)
@@ -135,9 +135,9 @@ class DBTransactionStorageTests {
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction()
-        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE))
+        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig(transaction.id)))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.transaction, it.signatures)
+            assertSignatures(it.transaction, it.signatures, transaction.sigs)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -147,13 +147,14 @@ class DBTransactionStorageTests {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
-        val transaction = newTransaction()
+        val transaction = newTransaction(notarySig = false)
         transactionStorage.addUnnotarisedTransaction(transaction)
         assertNull(transactionStorage.getTransaction(transaction.id))
         assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
-        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE))
+        val notarySig = notarySig(transaction.id)
+        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.transaction, it.signatures)
+            assertSignatures(it.transaction, it.signatures, transaction.sigs + notarySig)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -163,14 +164,14 @@ class DBTransactionStorageTests {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
-        val transaction = newTransaction().withAdditionalSignature(NOTARY_SIGNATURE)   // Alice + Notary signatures
+        val transaction = newTransaction()
         transactionStorage.addUnverifiedTransaction(transaction)
         assertNull(transactionStorage.getTransaction(transaction.id))
         assertEquals(UNVERIFIED, readTransactionFromDB(transaction.id).status)
         // attempt to finalise with another notary signature
-        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE))
+        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(notarySig(transaction.id)))
         readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.transaction, it.signatures)
+            assertSignatures(it.transaction, it.signatures, transaction.sigs)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -180,27 +181,28 @@ class DBTransactionStorageTests {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
-        val transaction = newTransaction()
+        val transactionWithoutNotarySig = newTransaction(notarySig = false)
 
         // txn recorded as un-notarised (simulate ReceiverFinalityFlow in initial flow)
-        transactionStorage.addUnnotarisedTransaction(transaction)
-        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+        transactionStorage.addUnnotarisedTransaction(transactionWithoutNotarySig)
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transactionWithoutNotarySig.id).status)
 
         // txn then recorded as unverified (simulate ResolveTransactionFlow in follow-up flow)
-        transactionStorage.addUnverifiedTransaction(transaction)
-        assertEquals(UNVERIFIED, readTransactionFromDB(transaction.id).status)
+        val notarySig = notarySig(transactionWithoutNotarySig.id)
+        transactionStorage.addUnverifiedTransaction(transactionWithoutNotarySig + notarySig)
+        assertEquals(UNVERIFIED, readTransactionFromDB(transactionWithoutNotarySig.id).status)
 
         // txn finalised with notary signatures (even though in UNVERIFIED state)
-        assertTrue(transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE)))
-        readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.transaction, it.signatures)
+        assertTrue(transactionStorage.finalizeTransactionWithExtraSignatures(transactionWithoutNotarySig, listOf(notarySig)))
+        readTransactionFromDB(transactionWithoutNotarySig.id).let {
+            assertSignatures(it.transaction, it.signatures, transactionWithoutNotarySig.sigs + notarySig)
             assertEquals(VERIFIED, it.status)
         }
 
         // attempt to record follow-up txn
-        assertFalse(transactionStorage.addTransaction(transaction + NOTARY_SIGNATURE))
-        readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.transaction, it.signatures)
+        assertFalse(transactionStorage.addTransaction(transactionWithoutNotarySig + notarySig))
+        readTransactionFromDB(transactionWithoutNotarySig.id).let {
+            assertSignatures(it.transaction, it.signatures, transactionWithoutNotarySig.sigs + notarySig)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -210,27 +212,29 @@ class DBTransactionStorageTests {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
-        val transaction = newTransaction()
+        val transactionWithoutNotarySigs = newTransaction(notarySig = false)
 
         // txn recorded as un-notarised (simulate ReceiverFinalityFlow in initial flow)
-        transactionStorage.addUnnotarisedTransaction(transaction)
-        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+        transactionStorage.addUnnotarisedTransaction(transactionWithoutNotarySigs)
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transactionWithoutNotarySigs.id).status)
 
         // txn then recorded as unverified (simulate ResolveTransactionFlow in follow-up flow)
-        transactionStorage.addUnverifiedTransaction(transaction + NOTARY_SIGNATURE)
-        assertEquals(UNVERIFIED, readTransactionFromDB(transaction.id).status)
+        val notarySig = notarySig(transactionWithoutNotarySigs.id)
+        val transactionWithNotarySigs = transactionWithoutNotarySigs + notarySig
+        transactionStorage.addUnverifiedTransaction(transactionWithNotarySigs)
+        assertEquals(UNVERIFIED, readTransactionFromDB(transactionWithoutNotarySigs.id).status)
 
         // txn then recorded as verified (simulate ResolveTransactions recording in follow-up flow)
-        assertTrue(transactionStorage.addTransaction(transaction))
-        readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.transaction, it.signatures)
+        assertTrue(transactionStorage.addTransaction(transactionWithNotarySigs))
+        readTransactionFromDB(transactionWithoutNotarySigs.id).let {
+            assertSignatures(it.transaction, it.signatures, expectedSigs = transactionWithNotarySigs.sigs)
             assertEquals(VERIFIED, it.status)
         }
 
         // attempt to finalise original txn
-        assertFalse(transactionStorage.finalizeTransactionWithExtraSignatures(transaction, listOf(NOTARY_SIGNATURE)))
-        readTransactionFromDB(transaction.id).let {
-            assertSignatures(it.transaction, it.signatures)
+        assertFalse(transactionStorage.finalizeTransactionWithExtraSignatures(transactionWithoutNotarySigs, listOf(notarySig)))
+        readTransactionFromDB(transactionWithoutNotarySigs.id).let {
+            assertSignatures(it.transaction, it.signatures, expectedSigs = transactionWithNotarySigs.sigs)
             assertEquals(VERIFIED, it.status)
         }
     }
@@ -555,23 +559,33 @@ class DBTransactionStorageTests {
         assertThat(transactionStorage.getTransaction(transaction.id)).isEqualTo(transaction)
     }
 
-    private fun newTransaction(): SignedTransaction {
+    private fun newTransaction(notarySig: Boolean = true): SignedTransaction {
         val wtx = createWireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
-                commands = listOf(dummyCommand()),
-                notary = DUMMY_NOTARY,
+                commands = listOf(dummyCommand(ALICE.publicKey)),
+                notary = DUMMY_NOTARY.party,
                 timeWindow = null
         )
-        return SignedTransaction(
-                wtx,
-                listOf(ALICE_SIGNATURE)
-        )
+        return makeSigned(wtx, ALICE.keyPair, notarySig = notarySig)
     }
 
+    private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair, notarySig: Boolean = true): SignedTransaction {
+        val keySigs = keys.map { it.sign(SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(it.public).schemeNumberID))) }
+        val sigs = if (notarySig) {
+            keySigs + notarySig(wtx.id)
+        } else {
+            keySigs
+        }
+        return SignedTransaction(wtx, sigs)
+    }
+
+    private fun notarySig(txId: SecureHash) =
+            DUMMY_NOTARY.keyPair.sign(SignableData(txId, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.publicKey).schemeNumberID)))
+
     private fun assertSignatures(transaction: ByteArray, extraSigs: ByteArray?,
-                                 expectedSigs: List<TransactionSignature> = listOf(ALICE_SIGNATURE, NOTARY_SIGNATURE)) {
+                                 expectedSigs: List<TransactionSignature>) {
         assertNotNull(extraSigs)
         assertEquals(expectedSigs,
                 (transaction.deserialize<SignedTransaction>(context = DBTransactionStorage.contextToUse()).sigs +
