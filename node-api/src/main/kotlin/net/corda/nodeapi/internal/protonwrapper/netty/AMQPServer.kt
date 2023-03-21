@@ -25,7 +25,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.BindException
 import java.net.InetSocketAddress
-import java.security.cert.CertPathValidatorException
+import java.security.cert.PKIXRevocationChecker
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -56,17 +56,18 @@ class AMQPServer(val hostName: String,
     private var bossGroup: EventLoopGroup? = null
     private var workerGroup: EventLoopGroup? = null
     private var serverChannel: Channel? = null
-    private val revocationChecker = createPKIXRevocationChecker(configuration.revocationConfig)
     private val clientChannels = ConcurrentHashMap<InetSocketAddress, SocketChannel>()
 
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        private val revocationChecker: PKIXRevocationChecker
         private val conf = parent.configuration
 
         init {
             keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.entryPassword.toCharArray())
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, parent.revocationChecker))
+            revocationChecker = createPKIXRevocationChecker(conf.revocationConfig)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, revocationChecker))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -87,7 +88,7 @@ class AMQPServer(val hostName: String,
                     conf.password,
                     conf.trace,
                     suppressLogs,
-                    parent.revocationChecker,
+                    revocationChecker,
                     onOpen = ::onChannelOpen,
                     onClose = ::onChannelClose,
                     onReceive = parent._onReceive::onNext
@@ -226,9 +227,4 @@ class AMQPServer(val hostName: String,
     private val _onConnection = PublishSubject.create<ConnectionChange>().toSerialized()
     val onConnection: Observable<ConnectionChange>
         get() = _onConnection
-
-    /**
-     * Returns a list of exceptions that were ignored due to recent soft fail revocation checks.
-     */
-    val softFailExceptions: List<CertPathValidatorException> get() = revocationChecker.softFailExceptions
 }

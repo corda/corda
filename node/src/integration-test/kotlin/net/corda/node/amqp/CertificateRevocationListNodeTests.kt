@@ -5,7 +5,6 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.internal.rootCause
 import net.corda.core.internal.times
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
@@ -59,7 +58,6 @@ import org.junit.rules.TemporaryFolder
 import java.io.Closeable
 import java.math.BigInteger
 import java.net.InetSocketAddress
-import java.net.SocketTimeoutException
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.X509CRL
@@ -153,13 +151,9 @@ class CertificateRevocationListNodeTests {
     @After
     fun tearDown() {
         if (::amqpClient.isInitialized) {
-            println("Client soft fail exceptions:")
-            amqpClient.softFailExceptions.forEach { it.printStackTrace(System.out) }
             amqpClient.close()
         }
         if (::amqpServer.isInitialized) {
-            println("Server soft fail exceptions:")
-            amqpServer.softFailExceptions.forEach { it.printStackTrace(System.out) }
             amqpServer.close()
         }
         if (::crlServer.isInitialized) {
@@ -272,8 +266,9 @@ class CertificateRevocationListNodeTests {
                 sslHandshakeTimeout = crlTimeout * 2,
                 expectedConnectStatus = true
         )
-        val timeoutExceptions = amqpClient.softFailExceptions.map { it.rootCause }.filterIsInstance<SocketTimeoutException>()
-        assertThat(timeoutExceptions).isNotEmpty
+        // We could use PKIXRevocationChecker.getSoftFailExceptions() to make sure timeout exceptions did actually occur, but the JDK seems
+        // to have a bug in the older 8 builds where this method returns an empty list. Newer builds don't have this issue, but we need to
+        // be able to support that certain minimum build.
     }
 
     @Test(timeout=300_000)
@@ -353,8 +348,9 @@ class CertificateRevocationListNodeTests {
                 nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
                 sslHandshakeTimeout = crlTimeout * 3
         )
-        val timeoutExceptions = amqpClient.softFailExceptions.map { it.rootCause }.filterIsInstance<SocketTimeoutException>()
-        assertThat(timeoutExceptions).isNotEmpty
+        // We could use PKIXRevocationChecker.getSoftFailExceptions() to make sure timeout exceptions did actually occur, but the JDK seems
+        // to have a bug in the older 8 builds where this method returns an empty list. Newer builds don't have this issue, but we need to
+        // be able to support that certain minimum build.
     }
 
     @Test(timeout = 300_000)
