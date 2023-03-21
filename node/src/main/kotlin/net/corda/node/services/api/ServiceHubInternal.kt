@@ -10,7 +10,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.TransactionsResolver
@@ -192,9 +191,6 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             requireSupportedHashType(it)
-            if (getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY) {
-                it.verifyRequiredSignatures()
-            }
         }
         recordTransactions(
                 statesToRecord,
