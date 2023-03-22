@@ -154,7 +154,8 @@ class DriverDSLImpl(
         val djvmCordaSource: List<Path>,
         val environmentVariables: Map<String, String>,
         val allowHibernateToManageAppSchema: Boolean = true,
-        val premigrateH2Database: Boolean = true
+        val premigrateH2Database: Boolean = true,
+        val notaryHandleTimeout: Duration = Duration.ofMinutes(1)
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -854,7 +855,6 @@ class DriverDSLImpl(
         // While starting with inProcess mode, we need to have different names to avoid clashes
         private val inMemoryCounter = AtomicInteger()
 
-        private val notaryHandleTimeout = Duration.ofMinutes(1)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
 
@@ -1332,7 +1332,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                         djvmCordaSource = defaultParameters.djvmCordaSource,
                         environmentVariables = defaultParameters.environmentVariables,
                         allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
-                        premigrateH2Database = defaultParameters.premigrateH2Database
+                        premigrateH2Database = defaultParameters.premigrateH2Database,
+                        notaryHandleTimeout = defaultParameters.notaryHandleTimeout
                 )
         )
         val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1432,6 +1433,7 @@ fun <A> internalDriver(
         environmentVariables: Map<String, String> = emptyMap(),
         allowHibernateToManageAppSchema: Boolean = true,
         premigrateH2Database: Boolean = true,
+        notaryHandleTimeout: Duration = Duration.ofMinutes(1),
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1456,7 +1458,8 @@ fun <A> internalDriver(
                     djvmCordaSource = djvmCordaSource,
                     environmentVariables = environmentVariables,
                     allowHibernateToManageAppSchema = allowHibernateToManageAppSchema,
-                    premigrateH2Database = premigrateH2Database
+                    premigrateH2Database = premigrateH2Database,
+                    notaryHandleTimeout = notaryHandleTimeout
             ),
             coerce = { it },
             dsl = dsl
