@@ -21,7 +21,8 @@ class ResolveTransactionsFlow private constructor(
         val initialTx: SignedTransaction?,
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
-        val statesToRecord: StatesToRecord
+        val statesToRecord: StatesToRecord,
+        val deferredAck: Boolean = false
 ) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
@@ -35,6 +36,9 @@ class ResolveTransactionsFlow private constructor(
      */
     constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(transaction, transaction.dependencies, otherSide, statesToRecord)
+
+    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, deferredAck: Boolean = false)
+            : this(transaction, transaction.dependencies, otherSide, statesToRecord, deferredAck)
 
     private var fetchNetParamsFromCounterpart = false
 
@@ -60,8 +64,10 @@ class ResolveTransactionsFlow private constructor(
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
         resolver.downloadDependencies(batchMode)
 
-        logger.trace { "ResolveTransactionsFlow: Sending END." }
-        otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
+        if (!deferredAck) {
+            logger.trace { "ResolveTransactionsFlow: Sending END." }
+            otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
+        }
 
         // If transaction resolution is performed for a transaction where some states are relevant, then those should be
         // recorded if this has not already occurred.

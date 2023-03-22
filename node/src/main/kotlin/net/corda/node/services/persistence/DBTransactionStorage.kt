@@ -3,17 +3,26 @@ package net.corda.node.services.persistence
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
+import net.corda.core.node.StatesToRecord
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.CordaClock
@@ -21,22 +30,35 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Instant
-import java.util.*
-import javax.persistence.*
+import java.util.Collections
+import javax.persistence.AttributeConverter
+import javax.persistence.Column
+import javax.persistence.Convert
+import javax.persistence.Converter
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.Table
 import kotlin.streams.toList
 
+@Suppress("TooManyFunctions")
 class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
                            private val clock: CordaClock) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
     @Suppress("MagicNumber") // database column width
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
-    class DBTransaction(
+    data class DBTransaction(
             @Id
             @Column(name = "tx_id", length = 144, nullable = false)
             val txId: String,
@@ -53,17 +75,41 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val status: TransactionStatus,
 
             @Column(name = "timestamp", nullable = false)
-            val timestamp: Instant
-            )
+            val timestamp: Instant,
+
+            @Column(name = "signatures")
+            val signatures: ByteArray?,
+
+            /**
+             * Flow finality metadata used for recovery
+             * TODO: create association table solely for Flow metadata and recovery purposes.
+             * See https://r3-cev.atlassian.net/browse/ENT-9521
+             */
+
+            /** X500Name of flow initiator **/
+            @Column(name = "initiator")
+            val initiator: String? = null,
+
+            /** X500Name of flow participant parties **/
+            @Column(name = "participants")
+            @Convert(converter = StringListConverter::class)
+            val participants: List<String>? = null,
+
+            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
+            @Column(name = "states_to_record")
+            val statesToRecord: StatesToRecord? = null
+    )
 
     enum class TransactionStatus {
         UNVERIFIED,
-        VERIFIED;
+        VERIFIED,
+        MISSING_NOTARY_SIG;
 
         fun toDatabaseValue(): String {
             return when (this) {
                 UNVERIFIED -> "U"
                 VERIFIED -> "V"
+                MISSING_NOTARY_SIG -> "M"
             }
         }
 
@@ -71,11 +117,20 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             return this == VERIFIED
         }
 
+        fun toTransactionStatus(): net.corda.core.flows.TransactionStatus {
+            return when(this) {
+                UNVERIFIED -> net.corda.core.flows.TransactionStatus.UNVERIFIED
+                VERIFIED -> net.corda.core.flows.TransactionStatus.VERIFIED
+                MISSING_NOTARY_SIG -> net.corda.core.flows.TransactionStatus.MISSING_NOTARY_SIG
+            }
+        }
+
         companion object {
             fun fromDatabaseValue(databaseValue: String): TransactionStatus {
                 return when (databaseValue) {
                     "V" -> VERIFIED
                     "U" -> UNVERIFIED
+                    "M" -> MISSING_NOTARY_SIG
                     else -> throw UnexpectedStatusValueException(databaseValue)
                 }
             }
@@ -95,6 +150,21 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
+    @Converter
+    class StringListConverter : AttributeConverter<List<String>?, String?> {
+        override fun convertToDatabaseColumn(stringList: List<String>?): String? {
+            return stringList?.let { if (it.isEmpty()) null else it.joinToString(SPLIT_CHAR) }
+        }
+
+        override fun convertToEntityAttribute(string: String?): List<String>? {
+            return string?.split(SPLIT_CHAR)
+        }
+
+        companion object {
+            private const val SPLIT_CHAR = ";"
+        }
+    }
+
     internal companion object {
         const val TRANSACTION_ALREADY_IN_PROGRESS_WARNING = "trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions."
 
@@ -107,7 +177,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         private val logger = contextLogger()
 
-        private fun contextToUse(): SerializationContext {
+        fun contextToUse(): SerializationContext {
             return if (effectiveSerializationEnv.serializationFactory.currentContext?.useCase == SerializationContext.UseCase.Storage) {
                 effectiveSerializationEnv.serializationFactory.currentContext!!
             } else {
@@ -121,10 +191,19 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     cacheFactory = cacheFactory,
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = SecureHash::toString,
-                    fromPersistentEntity = {
-                        SecureHash.create(it.txId) to TxCacheValue(
-                                it.transaction.deserialize(context = contextToUse()),
-                                it.status)
+                    fromPersistentEntity = { dbTxn ->
+                        SecureHash.create(dbTxn.txId) to TxCacheValue(
+                                dbTxn.transaction.deserialize(context = contextToUse()),
+                                dbTxn.status,
+                                dbTxn.signatures?.deserialize(context = contextToUse()),
+                                dbTxn.initiator?.let { initiator ->
+                                    FlowTransactionMetadata(
+                                            CordaX500Name.parse(initiator),
+                                            dbTxn.statesToRecord!!,
+                                            dbTxn.participants?.let { it.map { CordaX500Name.parse(it) }.toSet() }
+                                    )
+                                }
+                        )
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction(
@@ -132,7 +211,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString(),
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 status = value.status,
-                                timestamp = clock.instant()
+                                timestamp = clock.instant(),
+                                signatures = value.sigs.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
+                                statesToRecord = value.metadata?.statesToRecord,
+                                initiator = value.metadata?.initiator?.toString(),
+                                participants = value.metadata?.peers?.map { it.toString() }
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -158,19 +241,43 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
         criteriaUpdate.where(criteriaBuilder.and(
                 criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
-                criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
-        ))
+                criteriaBuilder.and(updateRoot.get<TransactionStatus>(DBTransaction::status.name).`in`(setOf(TransactionStatus.UNVERIFIED, TransactionStatus.MISSING_NOTARY_SIG))
+        )))
         criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
         val update = session.createQuery(criteriaUpdate)
         val rowsUpdated = update.executeUpdate()
         return rowsUpdated != 0
     }
 
-    override fun addTransaction(transaction: SignedTransaction): Boolean {
+    override fun addTransaction(transaction: SignedTransaction) =
+            addTransaction(transaction) {
+                updateTransaction(transaction.id)
+            }
+
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
+            database.transaction {
+                txStorage.locked {
+                    val cacheValue = TxCacheValue(transaction, status = TransactionStatus.MISSING_NOTARY_SIG, metadata = metadata)
+                    val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
+                    if (added) {
+                        logger.info ("Transaction ${transaction.id} recorded as un-notarised.")
+                    } else {
+                        logger.info("Transaction ${transaction.id} (un-notarised) already exists so no need to record.")
+                    }
+                    added
+                }
+            }
+
+    override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
+            addTransaction(transaction + signatures) {
+                finalizeTransactionWithExtraSignatures(transaction.id, signatures)
+            }
+
+    private fun addTransaction(transaction: SignedTransaction, updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txStorage.locked {
                 val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED)
-                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateTransaction(k) }
+                val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
                     onNewTx(transaction)
@@ -179,6 +286,40 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     false
                 }
             }
+        }
+    }
+
+    private fun finalizeTransactionWithExtraSignatures(txId: SecureHash, signatures: Collection<TransactionSignature>): Boolean {
+        return txStorage.locked {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
+            val updateRoot = criteriaUpdate.from(DBTransaction::class.java)
+            criteriaUpdate.set(updateRoot.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
+            criteriaUpdate.set(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+            criteriaUpdate.where(criteriaBuilder.and(
+                    criteriaBuilder.equal(updateRoot.get<String>(DBTransaction::txId.name), txId.toString()),
+                    criteriaBuilder.equal(updateRoot.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG)
+            ))
+            criteriaUpdate.set(updateRoot.get<Instant>(DBTransaction::timestamp.name), clock.instant())
+            val update = session.createQuery(criteriaUpdate)
+            val rowsUpdated = update.executeUpdate()
+            if (rowsUpdated == 0) {
+                // indicates race condition whereby ReceiverFinality MISSING_NOTARY_SIG overwritten to UNVERIFIED by ResolveTransactionsFlow (in follow-up txn)
+                // TO-DO: ensure unverified txn signatures are validated prior to recording  (https://r3-cev.atlassian.net/browse/ENT-9566)
+                val criteriaUpdateUnverified = criteriaBuilder.createCriteriaUpdate(DBTransaction::class.java)
+                val updateRootUnverified = criteriaUpdateUnverified.from(DBTransaction::class.java)
+                criteriaUpdateUnverified.set(updateRootUnverified.get<ByteArray>(DBTransaction::signatures.name), signatures.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes)
+                criteriaUpdateUnverified.set(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.VERIFIED)
+                criteriaUpdateUnverified.where(criteriaBuilder.and(
+                        criteriaBuilder.equal(updateRootUnverified.get<String>(DBTransaction::txId.name), txId.toString()),
+                        criteriaBuilder.equal(updateRootUnverified.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.UNVERIFIED)
+                ))
+                criteriaUpdateUnverified.set(updateRootUnverified.get<Instant>(DBTransaction::timestamp.name), clock.instant())
+                val updateUnverified = session.createQuery(criteriaUpdateUnverified)
+                val rowsUpdatedUnverified = updateUnverified.executeUpdate()
+                rowsUpdatedUnverified != 0
+            } else true
         }
     }
 
@@ -194,10 +335,18 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
+        if (transaction.coreTransaction is WireTransaction)
+            transaction.verifyRequiredSignatures()
         database.transaction {
             txStorage.locked {
                 val cacheValue = TxCacheValue(transaction, status = TransactionStatus.UNVERIFIED)
-                val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
+                val added = addWithDuplicatesAllowed(transaction.id, cacheValue) { k, v, existingEntry ->
+                    if (existingEntry.status == TransactionStatus.MISSING_NOTARY_SIG) {
+                        // TODO verify signatures on passed in transaction include notary (See https://r3-cev.atlassian.net/browse/ENT-9566))
+                        session.merge(toPersistentEntity(k, v))
+                        true
+                    } else false
+                }
                 if (added) {
                     logger.debug { "Transaction ${transaction.id} recorded as unverified." }
                 } else {
@@ -207,9 +356,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
+    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, net.corda.core.flows.TransactionStatus>? {
         return database.transaction {
-            txStorage.content[id]?.let { it.toSignedTx() to it.status.isVerified() }
+            txStorage.content[id]?.let { it.toSignedTx() to it.status.toTransactionStatus() }
         }
     }
 
@@ -269,16 +418,30 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     // Cache value type to just store the immutable bits of a signed transaction plus conversion helpers
-    private data class TxCacheValue(
+    private class TxCacheValue(
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
-            val status: TransactionStatus
+            val status: TransactionStatus,
+            // flow metadata recorded for recovery
+            val metadata: FlowTransactionMetadata? = null
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
-                status)
-
+                status
+        )
+        constructor(stx: SignedTransaction, status: TransactionStatus, metadata: FlowTransactionMetadata?) : this(
+                stx.txBits,
+                Collections.unmodifiableList(stx.sigs),
+                status,
+                metadata
+        )
+        constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?, metadata: FlowTransactionMetadata?) : this(
+                stx.txBits,
+                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs).distinct(),
+                status,
+                metadata
+        )
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }
 }

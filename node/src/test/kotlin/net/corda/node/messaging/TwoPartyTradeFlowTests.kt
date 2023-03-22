@@ -2,9 +2,26 @@ package net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
-import net.corda.core.flows.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.OwnableState
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -38,14 +55,26 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.sequence
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
 import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.VaultFiller
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -56,7 +85,11 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import java.util.*
+import java.util.ArrayList
+import java.util.Collections
+import java.util.Currency
+import java.util.Random
+import java.util.UUID
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.streams.toList
@@ -139,7 +172,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // TODO: Verify that the result was inserted into the transaction database.
             // assertEquals(bobResult.get(), aliceNode.storage.validatedTransactions[aliceResult.get().id])
-            assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
+            assertEquals(aliceResult.getOrThrow().id, (bobStateMachine.getOrThrow().resultFuture.getOrThrow() as SignedTransaction).id)
 
             aliceNode.dispose()
             bobNode.dispose()
@@ -285,7 +318,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             mockNet.runNetwork()
 
             // Bob is now finished and has the same transaction as Alice.
-            assertThat(bobFuture.getOrThrow()).isEqualTo(aliceFuture.getOrThrow())
+            assertThat((bobFuture.getOrThrow() as SignedTransaction).id).isEqualTo((aliceFuture.getOrThrow().id))
 
             assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
             bobNode.database.transaction {
@@ -768,6 +801,21 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
+        override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean {
+            database.transaction {
+                records.add(TxRecord.Add(transaction))
+                delegate.addUnnotarisedTransaction(transaction)
+            }
+            return true
+        }
+
+        override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean {
+            database.transaction {
+                delegate.finalizeTransactionWithExtraSignatures(transaction, signatures)
+            }
+            return true
+        }
+
         override fun addUnverifiedTransaction(transaction: SignedTransaction) {
             database.transaction {
                 delegate.addUnverifiedTransaction(transaction)
@@ -781,11 +829,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
-        override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>? {
+        override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>? {
             return database.transaction {
                 delegate.getTransactionInternal(id)
             }
         }
+
     }
 
     interface TxRecord {
