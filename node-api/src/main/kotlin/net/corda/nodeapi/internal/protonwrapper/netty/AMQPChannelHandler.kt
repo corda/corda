@@ -28,6 +28,7 @@ import org.apache.qpid.proton.framing.TransportFrame
 import org.slf4j.MDC
 import java.net.InetSocketAddress
 import java.nio.channels.ClosedChannelException
+import java.security.cert.PKIXRevocationChecker
 import java.security.cert.X509Certificate
 import javax.net.ssl.ExtendedSSLSession
 import javax.net.ssl.SNIHostName
@@ -46,6 +47,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val password: String?,
                                   private val trace: Boolean,
                                   private val suppressLogs: Boolean,
+                                  private val revocationChecker: PKIXRevocationChecker,
                                   private val onOpen: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onClose: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
@@ -168,6 +170,13 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 } else {
                     handleFailedHandshake(ctx, evt)
                 }
+                if (log.isDebugEnabled) {
+                    withMDC {
+                        revocationChecker.softFailExceptions.forEachIndexed { index, e ->
+                            log.debug("Revocation soft fail exception (${index + 1}/${revocationChecker.softFailExceptions.size})", e)
+                        }
+                    }
+                }
             }
         }
     }
@@ -186,7 +195,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         }
     }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Deprecated("Deprecated in Java")
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         logWarnWithMDC("Closing channel due to nonrecoverable exception ${cause.message}")
         if (log.isTraceEnabled) {
@@ -298,16 +307,15 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             cause is ClosedChannelException -> logWarnWithMDC("SSL Handshake closed early.")
             cause is SslHandshakeTimeoutException -> logWarnWithMDC("SSL Handshake timed out")
             // Sadly the exception thrown by Netty wrapper requires that we check the message.
-            cause is SSLException && (cause.message?.contains("close_notify") == true)
-                                                                           -> logWarnWithMDC("Received close_notify during handshake")
+            cause is SSLException && (cause.message?.contains("close_notify") == true) -> logWarnWithMDC("Received close_notify during handshake")
             // io.netty.handler.ssl.SslHandler.setHandshakeFailureTransportFailure()
             cause is SSLException && (cause.message?.contains("writing TLS control frames") == true) -> logWarnWithMDC(cause.message!!)
-
             else -> badCert = true
         }
-        logWarnWithMDC("Handshake failure: ${evt.cause().message}")
         if (log.isTraceEnabled) {
-            withMDC { log.trace("Handshake failure", evt.cause()) }
+            withMDC { log.trace("Handshake failure", cause) }
+        } else {
+            logWarnWithMDC("Handshake failure: ${cause.message}")
         }
         ctx.close()
     }

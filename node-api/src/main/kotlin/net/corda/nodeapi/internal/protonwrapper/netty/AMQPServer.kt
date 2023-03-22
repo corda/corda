@@ -25,6 +25,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.BindException
 import java.net.InetSocketAddress
+import java.security.cert.PKIXRevocationChecker
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -60,11 +61,13 @@ class AMQPServer(val hostName: String,
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        private val revocationChecker: PKIXRevocationChecker
         private val conf = parent.configuration
 
         init {
             keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.entryPassword.toCharArray())
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
+            revocationChecker = createPKIXRevocationChecker(conf.revocationConfig)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, revocationChecker))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -75,7 +78,8 @@ class AMQPServer(val hostName: String,
             pipeline.addLast("sslHandler", sslHandler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             val suppressLogs = ch.remoteAddress()?.hostString in amqpConfiguration.silencedIPs
-            pipeline.addLast(AMQPChannelHandler(true,
+            pipeline.addLast(AMQPChannelHandler(
+                    true,
                     null,
                     // Passing a mapping of legal names to key managers to be able to pick the correct one after
                     // SNI completion event is fired up.
@@ -84,27 +88,33 @@ class AMQPServer(val hostName: String,
                     conf.password,
                     conf.trace,
                     suppressLogs,
-                    onOpen = { channel, change ->
-                        parent.run {
-                            clientChannels[channel.remoteAddress()] = channel
-                            _onConnection.onNext(change)
-                        }
-                    },
-                    onClose = { channel, change ->
-                        parent.run {
-                            val remoteAddress = channel.remoteAddress()
-                            clientChannels.remove(remoteAddress)
-                            _onConnection.onNext(change)
-                        }
-                    },
-                    onReceive = { rcv -> parent._onReceive.onNext(rcv) }))
+                    revocationChecker,
+                    onOpen = ::onChannelOpen,
+                    onClose = ::onChannelClose,
+                    onReceive = parent._onReceive::onNext
+            ))
+        }
+
+        private fun onChannelOpen(channel: SocketChannel, change: ConnectionChange) {
+            parent.run {
+                clientChannels[channel.remoteAddress()] = channel
+                _onConnection.onNext(change)
+            }
+        }
+
+        private fun onChannelClose(channel: SocketChannel, change: ConnectionChange) {
+            parent.run {
+                val remoteAddress = channel.remoteAddress()
+                clientChannels.remove(remoteAddress)
+                _onConnection.onNext(change)
+            }
         }
 
         private fun createSSLHandler(amqpConfig: AMQPConfiguration, ch: SocketChannel): Pair<ChannelHandler, Map<String, CertHoldingKeyManagerFactoryWrapper>> {
             return if (amqpConfig.useOpenSsl && amqpConfig.enableSNI && amqpConfig.keyStore.aliases().size > 1) {
                 val keyManagerFactoriesMap = splitKeystore(amqpConfig)
                 // SNI matching needed only when multiple nodes exist behind the server.
-                Pair(createServerSNIOpenSslHandler(keyManagerFactoriesMap, trustManagerFactory), keyManagerFactoriesMap)
+                Pair(createServerSNIOpenSniHandler(keyManagerFactoriesMap, trustManagerFactory), keyManagerFactoriesMap)
             } else {
                 val keyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, amqpConfig)
                 val handler = if (amqpConfig.useOpenSsl) {
@@ -113,7 +123,7 @@ class AMQPServer(val hostName: String,
                     // For javaSSL, SNI matching is handled at key manager level.
                     createServerSslHandler(amqpConfig.keyStore, keyManagerFactory, trustManagerFactory)
                 }
-                handler.handshakeTimeoutMillis = amqpConfig.sslHandshakeTimeout
+                handler.handshakeTimeoutMillis = amqpConfig.sslHandshakeTimeout.toMillis()
                 Pair(handler, mapOf(DEFAULT to keyManagerFactory))
             }
         }

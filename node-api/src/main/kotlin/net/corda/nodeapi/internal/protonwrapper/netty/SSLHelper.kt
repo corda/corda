@@ -46,7 +46,7 @@ internal const val DP_DEFAULT_ANSWER = "NO CRLDP ext"
 
 internal val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.protonwrapper.netty.SSLHelper")
 
-fun X509Certificate.distributionPoints() : Set<String>? {
+fun X509Certificate.distributionPoints(): Set<String> {
     logger.debug("Checking CRLDPs for $subjectX500Principal")
 
     val crldpExtBytes = getExtensionValue(Extension.cRLDistributionPoints.id)
@@ -74,13 +74,9 @@ fun X509Certificate.distributionPoints() : Set<String>? {
     return generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { DERIA5String.getInstance(it.name).string }.toSet()
 }
 
-fun X509Certificate.distributionPointsToString() : String {
+fun X509Certificate.distributionPointsToString(): String {
     return with(distributionPoints()) {
-        if(this == null || isEmpty()) {
-            DP_DEFAULT_ANSWER
-        } else {
-            sorted().joinToString()
-        }
+        if (isEmpty()) DP_DEFAULT_ANSWER else sorted().joinToString()
     }
 }
 
@@ -117,7 +113,7 @@ class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509Ex
         if (chain == null) {
             return "<empty certpath>"
         }
-        return chain.map { it.toString() }.joinToString(", ")
+        return chain.joinToString(", ") { it.toString() }
     }
 
     private fun logErrors(chain: Array<out X509Certificate>?, block: () -> Unit) {
@@ -171,13 +167,8 @@ class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509Ex
 
 private object LoggingImmediateExecutor : Executor {
 
-    override fun execute(command: Runnable?) {
+    override fun execute(command: Runnable) {
         val log = LoggerFactory.getLogger(javaClass)
-
-        if (command == null) {
-            log.error("SSL handler executor called with a null command")
-            throw NullPointerException("command")
-        }
 
         @Suppress("TooGenericExceptionCaught", "MagicNumber") // log and rethrow all exceptions
         try {
@@ -196,10 +187,10 @@ private object LoggingImmediateExecutor : Executor {
     }
 }
 
-internal fun createClientSslHelper(target: NetworkHostAndPort,
-                                   expectedRemoteLegalNames: Set<CordaX500Name>,
-                                   keyManagerFactory: KeyManagerFactory,
-                                   trustManagerFactory: TrustManagerFactory): SslHandler {
+internal fun createClientSslHandler(target: NetworkHostAndPort,
+                                    expectedRemoteLegalNames: Set<CordaX500Name>,
+                                    keyManagerFactory: KeyManagerFactory,
+                                    trustManagerFactory: TrustManagerFactory): SslHandler {
     val sslContext = createAndInitSslContext(keyManagerFactory, trustManagerFactory)
     val sslEngine = sslContext.createSSLEngine(target.host, target.port)
     sslEngine.useClientMode = true
@@ -211,7 +202,6 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    @Suppress("DEPRECATION")
     return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
@@ -229,7 +219,6 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
         sslEngine.sslParameters = sslParameters
     }
-    @Suppress("DEPRECATION")
     return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
@@ -246,7 +235,15 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
     val sslParameters = sslEngine.sslParameters
     sslParameters.sniMatchers = listOf(ServerSNIMatcher(keyStore))
     sslEngine.sslParameters = sslParameters
-    @Suppress("DEPRECATION")
+    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
+}
+
+internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
+                                        trustManagerFactory: TrustManagerFactory,
+                                        alloc: ByteBufAllocator): SslHandler {
+    val sslContext = getServerSslContextBuilder(keyManagerFactory, trustManagerFactory).build()
+    val sslEngine = sslContext.newEngine(alloc)
+    sslEngine.useClientMode = false
     return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
@@ -260,9 +257,20 @@ fun createAndInitSslContext(keyManagerFactory: KeyManagerFactory, trustManagerFa
 }
 
 @VisibleForTesting
-fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
+fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore,
+                                             revocationConfig: RevocationConfig): CertPathTrustManagerParameters {
+    return initialiseTrustStoreAndEnableCrlChecking(trustStore, createPKIXRevocationChecker(revocationConfig))
+}
+
+fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore,
+                                             revocationChecker: PKIXRevocationChecker): CertPathTrustManagerParameters {
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
-    val revocationChecker = when (revocationConfig.mode) {
+    pkixParams.addCertPathChecker(revocationChecker)
+    return CertPathTrustManagerParameters(pkixParams)
+}
+
+fun createPKIXRevocationChecker(revocationConfig: RevocationConfig): PKIXRevocationChecker {
+    return when (revocationConfig.mode) {
         RevocationConfig.Mode.OFF -> AllowAllRevocationChecker  // Custom PKIXRevocationChecker skipping CRL check
         RevocationConfig.Mode.EXTERNAL_SOURCE -> {
             require(revocationConfig.externalCrlSource != null) { "externalCrlSource must not be null" }
@@ -271,40 +279,28 @@ fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, revoc
         else -> {
             val certPathBuilder = CertPathBuilder.getInstance("PKIX")
             val pkixRevocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
-            pkixRevocationChecker.options = EnumSet.of(
+            val options = EnumSet.of(
                     // Prefer CRL over OCSP
                     PKIXRevocationChecker.Option.PREFER_CRLS,
                     // Don't fall back to OCSP checking
-                    PKIXRevocationChecker.Option.NO_FALLBACK)
+                    PKIXRevocationChecker.Option.NO_FALLBACK
+            )
             if (revocationConfig.mode == RevocationConfig.Mode.SOFT_FAIL) {
                 // Allow revocation check to succeed if the revocation status cannot be determined for one of
                 // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
-                pkixRevocationChecker.options = pkixRevocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
+                options += PKIXRevocationChecker.Option.SOFT_FAIL
             }
+            pkixRevocationChecker.options = options
             pkixRevocationChecker
         }
     }
-    pkixParams.addCertPathChecker(revocationChecker)
-    return CertPathTrustManagerParameters(pkixParams)
-}
-
-internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
-                                        trustManagerFactory: TrustManagerFactory,
-                                        alloc: ByteBufAllocator): SslHandler {
-
-    val sslContext = getServerSslContextBuilder(keyManagerFactory, trustManagerFactory).build()
-    val sslEngine = sslContext.newEngine(alloc)
-    sslEngine.useClientMode = false
-    @Suppress("DEPRECATION")
-    return SslHandler(sslEngine, false, LoggingImmediateExecutor)
 }
 
 /**
  * Creates a special SNI handler used only when openSSL is used for AMQPServer
  */
-internal fun createServerSNIOpenSslHandler(keyManagerFactoriesMap: Map<String, KeyManagerFactory>,
+internal fun createServerSNIOpenSniHandler(keyManagerFactoriesMap: Map<String, KeyManagerFactory>,
                                            trustManagerFactory: TrustManagerFactory): SniHandler {
-
     // Default value can be any in the map.
     val sslCtxBuilder = getServerSslContextBuilder(keyManagerFactoriesMap.values.first(), trustManagerFactory)
     val mapping = DomainWildcardMappingBuilder(sslCtxBuilder.build())
@@ -327,7 +323,7 @@ private fun getServerSslContextBuilder(keyManagerFactory: KeyManagerFactory, tru
 internal fun splitKeystore(config: AMQPConfiguration): Map<String, CertHoldingKeyManagerFactoryWrapper> {
     val keyStore = config.keyStore.value.internal
     val password = config.keyStore.entryPassword.toCharArray()
-    return keyStore.aliases().toList().map { alias ->
+    return keyStore.aliases().toList().associate { alias ->
         val key = keyStore.getKey(alias, password)
         val certs = keyStore.getCertificateChain(alias)
         val x500Name = keyStore.getCertificate(alias).x509.subjectX500Principal
@@ -338,7 +334,7 @@ internal fun splitKeystore(config: AMQPConfiguration): Map<String, CertHoldingKe
         val newKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         newKeyManagerFactory.init(newKeyStore, password)
         x500toHostName(cordaX500Name) to CertHoldingKeyManagerFactoryWrapper(newKeyManagerFactory, config)
-    }.toMap()
+    }
 }
 
 // As per Javadoc in: https://docs.oracle.com/javase/8/docs/api/javax/net/ssl/KeyManagerFactory.html `init` method
