@@ -231,6 +231,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
             logger.info("Recorded transaction without notary signature locally.")
+            if (sessions.isEmpty()) return
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
             sessions.forEach { session ->
                 try {
