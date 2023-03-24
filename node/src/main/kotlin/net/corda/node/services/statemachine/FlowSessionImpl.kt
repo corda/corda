@@ -45,6 +45,9 @@ class FlowSessionImpl(
     override fun getCounterpartyFlowInfo(): FlowInfo = getCounterpartyFlowInfo(maySkipCheckpoint = false)
 
     @Suspendable
+    override fun <R : Any> sendAndReceive(receiveType: Class<R>, payload: Any) = sendAndReceive(receiveType, payload, maySkipCheckpoint = false)
+
+    @Suspendable
     override fun <R : Any> sendAndReceive(
             receiveType: Class<R>,
             payload: Any,
@@ -63,7 +66,7 @@ class FlowSessionImpl(
     }
 
     @Suspendable
-    override fun <R : Any> sendAndReceive(receiveType: Class<R>, payload: Any) = sendAndReceive(receiveType, payload, maySkipCheckpoint = false)
+    override fun <R : Any> receive(receiveType: Class<R>) = receive(receiveType, maySkipCheckpoint = false)
 
     @Suspendable
     override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
@@ -75,7 +78,7 @@ class FlowSessionImpl(
     }
 
     @Suspendable
-    override fun <R : Any> receive(receiveType: Class<R>) = receive(receiveType, maySkipCheckpoint = false)
+    override fun send(payload: Any) = send(payload, maySkipCheckpoint = false)
 
     @Suspendable
     override fun send(payload: Any, maySkipCheckpoint: Boolean) {
@@ -86,9 +89,6 @@ class FlowSessionImpl(
             return flowStateMachine.suspend(request, maySkipCheckpoint)
         }
     }
-
-    @Suspendable
-    override fun send(payload: Any) = send(payload, maySkipCheckpoint = false)
 
     @Suspendable
     override fun close() {
