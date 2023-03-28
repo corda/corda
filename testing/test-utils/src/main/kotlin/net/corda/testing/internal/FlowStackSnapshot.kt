@@ -1,7 +1,6 @@
 package net.corda.testing.internal
 
 import co.paralleluniverse.fibers.Fiber
-import co.paralleluniverse.fibers.Instrumented
 import co.paralleluniverse.fibers.Stack
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -23,6 +22,26 @@ import java.time.Instant
 import java.time.LocalDate
 
 class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
+    private companion object {
+        private const val QUASAR_0_7_INSTRUMENTED_CLASS_NAME = "co.paralleluniverse.fibers.Instrumented"
+        private const val QUASAR_0_8_INSTRUMENTED_CLASS_NAME = "co.paralleluniverse.fibers.suspend.Instrumented"
+
+        // @Instrumented is an internal Quasar class that should not be referenced directly.
+        // We have needed to change its package for Quasar 0.8.x.
+        @Suppress("unchecked_cast")
+        private val instrumentedAnnotationClass: Class<out Annotation> = try {
+            Class.forName(QUASAR_0_7_INSTRUMENTED_CLASS_NAME, false, this::class.java.classLoader)
+        } catch (_: ClassNotFoundException) {
+            Class.forName(QUASAR_0_8_INSTRUMENTED_CLASS_NAME, false, this::class.java.classLoader)
+        } as Class<out Annotation>
+
+        private val methodOptimized = instrumentedAnnotationClass.getMethod("methodOptimized")
+
+        private fun isMethodOptimized(annotation: Annotation): Boolean {
+            return instrumentedAnnotationClass.isInstance(annotation) && (methodOptimized.invoke(annotation) as Boolean)
+        }
+    }
+
     @Suspendable
     override fun getFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot {
         var snapshot: FlowStackSnapshot? = null
@@ -68,7 +87,7 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         val frames = stackTraceToAnnotation.reversed().map { (element, annotation) ->
             // If annotation is null then the case indicates that this is an entry point - i.e.
             // the net.corda.node.services.statemachine.FlowStateMachineImpl.run method
-            val stackObjects = if (frameObjectsIterator.hasNext() && (annotation == null || !annotation.methodOptimized)) {
+            val stackObjects = if (frameObjectsIterator.hasNext() && (annotation == null || !isMethodOptimized(annotation))) {
                 frameObjectsIterator.next()
             } else {
                 emptyList()
@@ -78,11 +97,11 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
         return FlowStackSnapshot(Instant.now(), flowClass.name, frames)
     }
 
-    private val StackTraceElement.instrumentedAnnotation: Instrumented?
+    private val StackTraceElement.instrumentedAnnotation: Annotation?
         get() {
-            Class.forName(className).methods.forEach {
-                if (it.name == methodName && it.isAnnotationPresent(Instrumented::class.java)) {
-                    return it.getAnnotation(Instrumented::class.java)
+            Class.forName(className, false, this::class.java.classLoader).methods.forEach {
+                if (it.name == methodName && it.isAnnotationPresent(instrumentedAnnotationClass)) {
+                    return it.getAnnotation(instrumentedAnnotationClass)
                 }
             }
             return null
@@ -105,7 +124,7 @@ class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
 
     private fun filterOutStackDump(flowStackSnapshot: FlowStackSnapshot): FlowStackSnapshot {
         val framesFilteredByStackTraceElement = flowStackSnapshot.stackFrames.filter {
-            !FlowStateMachine::class.java.isAssignableFrom(Class.forName(it.stackTraceElement.className))
+            !FlowStateMachine::class.java.isAssignableFrom(Class.forName(it.stackTraceElement.className, false, this::class.java.classLoader))
         }
         val framesFilteredByObjects = framesFilteredByStackTraceElement.map {
             it.copy(stackObjects = it.stackObjects.map {
