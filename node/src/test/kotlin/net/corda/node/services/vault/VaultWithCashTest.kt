@@ -382,8 +382,10 @@ class VaultWithCashTest {
             linearStates.forEach { println(it.state.data.linearId) }
 
             //copy transactions to notary - simulates transaction resolution
-            services.validatedTransactions.getTransaction(deals.first().ref.txhash)?.apply { notaryServices.recordTransactions(this) }
-            services.validatedTransactions.getTransaction(linearStates.first().ref.txhash)?.apply { notaryServices.recordTransactions(this) }
+            services.validatedTransactions.getTransaction(deals.first().ref.txhash)?.apply {
+                notaryServices.recordTransactions(this, disableSignatureVerification = true) }
+            services.validatedTransactions.getTransaction(linearStates.first().ref.txhash)?.apply {
+                notaryServices.recordTransactions(this, disableSignatureVerification = true) }
 
             // Create a txn consuming different contract types
             val dummyMoveBuilder = TransactionBuilder(notary = notary).apply {

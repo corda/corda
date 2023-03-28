@@ -13,9 +13,11 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.TransactionsResolver
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.dependencies
 import net.corda.core.internal.requireSupportedHashType
+import net.corda.core.internal.warnOnce
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
@@ -36,7 +38,8 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import java.security.PublicKey
+import java.lang.IllegalStateException
+import java.security.SignatureException
 import java.util.ArrayList
 import java.util.Collections
 import java.util.HashMap
@@ -67,6 +70,7 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
 interface ServiceHubInternal : ServiceHubCoreInternal {
     companion object {
         private val log = contextLogger()
+        private val SIGNATURE_VERIFICATION_DISABLED = java.lang.Boolean.getBoolean("net.corda.recordtransaction.signature.verification.disabled")
 
         private fun topologicalSort(transactions: Collection<SignedTransaction>): Collection<SignedTransaction> {
             if (transactions.size == 1) return transactions
@@ -188,9 +192,28 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
 
-    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
+            recordTransactions(statesToRecord, txs, SIGNATURE_VERIFICATION_DISABLED)
+
+    @Suppress("NestedBlockDepth")
+    @VisibleForTesting
+    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean) {
         txs.forEach {
             requireSupportedHashType(it)
+            if (it.coreTransaction is WireTransaction) {
+                if (disableSignatureVerification) {
+                    log.warnOnce("The current usage of recordTransactions is unsafe." +
+                            "Recording transactions without signature verification may lead to severe problems with ledger consistency.")
+                }
+                else {
+                    try {
+                        it.verifyRequiredSignatures()
+                    }
+                    catch (e: SignatureException) {
+                        throw IllegalStateException("Signature verification failed", e)
+                    }
+                }
+            }
         }
         recordTransactions(
                 statesToRecord,
