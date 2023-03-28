@@ -265,7 +265,7 @@ tasks.register('integrationTest', Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
     maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
     // CertificateRevocationListNodeTests
-    systemProperty 'com.sun.security.crl.timeout', '4'
+    systemProperty 'net.corda.crl.connectTimeoutMs', '4000'
 }
 
 tasks.register('slowIntegrationTest', Test) {

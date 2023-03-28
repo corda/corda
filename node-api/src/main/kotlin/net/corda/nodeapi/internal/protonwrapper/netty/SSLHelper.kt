@@ -13,15 +13,17 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.toHex
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
-import net.corda.nodeapi.internal.protonwrapper.netty.revocation.ExternalSourceRevocationChecker
 import org.bouncycastle.asn1.ASN1InputStream
+import org.bouncycastle.asn1.ASN1Primitive
 import org.bouncycastle.asn1.DERIA5String
 import org.bouncycastle.asn1.DEROctetString
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.CRLDistPoint
 import org.bouncycastle.asn1.x509.DistributionPointName
@@ -30,13 +32,15 @@ import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralNames
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.slf4j.LoggerFactory
-import java.io.ByteArrayInputStream
 import java.net.Socket
+import java.net.URI
 import java.security.KeyStore
 import java.security.cert.*
 import java.util.*
 import java.util.concurrent.Executor
 import javax.net.ssl.*
+import javax.security.auth.x500.X500Principal
+import kotlin.collections.HashMap
 import kotlin.system.measureTimeMillis
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
@@ -46,39 +50,57 @@ internal const val DP_DEFAULT_ANSWER = "NO CRLDP ext"
 
 internal val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.protonwrapper.netty.SSLHelper")
 
-fun X509Certificate.distributionPoints(): Set<String> {
-    logger.debug("Checking CRLDPs for $subjectX500Principal")
+@Suppress("ComplexMethod")
+fun X509Certificate.distributionPoints(): Map<URI, List<X500Principal>?> {
+    logger.debug { "Checking CRLDPs for $subjectX500Principal" }
 
     val crldpExtBytes = getExtensionValue(Extension.cRLDistributionPoints.id)
     if (crldpExtBytes == null) {
         logger.debug(DP_DEFAULT_ANSWER)
-        return emptySet()
+        return emptyMap()
     }
 
-    val derObjCrlDP = ASN1InputStream(ByteArrayInputStream(crldpExtBytes)).readObject()
+    val derObjCrlDP = crldpExtBytes.toAsn1Object()
     val dosCrlDP = derObjCrlDP as? DEROctetString
     if (dosCrlDP == null) {
         logger.error("Expected to have DEROctetString, actual type: ${derObjCrlDP.javaClass}")
-        return emptySet()
+        return emptyMap()
     }
-    val crldpExtOctetsBytes = dosCrlDP.octets
-    val dpObj = ASN1InputStream(ByteArrayInputStream(crldpExtOctetsBytes)).readObject()
-    val distPoint = CRLDistPoint.getInstance(dpObj)
-    if (distPoint == null) {
+    val dpObj = dosCrlDP.octets.toAsn1Object()
+    val crlDistPoint = CRLDistPoint.getInstance(dpObj)
+    if (crlDistPoint == null) {
         logger.error("Could not instantiate CRLDistPoint, from: $dpObj")
-        return emptySet()
+        return emptyMap()
     }
 
-    val dpNames = distPoint.distributionPoints.mapNotNull { it.distributionPoint }.filter { it.type == DistributionPointName.FULL_NAME }
-    val generalNames = dpNames.flatMap { GeneralNames.getInstance(it.name).names.asList() }
-    return generalNames.filter { it.tagNo == GeneralName.uniformResourceIdentifier}.map { DERIA5String.getInstance(it.name).string }.toSet()
+    val dpMap = HashMap<URI, List<X500Principal>?>()
+    for (distributionPoint in crlDistPoint.distributionPoints) {
+        val distributionPointName = distributionPoint.distributionPoint
+        if (distributionPointName?.type != DistributionPointName.FULL_NAME) continue
+        val issuerNames = distributionPoint.crlIssuer?.names?.mapNotNull {
+            if (it.tagNo == GeneralName.directoryName) {
+                X500Principal(X500Name.getInstance(it.name).encoded)
+            } else {
+                null
+            }
+        }
+        for (generalName in GeneralNames.getInstance(distributionPointName.name).names) {
+            if (generalName.tagNo == GeneralName.uniformResourceIdentifier) {
+                val uri = URI(DERIA5String.getInstance(generalName.name).string)
+                dpMap[uri] = issuerNames
+            }
+        }
+    }
+    return dpMap
 }
 
 fun X509Certificate.distributionPointsToString(): String {
-    return with(distributionPoints()) {
+    return with(distributionPoints().keys) {
         if (isEmpty()) DP_DEFAULT_ANSWER else sorted().joinToString()
     }
 }
+
+fun ByteArray.toAsn1Object(): ASN1Primitive = ASN1InputStream(this).readObject()
 
 fun certPathToString(certPath: Array<out X509Certificate>?): String {
     if (certPath == null) {
@@ -256,10 +278,9 @@ fun createAndInitSslContext(keyManagerFactory: KeyManagerFactory, trustManagerFa
     return sslContext
 }
 
-@VisibleForTesting
 fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore,
                                              revocationConfig: RevocationConfig): CertPathTrustManagerParameters {
-    return initialiseTrustStoreAndEnableCrlChecking(trustStore, createPKIXRevocationChecker(revocationConfig))
+    return initialiseTrustStoreAndEnableCrlChecking(trustStore, revocationConfig.createPKIXRevocationChecker())
 }
 
 fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore,
@@ -267,33 +288,6 @@ fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore,
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
     pkixParams.addCertPathChecker(revocationChecker)
     return CertPathTrustManagerParameters(pkixParams)
-}
-
-fun createPKIXRevocationChecker(revocationConfig: RevocationConfig): PKIXRevocationChecker {
-    return when (revocationConfig.mode) {
-        RevocationConfig.Mode.OFF -> AllowAllRevocationChecker  // Custom PKIXRevocationChecker skipping CRL check
-        RevocationConfig.Mode.EXTERNAL_SOURCE -> {
-            require(revocationConfig.externalCrlSource != null) { "externalCrlSource must not be null" }
-            ExternalSourceRevocationChecker(revocationConfig.externalCrlSource!!) { Date() } // Custom PKIXRevocationChecker which uses `externalCrlSource`
-        }
-        else -> {
-            val certPathBuilder = CertPathBuilder.getInstance("PKIX")
-            val pkixRevocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
-            val options = EnumSet.of(
-                    // Prefer CRL over OCSP
-                    PKIXRevocationChecker.Option.PREFER_CRLS,
-                    // Don't fall back to OCSP checking
-                    PKIXRevocationChecker.Option.NO_FALLBACK
-            )
-            if (revocationConfig.mode == RevocationConfig.Mode.SOFT_FAIL) {
-                // Allow revocation check to succeed if the revocation status cannot be determined for one of
-                // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
-                options += PKIXRevocationChecker.Option.SOFT_FAIL
-            }
-            pkixRevocationChecker.options = options
-            pkixRevocationChecker
-        }
-    }
 }
 
 /**

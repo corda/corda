@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
+import net.corda.core.internal.rootCause
 import net.corda.core.internal.times
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
@@ -17,7 +18,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
@@ -35,7 +36,6 @@ import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
 import org.junit.Before
@@ -43,13 +43,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.math.BigInteger
+import java.net.SocketTimeoutException
 import java.security.cert.X509Certificate
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 
-@Suppress("LongParameterList")
 class CertificateRevocationListNodeTests {
     @Rule
     @JvmField
@@ -70,7 +69,7 @@ class CertificateRevocationListNodeTests {
     companion object {
         private val unreachableIpCounter = AtomicInteger(1)
 
-        private val crlTimeout = Duration.ofSeconds(System.getProperty("com.sun.security.crl.timeout").toLong())
+        private val crlTimeout = Duration.ofMillis(System.getProperty("net.corda.crl.connectTimeoutMs").toLong())
 
         /**
          * Use this method to get a unqiue unreachable IP address. Subsequent uses of the same IP for connection timeout testing purposes
@@ -208,9 +207,10 @@ class CertificateRevocationListNodeTests {
                 sslHandshakeTimeout = crlTimeout * 2,
                 expectedConnectStatus = true
         )
-        // We could use PKIXRevocationChecker.getSoftFailExceptions() to make sure timeout exceptions did actually occur, but the JDK seems
-        // to have a bug in the older 8 builds where this method returns an empty list. Newer builds don't have this issue, but we need to
-        // be able to support that certain minimum build.
+        val timeoutExceptions = (amqpServer.softFailExceptions + amqpClient.softFailExceptions)
+                .map { it.rootCause }
+                .filterIsInstance<SocketTimeoutException>()
+        assertThat(timeoutExceptions).isNotEmpty
     }
 
     @Test(timeout=300_000)
@@ -286,9 +286,6 @@ class CertificateRevocationListNodeTests {
                 nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
                 sslHandshakeTimeout = crlTimeout * 3
         )
-        // We could use PKIXRevocationChecker.getSoftFailExceptions() to make sure timeout exceptions did actually occur, but the JDK seems
-        // to have a bug in the older 8 builds where this method returns an empty list. Newer builds don't have this issue, but we need to
-        // be able to support that certain minimum build.
     }
 
     @Test(timeout = 300_000)
@@ -363,7 +360,9 @@ class CertificateRevocationListNodeTests {
         return nodeCert
     }
 
-    private fun createAMQPServer(port: Int, name: CordaX500Name = ALICE_NAME,
+    @Suppress("LongParameterList")
+    private fun createAMQPServer(port: Int,
+                                 name: CordaX500Name = ALICE_NAME,
                                  crlCheckSoftFail: Boolean,
                                  nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
                                  tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/empty.crl",
@@ -427,6 +426,7 @@ class CertificateRevocationListNodeTests {
         return newNodeCert
     }
 
+    @Suppress("LongParameterList")
     private fun verifyAMQPConnection(crlCheckSoftFail: Boolean,
                                      nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
                                      revokeServerCert: Boolean = false,
@@ -489,6 +489,7 @@ class CertificateRevocationListNodeTests {
         return server to client
     }
 
+    @Suppress("LongParameterList")
     private fun verifyArtemisConnection(crlCheckSoftFail: Boolean,
                                         crlCheckArtemisServer: Boolean,
                                         expectedConnected: Boolean = true,

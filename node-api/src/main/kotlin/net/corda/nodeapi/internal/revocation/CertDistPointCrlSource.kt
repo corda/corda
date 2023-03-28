@@ -1,0 +1,80 @@
+package net.corda.nodeapi.internal.revocation
+
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.LoadingCache
+import net.corda.core.internal.readFully
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.protonwrapper.netty.CrlSource
+import net.corda.nodeapi.internal.protonwrapper.netty.distributionPoints
+import java.net.URI
+import java.security.cert.X509CRL
+import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
+import javax.security.auth.x500.X500Principal
+
+/**
+ * [CrlSource] which downloads CRLs from the distribution points in the X509 certificate.
+ */
+class CertDistPointCrlSource : CrlSource {
+    companion object {
+        private const val DEFAULT_CONNECT_TIMEOUT = 60_000
+        private const val DEFAULT_READ_TIMEOUT = 60_000
+        private const val CACHE_EXPIRY = 30L  // Mimick the 30s cache expiry behaviour of the JDK (URICertStore.engineGetCRLs)
+
+        private val cache: LoadingCache<URI, X509CRL> = Caffeine.newBuilder()
+                .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
+                .build(::retrieveCRL)
+
+        private val connectTimeout = Integer.getInteger("net.corda.crl.connectTimeoutMs", DEFAULT_CONNECT_TIMEOUT)
+        private val readTimeout = Integer.getInteger("net.corda.crl.readTimeoutMs", DEFAULT_READ_TIMEOUT)
+
+        private fun retrieveCRL(uri: URI): X509CRL {
+            val bytes = run {
+                val conn = uri.toURL().openConnection()
+                conn.connectTimeout = connectTimeout
+                conn.readTimeout = readTimeout
+                // Read all bytes first and then pass them into the CertificateFactory. This may seem unnecessary when generateCRL already takes
+                // in an InputStream, but the JDK implementation (sun.security.provider.X509Factory.engineGenerateCRL) converts any IOException
+                // into CRLException and drops the cause chain.
+                conn.getInputStream().readFully()
+            }
+            return X509CertificateFactory().generateCRL(bytes.inputStream())
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    override fun fetch(certificate: X509Certificate): Set<X509CRL> {
+        val approvedCRLs = HashSet<X509CRL>()
+        var exception: Exception? = null
+        for ((distPointUri, issuerNames) in certificate.distributionPoints()) {
+            try {
+                val possibleCRL = getPossibleCRL(distPointUri)
+                if (verifyCRL(possibleCRL, certificate, issuerNames)) {
+                    approvedCRLs += possibleCRL
+                }
+            } catch (e: Exception) {
+                if (exception == null) {
+                    exception = e
+                } else {
+                    exception.addSuppressed(e)
+                }
+            }
+        }
+        // Only throw if no CRLs are retrieved
+        if (exception != null && approvedCRLs.isEmpty()) {
+            throw exception
+        } else {
+            return approvedCRLs
+        }
+    }
+
+    private fun getPossibleCRL(uri: URI): X509CRL {
+        return cache[uri]!!
+    }
+
+    // DistributionPointFetcher.verifyCRL
+    private fun verifyCRL(crl: X509CRL, certificate: X509Certificate, issuerNames: List<X500Principal>?): Boolean {
+        val crlIssuer = crl.issuerX500Principal
+        return issuerNames?.any { it == crlIssuer } ?: (certificate.issuerX500Principal == crlIssuer)
+    }
+}

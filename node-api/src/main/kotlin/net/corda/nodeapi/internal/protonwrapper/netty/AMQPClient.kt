@@ -26,7 +26,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
 import java.net.InetSocketAddress
-import java.security.cert.PKIXRevocationChecker
+import java.security.cert.CertPathValidatorException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -83,6 +83,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
     private var retryInterval = MIN_RETRY_INTERVAL
+    private val revocationChecker = configuration.revocationConfig.createPKIXRevocationChecker()
     private val badCertTargets = mutableSetOf<NetworkHostAndPort>()
     @Volatile
     private var amqpActive = false
@@ -145,15 +146,13 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     private class ClientChannelInitializer(val parent: AMQPClient) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        private val revocationChecker: PKIXRevocationChecker
         private val conf = parent.configuration
         @Volatile
         private lateinit var amqpChannelHandler: AMQPChannelHandler
 
         init {
             keyManagerFactory.init(conf.keyStore)
-            revocationChecker = createPKIXRevocationChecker(conf.revocationConfig)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, revocationChecker))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, parent.revocationChecker))
         }
 
         @Suppress("ComplexMethod")
@@ -211,7 +210,6 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
                     conf.password,
                     conf.trace,
                     false,
-                    revocationChecker,
                     onOpen = { _, change -> onChannelOpen(change) },
                     onClose = { _, change -> onChannelClose(change, target) },
                     onReceive = parent._onReceive::onNext
@@ -330,4 +328,6 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     private val _onConnection = PublishSubject.create<ConnectionChange>().toSerialized()
     val onConnection: Observable<ConnectionChange>
         get() = _onConnection
+
+    val softFailExceptions: List<CertPathValidatorException> get() = revocationChecker.softFailExceptions
 }

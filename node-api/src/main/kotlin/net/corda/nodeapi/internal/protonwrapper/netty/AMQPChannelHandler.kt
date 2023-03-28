@@ -28,7 +28,6 @@ import org.apache.qpid.proton.framing.TransportFrame
 import org.slf4j.MDC
 import java.net.InetSocketAddress
 import java.nio.channels.ClosedChannelException
-import java.security.cert.PKIXRevocationChecker
 import java.security.cert.X509Certificate
 import javax.net.ssl.ExtendedSSLSession
 import javax.net.ssl.SNIHostName
@@ -47,7 +46,6 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val password: String?,
                                   private val trace: Boolean,
                                   private val suppressLogs: Boolean,
-                                  private val revocationChecker: PKIXRevocationChecker,
                                   private val onOpen: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onClose: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
@@ -169,13 +167,6 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                     handleSuccessfulHandshake(ctx)
                 } else {
                     handleFailedHandshake(ctx, evt)
-                }
-                if (log.isDebugEnabled) {
-                    withMDC {
-                        revocationChecker.softFailExceptions.forEachIndexed { index, e ->
-                            log.debug("Revocation soft fail exception (${index + 1}/${revocationChecker.softFailExceptions.size})", e)
-                        }
-                    }
                 }
             }
         }
