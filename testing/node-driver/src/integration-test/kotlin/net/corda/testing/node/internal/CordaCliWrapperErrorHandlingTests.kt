@@ -45,7 +45,7 @@ class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputR
         val processErrorOutput = BufferedReader(
                 InputStreamReader(process.errorStream))
                 .lines()
-                .filter { !it.startsWith("Warning: Nashorn") }
+                .filter { it.contains("exception") || it.contains("at ") }
                 .collect(Collectors.joining("\n"))
                 .toString()
 

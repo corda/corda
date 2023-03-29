@@ -33,7 +33,9 @@ class FlowSleepTest {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, finish) = alice.rpc.startFlow(::SleepyFlow).returnValue.getOrThrow(1.minutes)
+
             val difference = Duration.between(start, finish)
+            println("AXM - $difference")
             assertTrue(difference >= 5.seconds)
             assertTrue(difference < 7.seconds)
         }
@@ -45,8 +47,13 @@ class FlowSleepTest {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, middle, finish) = alice.rpc.startFlow(::AnotherSleepyFlow).returnValue.getOrThrow(1.minutes)
+
             val differenceBetweenStartAndMiddle = Duration.between(start, middle)
             val differenceBetweenMiddleAndFinish = Duration.between(middle, finish)
+
+            println("AXM - differenceBetweenStartAndMiddle: $differenceBetweenStartAndMiddle")
+            println("AXM - differenceBetweenMiddleAndFinish: $differenceBetweenMiddleAndFinish")
+
             assertTrue(differenceBetweenStartAndMiddle >= 5.seconds)
             assertTrue(differenceBetweenStartAndMiddle < 7.seconds)
             assertTrue(differenceBetweenMiddleAndFinish >= 10.seconds)
@@ -67,7 +74,10 @@ class FlowSleepTest {
                 ::SleepAndInteractWithPartyFlow,
                 bob.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(1.minutes)
+
             val difference = Duration.between(start, finish)
+            println("AXM - $difference")
+
             assertTrue(difference >= 5.seconds)
             assertTrue(difference < 7.seconds)
         }
