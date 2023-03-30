@@ -209,7 +209,7 @@ interface ServiceHub : ServicesForResolution {
      * [IllegalStateException] with details of the cause of error upon failure.
      * Of course, you should not be recording transactions to the ledger that are not fully signed.
      * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
-     * "signature.verification.disabled" to true upon node start-up.
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
      *
      * @param txs The transactions to record.
      * @param notifyVault indicate if the vault should be notified for the update.
@@ -226,7 +226,7 @@ interface ServiceHub : ServicesForResolution {
      * [IllegalStateException] with details of the cause of error upon failure.
      * Of course, you should not be recording transactions to the ledger that are not fully signed.
      * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
-     * "signature.verification.disabled" to true upon node start-up.
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
      */
     fun recordTransactions(notifyVault: Boolean, first: SignedTransaction, vararg remaining: SignedTransaction) {
         recordTransactions(notifyVault, listOf(first, *remaining))
@@ -241,7 +241,7 @@ interface ServiceHub : ServicesForResolution {
      * [IllegalStateException] with details of the cause of error upon failure.
      * Of course, you should not be recording transactions to the ledger that are not fully signed.
      * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
-     * "signature.verification.disabled" to true upon node start-up.
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
      *
      * @param txs The transactions to record.
      * @param statesToRecord how the vault should treat the output states of the transaction.
@@ -256,7 +256,7 @@ interface ServiceHub : ServicesForResolution {
      * [IllegalStateException] with details of the cause of error upon failure.
      * Of course, you should not be recording transactions to the ledger that are not fully signed.
      * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
-     * "signature.verification.disabled" to true upon node start-up.
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
      *
      */
     fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
@@ -271,7 +271,7 @@ interface ServiceHub : ServicesForResolution {
      * [IllegalStateException] with details of the cause of error upon failure.
      * Of course, you should not be recording transactions to the ledger that are not fully signed.
      * It is possible, but not recommended, to revert to non-signature verification behaviour by setting the system property
-     * "signature.verification.disabled" to true upon node start-up.
+     * "net.corda.recordtransaction.signature.verification.disabled" to true upon node start-up.
      *
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
