@@ -7,6 +7,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.JavaVersion
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -18,7 +19,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IS_S390X
 import org.junit.Assume
 import org.junit.Test
 import java.time.Duration
@@ -29,13 +29,12 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep`() {
-        Assume.assumeFalse(IS_S390X)
+        Assume.assumeFalse(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
+
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, finish) = alice.rpc.startFlow(::SleepyFlow).returnValue.getOrThrow(1.minutes)
-
             val difference = Duration.between(start, finish)
-            println("AXM - $difference")
             assertTrue(difference >= 5.seconds)
             assertTrue(difference < 7.seconds)
         }
@@ -43,17 +42,13 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep multiple times`() {
-        Assume.assumeFalse(IS_S390X)
+        Assume.assumeFalse(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
+
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, middle, finish) = alice.rpc.startFlow(::AnotherSleepyFlow).returnValue.getOrThrow(1.minutes)
-
             val differenceBetweenStartAndMiddle = Duration.between(start, middle)
             val differenceBetweenMiddleAndFinish = Duration.between(middle, finish)
-
-            println("AXM - differenceBetweenStartAndMiddle: $differenceBetweenStartAndMiddle")
-            println("AXM - differenceBetweenMiddleAndFinish: $differenceBetweenMiddleAndFinish")
-
             assertTrue(differenceBetweenStartAndMiddle >= 5.seconds)
             assertTrue(differenceBetweenStartAndMiddle < 7.seconds)
             assertTrue(differenceBetweenMiddleAndFinish >= 10.seconds)
@@ -63,7 +58,8 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep and perform other suspending functions`() {
-        Assume.assumeFalse(IS_S390X)
+        Assume.assumeFalse(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
+
         // ensures that events received while the flow is sleeping are not processed
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
@@ -74,10 +70,7 @@ class FlowSleepTest {
                 ::SleepAndInteractWithPartyFlow,
                 bob.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(1.minutes)
-
             val difference = Duration.between(start, finish)
-            println("AXM - $difference")
-
             assertTrue(difference >= 5.seconds)
             assertTrue(difference < 7.seconds)
         }
