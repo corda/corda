@@ -30,19 +30,19 @@ import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.internal.network.CrlServer
+import net.corda.testing.node.internal.network.CrlServer.Companion.EMPTY_CRL
 import net.corda.testing.node.internal.network.CrlServer.Companion.FORBIDDEN_CRL
+import net.corda.testing.node.internal.network.CrlServer.Companion.NODE_CRL
 import net.corda.testing.node.internal.network.CrlServer.Companion.withCrlDistPoint
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.math.BigInteger
 import java.net.SocketTimeoutException
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -60,9 +60,6 @@ class CertificateRevocationListNodeTests {
     private lateinit var crlServer: CrlServer
     private lateinit var amqpServer: AMQPServer
     private lateinit var amqpClient: AMQPClient
-
-    private val revokedNodeCerts: MutableList<BigInteger> = mutableListOf()
-    private val revokedIntermediateCerts: MutableList<BigInteger> = mutableListOf()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -85,7 +82,7 @@ class CertificateRevocationListNodeTests {
     fun setUp() {
         // Do not use Security.addProvider(BouncyCastleProvider()) to avoid EdDSA signature disruption in other tests.
         Crypto.findProvider(BouncyCastleProvider.PROVIDER_NAME)
-        crlServer = CrlServer(NetworkHostAndPort("localhost", 0), revokedNodeCerts, revokedIntermediateCerts)
+        crlServer = CrlServer(NetworkHostAndPort("localhost", 0))
         crlServer.start()
     }
 
@@ -225,12 +222,10 @@ class CertificateRevocationListNodeTests {
 
     @Test(timeout=300_000)
 	fun `verify CRL algorithms`() {
-        val emptyCrl = "empty.crl"
-
         val crl = crlServer.createRevocationList(
                 "SHA256withECDSA",
                 crlServer.rootCa,
-                emptyCrl,
+                EMPTY_CRL,
                 true,
                 emptyList()
         )
@@ -242,7 +237,7 @@ class CertificateRevocationListNodeTests {
             crlServer.createRevocationList(
                     "EC",
                     crlServer.rootCa,
-                    emptyCrl,
+                    EMPTY_CRL,
                     true,
                     emptyList()
             )
@@ -331,8 +326,8 @@ class CertificateRevocationListNodeTests {
 
     private fun createAMQPClient(targetPort: Int,
                                  crlCheckSoftFail: Boolean,
-                                 nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
-                                 tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/empty.crl",
+                                 nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
+                                 tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$EMPTY_CRL",
                                  maxMessageSize: Int = MAX_MESSAGE_SIZE): X509Certificate {
         val baseDirectory = temporaryFolder.root.toPath() / "client"
         val certificatesDirectory = baseDirectory / "certificates"
@@ -364,8 +359,8 @@ class CertificateRevocationListNodeTests {
     private fun createAMQPServer(port: Int,
                                  name: CordaX500Name = ALICE_NAME,
                                  crlCheckSoftFail: Boolean,
-                                 nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
-                                 tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/empty.crl",
+                                 nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
+                                 tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$EMPTY_CRL",
                                  maxMessageSize: Int = MAX_MESSAGE_SIZE,
                                  sslHandshakeTimeout: Duration? = null): X509Certificate {
         check(!::amqpServer.isInitialized)
@@ -400,7 +395,7 @@ class CertificateRevocationListNodeTests {
                                                  tlsCrlDistPoint: String?): X509Certificate {
         val nodeKeyStore = signingCertificateStore.get()
         val (nodeCert, nodeKeys) = nodeKeyStore.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, nodeKeyStore.entryPassword) }
-        val newNodeCert = nodeCert.withCrlDistPoint(crlServer.intermediateCa.keyPair, nodeCaCrlDistPoint)
+        val newNodeCert = crlServer.replaceNodeCertDistPoint(nodeCert, nodeCaCrlDistPoint)
         val nodeCertChain = listOf(newNodeCert, crlServer.intermediateCa.certificate) +
                 nodeKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.drop(2)
 
@@ -413,7 +408,7 @@ class CertificateRevocationListNodeTests {
 
         val sslKeyStore = p2pSslConfiguration.keyStore.get()
         val (tlsCert, tlsKeys) = sslKeyStore.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, sslKeyStore.entryPassword) }
-        val newTlsCert = tlsCert.withCrlDistPoint(nodeKeys, tlsCrlDistPoint, X500Name.getInstance(crlServer.rootCa.certificate.subjectX500Principal.encoded))
+        val newTlsCert = tlsCert.withCrlDistPoint(nodeKeys, tlsCrlDistPoint, crlServer.rootCa.certificate.subjectX500Principal)
         val sslCertChain = listOf(newTlsCert, newNodeCert, crlServer.intermediateCa.certificate) +
                 sslKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.drop(3)
 
@@ -428,7 +423,7 @@ class CertificateRevocationListNodeTests {
 
     @Suppress("LongParameterList")
     private fun verifyAMQPConnection(crlCheckSoftFail: Boolean,
-                                     nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/node.crl",
+                                     nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
                                      revokeServerCert: Boolean = false,
                                      revokeClientCert: Boolean = false,
                                      sslHandshakeTimeout: Duration? = null,
@@ -440,7 +435,7 @@ class CertificateRevocationListNodeTests {
                 sslHandshakeTimeout = sslHandshakeTimeout
         )
         if (revokeServerCert) {
-            revokedNodeCerts.add(serverCert.serialNumber)
+            crlServer.revokedNodeCerts.add(serverCert.serialNumber)
         }
         amqpServer.start()
         amqpServer.onReceive.subscribe {
@@ -452,7 +447,7 @@ class CertificateRevocationListNodeTests {
                 nodeCrlDistPoint = nodeCrlDistPoint
         )
         if (revokeClientCert) {
-            revokedNodeCerts.add(clientCert.serialNumber)
+            crlServer.revokedNodeCerts.add(clientCert.serialNumber)
         }
         val serverConnected = amqpServer.onConnection.toFuture()
         amqpClient.start()
@@ -495,7 +490,7 @@ class CertificateRevocationListNodeTests {
                                         expectedConnected: Boolean = true,
                                         expectedStatus: MessageStatus? = null,
                                         revokedNodeCert: Boolean = false,
-                                        nodeCrlDistPoint: String = "http://${crlServer.hostAndPort}/crl/node.crl",
+                                        nodeCrlDistPoint: String = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
                                         sslHandshakeTimeout: Duration? = null) {
         val queueName = P2P_PREFIX + "Test"
         val (artemisServer, artemisClient) = createArtemisServerAndClient(crlCheckSoftFail, crlCheckArtemisServer, nodeCrlDistPoint, sslHandshakeTimeout)
@@ -504,7 +499,7 @@ class CertificateRevocationListNodeTests {
 
             val nodeCert = createAMQPClient(serverPort, true, nodeCrlDistPoint)
             if (revokedNodeCert) {
-                revokedNodeCerts.add(nodeCert.serialNumber)
+                crlServer.revokedNodeCerts.add(nodeCert.serialNumber)
             }
             val clientConnected = amqpClient.onConnection.toFuture()
             amqpClient.start()

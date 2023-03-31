@@ -42,21 +42,23 @@ import java.security.KeyPair
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
+import javax.security.auth.x500.X500Principal
 import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
+import kotlin.collections.ArrayList
 
-class CrlServer(hostAndPort: NetworkHostAndPort,
-                private val revokedNodeCerts: List<BigInteger>,
-                private val revokedIntermediateCerts: List<BigInteger>) : Closeable {
-
+class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
     companion object {
         private const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
 
+        const val NODE_CRL = "node.crl"
         const val FORBIDDEN_CRL = "forbidden.crl"
+        const val INTERMEDIATE_CRL = "intermediate.crl"
+        const val EMPTY_CRL = "empty.crl"
 
-        fun X509Certificate.withCrlDistPoint(issuerKeyPair: KeyPair, crlDistPoint: String?, crlIssuer: X500Name? = null): X509Certificate {
+        fun X509Certificate.withCrlDistPoint(issuerKeyPair: KeyPair, crlDistPoint: String?, crlIssuer: X500Principal? = null): X509Certificate {
             val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
             val provider = Crypto.findProvider(signatureScheme.providerName)
             val issuerSigner = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
@@ -71,7 +73,7 @@ class CrlServer(hostAndPort: NetworkHostAndPort,
             )
             if (crlDistPoint != null) {
                 val distPointName = DistributionPointName(GeneralNames(GeneralName(GeneralName.uniformResourceIdentifier, crlDistPoint)))
-                val crlIssuerGeneralNames = crlIssuer?.let { GeneralNames(GeneralName(it)) }
+                val crlIssuerGeneralNames = crlIssuer?.let { GeneralNames(GeneralName(X500Name.getInstance(it.encoded))) }
                 val distPoint = DistributionPoint(distPointName, null, crlIssuerGeneralNames)
                 builder.addExtension(Extension.cRLDistributionPoints, false, CRLDistPoint(arrayOf(distPoint)))
             }
@@ -84,6 +86,9 @@ class CrlServer(hostAndPort: NetworkHostAndPort,
             addHandler(buildServletContextHandler())
         }
     }
+
+    val revokedNodeCerts: MutableList<BigInteger> = ArrayList()
+    val revokedIntermediateCerts: MutableList<BigInteger> = ArrayList()
 
     val rootCa: CertificateAndKeyPair = DEV_ROOT_CA
 
@@ -98,10 +103,16 @@ class CrlServer(hostAndPort: NetworkHostAndPort,
     fun start() {
         server.start()
         _intermediateCa = CertificateAndKeyPair(
-                DEV_INTERMEDIATE_CA.certificate.withCrlDistPoint(rootCa.keyPair, "http://$hostAndPort/crl/intermediate.crl"),
+                DEV_INTERMEDIATE_CA.certificate.withCrlDistPoint(rootCa.keyPair, "http://$hostAndPort/crl/$INTERMEDIATE_CRL"),
                 DEV_INTERMEDIATE_CA.keyPair
         )
         println("Network management web services started on $hostAndPort")
+    }
+
+    fun replaceNodeCertDistPoint(nodeCaCert: X509Certificate,
+                                 nodeCaCrlDistPoint: String? = "http://$hostAndPort/crl/$NODE_CRL",
+                                 crlIssuer: X500Principal? = null): X509Certificate {
+        return nodeCaCert.withCrlDistPoint(intermediateCa.keyPair, nodeCaCrlDistPoint, crlIssuer)
     }
 
     fun createRevocationList(signatureAlgorithm: String,
@@ -145,13 +156,13 @@ class CrlServer(hostAndPort: NetworkHostAndPort,
     @Path("crl")
     class CrlServlet(private val crlServer: CrlServer) {
         @GET
-        @Path("node.crl")
+        @Path(NODE_CRL)
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
             return Response.ok(crlServer.createRevocationList(
                     SIGNATURE_ALGORITHM,
                     crlServer.intermediateCa,
-                    "node.crl",
+                    NODE_CRL,
                     false,
                     crlServer.revokedNodeCerts
             ).encoded).build()
@@ -165,26 +176,26 @@ class CrlServer(hostAndPort: NetworkHostAndPort,
         }
 
         @GET
-        @Path("intermediate.crl")
+        @Path(INTERMEDIATE_CRL)
         @Produces("application/pkcs7-crl")
         fun getIntermediateCRL(): Response {
             return Response.ok(crlServer.createRevocationList(
                     SIGNATURE_ALGORITHM,
                     crlServer.rootCa,
-                    "intermediate.crl",
+                    INTERMEDIATE_CRL,
                     false,
                     crlServer.revokedIntermediateCerts
             ).encoded).build()
         }
 
         @GET
-        @Path("empty.crl")
+        @Path(EMPTY_CRL)
         @Produces("application/pkcs7-crl")
         fun getEmptyCRL(): Response {
             return Response.ok(crlServer.createRevocationList(
                     SIGNATURE_ALGORITHM,
                     crlServer.rootCa,
-                    "empty.crl",
+                    EMPTY_CRL,
                     true, emptyList()
             ).encoded).build()
         }
