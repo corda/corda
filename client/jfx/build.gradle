@@ -12,7 +12,7 @@ javafx {
     ]
 }
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'com.jfrog.artifactory'
 

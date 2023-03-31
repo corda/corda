@@ -5,12 +5,14 @@ import net.i2p.crypto.eddsa.EdDSAEngine;
 import net.i2p.crypto.eddsa.EdDSAPublicKey;
 import org.junit.Test;
 import sun.security.util.BitArray;
+import sun.security.util.DerInputStream;
 import sun.security.util.ObjectIdentifier;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.X509Key;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.SignatureException;
@@ -47,7 +49,7 @@ public class X509EdDSAEngineTest {
         System.arraycopy(internals, keyStart, key, 0, keySize);
 
         // 1.3.101.102 is the EdDSA OID
-        return new TestX509Key(new AlgorithmId(new ObjectIdentifier("1.3.101.112")), new BitArray(keySize * 8, key));
+        return new TestX509Key(new AlgorithmId(new ObjectIdentifier(new DerInputStream("1.3.101.112".getBytes(StandardCharsets.UTF_8)))), new BitArray(keySize * 8, key));
     }
 
     class TestX509Key extends X509Key {

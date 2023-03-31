@@ -89,10 +89,10 @@ open class InternalUtilsTest {
 
     @Test(timeout=300_000)
 	fun `Stream toTypedArray works`() {
-        val a: Array<String> = Stream.of("one", "two").toTypedArray()
+        val a: Array<String> = Stream.of("one", "two").toTypedArray() as Array<String>
         assertEquals(Array<String>::class.java, a.javaClass)
         assertArrayEquals(arrayOf("one", "two"), a)
-        val b: Array<String?> = Stream.of("one", "two", null).toTypedArray()
+        val b: Array<String?> = Stream.of("one", "two", null).toTypedArray() as Array<String?>
         assertEquals(Array<String?>::class.java, b.javaClass)
         assertArrayEquals(arrayOf("one", "two", null), b)
     }

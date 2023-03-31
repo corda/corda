@@ -1,7 +1,7 @@
 group 'com.r3cev.prototyping'
 version '1.0-SNAPSHOT'
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 
 compileKotlin {
     kotlinOptions.suppressWarnings = true

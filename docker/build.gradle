@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter
 import java.util.stream.Collectors
 import java.util.stream.Stream
 
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
 // We need to set mainClassName before applying the shadow plugin.

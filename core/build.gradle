@@ -1,7 +1,7 @@
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
-apply plugin: 'kotlin'
-apply plugin: 'kotlin-jpa'
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'

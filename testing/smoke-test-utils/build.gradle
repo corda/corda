@@ -1,4 +1,4 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 
 description 'Utilities needed for smoke tests in Corda'
 

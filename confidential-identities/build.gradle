@@ -17,6 +17,7 @@ dependencies {
 
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "junit:junit:$junit_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
@@ -28,6 +29,9 @@ dependencies {
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testImplementation project(":node-driver")
+    testImplementation project(":core-test-utils")
+    testImplementation project(':finance:contracts')
+    testImplementation project(':finance:workflows')
 
     // AssertJ: for fluent assertions for testing
     testImplementation "org.assertj:assertj-core:$assertj_version"

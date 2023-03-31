@@ -1,7 +1,7 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
-apply plugin: 'kotlin-jpa'
+apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
@@ -16,9 +16,9 @@ dependencies {
     implementation "org.hibernate:hibernate-core:$hibernate_version"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
-    testImplementation project(':test-utils')
+//    testImplementation project(':test-utils')
+//    testImplementation project(':node-driver')
     testImplementation project(path: ':core', configuration: 'testArtifacts')
-    testImplementation project(':node-driver')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 

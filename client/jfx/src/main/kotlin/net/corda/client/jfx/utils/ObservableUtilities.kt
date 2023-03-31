@@ -118,9 +118,9 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
  * val dogs: ObservableList<Dog> = (..)
  * val owners: ObservableList<Person> = dogs.map(Dog::owner).filterNotNull()
  */
-fun <A> ObservableList<out A?>.filterNotNull(): FilteredList<A?>? {
+fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
     //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works.
-    return uncheckedCast(uncheckedCast<Any, ObservableList<A?>>(this).filtered { t -> t != null })
+    return uncheckedCast(uncheckedCast<Any, ObservableList<A>>(this).filtered { t -> t != null })
 }
 
 /**

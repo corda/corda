@@ -36,7 +36,7 @@ class NetworkIdentityModel {
                 publicKey.let { rpcProxy.map { it?.nodeInfoFromParty(AnonymousParty(publicKey)) } }
             })
     val notaries = ChosenList(rpcProxy.map { FXCollections.observableList(it?.notaryIdentities() ?: emptyList()) }, "notaries")
-    val notaryNodes: FilteredList<NodeInfo?>? = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
+    val notaryNodes: ObservableList<NodeInfo> = notaries.map { rpcProxy.value?.nodeInfoFromParty(it) }.filterNotNull()
     val parties: ObservableList<NodeInfo> = networkIdentities
             .filtered { it.legalIdentities.all { it !in notaries } }.unique()
     val myIdentity = rpcProxy.map { it?.nodeInfo()?.legalIdentitiesAndCerts?.first()?.party }
