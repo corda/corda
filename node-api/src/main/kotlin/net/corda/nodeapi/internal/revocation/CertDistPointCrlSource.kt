@@ -17,9 +17,11 @@ import javax.security.auth.x500.X500Principal
  */
 class CertDistPointCrlSource : CrlSource {
     companion object {
-        // Keep to the same defaults as the JDK (URICertStore)
-        private const val DEFAULT_CONNECT_TIMEOUT = 15_000
-        private const val DEFAULT_READ_TIMEOUT = 15_000
+        // The default SSL handshake timeout is 60s (DEFAULT_SSL_HANDSHAKE_TIMEOUT). Considering there are 3 CRLs endpoints to check in a
+        // node handshake, we want to keep the total timeout within that.
+        private const val DEFAULT_CONNECT_TIMEOUT = 9_000
+        private const val DEFAULT_READ_TIMEOUT = 9_000
+        // Use the same defaults for the cache as the JDK (URICertStore)
         private const val CACHE_SIZE = 185L
         private const val CACHE_EXPIRY = 30L
 
