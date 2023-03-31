@@ -21,17 +21,18 @@ class CertDistPointCrlSource : CrlSource {
         // node handshake, we want to keep the total timeout within that.
         private const val DEFAULT_CONNECT_TIMEOUT = 9_000
         private const val DEFAULT_READ_TIMEOUT = 9_000
-        // Use the same defaults for the cache as the JDK (URICertStore)
-        private const val CACHE_SIZE = 185L
-        private const val CACHE_EXPIRY = 30L
+        private const val DEFAULT_CACHE_SIZE = 185L  // Same default as the JDK (URICertStore)
+        private const val DEFAULT_CACHE_EXPIRY = 5 * 60 * 1000L
+
+        private val connectTimeout = Integer.getInteger("net.corda.dpcrl.connect.timeout", DEFAULT_CONNECT_TIMEOUT)
+        private val readTimeout = Integer.getInteger("net.corda.dpcrl.read.timeout", DEFAULT_READ_TIMEOUT)
+        private val cacheSize = java.lang.Long.getLong("net.corda.dpcrl.cache.size", DEFAULT_CACHE_SIZE)
+        private val cacheExpiry = java.lang.Long.getLong("net.corda.dpcrl.cache.expiry", DEFAULT_CACHE_EXPIRY)
 
         private val cache: LoadingCache<URI, X509CRL> = Caffeine.newBuilder()
-                .maximumSize(CACHE_SIZE)
-                .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
+                .maximumSize(cacheSize)
+                .expireAfterWrite(cacheExpiry, TimeUnit.MILLISECONDS)
                 .build(::retrieveCRL)
-
-        private val connectTimeout = Integer.getInteger("net.corda.crl.connectTimeoutMs", DEFAULT_CONNECT_TIMEOUT)
-        private val readTimeout = Integer.getInteger("net.corda.crl.readTimeoutMs", DEFAULT_READ_TIMEOUT)
 
         private fun retrieveCRL(uri: URI): X509CRL {
             val bytes = run {
