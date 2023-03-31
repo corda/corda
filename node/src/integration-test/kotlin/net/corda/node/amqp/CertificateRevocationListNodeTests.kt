@@ -69,7 +69,7 @@ class CertificateRevocationListNodeTests {
     companion object {
         private val unreachableIpCounter = AtomicInteger(1)
 
-        private val crlTimeout = Duration.ofMillis(System.getProperty("net.corda.crl.connectTimeoutMs").toLong())
+        private val crlConnectTimeout = Duration.ofMillis(System.getProperty("net.corda.dpcrl.connect.timeout").toLong())
 
         /**
          * Use this method to get a unqiue unreachable IP address. Subsequent uses of the same IP for connection timeout testing purposes
@@ -204,7 +204,7 @@ class CertificateRevocationListNodeTests {
         verifyAMQPConnection(
                 crlCheckSoftFail = true,
                 nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
-                sslHandshakeTimeout = crlTimeout * 2,
+                sslHandshakeTimeout = crlConnectTimeout * 2,
                 expectedConnectStatus = true
         )
         val timeoutExceptions = (amqpServer.softFailExceptions + amqpClient.softFailExceptions)
@@ -218,7 +218,7 @@ class CertificateRevocationListNodeTests {
         verifyAMQPConnection(
                 crlCheckSoftFail = true,
                 nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
-                sslHandshakeTimeout = crlTimeout / 2,
+                sslHandshakeTimeout = crlConnectTimeout / 2,
                 expectedConnectStatus = false
         )
     }
@@ -284,7 +284,7 @@ class CertificateRevocationListNodeTests {
                 crlCheckArtemisServer = true,
                 expectedStatus = MessageStatus.Acknowledged,
                 nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
-                sslHandshakeTimeout = crlTimeout * 3
+                sslHandshakeTimeout = crlConnectTimeout * 3
         )
     }
 
@@ -295,7 +295,7 @@ class CertificateRevocationListNodeTests {
                 crlCheckArtemisServer = true,
                 expectedConnected = false,
                 nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
-                sslHandshakeTimeout = crlTimeout / 2
+                sslHandshakeTimeout = crlConnectTimeout / 2
         )
     }
 
