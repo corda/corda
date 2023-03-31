@@ -17,9 +17,10 @@ import javax.security.auth.x500.X500Principal
  */
 class CertDistPointCrlSource : CrlSource {
     companion object {
-        private const val DEFAULT_CONNECT_TIMEOUT = 60_000
-        private const val DEFAULT_READ_TIMEOUT = 60_000
-        private const val CACHE_EXPIRY = 30L  // Mimick the 30s cache expiry behaviour of the JDK (URICertStore.engineGetCRLs)
+        // Keep to the same defaults as the JDK (URICertStore)
+        private const val DEFAULT_CONNECT_TIMEOUT = 15_000
+        private const val DEFAULT_READ_TIMEOUT = 15_000
+        private const val CACHE_EXPIRY = 30L
 
         private val cache: LoadingCache<URI, X509CRL> = Caffeine.newBuilder()
                 .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
@@ -73,8 +74,8 @@ class CertDistPointCrlSource : CrlSource {
     }
 
     // DistributionPointFetcher.verifyCRL
-    private fun verifyCRL(crl: X509CRL, certificate: X509Certificate, issuerNames: List<X500Principal>?): Boolean {
+    private fun verifyCRL(crl: X509CRL, certificate: X509Certificate, distPointIssuerNames: List<X500Principal>?): Boolean {
         val crlIssuer = crl.issuerX500Principal
-        return issuerNames?.any { it == crlIssuer } ?: (certificate.issuerX500Principal == crlIssuer)
+        return distPointIssuerNames?.any { it == crlIssuer } ?: (certificate.issuerX500Principal == crlIssuer)
     }
 }

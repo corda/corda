@@ -50,6 +50,9 @@ internal const val DP_DEFAULT_ANSWER = "NO CRLDP ext"
 
 internal val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.protonwrapper.netty.SSLHelper")
 
+/**
+ * Returns all the CRL distribution points in the certificate as [URI]s along with the CRL issuer names, if any.
+ */
 @Suppress("ComplexMethod")
 fun X509Certificate.distributionPoints(): Map<URI, List<X500Principal>?> {
     logger.debug { "Checking CRLDPs for $subjectX500Principal" }
