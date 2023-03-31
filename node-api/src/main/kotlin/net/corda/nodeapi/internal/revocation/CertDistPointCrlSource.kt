@@ -20,9 +20,11 @@ class CertDistPointCrlSource : CrlSource {
         // Keep to the same defaults as the JDK (URICertStore)
         private const val DEFAULT_CONNECT_TIMEOUT = 15_000
         private const val DEFAULT_READ_TIMEOUT = 15_000
+        private const val CACHE_SIZE = 185L
         private const val CACHE_EXPIRY = 30L
 
         private val cache: LoadingCache<URI, X509CRL> = Caffeine.newBuilder()
+                .maximumSize(CACHE_SIZE)
                 .expireAfterWrite(CACHE_EXPIRY, TimeUnit.SECONDS)
                 .build(::retrieveCRL)
 
