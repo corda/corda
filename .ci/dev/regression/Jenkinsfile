@@ -62,6 +62,7 @@ pipeline {
         SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
         C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
         JAVA_HOME="/usr/lib/jvm/java-11-amazon-corretto"
+        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
     }
 
     stages {
