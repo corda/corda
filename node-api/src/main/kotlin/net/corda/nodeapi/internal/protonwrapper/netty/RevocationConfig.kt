@@ -3,11 +3,15 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 import com.typesafe.config.Config
 import net.corda.nodeapi.internal.config.ConfigParser
 import net.corda.nodeapi.internal.config.CustomConfigParser
+import net.corda.nodeapi.internal.revocation.CertDistPointCrlSource
+import net.corda.nodeapi.internal.revocation.CordaRevocationChecker
+import java.security.cert.PKIXRevocationChecker
 
 /**
  * Data structure for controlling the way how Certificate Revocation Lists are handled.
  */
 @CustomConfigParser(parser = RevocationConfigParser::class)
+// TODO This and RevocationConfigImpl should really be a single sealed data type
 interface RevocationConfig {
 
     enum class Mode {
@@ -26,7 +30,7 @@ interface RevocationConfig {
 
         /**
          * CRLs are obtained from external source
-         * @see ExternalCrlSource
+         * @see CrlSource
          */
         EXTERNAL_SOURCE,
 
@@ -39,14 +43,23 @@ interface RevocationConfig {
     val mode: Mode
 
     /**
-     * Optional `ExternalCrlSource` which only makes sense with `mode` = `EXTERNAL_SOURCE`
+     * Optional [CrlSource] which only makes sense with `mode` = `EXTERNAL_SOURCE`
      */
-    val externalCrlSource: ExternalCrlSource?
+    val externalCrlSource: CrlSource?
 
     /**
-     * Creates a copy of `RevocationConfig` with ExternalCrlSource enriched
+     * Creates a copy of [RevocationConfig] enriched by a [CrlSource].
      */
-    fun enrichExternalCrlSource(sourceFunc: (() -> ExternalCrlSource)?): RevocationConfig
+    fun enrichExternalCrlSource(sourceFunc: (() -> CrlSource)?): RevocationConfig
+
+    fun createPKIXRevocationChecker(): PKIXRevocationChecker {
+        return when (mode) {
+            Mode.OFF -> AllowAllRevocationChecker
+            Mode.EXTERNAL_SOURCE -> CordaRevocationChecker(externalCrlSource!!, softFail = true)
+            Mode.SOFT_FAIL -> CordaRevocationChecker(CertDistPointCrlSource(), softFail = true)
+            Mode.HARD_FAIL -> CordaRevocationChecker(CertDistPointCrlSource(), softFail = false)
+        }
+    }
 }
 
 /**
@@ -54,13 +67,21 @@ interface RevocationConfig {
  */
 fun Boolean.toRevocationConfig() = if(this) RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL) else RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)
 
-data class RevocationConfigImpl(override val mode: RevocationConfig.Mode, override val externalCrlSource: ExternalCrlSource? = null) : RevocationConfig {
-    override fun enrichExternalCrlSource(sourceFunc: (() -> ExternalCrlSource)?): RevocationConfig {
-        return if(mode != RevocationConfig.Mode.EXTERNAL_SOURCE) {
+data class RevocationConfigImpl(override val mode: RevocationConfig.Mode, override val externalCrlSource: CrlSource? = null) : RevocationConfig {
+    init {
+        if (mode == RevocationConfig.Mode.EXTERNAL_SOURCE) {
+            requireNotNull(externalCrlSource) { "externalCrlSource must not be null" }
+        }
+    }
+
+    // TODO This doesn't really need to be a member method. All it does is change externalCrlSource if applicable, which is the same as
+    //  just creating a new RevocationConfigImpl with that CrlSource.
+    override fun enrichExternalCrlSource(sourceFunc: (() -> CrlSource)?): RevocationConfig {
+        return if (mode != RevocationConfig.Mode.EXTERNAL_SOURCE) {
             this
         } else {
-            assert(sourceFunc != null) { "There should be a way to obtain ExternalCrlSource" }
-            copy(externalCrlSource = sourceFunc!!())
+            val func = requireNotNull(sourceFunc) { "There should be a way to obtain CrlSource" }
+            copy(externalCrlSource = func())
         }
     }
 }

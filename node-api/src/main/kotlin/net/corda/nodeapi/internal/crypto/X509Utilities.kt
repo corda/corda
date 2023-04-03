@@ -438,6 +438,8 @@ class X509CertificateFactory {
     fun generateCertPath(vararg certificates: X509Certificate): CertPath = generateCertPath(certificates.asList())
 
     fun generateCertPath(certificates: List<X509Certificate>): CertPath = delegate.generateCertPath(certificates)
+
+    fun generateCRL(input: InputStream): X509CRL = delegate.generateCRL(input) as X509CRL
 }
 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: CertRole?) {
