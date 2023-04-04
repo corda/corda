@@ -2,19 +2,18 @@
 
 package net.gredler.aegis4j;
 
+import org.junit.jupiter.api.Test;
+
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * <p>Tests {@link AegisAgent} command line use (both static and dynamic attach).
@@ -29,12 +28,19 @@ public class AegisAgentCommandLineTest {
     @Test
     public void testStaticAttach() throws Exception {
         String jar = TestUtils.createAgentJar();
-        //                    CONFIG                   EXPECTED ERROR
-        testStaticAttach(jar, "block=jndi",            "");
+        //                    CONFIG                           EXPECTED ERROR
+        testStaticAttach(jar, "block=jndi", "");
         testStaticAttach(jar, "unblock=serialization", "");
-        testStaticAttach(jar, "block=serialization",   "Java serialization blocked by aegis4j");
-        testStaticAttach(jar, "block=serialization;",   "Java serialization blocked by aegis4j");
-        testStaticAttach(jar, ";block=serialization",   "ERROR: argument ordering means patching already started");
+        testStaticAttach(jar, "block=serialization", "Java serialization blocked by aegis4j");
+        testStaticAttach(jar, "block=serialization;", "Java serialization blocked by aegis4j");
+        testStaticAttach(jar, ";block=serialization", "ERROR: parameter ordering means patching already started");
+        testStaticAttach(jar, "foo", "ERROR: unrecognised parameters foo");
+        testStaticAttach(jar, "dynamic", "");
+
+        Path path = Paths.get(AegisAgent.class.getResource("mods.properties").toURI());
+        testStaticAttach(jar, "path=" + path, "Java serialization blocked by aegis4j");
+        testStaticAttach(jar, "path=" + path + ";unblock=serialization", "");
+        testStaticAttach(jar, "path=/foo/bar", "java.io.FileNotFoundException: /foo/bar");
     }
 
     private static void testStaticAttach(String jar, String config, String expectedErr) throws Exception {
