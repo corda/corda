@@ -1,7 +1,0 @@
-bin/
-build/
-.gradle/
-.settings/
-.classpath
-.project
-gradle.properties

@@ -2,26 +2,12 @@
 
 package net.gredler.aegis4j;
 
-import static net.gredler.aegis4j.AegisAgent.toBlockList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.lang.reflect.Field;
-import java.rmi.StubNotFoundException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.server.RMIClientSocketFactory;
-import java.rmi.server.RMIServerSocketFactory;
-import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.spi.HttpServerProvider;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import javax.naming.InitialContext;
 import javax.naming.Name;
@@ -32,55 +18,62 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.SimpleScriptContext;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.rmi.StubNotFoundException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.server.RMIClientSocketFactory;
+import java.rmi.server.RMIServerSocketFactory;
+import java.util.Collections;
 
-import jdk.nashorn.internal.ir.annotations.Ignore;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-import org.springframework.objenesis.SpringObjenesis;
-
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.spi.HttpServerProvider;
-
-import sun.misc.Unsafe;
+import static net.gredler.aegis4j.AegisAgent.toBlockList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Tests {@link AegisAgent}.
  */
-/*
 public class AegisAgentTest {
 
     @BeforeAll
     public static void installAgent() throws Exception {
-        TestUtils.installAgent(null);
+        TestUtils.installAgent("unblock=unsafe");
+    }
+
+    @AfterAll
+    public static void uninstallAgent() throws Exception {
+        TestUtils.installAgent("unblock=unsafe,serialization");
     }
 
     @Test
     public void testParseBlockList() {
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting"), toBlockList("", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting"), toBlockList("   ", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "unsafe", "scripting"), toBlockList("unblock=serialization", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting"), toBlockList("unblock=serialization,process", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting"), toBlockList("UNbloCk=SERIALIZATION,Process", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting"), toBlockList(" unblock\t=    serialization      , process\t", null));
+        assertEquals(TestUtils.setOf(), toBlockList("unblock=jndi,rmi,process,httpserver,serialization,unsafe,scripting", null));
+        assertEquals(TestUtils.setOf("jndi"), toBlockList("block=jndi", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("block=jndi,rmi,process", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("block = jndi\t, rmi ,\nprocess", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("BLOck = JNDI\t, rmi ,\nProcESs", null));
 
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting", "jshell"), toBlockList(""));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting", "jshell"), toBlockList("   "));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "unsafe", "scripting", "jshell"), toBlockList("unblock=serialization"));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting", "jshell"), toBlockList("unblock=serialization,process"));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting", "jshell"), toBlockList("UNbloCk=SERIALIZATION,Process"));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting", "jshell"), toBlockList(" unblock\t=    serialization      , process\t"));
-        assertEquals(TestUtils.setOf(), toBlockList("unblock=jndi,rmi,process,httpserver,serialization,unsafe,scripting,jshell"));
-        assertEquals(TestUtils.setOf("jndi"), toBlockList("block=jndi"));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("block=jndi,rmi,process"));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("block = jndi\t, rmi ,\nprocess"));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("BLOck = JNDI\t, rmi ,\nProcESs"));
-
-        assertThrowsIAE(() -> toBlockList("blahblah"), "ERROR: Invalid agent configuration string");
-        assertThrowsIAE(() -> toBlockList("foo=bar"), "ERROR: Unrecognized parameter name (should be one of 'block' or 'unblock'): foo");
-        assertThrowsIAE(() -> toBlockList("block=incorrect"), "ERROR: Unrecognized feature name: incorrect");
-        assertThrowsIAE(() -> toBlockList("unblock=incorrect"), "ERROR: Unrecognized feature name: incorrect");
-        assertThrowsIAE(() -> toBlockList("block=serialization,process,incorrect,jndi"), "ERROR: Unrecognized feature name: incorrect");
-        assertThrowsIAE(() -> toBlockList("unblock=serialization,process,incorrect,jndi"), "ERROR: Unrecognized feature name: incorrect");
+        assertThrowsIAE(() -> toBlockList("blahblah", null), "Aegis4j ERROR: Invalid agent configuration string");
+        assertThrowsIAE(() -> toBlockList("foo=bar", null), "Aegis4j ERROR: Unrecognized parameter name (should be one of 'block' or 'unblock'): foo");
+        assertThrowsIAE(() -> toBlockList("block=incorrect", null), "Aegis4j ERROR: Unrecognized feature name: incorrect");
+        assertThrowsIAE(() -> toBlockList("unblock=incorrect", null), "Aegis4j ERROR: Unrecognized feature name: incorrect");
+        assertThrowsIAE(() -> toBlockList("block=serialization,process,incorrect,jndi", null), "Aegis4j ERROR: Unrecognized feature name: incorrect");
+        assertThrowsIAE(() -> toBlockList("unblock=serialization,process,incorrect,jndi", null), "Aegis4j ERROR: Unrecognized feature name: incorrect");
     }
 
     @Test
     public void testJndi() throws Exception {
-
         String string = "foo";
         Name name = new LdapName("cn=foo");
         Object object = new Object();
@@ -116,7 +109,6 @@ public class AegisAgentTest {
 
     @Test
     public void testRmi() {
-
         int integer = 9090;
         String string = "foo";
         RMIClientSocketFactory clientSocketFactory = null;
@@ -132,7 +124,6 @@ public class AegisAgentTest {
 
     @Test
     public void testProcess() {
-
         Runtime runtime = Runtime.getRuntime();
         String string = "foo";
         String[] array = new String[] { "foo" };
@@ -178,6 +169,7 @@ public class AegisAgentTest {
         assertThrowsRE(() -> new ObjectOutputStream(baos), "Java serialization blocked by aegis4j");
     }
 
+    /*
     @Test
     public void testUnsafe() throws Exception {
 
@@ -283,6 +275,7 @@ public class AegisAgentTest {
         assertInstanceOf(TestUtils.class, so.newInstance(TestUtils.class));
         assertInstanceOf(LocalDate.class, so.newInstance(LocalDate.class));
     }
+    */
 
     private static void assertThrowsNICE(Executable task) {
         assertThrows(task, NoInitialContextException.class, "JNDI context creation blocked by aegis4j");
@@ -324,4 +317,3 @@ public class AegisAgentTest {
         return t;
     }
 }
-*/

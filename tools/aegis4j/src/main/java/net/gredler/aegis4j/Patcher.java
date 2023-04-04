@@ -2,6 +2,15 @@
 
 package net.gredler.aegis4j;
 
+import javassist.ByteArrayClassPath;
+import javassist.CannotCompileException;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtConstructor;
+import javassist.CtMethod;
+import javassist.LoaderClassPath;
+import javassist.NotFoundException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
@@ -17,15 +26,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import javassist.ByteArrayClassPath;
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.LoaderClassPath;
-import javassist.NotFoundException;
-
 /**
  * Disables rarely-used platform features like JNDI and RMI so that they cannot be exploited by attackers.
  * See the {@code mods.properties} file for the actual class modification configuration.
@@ -33,6 +33,7 @@ import javassist.NotFoundException;
 public final class Patcher implements ClassFileTransformer {
 
     private final Map<String, List<Modification>> modifications; // class name -> modifications
+    private static Patcher patcher;
 
     /**
      * Creates a new class patcher which blocks the specified features.
@@ -51,7 +52,8 @@ public final class Patcher implements ClassFileTransformer {
      */
     public static void start(Instrumentation instr, Set<String> block, InputStream inputStream) {
         System.out.println("Aegis4j patching starting");
-        Patcher patcher = new Patcher(block ,inputStream);
+        if (patcher != null) instr.removeTransformer(patcher);
+        patcher = new Patcher(block, inputStream);
         instr.addTransformer(patcher, true);
 
         for (String className : patcher.modifications.keySet()) {
@@ -87,17 +89,19 @@ public final class Patcher implements ClassFileTransformer {
         try {
             CtClass clazz = pool.get(className);
             for (Modification mod : mods) {
-                if (mod.isConstructor()) {
-                    for (CtConstructor constructor : clazz.getConstructors()) {
-                        constructor.setBody(mod.newBody);
-                    }
-                } else {
-                    CtMethod[] methods = mod.isAll() ? clazz.getDeclaredMethods() : clazz.getDeclaredMethods(mod.methodName);
-                    if (methods.length == 0) {
-                        System.err.println("ERROR: Method not found: " + className + "." + mod.methodName);
-                    }
-                    for (CtMethod method : methods) {
-                        method.setBody(mod.newBody);
+                if (mod.enabled) {
+                    if (mod.isConstructor()) {
+                        for (CtConstructor constructor : clazz.getConstructors()) {
+                            constructor.setBody(mod.newBody);
+                        }
+                    } else {
+                        CtMethod[] methods = mod.isAll() ? clazz.getDeclaredMethods() : clazz.getDeclaredMethods(mod.methodName);
+                        if (methods.length == 0) {
+                            System.err.println("ERROR: Method not found: " + className + "." + mod.methodName);
+                        }
+                        for (CtMethod method : methods) {
+                            method.setBody(mod.newBody);
+                        }
                     }
                 }
             }
@@ -121,13 +125,13 @@ public final class Patcher implements ClassFileTransformer {
             int first = key.indexOf('.');
             int last = key.lastIndexOf('.');
             String feature = key.substring(0, first).toLowerCase();
-            if (block.contains(feature)) {
+            //if (block.contains(feature)) {
                 String className = key.substring(first + 1, last);
                 String methodName = key.substring(last + 1);
-                String newBody = props.getProperty(key);
-                Modification mod = new Modification(className, methodName, newBody);
+            String newBody = props.getProperty(key);
+            Modification mod = new Modification(className, methodName, newBody, block.contains(feature));
                 mods.add(mod);
-            }
+            //}
         }
 
         return Collections.unmodifiableMap(new TreeMap<>(
@@ -140,11 +144,13 @@ public final class Patcher implements ClassFileTransformer {
         public final String className;
         public final String methodName;
         public final String newBody;
+        public final boolean enabled;
 
-        public Modification(String className, String methodName, String newBody) {
+        public Modification(String className, String methodName, String newBody, boolean enabled) {
             this.className = className;
             this.methodName = methodName;
             this.newBody = newBody;
+            this.enabled = enabled;
         }
 
         public boolean isConstructor() {

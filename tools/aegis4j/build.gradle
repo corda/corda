@@ -47,8 +47,10 @@ java {
 }
 
 test {
+    jvmArgs "-javaagent:${shadowJar.archiveFile.get()}=dynamic"
     useJUnitPlatform()
     systemProperty 'jdk.attach.allowAttachSelf', 'true' // tests attach agent to local VM
+    systemProperty 'aegis4j.projectRoot', "${project.rootDir.toString()}"
     forkEvery 1 // tests cannot undo class modifications to clean up after themselves
     testLogging {
         events 'passed', 'skipped', 'failed'
@@ -79,6 +81,7 @@ shadowJar {
 }
 
 tasks.build.dependsOn tasks.shadowJar
+tasks.test.dependsOn tasks.shadowJar
 
 /*
 publishing {
