@@ -2,7 +2,7 @@
 NODE_LIST=("dockerNode1" "dockerNode2" "dockerNode3")
 NETWORK_NAME=mininet
 CORDAPP_VERSION="4.10-SNAPSHOT"
-DOCKER_IMAGE_VERSION="corda-zulu-4.10-snapshot"
+DOCKER_IMAGE_VERSION="corda-zulu-4.11-009"
 
 mkdir cordapps
 rm -f cordapps/*
