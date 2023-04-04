@@ -284,7 +284,7 @@ pipeline {
 
         stage('Publish Release Candidate to Internal Repository') {
             when {
-                expression { return false }
+                expression { isReleaseCandidate }
             }
             steps {
                 withCredentials([
@@ -306,7 +306,7 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { return false }
+                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
             }
             steps {
                 withCredentials([
