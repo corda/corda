@@ -2,6 +2,7 @@
 
 package net.gredler.aegis4j;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
@@ -35,24 +36,33 @@ public final class AegisAgent {
      */
     public static void premain(String args, Instrumentation instr) {
         instrumentation = instr;
-        if(args.trim().equalsIgnoreCase("dynamic")) return;
         Path path = null;
         boolean started = false;
-        for(String arg: args.split(";")) {
-            if (started) throw new IllegalArgumentException("Aegis4j ERROR: parameter ordering means patching already started");
-            String normalisedaArg = arg.trim().toLowerCase();
-            if(normalisedaArg.isEmpty() || normalisedaArg.startsWith("block=") || normalisedaArg.startsWith("unblock=")) {
-                try {
-                    Patcher.start(instr, toBlockList(normalisedaArg, path), getModificationsInputStream(path));
-                    started = true;
-                } catch (IOException e) {
-                    throw new IllegalArgumentException("Aegis4j ERROR: Unable to process mods file", e);
+
+        if (args != null) {
+            if (args.trim().equalsIgnoreCase("dynamic")) return;
+            for (String arg : args.split(";")) {
+                if (started) throw new IllegalArgumentException("Aegis4j ERROR: parameter ordering means patching already started");
+                String normalisedaArg = arg.trim().toLowerCase();
+                if (normalisedaArg.isEmpty() || normalisedaArg.startsWith("block=") || normalisedaArg.startsWith("unblock=")) {
+                    try {
+                        Patcher.start(instr, toBlockList(normalisedaArg, path), getModificationsInputStream(path));
+                        started = true;
+                    } catch (IOException e) {
+                        throw new IllegalArgumentException("Aegis4j ERROR: Unable to process mods file", e);
+                    }
+                } else if (normalisedaArg.startsWith("path=")) {
+                    String pathString = arg.trim().substring(5);
+                    if (pathString.startsWith(File.pathSeparator)) {
+                        path = Paths.get(pathString);
+                    } else {
+                        Path agentJar = Paths.get(AegisAgent.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+                        path = agentJar.resolveSibling(pathString);
+                    }
+                    System.out.println("Aegis4j patching from " + path + " mods file");
+                } else {
+                    throw new IllegalArgumentException("Aegis4j ERROR: unrecognised parameters " + arg);
                 }
-            } else if (normalisedaArg.startsWith("path=")) {
-                path = Paths.get(arg.trim().substring(5));
-                System.out.println("Aegis4j patching from " + path + " mods file");
-            } else {
-                throw new IllegalArgumentException("Aegis4j ERROR: unrecognised parameters " + arg);
             }
         }
         if (!started) {
