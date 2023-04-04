@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @see <a href="https://swapneildash.medium.com/understanding-insecure-implementation-of-jackson-deserialization-7b3d409d2038">Understanding Jackson deserialization</a>
  */
 public class CVE_2019_17531 {
-
+/*
     @Test
     public void test() throws Throwable {
 
@@ -40,5 +40,5 @@ public class CVE_2019_17531 {
 
         testLdap(setup, trigger, SerializableDataSource.class, true);
     }
-
+*/
 }

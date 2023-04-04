@@ -2,15 +2,12 @@
 
 package net.gredler.aegis4j;
 
-import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.sun.tools.attach.VirtualMachine;
 
 /**
  * The main agent class. This class fails fast on any configuration errors, so that e.g. a typo
@@ -22,31 +19,6 @@ import com.sun.tools.attach.VirtualMachine;
  * @see <a href="https://github.com/nccgroup/log4j-jndi-be-gone">Alternate Java agent project</a>
  */
 public final class AegisAgent {
-
-    /**
-     * Supports easy dynamic attach via the command line.
-     *
-     * @param args the command line parameters (should contain the PID of the application to patch)
-     * @throws Exception if any error occurs during the attach process
-     */
-    public static void main(String[] args) throws Exception {
-
-        if (args.length < 1) {
-            throw new IllegalArgumentException("ERROR: Missing required argument: pid");
-        }
-
-        if (args.length > 2) {
-            throw new IllegalArgumentException("ERROR: Too many arguments provided");
-        }
-
-        String pid = args[0];
-        String options = args.length > 1 ? args[1] : "";
-
-        File jar = new File(AegisAgent.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-        VirtualMachine jvm = VirtualMachine.attach(pid);
-        jvm.loadAgent(jar.getAbsolutePath(), options);
-        jvm.detach();
-    }
 
     /**
      * Supports static attach (via -javaagent parameter at JVM startup).
@@ -77,8 +49,8 @@ public final class AegisAgent {
      */
     protected static Set< String > toBlockList(String args) {
 
-        Set< String > all = Set.of("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting", "jshell");
-        if (args == null || args.isBlank()) {
+        Set< String > all = new HashSet<String>(Arrays.<String>asList("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting", "jshell"));
+        if (args == null || args.trim().isEmpty()) {
             // no arguments provided by user
             return all;
         }
@@ -121,7 +93,7 @@ public final class AegisAgent {
         Set< String > features = Arrays.asList(values.split(","))
                                        .stream()
                                        .map(String::trim)
-                                       .collect(Collectors.toUnmodifiableSet());
+                                       .collect(Collectors.toSet());
 
         for (String feature : features) {
             if (!all.contains(feature)) {
@@ -129,6 +101,6 @@ public final class AegisAgent {
             }
         }
 
-        return features;
+        return Collections.unmodifiableSet(features);
     }
 }

@@ -13,13 +13,18 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
+import com.ea.agentloader.AgentLoader;
+import com.google.common.base.Charsets;
+import com.google.common.io.ByteStreams;
 import org.junit.jupiter.api.function.Executable;
 
-import com.sun.tools.attach.VirtualMachine;
 import com.unboundid.ldap.listener.InMemoryDirectoryServer;
 import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
 import com.unboundid.ldap.listener.InMemoryListenerConfig;
@@ -110,7 +115,7 @@ public final class TestUtils {
     private static byte[] toBytes(Class< ? > clazz) throws IOException {
         String path = clazz.getName().replace('.', '/') + ".class";
         InputStream stream = clazz.getClassLoader().getResourceAsStream(path);
-        return stream.readAllBytes();
+        return TestUtils.inputStreamReadAllBytes(stream);
     }
 
     public static byte[] toBytes(Object object) throws IOException {
@@ -125,9 +130,24 @@ public final class TestUtils {
      * Requires {@code -Djdk.attach.allowAttachSelf=true} on the command line.
      */
     public static void installAgent(String options) throws Exception {
+        /*
         long pid = ProcessHandle.current().pid();
         VirtualMachine jvm = VirtualMachine.attach(String.valueOf(pid));
         jvm.loadAgent(createAgentJar(), options);
         jvm.detach();
+        */
+        AgentLoader.loadAgentClass(AegisAgent.class.getName(), options);
+    }
+
+    public static byte[] inputStreamReadAllBytes(InputStream stream) throws IOException {
+        return ByteStreams.toByteArray(stream);
+    }
+
+    public static String fileReadString(Path path) throws IOException {
+        return new String(Files.readAllBytes(path), Charsets.UTF_8);
+    }
+
+    public static Set<String> setOf(String... args) {
+        return new HashSet<String>(Arrays.<String>asList(args));
     }
 }

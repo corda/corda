@@ -69,11 +69,6 @@ public final class Patcher implements ClassFileTransformer {
     }
 
     @Override
-    public byte[] transform(Module module, ClassLoader loader, String className, Class< ? > clazz, ProtectionDomain domain, byte[] classBytes) {
-        return transform(loader, className, clazz, domain, classBytes);
-    }
-
-    @Override
     public byte[] transform(ClassLoader loader, String className, Class< ? > clazz, ProtectionDomain domain, byte[] classBytes) {
         return patch(className.replace('/', '.'), classBytes);
     }
@@ -87,7 +82,7 @@ public final class Patcher implements ClassFileTransformer {
 
         ClassPool pool = new ClassPool();
         pool.appendClassPath(new ByteArrayClassPath(className, classBytes));
-        pool.appendClassPath(new LoaderClassPath(ClassLoader.getPlatformClassLoader()));
+        pool.appendClassPath(new LoaderClassPath(ClassLoader.getSystemClassLoader()));
         pool.appendClassPath(new LoaderClassPath(getClass().getClassLoader()));
 
         try {
@@ -138,7 +133,7 @@ public final class Patcher implements ClassFileTransformer {
         }
 
         return Collections.unmodifiableMap(new TreeMap<>(
-            mods.stream().collect(Collectors.groupingBy(mod -> mod.className, Collectors.toUnmodifiableList()))
+            mods.stream().collect(Collectors.groupingBy(mod -> mod.className, Collectors.toList()))
         ));
     }
 

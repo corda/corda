@@ -4,7 +4,7 @@ plugins {
     id 'eclipse'
     id 'signing'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '7.1.0'
+    id 'com.github.johnrengelman.shadow' //version '7.1.0'
 }
 
 group = 'net.gredler'
@@ -30,18 +30,20 @@ dependencies {
     testImplementation('log4j:apache-log4j-extras:1.2.17') {
         exclude group: 'log4j', module: 'log4j'
     }
+    testImplementation group: 'com.ea.agentloader', name: 'ea-agent-loader', version: '1.0.3'
+    testImplementation "com.google.guava:guava:$guava_version"
 }
 
-sourceCompatibility = 11
-targetCompatibility = 11
+sourceCompatibility = 8
+targetCompatibility = 8
 
 compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 javadoc.options.encoding = 'UTF-8'
 
 java {
-    withJavadocJar()
-    withSourcesJar()
+    //withJavadocJar()
+    //withSourcesJar()
 }
 
 test {
@@ -78,6 +80,7 @@ shadowJar {
 
 tasks.build.dependsOn tasks.shadowJar
 
+/*
 publishing {
     publications {
         mavenJava(MavenPublication) { publication ->
@@ -124,3 +127,4 @@ publishing {
 signing {
     sign publishing.publications.mavenJava
 }
+*/

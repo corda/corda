@@ -35,19 +35,6 @@ public class AegisAgentCommandLineTest {
         testStaticAttach(jar, "block=serialization",   "Java serialization blocked by aegis4j");
     }
 
-    @Test
-    public void testDynamicAttach() throws Exception {
-        String jar = TestUtils.createAgentJar();
-        //                     PID    CONFIG                   EXTRA   EXPECTED APP ERROR                       EXPECTED AGENT ERROR
-        testDynamicAttach(jar, true,  "block=jndi",            false,  "",                                      "");
-        testDynamicAttach(jar, true,  "unblock=serialization", false,  "",                                      "");
-        testDynamicAttach(jar, true,  "block=serialization",   false,  "Java serialization blocked by aegis4j", "");
-        testDynamicAttach(jar, true,  "",                      false,  "Java serialization blocked by aegis4j", "");
-        testDynamicAttach(jar, false, "block=serialization",   false,  "",                                      "Invalid process identifier");
-        testDynamicAttach(jar, false, "",                      false,  "",                                      "ERROR: Missing required argument: pid");
-        testDynamicAttach(jar, true,  "block=serialization",   true,   "",                                      "ERROR: Too many arguments provided");
-    }
-
     private static void testStaticAttach(String jar, String config, String expectedErr) throws Exception {
 
         String main = Main.class.getName();
@@ -56,39 +43,11 @@ public class AegisAgentCommandLineTest {
         process.waitFor(5, TimeUnit.SECONDS);
         assertFalse(process.isAlive());
 
-        String out = new String(process.getInputStream().readAllBytes(), UTF_8);
-        String err = new String(process.getErrorStream().readAllBytes(), UTF_8);
+        String out = new String(TestUtils.inputStreamReadAllBytes(process.getInputStream()), UTF_8);
+        String err = new String(TestUtils.inputStreamReadAllBytes(process.getErrorStream()), UTF_8);
         String summary = "OUT: " + out + "\nERR: " + err;
         assertEquals(expectedErr.isEmpty(), out.endsWith("done" + System.lineSeparator()), summary);
         assertEmptyOrContains(expectedErr, err, summary);
-    }
-
-    private static void testDynamicAttach(String jar, boolean addPid, String config, boolean addThirdParam, String expectedErr, String expectedAttachErr) throws Exception {
-
-        String main = Main.class.getName();
-        String cp = System.getProperty("java.class.path");
-        Process process = new ProcessBuilder("java", "-cp", cp, main).start();
-
-        List< String > cmd2 = new ArrayList<>();
-        cmd2.addAll(Arrays.asList("java", "-jar", jar));
-        if (addPid) cmd2.add(String.valueOf(process.pid()));
-        if (!config.isEmpty()) cmd2.add(config);
-        if (addThirdParam) cmd2.add("foo");
-        Process process2 = new ProcessBuilder(cmd2).start();
-
-        process.waitFor(5, TimeUnit.SECONDS);
-        process2.waitFor(5, TimeUnit.SECONDS);
-        assertFalse(process.isAlive());
-        assertFalse(process2.isAlive());
-
-        String out = new String(process.getInputStream().readAllBytes(), UTF_8);
-        String err = new String(process.getErrorStream().readAllBytes(), UTF_8);
-        String out2 = new String(process2.getInputStream().readAllBytes(), UTF_8);
-        String err2 = new String(process2.getErrorStream().readAllBytes(), UTF_8);
-        String summary = "OUT 1: " + out + "\nERR 1: " + err + "\nOUT 2: " + out2 + "\nERR 2: " + err2;
-        assertEquals(expectedErr.isEmpty(), out.endsWith("done" + System.lineSeparator()), summary);
-        assertEmptyOrContains(expectedErr, err, summary);
-        assertEmptyOrContains(expectedAttachErr, err2, summary);
     }
 
     private static void assertEmptyOrContains(String expected, String actual, String message) {
