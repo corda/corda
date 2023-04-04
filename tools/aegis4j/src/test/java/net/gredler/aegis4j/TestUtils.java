@@ -20,7 +20,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
-import com.ea.agentloader.AgentLoader;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
 import org.junit.jupiter.api.function.Executable;
@@ -136,7 +135,8 @@ public final class TestUtils {
         jvm.loadAgent(createAgentJar(), options);
         jvm.detach();
         */
-        AgentLoader.loadAgentClass(AegisAgent.class.getName(), options);
+        //AgentLoader.loadAgentClass(AegisAgent.class.getName(), options);
+        AegisAgent.dynamicLoad(options);
     }
 
     public static byte[] inputStreamReadAllBytes(InputStream stream) throws IOException {

@@ -30,7 +30,7 @@ dependencies {
     testImplementation('log4j:apache-log4j-extras:1.2.17') {
         exclude group: 'log4j', module: 'log4j'
     }
-    testImplementation group: 'com.ea.agentloader', name: 'ea-agent-loader', version: '1.0.3'
+    // testImplementation group: 'com.ea.agentloader', name: 'ea-agent-loader', version: '1.0.3'
     testImplementation "com.google.guava:guava:$guava_version"
 }
 

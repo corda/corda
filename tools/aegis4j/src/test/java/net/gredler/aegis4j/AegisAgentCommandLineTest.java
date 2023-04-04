@@ -33,6 +33,8 @@ public class AegisAgentCommandLineTest {
         testStaticAttach(jar, "block=jndi",            "");
         testStaticAttach(jar, "unblock=serialization", "");
         testStaticAttach(jar, "block=serialization",   "Java serialization blocked by aegis4j");
+        testStaticAttach(jar, "block=serialization;",   "Java serialization blocked by aegis4j");
+        testStaticAttach(jar, ";block=serialization",   "ERROR: argument ordering means patching already started");
     }
 
     private static void testStaticAttach(String jar, String config, String expectedErr) throws Exception {

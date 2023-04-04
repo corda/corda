@@ -2,11 +2,20 @@
 
 package net.gredler.aegis4j;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -20,24 +29,48 @@ import java.util.stream.Collectors;
  */
 public final class AegisAgent {
 
+    private static Instrumentation instrumentation;
+
     /**
      * Supports static attach (via -javaagent parameter at JVM startup).
      *
-     * @param args agent arguments
+     * @param args  agent arguments
      * @param instr instrumentation services
      */
     public static void premain(String args, Instrumentation instr) {
-        Patcher.start(instr, toBlockList(args));
+        instrumentation = instr;
+        if(args.trim().equalsIgnoreCase("dynamic")) return;
+        Path path = null;
+        boolean started = false;
+        for(String arg: args.split(";")) {
+            if(started) throw new IllegalArgumentException("ERROR: argument ordering means patching already started");
+            String normalisedaArg = arg.trim().toLowerCase();
+            if(normalisedaArg.isEmpty() || normalisedaArg.startsWith("block=") || normalisedaArg.startsWith("unblock=")) {
+                try {
+                    Patcher.start(instr, toBlockList(normalisedaArg, path), getModificationsInputStream(path));
+                    started = true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else if(normalisedaArg.startsWith("path=")) {
+                path= Paths.get(arg.trim().substring(5));
+            }
+        }
+        if(!started) throw new IllegalArgumentException("ERROR: patching not started");
     }
 
     /**
      * Supports dynamic attach (via the com.sun.tools.attach.* API).
      *
-     * @param args agent arguments
+     * @param args  agent arguments
      * @param instr instrumentation services
      */
     public static void agentmain(String args, Instrumentation instr) {
-        Patcher.start(instr, toBlockList(args));
+        premain(args, instr);
+    }
+
+    static void dynamicLoad(String args) {
+        agentmain(args, instrumentation);
     }
 
     /**
@@ -47,9 +80,8 @@ public final class AegisAgent {
      * @param args agent arguments
      * @return the block list derived from the agent arguments
      */
-    protected static Set< String > toBlockList(String args) {
-
-        Set< String > all = new HashSet<String>(Arrays.<String>asList("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting", "jshell"));
+    protected static Set<String> toBlockList(String args, Path path) {
+        Set<String> all = loadFeaturesFromModifications(path);
         if (args == null || args.trim().isEmpty()) {
             // no arguments provided by user
             return all;
@@ -70,8 +102,8 @@ public final class AegisAgent {
             return split(value, all);
         } else if ("unblock".equals(name)) {
             // user is modifying the default block list
-            Set< String > block = new HashSet<>(all);
-            Set< String > unblock = split(value, all);
+            Set<String> block = new HashSet<>(all);
+            Set<String> unblock = split(value, all);
             block.removeAll(unblock);
             return Collections.unmodifiableSet(block);
         } else {
@@ -84,16 +116,15 @@ public final class AegisAgent {
      * Splits the specified comma-delimited feature list, validating that all specified features are valid.
      *
      * @param values the comma-delimited feature list
-     * @param all the list of valid features to validate against
+     * @param all    the list of valid features to validate against
      * @return the feature list, split into individual (validated) feature names
      * @throws IllegalArgumentException if any unrecognized feature names are included in the comma-delimited feature list
      */
-    private static Set< String > split(String values, Set< String > all) {
-
-        Set< String > features = Arrays.asList(values.split(","))
-                                       .stream()
-                                       .map(String::trim)
-                                       .collect(Collectors.toSet());
+    private static Set<String> split(String values, Set<String> all) {
+        Set<String> features = Arrays.asList(values.split(","))
+                .stream()
+                .map(String::trim)
+                .collect(Collectors.toSet());
 
         for (String feature : features) {
             if (!all.contains(feature)) {
@@ -102,5 +133,26 @@ public final class AegisAgent {
         }
 
         return Collections.unmodifiableSet(features);
+    }
+
+    private static Set<String> loadFeaturesFromModifications(Path path) {
+        Properties props = new Properties();
+        try {
+            props.load(getModificationsInputStream(path));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Set<String> features = new HashSet<String>();
+        for (String key : props.stringPropertyNames()) {
+            int first = key.indexOf('.');
+            String feature = key.substring(0, first).toLowerCase();
+            features.add(feature);
+        }
+        return Collections.unmodifiableSet(features);
+    }
+
+    public static InputStream getModificationsInputStream(Path path) throws IOException {
+        if(path != null) return path.toUri().toURL().openStream();
+        return AegisAgent.class.getResourceAsStream("mods.properties");
     }
 }

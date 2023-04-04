@@ -3,6 +3,7 @@
 package net.gredler.aegis4j;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
@@ -31,15 +32,15 @@ import javassist.NotFoundException;
  */
 public final class Patcher implements ClassFileTransformer {
 
-    private final Map< String, List< Modification > > modifications; // class name -> modifications
+    private final Map<String, List<Modification>> modifications; // class name -> modifications
 
     /**
      * Creates a new class patcher which blocks the specified features.
      *
      * @param block the features to block
      */
-    public Patcher(Set< String > block) {
-        modifications = loadModifications(block);
+    public Patcher(Set<String> block, InputStream inputStream) {
+        modifications = loadModifications(inputStream, block);
     }
 
     /**
@@ -48,16 +49,15 @@ public final class Patcher implements ClassFileTransformer {
      * @param instr the instrumentation instance to add a new patcher to
      * @param block the features to block
      */
-    public static void start(Instrumentation instr, Set< String > block) {
-
+    public static void start(Instrumentation instr, Set<String> block, InputStream inputStream) {
         System.out.println("Aegis4j patching starting");
-        Patcher patcher = new Patcher(block);
+        Patcher patcher = new Patcher(block ,inputStream);
         instr.addTransformer(patcher, true);
 
         for (String className : patcher.modifications.keySet()) {
             try {
                 System.out.println("Aegis4j patching " + className + "...");
-                Class< ? > clazz = Class.forName(className);
+                Class<?> clazz = Class.forName(className);
                 instr.retransformClasses(clazz);
             } catch (ClassNotFoundException | UnmodifiableClassException e) {
                 e.printStackTrace();
@@ -69,13 +69,12 @@ public final class Patcher implements ClassFileTransformer {
     }
 
     @Override
-    public byte[] transform(ClassLoader loader, String className, Class< ? > clazz, ProtectionDomain domain, byte[] classBytes) {
+    public byte[] transform(ClassLoader loader, String className, Class<?> clazz, ProtectionDomain domain, byte[] classBytes) {
         return patch(className.replace('/', '.'), classBytes);
     }
 
     private byte[] patch(String className, byte[] classBytes) {
-
-        List< Modification > mods = modifications.get(className);
+        List<Modification> mods = modifications.get(className);
         if (mods == null || mods.isEmpty()) {
             return null;
         }
@@ -109,16 +108,15 @@ public final class Patcher implements ClassFileTransformer {
         }
     }
 
-    private static Map< String, List< Modification > > loadModifications(Set< String > block) {
-
+    private static Map<String, List<Modification>> loadModifications(InputStream inputStream, Set<String> block) {
         Properties props = new Properties();
         try {
-            props.load(AegisAgent.class.getResourceAsStream("mods.properties"));
+            props.load(inputStream);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        List< Modification > mods = new ArrayList<>();
+        List<Modification> mods = new ArrayList<>();
         for (String key : props.stringPropertyNames()) {
             int first = key.indexOf('.');
             int last = key.lastIndexOf('.');
@@ -133,7 +131,7 @@ public final class Patcher implements ClassFileTransformer {
         }
 
         return Collections.unmodifiableMap(new TreeMap<>(
-            mods.stream().collect(Collectors.groupingBy(mod -> mod.className, Collectors.toList()))
+                mods.stream().collect(Collectors.groupingBy(mod -> mod.className, Collectors.toList()))
         ));
     }
 
