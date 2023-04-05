@@ -36,41 +36,45 @@ public final class AegisAgent {
      */
     public static void premain(String args, Instrumentation instr) {
         instrumentation = instr;
-        Path path = null;
-        boolean started = false;
-
-        if (args != null) {
-            if (args.trim().equalsIgnoreCase("dynamic")) return;
-            for (String arg : args.split(";")) {
-                if (started) throw new IllegalArgumentException("Aegis4j ERROR: parameter ordering means patching already started");
-                String normalisedaArg = arg.trim().toLowerCase();
-                if (normalisedaArg.isEmpty() || normalisedaArg.startsWith("block=") || normalisedaArg.startsWith("unblock=")) {
-                    try {
-                        Patcher.start(instr, toBlockList(normalisedaArg, path), getModificationsInputStream(path));
+        try {
+            boolean started = false;
+            Properties props = null;
+            if (args != null) {
+                if (args.trim().equalsIgnoreCase("dynamic")) return;
+                for (String arg : args.split(";")) {
+                    if (started) throw new IllegalArgumentException("Aegis4j ERROR: parameter ordering means patching already started");
+                    String normalisedaArg = arg.trim().toLowerCase();
+                    if (normalisedaArg.isEmpty() || normalisedaArg.startsWith("block=") || normalisedaArg.startsWith("unblock=")) {
+                        Patcher.start(instr, toBlockList(normalisedaArg, props), getModificationsProperties(props));
                         started = true;
-                    } catch (IOException e) {
-                        throw new IllegalArgumentException("Aegis4j ERROR: Unable to process mods file", e);
-                    }
-                } else if (normalisedaArg.startsWith("path=")) {
-                    String pathString = arg.trim().substring(5);
-                    if (pathString.startsWith(File.pathSeparator)) {
-                        path = Paths.get(pathString);
+                    } else if (normalisedaArg.startsWith("path=")) {
+                        String pathString = arg.trim().substring(5);
+                        Path path;
+                        if (pathString.startsWith(File.pathSeparator)) {
+                            path = Paths.get(pathString);
+                        } else {
+                            Path agentJar = Paths.get(AegisAgent.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+                            path = agentJar.resolveSibling(pathString);
+                        }
+                        InputStream in = path.toUri().toURL().openStream();
+                        props = readPropertiesFromStream(in);
+                        System.out.println("Aegis4j patching from " + path + " mods file");
+                    } else if (normalisedaArg.startsWith("resource=")) {
+                        String pathString = arg.trim().substring(9);
+                        InputStream in = ClassLoader.getSystemResourceAsStream(pathString);
+                        if (in == null) throw new IOException("Unable to load mods resource " + pathString);
+                        props = readPropertiesFromStream(in);
+                        System.out.println("Aegis4j patching from " + pathString + " mods resource");
                     } else {
-                        Path agentJar = Paths.get(AegisAgent.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-                        path = agentJar.resolveSibling(pathString);
+                        throw new IllegalArgumentException("Aegis4j ERROR: unrecognised parameters " + arg);
                     }
-                    System.out.println("Aegis4j patching from " + path + " mods file");
-                } else {
-                    throw new IllegalArgumentException("Aegis4j ERROR: unrecognised parameters " + arg);
                 }
             }
-        }
-        if (!started) {
-            try {
-                Patcher.start(instr, toBlockList("", path), getModificationsInputStream(path));
-            } catch (IOException e) {
-                throw new IllegalArgumentException("Aegis4j ERROR: Unable to process mods file", e);
+            if (!started) {
+                Patcher.start(instr, toBlockList("", props), getModificationsProperties(props));
             }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Aegis4j ERROR: Unable to process mods file", e);
         }
     }
 
@@ -95,8 +99,8 @@ public final class AegisAgent {
      * @param args agent arguments
      * @return the block list derived from the agent arguments
      */
-    protected static Set<String> toBlockList(String args, Path path) {
-        Set<String> all = loadFeaturesFromModifications(path);
+    protected static Set<String> toBlockList(String args, Properties override) throws IOException {
+        Set<String> all = loadFeaturesFromModifications(override);
         if (args == null || args.trim().isEmpty()) {
             // no arguments provided by user
             return all;
@@ -150,13 +154,8 @@ public final class AegisAgent {
         return Collections.unmodifiableSet(features);
     }
 
-    private static Set<String> loadFeaturesFromModifications(Path path) {
-        Properties props = new Properties();
-        try {
-            props.load(getModificationsInputStream(path));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private static Set<String> loadFeaturesFromModifications(Properties override) throws IOException {
+        Properties props = getModificationsProperties(override);
         Set<String> features = new HashSet<String>();
         for (String key : props.stringPropertyNames()) {
             int first = key.indexOf('.');
@@ -166,8 +165,19 @@ public final class AegisAgent {
         return Collections.unmodifiableSet(features);
     }
 
-    public static InputStream getModificationsInputStream(Path path) throws IOException {
-        if(path != null) return path.toUri().toURL().openStream();
-        return AegisAgent.class.getResourceAsStream("mods.properties");
+    public static Properties getModificationsProperties(Properties props) throws IOException {
+        if (props != null) return props;
+        return readPropertiesFromStream(Patcher.class.getResourceAsStream("mods.properties"));
+    }
+
+    public static Properties readPropertiesFromStream(InputStream stream) throws IOException {
+        if (stream == null) return null;
+        try {
+            Properties props = new Properties();
+            props.load(stream);
+            return props;
+        } finally {
+            stream.close();
+        }
     }
 }

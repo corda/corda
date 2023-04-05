@@ -51,7 +51,7 @@ public class AegisAgentTest {
     }
 
     @Test
-    public void testParseBlockList() {
+    public void testParseBlockList() throws IOException {
         assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "scripting"), toBlockList("", null));
         assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "scripting"), toBlockList("   ", null));
         assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "scripting"), toBlockList("unblock=serialization", null));

@@ -12,7 +12,6 @@ import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
@@ -40,8 +39,8 @@ public final class Patcher implements ClassFileTransformer {
      *
      * @param block the features to block
      */
-    public Patcher(Set<String> block, InputStream inputStream) {
-        modifications = loadModifications(inputStream, block);
+    public Patcher(Set<String> block, Properties props) {
+        modifications = loadModifications(props, block);
     }
 
     /**
@@ -50,10 +49,10 @@ public final class Patcher implements ClassFileTransformer {
      * @param instr the instrumentation instance to add a new patcher to
      * @param block the features to block
      */
-    public static void start(Instrumentation instr, Set<String> block, InputStream inputStream) {
+    public static void start(Instrumentation instr, Set<String> block, Properties props) {
         System.out.println("Aegis4j patching starting");
         if (patcher != null) instr.removeTransformer(patcher);
-        patcher = new Patcher(block, inputStream);
+        patcher = new Patcher(block, props);
         instr.addTransformer(patcher, true);
 
         for (String className : patcher.modifications.keySet()) {
@@ -112,22 +111,15 @@ public final class Patcher implements ClassFileTransformer {
         }
     }
 
-    private static Map<String, List<Modification>> loadModifications(InputStream inputStream, Set<String> block) {
-        Properties props = new Properties();
-        try {
-            props.load(inputStream);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+    private static Map<String, List<Modification>> loadModifications(Properties props, Set<String> block) {
         List<Modification> mods = new ArrayList<>();
         for (String key : props.stringPropertyNames()) {
             int first = key.indexOf('.');
             int last = key.lastIndexOf('.');
             String feature = key.substring(0, first).toLowerCase();
             //if (block.contains(feature)) {
-                String className = key.substring(first + 1, last);
-                String methodName = key.substring(last + 1);
+            String className = key.substring(first + 1, last);
+            String methodName = key.substring(last + 1);
             String newBody = props.getProperty(key);
             Modification mod = new Modification(className, methodName, newBody, block.contains(feature));
                 mods.add(mod);
