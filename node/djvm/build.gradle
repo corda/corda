@@ -1,4 +1,4 @@
-apply from: '../../deterministic.gradle'
+//apply from: '../../deterministic.gradle'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'java-library'
 

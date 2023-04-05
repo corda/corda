@@ -1,8 +1,7 @@
 import com.r3.testing.DistributeTestsBy
 import com.r3.testing.PodLogLevel
 
-import static org.gradle.api.JavaVersion.VERSION_11
-import static org.gradle.api.JavaVersion.VERSION_1_8
+import static org.gradle.api.JavaVersion.VERSION_17
 
 buildscript {
     // For sharing constants between builds
@@ -227,8 +226,8 @@ if (ext.versionSuffix != ""){
 apply plugin: 'java'
 
 logger.lifecycle("Java version: {}", JavaVersion.current())
-sourceCompatibility = VERSION_1_8
-targetCompatibility = VERSION_11
+sourceCompatibility = VERSION_17
+targetCompatibility = VERSION_17
 logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
 logger.lifecycle("Java target compatibility: {}", targetCompatibility)
 logger.lifecycle("Quasar version: {}", quasar_version)
@@ -264,12 +263,12 @@ allprojects {
             nugetconfEnabled = false
         }
     }
-    sourceCompatibility = VERSION_1_8
-    targetCompatibility = VERSION_11
+    sourceCompatibility = VERSION_17
+    targetCompatibility = VERSION_17
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
-        toolVersion = "0.8.3"
+        toolVersion = "0.8.7"
     }
 
     tasks.withType(JavaCompile).configureEach {
@@ -288,7 +287,7 @@ allprojects {
         kotlinOptions {
             languageVersion = "1.8"
             apiVersion = "1.8"
-            jvmTarget = VERSION_1_8
+            jvmTarget = VERSION_17
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=all-compatibility']
             allWarningsAsErrors = warnings_as_errors

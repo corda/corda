@@ -8,6 +8,7 @@ dependencies {
 
     implementation "org.hibernate:hibernate-core:$hibernate_version"
     implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
     implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 

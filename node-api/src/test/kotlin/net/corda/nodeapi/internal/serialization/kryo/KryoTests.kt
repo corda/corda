@@ -182,7 +182,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test(timeout=300_000)
 	fun `InputStream serialisation`() {
-        val rubbish = ByteArray(12345) { (it * it * 0.12345).toByte() }
+        val rubbish = ByteArray(12345) { (it * it * 0.12345).toInt().toByte() }
         val readRubbishStream: InputStream = rubbish.inputStream().checkpointSerialize(context).checkpointDeserialize(context)
         for (i in 0..12344) {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())

@@ -2,22 +2,17 @@ import net.corda.gradle.jarfilter.JarFilterTask
 import net.corda.gradle.jarfilter.MetaFixerTask
 import proguard.gradle.ProGuardTask
 
-import static org.gradle.api.JavaVersion.VERSION_1_8
-
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
 }
-apply from: "${rootProject.projectDir}/deterministic.gradle"
+//apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Corda core (deterministic)'
 
 evaluationDependsOn(":core")
-
-// required by DJVM and Avian JVM (for running inside the SGX enclave) which only supports Java 8.
-targetCompatibility = VERSION_1_8
 
 def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()

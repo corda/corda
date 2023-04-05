@@ -4,7 +4,7 @@ plugins {
     id 'java-library'
     id 'idea'
 }
-apply from: "${rootProject.projectDir}/deterministic.gradle"
+//apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Deserializers for the DJVM'
 

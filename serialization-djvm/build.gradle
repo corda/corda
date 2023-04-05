@@ -8,7 +8,7 @@ plugins {
 // The DJVM only supports Java 8 byte-code, so the tests must
 // be compiled for Java 8. The main artifact is only compiled
 // for Java 8 because it belongs to "Open Core".
-apply from: "${rootProject.projectDir}/java8.gradle"
+//apply from: "${rootProject.projectDir}/java8.gradle"
 
 description 'Serialization support for the DJVM'
 

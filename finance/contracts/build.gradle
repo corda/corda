@@ -5,7 +5,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
-apply from: "${rootProject.projectDir}/java8.gradle"
+//apply from: "${rootProject.projectDir}/java8.gradle"
 
 description 'Corda finance module - contracts'
 
@@ -16,9 +16,11 @@ dependencies {
     implementation "org.hibernate:hibernate-core:$hibernate_version"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
-//    testImplementation project(':test-utils')
-//    testImplementation project(':node-driver')
     testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':finance:workflows')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+    testImplementation project(':node-driver')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 

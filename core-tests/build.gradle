@@ -41,13 +41,12 @@ sourceSets {
 
 processSmokeTestResources {
     // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
-//    from(project(':node:capsule').tasks['buildCordaJAR']) {
-//        rename 'corda-(.*)', 'corda.jar'
-//    }
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
+        rename 'corda-(.*)', 'corda.jar'
+    }
 }
 
 dependencies {
-
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
@@ -83,6 +82,11 @@ dependencies {
     testImplementation "com.google.guava:guava:$guava_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestImplementation project(":core")
+    smokeTestImplementation project(":node-api")
+    smokeTestImplementation project(":client:rpc")
+    smokeTestImplementation "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    smokeTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     smokeTestImplementation "junit:junit:$junit_version"
 

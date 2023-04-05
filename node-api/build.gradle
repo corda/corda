@@ -11,7 +11,6 @@ dependencies {
     implementation project(':common-logging')
     implementation project(":common-validation")
 
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
@@ -61,6 +60,8 @@ dependencies {
     // JDK11: required by Quasar at run-time
     runtimeOnly "com.esotericsoftware:kryo:$kryo_version"
 
+    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 

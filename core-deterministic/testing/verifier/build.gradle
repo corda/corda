@@ -3,7 +3,7 @@ plugins {
     id 'com.jfrog.artifactory'
     id 'idea'
 }
-apply from: "${rootProject.projectDir}/deterministic.gradle"
+//apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Test utilities for deterministic contract verification'
 
