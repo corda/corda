@@ -2,11 +2,14 @@
 
 package net.gredler.aegis4j;
 
-import static net.gredler.aegis4j.TestUtils.OWNED;
-import static net.gredler.aegis4j.TestUtils.installAgent;
-import static net.gredler.aegis4j.TestUtils.toBytes;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.apache.commons.collections4.FunctorException;
+import org.apache.commons.collections4.Transformer;
+import org.apache.commons.collections4.comparators.TransformingComparator;
+import org.apache.commons.collections4.functors.ChainedTransformer;
+import org.apache.commons.collections4.functors.ConstantTransformer;
+import org.apache.commons.collections4.functors.InvokerTransformer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
@@ -15,14 +18,11 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.PriorityQueue;
 
-import jdk.nashorn.internal.ir.annotations.Ignore;
-import org.apache.commons.collections4.FunctorException;
-import org.apache.commons.collections4.Transformer;
-import org.apache.commons.collections4.comparators.TransformingComparator;
-import org.apache.commons.collections4.functors.ChainedTransformer;
-import org.apache.commons.collections4.functors.ConstantTransformer;
-import org.apache.commons.collections4.functors.InvokerTransformer;
-import org.junit.jupiter.api.Test;
+import static net.gredler.aegis4j.TestUtils.OWNED;
+import static net.gredler.aegis4j.TestUtils.installAgent;
+import static net.gredler.aegis4j.TestUtils.toBytes;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests mitigation of CVE-2015-7501, both at the process execution level and at the serialization level.
@@ -35,10 +35,13 @@ import org.junit.jupiter.api.Test;
  * @see <a href="https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/payloads/CommonsCollections6.java">Exploit POC</a>
  */
 public class CVE_2015_7501 {
+    @AfterAll
+    public static void uninstallAgent() throws Exception {
+        TestUtils.installAgent("unblock=unsafe,serialization");
+    }
 
-    /*
     @Test
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public void test() throws Exception {
 
         Path temp = Files.createTempFile("aegis4j-", ".tmp");
@@ -79,7 +82,7 @@ public class CVE_2015_7501 {
         assertEquals("", TestUtils.fileReadString(temp), path);
 
         // install aegis4j agent
-        installAgent(null);
+        installAgent("unblock=unsafe");
 
         // trigger again directly, verify not owned
         try {
@@ -103,5 +106,4 @@ public class CVE_2015_7501 {
             assertEquals("Java deserialization blocked by aegis4j", e.getMessage());
         }
     }
-    */
 }

@@ -2,9 +2,6 @@
 
 package net.gredler.aegis4j;
 
-import static net.gredler.aegis4j.TestUtils.testLdap;
-
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,6 +15,8 @@ import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static net.gredler.aegis4j.TestUtils.testLdap;
+
 /**
  * Tests mitigation of CVE-2021-44228 (a.k.a. Log4Shell). During setup we simply configure log4j to
  * perform basic logging, and set up our LDAP server to serve serialized {@link SerializablePojo}
@@ -28,8 +27,6 @@ import org.junit.jupiter.api.function.Executable;
  * @see <a href="https://research.nccgroup.com/2021/12/12/log4j-jndi-be-gone-a-simple-mitigation-for-cve-2021-44228/">log4j-jndi-be-gone</a>
  */
 public class CVE_2021_44228 {
-
-    /*
     @Test
     public void test() throws Throwable {
 
@@ -64,5 +61,4 @@ public class CVE_2021_44228 {
 
         Configurator.initialize(builder.build());
     }
-    */
 }

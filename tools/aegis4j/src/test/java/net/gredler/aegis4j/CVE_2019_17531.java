@@ -2,13 +2,12 @@
 
 package net.gredler.aegis4j;
 
-import static net.gredler.aegis4j.TestUtils.testLdap;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.receivers.db.JNDIConnectionSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static net.gredler.aegis4j.TestUtils.testLdap;
 
 /**
  * Tests mitigation of CVE-2019-17531. No setup is required besides starting the LDAP server that
@@ -23,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @see <a href="https://swapneildash.medium.com/understanding-insecure-implementation-of-jackson-deserialization-7b3d409d2038">Understanding Jackson deserialization</a>
  */
 public class CVE_2019_17531 {
-/*
     @Test
     public void test() throws Throwable {
 
@@ -40,5 +38,4 @@ public class CVE_2019_17531 {
 
         testLdap(setup, trigger, SerializableDataSource.class, true);
     }
-*/
 }

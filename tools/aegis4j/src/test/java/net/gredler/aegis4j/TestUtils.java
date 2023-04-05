@@ -2,9 +2,15 @@
 
 package net.gredler.aegis4j;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.google.common.base.Charsets;
+import com.google.common.io.ByteStreams;
+import com.unboundid.ldap.listener.InMemoryDirectoryServer;
+import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
+import com.unboundid.ldap.listener.InMemoryListenerConfig;
+import com.unboundid.ldap.sdk.DN;
+import com.unboundid.ldap.sdk.Entry;
+import com.unboundid.ldap.sdk.LDAPException;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,16 +26,9 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.ByteStreams;
-import org.junit.jupiter.api.function.Executable;
-
-import com.unboundid.ldap.listener.InMemoryDirectoryServer;
-import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;
-import com.unboundid.ldap.listener.InMemoryListenerConfig;
-import com.unboundid.ldap.sdk.DN;
-import com.unboundid.ldap.sdk.Entry;
-import com.unboundid.ldap.sdk.LDAPException;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Base test class which makes it easy to set up an embedded LDAP server, trigger an LDAP-related
@@ -53,7 +52,7 @@ public final class TestUtils {
         System.clearProperty(OWNED);
         assertNull(System.getProperty(OWNED));
 
-        installAgent(null);
+        installAgent("unblock=unsafe");
 
         try {
             trigger.execute();
@@ -66,6 +65,7 @@ public final class TestUtils {
         }
 
         ldapServer.shutDown(true);
+        TestUtils.installAgent("unblock=unsafe,serialization");
     }
 
     // https://docs.oracle.com/javase/jndi/tutorial/objects/representation/ldap.html
