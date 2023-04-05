@@ -52,7 +52,7 @@ public final class TestUtils {
         System.clearProperty(OWNED);
         assertNull(System.getProperty(OWNED));
 
-        installAgent("unblock=unsafe");
+        installAgent(null);
 
         try {
             trigger.execute();
@@ -65,7 +65,7 @@ public final class TestUtils {
         }
 
         ldapServer.shutDown(true);
-        TestUtils.installAgent("unblock=unsafe,serialization");
+        TestUtils.installAgent("unblock=serialization");
     }
 
     // https://docs.oracle.com/javase/jndi/tutorial/objects/representation/ldap.html

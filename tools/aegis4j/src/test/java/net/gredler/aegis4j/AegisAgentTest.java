@@ -42,23 +42,23 @@ public class AegisAgentTest {
 
     @BeforeAll
     public static void installAgent() throws Exception {
-        TestUtils.installAgent("unblock=unsafe");
+        TestUtils.installAgent(null);
     }
 
     @AfterAll
     public static void uninstallAgent() throws Exception {
-        TestUtils.installAgent("unblock=unsafe,serialization");
+        TestUtils.installAgent("unblock=serialization");
     }
 
     @Test
     public void testParseBlockList() {
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting"), toBlockList("", null));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "unsafe", "scripting"), toBlockList("   ", null));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "unsafe", "scripting"), toBlockList("unblock=serialization", null));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting"), toBlockList("unblock=serialization,process", null));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting"), toBlockList("UNbloCk=SERIALIZATION,Process", null));
-        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "unsafe", "scripting"), toBlockList(" unblock\t=    serialization      , process\t", null));
-        assertEquals(TestUtils.setOf(), toBlockList("unblock=jndi,rmi,process,httpserver,serialization,unsafe,scripting", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "scripting"), toBlockList("", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "serialization", "scripting"), toBlockList("   ", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "process", "httpserver", "scripting"), toBlockList("unblock=serialization", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "scripting"), toBlockList("unblock=serialization,process", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "scripting"), toBlockList("UNbloCk=SERIALIZATION,Process", null));
+        assertEquals(TestUtils.setOf("jndi", "rmi", "httpserver", "scripting"), toBlockList(" unblock\t=    serialization      , process\t", null));
+        assertEquals(TestUtils.setOf(), toBlockList("unblock=jndi,rmi,process,httpserver,serialization,scripting", null));
         assertEquals(TestUtils.setOf("jndi"), toBlockList("block=jndi", null));
         assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("block=jndi,rmi,process", null));
         assertEquals(TestUtils.setOf("jndi", "rmi", "process"), toBlockList("block = jndi\t, rmi ,\nprocess", null));
@@ -168,114 +168,6 @@ public class AegisAgentTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         assertThrowsRE(() -> new ObjectOutputStream(baos), "Java serialization blocked by aegis4j");
     }
-
-    /*
-    @Test
-    public void testUnsafe() throws Exception {
-
-        Field f = Unsafe.class.getDeclaredField("theUnsafe");
-        f.setAccessible(true);
-        Unsafe unsafe = (Unsafe) f.get(null);
-
-        String msg = "Unsafe blocked by aegis4j";
-
-        assertThrowsRE(() -> Unsafe.getUnsafe(), msg);
-        assertThrowsRE(() -> unsafe.addressSize(), msg);
-        assertThrowsRE(() -> unsafe.allocateInstance(null), msg);
-        assertThrowsRE(() -> unsafe.allocateMemory(1), msg);
-        assertThrowsRE(() -> unsafe.arrayBaseOffset(null), msg);
-        assertThrowsRE(() -> unsafe.arrayIndexScale(null), msg);
-        assertThrowsRE(() -> unsafe.compareAndSwapInt(null, 0, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.compareAndSwapLong(null, 0, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.compareAndSwapObject(null, 0, null, null), msg);
-        assertThrowsRE(() -> unsafe.copyMemory(0, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.copyMemory(null, 0, null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.ensureClassInitialized(null), msg);
-        assertThrowsRE(() -> unsafe.freeMemory(0), msg);
-        assertThrowsRE(() -> unsafe.fullFence(), msg);
-        assertThrowsRE(() -> unsafe.getAddress(0), msg);
-        assertThrowsRE(() -> unsafe.getAndAddInt(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.getAndAddLong(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.getAndSetInt(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.getAndSetLong(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.getAndSetObject(null, 0, null), msg);
-        assertThrowsRE(() -> unsafe.getBoolean(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getBooleanVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getByte(0), msg);
-        assertThrowsRE(() -> unsafe.getByte(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getByteVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getChar(0), msg);
-        assertThrowsRE(() -> unsafe.getChar(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getCharVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getDouble(0), msg);
-        assertThrowsRE(() -> unsafe.getDouble(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getDoubleVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getFloat(0), msg);
-        assertThrowsRE(() -> unsafe.getFloat(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getFloatVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getInt(0), msg);
-        assertThrowsRE(() -> unsafe.getInt(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getIntVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getLoadAverage(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getLong(0), msg);
-        assertThrowsRE(() -> unsafe.getLong(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getLongVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getObject(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getObjectVolatile(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getShort(0), msg);
-        assertThrowsRE(() -> unsafe.getShort(null, 0), msg);
-        assertThrowsRE(() -> unsafe.getShortVolatile(null, 0), msg);
-        //assertThrowsRE(() -> unsafe.invokeCleaner(null), msg);
-        assertThrowsRE(() -> unsafe.loadFence(), msg);
-        assertThrowsRE(() -> unsafe.objectFieldOffset(null), msg);
-        assertThrowsRE(() -> unsafe.pageSize(), msg);
-        assertThrowsRE(() -> unsafe.park(false, 0), msg);
-        assertThrowsRE(() -> unsafe.putAddress(0, 0), msg);
-        assertThrowsRE(() -> unsafe.putBoolean(null, 0, false), msg);
-        assertThrowsRE(() -> unsafe.putBooleanVolatile(null, 0, false), msg);
-        assertThrowsRE(() -> unsafe.putByte(0, (byte) 0), msg);
-        assertThrowsRE(() -> unsafe.putByte(null, 0, (byte) 0), msg);
-        assertThrowsRE(() -> unsafe.putByteVolatile(null, 0, (byte) 0), msg);
-        assertThrowsRE(() -> unsafe.putChar(0, 'x'), msg);
-        assertThrowsRE(() -> unsafe.putChar(null, 0, 'x'), msg);
-        assertThrowsRE(() -> unsafe.putCharVolatile(null, 0, 'x'), msg);
-        assertThrowsRE(() -> unsafe.putDouble(0, 0), msg);
-        assertThrowsRE(() -> unsafe.putDouble(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putDoubleVolatile(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putFloat(0, 0), msg);
-        assertThrowsRE(() -> unsafe.putFloat(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putFloatVolatile(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putInt(0, 0), msg);
-        assertThrowsRE(() -> unsafe.putInt(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putIntVolatile(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putLong(0, 0), msg);
-        assertThrowsRE(() -> unsafe.putLong(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putLongVolatile(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putObject(null, 0, null), msg);
-        assertThrowsRE(() -> unsafe.putObjectVolatile(null, 0, null), msg);
-        assertThrowsRE(() -> unsafe.putOrderedInt(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putOrderedLong(null, 0, 0), msg);
-        assertThrowsRE(() -> unsafe.putOrderedObject(null, 0, null), msg);
-        assertThrowsRE(() -> unsafe.putShort(0, (short) 0), msg);
-        assertThrowsRE(() -> unsafe.putShort(null, 0, (short) 0), msg);
-        assertThrowsRE(() -> unsafe.putShortVolatile(null, 0, (short) 0), msg);
-        assertThrowsRE(() -> unsafe.reallocateMemory(0, 0), msg);
-        assertThrowsRE(() -> unsafe.setMemory(0, 0, (byte) 0), msg);
-        assertThrowsRE(() -> unsafe.setMemory(null, 0, 0, (byte) 0), msg);
-        assertThrowsRE(() -> unsafe.shouldBeInitialized(null), msg);
-        //assertThrowsRE(() -> unsafe.staticFieldBase(null), msg);
-        assertThrowsRE(() -> unsafe.staticFieldOffset(null), msg);
-        assertThrowsRE(() -> unsafe.storeFence(), msg);
-        assertThrowsRE(() -> unsafe.throwException(null), msg);
-        assertThrowsRE(() -> unsafe.unpark(null), msg);
-
-        // Spring should still work with Unsafe disabled
-        SpringObjenesis so = new SpringObjenesis();
-        assertInstanceOf(SerializablePojo.class, so.newInstance(SerializablePojo.class));
-        assertInstanceOf(TestUtils.class, so.newInstance(TestUtils.class));
-        assertInstanceOf(LocalDate.class, so.newInstance(LocalDate.class));
-    }
-    */
 
     private static void assertThrowsNICE(Executable task) {
         assertThrows(task, NoInitialContextException.class, "JNDI context creation blocked by aegis4j");

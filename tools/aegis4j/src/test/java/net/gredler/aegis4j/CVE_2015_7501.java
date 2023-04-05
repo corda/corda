@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class CVE_2015_7501 {
     @AfterAll
     public static void uninstallAgent() throws Exception {
-        TestUtils.installAgent("unblock=unsafe,serialization");
+        TestUtils.installAgent("unblock=serialization");
     }
 
     @Test
@@ -82,7 +82,7 @@ public class CVE_2015_7501 {
         assertEquals("", TestUtils.fileReadString(temp), path);
 
         // install aegis4j agent
-        installAgent("unblock=unsafe");
+        installAgent(null);
 
         // trigger again directly, verify not owned
         try {

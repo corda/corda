@@ -14,13 +14,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class AegisAgentMonitoringTest {
     @AfterAll
     public static void uninstallAgent() throws Exception {
-        TestUtils.installAgent("unblock=unsafe,serialization");
+        TestUtils.installAgent("unblock=serialization");
     }
 
     @Test
     public void testSystemProperty() throws Exception {
         assertNull(System.getProperty("aegis4j.blocked.features"));
-        TestUtils.installAgent("unblock=jndi,rmi,unsafe,scripting");
+        TestUtils.installAgent("unblock=jndi,rmi,scripting");
         assertEquals("serialization,process,httpserver", System.getProperty("aegis4j.blocked.features"));
     }
 }
