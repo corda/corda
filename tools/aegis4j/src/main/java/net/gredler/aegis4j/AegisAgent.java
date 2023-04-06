@@ -36,6 +36,14 @@ public final class AegisAgent {
      */
     public static void premain(String args, Instrumentation instr) {
         instrumentation = instr;
+        String argsProperty = System.getProperty("aegis4j.additional.args");
+        if (argsProperty != null) {
+            if (args == null || args.trim().isEmpty()) {
+                args = argsProperty;
+            } else {
+                args += ";" + argsProperty;
+            }
+        }
         try {
             boolean started = false;
             Properties props = null;

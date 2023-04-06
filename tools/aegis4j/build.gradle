@@ -42,8 +42,6 @@ compileTestJava.options.encoding = 'UTF-8'
 javadoc.options.encoding = 'UTF-8'
 
 java {
-    //withJavadocJar()
-    //withSourcesJar()
 }
 
 test {
@@ -83,51 +81,3 @@ shadowJar {
 tasks.build.dependsOn tasks.shadowJar
 tasks.test.dependsOn tasks.shadowJar
 
-/*
-publishing {
-    publications {
-        mavenJava(MavenPublication) { publication ->
-            project.shadow.component(publication)
-            artifact sourcesJar
-            artifact javadocJar
-            pom {
-                groupId = 'net.gredler'
-                name = 'aegis4j'
-                url = 'https://github.com/gredler/aegis4j'
-                description = 'A Java agent which disables dangerous rarely-used runtime features.'
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'gredler'
-                        name = 'Daniel Gredler'
-                        email = 'daniel.gredler@gmail.com'
-                    }
-                }
-                scm {
-                    url = 'https://github.com/gredler/aegis4j'
-                    connection = 'scm:git:git://github.com/gredler/aegis4j.git'
-                    developerConnection = 'scm:git:ssh:git@github.com:gredler/aegis4j.git'
-                }
-            }
-        }
-    }
-    repositories {
-        maven {
-            url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
-            credentials {
-                username = project.hasProperty('ossrhUsername') ? ossrhUsername : 'unknown'
-                password = project.hasProperty('ossrhPassword') ? ossrhPassword : 'unknown'
-            }
-        }
-    }
-}
-
-signing {
-    sign publishing.publications.mavenJava
-}
-*/
