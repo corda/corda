@@ -32,6 +32,7 @@ dependencies {
     }
     // testImplementation group: 'com.ea.agentloader', name: 'ea-agent-loader', version: '1.0.3'
     testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation "org.yaml:snakeyaml:1.33"
 }
 
 sourceCompatibility = 8

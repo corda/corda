@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Tests {@link AegisAgent} monitoring via system properties.
+ * Tests {@link AegisAgent} extra args via system properties.
  */
 public class AegisAgentSystemPropertyTest {
     @AfterAll
