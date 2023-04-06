@@ -23,6 +23,10 @@ dependencies {
     implementation "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
+    testImplementation project(':finance:workflows')
+    testImplementation project(':node-api')
+    testImplementation project(':test-common')
+    testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')
     testImplementation project(path: ':core', configuration: 'testArtifacts')
 

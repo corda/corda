@@ -191,6 +191,7 @@ dependencies {
     // Unit testing helpers.
     testImplementation "org.assertj:assertj-core:${assertj_version}"
     testImplementation project(':node-driver')
+    testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')
     testImplementation project(':client:jfx')
     testImplementation project(':finance:contracts')
@@ -233,9 +234,14 @@ dependencies {
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets
+    testImplementation "org.hamcrest:hamcrest-library:2.1"
     testImplementation "org.eclipse.jetty:jetty-servlet:${jetty_version}"
     testImplementation "org.eclipse.jetty:jetty-webapp:${jetty_version}"
     testImplementation "javax.servlet:javax.servlet-api:${servlet_version}"
+    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "com.google.jimfs:jimfs:1.1"
+    testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
+    testImplementation "com.natpryce:hamkrest:$hamkrest_version"
 
     // Jersey for JAX-RS implementation for use in Jetty
     testImplementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"

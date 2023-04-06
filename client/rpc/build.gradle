@@ -94,6 +94,7 @@ dependencies {
     smokeTestCompile project(':finance:contracts')
     smokeTestCompile project(':finance:workflows')
     smokeTestCompile project(':testing:cordapps:sleeping')
+    smokeTestCompile "io.reactivex:rxjava:$rxjava_version"
     smokeTestCompile "commons-io:commons-io:$commons_io_version"
     smokeTestCompile "org.hamcrest:hamcrest-library:2.1"
     smokeTestCompile "com.google.guava:guava-testlib:$guava_version"

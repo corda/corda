@@ -19,7 +19,10 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.hamcrest.CoreMatchers
 import org.hamcrest.Matcher
-import org.hamcrest.Matchers.*
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.anyOf
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.number.OrderingComparison.greaterThan
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -121,7 +124,7 @@ class IdentityServiceToStringShortMigrationTest {
 
         listOfNamesWithoutPkHash.forEach {
             //the only time an identity name does not have a PK_HASH is if there are multiple identities associated with that name
-            Assert.assertThat(groupedByNameIdentities[it]?.size, `is`(greaterThan(1)))
+            assertThat(groupedByNameIdentities[it]?.size!!, greaterThan(1))
         }
     }
 }

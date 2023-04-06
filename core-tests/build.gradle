@@ -55,12 +55,21 @@ dependencies {
 
     testImplementation "commons-fileupload:commons-fileupload:$fileupload_version"
     testImplementation project(":core")
+    testImplementation project(":node")
+    testImplementation project(":node-api")
+    testImplementation project(":client:rpc")
+    testImplementation project(":serialization")
+    testImplementation project(":common-configuration-parsing")
     testImplementation project(":finance:contracts")
     testImplementation project(":finance:workflows")
+    testImplementation project(":core-test-utils")
+    testImplementation project(":test-utils")
     testImplementation project(path: ':core', configuration: 'testArtifacts')
     
     // Guava: Google test library (collections test suite)
     testImplementation "com.google.guava:guava-testlib:$guava_version"
+    testImplementation "com.google.jimfs:jimfs:1.1"
+    testImplementation group: "com.typesafe", name: "config", version: typesafe_config_version
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testImplementation project(":node-driver")
