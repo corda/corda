@@ -49,7 +49,7 @@ public final class Patcher implements ClassFileTransformer {
      * @param instr the instrumentation instance to add a new patcher to
      * @param block the features to block
      */
-    public static void start(Instrumentation instr, Set<String> block, Properties props) {
+    public static void start(Instrumentation instr, Set<String> block, Properties props) throws IOException {
         System.out.println("Aegis4j patching starting");
         if (patcher != null) instr.removeTransformer(patcher);
         patcher = new Patcher(block, props);
@@ -57,11 +57,14 @@ public final class Patcher implements ClassFileTransformer {
 
         for (String className : patcher.modifications.keySet()) {
             try {
-                System.out.println("Aegis4j patching " + className + "...");
+                System.out.print("Aegis4j patching " + className + "...");
                 Class<?> clazz = Class.forName(className);
                 instr.retransformClasses(clazz);
-            } catch (ClassNotFoundException | UnmodifiableClassException e) {
-                e.printStackTrace();
+                System.out.println();
+            } catch (ClassNotFoundException e) {
+                System.out.println("not present.");
+            } catch (UnmodifiableClassException e) {
+                throw new IOException("Problems transforming class", e);
             }
         }
 
