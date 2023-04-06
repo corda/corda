@@ -35,6 +35,8 @@ dependencies {
     testImplementation "org.yaml:snakeyaml:1.33"
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testImplementation "io.netty:netty:3.10.5.Final"
+    testImplementation "com.h2database:h2:$h2_version"
+    testImplementation "javax.servlet:javax.servlet-api:${servlet_version}" // Needed to load H2 Web Console
 }
 
 sourceCompatibility = 8

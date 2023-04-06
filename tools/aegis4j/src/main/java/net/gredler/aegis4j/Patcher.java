@@ -63,6 +63,8 @@ public final class Patcher implements ClassFileTransformer {
                 System.out.println();
             } catch (ClassNotFoundException e) {
                 System.out.println("not present.");
+            } catch (NoClassDefFoundError e) {
+                System.out.println("not present.");
             } catch (UnmodifiableClassException e) {
                 throw new IOException("Problems transforming class", e);
             }
@@ -109,7 +111,6 @@ public final class Patcher implements ClassFileTransformer {
             }
             return clazz.toBytecode();
         } catch (NotFoundException | CannotCompileException | IOException e) {
-            e.printStackTrace();
             return null;
         }
     }
