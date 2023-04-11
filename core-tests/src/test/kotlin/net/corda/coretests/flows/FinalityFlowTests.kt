@@ -182,10 +182,8 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
-            val (_, txnDsStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
-            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusAlice)
-            val (_, txnDsStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
-            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusBob)
+            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
         }
     }
 
@@ -228,8 +226,7 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
-            val (_, txnDsStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
-            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusAlice)
+            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
         }
     }

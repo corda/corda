@@ -228,6 +228,12 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         }
     }
 
+    override fun removeUnnotarisedTransaction(id: SecureHash) {
+        database.transaction {
+            validatedTransactions.removeUnnotarisedTransaction(id)
+        }
+    }
+
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
 
     /**

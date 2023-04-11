@@ -350,8 +350,16 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#notariseOrRecord", flowLogic = this) {
             return if (needsNotarySignature(transaction)) {
                 progressTracker.currentStep = NOTARISING
-                val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
-                transaction + notarySignatures
+                try {
+                    val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
+                    transaction + notarySignatures
+                }
+                catch (e: NotaryException) {
+                    if (e.error is NotaryError.Conflict) {
+                        (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
+                    }
+                    throw e
+                }
             } else {
                 logger.info("No need to notarise this transaction. Recording locally.")
                 recordTransactionLocally(transaction)
@@ -433,12 +441,17 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             }
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
             logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
-            val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
-                    .unwrap { it }
-            serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                logger.debug { "Peer received notarised signature." }
-                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
-                logger.info("Peer finalised transaction with notary signature.")
+            try {
+                val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
+                        .unwrap { it }
+                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
+                    logger.debug { "Peer received notarised signature." }
+                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
+                    logger.info("Peer finalised transaction with notary signature.")
+                }
+            } catch (fe: UnexpectedFlowEndException) {
+                (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
+                throw fe
             }
         } else {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordTransactions", flowLogic = this) {

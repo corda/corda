@@ -279,7 +279,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     criteriaBuilder.equal(root.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG)
             ))
             if (session.createQuery(delete).executeUpdate() != 0) {
-                txStorage.content.clear(id)
+                txStorage.locked {
+                    txStorage.content.clear(id)
+                    txStorage.content[id]
+                }
                 true
             } else false
         }
