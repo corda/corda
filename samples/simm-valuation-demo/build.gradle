@@ -68,16 +68,20 @@ dependencies {
     implementation "com.opengamma.strata:strata-math:$strata_version"
 
     // Test dependencies
+    testImplementation project(':core')
     testImplementation project(':node-driver')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {

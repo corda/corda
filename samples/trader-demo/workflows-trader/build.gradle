@@ -10,8 +10,12 @@ dependencies {
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
 
+    testImplementation project(':node')
     testImplementation project(':node-driver')
-    
+    testImplementation project(':test-utils')
+    testImplementation project(':core-test-utils')
+
+    testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 

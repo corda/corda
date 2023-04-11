@@ -60,7 +60,8 @@ dependencies {
         // and we don't need another one.
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
     }
-    
+
+    testImplementation "io.reactivex:rxjava:$rxjava_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
