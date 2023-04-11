@@ -34,6 +34,7 @@ import net.corda.testing.node.internal.network.CrlServer.Companion.EMPTY_CRL
 import net.corda.testing.node.internal.network.CrlServer.Companion.FORBIDDEN_CRL
 import net.corda.testing.node.internal.network.CrlServer.Companion.NODE_CRL
 import net.corda.testing.node.internal.network.CrlServer.Companion.withCrlDistPoint
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
@@ -495,7 +496,9 @@ class CertificateRevocationListNodeTests {
         val queueName = P2P_PREFIX + "Test"
         val (artemisServer, artemisClient) = createArtemisServerAndClient(crlCheckSoftFail, crlCheckArtemisServer, nodeCrlDistPoint, sslHandshakeTimeout)
         artemisServer.use {
-            artemisClient.started!!.session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+            artemisClient.started!!.session.createQueue(
+                    QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true)
+            )
 
             val nodeCert = createAMQPClient(serverPort, true, nodeCrlDistPoint)
             if (revokedNodeCert) {

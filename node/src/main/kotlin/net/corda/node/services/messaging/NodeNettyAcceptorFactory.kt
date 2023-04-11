@@ -9,6 +9,7 @@ import net.corda.core.internal.declaredField
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import org.apache.activemq.artemis.api.core.BaseInterceptor
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptor
+import org.apache.activemq.artemis.core.server.balancing.RedirectHandler
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection
 import org.apache.activemq.artemis.spi.core.protocol.ProtocolManager
 import org.apache.activemq.artemis.spi.core.remoting.Acceptor
@@ -29,7 +30,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                 listener: ServerConnectionLifeCycleListener?,
                                 threadPool: Executor,
                                 scheduledThreadPool: ScheduledExecutorService?,
-                                protocolMap: Map<String, ProtocolManager<BaseInterceptor<*>>>?): Acceptor {
+                                protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?): Acceptor {
         val failureExecutor = OrderedExecutor(threadPool)
         return NodeNettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
     }
@@ -41,7 +42,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                     listener: ServerConnectionLifeCycleListener?,
                                     scheduledThreadPool: ScheduledExecutorService?,
                                     failureExecutor: Executor,
-                                    protocolMap: Map<String, ProtocolManager<BaseInterceptor<*>>>?) :
+                                    protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?) :
             NettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
     {
         override fun start() {
@@ -55,8 +56,8 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
             }
         }
 
-        override fun getSslHandler(alloc: ByteBufAllocator?): SslHandler {
-            val sslHandler = super.getSslHandler(alloc)
+        override fun getSslHandler(alloc: ByteBufAllocator?, peerHost: String?, peerPort: Int): SslHandler {
+            val sslHandler = super.getSslHandler(alloc, peerHost, peerPort)
             val handshakeTimeout = configuration[ArtemisTcpTransport.SSL_HANDSHAKE_TIMEOUT_NAME] as Duration?
             if (handshakeTimeout != null) {
                 sslHandler.handshakeTimeoutMillis = handshakeTimeout.toMillis()
