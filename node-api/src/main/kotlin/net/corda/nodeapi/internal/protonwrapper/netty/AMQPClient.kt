@@ -26,6 +26,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
 import java.net.InetSocketAddress
+import java.security.cert.CertPathValidatorException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -53,7 +54,7 @@ data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostA
  * otherwise it creates a self-contained Netty thraed pool and socket objects.
  * Once connected it can accept application packets to send via the AMQP protocol.
  */
-class AMQPClient(val targets: List<NetworkHostAndPort>,
+class AMQPClient(private val targets: List<NetworkHostAndPort>,
                  val allowedRemoteLegalNames: Set<CordaX500Name>,
                  private val configuration: AMQPConfiguration,
                  private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
@@ -82,6 +83,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
     private var retryInterval = MIN_RETRY_INTERVAL
+    private val revocationChecker = configuration.revocationConfig.createPKIXRevocationChecker()
     private val badCertTargets = mutableSetOf<NetworkHostAndPort>()
     @Volatile
     private var amqpActive = false
@@ -109,24 +111,22 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         retryInterval = min(MAX_RETRY_INTERVAL, retryInterval * BACKOFF_MULTIPLIER)
     }
 
-    private val connectListener = object : ChannelFutureListener {
-        override fun operationComplete(future: ChannelFuture) {
-            amqpActive = false
-            if (!future.isSuccess) {
-                log.info("Failed to connect to $currentTarget", future.cause())
+    private val connectListener = ChannelFutureListener { future ->
+        amqpActive = false
+        if (!future.isSuccess) {
+            log.info("Failed to connect to $currentTarget", future.cause())
 
-                if (started) {
-                    workerGroup?.schedule({
-                        nextTarget()
-                        restart()
-                    }, retryInterval, TimeUnit.MILLISECONDS)
-                }
-            } else {
-                // Connection established successfully
-                clientChannel = future.channel()
-                clientChannel?.closeFuture()?.addListener(closeListener)
-                log.info("Connected to $currentTarget, Local address: $localAddressString")
+            if (started) {
+                workerGroup?.schedule({
+                    nextTarget()
+                    restart()
+                }, retryInterval, TimeUnit.MILLISECONDS)
             }
+        } else {
+            // Connection established successfully
+            clientChannel = future.channel()
+            clientChannel?.closeFuture()?.addListener(closeListener)
+            log.info("Connected to $currentTarget, Local address: $localAddressString")
         }
     }
 
@@ -152,7 +152,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         init {
             keyManagerFactory.init(conf.keyStore)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, parent.revocationChecker))
         }
 
         @Suppress("ComplexMethod")
@@ -196,12 +196,13 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             val handler = if (parent.configuration.useOpenSsl) {
                 createClientOpenSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
             } else {
-                createClientSslHelper(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
+                createClientSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
             }
-            handler.handshakeTimeoutMillis = conf.sslHandshakeTimeout
+            handler.handshakeTimeoutMillis = conf.sslHandshakeTimeout.toMillis()
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
-            amqpChannelHandler = AMQPChannelHandler(false,
+            amqpChannelHandler = AMQPChannelHandler(
+                    false,
                     parent.allowedRemoteLegalNames,
                     // Single entry, key can be anything.
                     mapOf(DEFAULT to wrappedKeyManagerFactory),
@@ -209,36 +210,40 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                     conf.password,
                     conf.trace,
                     false,
-                    onOpen = { _, change ->
-                        parent.run {
-                            amqpActive = true
-                            retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
-                            _onConnection.onNext(change)
-                        }
-                    },
-                    onClose = { _, change ->
-                        if (parent.amqpChannelHandler == amqpChannelHandler) {
-                            parent.run {
-                                _onConnection.onNext(change)
-                                if (change.badCert) {
-                                    log.error("Blocking future connection attempts to $target due to bad certificate on endpoint")
-                                    badCertTargets += target
-                                }
-
-                                if (started && amqpActive) {
-                                    log.debug { "Scheduling restart of $currentTarget (AMQP active)" }
-                                    workerGroup?.schedule({
-                                        nextTarget()
-                                        restart()
-                                    }, retryInterval, TimeUnit.MILLISECONDS)
-                                }
-                                amqpActive = false
-                            }
-                        }
-                    },
-                    onReceive = { rcv -> parent._onReceive.onNext(rcv) })
+                    onOpen = { _, change -> onChannelOpen(change) },
+                    onClose = { _, change -> onChannelClose(change, target) },
+                    onReceive = parent._onReceive::onNext
+            )
             parent.amqpChannelHandler = amqpChannelHandler
             pipeline.addLast(amqpChannelHandler)
+        }
+
+        private fun onChannelOpen(change: ConnectionChange) {
+            parent.run {
+                amqpActive = true
+                retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
+                _onConnection.onNext(change)
+            }
+        }
+
+        private fun onChannelClose(change: ConnectionChange, target: NetworkHostAndPort) {
+            if (parent.amqpChannelHandler != amqpChannelHandler) return
+            parent.run {
+                _onConnection.onNext(change)
+                if (change.badCert) {
+                    log.error("Blocking future connection attempts to $target due to bad certificate on endpoint")
+                    badCertTargets += target
+                }
+
+                if (started && amqpActive) {
+                    log.debug { "Scheduling restart of $currentTarget (AMQP active)" }
+                    workerGroup?.schedule({
+                        nextTarget()
+                        restart()
+                    }, retryInterval, TimeUnit.MILLISECONDS)
+                }
+                amqpActive = false
+            }
         }
     }
 
@@ -323,4 +328,6 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private val _onConnection = PublishSubject.create<ConnectionChange>().toSerialized()
     val onConnection: Observable<ConnectionChange>
         get() = _onConnection
+
+    val softFailExceptions: List<CertPathValidatorException> get() = revocationChecker.softFailExceptions
 }
