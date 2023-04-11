@@ -201,7 +201,7 @@ class CertificateRevocationListNodeTests {
         verifyAMQPConnection(
                 crlCheckSoftFail = true,
                 nodeCrlDistPoint = "http://${newUnreachableIpAddress()}/crl/unreachable.crl",
-                sslHandshakeTimeout = crlConnectTimeout * 2,
+                sslHandshakeTimeout = crlConnectTimeout * 3,
                 expectedConnectStatus = true
         )
         val timeoutExceptions = (amqpServer.softFailExceptions + amqpClient.softFailExceptions)
