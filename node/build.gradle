@@ -26,7 +26,7 @@ evaluationDependsOn(':node:djvm')
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
     
     slowIntegrationTestCompile.extendsFrom testImplementation
@@ -219,10 +219,14 @@ dependencies {
     //Picocli for command line interface
     implementation "info.picocli:picocli:$picocli_version"
 
+    integrationTestImplementation project(":testing:cordapps:dbfailure:dbfcontracts")
+
     // Integration test helpers
-    integrationTestCompile "junit:junit:$junit_version"
-    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
-    integrationTestCompile "org.apache.qpid:qpid-jms-client:${protonj_version}"
+    integrationTestImplementation "de.javakaffee:kryo-serializers:$kryo_serializer_version"
+    integrationTestImplementation "junit:junit:$junit_version"
+    integrationTestImplementation "org.assertj:assertj-core:${assertj_version}"
+    integrationTestImplementation "org.apache.qpid:qpid-jms-client:${protonj_version}"
+    integrationTestImplementation "net.i2p.crypto:eddsa:$eddsa_version"
 
     // BFT-Smart dependencies
     implementation 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
@@ -272,7 +276,7 @@ dependencies {
     slowIntegrationTestRuntimeOnly configurations.runtimeOnly
     slowIntegrationTestRuntimeOnly configurations.testRuntimeOnly
 
-    integrationTestCompile(project(":testing:cordapps:missingmigration"))
+    integrationTestImplementation project(":testing:cordapps:missingmigration")
 
     testImplementation project(':testing:cordapps:dbfailure:dbfworkflows')
 }

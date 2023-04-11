@@ -6,7 +6,7 @@ apply plugin: 'com.jfrog.artifactory'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
@@ -44,8 +44,15 @@ dependencies {
 
     // Integration test helpers
     testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    integrationTestImplementation project(":client:jackson")
     integrationTestImplementation "junit:junit:$junit_version"
     integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    integrationTestImplementation "info.picocli:picocli:$picocli_version"
+    integrationTestImplementation "com.google.guava:guava:$guava_version"
+    integrationTestImplementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    integrationTestImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    integrationTestImplementation 'org.hamcrest:hamcrest-library:2.1'
 
     integrationTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

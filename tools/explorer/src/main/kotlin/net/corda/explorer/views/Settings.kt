@@ -61,9 +61,9 @@ class Settings : CordaView() {
             clientPane.isDisable = true
         }
         val disableProperty = clientPane.disableProperty()
-        save.visibleProperty().bind(disableProperty.map { !it })
-        editCancel.textProperty().bind(disableProperty.map { if (!it) "Cancel" else "Edit" })
-        editCancel.graphicProperty().bind(disableProperty
-                .map { if (!it) FontAwesomeIconView(FontAwesomeIcon.TIMES) else FontAwesomeIconView(FontAwesomeIcon.EDIT) })
+//        save.visibleProperty().bind(disableProperty.map { !it })
+//        editCancel.textProperty().bind(disableProperty.map { if (!it) "Cancel" else "Edit" })
+//        editCancel.graphicProperty().bind(disableProperty
+//                .map { if (!it) FontAwesomeIconView(FontAwesomeIcon.TIMES) else FontAwesomeIconView(FontAwesomeIcon.EDIT) })
     }
 }

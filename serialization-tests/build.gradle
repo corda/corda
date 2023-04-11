@@ -6,10 +6,22 @@ description 'Corda serialization tests'
 dependencies {
     testImplementation project(":serialization")
     testImplementation project(path: ':serialization', configuration: 'testArtifacts')
+    testImplementation project(':node')
     testImplementation project(':node-driver')
+    testImplementation project(':node-api')
+    testImplementation project(':finance:contracts')
+    testImplementation project(':client:rpc')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+
+    // Bouncy castle support needed for X509 certificate manipulation
+    testImplementation "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    testImplementation "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
+    testImplementation "com.esotericsoftware:kryo:$kryo_version"
+    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
@@ -17,6 +29,7 @@ dependencies {
 
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testImplementation "org.apache.commons:commons-lang3:3.9"
 }
 
 configurations {

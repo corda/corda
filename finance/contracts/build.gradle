@@ -17,6 +17,8 @@ dependencies {
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':node')
+    testImplementation project(':node-api')
     testImplementation project(':finance:workflows')
     testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')

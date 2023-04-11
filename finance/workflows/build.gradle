@@ -23,7 +23,7 @@ sourceSets {
 
 configurations {
     testArtifacts.extendsFrom testRuntimeOnlyClasspath
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
@@ -36,12 +36,17 @@ dependencies {
     
     cordapp project(':finance:contracts')
 
-    testImplementation project(':test-utils')
-    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':node')
+    testImplementation project(':node-api')
     testImplementation project(':node-driver')
+    testImplementation project(':serialization')
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
+    testImplementation "org.apache.qpid:proton-j:$protonj_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

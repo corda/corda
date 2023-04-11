@@ -20,8 +20,12 @@ dependencies {
 
     implementation "com.google.guava:guava:$guava_version"
 
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
+    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
 
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

@@ -28,6 +28,8 @@ dependencies {
     testImplementation "com.google.guava:guava-testlib:$guava_version"
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
+    testImplementation project(":node")
+    testImplementation project(":node-api")
     testImplementation project(":node-driver")
     testImplementation project(":core-test-utils")
     testImplementation project(':finance:contracts')
@@ -35,6 +37,8 @@ dependencies {
 
     // AssertJ: for fluent assertions for testing
     testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "com.natpryce:hamkrest:$hamkrest_version"
+    testImplementation "io.reactivex:rxjava:$rxjava_version"
 }
 
 jar {

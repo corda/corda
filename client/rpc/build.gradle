@@ -7,7 +7,7 @@ description 'Corda client RPC modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
     smokeTestCompile.extendsFrom compile
@@ -82,10 +82,22 @@ dependencies {
     // Unit testing helpers.
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testImplementation "org.assertj:assertj-core:${assertj_version}"
+    testImplementation "io.dropwizard.metrics:metrics-core:$metrics_version"
 
+    testImplementation project(':node')
     testImplementation project(':node-driver')
     testImplementation project(':client:mock')
-    integrationTestCompile project(path: ':node-api', configuration: 'testArtifacts')
+    testImplementation project(':core-test-utils')
+
+
+    integrationTestImplementation project(path: ':node-api', configuration: 'testArtifacts')
+    integrationTestImplementation project(':common-configuration-parsing')
+    integrationTestImplementation project(':finance:contracts')
+    integrationTestImplementation project(':finance:workflows')
+    integrationTestImplementation project(':test-utils')
+
+    integrationTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
+    integrationTestImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':core')

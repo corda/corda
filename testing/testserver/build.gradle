@@ -5,7 +5,7 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Corda node web server'
 
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
@@ -65,7 +65,8 @@ dependencies {
 
     implementation "io.netty:netty-transport-native-unix-common:4.1.77.Final.jar"
 
-    integrationTestCompile project(':node-driver')
+
+    testImplementation project(":core-test-utils")
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
@@ -73,6 +74,8 @@ dependencies {
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
+    integrationTestImplementation project(':node-driver')
 }
 
 task integrationTest(type: Test) {

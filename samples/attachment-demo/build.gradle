@@ -21,7 +21,7 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
@@ -65,7 +65,13 @@ dependencies {
 
     testImplementation "org.assertj:assertj-core:$assertj_version"
 
-    integrationTestCompile project(':testing:testserver')
+    integrationTestImplementation project(':core')
+    integrationTestImplementation project(':node')
+    integrationTestImplementation project(':client:rpc')
+    integrationTestImplementation project(':core-test-utils')
+    integrationTestImplementation project(':testing:testserver')
+
+    integrationTestImplementation "junit:junit:$junit_version"
 }
 
 task integrationTest(type: Test, dependsOn: []) {

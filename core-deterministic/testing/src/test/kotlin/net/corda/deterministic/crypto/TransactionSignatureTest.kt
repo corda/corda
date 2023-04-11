@@ -5,6 +5,7 @@ import net.corda.deterministic.KeyStoreProvider
 import net.corda.deterministic.CheatingSecurityProvider
 import net.corda.deterministic.verifier.LocalSerializationRule
 import org.junit.*
+import org.junit.Test
 import org.junit.rules.RuleChain
 import java.security.*
 import kotlin.test.*

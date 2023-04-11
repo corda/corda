@@ -12,7 +12,7 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
@@ -20,6 +20,8 @@ dependencies {
 //    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation project(':core')
     implementation project(':node-api')
+
+    testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')
     testImplementation project(':node-driver')
 

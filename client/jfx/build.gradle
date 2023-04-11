@@ -20,7 +20,7 @@ description 'Corda client JavaFX modules'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testImplementation
+    integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
@@ -75,8 +75,8 @@ dependencies {
     testImplementation project(':test-utils')
 
     // Integration test helpers
-    integrationTestCompile "junit:junit:$junit_version"
-    integrationTestCompile project(':node-driver')
+    integrationTestImplementation "junit:junit:$junit_version"
+    integrationTestImplementation project(':node-driver')
 }
 
 task integrationTest(type: Test) {
