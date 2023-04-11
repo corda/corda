@@ -282,6 +282,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 txStorage.locked {
                     txStorage.content.clear(id)
                     txStorage.content[id]
+                    logger.debug { "Un-notarised transaction $id has been removed." }
                 }
                 true
             } else false
