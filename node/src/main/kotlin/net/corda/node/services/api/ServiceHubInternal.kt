@@ -324,6 +324,12 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata? = null): Boolean
 
     /**
+     * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.
+     * Returns null if no transaction with the ID exists.
+     */
+    fun removeUnnotarisedTransaction(id: SecureHash): Boolean
+
+    /**
      * Update a previously un-notarised transaction including associated notary signatures.
      * @param transaction The notarised transaction to be finalized.
      * @param signatures The notary signatures.
