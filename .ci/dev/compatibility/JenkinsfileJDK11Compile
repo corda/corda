@@ -55,7 +55,7 @@ String COMMON_GRADLE_PARAMS = [
         '--stacktrace',
         '--info',
         '-Pcompilation.warningsAsErrors=false',
-        '-Ptests.failFast=false',
+        '-Ptests.failFast=true',
 ].join(' ')
 
 /**
