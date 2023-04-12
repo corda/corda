@@ -249,8 +249,7 @@ class FlowHospitalTest {
             }
         }
         // 1 is the notary failing to notarise and propagating the error
-        // 2 is the receiving flow failing due to the unexpected session end error
-        assertEquals(2, dischargedCounter)
+        assertEquals(1, dischargedCounter)
         assertTrue(SpendStateAndCatchDoubleSpendResponderFlow.exceptionSeenInUserFlow)
     }
 
@@ -562,7 +561,7 @@ class FlowHospitalTest {
             })
             try {
                 subFlow(ReceiveFinalityFlow(session, stx.id))
-            } catch (e: UnexpectedFlowEndException) {
+            } catch (e: NotaryException) {
                 exceptionSeenInUserFlow = true
                 if (!consumeError) {
                     throw e
