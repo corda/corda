@@ -47,6 +47,7 @@ import net.corda.core.utilities.unwrap
 // To maintain backwards compatibility with the old API, FinalityFlow can act both as an initiating flow and as an inlined flow.
 // This is only possible because a flow is only truly initiating when the first call to initiateFlow is made (where the
 // presence of @InitiatingFlow is checked). So the new API is inlined simply because that code path doesn't call initiateFlow.
+@Suppress("TooManyFunctions")
 @InitiatingFlow
 class FinalityFlow private constructor(val transaction: SignedTransaction,
                                        private val oldParticipants: Collection<Party>,
@@ -248,8 +249,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         catch (e: NotaryException) {
             if (e.error is NotaryError.Conflict) {
                 (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
-                if (handleDoubleSpend && useTwoPhaseFinality) {
-                    broadcastDoubleSpendError(newPlatformSessions, e.error)
+                if (useTwoPhaseFinality) {
+                    if (handleDoubleSpend) {
+                        broadcastDoubleSpendError(newPlatformSessions, e.error)
+                    } else if (!handleDoubleSpend && serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY) {
+                        logger.warn("Defaulting to double spend handling as CorDapp platform version >= ${PlatformVersionSwitches.TWO_PHASE_FINALITY}")
+                        broadcastDoubleSpendError(newPlatformSessions, e.error)
+                    }
                 }
             }
             throw e
