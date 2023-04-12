@@ -5,16 +5,14 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.DEFAULT_SSL_HANDSHAKE_TIMEOUT
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.nio.file.Path
 
-// This avoids internal types from leaking in the public API. The "external" ArtemisTcpTransport delegates to this internal one.
 class ArtemisTcpTransport {
     companion object {
         val CIPHER_SUITES = listOf(
@@ -23,6 +21,9 @@ class ArtemisTcpTransport {
         )
 
         val TLS_VERSIONS = listOf("TLSv1.2")
+
+        const val SSL_HANDSHAKE_TIMEOUT_NAME = "SSLHandshakeTimeout"
+        const val TRACE_NAME = "trace"
 
         // Turn on AMQP support, which needs the protocol jar on the classpath.
         // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop.
@@ -46,17 +47,7 @@ class ArtemisTcpTransport {
                 TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                 TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to TLS_VERSIONS.joinToString(","))
 
-        private fun SslConfiguration.toTransportOptions(): Map<String, Any> {
-
-            val options = mutableMapOf<String, Any>()
-            (keyStore to trustStore).addToTransportOptions(options)
-            return options
-        }
-
-        private fun Pair<FileBasedCertificateStoreSupplier?, FileBasedCertificateStoreSupplier?>.addToTransportOptions(options: MutableMap<String, Any>) {
-
-            val keyStore = first
-            val trustStore = second
+        private fun SslConfiguration.addToTransportOptions(options: MutableMap<String, Any>) {
             keyStore?.let {
                 with (it) {
                     path.requireOnDefaultFileSystem()
@@ -69,6 +60,8 @@ class ArtemisTcpTransport {
                     options.putAll(get().toTrustStoreTransportOptions(path))
                 }
             }
+            options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
+            options[SSL_HANDSHAKE_TIMEOUT_NAME] = handshakeTimeout ?: DEFAULT_SSL_HANDSHAKE_TIMEOUT
         }
 
         private fun CertificateStore.toKeyStoreTransportOptions(path: Path) = mapOf(
@@ -98,96 +91,97 @@ class ArtemisTcpTransport {
                 TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to keyStorePassword,
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to false)
 
-        private val acceptorFactoryClassName = NettyAcceptorFactory::class.java.name
-        private val connectorFactoryClassName = NettyConnectorFactory::class.java.name
-
-        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: MutualSslConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
-
-            return p2pAcceptorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL, useOpenSsl = config?.useOpenSsl ?: false)
-        }
-
-        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: MutualSslConfiguration?, enableSSL: Boolean = true, keyStoreType: String? = null): TransportConfiguration {
-
-            return p2pConnectorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL, useOpenSsl = config?.useOpenSsl ?: false, keyStoreType = keyStoreType)
-        }
-
-        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true, useOpenSsl: Boolean = false): TransportConfiguration {
-
-            val options = defaultArtemisOptions(hostAndPort, P2P_PROTOCOLS).toMutableMap()
+        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
+                                    config: MutualSslConfiguration?,
+                                    enableSSL: Boolean = true,
+                                    trace: Boolean = false): TransportConfiguration {
+            val options = mutableMapOf<String, Any>()
             if (enableSSL) {
-                options.putAll(defaultSSLOptions)
-                (keyStore to trustStore).addToTransportOptions(options)
-                options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
+                config?.addToTransportOptions(options)
             }
-            options[TransportConstants.HANDSHAKE_TIMEOUT] = 0 // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
-            return TransportConfiguration(acceptorFactoryClassName, options)
+            return createAcceptorTransport(hostAndPort, P2P_PROTOCOLS, options, enableSSL, trace)
         }
 
-        @Suppress("LongParameterList")
-        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true, useOpenSsl: Boolean = false, keyStoreType: String? = null): TransportConfiguration {
-
-            val options = defaultArtemisOptions(hostAndPort, P2P_PROTOCOLS).toMutableMap()
+        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort,
+                                     config: MutualSslConfiguration?,
+                                     enableSSL: Boolean = true,
+                                     keyStoreType: String? = null): TransportConfiguration {
+            val options = mutableMapOf<String, Any>()
             if (enableSSL) {
-                options.putAll(defaultSSLOptions)
-                (keyStore to trustStore).addToTransportOptions(options)
-                options[TransportConstants.SSL_PROVIDER] = if (useOpenSsl) TransportConstants.OPENSSL_PROVIDER else TransportConstants.DEFAULT_SSL_PROVIDER
-                keyStoreType?.let { options.put(TransportConstants.KEYSTORE_TYPE_PROP_NAME, keyStoreType) }
-                // This is required to stop Client checking URL address vs. Server provided certificate
-                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
+                config?.addToTransportOptions(options)
+                options += asMap(keyStoreType)
             }
-            return TransportConfiguration(connectorFactoryClassName, options)
+            return createConnectorTransport(hostAndPort, P2P_PROTOCOLS, options, enableSSL)
         }
 
-        fun p2pConnectorTcpTransportFromList(hostAndPortList: List<NetworkHostAndPort>, config: MutualSslConfiguration?, enableSSL: Boolean = true, keyStoreType: String? = null): List<TransportConfiguration> = hostAndPortList.map {
-            p2pConnectorTcpTransport(it, config, enableSSL, keyStoreType)
-        }
-
-        fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: BrokerRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
-            val options = defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS).toMutableMap()
-
+        fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
+                                    config: BrokerRpcSslOptions?,
+                                    enableSSL: Boolean = true,
+                                    trace: Boolean = false): TransportConfiguration {
+            val options = mutableMapOf<String, Any>()
             if (config != null && enableSSL) {
                 config.keyStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
-                options.putAll(defaultSSLOptions)
             }
-            options[TransportConstants.HANDSHAKE_TIMEOUT] = 0 // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
-            return TransportConfiguration(acceptorFactoryClassName, options)
+            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, enableSSL, trace)
         }
 
         fun rpcConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: ClientRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
-            val options = defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS).toMutableMap()
-
+            val options = mutableMapOf<String, Any>()
             if (config != null && enableSSL) {
                 config.trustStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
-                options.putAll(defaultSSLOptions)
-                // This is required to stop Client checking URL address vs. Server provided certificate
-                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
             }
-            return TransportConfiguration(connectorFactoryClassName, options)
+            return createConnectorTransport(hostAndPort, RPC_PROTOCOLS, options, enableSSL)
         }
 
-        fun rpcConnectorTcpTransportsFromList(hostAndPortList: List<NetworkHostAndPort>, config: ClientRpcSslOptions?, enableSSL: Boolean = true): List<TransportConfiguration> = hostAndPortList.map {
-            rpcConnectorTcpTransport(it, config, enableSSL)
+        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreProvider: String? = null): TransportConfiguration {
+            val options = mutableMapOf<String, Any>()
+            config.addToTransportOptions(options)
+            options += asMap(keyStoreProvider)
+            return createConnectorTransport(hostAndPort, RPC_PROTOCOLS, options, enableSSL = true)
         }
 
-        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreType: String? = null): TransportConfiguration {
-            val options = defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS).toMutableMap()
-            options.putAll(defaultSSLOptions)
-            options.putAll(config.toTransportOptions())
-            options.putAll(asMap(keyStoreType))
-            // This is required to stop Client checking URL address vs. Server provided certificate
-            options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
-            return TransportConfiguration(connectorFactoryClassName, options)
-        }
-
-        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration, keyStoreType: String? = null): TransportConfiguration {
-            return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort, RPC_PROTOCOLS) + defaultSSLOptions +
-                    config.toTransportOptions() + (TransportConstants.HANDSHAKE_TIMEOUT to 0) + asMap(keyStoreType))
+        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
+                                            config: SslConfiguration,
+                                            keyStoreType: String? = null,
+                                            trace: Boolean = false): TransportConfiguration {
+            val options = mutableMapOf<String, Any>()
+            config.addToTransportOptions(options)
+            options += asMap(keyStoreType)
+            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, enableSSL = true, trace = trace)
         }
 
         private fun asMap(keyStoreType: String?): Map<String, String> {
             return keyStoreType?.let { mutableMapOf(TransportConstants.KEYSTORE_TYPE_PROP_NAME to it) } ?: emptyMap()
+        }
+
+        private fun createAcceptorTransport(hostAndPort: NetworkHostAndPort,
+                                            protocols: String,
+                                            options: MutableMap<String, Any>,
+                                            enableSSL: Boolean,
+                                            trace: Boolean): TransportConfiguration {
+            options += defaultArtemisOptions(hostAndPort, protocols)
+            if (enableSSL) {
+                options += defaultSSLOptions
+            }
+            // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
+            options[TransportConstants.HANDSHAKE_TIMEOUT] = 0
+            options[TRACE_NAME] = trace
+            return TransportConfiguration("net.corda.node.services.messaging.NodeNettyAcceptorFactory", options)
+        }
+
+        private fun createConnectorTransport(hostAndPort: NetworkHostAndPort,
+                                             protocols: String,
+                                             options: MutableMap<String, Any>,
+                                             enableSSL: Boolean): TransportConfiguration {
+            options += defaultArtemisOptions(hostAndPort, protocols)
+            if (enableSSL) {
+                options += defaultSSLOptions
+                // This is required to stop Client checking URL address vs. Server provided certificate
+                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
+            }
+            return TransportConfiguration(NettyConnectorFactory::class.java.name, options)
         }
     }
 }
