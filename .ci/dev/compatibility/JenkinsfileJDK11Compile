@@ -140,7 +140,7 @@ pipeline {
             }
         }
 
-        stage('All Tests') {
+        stage('All Tests in parallel') {
             parallel {
                 stage('Another agent') {
                     post {
@@ -166,6 +166,18 @@ pipeline {
                                 }
                             }
                         }
+                    }
+                }
+                stage('Another agent') {
+                    post {
+                        always {
+                            dir(anotherAgentFolder) {
+                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            }
+                        }
+                    }
+                    stages {
                         stage('Smoke Test') {
                             steps {
                                 dir(anotherAgentFolder) {
@@ -180,6 +192,18 @@ pipeline {
                                 }
                             }
                         }
+                    }
+                }
+                stage('Another agent') {
+                    post {
+                        always {
+                            dir(anotherAgentFolder) {
+                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            }
+                        }
+                    }
+                    stages {
                         stage('Slow Integration Test') {
                             steps {
                                 dir(anotherAgentFolder) {
@@ -196,10 +220,10 @@ pipeline {
                         }
                     }
                 }
-                stage('Same agent') {
+                stage('Another agent') {
                     post {
                         always {
-                            dir(sameAgentFolder) {
+                            dir(anotherAgentFolder) {
                                 archiveArtifacts artifacts: '**/*.log', fingerprint: false
                                 junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
                             }
@@ -220,7 +244,10 @@ pipeline {
                                 }
                             }
                         }
-
+                    }
+                }
+                stage('Another agent') {
+                    stages {
                         stage('Deploy Node') {
                             steps {
                                 dir(sameAgentFolder) {
