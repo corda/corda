@@ -249,7 +249,8 @@ class FlowHospitalTest {
             }
         }
         // 1 is the notary failing to notarise and propagating the error
-        assertEquals(1, dischargedCounter)
+        // 2 is the receiving flow failing due to the unexpected session end error
+        assertEquals(2, dischargedCounter)
         assertTrue(SpendStateAndCatchDoubleSpendResponderFlow.exceptionSeenInUserFlow)
     }
 

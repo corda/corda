@@ -16,10 +16,10 @@ import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
 
@@ -252,7 +252,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
                             .apply { logger.warn("Overriding handleDoubleSpend from $handleDoubleSpend to $this") }
                 if (overrideHandleDoubleSpend) {
-                    broadcastDoubleSpendError(newPlatformSessions, e.error)
+                    broadcastDoubleSpendError(newPlatformSessions, e)
                 }
             }
             throw e
@@ -290,8 +290,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             sessions.forEach { session ->
                 try {
                     logger.debug { "Sending notary signature to party $session." }
-//                    session.send(notarySignatures)
-                    session.send(NotarisationResult.NotarySignatures(notarySignatures))
+                    session.send(Try.Success(notarySignatures))
                     // remote will finalise txn with notary signature
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -311,14 +310,14 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastDoubleSpendError(sessions: Collection<FlowSession>, error: NotaryError.Conflict) {
+    private fun broadcastDoubleSpendError(sessions: Collection<FlowSession>, error: NotaryException) {
         progressTracker.currentStep = BROADCASTING_DOUBLE_SPEND_ERROR
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastDoubleSpendError", flowLogic = this) {
             logger.info("Broadcasting notary double spend error.")
             sessions.forEach { session ->
                 try {
                     logger.debug { "Sending notary double spend error to party $session." }
-                    session.send(session.send(NotarisationResult.NotaryDoubleSpendError(error)))
+                    session.send(Try.Failure<List<TransactionSignature>>(error))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "${session.counterparty} has finished prematurely and we're trying to send them a notary double spend error. " +
@@ -488,40 +487,20 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             }
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
             logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
-//            val notaryResult2 = Try.on { otherSideSession.receive<List<TransactionSignature>>().unwrap { it } }
-//            when (notaryResult2) {
-//                is Try.Success -> {
-//                    val notarySignatures = notaryResult2.value
-//                    serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-//                        logger.debug { "Peer received notarised signature." }
-//                        (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
-//                        logger.info("Peer finalised transaction with notary signature.")
-//                    }
-//
-//                }
-//                is Try.Failure -> {
-//                    val notaryError = notaryResult2.exception
-//                    logger.info("Peer received double spend error.")
-//                    (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
-//                    throw NotaryException(notaryError as NotaryError, stx.id)
-//                }
-//            }
 
-            val notaryResult = otherSideSession.receive<NotarisationResult>().unwrap { it }
-            when (notaryResult) {
-                is NotarisationResult.NotarySignatures -> {
-                    val notarySignatures = notaryResult.signatures
-                    serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                        logger.debug { "Peer received notarised signature." }
-                        (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
-                        logger.info("Peer finalised transaction with notary signature.")
-                    }
+            try {
+                val notarySignatures = otherSideSession.receive<Try<List<TransactionSignature>>>().unwrap { it.getOrThrow() }
+                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
+                    logger.debug { "Peer received notarised signature." }
+                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
+                    logger.info("Peer finalised transaction with notary signature.")
                 }
-                is NotarisationResult.NotaryDoubleSpendError -> {
+            } catch(throwable: NotaryException) {
+                if(throwable.error is NotaryError.Conflict) {
                     logger.info("Peer received double spend error.")
                     (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
-                    throw NotaryException(notaryResult.error, notaryResult.error.txId)
                 }
+                throw throwable
             }
         } else {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordTransactions", flowLogic = this) {
@@ -532,10 +511,4 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         }
         return stx
     }
-}
-
-@CordaSerializable
-sealed class NotarisationResult {
-    data class NotarySignatures(val signatures: List<TransactionSignature>) : NotarisationResult()
-    data class NotaryDoubleSpendError(val error: NotaryError.Conflict) : NotarisationResult()
 }
