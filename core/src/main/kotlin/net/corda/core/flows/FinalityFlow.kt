@@ -247,15 +247,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             return stxn
         }
         catch (e: NotaryException) {
-            if (e.error is NotaryError.Conflict) {
+            if (e.error is NotaryError.Conflict && useTwoPhaseFinality) {
                 (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
-                if (useTwoPhaseFinality) {
-                    if (handleDoubleSpend) {
-                        broadcastDoubleSpendError(newPlatformSessions, e.error)
-                    } else if (!handleDoubleSpend && serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY) {
-                        logger.warn("Defaulting to double spend handling as CorDapp platform version >= ${PlatformVersionSwitches.TWO_PHASE_FINALITY}")
-                        broadcastDoubleSpendError(newPlatformSessions, e.error)
-                    }
+                if (handleDoubleSpend) {
+                    broadcastDoubleSpendError(newPlatformSessions, e.error)
+                } else if (!handleDoubleSpend && serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY) {
+                    logger.warn("Defaulting to double spend handling as CorDapp platform version >= ${PlatformVersionSwitches.TWO_PHASE_FINALITY}")
+                    broadcastDoubleSpendError(newPlatformSessions, e.error)
                 }
             }
             throw e
