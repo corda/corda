@@ -140,7 +140,7 @@ pipeline {
             }
         }
 
-        stage('All Tests in parallel') {
+        stage('All Tests') {
             parallel {
                 stage('Another agent') {
                     post {
@@ -154,76 +154,49 @@ pipeline {
                     stages {
                         stage('Unit Test') {
                             steps {
-                                dir(anotherAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'test'
-                                    ].join(' ')
-                                }
-                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                    sh "exit 0"
+                                catchError {
+                                    dir(anotherAgentFolder) {
+                                        sh script: [
+                                                './gradlew',
+                                                COMMON_GRADLE_PARAMS,
+                                                'test'
+                                        ].join(' ')
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-                stage('Another agent') {
-                    post {
-                        always {
-                            dir(anotherAgentFolder) {
-                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-                            }
-                        }
-                    }
-                    stages {
                         stage('Smoke Test') {
                             steps {
-                                dir(anotherAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'smokeTest'
-                                    ].join(' ')
-                                }
-                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                    sh "exit 0"
+                                catchError {
+                                    dir(anotherAgentFolder) {
+                                        sh script: [
+                                                './gradlew',
+                                                COMMON_GRADLE_PARAMS,
+                                                'smokeTest'
+                                        ].join(' ')
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-                stage('Another agent') {
-                    post {
-                        always {
-                            dir(anotherAgentFolder) {
-                                archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                                junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-                            }
-                        }
-                    }
-                    stages {
                         stage('Slow Integration Test') {
                             steps {
-                                dir(anotherAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'slowIntegrationTest'
-                                    ].join(' ')
-                                }
-                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                    sh "exit 0"
+                                catchError {
+                                    dir(anotherAgentFolder) {
+                                        sh script: [
+                                                './gradlew',
+                                                COMMON_GRADLE_PARAMS,
+                                                'slowIntegrationTest'
+                                        ].join(' ')
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                stage('Another agent') {
+                stage('Same agent') {
                     post {
                         always {
-                            dir(anotherAgentFolder) {
+                            dir(sameAgentFolder) {
                                 archiveArtifacts artifacts: '**/*.log', fingerprint: false
                                 junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
                             }
@@ -232,22 +205,18 @@ pipeline {
                     stages {
                         stage('Integration Test') {
                             steps {
-                                dir(sameAgentFolder) {
-                                    sh script: [
-                                            './gradlew',
-                                            COMMON_GRADLE_PARAMS,
-                                            'integrationTest'
-                                    ].join(' ')
-                                }
-                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                                    sh "exit 0"
+                                catchError {
+                                    dir(sameAgentFolder) {
+                                        sh script: [
+                                                './gradlew',
+                                                COMMON_GRADLE_PARAMS,
+                                                'integrationTest'
+                                        ].join(' ')
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-                stage('Another agent') {
-                    stages {
+
                         stage('Deploy Node') {
                             steps {
                                 dir(sameAgentFolder) {
