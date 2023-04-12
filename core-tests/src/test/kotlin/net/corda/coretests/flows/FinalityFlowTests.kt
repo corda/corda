@@ -303,7 +303,7 @@ class FinalityFlowTests : WithFinality {
     @StartableByRPC
     @InitiatingFlow
     class SpendFlow(private val stateAndRef: StateAndRef<DummyContract.SingleOwnerState>, private val newOwner: Party,
-                    private val handleDoubleSpend: Boolean = false) : FlowLogic<SignedTransaction>() {
+                    private val handleDoubleSpend: Boolean? = null) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {

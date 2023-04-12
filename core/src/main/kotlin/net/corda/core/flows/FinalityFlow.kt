@@ -124,7 +124,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param statesToRecord Which states to commit to the vault.
      * @param handleDoubleSpend Whether to catch and propagate Double Spend exception to peers.
      */
-    @JvmOverloads
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
@@ -249,10 +248,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         catch (e: NotaryException) {
             if (e.error is NotaryError.Conflict && useTwoPhaseFinality) {
                 (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
-                val overrideHandleDoubleSpend= handleDoubleSpend ?:
+                val overrideHandleDoubleSpend = handleDoubleSpend ?:
                     (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
+                            .apply { logger.warn("Overriding handleDoubleSpend from $handleDoubleSpend to $this") }
                 if (overrideHandleDoubleSpend) {
-                    logger.warn("Broadcasting double spend handling ...")
                     broadcastDoubleSpendError(newPlatformSessions, e.error)
                 }
             }
