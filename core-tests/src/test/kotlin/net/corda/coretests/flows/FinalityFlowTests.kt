@@ -183,6 +183,30 @@ class FinalityFlowTests : WithFinality {
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            // Note: double spend error not propagated to peers by default
+            val (_, txnDsStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusBob)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `two phase finality flow double spend transaction with double spend handling`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
+        val stx = aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
+
+        try {
+            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), handleDoubleSpend = true)).resultFuture.getOrThrow()
+        }
+        catch (e: NotaryException) {
+            val stxId = (e.error as NotaryError.Conflict).txId
+            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
         }
     }
@@ -278,7 +302,8 @@ class FinalityFlowTests : WithFinality {
 
     @StartableByRPC
     @InitiatingFlow
-    class SpendFlow(private val stateAndRef: StateAndRef<DummyContract.SingleOwnerState>, private val newOwner: Party) : FlowLogic<SignedTransaction>() {
+    class SpendFlow(private val stateAndRef: StateAndRef<DummyContract.SingleOwnerState>, private val newOwner: Party,
+                    private val handleDoubleSpend: Boolean = false) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -286,7 +311,7 @@ class FinalityFlowTests : WithFinality {
             val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
             sessionWithCounterParty.sendAndReceive<String>("initial-message")
-            return subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty)))
+            return subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty), handleDoubleSpend = handleDoubleSpend))
         }
     }
 
