@@ -80,7 +80,6 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
         checkoutToSubdirectory "${sameAgentFolder}"
         timeout(time: 6, unit: 'HOURS')
-        timeout(time: 6, unit: 'HOURS')
         timestamps()
     }
 
