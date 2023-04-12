@@ -20,7 +20,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
 
