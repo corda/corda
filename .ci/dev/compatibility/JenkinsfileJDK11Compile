@@ -173,7 +173,7 @@ pipeline {
                                 timeout(time: 1, unit: 'HOURS')   // timeout on this stage
                             }
                             steps {
-                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') { {
+                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                                     dir(anotherAgentFolder) {
                                         sh script: [
                                                 './gradlew',
@@ -189,7 +189,7 @@ pipeline {
                                 timeout(time: 1, unit: 'HOURS')   // timeout on this stage
                             }
                             steps {
-                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') { {
+                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                                     dir(anotherAgentFolder) {
                                         sh script: [
                                                 './gradlew',
@@ -217,7 +217,7 @@ pipeline {
                                 timeout(time: 1, unit: 'HOURS')   // timeout on this stage
                             }
                             steps {
-                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') { {
+                                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                                     dir(sameAgentFolder) {
                                         sh script: [
                                                 './gradlew',
