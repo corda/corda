@@ -153,6 +153,9 @@ pipeline {
                     }
                     stages {
                         stage('Unit Test') {
+                            options {
+                                timeout(time: 1, unit: 'HOURS')   // timeout on this stage
+                            }
                             steps {
                                 catchError {
                                     dir(anotherAgentFolder) {
@@ -166,6 +169,9 @@ pipeline {
                             }
                         }
                         stage('Smoke Test') {
+                            options {
+                                timeout(time: 1, unit: 'HOURS')   // timeout on this stage
+                            }
                             steps {
                                 catchError {
                                     dir(anotherAgentFolder) {
@@ -179,6 +185,9 @@ pipeline {
                             }
                         }
                         stage('Slow Integration Test') {
+                            options {
+                                timeout(time: 1, unit: 'HOURS')   // timeout on this stage
+                            }
                             steps {
                                 catchError {
                                     dir(anotherAgentFolder) {
@@ -204,6 +213,9 @@ pipeline {
                     }
                     stages {
                         stage('Integration Test') {
+                            options {
+                                timeout(time: 1, unit: 'HOURS')   // timeout on this stage
+                            }
                             steps {
                                 catchError {
                                     dir(sameAgentFolder) {
