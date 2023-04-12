@@ -50,28 +50,30 @@ public final class Patcher implements ClassFileTransformer {
      * @param block the features to block
      */
     public static void start(Instrumentation instr, Set<String> block, Properties props) throws IOException {
-        System.out.println("Aegis4j patching starting");
+        System.out.print("Aegis4j patching starting...");
         if (patcher != null) instr.removeTransformer(patcher);
         patcher = new Patcher(block, props);
         instr.addTransformer(patcher, true);
 
+        int count = 0;
         for (String className : patcher.modifications.keySet()) {
             try {
-                System.out.print("Aegis4j patching " + className + "...");
+                if (count > 0) System.out.print(", ");
+                System.out.print(className);
                 Class<?> clazz = Class.forName(className);
                 instr.retransformClasses(clazz);
-                System.out.println();
             } catch (ClassNotFoundException e) {
-                System.out.println("not present.");
+                System.out.print("... not present");
             } catch (NoClassDefFoundError e) {
-                System.out.println("not present.");
+                System.out.print("... not present");
             } catch (UnmodifiableClassException e) {
                 throw new IOException("Problems transforming class", e);
             }
+            count++;
         }
 
         System.setProperty("aegis4j.blocked.features", String.join(",", block));
-        System.out.println("Aegis4j patching finished");
+        System.out.println(" finished.");
     }
 
     @Override
