@@ -21,7 +21,6 @@ import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Primitive
-import org.bouncycastle.asn1.DERIA5String
 import org.bouncycastle.asn1.ASN1IA5String
 import org.bouncycastle.asn1.DEROctetString
 import org.bouncycastle.asn1.x500.X500Name
