@@ -124,6 +124,7 @@ processTestResources {
 
 test {
     maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
+    jvmArgs '--add-opens', 'java.base/java.net=ALL-UNNAMED', '--add-opens', 'java.base/java.nio=ALL-UNNAMED'
 }
 
 task testJar(type: Jar) {

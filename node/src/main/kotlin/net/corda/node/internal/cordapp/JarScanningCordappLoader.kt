@@ -462,7 +462,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
         private fun validateClassFileVersion(classInfo: ClassInfo) {
             if (classInfo.classfileMajorVersion < JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION ||
-                classInfo.classfileMajorVersion > JDK17_CLASS_FILE_FORMAT_MAJOR_VERSION)
+                classInfo.classfileMajorVersion > JDK11_CLASS_FILE_FORMAT_MAJOR_VERSION)
                     throw IllegalStateException("Class ${classInfo.name} from jar file ${cordappJarPath.url} has an invalid version of " +
                             "${classInfo.classfileMajorVersion}")
         }
