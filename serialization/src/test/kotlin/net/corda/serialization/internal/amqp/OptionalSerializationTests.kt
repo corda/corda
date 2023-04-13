@@ -6,34 +6,29 @@ import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.`is`
 import org.junit.Assert
 import org.junit.Test
-import java.util.*
+import java.util.Optional
 
 class OptionalSerializationTests {
 
-    @Test(timeout=300_000)
-	fun setupEnclosedSerializationTest() {
-        @Test(timeout=300_000)
-	fun `java optionals should serialize`() {
-            val factory = SerializerFactoryBuilder.build(AllWhitelist,
-                    ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
-            )
-            factory.register(OptionalSerializer(factory))
-            val obj = Optional.ofNullable("YES")
-            val bytes = TestSerializationOutput(true, factory).serialize(obj)
-            val deserializerFactory = testDefaultFactory().apply {
-                register(OptionalSerializer(this))
-            }
-
-            val deserialized = DeserializationInput(factory).deserialize(bytes)
-            val deserialized2 = DeserializationInput(deserializerFactory).deserialize(bytes)
-            Assert.assertThat(deserialized, `is`(equalTo(deserialized2)))
-            Assert.assertThat(obj, `is`(equalTo(deserialized2)))
+    @Test(timeout = 300_000)
+    fun `java optionals should serialize`() {
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
+        )
+        factory.register(OptionalSerializer(factory))
+        val obj = Optional.ofNullable("YES")
+        val bytes = TestSerializationOutput(true, factory).serialize(obj)
+        val deserializerFactory = testDefaultFactory().apply {
+            register(OptionalSerializer(this))
         }
 
-        `java optionals should serialize`()
+        val deserialized = DeserializationInput(factory).deserialize(bytes)
+        val deserialized2 = DeserializationInput(deserializerFactory).deserialize(bytes)
+        Assert.assertThat(deserialized, `is`(equalTo(deserialized2)))
+        Assert.assertThat(obj, `is`(equalTo(deserialized2)))
     }
 }

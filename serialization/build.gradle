@@ -29,6 +29,8 @@ dependencies {
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
+    testImplementation project(":serialization")
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
@@ -56,6 +58,10 @@ tasks.withType(Javadoc).configureEach {
 task testJar(type: Jar) {
     archiveClassifier = 'tests'
     from sourceSets.test.output
+}
+
+test {
+    jvmArgs '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.time=ALL-UNNAMED'
 }
 
 artifacts {

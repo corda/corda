@@ -47,9 +47,9 @@ sourceSets {
 }
 
 processSmokeTestResources {
-//    from(project(':node:capsule').tasks['buildCordaJAR']) {
-//        rename 'corda-(.*)', 'corda.jar'
-//    }
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
+        rename 'corda-(.*)', 'corda.jar'
+    }
     from(project(':finance:workflows').tasks['jar']) {
         rename '.*finance-workflows-.*', 'cordapp-finance-workflows.jar'
     }

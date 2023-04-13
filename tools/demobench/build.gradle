@@ -119,37 +119,37 @@ test {
     systemProperty 'org.jboss.logging.provider', 'slf4j'
 }
 
-//distributions {
-//    main() {
-//        contents {
-//            from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
-//                rename 'node-explorer-(.*)', 'node-explorer.jar'
-//                into 'explorer'
-//                fileMode = 0444
-//            }
-//            from(project(':node:capsule').tasks.buildCordaJAR) {
-//                rename 'corda-(.*)', 'corda.jar'
-//                into 'corda'
-//                fileMode = 0444
-//            }
-//            from(project(':testing:testserver:testcapsule:').tasks.buildWebserverJar) {
-//                rename 'corda-testserver-(.*)', 'corda-testserver.jar'
-//                into 'corda'
-//                fileMode = 0444
-//            }
-//            from(project(':finance:contracts').tasks.jar) {
-//                rename 'corda-finance-contracts(.*)', 'corda-finance-contracts.jar'
-//                into 'cordapps'
-//                fileMode = 0444
-//            }
-//            from(project(':finance:workflows').tasks.jar) {
-//                rename 'corda-finance-workflows(.*)', 'corda-finance-workflows.jar'
-//                into 'cordapps'
-//                fileMode = 0444
-//            }
-//        }
-//    }
-//}
+distributions {
+    main() {
+        contents {
+            from(project(':tools:explorer:capsule').tasks.buildExplorerJAR) {
+                rename 'node-explorer-(.*)', 'node-explorer.jar'
+                into 'explorer'
+                fileMode = 0444
+            }
+            from(project(':node:capsule').tasks.buildCordaJAR) {
+                rename 'corda-(.*)', 'corda.jar'
+                into 'corda'
+                fileMode = 0444
+            }
+            from(project(':testing:testserver:testcapsule:').tasks.buildWebserverJar) {
+                rename 'corda-testserver-(.*)', 'corda-testserver.jar'
+                into 'corda'
+                fileMode = 0444
+            }
+            from(project(':finance:contracts').tasks.jar) {
+                rename 'corda-finance-contracts(.*)', 'corda-finance-contracts.jar'
+                into 'cordapps'
+                fileMode = 0444
+            }
+            from(project(':finance:workflows').tasks.jar) {
+                rename 'corda-finance-workflows(.*)', 'corda-finance-workflows.jar'
+                into 'cordapps'
+                fileMode = 0444
+            }
+        }
+    }
+}
 
 /*
  * Bundles the application using JavaPackager,
