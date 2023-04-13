@@ -4,6 +4,7 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.serialization.djvm.SandboxType.KOTLIN
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
@@ -11,6 +12,7 @@ import java.time.Duration
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializeDurationTest : TestBase(KOTLIN) {
     @Test
     fun `test deserializing duration`() {

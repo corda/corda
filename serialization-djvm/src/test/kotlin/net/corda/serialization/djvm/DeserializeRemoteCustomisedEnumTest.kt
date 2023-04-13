@@ -11,6 +11,7 @@ import net.corda.serialization.internal.amqp.RestrictedType
 import net.corda.serialization.internal.amqp.TypeNotation
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
@@ -23,6 +24,7 @@ import java.util.function.Function
  * that the bug has been fixed.
  */
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializeRemoteCustomisedEnumTest : TestBase(KOTLIN) {
     @ParameterizedTest
     @EnumSource(Broken::class)

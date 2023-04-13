@@ -5,12 +5,14 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytesSubSequence
 import net.corda.serialization.djvm.SandboxType.KOTLIN
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializeOpaqueBytesSubSequenceTest : TestBase(KOTLIN) {
     companion object {
         const val MESSAGE = "The rain in spain falls mainly on the plain."

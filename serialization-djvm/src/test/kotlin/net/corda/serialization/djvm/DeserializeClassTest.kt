@@ -7,6 +7,7 @@ import net.corda.djvm.messages.Severity
 import net.corda.serialization.djvm.SandboxType.KOTLIN
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
@@ -15,6 +16,7 @@ import java.io.NotSerializableException
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializeClassTest : TestBase(KOTLIN) {
     @Test
 	fun `test deserializing existing class`() {

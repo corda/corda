@@ -8,6 +8,7 @@ import net.corda.serialization.internal.amqp.CompositeType
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.TypeNotation
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.fail
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class SafeDeserialisationTest : TestBase(KOTLIN) {
     companion object {
         const val MESSAGE = "Nothing to see here..."

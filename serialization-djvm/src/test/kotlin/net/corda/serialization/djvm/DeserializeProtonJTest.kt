@@ -14,12 +14,14 @@ import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.amqp.UnsignedShort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
+@Disabled("TODO JDK17: Disable DJVM tests")
 class DeserializeProtonJTest : TestBase(KOTLIN) {
     @Test
 	fun `test deserializing unsigned long`() {
