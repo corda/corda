@@ -13,7 +13,11 @@ import net.corda.nodeapi.internal.network.PackageOwner
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.getPublicKey
-import org.junit.*
+import org.junit.After
+import org.junit.AfterClass
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
 import java.io.PrintStream
@@ -98,10 +102,10 @@ class NetworkBootstrapperRunnerTests {
     @Test(timeout=300_000)
 	fun `test when base directory is specified it is passed through to the bootstrapper`() {
         val (runner, mockBootstrapper) = getRunner()
-        val tempDir = createTempDir()
-        runner.dir = tempDir.toPath()
+        val tempDir = Files.createTempDirectory("tmp")
+        runner.dir = tempDir
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(tempDir.toPath().toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides())
+        verify(mockBootstrapper).bootstrap(tempDir.toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides())
         assertEquals(0, exitCode)
     }
 
