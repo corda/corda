@@ -28,7 +28,7 @@ class SSLHelperTest {
         val trustStore = sslConfig.trustStore
         trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(CertificateStore.fromFile(trustStore.path, trustStore.storePassword, trustStore.entryPassword, false), RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)))
 
-        val sslHandler = createClientSslHelper(NetworkHostAndPort("localhost", 1234), setOf(legalName), keyManagerFactory, trustManagerFactory)
+        val sslHandler = createClientSslHandler(NetworkHostAndPort("localhost", 1234), setOf(legalName), keyManagerFactory, trustManagerFactory)
         val legalNameHash = SecureHash.sha256(legalName.toString()).toString().take(32).toLowerCase()
 
         // These hardcoded values must not be changed, something is broken if you have to change these hardcoded values.
