@@ -5,15 +5,14 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfigImpl
 import net.corda.nodeapi.internal.protonwrapper.netty.certPathToString
 import java.security.KeyStore
 import java.security.cert.CertPathValidator
 import java.security.cert.CertPathValidatorException
 import java.security.cert.CertificateException
 import java.security.cert.PKIXBuilderParameters
-import java.security.cert.PKIXRevocationChecker
 import java.security.cert.X509CertSelector
-import java.util.EnumSet
 
 sealed class CertificateChainCheckPolicy {
     companion object {
@@ -94,13 +93,12 @@ sealed class CertificateChainCheckPolicy {
         }
     }
 
-    class RevocationCheck(val revocationMode: RevocationConfig.Mode) : CertificateChainCheckPolicy() {
+    class RevocationCheck(val revocationConfig: RevocationConfig) : CertificateChainCheckPolicy() {
+        constructor(revocationMode: RevocationConfig.Mode) : this(RevocationConfigImpl(revocationMode))
+
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
             return object : Check {
                 override fun checkCertificateChain(theirChain: Array<java.security.cert.X509Certificate>) {
-                    if (revocationMode == RevocationConfig.Mode.OFF) {
-                        return
-                    }
                     // Convert javax.security.cert.X509Certificate to java.security.cert.X509Certificate.
                     val chain = theirChain.map { X509CertificateFactory().generateCertificate(it.encoded.inputStream()) }
                     log.info("Check Client Certpath:\r\n${certPathToString(chain.toTypedArray())}")
@@ -110,17 +108,7 @@ sealed class CertificateChainCheckPolicy {
                     // See PKIXValidator.engineValidate() for reference implementation.
                     val certPath = X509Utilities.buildCertPath(chain.dropLast(1))
                     val certPathValidator = CertPathValidator.getInstance("PKIX")
-                    val pkixRevocationChecker = certPathValidator.revocationChecker as PKIXRevocationChecker
-                    pkixRevocationChecker.options = EnumSet.of(
-                            // Prefer CRL over OCSP
-                            PKIXRevocationChecker.Option.PREFER_CRLS,
-                            // Don't fall back to OCSP checking
-                            PKIXRevocationChecker.Option.NO_FALLBACK)
-                    if (revocationMode == RevocationConfig.Mode.SOFT_FAIL) {
-                        // Allow revocation check to succeed if the revocation status cannot be determined for one of
-                        // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
-                        pkixRevocationChecker.options = pkixRevocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
-                    }
+                    val pkixRevocationChecker = revocationConfig.createPKIXRevocationChecker()
                     val params = PKIXBuilderParameters(trustStore, X509CertSelector())
                     params.addCertPathChecker(pkixRevocationChecker)
                     try {

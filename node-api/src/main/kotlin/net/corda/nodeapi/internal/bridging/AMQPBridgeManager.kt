@@ -29,6 +29,7 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.slf4j.MDC
 import rx.Subscription
+import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -54,7 +55,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                              private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                              private val bridgeMetricsService: BridgeMetricsService? = null,
                              trace: Boolean,
-                             sslHandshakeTimeout: Long?,
+                             sslHandshakeTimeout: Duration?,
                              private val bridgeConnectionTTLSeconds: Int) : BridgeManager {
 
     private val lock = ReentrantLock()
@@ -69,8 +70,8 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                                         override val enableSNI: Boolean,
                                         override val sourceX500Name: String? = null,
                                         override val trace: Boolean,
-                                        private val _sslHandshakeTimeout: Long?) : AMQPConfiguration {
-        override val sslHandshakeTimeout: Long
+                                        private val _sslHandshakeTimeout: Duration?) : AMQPConfiguration {
+        override val sslHandshakeTimeout: Duration
             get() = _sslHandshakeTimeout ?: super.sslHandshakeTimeout
     }
 

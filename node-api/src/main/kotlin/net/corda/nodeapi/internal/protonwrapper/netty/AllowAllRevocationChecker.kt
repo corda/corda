@@ -11,7 +11,7 @@ object AllowAllRevocationChecker : PKIXRevocationChecker() {
 
     private val logger = LoggerFactory.getLogger(AllowAllRevocationChecker::class.java)
 
-    override fun check(cert: Certificate?, unresolvedCritExts: MutableCollection<String>?) {
+    override fun check(cert: Certificate, unresolvedCritExts: Collection<String>) {
         logger.debug {"Passing certificate check for: $cert"}
         // Nothing to do
     }
@@ -20,7 +20,7 @@ object AllowAllRevocationChecker : PKIXRevocationChecker() {
         return true
     }
 
-    override fun getSupportedExtensions(): MutableSet<String>? {
+    override fun getSupportedExtensions(): Set<String>? {
         return null
     }
 
@@ -28,7 +28,7 @@ object AllowAllRevocationChecker : PKIXRevocationChecker() {
         // Nothing to do
     }
 
-    override fun getSoftFailExceptions(): MutableList<CertPathValidatorException> {
-        return LinkedList()
+    override fun getSoftFailExceptions(): List<CertPathValidatorException> {
+        return Collections.emptyList()
     }
 }
