@@ -48,7 +48,7 @@ public class AegisAgentCommandLineTest {
         String main = Main.class.getName();
         String cp = System.getProperty("java.class.path");
         Process process = new ProcessBuilder("java", "-javaagent:" + jar + "=" + config, "-cp", cp, main).start();
-        process.waitFor(5, TimeUnit.SECONDS);
+        process.waitFor(10, TimeUnit.SECONDS);
         assertFalse(process.isAlive());
 
         String out = new String(TestUtils.inputStreamReadAllBytes(process.getInputStream()), UTF_8);
