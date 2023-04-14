@@ -241,7 +241,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
                 if (overrideHandleDoubleSpend && newPlatformSessions.isNotEmpty()) {
                     broadcastDoubleSpendError(newPlatformSessions, e)
-                }
+                } else sleep(Duration.ZERO) // force checkpoint to persist db update.
             }
             throw e
         }
