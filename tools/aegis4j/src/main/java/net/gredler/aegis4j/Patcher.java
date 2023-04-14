@@ -106,13 +106,18 @@ public final class Patcher implements ClassFileTransformer {
                             System.err.println("ERROR: Method not found: " + className + "." + mod.methodName);
                         }
                         for (CtMethod method : methods) {
-                            method.setBody(mod.newBody);
+                            if (mod.newBody.startsWith("throw ")) {
+                                method.setBody(mod.newBody);
+                            } else {
+                                method.insertBefore(mod.newBody);
+                            }
                         }
                     }
                 }
             }
             return clazz.toBytecode();
         } catch (NotFoundException | CannotCompileException | IOException e) {
+            e.printStackTrace();
             return null;
         }
     }
