@@ -3,6 +3,9 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 import com.typesafe.config.Config
 import net.corda.nodeapi.internal.config.ConfigParser
 import net.corda.nodeapi.internal.config.CustomConfigParser
+import net.corda.nodeapi.internal.revocation.CertDistPointCrlSource
+import net.corda.nodeapi.internal.revocation.CordaRevocationChecker
+import java.security.cert.PKIXRevocationChecker
 
 /**
  * Data structure for controlling the way how Certificate Revocation Lists are handled.
@@ -26,7 +29,7 @@ interface RevocationConfig {
 
         /**
          * CRLs are obtained from external source
-         * @see ExternalCrlSource
+         * @see CrlSource
          */
         EXTERNAL_SOURCE,
 
@@ -39,14 +42,21 @@ interface RevocationConfig {
     val mode: Mode
 
     /**
-     * Optional `ExternalCrlSource` which only makes sense with `mode` = `EXTERNAL_SOURCE`
+     * Optional [CrlSource] which only makes sense with `mode` = `EXTERNAL_SOURCE`
      */
-    val externalCrlSource: ExternalCrlSource?
+    val externalCrlSource: CrlSource?
 
-    /**
-     * Creates a copy of `RevocationConfig` with ExternalCrlSource enriched
-     */
-    fun enrichExternalCrlSource(sourceFunc: (() -> ExternalCrlSource)?): RevocationConfig
+    fun createPKIXRevocationChecker(): PKIXRevocationChecker {
+        return when (mode) {
+            Mode.OFF -> AllowAllRevocationChecker
+            Mode.EXTERNAL_SOURCE -> {
+                val externalCrlSource = requireNotNull(externalCrlSource) { "externalCrlSource must be specfied for EXTERNAL_SOURCE" }
+                CordaRevocationChecker(externalCrlSource, softFail = true)
+            }
+            Mode.SOFT_FAIL -> CordaRevocationChecker(CertDistPointCrlSource(), softFail = true)
+            Mode.HARD_FAIL -> CordaRevocationChecker(CertDistPointCrlSource(), softFail = false)
+        }
+    }
 }
 
 /**
@@ -54,16 +64,7 @@ interface RevocationConfig {
  */
 fun Boolean.toRevocationConfig() = if(this) RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL) else RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)
 
-data class RevocationConfigImpl(override val mode: RevocationConfig.Mode, override val externalCrlSource: ExternalCrlSource? = null) : RevocationConfig {
-    override fun enrichExternalCrlSource(sourceFunc: (() -> ExternalCrlSource)?): RevocationConfig {
-        return if(mode != RevocationConfig.Mode.EXTERNAL_SOURCE) {
-            this
-        } else {
-            assert(sourceFunc != null) { "There should be a way to obtain ExternalCrlSource" }
-            copy(externalCrlSource = sourceFunc!!())
-        }
-    }
-}
+data class RevocationConfigImpl(override val mode: RevocationConfig.Mode, override val externalCrlSource: CrlSource? = null) : RevocationConfig
 
 class RevocationConfigParser : ConfigParser<RevocationConfig> {
     override fun parse(config: Config): RevocationConfig {

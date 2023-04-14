@@ -8,6 +8,7 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import java.nio.file.Path
+import java.time.Duration
 
 class CertificateStoreStubs {
 
@@ -49,11 +50,11 @@ class CertificateStoreStubs {
                                           keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, keyPassword: String = keyStorePassword,
                                           trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME,
                                           trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD,
-                                          trustStoreKeyPassword: String = TrustStore.DEFAULT_KEY_PASSWORD): MutualSslConfiguration {
-
+                                          trustStoreKeyPassword: String = TrustStore.DEFAULT_KEY_PASSWORD,
+                                          sslHandshakeTimeout: Duration? = null): MutualSslConfiguration {
                 val keyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / keyStoreFileName, keyStorePassword, keyPassword)
                 val trustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / trustStoreFileName, trustStorePassword, trustStoreKeyPassword)
-                return SslConfiguration.mutual(keyStore, trustStore)
+                return SslConfiguration.mutual(keyStore, trustStore, sslHandshakeTimeout)
             }
 
             @JvmStatic

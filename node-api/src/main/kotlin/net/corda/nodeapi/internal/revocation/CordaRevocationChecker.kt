@@ -1,30 +1,53 @@
-package net.corda.nodeapi.internal.protonwrapper.netty.revocation
+package net.corda.nodeapi.internal.revocation
 
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.protonwrapper.netty.ExternalCrlSource
+import net.corda.nodeapi.internal.protonwrapper.netty.CrlSource
 import org.bouncycastle.asn1.x509.Extension
 import java.security.cert.CRLReason
 import java.security.cert.CertPathValidatorException
+import java.security.cert.CertPathValidatorException.BasicReason
 import java.security.cert.Certificate
 import java.security.cert.CertificateRevokedException
 import java.security.cert.PKIXRevocationChecker
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
- * Implementation of [PKIXRevocationChecker] which determines whether certificate is revoked using [externalCrlSource] which knows how to
- * obtain a set of CRLs for a given certificate from an external source
+ * Custom [PKIXRevocationChecker] which delegates to a plugable [CrlSource] to retrieve the CRLs for certificate revocation checks.
  */
-class ExternalSourceRevocationChecker(private val externalCrlSource: ExternalCrlSource, private val dateSource: () -> Date) : PKIXRevocationChecker() {
-
+class CordaRevocationChecker(private val crlSource: CrlSource,
+                             private val softFail: Boolean,
+                             private val dateSource: () -> Date = ::Date) : PKIXRevocationChecker() {
     companion object {
         private val logger = contextLogger()
     }
 
+    private val softFailExceptions = ArrayList<CertPathValidatorException>()
+
     override fun check(cert: Certificate, unresolvedCritExts: MutableCollection<String>?) {
         val x509Certificate = cert as X509Certificate
-        checkApprovedCRLs(x509Certificate, externalCrlSource.fetch(x509Certificate))
+        checkApprovedCRLs(x509Certificate, getCRLs(x509Certificate))
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun getCRLs(cert: X509Certificate): Set<X509CRL> {
+        val crls = try {
+            crlSource.fetch(cert)
+        } catch (e: Exception) {
+            if (softFail) {
+                addSoftFailException(e)
+                return emptySet()
+            } else {
+                throw undeterminedRevocationException("Unable to retrieve CRLs", e)
+            }
+        }
+        if (crls.isNotEmpty() || softFail) {
+            return crls
+        }
+        // Note, the JDK tries to find a valid CRL from a different signing key before giving up (RevocationChecker.verifyWithSeparateSigningKey)
+        throw undeterminedRevocationException("Could not find any valid CRLs", null)
     }
 
     /**
@@ -47,11 +70,11 @@ class ExternalSourceRevocationChecker(private val externalCrlSource: ExternalCrl
                  * 5.3 of RFC 5280).
                  */
                 val unresCritExts = entry.criticalExtensionOIDs
-                if (unresCritExts != null && !unresCritExts.isEmpty()) {
+                if (unresCritExts != null && unresCritExts.isNotEmpty()) {
                     /* remove any that we will process */
                     unresCritExts.remove(Extension.cRLDistributionPoints.id)
                     unresCritExts.remove(Extension.certificateIssuer.id)
-                    if (!unresCritExts.isEmpty()) {
+                    if (unresCritExts.isNotEmpty()) {
                         throw CertPathValidatorException(
                                 "Unrecognized critical extension(s) in revoked CRL entry: $unresCritExts")
                     }
@@ -64,14 +87,22 @@ class ExternalSourceRevocationChecker(private val externalCrlSource: ExternalCrl
                             revocationDate, reasonCode,
                             crl.issuerX500Principal, mutableMapOf())
                     throw CertPathValidatorException(
-                            t.message, t, null, -1, CertPathValidatorException.BasicReason.REVOKED)
+                            t.message, t, null, -1, BasicReason.REVOKED)
                 }
             }
         }
     }
 
+    /**
+     * This is set to false intentionally for security reasons.
+     * It ensures that certificates are provided in reverse direction (from most-trusted CA to target certificate)
+     * after the necessary validation checks have already been performed.
+     *
+     * If that wasn't the case, we could be reaching out to CRL endpoints for invalid certificates, which would open security holes
+     * e.g. systems that are not part of a Corda network could force a Corda firewall to initiate outbound requests to systems under their control.
+     */
     override fun isForwardCheckingSupported(): Boolean {
-        return true
+        return false
     }
 
     override fun getSupportedExtensions(): MutableSet<String>? {
@@ -79,10 +110,19 @@ class ExternalSourceRevocationChecker(private val externalCrlSource: ExternalCrl
     }
 
     override fun init(forward: Boolean) {
-        // Nothing to do
+        softFailExceptions.clear()
     }
 
     override fun getSoftFailExceptions(): MutableList<CertPathValidatorException> {
-        return LinkedList()
+        return Collections.unmodifiableList(softFailExceptions)
+    }
+
+    private fun addSoftFailException(e: Exception) {
+        logger.debug("Soft fail exception", e)
+        softFailExceptions += undeterminedRevocationException(e.message, e)
+    }
+
+    private fun undeterminedRevocationException(message: String?, cause: Throwable?): CertPathValidatorException {
+        return CertPathValidatorException(message, cause, null, -1, BasicReason.UNDETERMINED_REVOCATION_STATUS)
     }
 }
