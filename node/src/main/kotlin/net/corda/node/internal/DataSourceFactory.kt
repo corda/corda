@@ -29,14 +29,6 @@ object DataSourceFactory {
 
     init {
         LoggerFactory.getLogger(javaClass).debug("Applying H2 fix.") // See CORDA-924.
-        Engine::class.java.getDeclaredField("DATABASES").apply {
-            isAccessible = true
-
-//            val lookup = MethodHandles.privateLookupIn(Field::class.java, MethodHandles.lookup())
-//            val modifiers = lookup.findVarHandle(Field::class.java, "modifiers", Int::class.javaPrimitiveType)
-//            modifiers.set(this, getModifiers() and Modifier.FINAL.inv())
-            declaredField<Int>("modifiers").apply { value = value and Modifier.FINAL.inv() }
-        }.set(null, SynchronizedGetPutRemove<String, Database>())
     }
 
     fun createDataSource(hikariProperties: Properties, pool: Boolean = true, metricRegistry: MetricRegistry? = null): DataSource {
