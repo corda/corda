@@ -20,7 +20,7 @@ public class CVE_2022_1471 {
 
     @Test
     public void test() throws Exception {
-        TestUtils.installAgent("path=../resources/test/snakeyaml-mods.properties");
+        TestUtils.installAgent("path=" + System.getProperty("aegis4j.projectDir") + "/src/test/resources/snakeyaml-mods.properties");
         try {
             Constructor banned = new Constructor(this.getClass());
             fail("Exception expected");

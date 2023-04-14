@@ -29,7 +29,7 @@ public class CVE_2021_23463 {
 
     @Test
     public void test() throws Exception {
-        TestUtils.installAgent("path=../resources/test/h2-mods.properties");
+        TestUtils.installAgent("path=" + System.getProperty("aegis4j.projectDir") + "/src/test/resources/h2-mods.properties");
         try {
             SessionInterface session = new SessionInterface() {
                 @Override

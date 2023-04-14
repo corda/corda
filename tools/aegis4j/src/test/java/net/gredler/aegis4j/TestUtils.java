@@ -126,16 +126,9 @@ public final class TestUtils {
     }
 
     /**
-     * Requires {@code -Djdk.attach.allowAttachSelf=true} on the command line.
+     * Requires {@code -Djdk.attach.allowAttachSelf=true} on the command line for JDK9+.
      */
     public static void installAgent(String options) throws Exception {
-        /*
-        long pid = ProcessHandle.current().pid();
-        VirtualMachine jvm = VirtualMachine.attach(String.valueOf(pid));
-        jvm.loadAgent(createAgentJar(), options);
-        jvm.detach();
-        */
-        //AgentLoader.loadAgentClass(AegisAgent.class.getName(), options);
         AegisAgent.dynamicLoad(options);
     }
 

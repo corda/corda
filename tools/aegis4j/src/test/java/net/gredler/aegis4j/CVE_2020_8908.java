@@ -19,7 +19,7 @@ public class CVE_2020_8908 {
 
     @Test
     public void test() throws Exception {
-        TestUtils.installAgent("path=../resources/test/guava-mods.properties");
+        TestUtils.installAgent("path=" + System.getProperty("aegis4j.projectDir") + "/src/test/resources/guava-mods.properties");
         try {
             com.google.common.io.Files.createTempDir();
             fail("Exception expected");

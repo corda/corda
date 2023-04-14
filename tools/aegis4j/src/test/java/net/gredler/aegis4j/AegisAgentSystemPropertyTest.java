@@ -34,7 +34,7 @@ public class AegisAgentSystemPropertyTest {
     @Test
     public void testSystemPropertyWithNonEmptyExistingArgs() throws Exception {
         System.setProperty("aegis4j.additional.args", "unblock=jndi,rmi,scripting");
-        TestUtils.installAgent("path=../resources/main/net/gredler/aegis4j/mods.properties");
+        TestUtils.installAgent("path=" + System.getProperty("aegis4j.projectDir") + "/src/main/resources/net/gredler/aegis4j/mods.properties");
         assertEquals("serialization,process,httpserver", System.getProperty("aegis4j.blocked.features"));
     }
 }

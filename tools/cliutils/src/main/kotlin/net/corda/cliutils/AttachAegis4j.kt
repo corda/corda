@@ -1,8 +1,9 @@
 package net.corda.cliutils
 
-import com.sun.tools.attach.VirtualMachine
 import net.gredler.aegis4j.AegisAgent
 import java.lang.management.ManagementFactory
+import java.net.URL
+import java.net.URLClassLoader
 import java.nio.file.Files
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
@@ -40,9 +41,25 @@ object AttachAegis4j {
     }
 
     init {
-        val pid = ManagementFactory.getRuntimeMXBean().getName().substringBefore('@')
-        var jvm = VirtualMachine.attach(pid)
-        jvm.loadAgent(createAgentJar(), "resource=mods.properties")
-        jvm.detach()
+        try {
+            val pid = ManagementFactory.getRuntimeMXBean().getName().substringBefore('@')
+            /*
+            The reflective code that follows implements this once the JDK tools.jar is added to the classpath:
+
+            var jvm = VirtualMachine.attach(pid)
+            jvm.loadAgent(createAgentJar(), "resource=mods.properties")
+            jvm.detach()
+            */
+            val toolsJar = "file:${System.getProperty("java.home")}/../lib/tools.jar"
+            val classLoader = URLClassLoader(arrayOf(URL(toolsJar)), this.javaClass.classLoader)
+            val virtualMachineClass: Class<*> = classLoader.loadClass("com.sun.tools.attach.VirtualMachine")
+            val jvm = virtualMachineClass.getDeclaredMethod("attach", String::class.java).invoke(null, pid)
+            val loadAgentMethod = jvm.javaClass.getMethod("loadAgent", String::class.java, String::class.java)
+            loadAgentMethod.invoke(jvm, createAgentJar(), "resource=mods.properties")
+            val detachMethod = jvm.javaClass.getMethod("detach")
+            detachMethod.invoke(jvm)
+        } catch (e: Exception) {
+            System.err.println("Aegis4j Unable to activate - JDK 9+ without system property jdk.attach.allowAttachSelf=true")
+        }
     }
 }

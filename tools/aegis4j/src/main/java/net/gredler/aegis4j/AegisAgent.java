@@ -97,6 +97,7 @@ public final class AegisAgent {
     }
 
     static void dynamicLoad(String args) {
+        if (instrumentation == null) throw new IllegalStateException("Cannot dynamically load agent if pre-initialised.");
         agentmain(args, instrumentation);
     }
 

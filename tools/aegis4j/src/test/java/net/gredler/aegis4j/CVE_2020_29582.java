@@ -19,7 +19,7 @@ public class CVE_2020_29582 {
 
     @Test
     public void testDir() throws Exception {
-        TestUtils.installAgent("path=../resources/test/kotlin-mods.properties");
+        TestUtils.installAgent("path=" + System.getProperty("aegis4j.projectDir") + "/src/test/resources/kotlin-mods.properties");
         try {
             new KotlinStdLibUtils().kotlinCreateTempDir();
             fail("Exception expected");
@@ -30,7 +30,7 @@ public class CVE_2020_29582 {
 
     @Test
     public void testFile() throws Exception {
-        TestUtils.installAgent("path=../resources/test/kotlin-mods.properties");
+        TestUtils.installAgent("path=" + System.getProperty("aegis4j.projectDir") + "/src/test/resources/kotlin-mods.properties");
         try {
             new KotlinStdLibUtils().kotlinCreateTempFile();
             fail("Exception expected");

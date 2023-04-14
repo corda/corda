@@ -37,7 +37,7 @@ public class AegisAgentCommandLineTest {
         testStaticAttach(jar, "foo", "ERROR: unrecognised parameters foo");
         testStaticAttach(jar, "dynamic", "");
 
-        Path path = Paths.get(System.getProperty("aegis4j.projectRoot") + "/tools/aegis4j/src/main/resources/net/gredler/aegis4j/mods.properties");
+        Path path = Paths.get(System.getProperty("aegis4j.projectDir") + "/src/main/resources/net/gredler/aegis4j/mods.properties");
         testStaticAttach(jar, "path=" + path, "Java serialization blocked by aegis4j");
         testStaticAttach(jar, "path=" + path + ";unblock=serialization", "");
         testStaticAttach(jar, "path=/foo/bar", "java.io.FileNotFoundException: /foo/bar");
