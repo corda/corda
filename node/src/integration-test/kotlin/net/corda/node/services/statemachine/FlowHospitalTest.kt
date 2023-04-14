@@ -562,10 +562,15 @@ class FlowHospitalTest {
             })
             try {
                 subFlow(ReceiveFinalityFlow(session, stx.id))
-            } catch (e: NotaryException) {
-                exceptionSeenInUserFlow = true
-                if (!consumeError) {
-                    throw e
+            } catch (ex: Exception) {
+                when (ex) {
+                    is NotaryException,
+                    is UnexpectedFlowEndException -> {
+                        exceptionSeenInUserFlow = true
+                        if (!consumeError) {
+                            throw ex
+                        }
+                    }
                 }
             }
         }
