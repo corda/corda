@@ -110,7 +110,6 @@ buildscript {
     ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = constants.getProperty("jcabiManifestsVersion")
     ext.picocli_version = constants.getProperty("picocliVersion")
-    ext.commons_lang_version = constants.getProperty("commonsLangVersion")
     ext.commons_io_version = constants.getProperty("commonsIoVersion")
     ext.controlsfx_version = constants.getProperty("controlsfxVersion")
     ext.detekt_version = constants.getProperty('detektVersion')

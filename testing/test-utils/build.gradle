@@ -43,7 +43,7 @@ dependencies {
     implementation "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
     implementation "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
 
-    testImplementation "org.apache.commons:commons-lang3:3.9"
+    testImplementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 

@@ -30,6 +30,11 @@ jar {
     baseName 'corda-trader-demo-workflows'
 }
 
+test {
+    jvmArgs '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.time=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+}
+
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1

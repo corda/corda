@@ -88,7 +88,7 @@ dependencies {
     implementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     implementation "com.esotericsoftware:kryo:$kryo_version"
     implementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
-    implementation "org.apache.commons:commons-lang3:3.9"
+    implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     implementation "org.assertj:assertj-core:${assertj_version}"
     implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
     implementation "junit:junit:$junit_version"
@@ -123,6 +123,10 @@ jar {
     }
 }
 
+test {
+    jvmArgs '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.time=ALL-UNNAMED',
+            '--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED'
+}
 
 //tasks.named('javadocJar', Jar) {
 //    from 'README.md'

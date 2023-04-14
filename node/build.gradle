@@ -281,6 +281,11 @@ dependencies {
     testImplementation project(':testing:cordapps:dbfailure:dbfworkflows')
 }
 
+test {
+    jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+}
+
 tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'

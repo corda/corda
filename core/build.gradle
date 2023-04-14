@@ -62,7 +62,7 @@ dependencies {
     // RxJava: observable streams of events.
     implementation "io.reactivex:rxjava:$rxjava_version"
     
-    implementation "org.apache.commons:commons-lang3:$commons_lang_version"
+    implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     implementation "net.i2p.crypto:eddsa:$eddsa_version"

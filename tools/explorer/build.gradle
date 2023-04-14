@@ -68,7 +68,7 @@ dependencies {
     // JOpt: for command line flags.
     implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
-    implementation "org.apache.commons:commons-lang3:3.9"
+    implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 }
 

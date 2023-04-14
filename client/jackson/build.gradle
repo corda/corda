@@ -41,6 +41,11 @@ dependencies {
     
 }
 
+test {
+    jvmArgs '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.time=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.io=ALL-UNNAMED'
+}
+
 jar {
     baseName 'corda-jackson'
     manifest {

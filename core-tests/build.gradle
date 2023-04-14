@@ -137,6 +137,11 @@ task smokeTest(type: Test) {
     classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
+test {
+    jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+}
+
 // quasar exclusions upon agent code instrumentation at run-time
 quasar {
     excludePackages.addAll(

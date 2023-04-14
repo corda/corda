@@ -128,6 +128,11 @@ dependencies {
     implementation "com.google.guava:guava-testlib:$guava_version"
 }
 
+test {
+    jvmArgs '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.time=ALL-UNNAMED',
+            '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED'
+}
+
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
