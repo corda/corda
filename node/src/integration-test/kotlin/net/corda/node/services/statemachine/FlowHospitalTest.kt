@@ -552,6 +552,7 @@ class FlowHospitalTest {
             var exceptionSeenInUserFlow = false
         }
 
+        @Suppress("TooGenericExceptionCaught")
         @Suspendable
         override fun call() {
             val consumeError = session.receive<Boolean>().unwrap { it }

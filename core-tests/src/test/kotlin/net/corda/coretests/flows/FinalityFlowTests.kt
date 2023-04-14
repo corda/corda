@@ -45,6 +45,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.issuedBy
+import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -207,8 +208,20 @@ class FinalityFlowTests : WithFinality {
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertTxnRemovedFromDatabase(aliceNode, stxId)
             assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertTxnRemovedFromDatabase(bobNode, stxId)
         }
+    }
+
+    private fun assertTxnRemovedFromDatabase(node: TestStartedNode, stxId: SecureHash) {
+        val fromDb = node.database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorage.DBTransaction::class.java
+            ).setParameter("transactionId", stxId.toString()).resultList.map { it }
+        }
+        assertEquals(0, fromDb.size)
     }
 
     @Test(timeout=300_000)

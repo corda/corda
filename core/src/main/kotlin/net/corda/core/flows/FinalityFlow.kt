@@ -22,6 +22,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
+import java.time.Duration
 
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
@@ -90,33 +91,18 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param transaction What to commit.
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
+     * @param handleDoubleSpend Whether to catch and propagate Double Spend exception to peers.
      */
     @JvmOverloads
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = tracker()
-    ) : this(transaction, emptyList(), progressTracker, sessions, true)
+            progressTracker: ProgressTracker = tracker(),
+            handleDoubleSpend: Boolean? = null
+    ) : this(transaction, emptyList(), progressTracker, sessions, true, handleDoubleSpend = handleDoubleSpend)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
-     *
-     * @param transaction What to commit.
-     * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
-     * also be provided.
-     * @param statesToRecord Which states to commit to the vault.
-     */
-    @JvmOverloads
-    constructor(
-            transaction: SignedTransaction,
-            sessions: Collection<FlowSession>,
-            statesToRecord: StatesToRecord,
-            progressTracker: ProgressTracker = tracker()
-    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord)
-
-    /**
-     * Notarise the given transaction and broadcast it to all the participants.
-     * Optionally, catch and propagate Double Spend exception (NotaryError.Conflict) to peers.
      *
      * @param transaction What to commit.
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
@@ -124,11 +110,14 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param statesToRecord Which states to commit to the vault.
      * @param handleDoubleSpend Whether to catch and propagate Double Spend exception to peers.
      */
+    @JvmOverloads
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            handleDoubleSpend: Boolean?
-    ) : this(transaction, emptyList(), tracker(), sessions, true, handleDoubleSpend = handleDoubleSpend)
+            statesToRecord: StatesToRecord,
+            progressTracker: ProgressTracker = tracker(),
+            handleDoubleSpend: Boolean? = null
+    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord, handleDoubleSpend = handleDoubleSpend)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -250,8 +239,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
                 val overrideHandleDoubleSpend = handleDoubleSpend ?:
                     (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
-                            .apply { logger.warn("Overriding handleDoubleSpend from $handleDoubleSpend to $this") }
-                if (overrideHandleDoubleSpend) {
+                if (overrideHandleDoubleSpend && newPlatformSessions.isNotEmpty()) {
                     broadcastDoubleSpendError(newPlatformSessions, e)
                 }
             }
@@ -499,6 +487,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 if(throwable.error is NotaryError.Conflict) {
                     logger.info("Peer received double spend error.")
                     (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
+                    sleep(Duration.ZERO) // force checkpoint to persist db update.
                 }
                 throw throwable
             }
