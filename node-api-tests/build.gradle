@@ -13,7 +13,7 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
-    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "net.i2p.crypto:eddsa:$eddsa_version"
     testImplementation "com.typesafe:config:$typesafe_config_version"
     testImplementation "io.dropwizard.metrics:metrics-core:$metrics_version"

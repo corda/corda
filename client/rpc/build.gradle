@@ -97,7 +97,7 @@ dependencies {
     integrationTestImplementation project(':test-utils')
 
     integrationTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
-    integrationTestImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    integrationTestImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':core')

@@ -42,7 +42,7 @@ buildscript {
             'org.junit**',
             'org.slf4j**',
             'worker.org.gradle.**',
-            'com.nhaarman.mockito_kotlin**',
+            'org.mockito.kotlin**',
             'org.assertj**',
             'org.hamcrest**',
             'org.mockito**',

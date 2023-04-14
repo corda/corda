@@ -60,7 +60,7 @@ dependencies {
     // JDK11: required by Quasar at run-time
     runtimeOnly "com.esotericsoftware:kryo:$kryo_version"
 
-    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

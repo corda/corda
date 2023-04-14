@@ -85,7 +85,7 @@ dependencies {
     implementation group: "com.typesafe", name: "config", version: typesafe_config_version
     implementation "io.github.classgraph:classgraph:$class_graph_version"
     implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
-    implementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    implementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     implementation "com.esotericsoftware:kryo:$kryo_version"
     implementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
     implementation "org.apache.commons:commons-lang3:3.9"

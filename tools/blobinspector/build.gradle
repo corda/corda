@@ -21,7 +21,11 @@ dependencies {
         exclude module: 'node-api'
         exclude module: 'contracts'
     }
-    testImplementation project(':core-test-utils')
+
+    testImplementation(project(':core-test-utils')) {
+        exclude module: 'node-api'
+    }
+
     testImplementation "commons-io:commons-io:$commons_io_version"
     testImplementation "org.assertj:assertj-core:${assertj_version}"
     testImplementation "junit:junit:$junit_version"
@@ -42,6 +46,10 @@ jar {
         )
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+test {
+    jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
 }
 
 publish {

@@ -87,7 +87,7 @@ dependencies {
     // JDK11: required by Quasar at run-time
     testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
 
-    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "org.mockito:mockito-core:$mockito_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"

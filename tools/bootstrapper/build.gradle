@@ -23,7 +23,7 @@ dependencies {
     testImplementation(project(':test-cli'))
 
     testImplementation "junit:junit:$junit_version"
-    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "org.mockito:mockito-core:$mockito_version"
 }
 

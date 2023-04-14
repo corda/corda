@@ -18,7 +18,7 @@ dependencies {
     testImplementation project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
 
     testImplementation "org.jetbrains.kotlin:kotlin-reflect"
-    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "junit:junit:$junit_version"
 
     // Bouncy castle support needed for X509 certificate manipulation

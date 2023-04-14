@@ -1,7 +1,7 @@
 package net.corda.nodeapitests.internal.serialization.kryo
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.internal.CheckpointSerializationContext

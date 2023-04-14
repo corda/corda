@@ -1,7 +1,7 @@
 package net.corda.node.services.config
 
-import com.nhaarman.mockito_kotlin.spy
-import com.nhaarman.mockito_kotlin.verify
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.delete

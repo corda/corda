@@ -242,7 +242,7 @@ dependencies {
     testImplementation "org.eclipse.jetty:jetty-servlet:${jetty_version}"
     testImplementation "org.eclipse.jetty:jetty-webapp:${jetty_version}"
     testImplementation "javax.servlet:javax.servlet-api:${servlet_version}"
-    testImplementation "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "com.google.jimfs:jimfs:1.1"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"

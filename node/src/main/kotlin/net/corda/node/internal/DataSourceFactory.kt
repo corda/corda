@@ -8,6 +8,8 @@ import net.corda.core.internal.declaredField
 import org.h2.engine.Database
 import org.h2.engine.Engine
 import org.slf4j.LoggerFactory
+import java.lang.invoke.MethodHandles
+import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.*
 import javax.sql.DataSource
@@ -29,6 +31,10 @@ object DataSourceFactory {
         LoggerFactory.getLogger(javaClass).debug("Applying H2 fix.") // See CORDA-924.
         Engine::class.java.getDeclaredField("DATABASES").apply {
             isAccessible = true
+
+//            val lookup = MethodHandles.privateLookupIn(Field::class.java, MethodHandles.lookup())
+//            val modifiers = lookup.findVarHandle(Field::class.java, "modifiers", Int::class.javaPrimitiveType)
+//            modifiers.set(this, getModifiers() and Modifier.FINAL.inv())
             declaredField<Int>("modifiers").apply { value = value and Modifier.FINAL.inv() }
         }.set(null, SynchronizedGetPutRemove<String, Database>())
     }

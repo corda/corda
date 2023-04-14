@@ -1,8 +1,8 @@
 package net.corda.core.contracts
 
-import com.nhaarman.mockito_kotlin.doAnswer
-import com.nhaarman.mockito_kotlin.spy
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.whenever
 import net.corda.core.identity.Party
 import org.junit.Ignore
 import org.junit.Test

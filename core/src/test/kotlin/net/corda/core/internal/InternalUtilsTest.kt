@@ -1,8 +1,8 @@
 package net.corda.core.internal
 
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import org.assertj.core.api.Assertions.assertThat
