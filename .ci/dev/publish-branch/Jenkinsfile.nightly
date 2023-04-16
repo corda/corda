@@ -14,37 +14,6 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
-/*
-** calculate the stage for NexusIQ evaluation
-**  * build for snapshots
-*/
-def nexusDefaultIqStage = "build"
-
-/**
- * make sure calculated default value of NexusIQ stage is first in the list
- * thus making it default for the `choice` parameter
- */
-def nexusIqStageChoices = [nexusDefaultIqStage].plus(
-                [
-                        'develop',
-                        'build',
-                        'stage-release',
-                        'release',
-                        'operate'
-                ].minus([nexusDefaultIqStage]))
-
-/**
- * define an empty teamsWebHookURL and if it is a Release Branch
- * then set it for the Corda 4 Jenkins Connector
- */
-boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
-def teamsWebHookURL = ""
-if (isReleaseBranch){
-    withCredentials([string(credentialsId: 'ms-teams-webhook', variable: 'webhook_url')]) {
-        teamsWebHookURL = "$webhook_url"
-    }
-}
-
 pipeline {
     agent { label 'standard' }
 
@@ -54,22 +23,6 @@ pipeline {
         overrideIndexTriggers(false)
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
-        office365ConnectorWebhooks([[
-                                            name                 : "Corda 4 Jenkins Connector",
-                                            notifyBackToNormal   : true,
-                                            startNotification    : false,
-                                            notifyFailure        : true,
-                                            notifySuccess        : true,
-                                            notifyNotBuilt       : false,
-                                            notifyAborted        : false,
-                                            notifyRepeatedFailure: true,
-                                            notifyUnstable       : true,
-                                            url                  : "${teamsWebHookURL}"
-                                    ]])
-    }
-
-    parameters {
-        choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
 
     triggers {
@@ -85,26 +38,6 @@ pipeline {
     }
 
     stages {
-        stage('Sonatype Check') {
-            steps {
-                sh "./gradlew --no-daemon clean jar"
-                script {
-                    sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
-                    /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
-                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\(\\.[0-9]\\+\\)\\+\\).*\$/\\1/'").trim()
-                    def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
-                    def artifactId = 'corda'
-                    nexusAppId = "${groupId}-${artifactId}-${version}"
-                }
-                nexusPolicyEvaluation (
-                        failBuildOnNetworkError: false,
-                        iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
-                        iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
-                        iqStage: params.nexusIqStage
-                )
-            }
-        }
-
         stage('Publish to Artifactory') {
             steps {
                 rtServer (
