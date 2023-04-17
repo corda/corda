@@ -112,6 +112,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
         if (this === other) return true
         if (other !is ByteSequence) return false
         if (this.size != other.size) return false
+        if (this.hashCode() != other.hashCode()) return false
         return subArraysEqual(this._bytes, this.offset, this.size, other._bytes, other.offset)
     }
 
@@ -125,13 +126,18 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
         return true
     }
 
+    private var _hashCode: Int = 0;
+
     override fun hashCode(): Int {
-        val thisBytes = _bytes
-        var result = 1
-        for (index in offset until (offset + size)) {
-            result = 31 * result + thisBytes[index]
-        }
-        return result
+        return if (_hashCode == 0) {
+            val thisBytes = _bytes
+            var result = 1
+            for (index in offset until (offset + size)) {
+                result = 31 * result + thisBytes[index]
+            }
+            _hashCode = result
+            result
+        } else _hashCode
     }
 
     override fun toString(): String = "[${copyBytes().toHexString()}]"
