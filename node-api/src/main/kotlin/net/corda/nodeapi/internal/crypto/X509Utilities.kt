@@ -52,6 +52,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.TrustAnchor
+import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
