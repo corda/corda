@@ -13,7 +13,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
-import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -39,10 +38,6 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             return true
         }
 
-        // This is an efficient hashCode, because there is no point in performing a hash calculation on a cryptographic hash.
-        // It just takes the first 4 bytes and transforms them into an Int.
-        override fun hashCode() = ByteBuffer.wrap(bytes).int
-
         /**
          * Convert the hash value to an uppercase hexadecimal [String].
          */
@@ -61,8 +56,6 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
                 else -> algorithm == other.algorithm && super.equals(other)
             }
         }
-
-        override fun hashCode() = ByteBuffer.wrap(bytes).int
 
         override fun toString(): String {
             return "$algorithm$DELIMITER${toHexString()}"
