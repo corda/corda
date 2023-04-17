@@ -26,11 +26,13 @@ import java.util.function.Supplier
 @CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
+    @Suppress("EqualsWithHashCodeExist")
     class SHA256(bytes: ByteArray) : SecureHash(bytes) {
         init {
             require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
         }
 
+        // Hash code not overridden on purpose (super class impl will do).
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is SHA256) return false
@@ -48,7 +50,9 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         }
     }
 
+    @Suppress("EqualsWithHashCodeExist")
     class HASH(val algorithm: String, bytes: ByteArray) : SecureHash(bytes) {
+        // Hash code not overridden on purpose (super class impl will do).
         override fun equals(other: Any?): Boolean {
             return when {
                 this === other -> true
