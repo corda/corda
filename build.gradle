@@ -107,7 +107,7 @@ buildscript {
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = '1.7.4'
+    ext.crash_version = '1.7.6'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.1'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
@@ -260,7 +260,7 @@ allprojects {
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'kotlin-allopen'
     apply plugin: 'org.sonarqube'
-    
+
     allOpen {
         annotations(
                 "javax.persistence.Entity",
