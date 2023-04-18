@@ -53,7 +53,6 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         }
     }
 
-    @Suppress("EqualsWithHashCodeExist")
     class HASH(val algorithm: String, bytes: ByteArray) : SecureHash(bytes) {
         override fun equals(other: Any?): Boolean {
             return when {
