@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
@@ -451,8 +452,18 @@ open class MockServices private constructor(
     val cordappClassloader: ClassLoader
         get() = cordappLoader.appClassLoader
 
-    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
+            recordTransactions(txs, false)
+
+    @VisibleForTesting
+    fun recordTransactions(txn: SignedTransaction, disableSignatureVerification: Boolean) =
+            recordTransactions(listOf(txn), disableSignatureVerification)
+
+    @VisibleForTesting
+    fun recordTransactions(txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean) {
         txs.forEach {
+            if (!disableSignatureVerification)
+                it.verifyRequiredSignatures()
             (validatedTransactions as WritableTransactionStorage).addTransaction(it)
         }
     }

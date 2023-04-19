@@ -5,16 +5,13 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
@@ -28,6 +25,7 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.time.Duration
 import java.util.*
 
 class BridgeControlListener(private val keyStore: CertificateStore,
@@ -40,7 +38,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             bridgeMetricsService: BridgeMetricsService? = null,
                             trace: Boolean = false,
-                            sslHandshakeTimeout: Long? = null,
+                            sslHandshakeTimeout: Duration? = null,
                             bridgeConnectionTTLSeconds: Int = 0) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
     private var bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
@@ -57,13 +55,6 @@ class BridgeControlListener(private val keyStore: CertificateStore,
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
     private var notifyConsumer: ClientConsumer? = null
-
-    constructor(config: MutualSslConfiguration,
-                p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int,
-                revocationConfig: RevocationConfig,
-                enableSNI: Boolean,
-                proxy: ProxyConfig? = null) : this(config.keyStore.get(), config.trustStore.get(), config.useOpenSsl, proxy, maxMessageSize, revocationConfig, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()

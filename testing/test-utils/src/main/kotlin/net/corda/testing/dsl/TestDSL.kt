@@ -23,6 +23,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.DbTransactionsResolver
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.testing.core.dummyCommand
@@ -139,6 +140,8 @@ data class TestTransactionDSLInterpreter private constructor(
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
 
         override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {}
+
+        override fun removeUnnotarisedTransaction(id: SecureHash) {}
 
         override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {}
     }
@@ -367,7 +370,10 @@ data class TestLedgerDSLInterpreter private constructor(
     override fun verifies(): EnforceVerifyOrFail {
         try {
             val usedInputs = mutableSetOf<StateRef>()
-            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it, listOf(NULL_SIGNATURE)) })
+            transactionsUnverified.map {
+                (services.validatedTransactions as WritableTransactionStorage).addTransaction(SignedTransaction(it, listOf(NULL_SIGNATURE)))
+            }
+
             for ((_, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
@@ -380,7 +386,7 @@ data class TestLedgerDSLInterpreter private constructor(
                     throw DoubleSpentInputs(txIds)
                 }
                 usedInputs.addAll(wtx.inputs)
-                services.recordTransactions(SignedTransaction(wtx, listOf(NULL_SIGNATURE)))
+                (services.validatedTransactions as WritableTransactionStorage).addTransaction(SignedTransaction(wtx, listOf(NULL_SIGNATURE)))
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
