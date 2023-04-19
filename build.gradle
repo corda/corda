@@ -63,7 +63,8 @@ buildscript {
     ext.asm_version = '7.1'
     ext.artemis_version = '2.6.2'
     // TODO Upgrade to Jackson 2.10+ only when corda is using kotlin 1.3.10
-    ext.jackson_version = '2.9.8'
+    ext.jackson_version = '2.13.5'
+    ext.jackson_kotlin_version = '2.9.7'
     ext.jetty_version = '9.4.19.v20190610'
     ext.jersey_version = '2.25'
     ext.servlet_version = '4.0.1'
@@ -106,7 +107,7 @@ buildscript {
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = '1.7.4'
+    ext.crash_version = '1.7.6'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.1'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
@@ -416,6 +417,10 @@ allprojects {
                         } else {
                             details.useVersion netty_version
                         }
+                    }
+
+                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                        details.useVersion snake_yaml_version
                     }
                 }
             }
