@@ -19,8 +19,10 @@ import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
+import java.time.Duration
 
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
@@ -46,13 +48,15 @@ import net.corda.core.utilities.unwrap
 // To maintain backwards compatibility with the old API, FinalityFlow can act both as an initiating flow and as an inlined flow.
 // This is only possible because a flow is only truly initiating when the first call to initiateFlow is made (where the
 // presence of @InitiatingFlow is checked). So the new API is inlined simply because that code path doesn't call initiateFlow.
+@Suppress("TooManyFunctions")
 @InitiatingFlow
 class FinalityFlow private constructor(val transaction: SignedTransaction,
                                        private val oldParticipants: Collection<Party>,
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
                                        private val newApi: Boolean,
-                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
+                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT,
+                                       private val handleDoubleSpend: Boolean? = null) : FlowLogic<SignedTransaction>() {
 
     @CordaInternal
     data class ExtraConstructorArgs(val oldParticipants: Collection<Party>, val sessions: Collection<FlowSession>, val newApi: Boolean, val statesToRecord: StatesToRecord)
@@ -87,13 +91,15 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param transaction What to commit.
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
+     * @param handleDoubleSpend Whether to catch and propagate Double Spend exception to peers.
      */
     @JvmOverloads
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = tracker()
-    ) : this(transaction, emptyList(), progressTracker, sessions, true)
+            progressTracker: ProgressTracker = tracker(),
+            handleDoubleSpend: Boolean? = null
+    ) : this(transaction, emptyList(), progressTracker, sessions, true, handleDoubleSpend = handleDoubleSpend)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -102,14 +108,16 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
      * @param statesToRecord Which states to commit to the vault.
+     * @param handleDoubleSpend Whether to catch and propagate Double Spend exception to peers.
      */
     @JvmOverloads
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
             statesToRecord: StatesToRecord,
-            progressTracker: ProgressTracker = tracker()
-    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord)
+            progressTracker: ProgressTracker = tracker(),
+            handleDoubleSpend: Boolean? = null
+    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord, handleDoubleSpend = handleDoubleSpend)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -146,11 +154,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         @Suppress("ClassNaming")
         object BROADCASTING_POST_NOTARISATION : ProgressTracker.Step("Broadcasting notary signature")
         @Suppress("ClassNaming")
+        object BROADCASTING_DOUBLE_SPEND_ERROR : ProgressTracker.Step("Broadcasting notary double spend error")
+        @Suppress("ClassNaming")
         object FINALISING_TRANSACTION : ProgressTracker.Step("Finalising transaction locally")
         object BROADCASTING : ProgressTracker.Step("Broadcasting notarised transaction to other participants")
 
         @JvmStatic
-        fun tracker() = ProgressTracker(RECORD_UNNOTARISED, BROADCASTING_PRE_NOTARISATION, NOTARISING, BROADCASTING_POST_NOTARISATION, FINALISING_TRANSACTION, BROADCASTING)
+        fun tracker() = ProgressTracker(RECORD_UNNOTARISED, BROADCASTING_PRE_NOTARISATION, NOTARISING, BROADCASTING_POST_NOTARISATION, BROADCASTING_DOUBLE_SPEND_ERROR, FINALISING_TRANSACTION, BROADCASTING)
     }
 
     @Suspendable
@@ -202,28 +212,39 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             recordLocallyAndBroadcast(newPlatformSessions, transaction)
         }
 
-        val stxn = notariseOrRecord()
-        val notarySignatures = stxn.sigs - transaction.sigs.toSet()
-        if (notarySignatures.isNotEmpty()) {
-            if (useTwoPhaseFinality && newPlatformSessions.isNotEmpty()) {
-                broadcastSignaturesAndFinalise(newPlatformSessions, notarySignatures)
-            }
-            else {
-                progressTracker.currentStep = FINALISING_TRANSACTION
-                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
-                    logger.info("Finalised transaction locally.")
+        try {
+            val stxn = notariseOrRecord()
+            val notarySignatures = stxn.sigs - transaction.sigs.toSet()
+            if (notarySignatures.isNotEmpty()) {
+                if (useTwoPhaseFinality && newPlatformSessions.isNotEmpty()) {
+                    broadcastSignaturesAndFinalise(newPlatformSessions, notarySignatures)
+                } else {
+                    progressTracker.currentStep = FINALISING_TRANSACTION
+                    serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
+                        (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
+                        logger.info("Finalised transaction locally.")
+                    }
                 }
             }
-        }
 
-        if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
-            broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, stxn)
-        } else if (useTwoPhaseFinality && oldPlatformSessions.isNotEmpty()) {
-            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
+            if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
+                broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, stxn)
+            } else if (useTwoPhaseFinality && oldPlatformSessions.isNotEmpty()) {
+                broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
+            }
+            return stxn
         }
-
-        return stxn
+        catch (e: NotaryException) {
+            if (e.error is NotaryError.Conflict && useTwoPhaseFinality) {
+                (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
+                val overrideHandleDoubleSpend = handleDoubleSpend ?:
+                    (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
+                if (overrideHandleDoubleSpend && newPlatformSessions.isNotEmpty()) {
+                    broadcastDoubleSpendError(newPlatformSessions, e)
+                } else sleep(Duration.ZERO) // force checkpoint to persist db update.
+            }
+            throw e
+        }
     }
 
     @Suspendable
@@ -257,7 +278,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             sessions.forEach { session ->
                 try {
                     logger.debug { "Sending notary signature to party $session." }
-                    session.send(notarySignatures)
+                    session.send(Try.Success(notarySignatures))
                     // remote will finalise txn with notary signature
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -272,6 +293,27 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
                 (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
                 logger.info("Finalised transaction locally with notary signature.")
+            }
+        }
+    }
+
+    @Suspendable
+    private fun broadcastDoubleSpendError(sessions: Collection<FlowSession>, error: NotaryException) {
+        progressTracker.currentStep = BROADCASTING_DOUBLE_SPEND_ERROR
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastDoubleSpendError", flowLogic = this) {
+            logger.info("Broadcasting notary double spend error.")
+            sessions.forEach { session ->
+                try {
+                    logger.debug { "Sending notary double spend error to party $session." }
+                    session.send(Try.Failure<List<TransactionSignature>>(error))
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "${session.counterparty} has finished prematurely and we're trying to send them a notary double spend error. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
+                }
             }
         }
     }
@@ -433,12 +475,21 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             }
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
             logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
-            val notarySignatures = otherSideSession.receive<List<TransactionSignature>>()
-                    .unwrap { it }
-            serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                logger.debug { "Peer received notarised signature." }
-                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
-                logger.info("Peer finalised transaction with notary signature.")
+
+            try {
+                val notarySignatures = otherSideSession.receive<Try<List<TransactionSignature>>>().unwrap { it.getOrThrow() }
+                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
+                    logger.debug { "Peer received notarised signature." }
+                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
+                    logger.info("Peer finalised transaction with notary signature.")
+                }
+            } catch(throwable: NotaryException) {
+                if(throwable.error is NotaryError.Conflict) {
+                    logger.info("Peer received double spend error.")
+                    (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
+                    sleep(Duration.ZERO) // force checkpoint to persist db update.
+                }
+                throw throwable
             }
         } else {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordTransactions", flowLogic = this) {

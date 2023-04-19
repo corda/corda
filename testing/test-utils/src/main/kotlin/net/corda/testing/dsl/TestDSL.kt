@@ -141,6 +141,8 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {}
 
+        override fun removeUnnotarisedTransaction(id: SecureHash) {}
+
         override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {}
     }
 

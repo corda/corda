@@ -43,6 +43,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import rx.plugins.RxJavaHooks
+import java.lang.AssertionError
 import java.security.KeyPair
 import java.time.Clock
 import java.time.Instant
@@ -50,6 +51,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
@@ -157,6 +159,21 @@ class DBTransactionStorageTests {
             assertSignatures(it.transaction, it.signatures, transaction.sigs + notarySig)
             assertEquals(VERIFIED, it.status)
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `remove un-notarised transaction`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction(notarySig = false)
+        transactionStorage.addUnnotarisedTransaction(transaction)
+        assertNull(transactionStorage.getTransaction(transaction.id))
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+
+        assertEquals(true, transactionStorage.removeUnnotarisedTransaction(transaction.id))
+        assertFailsWith<AssertionError> { readTransactionFromDB(transaction.id).status }
+        assertNull(transactionStorage.getTransactionInternal(transaction.id))
     }
 
     @Test(timeout = 300_000)

@@ -809,6 +809,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
+        override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
+            return database.transaction {
+                delegate.removeUnnotarisedTransaction(id)
+            }
+        }
+
         override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean {
             database.transaction {
                 delegate.finalizeTransactionWithExtraSignatures(transaction, signatures)
