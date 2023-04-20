@@ -185,9 +185,10 @@ class FinalityFlowTests : WithFinality {
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
-            // Note: double spend error not propagated to peers by default
-            val (_, txnDsStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
-            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnDsStatusBob)
+            // Note: double spend error not propagated to peers by default (corDapp PV = 3)
+            // Un-notarised txn clean-up occurs in ReceiveFinalityFlow upon receipt of UnexpectedFlowEndException
+            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertTxnRemovedFromDatabase(aliceNode, stxId)
         }
     }
 
