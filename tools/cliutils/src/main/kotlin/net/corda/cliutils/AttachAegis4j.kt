@@ -9,6 +9,7 @@ import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
+@Suppress("TooGenericExceptionCaught")
 object AttachAegis4j {
     private fun toBytes(clazz: Class<*>): ByteArray? {
         val path = clazz.name.replace('.', '/') + ".class"
