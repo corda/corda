@@ -207,6 +207,19 @@ class FinalityFlowTests : WithFinality {
             aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), propagateDoubleSpendErrorToPeers = true)).resultFuture.getOrThrow()
         }
         catch (e: NotaryException) {
+            // note: ReceiveFinalityFlow un-notarised transaction clean-up takes place upon catching NotaryError.Conflict
+            val stxId = (e.error as NotaryError.Conflict).txId
+            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertTxnRemovedFromDatabase(aliceNode, stxId)
+            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertTxnRemovedFromDatabase(bobNode, stxId)
+        }
+
+        try {
+            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), propagateDoubleSpendErrorToPeers = false)).resultFuture.getOrThrow()
+        }
+        catch (e: NotaryException) {
+            // note: ReceiveFinalityFlow un-notarised transaction clean-up takes place upon catching UnexpectedFlowEndException
             val stxId = (e.error as NotaryError.Conflict).txId
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
