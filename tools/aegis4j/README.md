@@ -1,4 +1,17 @@
-# aegis4j
+# Fork of aegis4j
+
+This module is a fork of [aegis4j](https://github.com/gredler/aegis4j). Many thanks to the oiginal author(s).
+The main changes in this fork are:
+
+- Additional patches for more unused methods and classes tagged as vulnerable in our dependencies.
+- Patches now patch the beginning of a method or constructor body, and don't replace the whole body. This maintains behaviour
+  where an exception is thrown, but allows fixes where appropriate code can be inserted at the start of a method.
+- Compatibility with JDK8
+- Support for specifying different source files or resources for the patches
+- Support for a system property to provide addition in-the-field patches for emergency use
+- Reduced output, except in error conditions.
+
+# Original aegis4j README
 
 Avoid the NEXT Log4Shell vulnerability!
 

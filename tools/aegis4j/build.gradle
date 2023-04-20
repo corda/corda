@@ -55,6 +55,7 @@ test {
     useJUnitPlatform()
     systemProperty 'jdk.attach.allowAttachSelf', 'true' // tests attach agent to local VM
     systemProperty 'aegis4j.projectDir', "${project.projectDir.toString()}"
+    systemProperty 'aegis4j.log', "true"
     forkEvery 1 // tests cannot undo class modifications to clean up after themselves
     testLogging {
         events 'passed', 'skipped', 'failed'

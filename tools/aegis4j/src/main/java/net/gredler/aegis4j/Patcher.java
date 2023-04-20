@@ -50,7 +50,7 @@ public final class Patcher implements ClassFileTransformer {
      * @param block the features to block
      */
     public static void start(Instrumentation instr, Set<String> block, Properties props) throws IOException {
-        System.out.print("Aegis4j patching starting...");
+        AegisAgent.logPrint("Aegis4j patching starting...");
         if (patcher != null) instr.removeTransformer(patcher);
         patcher = new Patcher(block, props);
         instr.addTransformer(patcher, true);
@@ -58,14 +58,14 @@ public final class Patcher implements ClassFileTransformer {
         int count = 0;
         for (String className : patcher.modifications.keySet()) {
             try {
-                if (count > 0) System.out.print(", ");
-                System.out.print(className);
+                if (count > 0) AegisAgent.logPrint(", ");
+                AegisAgent.logPrint(className);
                 Class<?> clazz = Class.forName(className);
                 instr.retransformClasses(clazz);
             } catch (ClassNotFoundException e) {
-                System.out.print("... not present");
+                AegisAgent.logPrint("... not present");
             } catch (NoClassDefFoundError e) {
-                System.out.print("... not present");
+                AegisAgent.logPrint("... not present");
             } catch (UnmodifiableClassException e) {
                 throw new IOException("Problems transforming class", e);
             }
@@ -73,7 +73,7 @@ public final class Patcher implements ClassFileTransformer {
         }
 
         System.setProperty("aegis4j.blocked.features", String.join(",", block));
-        System.out.println(" finished.");
+        AegisAgent.logPrintln(" finished.");
     }
 
     @Override
@@ -103,7 +103,7 @@ public final class Patcher implements ClassFileTransformer {
                     } else {
                         CtMethod[] methods = mod.isAll() ? clazz.getDeclaredMethods() : clazz.getDeclaredMethods(mod.methodName);
                         if (methods.length == 0) {
-                            System.err.println("ERROR: Method not found: " + className + "." + mod.methodName);
+                            System.err.println("Aegis4j ERROR: Method not found: " + className + "." + mod.methodName);
                         }
                         for (CtMethod method : methods) {
                             if (mod.newBody.startsWith("throw ")) {

@@ -26,6 +26,16 @@ import java.util.stream.Collectors;
  */
 public final class AegisAgent {
 
+    public static boolean log = Boolean.getBoolean("aegis4j.log");
+
+    public static void logPrint(String line) {
+        if (log) System.out.print(line);
+    }
+
+    public static void logPrintln(String line) {
+        if (log) System.out.println(line);
+    }
+
     private static Instrumentation instrumentation;
 
     /**
@@ -66,13 +76,13 @@ public final class AegisAgent {
                         }
                         InputStream in = path.toUri().toURL().openStream();
                         props = readPropertiesFromStream(in);
-                        System.out.println("Aegis4j patching from " + path + " mods file");
+                        logPrintln("Aegis4j patching from " + path + " mods file");
                     } else if (normalisedaArg.startsWith("resource=")) {
                         String pathString = arg.trim().substring(9);
                         InputStream in = ClassLoader.getSystemResourceAsStream(pathString);
                         if (in == null) throw new IOException("Unable to load mods resource " + pathString);
                         props = readPropertiesFromStream(in);
-                        System.out.println("Aegis4j patching from " + pathString + " mods resource");
+                        logPrintln("Aegis4j patching from " + pathString + " mods resource");
                     } else {
                         throw new IllegalArgumentException("Aegis4j ERROR: unrecognised parameters " + arg);
                     }
