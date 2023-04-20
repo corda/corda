@@ -109,7 +109,7 @@ buildscript {
     ext.beanutils_version = '1.9.3'
     ext.crash_version = '1.7.6'
     ext.jsr305_version = constants.getProperty("jsr305Version")
-    ext.shiro_version = '1.4.1'
+    ext.shiro_version = '1.10.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.hikari_version = '3.3.1'
     ext.liquibase_version = '3.6.3'
