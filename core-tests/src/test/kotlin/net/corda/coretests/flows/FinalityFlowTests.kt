@@ -22,6 +22,7 @@ import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotarySigCheck
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
+import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
@@ -304,6 +305,23 @@ class FinalityFlowTests : WithFinality {
         assertEquals(TransactionStatus.VERIFIED, txnStatusBobYetAgain)
     }
 
+    @Test(timeout=300_000)
+    fun `two phase finality flow successfully removes un-notarised transaction where initiator fails to send notary signature`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
+        try {
+            aliceNode.startFlowAndRunNetwork(MimicFinalityFailureFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
+        }
+        catch (e: UnexpectedFlowEndException) {
+            val stxId = SecureHash.parse(e.message)
+            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertTxnRemovedFromDatabase(aliceNode, stxId)
+            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertTxnRemovedFromDatabase(bobNode, stxId)
+        }
+    }
+
     @StartableByRPC
     class IssueFlow(val notary: Party) : FlowLogic<StateAndRef<DummyContract.SingleOwnerState>>() {
 
@@ -415,6 +433,27 @@ class FinalityFlowTests : WithFinality {
             logger.info("Peer finalised transaction with notary signature.")
 
             return stx + sigs
+        }
+    }
+
+    @InitiatingFlow
+    class MimicFinalityFailureFlow(private val stateAndRef: StateAndRef<DummyContract.SingleOwnerState>, private val newOwner: Party) : FlowLogic<SignedTransaction>() {
+        // Mimic FinalityFlow but trigger UnexpectedFlowEndException in ReceiveFinality whilst awaiting receipt of notary signature
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val txBuilder = DummyContract.move(stateAndRef, newOwner)
+            val stxn = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
+            val sessionWithCounterParty = initiateFlow(newOwner)
+            subFlow(SendTransactionFlow(sessionWithCounterParty, stxn))
+            throw UnexpectedFlowEndException("${stxn.id}")
+        }
+    }
+
+    @InitiatedBy(MimicFinalityFailureFlow::class)
+    class TriggerReceiveFinalityFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveFinalityFlow(otherSide))
         }
     }
 
