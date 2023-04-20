@@ -94,7 +94,7 @@ dependencies {
     smokeTestImplementation project(":core")
     smokeTestImplementation project(":node-api")
     smokeTestImplementation project(":client:rpc")
-    smokeTestImplementation "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    smokeTestImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
     smokeTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     smokeTestImplementation "junit:junit:$junit_version"
@@ -139,7 +139,8 @@ task smokeTest(type: Test) {
 
 test {
     jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+            '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
