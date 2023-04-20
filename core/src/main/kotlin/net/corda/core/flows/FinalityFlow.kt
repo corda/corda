@@ -237,9 +237,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         catch (e: NotaryException) {
             if (e.error is NotaryError.Conflict && useTwoPhaseFinality) {
                 (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
-                val overrideHandleDoubleSpend = propagateDoubleSpendErrorToPeers ?:
+                val overridePropagateDoubleSpendErrorToPeers = propagateDoubleSpendErrorToPeers ?:
                     (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
-                if (overrideHandleDoubleSpend && newPlatformSessions.isNotEmpty()) {
+                if (overridePropagateDoubleSpendErrorToPeers && newPlatformSessions.isNotEmpty()) {
                     broadcastDoubleSpendError(newPlatformSessions, e)
                 } else sleep(Duration.ZERO) // force checkpoint to persist db update.
             }
