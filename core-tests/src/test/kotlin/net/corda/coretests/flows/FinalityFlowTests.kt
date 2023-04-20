@@ -203,7 +203,7 @@ class FinalityFlowTests : WithFinality {
         assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
 
         try {
-            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), handleDoubleSpend = true)).resultFuture.getOrThrow()
+            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), propagateDoubleSpendErrorToPeers = true)).resultFuture.getOrThrow()
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
@@ -320,7 +320,7 @@ class FinalityFlowTests : WithFinality {
     @StartableByRPC
     @InitiatingFlow
     class SpendFlow(private val stateAndRef: StateAndRef<DummyContract.SingleOwnerState>, private val newOwner: Party,
-                    private val handleDoubleSpend: Boolean? = null) : FlowLogic<SignedTransaction>() {
+                    private val propagateDoubleSpendErrorToPeers: Boolean? = null) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -328,7 +328,7 @@ class FinalityFlowTests : WithFinality {
             val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
             sessionWithCounterParty.sendAndReceive<String>("initial-message")
-            return subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty), handleDoubleSpend = handleDoubleSpend))
+            return subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty), propagateDoubleSpendErrorToPeers = propagateDoubleSpendErrorToPeers))
         }
     }
 
