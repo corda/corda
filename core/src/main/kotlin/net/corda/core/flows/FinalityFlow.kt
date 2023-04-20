@@ -204,7 +204,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // - finalise locally
 
         val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
-            serviceHub.networkMapCache.getNodeByLegalName(it.counterparty.name)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
+            serviceHub.networkMapCache.getNodeByLegalIdentity(it.counterparty)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
         }
 
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
@@ -466,7 +466,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     override fun call(): SignedTransaction {
         val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true))
 
-        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalName(otherSideSession.counterparty.name)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
                 logger.debug { "Peer recording transaction without notary signature." }
