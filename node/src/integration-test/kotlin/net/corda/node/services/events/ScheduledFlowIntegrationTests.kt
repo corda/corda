@@ -4,10 +4,17 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.collect.ImmutableList
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.TransactionBuilder
@@ -69,7 +76,11 @@ class ScheduledFlowIntegrationTests {
             val state = results.states.firstOrNull() ?: return
             require(!state.state.data.processed) { "Cannot spend an already processed state" }
             val lock = UUID.randomUUID()
-            serviceHub.vaultService.softLockReserve(lock, NonEmptySet.of(state.ref))
+            try {
+                serviceHub.vaultService.softLockReserve(lock, NonEmptySet.of(state.ref))
+            } catch (e: StatesNotAvailableException) {
+                return
+            }
             val notary = state.state.notary
             val outputState = SpentState(identity, ourIdentity, state.state.data.destination)
             val builder = TransactionBuilder(notary)

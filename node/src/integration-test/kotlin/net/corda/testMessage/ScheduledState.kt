@@ -1,9 +1,22 @@
 package net.corda.testMessage
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
-import net.corda.core.flows.*
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.SchedulableState
+import net.corda.core.contracts.ScheduledActivity
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.testing.contracts.DummyContract
@@ -25,7 +38,11 @@ class ScheduledFlow(private val stateRef: StateRef) : FlowLogic<Unit>() {
         }
         require(!scheduledState.processed) { "State should not have been previously processed" }
         val lock = UUID.randomUUID()
-        serviceHub.vaultService.softLockReserve(lock, NonEmptySet.of(state.ref))
+        try {
+            serviceHub.vaultService.softLockReserve(lock, NonEmptySet.of(state.ref))
+        } catch (e: StatesNotAvailableException) {
+            return
+        }
         val notary = state.state.notary
         val newStateOutput = scheduledState.copy(processed = true)
         val builder = TransactionBuilder(notary)
