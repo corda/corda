@@ -43,8 +43,8 @@ dependencies {
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
-    deterministicLibraries "org.bouncycastle:bcprov-jdk18on:$bouncycastle_version"
-    deterministicLibraries "org.bouncycastle:bcpkix-jdk18on:$bouncycastle_version"
+    deterministicLibraries "org.bouncycastle:bcprov-debug-jdk18on:$bouncycastle_version"
+    deterministicLibraries "org.bouncycastle:bcpkix-debug-jdk18on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
 }
 
