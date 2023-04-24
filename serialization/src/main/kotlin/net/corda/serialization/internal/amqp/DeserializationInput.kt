@@ -2,8 +2,8 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
+import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
@@ -21,7 +21,6 @@ import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.InputStream
 import java.io.NotSerializableException
-import java.lang.Exception
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
@@ -41,16 +40,17 @@ class DeserializationInput constructor(
         private val serializerFactory: SerializerFactory
 ) {
     private val objectHistory: MutableList<Any> = mutableListOf()
-    private val logger = loggerFor<DeserializationInput>()
 
     companion object {
+        private val logger = loggerFor<DeserializationInput>()
+
         @VisibleForTesting
         @Throws(AMQPNoTypeNotSerializableException::class)
         fun <T> withDataBytes(
                 byteSequence: ByteSequence,
                 encodingWhitelist: EncodingWhitelist,
                 task: (ByteBuffer) -> T
-        ) : T {
+        ): T {
             // Check that the lead bytes match expected header
             val amqpSequence = amqpMagic.consume(byteSequence)
                     ?: throw AMQPNoTypeNotSerializableException("Serialization header does not match.")
