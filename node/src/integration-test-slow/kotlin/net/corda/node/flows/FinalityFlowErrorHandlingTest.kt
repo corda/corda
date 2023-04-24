@@ -72,7 +72,7 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 val txId = alice.rpc.stateMachineRecordedTransactionMappingSnapshot().single().transactionId
 
                 alice.rpc.startFlow(::GetFlowTransaction, txId).returnValue.getOrThrow().apply {
-                    assertEquals("M", this.first)              // "M" -> MISSING_NOTARY_SIG
+                    assertEquals("F", this.first)              // "F" -> IN_FLIGHT
                     assertEquals(ALICE_NAME.toString(), this.second)    // initiator
                     assertEquals(CHARLIE_NAME.toString(), this.third)   // peers
                 }

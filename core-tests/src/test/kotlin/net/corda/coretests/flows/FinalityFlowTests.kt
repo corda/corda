@@ -298,7 +298,7 @@ class FinalityFlowTests : WithFinality {
         val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(notarisedStxn1.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
         val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(notarisedStxn1.id) ?: fail()
-        assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatusBob)
+        assertEquals(TransactionStatus.IN_FLIGHT, txnStatusBob)
 
         // now lets attempt a new spend with the new output of the previous transaction
         val newStateRef = notarisedStxn1.coreTransaction.outRef<DummyContract.SingleOwnerState>(1)
@@ -312,7 +312,7 @@ class FinalityFlowTests : WithFinality {
         val (_, txnStatusAlice2) = aliceNode.services.validatedTransactions.getTransactionInternal(notarisedStxn2.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice2)
         val (_, txnStatusBob2) = bobNode.services.validatedTransactions.getTransactionInternal(notarisedStxn2.id) ?: fail()
-        assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatusBob2)
+        assertEquals(TransactionStatus.IN_FLIGHT, txnStatusBob2)
 
         // Validate attempt at flow finalisation by Bob has no effect on outcome.
         val finaliseStxn1 =  bobNode.startFlowAndRunNetwork(FinaliseSpeedySpendFlow(notarisedStxn1.id, notarisedStxn1.sigs)).resultFuture.getOrThrow()
