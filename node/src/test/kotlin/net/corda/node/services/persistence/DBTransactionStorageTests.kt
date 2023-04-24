@@ -145,6 +145,22 @@ class DBTransactionStorageTests {
     }
 
     @Test(timeout = 300_000)
+    fun `finalize transaction after recording transaction as un-notarised`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction(notarySig = false)
+        transactionStorage.addUnnotarisedTransaction(transaction)
+        assertNull(transactionStorage.getTransaction(transaction.id))
+        assertEquals(MISSING_NOTARY_SIG, readTransactionFromDB(transaction.id).status)
+        transactionStorage.finalizeTransactionWithExtraSignatures(transaction, emptyList())
+        readTransactionFromDB(transaction.id).let {
+            assertSignatures(it.transaction, it.signatures, transaction.sigs)
+            assertEquals(VERIFIED, it.status)
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `finalize transaction with extra signatures after recording transaction as un-notarised`() {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)

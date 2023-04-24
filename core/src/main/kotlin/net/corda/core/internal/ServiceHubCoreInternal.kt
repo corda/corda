@@ -54,6 +54,14 @@ interface ServiceHubCoreInternal : ServiceHub {
      * @param statesToRecord how the vault should treat the output states of the transaction.
      */
     fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord)
+
+    /**
+     * Stores or updates a [SignedTransaction] with a status of VERIFIED.
+     *
+     * @param txn The transaction to record.
+     * @param statesToRecord how the vault should treat the output states of the transaction.
+     */
+    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord)
 }
 
 interface TransactionsResolver {

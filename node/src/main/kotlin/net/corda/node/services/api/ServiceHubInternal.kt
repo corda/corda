@@ -160,7 +160,6 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                                                    vaultService: VaultServiceInternal,
                                                    database: CordaPersistence) {
             database.transaction {
-                require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
                 recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
                     validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs)
                 }
@@ -227,12 +226,28 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
 
     override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {
         requireSupportedHashType(txn)
+        require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
         if (txn.coreTransaction is WireTransaction)
             (txn + sigs).verifyRequiredSignatures()
         finalizeTransactionWithExtraSignatures(
                 statesToRecord,
                 txn,
                 sigs,
+                validatedTransactions,
+                stateMachineRecordedTransactionMapping,
+                vaultService,
+                database
+        )
+    }
+
+    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {
+        requireSupportedHashType(txn)
+        if (txn.coreTransaction is WireTransaction)
+            txn.verifyRequiredSignatures()
+        finalizeTransactionWithExtraSignatures(
+                statesToRecord,
+                txn,
+                emptyList(),
                 validatedTransactions,
                 stateMachineRecordedTransactionMapping,
                 vaultService,

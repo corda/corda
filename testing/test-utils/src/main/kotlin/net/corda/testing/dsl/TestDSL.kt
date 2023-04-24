@@ -144,6 +144,8 @@ data class TestTransactionDSLInterpreter private constructor(
         override fun removeUnnotarisedTransaction(id: SecureHash) {}
 
         override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {}
+
+        override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {}
     }
 
     private fun copy(): TestTransactionDSLInterpreter =

@@ -164,6 +164,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
+    @Suppress("ComplexMethod", "NestedBlockDepth")
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
         if (!newApi) {
@@ -207,43 +208,45 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             serviceHub.networkMapCache.getNodeByLegalIdentity(it.counterparty)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
         }
 
+        val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        if (useTwoPhaseFinality && needsNotarySignature(transaction)) {
+        if (useTwoPhaseFinality) {
             recordLocallyAndBroadcast(newPlatformSessions, transaction)
-        }
-
-        try {
-            val stxn = notariseOrRecord()
-            val notarySignatures = stxn.sigs - transaction.sigs.toSet()
-            if (notarySignatures.isNotEmpty()) {
-                if (useTwoPhaseFinality && newPlatformSessions.isNotEmpty()) {
-                    broadcastSignaturesAndFinalise(newPlatformSessions, notarySignatures)
-                } else {
-                    progressTracker.currentStep = FINALISING_TRANSACTION
-                    serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                        (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
-                        logger.info("Finalised transaction locally.")
+            val stxn = if (requiresNotarisation) {
+                try {
+                    val (notarisedTxn, notarySignatures) = notarise()
+                    if (newPlatformSessions.isNotEmpty()) {
+                        broadcastSignaturesAndFinalise(newPlatformSessions, notarySignatures)
+                    } else {
+                        finaliseLocally(notarisedTxn, notarySignatures)
                     }
+                    notarisedTxn
+                } catch (e: NotaryException) {
+                    if (e.error is NotaryError.Conflict && useTwoPhaseFinality) {
+                        (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
+                        val overridePropagateDoubleSpendErrorToPeers = propagateDoubleSpendErrorToPeers
+                                ?: (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
+                        if (overridePropagateDoubleSpendErrorToPeers && newPlatformSessions.isNotEmpty()) {
+                            broadcastDoubleSpendError(newPlatformSessions, e)
+                        } else sleep(Duration.ZERO) // force checkpoint to persist db update.
+                    }
+                    throw e
                 }
             }
-
-            if (!useTwoPhaseFinality || !needsNotarySignature(transaction)) {
-                broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, stxn)
-            } else if (useTwoPhaseFinality && oldPlatformSessions.isNotEmpty()) {
-                broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
+            else {
+                finaliseLocally(transaction)
+                transaction
             }
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
             return stxn
         }
-        catch (e: NotaryException) {
-            if (e.error is NotaryError.Conflict && useTwoPhaseFinality) {
-                (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(e.error.txId)
-                val overridePropagateDoubleSpendErrorToPeers = propagateDoubleSpendErrorToPeers ?:
-                    (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
-                if (overridePropagateDoubleSpendErrorToPeers && newPlatformSessions.isNotEmpty()) {
-                    broadcastDoubleSpendError(newPlatformSessions, e)
-                } else sleep(Duration.ZERO) // force checkpoint to persist db update.
-            }
-            throw e
+        else {
+            val stxn = if (requiresNotarisation) {
+                notarise().first
+            } else transaction
+            recordTransactionLocally(stxn)
+            broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, stxn)
+            return stxn
         }
     }
 
@@ -251,7 +254,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
-            logger.info("Recorded transaction without notary signature locally.")
+            logger.info("Recorded transaction locally.")
             if (sessions.isEmpty()) return
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
             sessions.forEach { session ->
@@ -289,9 +292,19 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     )
                 }
             }
-            progressTracker.currentStep = FINALISING_TRANSACTION
-            serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(transaction, notarySignatures, statesToRecord)
+            finaliseLocally(transaction, notarySignatures)
+        }
+    }
+
+    @Suspendable
+    private fun finaliseLocally(stx: SignedTransaction, notarySignatures: List<TransactionSignature> = emptyList()) {
+        progressTracker.currentStep = FINALISING_TRANSACTION
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocally", flowLogic = this) {
+            if (notarySignatures.isEmpty()) {
+                (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord)
+                logger.info("Finalised transaction locally.")
+            } else {
+                (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
                 logger.info("Finalised transaction locally with notary signature.")
             }
         }
@@ -388,17 +401,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun notariseOrRecord(): SignedTransaction {
-        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#notariseOrRecord", flowLogic = this) {
-            return if (needsNotarySignature(transaction)) {
-                progressTracker.currentStep = NOTARISING
-                val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
-                transaction + notarySignatures
-            } else {
-                logger.info("No need to notarise this transaction. Recording locally.")
-                recordTransactionLocally(transaction)
-                transaction
-            }
+    private fun notarise(): Pair<SignedTransaction, List<TransactionSignature>> {
+        return serviceHub.telemetryServiceInternal.span("${this::class.java.name}#notariseOrRecord", flowLogic = this) {
+            progressTracker.currentStep = NOTARISING
+            val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
+            Pair(transaction + notarySignatures, notarySignatures)
         }
     }
 
@@ -461,13 +468,14 @@ object NotarySigCheck {
 class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
                                                     private val expectedTxId: SecureHash? = null,
                                                     private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
-    @Suppress("ComplexMethod")
+    @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
         val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true))
 
+        val requiresNotarisation = needsNotarySignature(stx)
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        if (fromTwoPhaseFinalityNode && needsNotarySignature(stx)) {
+        if (fromTwoPhaseFinalityNode) {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
                 logger.debug { "Peer recording transaction without notary signature." }
                 (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
@@ -475,29 +483,35 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             }
             otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
             logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
-
-            try {
-                val notarySignatures = otherSideSession.receive<Try<List<TransactionSignature>>>().unwrap { it.getOrThrow() }
-                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                    logger.debug { "Peer received notarised signature." }
-                    (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
-                    logger.info("Peer finalised transaction with notary signature.")
-                }
-            } catch(throwable: NotaryException) {
-                if(throwable.error is NotaryError.Conflict) {
-                    logger.info("Peer received double spend error.")
+            if (requiresNotarisation) {
+                try {
+                    val notarySignatures = otherSideSession.receive<Try<List<TransactionSignature>>>().unwrap { it.getOrThrow() }
+                    serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
+                        logger.debug { "Peer received notarised signature." }
+                        (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
+                        logger.info("Peer finalised transaction with notary signature.")
+                    }
+                } catch (throwable: NotaryException) {
+                    if (throwable.error is NotaryError.Conflict) {
+                        logger.info("Peer received double spend error.")
+                        (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
+                        sleep(Duration.ZERO) // force checkpoint to persist db update.
+                    }
+                    throw throwable
+                } catch (e: UnexpectedFlowEndException) {
                     (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
                     sleep(Duration.ZERO) // force checkpoint to persist db update.
+                    throw UnexpectedFlowEndException(
+                            "${otherSideSession.counterparty} has finished prematurely whilst awaiting transaction notary signature.",
+                            e.cause,
+                            e.originalErrorId
+                    )
                 }
-                throw throwable
-            } catch (e: UnexpectedFlowEndException) {
-                (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
-                sleep(Duration.ZERO) // force checkpoint to persist db update.
-                throw UnexpectedFlowEndException(
-                        "${otherSideSession.counterparty} has finished prematurely whilst awaiting transaction notary signature.",
-                        e.cause,
-                        e.originalErrorId
-                )
+            } else {
+                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransaction", flowLogic = this) {
+                    (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord)
+                    logger.info("Peer finalised transaction.")
+                }
             }
         } else {
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordTransactions", flowLogic = this) {

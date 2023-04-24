@@ -44,6 +44,7 @@ import net.corda.finance.GBP
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.flows.CashIssueWithObserversFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.issuedBy
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -336,15 +337,28 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `two phase finality flow issuance transaction with observers`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        val stx = aliceNode.startFlowAndRunNetwork(CashIssueWithObserversFlow(
+                Amount(1000L, GBP), OpaqueBytes.of(1), notary,
+                observers = setOf(bobNode.info.singleIdentity()))).resultFuture.getOrThrow().stx
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+    }
+
     @StartableByRPC
-    class IssueFlow(val notary: Party) : FlowLogic<StateAndRef<DummyContract.SingleOwnerState>>() {
+    class IssueFlow(val notary: Party, val observers: Set<Party> = emptySet()) : FlowLogic<StateAndRef<DummyContract.SingleOwnerState>>() {
 
         @Suspendable
         override fun call(): StateAndRef<DummyContract.SingleOwnerState> {
             val partyAndReference = PartyAndReference(ourIdentity, OpaqueBytes.of(1))
             val txBuilder = DummyContract.generateInitial(Random().nextInt(), notary, partyAndReference)
             val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
-            val notarised = subFlow(FinalityFlow(signedTransaction, emptySet<FlowSession>()))
+            val observerSessions = observers.map { initiateFlow(it) }
+            val notarised = subFlow(FinalityFlow(signedTransaction, observerSessions))
             return notarised.coreTransaction.outRef(0)
         }
     }
