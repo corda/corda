@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.cfg.ConstructorDetector
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -179,6 +180,8 @@ object JacksonSupport {
             addMixIn(X500Principal::class.java, X500PrincipalMixin::class.java)
             addMixIn(X509Certificate::class.java, X509CertificateMixin::class.java)
             addMixIn(CertPath::class.java, CertPathMixin::class.java)
+
+            setConstructorDetector(ConstructorDetector.DEFAULT.withAllowJDKTypeConstructors(true))
         }
     }
 
