@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer
 import com.fasterxml.jackson.databind.deser.std.DelegatingDeserializer
 import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer
+import com.fasterxml.jackson.databind.introspect.AccessorNamingStrategy
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass
 import com.fasterxml.jackson.databind.introspect.BasicClassIntrospector
 import com.fasterxml.jackson.databind.introspect.POJOPropertiesCollector
@@ -113,6 +114,14 @@ private class CordaSerializableClassIntrospector(private val context: Module.Set
             context.configOverride(type.rawClass).visibility = Value.defaultVisibility().withFieldVisibility(Visibility.ANY)
         }
         return super.constructPropertyCollector(config, ac, type, forSerialization, mutatorPrefix)
+    }
+
+    override fun constructPropertyCollector(config: MapperConfig<*>?, classDef: AnnotatedClass?, type: JavaType, forSerialization: Boolean, accNaming: AccessorNamingStrategy?): POJOPropertiesCollector {
+        if (hasCordaSerializable(type.rawClass)) {
+            // Adjust the field visibility of CordaSerializable classes on the fly as they are encountered.
+            context.configOverride(type.rawClass).visibility = Value.defaultVisibility().withFieldVisibility(Visibility.ANY)
+        }
+        return super.constructPropertyCollector(config, classDef, type, forSerialization, accNaming)
     }
 }
 
