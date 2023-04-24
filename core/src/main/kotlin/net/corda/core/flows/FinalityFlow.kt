@@ -16,7 +16,6 @@ import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -56,14 +55,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
                                        private val newApi: Boolean,
-                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT,
-                                       private val propagateNotaryError: Boolean? = null) : FlowLogic<SignedTransaction>() {
+                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
 
     @CordaInternal
-    data class ExtraConstructorArgs(val oldParticipants: Collection<Party>, val sessions: Collection<FlowSession>, val newApi: Boolean, val statesToRecord: StatesToRecord, val propagateDoubleSpendErrorToPeers: Boolean?)
+    data class ExtraConstructorArgs(val oldParticipants: Collection<Party>, val sessions: Collection<FlowSession>, val newApi: Boolean, val statesToRecord: StatesToRecord)
 
     @CordaInternal
-    fun getExtraConstructorArgs() = ExtraConstructorArgs(oldParticipants, sessions, newApi, statesToRecord, propagateNotaryError)
+    fun getExtraConstructorArgs() = ExtraConstructorArgs(oldParticipants, sessions, newApi, statesToRecord)
 
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
@@ -92,15 +90,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param transaction What to commit.
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
-     * @param propagateNotaryError Whether to catch and propagate Double Spend exception to peers.
      */
     @JvmOverloads
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = tracker(),
-            propagateNotaryError: Boolean? = null
-    ) : this(transaction, emptyList(), progressTracker, sessions, true, propagateNotaryError = propagateNotaryError)
+            progressTracker: ProgressTracker = tracker()
+    ) : this(transaction, emptyList(), progressTracker, sessions, true)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -109,16 +105,14 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
      * also be provided.
      * @param statesToRecord Which states to commit to the vault.
-     * @param propagateNotaryError Whether to catch and propagate Double Spend exception to peers.
      */
     @JvmOverloads
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
             statesToRecord: StatesToRecord,
-            progressTracker: ProgressTracker = tracker(),
-            propagateNotaryError: Boolean? = null
-    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord, propagateNotaryError = propagateNotaryError)
+            progressTracker: ProgressTracker = tracker()
+    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -237,11 +231,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
         catch (e: NotaryException) {
             if (useTwoPhaseFinality) {
-                e.txId?.let { (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(it) }
-                val overridePropagateNotaryError = propagateNotaryError ?:
-                    (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
-                if (overridePropagateNotaryError && newPlatformSessions.isNotEmpty()) {
-                    broadcastNotaryError(newPlatformSessions, FinalityNotaryErrorException(e))
+                (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(transaction.id)
+                if (newPlatformSessions.isNotEmpty()) {
+                    broadcastNotaryError(newPlatformSessions, e)
                 } else sleep(Duration.ZERO) // force checkpoint to persist db update.
             }
             throw e
@@ -299,7 +291,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastNotaryError(sessions: Collection<FlowSession>, error: FinalityNotaryErrorException) {
+    private fun broadcastNotaryError(sessions: Collection<FlowSession>, error: NotaryException) {
         progressTracker.currentStep = BROADCASTING_NOTARY_ERROR
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastDoubleSpendError", flowLogic = this) {
             logger.info("Broadcasting notary error.")
@@ -486,14 +478,14 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                     (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
                     logger.info("Peer finalised transaction with notary signature.")
                 }
-            } catch (e: FinalityNotaryErrorException) {
+            } catch (e: NotaryException) {
                 logger.info("Peer received notary error.")
-                (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
                 val overrideHandlePropagatedNotaryError = handlePropagatedNotaryError ?:
                     (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
                 if (overrideHandlePropagatedNotaryError) {
+                    (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
                     sleep(Duration.ZERO) // force checkpoint to persist db update.
-                    throw e.cause!!
+                    throw e
                 }
                 else {
                     otherSideSession.receive<Any>() // simulate unexpected flow end
@@ -509,6 +501,3 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
         return stx
     }
 }
-
-@CordaSerializable
-class FinalityNotaryErrorException(cause: NotaryException) : FlowException(cause)
