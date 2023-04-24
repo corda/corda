@@ -222,8 +222,8 @@ class FinalityFlowTests : WithFinality {
             val stxId = (e.error as NotaryError.Conflict).txId
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
-            val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
-            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatusBob)
+            val (_, txnStatus) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatus)
         }
     }
 
