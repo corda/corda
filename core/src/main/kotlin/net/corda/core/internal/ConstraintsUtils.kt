@@ -28,15 +28,19 @@ val Attachment.contractVersion: Version get() = if (this is ContractAttachment) 
  * one and it inherits from [Contract].
  */
 val ContractState.requiredContractClassName: String? get() {
-    val annotation = javaClass.getAnnotation(BelongsToContract::class.java)
-    if (annotation != null) {
-        return annotation.value.java.typeName.removePrefix(DJVM_SANDBOX_PREFIX)
-    }
-    val enclosingClass = javaClass.enclosingClass ?: return null
-    return if (Contract::class.java.isAssignableFrom(enclosingClass)) {
-        enclosingClass.typeName.removePrefix(DJVM_SANDBOX_PREFIX)
-    } else {
-        null
+    return ContractStateClassCache.contractClassName(this.javaClass) ?: let {
+        val annotation = javaClass.getAnnotation(BelongsToContract::class.java)
+        val className = if (annotation != null) {
+            annotation.value.java.typeName.removePrefix(DJVM_SANDBOX_PREFIX)
+        } else {
+            val enclosingClass = javaClass.enclosingClass ?: return null
+            if (Contract::class.java.isAssignableFrom(enclosingClass)) {
+                enclosingClass.typeName.removePrefix(DJVM_SANDBOX_PREFIX)
+            } else {
+                null
+            }
+        }
+        ContractStateClassCache.cacheContractClassName(this.javaClass, className)
     }
 }
 
