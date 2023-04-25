@@ -8,7 +8,6 @@ dependencies {
 
     implementation "io.reactivex:rxjava:$rxjava_version"
 
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     implementation "org.apache.activemq:artemis-commons:${artemis_version}"
@@ -72,6 +71,10 @@ artifacts {
 jar {
     archiveBaseName = 'corda-serialization'
     archiveClassifier = ''
+
+    manifest {
+        attributes('Add-Opens': 'java.base/java.time java.base/java.io')
+    }
 }
 
 publish {

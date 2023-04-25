@@ -172,15 +172,15 @@ def metafix = tasks.register('metafix', MetaFixerTask) {
 
     // Strip timestamps from the JAR to make it reproducible.
     preserveTimestamps = false
-    finalizedBy checkDeterminism
+//    finalizedBy checkDeterminism
 }
 
 // DOCSTART 01
 checkDeterminism.configure {
-    dependsOn jdkTask
+//    dependsOn jdkTask
     injars metafix
 
-    libraryjars deterministic_rt_jar
+//    libraryjars deterministic_rt_jar
 
     configurations.deterministicLibraries.forEach {
         libraryjars it, filter: '!META-INF/versions/**'

@@ -47,8 +47,12 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
     Security.addProvider(it)
 
-    // JDK 17: Remove JDK EC Provider as we currently use BC for eddsa
-    Security.removeProvider("SunEC")
+    // JDK 17: Add SunEC provider as lowest priority, as we use Bouncycastle for EDDSA
+    val sunEC = Security.getProvider("SunEC")
+    if (sunEC != null) {
+        Security.removeProvider("SunEC")
+        Security.addProvider(sunEC)
+    }
 }
 
 val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {

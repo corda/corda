@@ -109,9 +109,6 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     }
 }
 
-// TODO JDK17: Why is this needed for unit tests?
-test.dependsOn 'buildCordaJAR'
-
 artifacts {
     archives buildCordaJAR
     runtimeArtifacts buildCordaJAR

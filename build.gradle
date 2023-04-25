@@ -152,6 +152,7 @@ buildscript {
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
+                    includeGroup 'co.paralleluniverse'
                 }
             }
             maven {
@@ -175,7 +176,7 @@ buildscript {
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
 //        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
-        classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
+//        classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:$dependency_checker_version"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
 //        // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
@@ -388,6 +389,12 @@ allprojects {
                 metadataSources {
                     mavenPom()
                     artifact()
+                }
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-dependencies-dev"
+                content {
+                    includeGroup 'co.paralleluniverse'
                 }
             }
             maven {

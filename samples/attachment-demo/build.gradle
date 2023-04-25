@@ -41,11 +41,12 @@ dependencies {
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
     // Use a much simpler SLF4J implementation here instead.
-    cordaRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper project(":node-api")
 
     // Corda integration dependencies
-    cordaRuntimeOnly project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntimeOnly project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    corda project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
 
     cordapp project(':samples:attachment-demo:contracts')
     cordapp project(':samples:attachment-demo:workflows')

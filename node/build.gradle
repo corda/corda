@@ -357,6 +357,7 @@ jar {
     manifest {
         attributes('Corda-Deterministic-Runtime': configurations.jdkRt.singleFile.name)
         attributes('Corda-Deterministic-Classpath': configurations.deterministic.collect { it.name }.join(' '))
+        attributes('Add-Opens': 'java.base/java.time java.base/java.io java.base/java.util java.base/java.net')
     }
 }
 
