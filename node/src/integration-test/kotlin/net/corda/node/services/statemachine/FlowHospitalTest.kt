@@ -249,6 +249,7 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
             }
             waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         // 1 is the notary failing to notarise and propagating the error
         // 2 is the receiving flow failing due to the unexpected session end error
@@ -321,6 +322,8 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendOldFinalityFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::SpendStateAndCatchDoubleSpendOldFinalityFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
             }
+            waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         // 1 is the notary failing to notarise and propagating the error
         // 2 is the receiving flow failing due to the unexpected session end error
@@ -351,6 +354,7 @@ class FlowHospitalTest {
                 it.startFlow(::CreateTransactionButDontFinalizeFlow, nodeBHandle.nodeInfo.singleIdentity(), ref3).returnValue.getOrThrow(20.seconds)
             }
             waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         assertEquals(0, dischargedCounter)
         assertEquals(1, observationCounter)
@@ -378,6 +382,7 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref, true).returnValue.getOrThrow(20.seconds)
             }
             waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         // 1 is the notary failing to notarise and propagating the error
         assertEquals(1, dischargedCounter)
