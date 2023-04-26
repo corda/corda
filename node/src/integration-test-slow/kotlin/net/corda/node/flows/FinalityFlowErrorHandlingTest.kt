@@ -77,9 +77,6 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                     assertEquals(ALICE_NAME.toString(), this.second)    // initiator
                     assertEquals(CHARLIE_NAME.toString(), this.third)   // peers
                 }
-//                assertThrows<SQLException> {
-//                    charlie.rpc.startFlow(::GetFlowTransaction, txId).returnValue.getOrThrow()
-//                }
             }
         }
     }

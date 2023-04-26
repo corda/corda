@@ -27,7 +27,7 @@ import java.time.Duration
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
  * is acceptable then it is from that point onwards committed to the ledger, and will be written through to the
- * vault. Additionally it will be distributed to the parties reflected in the participants list of the states.
+ * vault. Additionally, it will be distributed to the parties reflected in the participants list of the states.
  *
  * By default, the initiating flow will commit states that are relevant to the initiating party as indicated by
  * [StatesToRecord.ONLY_RELEVANT]. Relevance is determined by the union of all participants to states which have been
@@ -182,12 +182,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val externalTxParticipants = extractExternalParticipants(ledgerTransaction)
 
         if (newApi) {
-            val sessionParties = sessions.map { it.counterparty }
-            val missingRecipients = externalTxParticipants - sessionParties - oldParticipants
+            val sessionParties = sessions.map { it.counterparty }.toSet()
+            val missingRecipients = externalTxParticipants - sessionParties - oldParticipants.toSet()
             require(missingRecipients.isEmpty()) {
                 "Flow sessions were not provided for the following transaction participants: $missingRecipients"
             }
-            sessionParties.intersect(oldParticipants).let {
+            sessionParties.intersect(oldParticipants.toSet()).let {
                 require(it.isEmpty()) { "The following parties are specified both in flow sessions and in the oldParticipants list: $it" }
             }
         }
@@ -252,30 +252,23 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
-            logger.info("Recorded transaction locally.")
-            if (sessions.isEmpty()) return
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
-            sessions.forEach { session ->
-                try {
-                    logger.debug { "Sending transaction to party $session." }
-                    subFlow(SendTransactionFlow(session, tx))
-                } catch (e: UnexpectedFlowEndException) {
-                    throw UnexpectedFlowEndException(
-                            "${session.counterparty} has finished prematurely and we're trying to send them a transaction without notary signature. " +
-                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
-                            e.cause,
-                            e.originalErrorId
-                    )
-                }
-            }
+            broadcast(sessions, tx)
         }
     }
 
     @Suspendable
     private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, metadata: FlowTransactionMetadata) {
-        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocallyAndBroadcast", flowLogic = this) {
             finaliseLocally(tx, metadata = metadata)
             progressTracker.currentStep = BROADCASTING
+            broadcast(sessions, tx)
+        }
+    }
+
+    @Suspendable
+    private fun broadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcast", flowLogic = this) {
             sessions.forEach { session ->
                 try {
                     logger.debug { "Sending transaction to party $session." }
@@ -416,6 +409,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                             serviceHub.myInfo.legalIdentities.first().name,
                             statesToRecord,
                             sessions.map { it.counterparty.name }.toSet()))
+            logger.info("Recorded un-notarised transaction locally.")
             return tx
         }
     }
@@ -443,7 +437,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     private fun extractExternalParticipants(ltx: LedgerTransaction): Set<Party> {
         val participants = ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
-        return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities
+        return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities.toSet()
     }
 
     private fun verifyTx(): LedgerTransaction {

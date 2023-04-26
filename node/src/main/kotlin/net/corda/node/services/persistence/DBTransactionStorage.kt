@@ -253,34 +253,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             addTransaction(transaction) {
                 updateTransaction(transaction.id)
             }
-
     override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
-            database.transaction {
-                txStorage.locked {
-                    val cacheValue = TxCacheValue(transaction, status = TransactionStatus.IN_FLIGHT, metadata = metadata)
-                    val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
-                    if (added) {
-                        logger.info ("Transaction ${transaction.id} recorded as un-notarised.")
-                    } else {
-                        logger.info("Transaction ${transaction.id} (un-notarised) already exists so no need to record.")
-                    }
-                    added
-                }
-            }
-
+            addTransaction(transaction, metadata, TransactionStatus.IN_FLIGHT)
     override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
-            database.transaction {
-                txStorage.locked {
-                    val cacheValue = TxCacheValue(transaction, status = TransactionStatus.VERIFIED, metadata = metadata)
-                    val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
-                    if (added) {
-                        logger.info ("Transaction ${transaction.id} recorded as verified.")
-                    } else {
-                        logger.info("Transaction ${transaction.id} (verified) already exists so no need to record.")
-                    }
-                    added
-                }
-            }
+            addTransaction(transaction, metadata, TransactionStatus.VERIFIED)
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return database.transaction {
@@ -306,6 +282,20 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
             addTransaction(transaction + signatures) {
                 finalizeTransactionWithExtraSignatures(transaction.id, signatures)
+            }
+
+    private fun addTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?, status: TransactionStatus) =
+            database.transaction {
+                txStorage.locked {
+                    val cacheValue = TxCacheValue(transaction, status , metadata)
+                    val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
+                    if (added) {
+                        logger.info ("Transaction ${transaction.id} recorded as $status.")
+                    } else {
+                        logger.info("Transaction ${transaction.id} is already recorded as $status, so no need to re-record")
+                    }
+                    added
+                }
             }
 
     private fun addTransaction(transaction: SignedTransaction, updateFn: (SecureHash) -> Boolean): Boolean {

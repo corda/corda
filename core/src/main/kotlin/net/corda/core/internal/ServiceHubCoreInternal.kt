@@ -35,6 +35,7 @@ interface ServiceHubCoreInternal : ServiceHub {
      * This is expected to be run within a database transaction.
      *
      * @param txn The transaction to record.
+     * @param metadata Finality flow recovery metadata.
      */
     fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?= null)
 
@@ -61,6 +62,7 @@ interface ServiceHubCoreInternal : ServiceHub {
      *
      * @param txn The transaction to record.
      * @param statesToRecord how the vault should treat the output states of the transaction.
+     * @param metadata Finality flow recovery metadata.
      */
     fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata?= null)
 }

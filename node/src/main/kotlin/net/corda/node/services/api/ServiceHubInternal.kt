@@ -240,8 +240,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord,
-                                     metadata: FlowTransactionMetadata?) {
+    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata?) {
         requireSupportedHashType(txn)
         if (txn.coreTransaction is WireTransaction)
             txn.verifyRequiredSignatures()
