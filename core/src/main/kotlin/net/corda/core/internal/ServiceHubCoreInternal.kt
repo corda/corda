@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.internal.notary.NotaryService
@@ -36,6 +37,14 @@ interface ServiceHubCoreInternal : ServiceHub {
      * @param txn The transaction to record.
      */
     fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?= null)
+
+    /**
+     * Removes transaction from data store.
+     * This is expected to be run within a database transaction.
+     *
+     * @param id of transaction to remove.
+     */
+    fun removeUnnotarisedTransaction(id: SecureHash)
 
     /**
      * Stores [SignedTransaction] with extra signatures in the local transaction storage

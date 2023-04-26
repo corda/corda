@@ -59,6 +59,10 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         return txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.MISSING_NOTARY_SIG)) == null
     }
 
+    override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
+        return txns.remove(id) != null
+    }
+
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
         val current = txns.replace(transaction.id, TxHolder(transaction, status = TransactionStatus.VERIFIED))
         return if (current != null) {

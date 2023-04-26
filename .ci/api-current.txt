@@ -3142,7 +3142,6 @@ public final class net.corda.core.flows.ReceiveFinalityFlow extends net.corda.co
   public <init>(net.corda.core.flows.FlowSession)
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash)
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord)
-  public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Suspendable
   @NotNull
   public net.corda.core.transactions.SignedTransaction call()

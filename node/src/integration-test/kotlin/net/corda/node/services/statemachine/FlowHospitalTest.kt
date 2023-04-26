@@ -42,6 +42,7 @@ import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.flows.waitForAllFlowsToComplete
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
@@ -247,6 +248,8 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
             }
+            waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         // 1 is the notary failing to notarise and propagating the error
         // 2 is the receiving flow failing due to the unexpected session end error
@@ -319,6 +322,8 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendOldFinalityFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::SpendStateAndCatchDoubleSpendOldFinalityFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
             }
+            waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         // 1 is the notary failing to notarise and propagating the error
         // 2 is the receiving flow failing due to the unexpected session end error
@@ -348,6 +353,7 @@ class FlowHospitalTest {
                 val ref3 = it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeCHandle.nodeInfo.singleIdentity(), ref2).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::CreateTransactionButDontFinalizeFlow, nodeBHandle.nodeInfo.singleIdentity(), ref3).returnValue.getOrThrow(20.seconds)
             }
+            waitForAllFlowsToComplete(nodeAHandle)
         }
         assertEquals(0, dischargedCounter)
         assertEquals(1, observationCounter)
@@ -374,6 +380,8 @@ class FlowHospitalTest {
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref).returnValue.getOrThrow(20.seconds)
                 it.startFlow(::SpendStateAndCatchDoubleSpendFlow, nodeBHandle.nodeInfo.singleIdentity(), ref, true).returnValue.getOrThrow(20.seconds)
             }
+            waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         // 1 is the notary failing to notarise and propagating the error
         assertEquals(1, dischargedCounter)
@@ -552,6 +560,7 @@ class FlowHospitalTest {
             var exceptionSeenInUserFlow = false
         }
 
+        @Suppress("TooGenericExceptionCaught")
         @Suspendable
         override fun call() {
             val consumeError = session.receive<Boolean>().unwrap { it }
@@ -562,10 +571,15 @@ class FlowHospitalTest {
             })
             try {
                 subFlow(ReceiveFinalityFlow(session, stx.id))
-            } catch (e: UnexpectedFlowEndException) {
-                exceptionSeenInUserFlow = true
-                if (!consumeError) {
-                    throw e
+            } catch (ex: Exception) {
+                when (ex) {
+                    is NotaryException,
+                    is UnexpectedFlowEndException -> {
+                        exceptionSeenInUserFlow = true
+                        if (!consumeError) {
+                            throw ex
+                        }
+                    }
                 }
             }
         }

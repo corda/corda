@@ -251,6 +251,12 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         }
     }
 
+    override fun removeUnnotarisedTransaction(id: SecureHash) {
+        database.transaction {
+            validatedTransactions.removeUnnotarisedTransaction(id)
+        }
+    }
+
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
 
     /**
@@ -345,6 +351,12 @@ interface WritableTransactionStorage : TransactionStorage {
      * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
      */
     fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata? = null): Boolean
+
+    /**
+     * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.
+     * Returns null if no transaction with the ID exists.
+     */
+    fun removeUnnotarisedTransaction(id: SecureHash): Boolean
 
     /**
      * Update a previously un-notarised transaction including associated notary signatures.

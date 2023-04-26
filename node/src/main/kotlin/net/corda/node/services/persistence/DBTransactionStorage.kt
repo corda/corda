@@ -268,6 +268,27 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 }
             }
 
+    override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
+        return database.transaction {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
+            val delete = criteriaBuilder.createCriteriaDelete(DBTransaction::class.java)
+            val root = delete.from(DBTransaction::class.java)
+            delete.where(criteriaBuilder.and(
+                    criteriaBuilder.equal(root.get<String>(DBTransaction::txId.name), id.toString()),
+                    criteriaBuilder.equal(root.get<TransactionStatus>(DBTransaction::status.name), TransactionStatus.MISSING_NOTARY_SIG)
+            ))
+            if (session.createQuery(delete).executeUpdate() != 0) {
+                txStorage.locked {
+                    txStorage.content.clear(id)
+                    txStorage.content[id]
+                    logger.debug { "Un-notarised transaction $id has been removed." }
+                }
+                true
+            } else false
+        }
+    }
+
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) =
             addTransaction(transaction + signatures) {
                 finalizeTransactionWithExtraSignatures(transaction.id, signatures)
