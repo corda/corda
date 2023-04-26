@@ -224,7 +224,7 @@ class FinalityFlowTests : WithFinality {
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
             val (_, txnStatus) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
-            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatus)
+            assertEquals(TransactionStatus.IN_FLIGHT, txnStatus)
         }
     }
 
@@ -329,7 +329,7 @@ class FinalityFlowTests : WithFinality {
         catch (e: UnexpectedFlowEndException) {
             val stxId = SecureHash.parse(e.message)
             val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
-            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatusBob)
+            assertEquals(TransactionStatus.IN_FLIGHT, txnStatusBob)
         }
     }
 
