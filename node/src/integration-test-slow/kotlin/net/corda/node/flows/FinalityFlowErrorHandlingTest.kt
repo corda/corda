@@ -34,7 +34,7 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error after recording an issuance transaction inside of FinalityFlow generates recovery metadata`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false),
-                    extraCordappPackagesToScan = listOf("net.corda.node.flows")) {
+                    extraCordappPackagesToScan = listOf("net.corda.node.flows", "net.corda.finance.test.flows")) {
             val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME, FINANCE_CORDAPPS + enclosedCordapp())
 
             val rules = """
