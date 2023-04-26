@@ -63,7 +63,7 @@ buildscript {
     ext.asm_version = '7.1'
     ext.artemis_version = '2.19.1'
     // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
-    ext.jackson_version = '2.13.3'
+    ext.jackson_version = '2.13.5'
     ext.jackson_kotlin_version = '2.9.7'
     ext.jetty_version = '9.4.19.v20190610'
     ext.jersey_version = '2.25'
@@ -470,6 +470,8 @@ allprojects {
                         } else if (details.requested.name == "commons-text") {
                             details.useVersion commons_text_version
                         }
+                    if (details.requested.group == 'org.yaml' && details.requested.name == 'snakeyaml') {
+                        details.useVersion snake_yaml_version
                     }
                 }
             }
