@@ -166,7 +166,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         fun data(): ByteArray? {
             return when (type()) {
                 Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId.bytes
-                Type.SIGNATURE -> (constraint as SignatureAttachmentConstraint).key.encoded
+                Type.SIGNATURE -> Crypto.encodePublicKey((constraint as SignatureAttachmentConstraint).key)
                 else -> null
             }
         }

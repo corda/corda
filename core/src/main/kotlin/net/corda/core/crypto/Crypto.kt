@@ -5,6 +5,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.internal.Instances.withSignature
+import net.corda.core.crypto.internal.PublicKeyCache
 import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
@@ -12,6 +13,7 @@ import net.corda.core.crypto.internal.`id-Curve25519ph`
 import net.corda.core.crypto.internal.providerMap
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.ByteSequence
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -281,7 +283,7 @@ object Crypto {
      */
     @JvmStatic
     fun findSignatureScheme(key: PublicKey): SignatureScheme {
-        val keyInfo = SubjectPublicKeyInfo.getInstance(key.encoded)
+        val keyInfo = SubjectPublicKeyInfo.getInstance(encodePublicKey(key))
         return findSignatureScheme(keyInfo.algorithm)
     }
 
@@ -373,10 +375,17 @@ object Crypto {
      */
     @JvmStatic
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
-        val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
-        val keyFactory = keyFactory(signatureScheme)
-        return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+        return PublicKeyCache.publicKeyForCachedBytes(ByteSequence.of(encodedKey)) ?: {
+            val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
+            val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
+            val keyFactory = keyFactory(signatureScheme)
+            convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+        }()
+    }
+
+    @JvmStatic
+    fun encodePublicKey(key: PublicKey): ByteArray {
+        return PublicKeyCache.bytesForCachedPublicKey(key)?.bytes ?: key.encoded
     }
 
     /**
@@ -993,7 +1002,8 @@ object Crypto {
     }
 
     private val interner = PrivateInterner<PublicKey>()
-    private fun internPublicKey(key: PublicKey): PublicKey = interner.intern(key)
+    private fun internPublicKey(key: PublicKey): PublicKey = PublicKeyCache.cachePublicKey(interner.intern(key))
+
 
     private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
         return internPublicKey(when (key) {

@@ -3,7 +3,13 @@ package net.corda.serialization.internal.amqp.custom
 import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.AMQPTypeIdentifiers
+import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.DeserializationInput
+import net.corda.serialization.internal.amqp.RestrictedType
+import net.corda.serialization.internal.amqp.Schema
+import net.corda.serialization.internal.amqp.SerializationOutput
+import net.corda.serialization.internal.amqp.SerializationSchemas
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.security.PublicKey
@@ -28,7 +34,7 @@ object PublicKeySerializer
                                       context: SerializationContext
     ) {
         // TODO: Instead of encoding to the default X509 format, we could have a custom per key type (space-efficient) serialiser.
-        output.writeObject(obj.encoded, data, clazz, context)
+        output.writeObject(Crypto.encodePublicKey(obj), data, clazz, context)
     }
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,

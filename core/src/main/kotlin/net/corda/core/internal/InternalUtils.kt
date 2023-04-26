@@ -555,7 +555,7 @@ fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedD
 
 fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }
 
-val PublicKey.hash: SecureHash get() = encoded.sha256()
+val PublicKey.hash: SecureHash get() = Crypto.encodePublicKey(this).sha256()
 
 /**
  * Extension method for providing a sumBy method that processes and returns a Long
