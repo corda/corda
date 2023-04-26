@@ -351,7 +351,10 @@ val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
         field?.let {
             if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
                 it.isAccessible = true
-                uncheckedCast(it.get(null))
+
+                // TODO JDK17: Why does uncheckedCast(...) cause class cast exception?
+                // uncheckedCast(it.get(null))
+                it.get(null) as T
             } else {
                 null
             }

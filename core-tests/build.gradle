@@ -109,6 +109,12 @@ dependencies {
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
 }
 
+test {
+    jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED', '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
+}
+
 configurations {
     testArtifacts.extendsFrom testRuntimeOnlyClasspath
 }
@@ -137,12 +143,6 @@ task smokeTest(type: Test) {
     dependsOn smokeTestJar
     testClassesDirs = sourceSets.smokeTest.output.classesDirs
     classpath = sourceSets.smokeTest.runtimeClasspath
-}
-
-test {
-    jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED', '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
 }
 
 idea {

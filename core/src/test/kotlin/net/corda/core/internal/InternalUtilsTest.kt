@@ -101,11 +101,10 @@ open class InternalUtilsTest {
 	fun kotlinObjectInstance() {
         assertThat(PublicObject::class.java.kotlinObjectInstance).isSameAs(PublicObject)
         assertThat(ProtectedObject::class.java.kotlinObjectInstance).isSameAs(ProtectedObject)
+        assertThat(PrivateObject::class.java.kotlinObjectInstance).isSameAs(PrivateObject)
         assertThat(TimeWindow::class.java.kotlinObjectInstance).isNull()
         assertThat(PrivateClass::class.java.kotlinObjectInstance).isNull()
 
-        // TODO JDK 17: Throws a weird classcast exception when accessing the kotlinObjectInstance
-        // assertThat(PrivateObject::class.java.kotlinObjectInstance).isSameAs(PrivateObject)
     }
 
     @Test(timeout=300_000)

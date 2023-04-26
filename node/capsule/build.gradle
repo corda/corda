@@ -79,7 +79,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     manifest {
         // These are the dependencies that the deterministic Corda libraries share with Corda.
         attributes('Corda-DJVM-Dependencies': cordaResolved.values().collect { it.name }.join(' '))
-        attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
+        attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.net java.base/java.lang java.base/java.time')
     }
 
     into('djvm') {
