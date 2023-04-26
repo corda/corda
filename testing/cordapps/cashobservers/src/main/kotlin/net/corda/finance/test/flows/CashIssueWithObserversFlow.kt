@@ -1,4 +1,4 @@
-package net.corda.finance.flows
+package net.corda.finance.test.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
@@ -12,6 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.issuedBy
 import java.util.Currency
 

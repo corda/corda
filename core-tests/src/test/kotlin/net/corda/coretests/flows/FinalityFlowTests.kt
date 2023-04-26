@@ -44,9 +44,9 @@ import net.corda.finance.GBP
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.flows.CashIssueWithObserversFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.issuedBy
+import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -65,6 +65,7 @@ import net.corda.testing.node.internal.TestCordappInternal
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -80,6 +81,7 @@ class FinalityFlowTests : WithFinality {
     }
 
     override val mockNet = InternalMockNetwork(cordappsForAllNodes = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP, DUMMY_CONTRACTS_CORDAPP, enclosedCordapp(),
+                                                       findCordapp("net.corda.finance.test.flows"),
                                                        CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
 
     private val aliceNode = makeNode(ALICE_NAME)
@@ -346,15 +348,14 @@ class FinalityFlowTests : WithFinality {
     }
 
     @StartableByRPC
-    class IssueFlow(val notary: Party, val observers: Set<Party> = emptySet()) : FlowLogic<StateAndRef<DummyContract.SingleOwnerState>>() {
+    class IssueFlow(val notary: Party) : FlowLogic<StateAndRef<DummyContract.SingleOwnerState>>() {
 
         @Suspendable
         override fun call(): StateAndRef<DummyContract.SingleOwnerState> {
             val partyAndReference = PartyAndReference(ourIdentity, OpaqueBytes.of(1))
             val txBuilder = DummyContract.generateInitial(Random().nextInt(), notary, partyAndReference)
             val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
-            val observerSessions = observers.map { initiateFlow(it) }
-            val notarised = subFlow(FinalityFlow(signedTransaction, observerSessions))
+            val notarised = subFlow(FinalityFlow(signedTransaction, emptySet<FlowSession>()))
             return notarised.coreTransaction.outRef(0)
         }
     }

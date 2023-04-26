@@ -11,7 +11,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
-import net.corda.finance.flows.CashIssueWithObserversFlow
+import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.node.services.statemachine.StateMachineErrorHandlingTest
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
