@@ -205,10 +205,9 @@ class FinalityFlowTests : WithFinality {
         assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
 
         try {
-            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), propagateDoubleSpendErrorToPeers = true)).resultFuture.getOrThrow()
+            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), handlePropagatedNotaryError = true)).resultFuture.getOrThrow()
         }
         catch (e: NotaryException) {
-            // note: ReceiveFinalityFlow un-notarised transaction clean-up takes place upon catching NotaryError.Conflict
             val stxId = (e.error as NotaryError.Conflict).txId
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
@@ -217,15 +216,14 @@ class FinalityFlowTests : WithFinality {
         }
 
         try {
-            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), propagateDoubleSpendErrorToPeers = false)).resultFuture.getOrThrow()
+            aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity(), handlePropagatedNotaryError = false)).resultFuture.getOrThrow()
         }
         catch (e: NotaryException) {
-            // note: ReceiveFinalityFlow un-notarised transaction clean-up takes place upon catching UnexpectedFlowEndException
             val stxId = (e.error as NotaryError.Conflict).txId
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
-            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
-            assertTxnRemovedFromDatabase(bobNode, stxId)
+            val (_, txnStatus) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatus)
         }
     }
 
@@ -320,7 +318,7 @@ class FinalityFlowTests : WithFinality {
     }
 
     @Test(timeout=300_000)
-    fun `two phase finality flow successfully removes un-notarised transaction where initiator fails to send notary signature`() {
+    fun `two phase finality flow keeps un-notarised transaction where initiator fails to send notary signature`() {
         val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
 
         val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
@@ -329,10 +327,8 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: UnexpectedFlowEndException) {
             val stxId = SecureHash.parse(e.message)
-            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
-            assertTxnRemovedFromDatabase(aliceNode, stxId)
-            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
-            assertTxnRemovedFromDatabase(bobNode, stxId)
+            val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            assertEquals(TransactionStatus.MISSING_NOTARY_SIG, txnStatusBob)
         }
     }
 
@@ -352,15 +348,15 @@ class FinalityFlowTests : WithFinality {
     @StartableByRPC
     @InitiatingFlow
     class SpendFlow(private val stateAndRef: StateAndRef<DummyContract.SingleOwnerState>, private val newOwner: Party,
-                    private val propagateDoubleSpendErrorToPeers: Boolean? = null) : FlowLogic<SignedTransaction>() {
+                    private val handlePropagatedNotaryError: Boolean = false) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val signedTransaction = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
-            sessionWithCounterParty.sendAndReceive<String>("initial-message")
-            return subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty), propagateDoubleSpendErrorToPeers = propagateDoubleSpendErrorToPeers))
+            sessionWithCounterParty.send(handlePropagatedNotaryError)
+            return subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty)))
         }
     }
 
@@ -369,10 +365,8 @@ class FinalityFlowTests : WithFinality {
 
         @Suspendable
         override fun call() {
-            otherSide.receive<String>()
-            otherSide.send("initial-response")
-
-            subFlow(ReceiveFinalityFlow(otherSide))
+            val handleNotaryError = otherSide.receive<Boolean>().unwrap { it }
+            subFlow(ReceiveFinalityFlow(otherSide, handlePropagatedNotaryError = handleNotaryError))
         }
     }
 
