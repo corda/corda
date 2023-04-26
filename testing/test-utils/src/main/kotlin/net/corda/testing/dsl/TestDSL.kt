@@ -145,7 +145,7 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {}
 
-        override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {}
+        override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata?) {}
     }
 
     private fun copy(): TestTransactionDSLInterpreter =

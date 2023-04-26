@@ -56,12 +56,13 @@ interface ServiceHubCoreInternal : ServiceHub {
     fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord)
 
     /**
-     * Stores or updates a [SignedTransaction] with a status of VERIFIED.
+     * Stores or updates a [SignedTransaction] to a status of VERIFIED.
+     * Optionally add finality flow recovery metadata.
      *
      * @param txn The transaction to record.
      * @param statesToRecord how the vault should treat the output states of the transaction.
      */
-    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord)
+    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata?= null)
 }
 
 interface TransactionsResolver {

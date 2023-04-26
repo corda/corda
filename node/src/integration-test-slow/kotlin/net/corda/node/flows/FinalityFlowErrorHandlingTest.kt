@@ -23,6 +23,7 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
@@ -36,7 +37,6 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                     extraCordappPackagesToScan = listOf("net.corda.node.flows")) {
             val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME, FINANCE_CORDAPPS + enclosedCordapp())
 
-            // could not get rule for FinalityDoctor + observation counter to work
             val rules = """
                 RULE Set flag when entering receive finality flow
                 CLASS ${FinalityFlow::class.java.name}
@@ -48,10 +48,10 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 RULE Throw exception when recording transaction
                 CLASS ${FinalityFlow::class.java.name}
-                METHOD recordLocallyAndBroadcast
+                METHOD finaliseLocallyAndBroadcast
                 AT EXIT
                 IF flagged("finality_flag")
-                DO traceln("Throwing exception"); 
+                DO traceln("Throwing exception");
                     throw new java.lang.RuntimeException("die dammit die")
                 ENDRULE
             """.trimIndent()
@@ -66,16 +66,20 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                         defaultNotaryIdentity,
                         setOf(charlie.nodeInfo.singleIdentity())
                 ).returnValue.getOrThrow(30.seconds)
+                fail()
             }
             catch (e: CordaRuntimeException) {
                 waitForAllFlowsToComplete(alice)
                 val txId = alice.rpc.stateMachineRecordedTransactionMappingSnapshot().single().transactionId
 
                 alice.rpc.startFlow(::GetFlowTransaction, txId).returnValue.getOrThrow().apply {
-                    assertEquals("F", this.first)              // "F" -> IN_FLIGHT
+                    assertEquals("V", this.first)              // "V" -> VERIFIED
                     assertEquals(ALICE_NAME.toString(), this.second)    // initiator
                     assertEquals(CHARLIE_NAME.toString(), this.third)   // peers
                 }
+//                assertThrows<SQLException> {
+//                    charlie.rpc.startFlow(::GetFlowTransaction, txId).returnValue.getOrThrow()
+//                }
             }
         }
     }

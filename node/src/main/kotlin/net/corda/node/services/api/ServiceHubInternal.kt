@@ -240,19 +240,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {
+    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord,
+                                     metadata: FlowTransactionMetadata?) {
         requireSupportedHashType(txn)
         if (txn.coreTransaction is WireTransaction)
             txn.verifyRequiredSignatures()
-        finalizeTransactionWithExtraSignatures(
-                statesToRecord,
-                txn,
-                emptyList(),
-                validatedTransactions,
-                stateMachineRecordedTransactionMapping,
-                vaultService,
-                database
-        )
+
+        database.transaction {
+            validatedTransactions.finalizeTransaction(txn, metadata)
+        }
     }
 
     override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {
@@ -372,6 +368,15 @@ interface WritableTransactionStorage : TransactionStorage {
      * Returns null if no transaction with the ID exists.
      */
     fun removeUnnotarisedTransaction(id: SecureHash): Boolean
+
+    /**
+     * Add a finalised transaction to the store with recovery metadata
+     * Optionally add finality flow recovery metadata.
+     * @param transaction The transaction to be recorded.
+     * @param metadata Finality flow recovery metadata.
+     * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
+     */
+    fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean
 
     /**
      * Update a previously un-notarised transaction including associated notary signatures.

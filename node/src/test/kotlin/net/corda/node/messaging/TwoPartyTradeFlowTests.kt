@@ -815,6 +815,13 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
+        override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean {
+            database.transaction {
+                delegate.finalizeTransaction(transaction, metadata)
+            }
+            return true
+        }
+
         override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean {
             database.transaction {
                 delegate.finalizeTransactionWithExtraSignatures(transaction, signatures)

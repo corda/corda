@@ -63,6 +63,15 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         return txns.remove(id) != null
     }
 
+    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean {
+        val current = txns.replace(transaction.id, TxHolder(transaction, status = TransactionStatus.VERIFIED))
+        return if (current != null) {
+            notify(transaction)
+        } else {
+            false
+        }
+    }
+
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
         val current = txns.replace(transaction.id, TxHolder(transaction, status = TransactionStatus.VERIFIED))
         return if (current != null) {
