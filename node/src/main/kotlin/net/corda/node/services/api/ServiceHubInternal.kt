@@ -244,9 +244,10 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         requireSupportedHashType(txn)
         if (txn.coreTransaction is WireTransaction)
             txn.verifyRequiredSignatures()
-
         database.transaction {
-            validatedTransactions.finalizeTransaction(txn, metadata)
+            recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
+                validatedTransactions.finalizeTransaction(txn, metadata)
+            }
         }
     }
 
@@ -369,7 +370,7 @@ interface WritableTransactionStorage : TransactionStorage {
     fun removeUnnotarisedTransaction(id: SecureHash): Boolean
 
     /**
-     * Add a finalised transaction to the store with recovery metadata
+     * Add a finalised transaction to the store.
      * Optionally add finality flow recovery metadata.
      * @param transaction The transaction to be recorded.
      * @param metadata Finality flow recovery metadata.
