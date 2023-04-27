@@ -254,10 +254,12 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 updateTransaction(transaction.id)
             }
 
-    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
-            addTransaction(transaction, metadata, TransactionStatus.IN_FLIGHT)
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
+            addTransaction(transaction, metadata, TransactionStatus.IN_FLIGHT) {
+                false
+            }
 
-    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
+    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
             addTransaction(transaction, metadata) {
                 false
             }
@@ -287,30 +289,19 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 finalizeTransactionWithExtraSignatures(transaction.id, signatures)
             }
 
-    private fun addTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?, status: TransactionStatus) =
-            database.transaction {
-                txStorage.locked {
-                    val cacheValue = TxCacheValue(transaction, status , metadata)
-                    val added = addWithDuplicatesAllowed(transaction.id, cacheValue)
-                    if (added) {
-                        logger.info ("Transaction ${transaction.id} recorded as $status.")
-                    } else {
-                        logger.info("Transaction ${transaction.id} is already recorded as $status, so no need to re-record")
-                    }
-                    added
-                }
-            }
-
-    private fun addTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata? = null, updateFn: (SecureHash) -> Boolean): Boolean {
+    private fun addTransaction(transaction: SignedTransaction,
+                               metadata: FlowTransactionMetadata? = null,
+                               status: TransactionStatus = TransactionStatus.VERIFIED,
+                               updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED, metadata)
+                val cachedValue = TxCacheValue(transaction, status, metadata)
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
-                    logger.debug { "Transaction ${transaction.id} has been recorded as verified" }
+                    logger.debug { "Transaction ${transaction.id} has been recorded as $status" }
                     onNewTx(transaction)
                 } else {
-                    logger.debug { "Transaction ${transaction.id} is already recorded as verified, so no need to re-record" }
+                    logger.debug { "Transaction ${transaction.id} is already recorded as $status, so no need to re-record" }
                     false
                 }
             }

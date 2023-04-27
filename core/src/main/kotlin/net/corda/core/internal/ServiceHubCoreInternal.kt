@@ -30,14 +30,14 @@ interface ServiceHubCoreInternal : ServiceHub {
     val attachmentsClassLoaderCache: AttachmentsClassLoaderCache
 
     /**
-     * Stores [SignedTransaction] and participant signatures without the notary signature in the local transaction storage.
-     * Optionally add finality flow recovery metadata.
+     * Stores [SignedTransaction] and participant signatures without the notary signature in the local transaction storage,
+     * inclusive of flow recovery metadata.
      * This is expected to be run within a database transaction.
      *
      * @param txn The transaction to record.
      * @param metadata Finality flow recovery metadata.
      */
-    fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?= null)
+    fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata)
 
     /**
      * Removes transaction from data store.
@@ -57,14 +57,13 @@ interface ServiceHubCoreInternal : ServiceHub {
     fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord)
 
     /**
-     * Stores or updates a [SignedTransaction] to a status of VERIFIED.
-     * Optionally add finality flow recovery metadata.
+     * Records a [SignedTransaction] as VERIFIED with flow recovery metadata.
      *
      * @param txn The transaction to record.
      * @param statesToRecord how the vault should treat the output states of the transaction.
      * @param metadata Finality flow recovery metadata.
      */
-    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata?= null)
+    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata)
 }
 
 interface TransactionsResolver {

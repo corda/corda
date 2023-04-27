@@ -240,7 +240,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata?) {
+    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata) {
         requireSupportedHashType(txn)
         if (txn.coreTransaction is WireTransaction)
             txn.verifyRequiredSignatures()
@@ -251,7 +251,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         }
     }
 
-    override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata?) {
+    override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata) {
         if (txn.coreTransaction is WireTransaction) {
             txn.notary?.let { notary ->
                 txn.verifySignaturesExcept(notary.owningKey)
@@ -355,13 +355,13 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addTransaction(transaction: SignedTransaction): Boolean
 
     /**
-     * Add an un-notarised transaction to the store with a status of *MISSING_TRANSACTION_SIG*.
-     * Optionally add finality flow recovery metadata.
+     * Add an un-notarised transaction to the store with a status of *MISSING_TRANSACTION_SIG* and inclusive of flow recovery metadata.
+     *
      * @param transaction The transaction to be recorded.
      * @param metadata Finality flow recovery metadata.
      * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
      */
-    fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata? = null): Boolean
+    fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata): Boolean
 
     /**
      * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.
@@ -370,13 +370,13 @@ interface WritableTransactionStorage : TransactionStorage {
     fun removeUnnotarisedTransaction(id: SecureHash): Boolean
 
     /**
-     * Add a finalised transaction to the store.
-     * Optionally add finality flow recovery metadata.
+     * Add a finalised transaction to the store with flow recovery metadata.
+     *
      * @param transaction The transaction to be recorded.
      * @param metadata Finality flow recovery metadata.
      * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
      */
-    fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean
+    fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata): Boolean
 
     /**
      * Update a previously un-notarised transaction including associated notary signatures.
