@@ -55,13 +55,16 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         }
     }
 
-    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?): Boolean {
-        return txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.MISSING_NOTARY_SIG)) == null
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata): Boolean {
+        return txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.IN_FLIGHT)) == null
     }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return txns.remove(id) != null
     }
+
+    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
+            addTransaction(transaction)
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {
         val current = txns.replace(transaction.id, TxHolder(transaction, status = TransactionStatus.VERIFIED))

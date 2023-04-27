@@ -33,5 +33,5 @@ data class FlowTransactionMetadata(
 enum class TransactionStatus {
     UNVERIFIED,
     VERIFIED,
-    MISSING_NOTARY_SIG;
+    IN_FLIGHT;
 }

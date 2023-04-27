@@ -251,6 +251,9 @@ dependencies {
     integrationTestCompile(project(":testing:cordapps:missingmigration"))
 
     testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
+
+    // used by FinalityFlowErrorHandlingTest
+    slowIntegrationTestCompile project(':testing:cordapps:cashobservers')
 }
 
 tasks.withType(JavaCompile).configureEach {

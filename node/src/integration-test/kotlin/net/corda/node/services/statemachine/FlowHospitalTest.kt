@@ -354,6 +354,7 @@ class FlowHospitalTest {
                 it.startFlow(::CreateTransactionButDontFinalizeFlow, nodeBHandle.nodeInfo.singleIdentity(), ref3).returnValue.getOrThrow(20.seconds)
             }
             waitForAllFlowsToComplete(nodeAHandle)
+            waitForAllFlowsToComplete(nodeBHandle)
         }
         assertEquals(0, dischargedCounter)
         assertEquals(1, observationCounter)
