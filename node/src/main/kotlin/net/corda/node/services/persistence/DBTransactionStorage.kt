@@ -299,7 +299,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as $status" }
-                    onNewTx(transaction)
+                    if (status.isVerified())
+                        onNewTx(transaction)
+                    true
                 } else {
                     logger.debug { "Transaction ${transaction.id} is already recorded as $status, so no need to re-record" }
                     false
