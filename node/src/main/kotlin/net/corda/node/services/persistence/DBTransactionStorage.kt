@@ -253,11 +253,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             addTransaction(transaction) {
                 updateTransaction(transaction.id)
             }
+
     override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
             addTransaction(transaction, metadata, TransactionStatus.IN_FLIGHT)
-    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
-            addTransaction(transaction, metadata, TransactionStatus.VERIFIED)
 
+    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata?) =
+            addTransaction(transaction, metadata) {
+                false
+            }
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return database.transaction {
             val session = currentDBSession()
@@ -298,10 +301,10 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 }
             }
 
-    private fun addTransaction(transaction: SignedTransaction, updateFn: (SecureHash) -> Boolean): Boolean {
+    private fun addTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata? = null, updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED)
+                val cachedValue = TxCacheValue(transaction, TransactionStatus.VERIFIED, metadata)
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as verified" }

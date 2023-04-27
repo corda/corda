@@ -161,6 +161,21 @@ class DBTransactionStorageTests {
     }
 
     @Test(timeout = 300_000)
+    fun `finalize transaction with recovery metadata`() {
+        val now = Instant.ofEpochSecond(333444555L)
+        val transactionClock = TransactionClock(now)
+        newTransactionStorage(clock = transactionClock)
+        val transaction = newTransaction(notarySig = false)
+        transactionStorage.finalizeTransaction(transaction,
+                FlowTransactionMetadata(ALICE_NAME))
+        readTransactionFromDB(transaction.id).let {
+            assertEquals(VERIFIED, it.status)
+            assertEquals(ALICE_NAME.toString(), it.initiator)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, it.statesToRecord)
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `finalize transaction with extra signatures after recording transaction as un-notarised`() {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)
