@@ -104,7 +104,7 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     override fun write(kryo: Kryo, output: Output, obj: DefaultSerializable) {
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<DefaultSerializable>): DefaultSerializable {
+    override fun read(kryo: Kryo, input: Input, type: Class<out DefaultSerializable>): DefaultSerializable {
         return DefaultSerializable()
     }
 }

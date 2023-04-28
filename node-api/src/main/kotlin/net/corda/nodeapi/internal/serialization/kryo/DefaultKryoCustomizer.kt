@@ -6,7 +6,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
-import com.esotericsoftware.kryo.serializers.FieldSerializer
+import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
@@ -73,7 +73,7 @@ object DefaultKryoCustomizer {
             // for change to a class.
             setDefaultSerializer(CompatibleFieldSerializer::class.java)
             // Take the safest route here and allow subclasses to have fields named the same as super classes.
-            fieldSerializerConfig.cachedFieldNameStrategy = FieldSerializer.CachedFieldNameStrategy.EXTENDED
+            //fieldSerializerConfig.cachedFieldNameStrategy = FieldSerializer.CachedFieldNameStrategy.EXTENDED
 
             instantiatorStrategy = CustomInstantiatorStrategy()
 
@@ -140,9 +140,8 @@ object DefaultKryoCustomizer {
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)
 
-            addDefaultSerializer(Iterator::class.java) {kryo, type ->
-                IteratorSerializer(type, CompatibleFieldSerializer<Iterator<*>>(kryo, type).apply { setIgnoreSyntheticFields(false) })
-            }
+            val iteratorSerializer = IteratorSerializer(Any::class.java, CompatibleFieldSerializer(kryo, Any::class.java))
+            addDefaultSerializer(Iterator::class.java, iteratorSerializer)
 
             for (whitelistProvider in serializationWhitelists) {
                 val types = whitelistProvider.whitelist
@@ -162,7 +161,7 @@ object DefaultKryoCustomizer {
         private val fallbackStrategy = StdInstantiatorStrategy()
         // Use this to allow construction of objects using a JVM backdoor that skips invoking the constructors, if there
         // is no no-arg constructor available.
-        private val defaultStrategy = Kryo.DefaultInstantiatorStrategy(fallbackStrategy)
+        private val defaultStrategy = DefaultInstantiatorStrategy(fallbackStrategy)
 
         override fun <T> newInstantiatorOf(type: Class<T>): ObjectInstantiator<T> {
             // However this doesn't work for non-public classes in the java. namespace
@@ -176,7 +175,7 @@ object DefaultKryoCustomizer {
             kryo.writeClassAndObject(output, obj.certPath)
         }
 
-        override fun read(kryo: Kryo, input: Input, type: Class<PartyAndCertificate>): PartyAndCertificate {
+        override fun read(kryo: Kryo, input: Input, type: Class<out PartyAndCertificate>): PartyAndCertificate {
             return PartyAndCertificate(kryo.readClassAndObject(input) as CertPath)
         }
     }
@@ -188,7 +187,7 @@ object DefaultKryoCustomizer {
             obj.forEach { kryo.writeClassAndObject(output, it) }
         }
 
-        override fun read(kryo: Kryo, input: Input, type: Class<NonEmptySet<Any>>): NonEmptySet<Any> {
+        override fun read(kryo: Kryo, input: Input, type: Class<out NonEmptySet<Any>>): NonEmptySet<Any> {
             val size = input.readInt(true)
             require(size >= 1) { "Invalid size read off the wire: $size" }
             val list = ArrayList<Any>(size)
@@ -208,7 +207,7 @@ object DefaultKryoCustomizer {
             output.writeBytesWithLength(obj.bytes)
         }
 
-        override fun read(kryo: Kryo, input: Input, type: Class<PrivacySalt>): PrivacySalt {
+        override fun read(kryo: Kryo, input: Input, type: Class<out PrivacySalt>): PrivacySalt {
             return PrivacySalt(input.readBytesWithLength())
         }
     }
@@ -230,7 +229,7 @@ object DefaultKryoCustomizer {
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun read(kryo: Kryo, input: Input, type: Class<ContractAttachment>): ContractAttachment {
+        override fun read(kryo: Kryo, input: Input, type: Class<out ContractAttachment>): ContractAttachment {
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.createSHA256(input.readBytes(32))
                 val contract = input.readString()
