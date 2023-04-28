@@ -10,6 +10,7 @@ import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import okhttp3.CacheControl
 import okhttp3.Headers
+import okhttp3.Headers.Companion.toHeaders
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -36,7 +37,7 @@ class HTTPNetworkRegistrationService(
         // Poll server to download the signed certificate once request has been approved.
         val conn = URL("$registrationURL/$requestId").openHttpConnection()
         conn.requestMethod = "GET"
-        val maxAge = conn.cacheControl.maxAgeSeconds()
+        val maxAge = conn.cacheControl.maxAgeSeconds
         // Default poll interval to 10 seconds if not specified by the server, for backward compatibility.
         val pollInterval = if (maxAge == -1) 10.seconds else maxAge.seconds
 
@@ -67,7 +68,7 @@ class HTTPNetworkRegistrationService(
 
 val HttpURLConnection.cacheControl: CacheControl
     get() {
-        return CacheControl.parse(Headers.of(headerFields.filterKeys { it != null }.mapValues { it.value[0] }))
+        return CacheControl.parse(headerFields.filterKeys { it != null }.mapValues { it.value[0] }.toHeaders())
     }
 
 val HttpURLConnection.cordaServerVersion: String
