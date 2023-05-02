@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.instrument.Retransform
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.zaxxer.hikari.pool.HikariPool
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
@@ -67,6 +66,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
+import net.corda.core.utilities.millis
 import net.corda.core.utilities.minutes
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.EmptyApi
@@ -166,6 +166,7 @@ import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
+import net.corda.nodeapi.internal.namedThreadPoolExecutor
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
@@ -181,9 +182,6 @@ import java.time.format.DateTimeParseException
 import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
@@ -881,13 +879,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         // Start with 1 thread and scale up to the configured thread pool size if needed
         // Parameters of [ThreadPoolExecutor] based on [Executors.newFixedThreadPool]
-        return ThreadPoolExecutor(
-            1,
-            numberOfThreads,
-            0L,
-            TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue<Runnable>(),
-            ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").setDaemon(true).build()
+        return namedThreadPoolExecutor(
+                corePoolSize = 1,
+                maxPoolSize = numberOfThreads,
+                idleKeepAlive = 0.millis,
+                poolName = "flow-external-operation-thread",
+                daemonThreads = true
         )
     }
 

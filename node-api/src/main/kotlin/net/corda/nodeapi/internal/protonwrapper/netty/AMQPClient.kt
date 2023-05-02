@@ -27,15 +27,14 @@ import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPChannelHandler.Companion.PROXY_LOGGER_NAME
 import net.corda.nodeapi.internal.requireMessageSize
+import net.corda.nodeapi.internal.revocation.CertDistPointCrlSource
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
 import java.net.InetSocketAddress
-import java.security.cert.CertPathValidatorException
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.withLock
 
 enum class ProxyVersion {
@@ -63,7 +62,8 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
                  val allowedRemoteLegalNames: Set<CordaX500Name>,
                  private val configuration: AMQPConfiguration,
                  private val sharedThreadPool: EventLoopGroup? = null,
-                 private val threadPoolName: String = "AMQPClient") : AutoCloseable {
+                 private val threadPoolName: String = "AMQPClient",
+                 private val distPointCrlSource: CertDistPointCrlSource = CertDistPointCrlSource.SINGLETON) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
@@ -89,12 +89,12 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
     private var retryInterval = MIN_RETRY_INTERVAL
-    private val revocationChecker = configuration.revocationConfig.createPKIXRevocationChecker()
     private val badCertTargets = mutableSetOf<NetworkHostAndPort>()
     @Volatile
     private var amqpActive = false
     @Volatile
     private var amqpChannelHandler: ChannelHandler? = null
+    private var sslDelegatedTaskExecutor: ExecutorService? = null
 
     val localAddressString: String
         get() = clientChannel?.localAddress()?.toString() ?: "<unknownLocalAddress>"
@@ -150,16 +150,15 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     }
 
     private class ClientChannelInitializer(val parent: AMQPClient) : ChannelInitializer<SocketChannel>() {
-        private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        private val keyManagerFactory = keyManagerFactory(parent.configuration.keyStore)
+        private val trustManagerFactory = trustManagerFactoryWithRevocation(
+                parent.configuration.trustStore,
+                parent.configuration.revocationConfig,
+                parent.distPointCrlSource
+        )
         private val conf = parent.configuration
         @Volatile
         private lateinit var amqpChannelHandler: AMQPChannelHandler
-
-        init {
-            keyManagerFactory.init(conf.keyStore)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, parent.revocationChecker))
-        }
 
         @Suppress("ComplexMethod")
         override fun initChannel(ch: SocketChannel) {
@@ -199,10 +198,24 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
 
             val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, parent.configuration)
             val target = parent.currentTarget
+            val delegatedTaskExecutor = checkNotNull(parent.sslDelegatedTaskExecutor)
             val handler = if (parent.configuration.useOpenSsl) {
-                createClientOpenSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
+                createClientOpenSslHandler(
+                        target,
+                        parent.allowedRemoteLegalNames,
+                        wrappedKeyManagerFactory,
+                        trustManagerFactory,
+                        ch.alloc(),
+                        delegatedTaskExecutor
+                )
             } else {
-                createClientSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
+                createClientSslHandler(
+                        target,
+                        parent.allowedRemoteLegalNames,
+                        wrappedKeyManagerFactory,
+                        trustManagerFactory,
+                        delegatedTaskExecutor
+                )
             }
             handler.handshakeTimeoutMillis = conf.sslHandshakeTimeout.toMillis()
             pipeline.addLast("sslHandler", handler)
@@ -260,6 +273,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
                 return
             }
             log.info("Connect to: $currentTarget")
+            sslDelegatedTaskExecutor = sslDelegatedTaskExecutor(threadPoolName)
             workerGroup = sharedThreadPool ?: NioEventLoopGroup(NUM_CLIENT_THREADS, DefaultThreadFactory(threadPoolName, Thread.MAX_PRIORITY))
             started = true
             restart()
@@ -294,6 +308,8 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
             }
             clientChannel = null
             workerGroup = null
+            sslDelegatedTaskExecutor?.shutdown()
+            sslDelegatedTaskExecutor = null
             log.info("Stopped connection to $currentTarget")
         }
     }
@@ -334,6 +350,4 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     private val _onConnection = PublishSubject.create<ConnectionChange>().toSerialized()
     val onConnection: Observable<ConnectionChange>
         get() = _onConnection
-
-    val softFailExceptions: List<CertPathValidatorException> get() = revocationChecker.softFailExceptions
 }

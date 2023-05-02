@@ -3,9 +3,6 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 import com.typesafe.config.Config
 import net.corda.nodeapi.internal.config.ConfigParser
 import net.corda.nodeapi.internal.config.CustomConfigParser
-import net.corda.nodeapi.internal.revocation.CertDistPointCrlSource
-import net.corda.nodeapi.internal.revocation.CordaRevocationChecker
-import java.security.cert.PKIXRevocationChecker
 
 /**
  * Data structure for controlling the way how Certificate Revocation Lists are handled.
@@ -45,18 +42,6 @@ interface RevocationConfig {
      * Optional [CrlSource] which only makes sense with `mode` = `EXTERNAL_SOURCE`
      */
     val externalCrlSource: CrlSource?
-
-    fun createPKIXRevocationChecker(): PKIXRevocationChecker {
-        return when (mode) {
-            Mode.OFF -> AllowAllRevocationChecker
-            Mode.EXTERNAL_SOURCE -> {
-                val externalCrlSource = requireNotNull(externalCrlSource) { "externalCrlSource must be specfied for EXTERNAL_SOURCE" }
-                CordaRevocationChecker(externalCrlSource, softFail = true)
-            }
-            Mode.SOFT_FAIL -> CordaRevocationChecker(CertDistPointCrlSource(), softFail = true)
-            Mode.HARD_FAIL -> CordaRevocationChecker(CertDistPointCrlSource(), softFail = false)
-        }
-    }
 }
 
 /**

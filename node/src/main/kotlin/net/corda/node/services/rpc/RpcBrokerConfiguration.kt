@@ -30,7 +30,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         setDirectories(baseDirectory)
 
         val acceptorConfigurationsSet = mutableSetOf(
-                rpcAcceptorTcpTransport(address, sslOptions, useSsl)
+                rpcAcceptorTcpTransport(address, sslOptions, enableSSL = useSsl)
         )
         adminAddress?.let {
             acceptorConfigurationsSet += rpcInternalAcceptorTcpTransport(it, nodeConfiguration)

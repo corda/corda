@@ -4,12 +4,15 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -23,7 +26,9 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.nodeapi.internal.protonwrapper.netty.init
+import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactory
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -31,9 +36,6 @@ import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
-import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
@@ -42,7 +44,11 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.*
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.SSLParameters
+import javax.net.ssl.SSLServerSocket
+import javax.net.ssl.SSLSocket
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -144,15 +150,10 @@ class ProtonWrapperTests {
         sslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(ALICE_NAME, rootCa.certificate, intermediateCa) }
         sslConfig.createTrustStore(rootCa.certificate)
 
-        val keyStore = sslConfig.keyStore.get()
-        val trustStore = sslConfig.trustStore.get()
-
         val context = SSLContext.getInstance("TLS")
-        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        keyManagerFactory.init(keyStore)
+        val keyManagerFactory = keyManagerFactory(sslConfig.keyStore.get())
         val keyManagers = keyManagerFactory.keyManagers
-        val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        trustMgrFactory.init(trustStore)
+        val trustMgrFactory = trustManagerFactory(sslConfig.trustStore.get())
         val trustManagers = trustMgrFactory.trustManagers
         context.init(keyManagers, trustManagers, newSecureRandom())
 
@@ -339,7 +340,7 @@ class ProtonWrapperTests {
         amqpServer.use {
             val connectionEvents = amqpServer.onConnection.toBlocking().iterator
             amqpServer.start()
-            val sharedThreads = NioEventLoopGroup()
+            val sharedThreads = NioEventLoopGroup(DefaultThreadFactory("sharedThreads"))
             val amqpClient1 = createSharedThreadsClient(sharedThreads, 0)
             val amqpClient2 = createSharedThreadsClient(sharedThreads, 1)
             amqpClient1.start()

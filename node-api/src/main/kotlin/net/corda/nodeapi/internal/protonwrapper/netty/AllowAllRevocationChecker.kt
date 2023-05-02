@@ -31,4 +31,6 @@ object AllowAllRevocationChecker : PKIXRevocationChecker() {
     override fun getSoftFailExceptions(): List<CertPathValidatorException> {
         return Collections.emptyList()
     }
+
+    override fun clone(): AllowAllRevocationChecker = this
 }
