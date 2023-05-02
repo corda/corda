@@ -2,10 +2,10 @@
 *.md	@corda/technical-writers
 
 # By default anything under core or node-api is the Kernel team
-core    @corda/kernel
-node-api        @corda/kernel
-node/src/main/kotlin/net/corda/node/internal    @corda/kernel
-node/src/main/kotlin/net/corda/node/services    @corda/kernel
+core    @rick-r3
+node-api        @rick-r3
+node/src/main/kotlin/net/corda/node/internal    @rick-r3
+node/src/main/kotlin/net/corda/node/services    @rick-r3
 
 # Determinstic components
 core-deterministic      @chrisr3
@@ -17,46 +17,27 @@ serialization-tests     @chrisr3
 
 # Demobench defaults to Chris, but Viktor for the main code
 tools/demobench @chrisr3
-tools/demobench/src/main/kotlin/net/corda/demobench @vkolomeyko
 
 # General Corda code
 
-client/rpc	@vkolomeyko
+core/src/main/kotlin/net/corda/core/flows	@rick-r3
+core/src/main/kotlin/net/corda/core/internal/notary	@corda/notaries
 
-core/src/main/kotlin/net/corda/core/flows	@dimosr
-core/src/main/kotlin/net/corda/core/internal/notary	@thschroeter
-core/src/main/kotlin/net/corda/core/messaging	@vkolomeyko
+node/src/integration-test/kotlin/net/corda/node/persistence	@chriscochrane
+node/src/integration-test/kotlin/net/corda/node/services/persistence	@chriscochrane
+node/src/main/kotlin/net/corda/node/services/messaging	@rick-r3
+node/src/main/kotlin/net/corda/node/services/persistence	@rick-r3
+node/src/main/kotlin/net/corda/node/services/statemachine	@rick-r3
+node/src/main/kotlin/net/corda/notary	@corda/notaries
 
-node/src/integration-test/kotlin/net/corda/node/persistence	@blsemo
-node/src/integration-test/kotlin/net/corda/node/services/persistence	@blsemo
-node/src/main/kotlin/net/corda/node/internal/artemis @rekalov
-node/src/main/kotlin/net/corda/node/services/identity	@rekalov
-node/src/main/kotlin/net/corda/node/services/keys	@rekalov
-node/src/main/kotlin/net/corda/node/services/messaging	@dimosr
-node/src/main/kotlin/net/corda/node/services/network	@rekalov
-node/src/main/kotlin/net/corda/node/services/persistence	@blsemo
-node/src/main/kotlin/net/corda/node/services/rpc	@vkolomeyko
-node/src/main/kotlin/net/corda/node/services/statemachine	@lankydan
-node/src/main/kotlin/net/corda/node/utilities/registration	@rekalov
-node/src/main/kotlin/net/corda/notary	@thschroeter
+node-api/src/main/kotlin/net/corda/nodeapi/internal/persistence	@rick-r3
 
-node-api/src/main/kotlin/net/corda/nodeapi/internal/bridging	@vkolomeyko
-node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto	@rekalov
-node-api/src/main/kotlin/net/corda/nodeapi/internal/cryptoservice @rekalov
-node-api/src/main/kotlin/net/corda/nodeapi/internal/lifecycle	@vkolomeyko
-node-api/src/main/kotlin/net/corda/nodeapi/internal/persistence	@blsemo
-node-api/src/main/kotlin/net/corda/nodeapi/internal/protonwrapper	@vkolomeyko
-node-api/src/test/kotlin/net/corda/nodeapi/internal/bridging	@rekalov
-
-common/logging/src/main/kotlin/net/corda/common/logging/errorReporting @JamesHR3
-common/logging/src/test/kotlin/net/corda/commmon/logging/errorReporting @JamesHR3
+common/logging/src/main/kotlin/net/corda/common/logging/errorReporting @chriscochrane
+common/logging/src/test/kotlin/net/corda/commmon/logging/errorReporting @chriscochrane
 
 # Single file ownerships go at the end, as they are most specific and take precedence over other ownerships
 
 core/src/main/kotlin/net/corda/core/internal/AbstractAttachment.kt      @adelel1
 core/src/main/kotlin/net/corda/core/internal/AttachmentTrustCalculator.kt       @adelel1
 core/src/main/kotlin/net/corda/core/internal/AttachmentWithContext.kt   @adelel1
-core/src/main/kotlin/net/corda/core/internal/CertRole.kt        @rekalov
 core/src/main/kotlin/net/corda/core/node/services/AttachmentStorage.kt  @adelel1
-core/src/main/kotlin/net/corda/core/node/services/IdentityService.kt    @rekalov
-core/src/main/kotlin/net/corda/core/node/services/NetworkMapCache.kt    @rekalov
