@@ -2,10 +2,10 @@
 *.md	@corda/technical-writers
 
 # By default anything under core or node-api is the Kernel team
-core    @corda/kernel
-node-api        @corda/kernel
-node/src/main/kotlin/net/corda/node/internal    @corda/kernel
-node/src/main/kotlin/net/corda/node/services    @corda/kernel
+core    @rick-r3
+node-api        @rick-r3
+node/src/main/kotlin/net/corda/node/internal    @rick-r3
+node/src/main/kotlin/net/corda/node/services    @rick-r3
 
 # Determinstic components
 core-deterministic      @chrisr3
@@ -20,20 +20,20 @@ tools/demobench @chrisr3
 
 # General Corda code
 
-core/src/main/kotlin/net/corda/core/flows	@dimosr
+core/src/main/kotlin/net/corda/core/flows	@rick-r3
 core/src/main/kotlin/net/corda/core/internal/notary	@corda/notaries
 
-node/src/integration-test/kotlin/net/corda/node/persistence	@blsemo
-node/src/integration-test/kotlin/net/corda/node/services/persistence	@blsemo
-node/src/main/kotlin/net/corda/node/services/messaging	@dimosr
-node/src/main/kotlin/net/corda/node/services/persistence	@blsemo
-node/src/main/kotlin/net/corda/node/services/statemachine	@lankydan
+node/src/integration-test/kotlin/net/corda/node/persistence	@chriscochrane
+node/src/integration-test/kotlin/net/corda/node/services/persistence	@chriscochrane
+node/src/main/kotlin/net/corda/node/services/messaging	@rick-r3
+node/src/main/kotlin/net/corda/node/services/persistence	@rick-r3
+node/src/main/kotlin/net/corda/node/services/statemachine	@rick-r3
 node/src/main/kotlin/net/corda/notary	@corda/notaries
 
-node-api/src/main/kotlin/net/corda/nodeapi/internal/persistence	@blsemo
+node-api/src/main/kotlin/net/corda/nodeapi/internal/persistence	@rick-r3
 
-common/logging/src/main/kotlin/net/corda/common/logging/errorReporting @JamesHR3
-common/logging/src/test/kotlin/net/corda/commmon/logging/errorReporting @JamesHR3
+common/logging/src/main/kotlin/net/corda/common/logging/errorReporting @chriscochrane
+common/logging/src/test/kotlin/net/corda/commmon/logging/errorReporting @chriscochrane
 
 # Single file ownerships go at the end, as they are most specific and take precedence over other ownerships
 
