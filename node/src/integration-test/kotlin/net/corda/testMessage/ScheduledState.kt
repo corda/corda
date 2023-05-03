@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.testing.contracts.DummyContract
@@ -25,7 +26,11 @@ class ScheduledFlow(private val stateRef: StateRef) : FlowLogic<Unit>() {
         }
         require(!scheduledState.processed) { "State should not have been previously processed" }
         val lock = UUID.randomUUID()
-        serviceHub.vaultService.softLockReserve(lock, NonEmptySet.of(state.ref))
+        try {
+            serviceHub.vaultService.softLockReserve(lock, NonEmptySet.of(state.ref))
+        } catch (e: StatesNotAvailableException) {
+            return
+        }
         val notary = state.state.notary
         val newStateOutput = scheduledState.copy(processed = true)
         val builder = TransactionBuilder(notary)
