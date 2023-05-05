@@ -1,6 +1,7 @@
 @file:Suppress("TooGenericExceptionCaught") // needs to catch and handle/rethrow *all* exceptions in many places
 package net.corda.nodeapi.internal.bridging
 
+import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.netty.channel.EventLoop
 import io.netty.channel.EventLoopGroup
@@ -85,6 +86,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
 
         private val NUM_BRIDGE_THREADS = Integer.getInteger(CORDA_NUM_BRIDGE_THREADS_PROP_NAME, 0) // Default 0 means Netty default sized pool
         private const val ARTEMIS_RETRY_BACKOFF = 5000L
+        private val artemisLock = co.paralleluniverse.strands.concurrent.ReentrantLock()
     }
 
     /**
@@ -176,7 +178,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
 
         private fun artemis(inProgress: ArtemisState, block: (precedingState: ArtemisState) -> ArtemisState) {
             val runnable = {
-                synchronized(artemis) {
+                artemisLock.withLock {
                     try {
                         val precedingState = artemisState
                         artemisState.pending?.cancel(false)

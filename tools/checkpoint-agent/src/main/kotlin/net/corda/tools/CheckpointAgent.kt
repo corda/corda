@@ -192,7 +192,7 @@ object CheckpointHook : ClassFileTransformer {
 
     @JvmStatic
     fun readFieldEnter(that: Any) {
-        if (that is FieldSerializer.CachedField<*>) {
+        if (that is FieldSerializer.CachedField) {
             log.debug { "readFieldEnter object: ${that.field.name}:${that.field.type}" }
             val (list, _) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
             list.add(StatsEvent.EnterField(that.field.name, that.field.type))
@@ -201,7 +201,7 @@ object CheckpointHook : ClassFileTransformer {
 
     @JvmStatic
     fun readFieldExit(obj: Any?, that: Any) {
-        if (that is FieldSerializer.CachedField<*>) {
+        if (that is FieldSerializer.CachedField) {
             val (list, _) = events.getOrPut(Strand.currentStrand().id) { Pair(ArrayList(), AtomicInteger(0)) }
             val value = that.field.get(obj)
             val arrayValue = getArrayValue(that.field.type, value)

@@ -46,8 +46,8 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Triple(context.whitelist, context.deserializationClassLoader, context.checkpointCustomSerializers)) {
             KryoPool {
-                val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-                val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }
+                val classResolver = CordaClassResolver(context)
+                val serializer = Fiber.getFiberSerializer(classResolver,false) as KryoSerializer
                 // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
                 val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                 serializer.kryo.apply {
