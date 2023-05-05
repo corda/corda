@@ -147,8 +147,15 @@ object DefaultKryoCustomizer {
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)
 
-            val iteratorSerializer = IteratorSerializer(Any::class.java, CompatibleFieldSerializer(kryo, Any::class.java))
-            addDefaultSerializer(Iterator::class.java, iteratorSerializer)
+            addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<IteratorSerializer>() {
+                override fun newSerializer(kryo: Kryo, type: Class<*>): IteratorSerializer {
+                    val config = CompatibleFieldSerializer.CompatibleFieldSerializerConfig().apply {
+                        ignoreSyntheticFields = false
+                        extendedFieldNames = true
+                    }
+                    return IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
+                }
+            })
 
             for (whitelistProvider in serializationWhitelists) {
                 val types = whitelistProvider.whitelist
