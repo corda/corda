@@ -1,0 +1,61 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="remove_flow_metadata_columns">
+        <dropColumn tableName="node_transactions" columnName="initiator"/>
+        <dropColumn tableName="node_transactions" columnName="participants"/>
+        <dropColumn tableName="node_transactions" columnName="states_to_record"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="create_recovery_transaction_metadata_table">
+        <createTable tableName="node_recovery_transaction_metadata">
+            <column name="tx_id" type="VARCHAR(144)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="initiator_party_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="peer_party_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="states_to_record" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="create_recovery_party_info_table">
+        <createTable tableName="node_recovery_party_info">
+            <column name="party_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="party_name" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_recovery_transaction_metadata_pkey">
+        <addPrimaryKey columnNames="tx_id" constraintName="node_recovery_transaction_metadata_pkey" tableName="node_recovery_transaction_metadata"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_recovery_party_info_pkey">
+        <addPrimaryKey columnNames="party_id" constraintName="node_recovery_party_info_pkey" tableName="node_recovery_party_info"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="FK__party_info__initiator_party_id">
+        <addForeignKeyConstraint baseColumnNames="initiator_party_id" baseTableName="node_recovery_transaction_metadata"
+                                 constraintName="FK__party_info__initiator_party_id"
+                                 referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="FK__party_info__peer_party_id">
+        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_recovery_transaction_metadata"
+                                 constraintName="FK__party_info__peer_party_id"
+                                 referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
+    </changeSet>
+
+</databaseChangeLog>
