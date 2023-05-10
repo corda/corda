@@ -68,12 +68,14 @@ class DBTransactionStorageTests {
 
     private lateinit var database: CordaPersistence
     private lateinit var transactionStorage: DBTransactionStorage
+    private lateinit var transactionRecovery: DBTransactionRecovery
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null })
         newTransactionStorage()
+        newTransactionRecovery()
     }
 
     @After
@@ -123,7 +125,7 @@ class DBTransactionStorageTests {
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction()
-        transactionStorage.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
+        transactionRecovery.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
         val txn = readTransactionFromDB(transaction.id)
         assertEquals(IN_FLIGHT, txn.status)
 //        assertEquals(StatesToRecord.ALL_VISIBLE, txn.recoveryMetadata?.statesToRecord)
@@ -600,6 +602,11 @@ class DBTransactionStorageTests {
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
         transactionStorage = DBTransactionStorage(database, TestingNamedCacheFactory(cacheSizeBytesOverride
+                ?: 1024), clock)
+    }
+
+    private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
+        transactionRecovery = DBTransactionRecovery(database, TestingNamedCacheFactory(cacheSizeBytesOverride
                 ?: 1024), clock)
     }
 
