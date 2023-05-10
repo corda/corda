@@ -19,6 +19,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
+import net.corda.node.services.network.RecoveryPartyInfoCache
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.IN_FLIGHT
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.UNVERIFIED
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
@@ -27,6 +28,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -69,6 +71,8 @@ class DBTransactionStorageTests {
     private lateinit var database: CordaPersistence
     private lateinit var transactionStorage: DBTransactionStorage
     private lateinit var transactionRecovery: DBTransactionRecovery
+    private lateinit var partyInfoCache: RecoveryPartyInfoCache
+
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
@@ -128,9 +132,10 @@ class DBTransactionStorageTests {
         transactionRecovery.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
         val txn = readTransactionFromDB(transaction.id)
         assertEquals(IN_FLIGHT, txn.status)
-//        assertEquals(StatesToRecord.ALL_VISIBLE, txn.recoveryMetadata?.statesToRecord)
-//        assertEquals(ALICE_NAME.toString(), txn.recoveryMetadata?.initiator?.partyName)
-//        assertEquals(listOf(BOB_NAME.toString()), txn.recoveryMetadata?.peers?.map { it.partyName })
+        val txnRecoveryMetadata = readTransactionRecoveryDataFromDB(transaction.id)
+        assertEquals(StatesToRecord.ALL_VISIBLE, txnRecoveryMetadata.statesToRecord)
+        assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(txnRecoveryMetadata.initiatorPartyId!!))
+        assertEquals(listOf(BOB_NAME), txnRecoveryMetadata.peerPartyIds.map { partyInfoCache.getCordaX500NameByPartyId(it) })
     }
 
     @Test(timeout = 300_000)
@@ -385,6 +390,17 @@ class DBTransactionStorageTests {
         return fromDb[0]
     }
 
+    private fun readTransactionRecoveryDataFromDB(id: SecureHash): TransactionRecoveryMetadata {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionRecovery.DBRecoveryTransactionMetadata::class.java.name} where tx_id = :transactionId",
+                    DBTransactionRecovery.DBRecoveryTransactionMetadata::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        assertEquals(1, fromDb.size)
+        return fromDb[0].toTransactionRecoveryMetadata(CryptoService())
+    }
+
     @Test(timeout = 300_000)
     fun `empty store`() {
         assertThat(transactionStorage.getTransaction(newTransaction().id)).isNull()
@@ -605,9 +621,14 @@ class DBTransactionStorageTests {
                 ?: 1024), clock)
     }
 
-    private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
+    private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC()),
+                                       cryptoService: CryptoService = CryptoService()) {
+        partyInfoCache = RecoveryPartyInfoCache(TestingNamedCacheFactory(), database)
+        partyInfoCache.add(ALICE_NAME.hashCode().toLong(), ALICE_NAME)
+        partyInfoCache.add(BOB_NAME.hashCode().toLong(), BOB_NAME)
+        partyInfoCache.add(CHARLIE_NAME.hashCode().toLong(), CHARLIE_NAME)
         transactionRecovery = DBTransactionRecovery(database, TestingNamedCacheFactory(cacheSizeBytesOverride
-                ?: 1024), clock)
+                ?: 1024), clock, cryptoService, partyInfoCache)
     }
 
     private fun assertTransactionIsRetrievable(transaction: SignedTransaction) {

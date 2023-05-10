@@ -12,16 +12,19 @@
 
     <changeSet author="R3.Corda" id="create_recovery_transaction_metadata_table">
         <createTable tableName="node_recovery_transaction_metadata">
-            <column name="tx_id" type="VARCHAR(144)">
+            <column name="tx_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
             <column name="initiator_party_id" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="peer_party_id" type="INT">
+            <column name="peer_party_ids" type="BLOB">
                 <constraints nullable="false"/>
             </column>
             <column name="states_to_record" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -46,16 +49,10 @@
         <addPrimaryKey columnNames="party_id" constraintName="node_recovery_party_info_pkey" tableName="node_recovery_party_info"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="FK__party_info__initiator_party_id">
-        <addForeignKeyConstraint baseColumnNames="initiator_party_id" baseTableName="node_recovery_transaction_metadata"
-                                 constraintName="FK__party_info__initiator_party_id"
-                                 referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
-    </changeSet>
-
-    <changeSet author="R3.Corda" id="FK__party_info__peer_party_id">
-        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_recovery_transaction_metadata"
-                                 constraintName="FK__party_info__peer_party_id"
-                                 referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
-    </changeSet>
+<!--    <changeSet author="R3.Corda" id="FK__recovery_transaction_metadata__transactions_tx_id">-->
+<!--        <addForeignKeyConstraint baseColumnNames="tx_id" baseTableName="node_recovery_transaction_metadata"-->
+<!--                                 constraintName="FK__recovery_transaction_metadata__transactions_tx_id"-->
+<!--                                 referencedColumnNames="tx_id" referencedTableName="node_transactions"/>-->
+<!--    </changeSet>-->
 
 </databaseChangeLog>
