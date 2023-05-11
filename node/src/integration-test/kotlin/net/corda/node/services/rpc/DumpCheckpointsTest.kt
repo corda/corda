@@ -14,8 +14,11 @@ import net.corda.core.internal.list
 import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.CountUpDownLatch
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
@@ -36,8 +39,8 @@ class DumpCheckpointsTest {
         private val flowProceedLatch = CountUpDownLatch(1)
     }
 
-    @Test(timeout=300_000)
-	fun `verify checkpoint dump via RPC`() {
+    @Test(timeout = 300_000)
+    fun `verify checkpoint dump via RPC`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
 
@@ -55,20 +58,44 @@ class DumpCheckpointsTest {
 
                 flowProceedLatch.countDown()
                 assertEquals(1, checkPointCountFuture.get())
-                checkDumpFile(logDirPath)
+                checkDumpFile(logDirPath, GetNumberOfCheckpointsFlow::class.java, Checkpoint.FlowStatus.RUNNABLE)
             }
         }
     }
 
-    private fun checkDumpFile(dir: Path) {
+    @Test(timeout = 300_000)
+    fun `paused flows included in checkpoint dump output`() {
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+
+                it.proxy.startFlow(::EasyFlow)
+
+                // Hack to get the flow to show as paused
+                it.proxy.startFlow(::SetAllFlowsToPausedFlow).returnValue.getOrThrow(10.seconds)
+
+                val logDirPath = nodeAHandle.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
+                logDirPath.createDirectories()
+                nodeAHandle.checkpointsRpc.use { checkpointRPCOps -> checkpointRPCOps.dumpCheckpoints() }
+
+                checkDumpFile(logDirPath, EasyFlow::class.java, Checkpoint.FlowStatus.PAUSED)
+            }
+        }
+    }
+
+    private fun checkDumpFile(dir: Path, containsClass: Class<out FlowLogic<*>>, flowStatus: Checkpoint.FlowStatus) {
         // The directory supposed to contain a single ZIP file
         val file = dir.list().single { it.isRegularFile() }
 
         ZipInputStream(file.inputStream()).use { zip ->
             val entry = zip.nextEntry
             assertThat(entry.name, containsSubstring("json"))
-            val content = zip.readFully()
-            assertThat(String(content), containsSubstring(GetNumberOfCheckpointsFlow::class.java.name))
+            val content = String(zip.readFully())
+            assertThat(content, containsSubstring(containsClass.name))
+            assertThat(content, containsSubstring(flowStatus.name))
         }
     }
 
@@ -92,6 +119,26 @@ class DumpCheckpointsTest {
         private fun syncUp() {
             dumpCheckPointLatch.countDown()
             flowProceedLatch.await()
+        }
+    }
+
+    @StartableByRPC
+    class EasyFlow : FlowLogic<Int>() {
+        @Suspendable
+        override fun call(): Int {
+            sleep(2.minutes)
+            return 1
+        }
+    }
+
+    @StartableByRPC
+    class SetAllFlowsToPausedFlow : FlowLogic<Int>() {
+        @Suspendable
+        override fun call(): Int {
+            return serviceHub
+                .jdbcSession()
+                .prepareStatement("UPDATE node_checkpoints SET status = '${Checkpoint.FlowStatus.PAUSED.ordinal}'")
+                .use { ps -> ps.executeUpdate() }
         }
     }
 }

@@ -215,17 +215,28 @@ data class Checkpoint(
         /**
          * Deserializes the serialized fields contained in [Checkpoint.Serialized].
          *
-         * @return A [Checkpoint] with all its fields filled in from [Checkpoint.Serialized]
+         * Depending on the [FlowStatus] of the [Checkpoint.Serialized], the deserialized [Checkpoint] may or may not have its [flowState]
+         * properly deserialized. This is to optimise the process's memory footprint by not holding the checkpoints of flows that are not
+         * running in-memory.
+         *
+         * The [flowState] will not be deserialized when the [FlowStatus] is:
+         *
+         * - [FlowStatus.PAUSED]
+         * - [FlowStatus.COMPLETED]
+         * - [FlowStatus.FAILED]
+         *
+         * Any other status returns a [FlowState.Unstarted] or [FlowState.Started] depending on the content of [serializedFlowState].
+         *
+         * @param checkpointSerializationContext The [CheckpointSerializationContext] to deserialize the checkpoint's serialized content with.
+         * @param alwaysDeserializeFlowState A flag to specify if [flowState] should be deserialized, disregarding the [FlowStatus] of the
+         * checkpoint and ignoring the memory optimisation.
+         *
+         * @return A [Checkpoint] with all its fields filled in from [Checkpoint.Serialized].
          */
-        fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
-            val flowState = when(status) {
-                FlowStatus.PAUSED -> FlowState.Paused
-                FlowStatus.COMPLETED, FlowStatus.FAILED -> FlowState.Finished
-                else -> serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
-            }
+        fun deserialize(checkpointSerializationContext: CheckpointSerializationContext, alwaysDeserializeFlowState: Boolean = false): Checkpoint {
             return Checkpoint(
                 checkpointState = serializedCheckpointState.checkpointDeserialize(checkpointSerializationContext),
-                flowState = flowState,
+                flowState = getFlowState(checkpointSerializationContext, alwaysDeserializeFlowState),
                 errorState = errorState,
                 result = result?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
                 status = status,
@@ -233,6 +244,23 @@ data class Checkpoint(
                 flowIoRequest = flowIoRequest,
                 compatible = compatible
             )
+        }
+
+        private fun getFlowState(
+            checkpointSerializationContext: CheckpointSerializationContext,
+            alwaysDeserializeFlowState: Boolean
+        ): FlowState {
+            return when {
+                alwaysDeserializeFlowState -> deserializeFlowState(checkpointSerializationContext)
+                status == FlowStatus.PAUSED -> FlowState.Paused
+                status == FlowStatus.COMPLETED -> FlowState.Finished
+                status == FlowStatus.FAILED -> FlowState.Finished
+                else -> deserializeFlowState(checkpointSerializationContext)
+            }
+        }
+
+        private fun deserializeFlowState(checkpointSerializationContext: CheckpointSerializationContext): FlowState {
+            return serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
         }
     }
 }
