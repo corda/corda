@@ -38,6 +38,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.notary.NotaryService
@@ -121,13 +122,14 @@ import net.corda.node.services.network.NetworkParameterUpdateListener
 import net.corda.node.services.network.NetworkParametersHotloader
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.persistence.DBCheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
-import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
@@ -285,6 +287,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
+    val partyInfoCache = PersistentPartyInfoCache(networkMapCache, cacheFactory, database)
+    @Suppress("LeakingThis")
+    val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
@@ -295,8 +300,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         configuration.devMode
     ).tokenize()
     val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
-    @Suppress("LeakingThis")
-    val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -694,6 +697,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.warn("Not distributing events as NetworkMap is not ready")
             }
         }
+        nodeReadyFuture.thenMatch({
+            partyInfoCache.start()
+        }, { th -> log.error("Unexpected exception during cache initialisation", th) })
+
         setNodeStatus(NodeStatus.STARTED)
         return resultingNodeInfo
     }
@@ -1077,7 +1084,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
-        return DBTransactionStorage(database, cacheFactory, platformClock)
+        return DBTransactionStorageLedgerRecovery(database, cacheFactory, platformClock, cryptoService, partyInfoCache)
     }
 
     protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {

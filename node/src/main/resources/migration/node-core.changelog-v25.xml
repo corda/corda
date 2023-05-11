@@ -49,6 +49,18 @@
         <addPrimaryKey columnNames="party_id" constraintName="node_recovery_party_info_pkey" tableName="node_recovery_party_info"/>
     </changeSet>
 
+    <changeSet author="R3.Corda" id="node_recovery_transaction_metadata_timestamp_idx">
+        <createIndex indexName="node_recovery_transaction_metadata_timestamp_idx" tableName="node_recovery_transaction_metadata">
+            <column name="timestamp"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="FK__recovery_transaction_metadata__initiator_party_id">
+        <addForeignKeyConstraint baseColumnNames="initiator_party_id" baseTableName="node_recovery_transaction_metadata"
+                                 constraintName="FK__recovery_transaction_metadata__initiator_party_id"
+                                 referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
+    </changeSet>
+
 <!--    <changeSet author="R3.Corda" id="FK__recovery_transaction_metadata__transactions_tx_id">-->
 <!--        <addForeignKeyConstraint baseColumnNames="tx_id" baseTableName="node_recovery_transaction_metadata"-->
 <!--                                 constraintName="FK__recovery_transaction_metadata__transactions_tx_id"-->

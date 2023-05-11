@@ -23,12 +23,13 @@ import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.network.RecoveryPartyInfoCache
+import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.IN_FLIGHT
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.UNVERIFIED
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
@@ -42,6 +43,7 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.MockCryptoService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assert
@@ -75,8 +77,8 @@ class DBTransactionStorageTests {
 
     private lateinit var database: CordaPersistence
     private lateinit var transactionStorage: DBTransactionStorage
-    private lateinit var transactionRecovery: DBTransactionRecovery
-    private lateinit var partyInfoCache: RecoveryPartyInfoCache
+    private lateinit var transactionRecovery: DBTransactionStorageLedgerRecovery
+    private lateinit var partyInfoCache: PersistentPartyInfoCache
 
     @Before
     fun setUp() {
@@ -399,12 +401,12 @@ class DBTransactionStorageTests {
     private fun readTransactionRecoveryDataFromDB(id: SecureHash): TransactionRecoveryMetadata {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionRecovery.DBRecoveryTransactionMetadata::class.java.name} where tx_id = :transactionId",
-                    DBTransactionRecovery.DBRecoveryTransactionMetadata::class.java
+                    "from ${DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
         assertEquals(1, fromDb.size)
-        return fromDb[0].toTransactionRecoveryMetadata(CryptoService())
+        return fromDb[0].toTransactionRecoveryMetadata(MockCryptoService(emptyMap()))
     }
 
     @Test(timeout = 300_000)
@@ -628,15 +630,15 @@ class DBTransactionStorageTests {
     }
 
     private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC()),
-                                       cryptoService: CryptoService = CryptoService()) {
+                                       cryptoService: CryptoService = MockCryptoService(emptyMap())) {
 
         val networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
         val alice = createNodeInfo(listOf(ALICE))
         val bob = createNodeInfo(listOf(BOB))
         networkMapCache.addOrUpdateNodes(listOf(alice, bob))
-
-        partyInfoCache = RecoveryPartyInfoCache(networkMapCache, TestingNamedCacheFactory(), database)
-        transactionRecovery = DBTransactionRecovery(database, TestingNamedCacheFactory(cacheSizeBytesOverride
+        partyInfoCache = PersistentPartyInfoCache(networkMapCache, TestingNamedCacheFactory(), database)
+        partyInfoCache.start()
+        transactionRecovery = DBTransactionStorageLedgerRecovery(database, TestingNamedCacheFactory(cacheSizeBytesOverride
                 ?: 1024), clock, cryptoService, partyInfoCache)
     }
 

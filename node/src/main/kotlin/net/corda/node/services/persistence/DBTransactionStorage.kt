@@ -77,11 +77,6 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
 
             @Column(name = "signatures")
             val signatures: ByteArray?
-
-            // optional
-//            @OneToOne(fetch = FetchType.LAZY, optional = true)
-//            @JoinColumn(name = "tx_id", foreignKey = ForeignKey(name = "NODE_RECOVERY_TRANSACTION_METADATA_NODE_TRANSACTIONS_TX_ID_fk"))
-//            val recoveryMetadata: DBTransactionRecovery.DBRecoveryTransactionMetadata? = null
     )
 
     enum class TransactionStatus {
@@ -165,13 +160,6 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                                 dbTxn.transaction.deserialize(context = contextToUse()),
                                 dbTxn.status,
                                 dbTxn.signatures?.deserialize(context = contextToUse())
-//                                dbTxn.recoveryMetadata?.let { recoveryMetadata ->
-//                                        FlowTransactionMetadata(
-//                                                CordaX500Name.parse(recoveryMetadata.initiator.partyName),
-//                                                recoveryMetadata.statesToRecord,
-//                                                recoveryMetadata.peers.map { CordaX500Name.parse(it.partyName) }.toSet()
-//                                        )
-//                                    }
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
@@ -182,16 +170,6 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                                 status = value.status,
                                 timestamp = clock.instant(),
                                 signatures = value.sigs.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes
-//                                recoveryMetadata = value.metadata?.let { flowTxnMetadata ->
-//                                    DBTransactionRecovery.DBRecoveryTransactionMetadata(
-//                                            txId = key.toString(),
-//                                            initiator = DBTransactionRecovery.DBRecoveryPartyInfo(0, flowTxnMetadata.initiator.toString()),
-//                                            peers = flowTxnMetadata.peers?.map { peer ->
-//                                                DBTransactionRecovery.DBRecoveryPartyInfo(0, peer.toString())
-//                                            } ?: emptyList(),
-//                                            statesToRecord = flowTxnMetadata.statesToRecord!!
-//                                    )
-//                                }
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,

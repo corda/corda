@@ -12,24 +12,24 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.CordaClock
-import net.corda.node.services.network.RecoveryPartyInfoCache
+import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.serialization.internal.CordaSerializationEncoding
 import java.time.Instant
-import java.time.Instant.now
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 import javax.persistence.Table
 
-class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
-                            val clock: CordaClock,
-                            private val cryptoService: CryptoService,
-                            private val partyInfoCache: RecoveryPartyInfoCache) : DBTransactionStorage(database, cacheFactory, clock) {
+class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
+                                         val clock: CordaClock,
+                                         private val cryptoService: CryptoService,
+                                         private val partyInfoCache: PersistentPartyInfoCache) : DBTransactionStorage(database, cacheFactory, clock) {
     internal companion object {
         private val logger = contextLogger()
     }
@@ -57,7 +57,7 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
             @Column(name = "timestamp", nullable = false)
             val timestamp: Instant
     ) {
-        constructor(txId: SecureHash, initiatorPartyId: Long?, peerPartyIds: Set<Long>, statesToRecord: StatesToRecord, cryptoService: CryptoService) :
+        constructor(txId: SecureHash, initiatorPartyId: Long?, peerPartyIds: Set<Long>, statesToRecord: StatesToRecord, clock: CordaClock, cryptoService: CryptoService) :
                 this(txId = txId.toString(), initiatorPartyId = initiatorPartyId,
                         peerPartyIds =
                             if (initiatorPartyId == null)
@@ -65,7 +65,7 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
                             else
                                 cryptoService.encrypt(peerPartyIds.serialize(context = contextToUse().withEncoding(CordaSerializationEncoding.SNAPPY)).bytes),
                         statesToRecord = statesToRecord,
-                        timestamp = now()
+                        timestamp = clock.instant()
                 )
         fun toTransactionRecoveryMetadata(cryptoService: CryptoService) =
                 TransactionRecoveryMetadata(
@@ -83,7 +83,6 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
         fun isSender(): Boolean {
             return initiatorPartyId == null
         }
-
     }
 
     @Entity
@@ -108,16 +107,16 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
 
     private fun createTransactionRecoveryMap(cacheFactory: NamedCacheFactory)
             : AppendOnlyPersistentMapBase<SecureHash, TxRecoveryCacheValue, DBRecoveryTransactionMetadata, String> {
-        return AppendOnlyPersistentMap<SecureHash, TxRecoveryCacheValue, DBRecoveryTransactionMetadata, String>(
+        return AppendOnlyPersistentMap(
                 cacheFactory = cacheFactory,
-                name = "DBTransactionRecovery_transactions",
+                name = "DBTransactionRecovery_recoveryMetadata",
                 toPersistentEntityKey = SecureHash::toString,
                 fromPersistentEntity = { dbTxn ->
                     val txId = SecureHash.create(dbTxn.txId)
                     txId to TxRecoveryCacheValue(txId, dbTxn.toTransactionRecoveryMetadata(cryptoService))
                 },
                 toPersistentEntity = { key: SecureHash, value: TxRecoveryCacheValue ->
-                    DBRecoveryTransactionMetadata(key, value.metadata.initiatorPartyId, value.metadata.peerPartyIds, value.metadata.statesToRecord, cryptoService)
+                    DBRecoveryTransactionMetadata(key, value.metadata.initiatorPartyId, value.metadata.peerPartyIds, value.metadata.statesToRecord, clock, cryptoService)
                 },
                 persistentEntityClass = DBRecoveryTransactionMetadata::class.java
         )
@@ -125,16 +124,16 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
 
     override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata): Boolean {
         return addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
-            addTransactionRecoveryMetadata(transaction.id, metadata) { false }
+            addTransactionRecoveryMetadata(transaction.id, metadata, clock) { false }
         }
     }
 
     override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
             addTransaction(transaction) {
-                addTransactionRecoveryMetadata(transaction.id, metadata) { false }
+                addTransactionRecoveryMetadata(transaction.id, metadata, clock) { false }
             }
 
-    private fun addTransactionRecoveryMetadata(txId: SecureHash, metadata: FlowTransactionMetadata,
+    private fun addTransactionRecoveryMetadata(txId: SecureHash, metadata: FlowTransactionMetadata, clock: CordaClock,
                                                updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txRecoveryMetadataStorage.locked {
@@ -143,7 +142,7 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
                                 partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
                                 metadata.peers?.map { partyInfoCache.getPartyIdByCordaX500Name(it) }?.toSet() ?: emptySet(),
                                 metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT,
-                                now()))
+                                clock.instant()))
                 val addedOrUpdated = addOrUpdate(txId, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction recovery metadata for $txId has been recorded." }
@@ -156,6 +155,16 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
     }
 }
 
+// TO DO: https://r3-cev.atlassian.net/browse/ENT-9876
+private fun CryptoService.decrypt(bytes: ByteArray): ByteArray {
+    return bytes
+}
+
+// TO DO: https://r3-cev.atlassian.net/browse/ENT-9876
+private fun CryptoService.encrypt(bytes: ByteArray): ByteArray {
+    return bytes
+}
+
 @CordaSerializable
 data class TransactionRecoveryMetadata(
         val txId: SecureHash,
@@ -165,14 +174,3 @@ data class TransactionRecoveryMetadata(
         val timestamp: Instant
 )
 
-class CryptoService {
-    fun encrypt(bytes: ByteArray): ByteArray {
-//        TODO("Not yet implemented")
-        return bytes
-    }
-
-    fun decrypt(bytes: ByteArray): ByteArray {
-//        TODO("Not yet implemented")
-        return bytes
-    }
-}
