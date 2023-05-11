@@ -15,7 +15,7 @@
             <column name="tx_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
-            <column name="initiator_party_id" type="INT">
+            <column name="initiator_party_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="peer_party_ids" type="BLOB">
@@ -32,7 +32,7 @@
 
     <changeSet author="R3.Corda" id="create_recovery_party_info_table">
         <createTable tableName="node_recovery_party_info">
-            <column name="party_id" type="INT">
+            <column name="party_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="party_name" type="NVARCHAR(255)">
