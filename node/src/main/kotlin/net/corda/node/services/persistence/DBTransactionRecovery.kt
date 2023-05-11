@@ -17,7 +17,6 @@ import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.serialization.internal.CordaSerializationEncoding
 import java.time.Instant
 import java.time.Instant.now
@@ -27,7 +26,6 @@ import javax.persistence.Id
 import javax.persistence.Lob
 import javax.persistence.Table
 
-@Suppress("TooManyFunctions")
 class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
                             val clock: CordaClock,
                             private val cryptoService: CryptoService,
@@ -126,23 +124,15 @@ class DBTransactionRecovery(private val database: CordaPersistence, cacheFactory
     }
 
     override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata): Boolean {
-        return addTransaction(transaction, metadata, TransactionStatus.IN_FLIGHT) {
+        return addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
             addTransactionRecoveryMetadata(transaction.id, metadata) { false }
         }
     }
 
-//    private fun addTransactionRecoveryMetadata(txId: SecureHash, metadata: FlowTransactionMetadata): Boolean {
-//        val txnRecoveryMetadata = DBRecoveryTransactionMetadata(
-//                txId = txId,
-//                initiatorPartyId = partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
-//                peerPartyIds = metadata.peers?.map { partyInfoCache.getPartyIdByCordaX500Name(it) }?.toSet() ?: emptySet(),
-//                statesToRecord = metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT,
-//                cryptoService = cryptoService
-//        )
-//        currentDBSession().save(txnRecoveryMetadata)
-//
-//        return false
-//    }
+    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
+            addTransaction(transaction) {
+                addTransactionRecoveryMetadata(transaction.id, metadata) { false }
+            }
 
     private fun addTransactionRecoveryMetadata(txId: SecureHash, metadata: FlowTransactionMetadata,
                                                updateFn: (SecureHash) -> Boolean): Boolean {

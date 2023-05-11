@@ -11,24 +11,28 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
+import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.RecoveryPartyInfoCache
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.IN_FLIGHT
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.UNVERIFIED
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -60,7 +64,8 @@ import kotlin.test.assertNull
 class DBTransactionStorageTests {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70)
-        val BOB_PARTY = TestIdentity(BOB_NAME, 80).party
+        val BOB = TestIdentity(BOB_NAME, 80)
+        val BOB_PARTY = BOB.party
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20)
     }
 
@@ -173,12 +178,13 @@ class DBTransactionStorageTests {
         val transactionClock = TransactionClock(now)
         newTransactionStorage(clock = transactionClock)
         val transaction = newTransaction(notarySig = false)
-        transactionStorage.finalizeTransaction(transaction,
+        transactionRecovery.finalizeTransaction(transaction,
                 FlowTransactionMetadata(ALICE_NAME))
-        readTransactionFromDB(transaction.id).let {
-            assertEquals(VERIFIED, it.status)
-//            assertEquals(ALICE_NAME.toString(), it.recoveryMetadata?.initiator?.partyName)
-//            assertEquals(StatesToRecord.ONLY_RELEVANT, it.recoveryMetadata?.statesToRecord)
+
+        assertEquals(VERIFIED, readTransactionFromDB(transaction.id).status)
+        readTransactionRecoveryDataFromDB(transaction.id).let {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, it.statesToRecord)
+            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId!!))
         }
     }
 
@@ -623,14 +629,27 @@ class DBTransactionStorageTests {
 
     private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC()),
                                        cryptoService: CryptoService = CryptoService()) {
-        partyInfoCache = RecoveryPartyInfoCache(TestingNamedCacheFactory(), database)
-        partyInfoCache.add(ALICE_NAME.hashCode().toLong(), ALICE_NAME)
-        partyInfoCache.add(BOB_NAME.hashCode().toLong(), BOB_NAME)
-        partyInfoCache.add(CHARLIE_NAME.hashCode().toLong(), CHARLIE_NAME)
+
+        val networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
+        val alice = createNodeInfo(listOf(ALICE))
+        val bob = createNodeInfo(listOf(BOB))
+        networkMapCache.addOrUpdateNodes(listOf(alice, bob))
+
+        partyInfoCache = RecoveryPartyInfoCache(networkMapCache, TestingNamedCacheFactory(), database)
         transactionRecovery = DBTransactionRecovery(database, TestingNamedCacheFactory(cacheSizeBytesOverride
                 ?: 1024), clock, cryptoService, partyInfoCache)
     }
 
+    private var portCounter = 1000
+    private fun createNodeInfo(identities: List<TestIdentity>,
+                               address: NetworkHostAndPort = NetworkHostAndPort("localhost", portCounter++)): NodeInfo {
+        return NodeInfo(
+                addresses = listOf(address),
+                legalIdentitiesAndCerts = identities.map { it.identity },
+                platformVersion = 3,
+                serial = 1
+        )
+    }
     private fun assertTransactionIsRetrievable(transaction: SignedTransaction) {
         assertThat(transactionStorage.getTransaction(transaction.id)).isEqualTo(transaction)
     }

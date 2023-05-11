@@ -156,7 +156,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
 
         private fun createTransactionsMap(cacheFactory: NamedCacheFactory, clock: CordaClock)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
-            return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
+            return WeightBasedAppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = SecureHash::toString,
@@ -207,7 +207,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
         private val log = contextLogger()
     }
 
-    internal val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
+    private val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
 
     private fun updateTransaction(txId: SecureHash): Boolean {
         val session = currentDBSession()
@@ -231,12 +231,12 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             }
 
     override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
-            addTransaction(transaction, metadata, TransactionStatus.IN_FLIGHT) {
+            addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
                 false
             }
 
     override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
-            addTransaction(transaction, metadata) {
+            addTransaction(transaction) {
                 false
             }
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
@@ -266,12 +266,11 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             }
 
     protected fun addTransaction(transaction: SignedTransaction,
-                               metadata: FlowTransactionMetadata? = null,
                                status: TransactionStatus = TransactionStatus.VERIFIED,
                                updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, status, metadata)
+                val cachedValue = TxCacheValue(transaction, status)
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as $status" }
@@ -415,26 +414,18 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
     internal class TxCacheValue(
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
-            val status: TransactionStatus,
-            // flow metadata recorded for recovery
-            val metadata: FlowTransactionMetadata? = null
+            val status: TransactionStatus
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
                 status
         )
-        constructor(stx: SignedTransaction, status: TransactionStatus, metadata: FlowTransactionMetadata?) : this(
-                stx.txBits,
-                Collections.unmodifiableList(stx.sigs),
-                status,
-                metadata
-        )
-        constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?, metadata: FlowTransactionMetadata?) : this(
+
+        constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?) : this(
                 stx.txBits,
                 if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs).distinct(),
-                status,
-                metadata
+                status
         )
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }
