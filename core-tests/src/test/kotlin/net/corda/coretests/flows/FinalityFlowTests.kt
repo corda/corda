@@ -48,6 +48,9 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.issuedBy
 import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
+import net.corda.node.services.persistence.TransactionRecoveryMetadata
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -61,6 +64,7 @@ import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
+import net.corda.testing.node.internal.MockCryptoService
 import net.corda.testing.node.internal.TestCordappInternal
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappWithPackages
@@ -345,6 +349,19 @@ class FinalityFlowTests : WithFinality {
 
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+
+        assertThat(getTransactionRecoveryData(stx.id, aliceNode.database)).isNotNull
+        assertThat(getTransactionRecoveryData(stx.id, bobNode.database)).isNotNull
+    }
+
+    private fun getTransactionRecoveryData(id: SecureHash, database: CordaPersistence): TransactionRecoveryMetadata? {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        return fromDb.singleOrNull()?.toTransactionRecoveryMetadata(MockCryptoService(emptyMap()))
     }
 
     @StartableByRPC
