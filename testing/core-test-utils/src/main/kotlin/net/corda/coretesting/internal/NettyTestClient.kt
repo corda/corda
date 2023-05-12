@@ -3,20 +3,20 @@ package net.corda.coretesting.internal
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.handler.ssl.SslContext
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslHandler
+import io.netty.util.concurrent.DefaultThreadFactory
 import java.io.Closeable
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.SSLEngine
 import kotlin.concurrent.thread
-
 
 class NettyTestClient(
         val sslContext: SslContext?,
@@ -49,7 +49,7 @@ class NettyTestClient(
 
     private fun run() {
         // Configure the client.
-        val group = NioEventLoopGroup()
+        val group = NioEventLoopGroup(DefaultThreadFactory("NettyTestClient"))
         try {
             val b = Bootstrap()
             b.group(group)

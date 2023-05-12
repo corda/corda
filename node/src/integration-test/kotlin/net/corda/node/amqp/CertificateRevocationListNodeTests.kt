@@ -25,7 +25,6 @@ import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
@@ -50,6 +49,7 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 
+@Suppress("LongParameterList")
 class CertificateRevocationListNodeTests {
     @Rule
     @JvmField
@@ -327,17 +327,18 @@ class CertificateRevocationListNodeTests {
 
     private fun createAMQPClient(targetPort: Int,
                                  crlCheckSoftFail: Boolean,
+                                 legalName: CordaX500Name,
                                  nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
                                  tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$EMPTY_CRL",
                                  maxMessageSize: Int = MAX_MESSAGE_SIZE): X509Certificate {
-        val baseDirectory = temporaryFolder.root.toPath() / "client"
+        val baseDirectory = temporaryFolder.root.toPath() / legalName.organisation
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
-            doReturn(BOB_NAME).whenever(it).myLegalName
+            doReturn(legalName).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
@@ -351,28 +352,32 @@ class CertificateRevocationListNodeTests {
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val maxMessageSize: Int = maxMessageSize
         }
-        amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", targetPort)), setOf(ALICE_NAME, CHARLIE_NAME), amqpConfig)
+        amqpClient = AMQPClient(
+                listOf(NetworkHostAndPort("localhost", targetPort)),
+                setOf(CHARLIE_NAME),
+                amqpConfig,
+                threadPoolName = legalName.organisation
+        )
 
         return nodeCert
     }
 
-    @Suppress("LongParameterList")
     private fun createAMQPServer(port: Int,
-                                 name: CordaX500Name = ALICE_NAME,
+                                 legalName: CordaX500Name,
                                  crlCheckSoftFail: Boolean,
                                  nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
                                  tlsCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$EMPTY_CRL",
                                  maxMessageSize: Int = MAX_MESSAGE_SIZE,
                                  sslHandshakeTimeout: Duration? = null): X509Certificate {
         check(!::amqpServer.isInitialized)
-        val baseDirectory = temporaryFolder.root.toPath() / "server"
+        val baseDirectory = temporaryFolder.root.toPath() / legalName.organisation
         val certificatesDirectory = baseDirectory / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
-            doReturn(name).whenever(it).myLegalName
+            doReturn(legalName).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         }
@@ -386,7 +391,7 @@ class CertificateRevocationListNodeTests {
             override val maxMessageSize: Int = maxMessageSize
             override val sslHandshakeTimeout: Duration = sslHandshakeTimeout ?: super.sslHandshakeTimeout
         }
-        amqpServer = AMQPServer("0.0.0.0", port, amqpConfig)
+        amqpServer = AMQPServer("0.0.0.0", port, amqpConfig, threadPoolName = legalName.organisation)
         return nodeCert
     }
 
@@ -422,7 +427,6 @@ class CertificateRevocationListNodeTests {
         return newNodeCert
     }
 
-    @Suppress("LongParameterList")
     private fun verifyAMQPConnection(crlCheckSoftFail: Boolean,
                                      nodeCrlDistPoint: String? = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
                                      revokeServerCert: Boolean = false,
@@ -431,6 +435,7 @@ class CertificateRevocationListNodeTests {
                                      expectedConnectStatus: Boolean) {
         val serverCert = createAMQPServer(
                 serverPort,
+                CHARLIE_NAME,
                 crlCheckSoftFail = crlCheckSoftFail,
                 nodeCrlDistPoint = nodeCrlDistPoint,
                 sslHandshakeTimeout = sslHandshakeTimeout
@@ -445,6 +450,7 @@ class CertificateRevocationListNodeTests {
         val clientCert = createAMQPClient(
                 serverPort,
                 crlCheckSoftFail = crlCheckSoftFail,
+                legalName = ALICE_NAME,
                 nodeCrlDistPoint = nodeCrlDistPoint
         )
         if (revokeClientCert) {
@@ -456,7 +462,8 @@ class CertificateRevocationListNodeTests {
         assertThat(serverConnect.connected).isEqualTo(expectedConnectStatus)
     }
 
-    private fun createArtemisServerAndClient(crlCheckSoftFail: Boolean,
+    private fun createArtemisServerAndClient(legalName: CordaX500Name,
+                                             crlCheckSoftFail: Boolean,
                                              crlCheckArtemisServer: Boolean,
                                              nodeCrlDistPoint: String,
                                              sslHandshakeTimeout: Duration?): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
@@ -467,7 +474,7 @@ class CertificateRevocationListNodeTests {
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
-            doReturn(CHARLIE_NAME).whenever(it).myLegalName
+            doReturn(legalName).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
@@ -478,14 +485,25 @@ class CertificateRevocationListNodeTests {
         artemisConfig.configureWithDevSSLCertificate()
         recreateNodeCaAndTlsCertificates(signingCertificateStore, p2pSslConfiguration, nodeCrlDistPoint, null)
 
-        val server = ArtemisMessagingServer(artemisConfig, artemisConfig.p2pAddress, MAX_MESSAGE_SIZE, null)
-        val client = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisConfig.p2pAddress, MAX_MESSAGE_SIZE)
+        val server = ArtemisMessagingServer(
+                artemisConfig,
+                artemisConfig.p2pAddress,
+                MAX_MESSAGE_SIZE,
+                threadPoolName = "${legalName.organisation}-server",
+                trace = true
+        )
+        val client = ArtemisMessagingClient(
+                artemisConfig.p2pSslOptions,
+                artemisConfig.p2pAddress,
+                MAX_MESSAGE_SIZE,
+                threadPoolName = "${legalName.organisation}-client",
+                trace = true
+        )
         server.start()
         client.start()
         return server to client
     }
 
-    @Suppress("LongParameterList")
     private fun verifyArtemisConnection(crlCheckSoftFail: Boolean,
                                         crlCheckArtemisServer: Boolean,
                                         expectedConnected: Boolean = true,
@@ -494,13 +512,19 @@ class CertificateRevocationListNodeTests {
                                         nodeCrlDistPoint: String = "http://${crlServer.hostAndPort}/crl/$NODE_CRL",
                                         sslHandshakeTimeout: Duration? = null) {
         val queueName = P2P_PREFIX + "Test"
-        val (artemisServer, artemisClient) = createArtemisServerAndClient(crlCheckSoftFail, crlCheckArtemisServer, nodeCrlDistPoint, sslHandshakeTimeout)
+        val (artemisServer, artemisClient) = createArtemisServerAndClient(
+                CHARLIE_NAME,
+                crlCheckSoftFail,
+                crlCheckArtemisServer,
+                nodeCrlDistPoint,
+                sslHandshakeTimeout
+        )
         artemisServer.use {
             artemisClient.started!!.session.createQueue(
                     QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true)
             )
 
-            val nodeCert = createAMQPClient(serverPort, true, nodeCrlDistPoint)
+            val nodeCert = createAMQPClient(serverPort, true, ALICE_NAME, nodeCrlDistPoint)
             if (revokedNodeCert) {
                 crlServer.revokedNodeCerts.add(nodeCert.serialNumber)
             }

@@ -56,7 +56,8 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
                              private val maxMessageSize: Int,
-                             private val journalBufferTimeout : Int?,
+                             private val journalBufferTimeout : Int? = null,
+                             private val threadPoolName: String = "ArtemisServer",
                              private val trace: Boolean = false) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
@@ -131,9 +132,10 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         // The transaction cache is configurable, and drives other cache sizes.
         globalMaxSize = max(config.transactionCacheSizeBytes, 10L * maxMessageSize)
 
-        acceptorConfigurations.add(p2pAcceptorTcpTransport(
+        addAcceptorConfiguration(p2pAcceptorTcpTransport(
                 NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port),
                 config.p2pSslOptions,
+                threadPoolName = threadPoolName,
                 trace = trace
         ))
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
@@ -180,7 +182,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                 deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue)
     }
 
-    @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val keyStore = config.p2pSslOptions.keyStore.get().value.internal
         val trustStore = config.p2pSslOptions.trustStore.get().value.internal
