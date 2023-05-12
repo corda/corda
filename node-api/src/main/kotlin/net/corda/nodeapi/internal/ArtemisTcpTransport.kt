@@ -182,7 +182,7 @@ class ArtemisTcpTransport {
                                              threadPoolName: String,
                                              trace: Boolean): TransportConfiguration {
             return createTransport(
-                    "net.corda.node.services.messaging.NodeNettyConnectorFactory",
+                    NodeNettyConnectorFactory::class.java.name,
                     hostAndPort,
                     protocols,
                     options,
