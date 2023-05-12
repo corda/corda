@@ -24,6 +24,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.TransactionRecoveryMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
@@ -49,7 +50,6 @@ import net.corda.finance.issuedBy
 import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
-import net.corda.node.services.persistence.TransactionRecoveryMetadata
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
