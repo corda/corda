@@ -115,11 +115,10 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             val transport = connection.transport as ProtonJTransport
             transport.protocolTracer = object : ProtocolTracer {
                 override fun sentFrame(transportFrame: TransportFrame) {
-                    logInfoWithMDC { "${transportFrame.body}" }
+                    logInfoWithMDC { "sentFrame: ${transportFrame.body}" }
                 }
-
                 override fun receivedFrame(transportFrame: TransportFrame) {
-                    logInfoWithMDC { "${transportFrame.body}" }
+                    logInfoWithMDC { "receivedFrame: ${transportFrame.body}" }
                 }
             }
         }

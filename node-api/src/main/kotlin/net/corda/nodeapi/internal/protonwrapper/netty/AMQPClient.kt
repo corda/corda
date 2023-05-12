@@ -1,7 +1,11 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel.*
+import io.netty.channel.Channel
+import io.netty.channel.ChannelFutureListener
+import io.netty.channel.ChannelHandler
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -11,6 +15,7 @@ import io.netty.handler.proxy.HttpProxyHandler
 import io.netty.handler.proxy.Socks4ProxyHandler
 import io.netty.handler.proxy.Socks5ProxyHandler
 import io.netty.resolver.NoopAddressResolverGroup
+import io.netty.util.concurrent.DefaultThreadFactory
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
@@ -57,7 +62,8 @@ data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostA
 class AMQPClient(private val targets: List<NetworkHostAndPort>,
                  val allowedRemoteLegalNames: Set<CordaX500Name>,
                  private val configuration: AMQPConfiguration,
-                 private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
+                 private val sharedThreadPool: EventLoopGroup? = null,
+                 private val threadPoolName: String = "AMQPClient") : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
@@ -254,7 +260,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
                 return
             }
             log.info("Connect to: $currentTarget")
-            workerGroup = sharedThreadPool ?: NioEventLoopGroup(NUM_CLIENT_THREADS)
+            workerGroup = sharedThreadPool ?: NioEventLoopGroup(NUM_CLIENT_THREADS, DefaultThreadFactory(threadPoolName, Thread.MAX_PRIORITY))
             started = true
             restart()
         }
