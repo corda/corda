@@ -2,10 +2,12 @@ package net.corda.node.services.persistence
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.flows.RecoveryTimeWindow
+import net.corda.core.flows.TransactionRecoveryMetadata
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.StatesToRecord
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
@@ -25,6 +27,8 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 import javax.persistence.Table
+import javax.persistence.criteria.Predicate
+import kotlin.streams.toList
 
 class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
                                          val clock: CordaClock,
@@ -67,6 +71,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                         statesToRecord = statesToRecord,
                         timestamp = clock.instant()
                 )
+
         fun toTransactionRecoveryMetadata(cryptoService: CryptoService) =
                 TransactionRecoveryMetadata(
                         SecureHash.parse(this.txId),
@@ -133,6 +138,54 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                 addTransactionRecoveryMetadata(transaction.id, metadata, clock) { false }
             }
 
+    override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
+        return database.transaction {
+            super.removeUnnotarisedTransaction(id)
+            val criteriaBuilder = session.criteriaBuilder
+            val delete = criteriaBuilder.createCriteriaDelete(DBRecoveryTransactionMetadata::class.java)
+            val root = delete.from(DBRecoveryTransactionMetadata::class.java)
+            delete.where(criteriaBuilder.equal(root.get<String>(DBRecoveryTransactionMetadata::txId.name), id.toString()))
+            if (session.createQuery(delete).executeUpdate() != 0) {
+                txRecoveryMetadataStorage.locked {
+                    txRecoveryMetadataStorage.content.clear(id)
+                    txRecoveryMetadataStorage.content[id]
+                    logger.debug { "Recovery metadata has been removed for un-notarised transaction $id." }
+                }
+                true
+            } else false
+        }
+    }
+
+    @Suppress("SpreadOperator")
+    fun queryForTransactions(timeWindow: RecoveryTimeWindow, orderByTimestamp: Sort.Direction? = null,
+                             excludingTxnIds: Set<SecureHash>? = null): List<TransactionRecoveryMetadata> {
+        return database.transaction {
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(DBRecoveryTransactionMetadata::class.java)
+            val txnMetadata = criteriaQuery.from(DBRecoveryTransactionMetadata::class.java)
+            val predicates = mutableListOf<Predicate>()
+            predicates.add(criteriaBuilder.greaterThanOrEqualTo(txnMetadata.get<Instant>(DBRecoveryTransactionMetadata::timestamp.name), timeWindow.fromTime))
+            predicates.add(criteriaBuilder.and(criteriaBuilder.lessThanOrEqualTo(txnMetadata.get<Instant>(DBRecoveryTransactionMetadata::timestamp.name), timeWindow.untilTime)))
+            excludingTxnIds?.let { excludingTxnIds ->
+                predicates.add(criteriaBuilder.and(criteriaBuilder.notEqual(txnMetadata.get<String>(DBRecoveryTransactionMetadata::txId.name),
+                        excludingTxnIds.map { it.toString() })))
+            }
+            criteriaQuery.where(*predicates.toTypedArray())
+            // optionally order by timestamp
+            orderByTimestamp?.let {
+                val orderCriteria =
+                        when (orderByTimestamp) {
+                            // when adding column position of 'group by' shift in case columns were removed
+                            Sort.Direction.ASC -> criteriaBuilder.asc(txnMetadata.get<Instant>(DBRecoveryTransactionMetadata::timestamp.name))
+                            Sort.Direction.DESC -> criteriaBuilder.desc(txnMetadata.get<Instant>(DBRecoveryTransactionMetadata::timestamp.name))
+                        }
+                criteriaQuery.orderBy(orderCriteria)
+            }
+            val results = session.createQuery(criteriaQuery).stream()
+            results.map { it.toTransactionRecoveryMetadata(cryptoService) }.toList()
+        }
+    }
+
     private fun addTransactionRecoveryMetadata(txId: SecureHash, metadata: FlowTransactionMetadata, clock: CordaClock,
                                                updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
@@ -165,12 +218,4 @@ private fun CryptoService.encrypt(bytes: ByteArray): ByteArray {
     return bytes
 }
 
-@CordaSerializable
-data class TransactionRecoveryMetadata(
-        val txId: SecureHash,
-        val initiatorPartyId: Long?,    // CordaX500Name hashCode()
-        val peerPartyIds: Set<Long>,    // CordaX500Name hashCode()
-        val statesToRecord: StatesToRecord,
-        val timestamp: Instant
-)
 

@@ -217,9 +217,9 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             addTransaction(transaction) {
                 false
             }
+
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return database.transaction {
-            val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             val delete = criteriaBuilder.createCriteriaDelete(DBTransaction::class.java)
             val root = delete.from(DBTransaction::class.java)

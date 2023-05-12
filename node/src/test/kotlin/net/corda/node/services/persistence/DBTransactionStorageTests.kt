@@ -11,29 +11,20 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowTransactionMetadata
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.deserialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.SimpleClock
-import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.IN_FLIGHT
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.UNVERIFIED
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -43,7 +34,6 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.internal.MockCryptoService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assert
@@ -51,7 +41,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import rx.plugins.RxJavaHooks
-import java.lang.AssertionError
 import java.security.KeyPair
 import java.time.Clock
 import java.time.Instant
@@ -66,8 +55,6 @@ import kotlin.test.assertNull
 class DBTransactionStorageTests {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70)
-        val BOB = TestIdentity(BOB_NAME, 80)
-        val BOB_PARTY = BOB.party
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20)
     }
 
@@ -77,16 +64,12 @@ class DBTransactionStorageTests {
 
     private lateinit var database: CordaPersistence
     private lateinit var transactionStorage: DBTransactionStorage
-    private lateinit var transactionRecovery: DBTransactionStorageLedgerRecovery
-    private lateinit var partyInfoCache: PersistentPartyInfoCache
-
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null })
         newTransactionStorage()
-        newTransactionRecovery()
     }
 
     @After
@@ -131,21 +114,6 @@ class DBTransactionStorageTests {
     }
 
     @Test(timeout = 300_000)
-    fun `create un-notarised transaction with flow metadata and validate status in db`() {
-        val now = Instant.ofEpochSecond(333444555L)
-        val transactionClock = TransactionClock(now)
-        newTransactionStorage(clock = transactionClock)
-        val transaction = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB_PARTY.name)))
-        val txn = readTransactionFromDB(transaction.id)
-        assertEquals(IN_FLIGHT, txn.status)
-        val txnRecoveryMetadata = readTransactionRecoveryDataFromDB(transaction.id)
-        assertEquals(StatesToRecord.ALL_VISIBLE, txnRecoveryMetadata.statesToRecord)
-        assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(txnRecoveryMetadata.initiatorPartyId!!))
-        assertEquals(listOf(BOB_NAME), txnRecoveryMetadata.peerPartyIds.map { partyInfoCache.getCordaX500NameByPartyId(it) })
-    }
-
-    @Test(timeout = 300_000)
     fun `finalize transaction with no prior recording of un-notarised transaction`() {
         val now = Instant.ofEpochSecond(333444555L)
         val transactionClock = TransactionClock(now)
@@ -171,22 +139,6 @@ class DBTransactionStorageTests {
         readTransactionFromDB(transaction.id).let {
             assertSignatures(it.transaction, it.signatures, transaction.sigs)
             assertEquals(VERIFIED, it.status)
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `finalize transaction with recovery metadata`() {
-        val now = Instant.ofEpochSecond(333444555L)
-        val transactionClock = TransactionClock(now)
-        newTransactionStorage(clock = transactionClock)
-        val transaction = newTransaction(notarySig = false)
-        transactionRecovery.finalizeTransaction(transaction,
-                FlowTransactionMetadata(ALICE_NAME))
-
-        assertEquals(VERIFIED, readTransactionFromDB(transaction.id).status)
-        readTransactionRecoveryDataFromDB(transaction.id).let {
-            assertEquals(StatesToRecord.ONLY_RELEVANT, it.statesToRecord)
-            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId!!))
         }
     }
 
@@ -396,17 +348,6 @@ class DBTransactionStorageTests {
         }
         assertEquals(1, fromDb.size)
         return fromDb[0]
-    }
-
-    private fun readTransactionRecoveryDataFromDB(id: SecureHash): TransactionRecoveryMetadata {
-        val fromDb = database.transaction {
-            session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java.name} where tx_id = :transactionId",
-                    DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java
-            ).setParameter("transactionId", id.toString()).resultList.map { it }
-        }
-        assertEquals(1, fromDb.size)
-        return fromDb[0].toTransactionRecoveryMetadata(MockCryptoService(emptyMap()))
     }
 
     @Test(timeout = 300_000)
@@ -629,29 +570,6 @@ class DBTransactionStorageTests {
                 ?: 1024), clock)
     }
 
-    private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC()),
-                                       cryptoService: CryptoService = MockCryptoService(emptyMap())) {
-
-        val networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
-        val alice = createNodeInfo(listOf(ALICE))
-        val bob = createNodeInfo(listOf(BOB))
-        networkMapCache.addOrUpdateNodes(listOf(alice, bob))
-        partyInfoCache = PersistentPartyInfoCache(networkMapCache, TestingNamedCacheFactory(), database)
-        partyInfoCache.start()
-        transactionRecovery = DBTransactionStorageLedgerRecovery(database, TestingNamedCacheFactory(cacheSizeBytesOverride
-                ?: 1024), clock, cryptoService, partyInfoCache)
-    }
-
-    private var portCounter = 1000
-    private fun createNodeInfo(identities: List<TestIdentity>,
-                               address: NetworkHostAndPort = NetworkHostAndPort("localhost", portCounter++)): NodeInfo {
-        return NodeInfo(
-                addresses = listOf(address),
-                legalIdentitiesAndCerts = identities.map { it.identity },
-                platformVersion = 3,
-                serial = 1
-        )
-    }
     private fun assertTransactionIsRetrievable(transaction: SignedTransaction) {
         assertThat(transactionStorage.getTransaction(transaction.id)).isEqualTo(transaction)
     }
