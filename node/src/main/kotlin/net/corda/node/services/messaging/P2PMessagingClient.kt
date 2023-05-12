@@ -93,6 +93,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          cacheFactory: NamedCacheFactory,
                          private val isDrainingModeOn: () -> Boolean,
                          private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>,
+                         private val threadPoolName: String = "P2PClient",
                          private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, ServiceStateSupport by stateHelper {
     companion object {
@@ -164,10 +165,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             started = true
             log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions)
+            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions, threadPoolName = threadPoolName)
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
-                // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
-                // would be the default and the two lines below can be deleted.
                 connectionTTL = 60000
                 clientFailureCheckPeriod = 30000
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE

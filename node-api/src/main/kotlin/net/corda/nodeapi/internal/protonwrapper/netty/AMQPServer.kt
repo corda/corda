@@ -11,6 +11,7 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import io.netty.util.concurrent.DefaultThreadFactory
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.utilities.NetworkHostAndPort
@@ -37,8 +38,8 @@ import kotlin.concurrent.withLock
  */
 class AMQPServer(val hostName: String,
                  val port: Int,
-                 private val configuration: AMQPConfiguration) : AutoCloseable {
-
+                 private val configuration: AMQPConfiguration,
+                 private val threadPoolName: String = "AMQPServer") : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
@@ -131,8 +132,8 @@ class AMQPServer(val hostName: String,
         lock.withLock {
             stop()
 
-            bossGroup = NioEventLoopGroup(1)
-            workerGroup = NioEventLoopGroup(NUM_SERVER_THREADS)
+            bossGroup = NioEventLoopGroup(1, DefaultThreadFactory("$threadPoolName-boss", Thread.MAX_PRIORITY))
+            workerGroup = NioEventLoopGroup(NUM_SERVER_THREADS, DefaultThreadFactory("$threadPoolName-worker", Thread.MAX_PRIORITY))
 
             val server = ServerBootstrap()
             // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux

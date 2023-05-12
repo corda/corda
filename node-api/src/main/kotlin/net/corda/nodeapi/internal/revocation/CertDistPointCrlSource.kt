@@ -3,7 +3,10 @@ package net.corda.nodeapi.internal.revocation
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import net.corda.core.internal.readFully
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.toSimpleString
 import net.corda.nodeapi.internal.protonwrapper.netty.CrlSource
 import net.corda.nodeapi.internal.protonwrapper.netty.distributionPoints
 import java.net.URI
@@ -15,8 +18,11 @@ import javax.security.auth.x500.X500Principal
 /**
  * [CrlSource] which downloads CRLs from the distribution points in the X509 certificate.
  */
+@Suppress("TooGenericExceptionCaught")
 class CertDistPointCrlSource : CrlSource {
     companion object {
+        private val logger = contextLogger()
+
         // The default SSL handshake timeout is 60s (DEFAULT_SSL_HANDSHAKE_TIMEOUT). Considering there are 3 CRLs endpoints to check in a
         // node handshake, we want to keep the total timeout within that.
         private const val DEFAULT_CONNECT_TIMEOUT = 9_000
@@ -33,7 +39,8 @@ class CertDistPointCrlSource : CrlSource {
         private val readTimeout = Integer.getInteger("net.corda.dpcrl.read.timeout", DEFAULT_READ_TIMEOUT)
 
         private fun retrieveCRL(uri: URI): X509CRL {
-            val bytes = run {
+            val start = System.currentTimeMillis()
+            val bytes = try {
                 val conn = uri.toURL().openConnection()
                 conn.connectTimeout = connectTimeout
                 conn.readTimeout = readTimeout
@@ -41,12 +48,26 @@ class CertDistPointCrlSource : CrlSource {
                 // in an InputStream, but the JDK implementation (sun.security.provider.X509Factory.engineGenerateCRL) converts any IOException
                 // into CRLException and drops the cause chain.
                 conn.getInputStream().readFully()
+            } catch (e: Exception) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Unable to download CRL from $uri (${System.currentTimeMillis() - start}ms)", e)
+                }
+                throw e
             }
-            return X509CertificateFactory().generateCRL(bytes.inputStream())
+            val duration = System.currentTimeMillis() - start
+            val crl = try {
+                X509CertificateFactory().generateCRL(bytes.inputStream())
+            } catch (e: Exception) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Invalid CRL from $uri (${duration}ms)", e)
+                }
+                throw e
+            }
+            logger.debug { "CRL from $uri (${duration}ms): ${crl.toSimpleString()}" }
+            return crl
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override fun fetch(certificate: X509Certificate): Set<X509CRL> {
         val approvedCRLs = HashSet<X509CRL>()
         var exception: Exception? = null
