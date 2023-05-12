@@ -22,7 +22,7 @@ class SimpleMQClient(val target: NetworkHostAndPort,
     lateinit var producer: ClientProducer
 
     fun start(username: String? = null, password: String? = null, enableSSL: Boolean = true) {
-        val tcpTransport = p2pConnectorTcpTransport(target, config, enableSSL = enableSSL)
+        val tcpTransport = p2pConnectorTcpTransport(target, config, enableSSL = enableSSL, threadPoolName = "SimpleMQClient")
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             isBlockOnNonDurableSend = true
             threadPoolMaxSize = 1
