@@ -1,9 +1,8 @@
-package net.corda.node.services.messaging
+package net.corda.nodeapi.internal
 
 import io.netty.channel.ChannelPipeline
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
-import net.corda.nodeapi.internal.ArtemisTcpTransport
 import org.apache.activemq.artemis.core.protocol.core.impl.ActiveMQClientProtocolManager
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnector
 import org.apache.activemq.artemis.spi.core.remoting.BufferHandler
@@ -15,7 +14,6 @@ import org.apache.activemq.artemis.utils.ConfigurationHelper
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
 
-@Suppress("unused")
 class NodeNettyConnectorFactory : ConnectorFactory {
     override fun createConnector(configuration: MutableMap<String, Any>?,
                                  handler: BufferHandler?,
