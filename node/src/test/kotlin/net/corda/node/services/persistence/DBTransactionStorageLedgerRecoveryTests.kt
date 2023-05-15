@@ -6,9 +6,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.sign
-import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.RecoveryTimeWindow
-import net.corda.core.flows.TransactionRecoveryMetadata
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
@@ -78,14 +77,14 @@ class DBTransactionStorageLedgerRecoveryTests {
     @Test(timeout = 300_000)
     fun `query local ledger for transactions with recovery peers within time window`() {
         val beforeFirstTxn = now()
-        transactionRecovery.addUnnotarisedTransaction(newTransaction(), FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)))
+        transactionRecovery.addUnnotarisedTransaction(newTransaction(), TransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)), true)
         val timeWindow = RecoveryTimeWindow(fromTime = beforeFirstTxn,
                                             untilTime = beforeFirstTxn.plus(1, ChronoUnit.MINUTES))
         val results = transactionRecovery.queryForTransactions(timeWindow)
         assertEquals(1, results.size)
 
         val afterFirstTxn = now()
-        transactionRecovery.addUnnotarisedTransaction(newTransaction(), FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ONLY_RELEVANT))
+        transactionRecovery.addUnnotarisedTransaction(newTransaction(), TransactionMetadata(ALICE.party.name, StatesToRecord.ONLY_RELEVANT), true)
         assertEquals(2, transactionRecovery.queryForTransactions(timeWindow).size)
         assertEquals(1, transactionRecovery.queryForTransactions(RecoveryTimeWindow(fromTime = afterFirstTxn)).size)
     }
@@ -93,23 +92,44 @@ class DBTransactionStorageLedgerRecoveryTests {
     @Test(timeout = 300_000)
     fun `query local ledger for transactions within timeWindow and excluding remoteTransactionIds`() {
         val transaction1 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction1, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)))
+        transactionRecovery.addUnnotarisedTransaction(transaction1, TransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)), true)
         val transaction2 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction2, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)))
+        transactionRecovery.addUnnotarisedTransaction(transaction2, TransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)), true)
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         val results = transactionRecovery.queryForTransactions(timeWindow, excludingTxnIds = setOf(transaction1.id))
         assertEquals(1, results.size)
     }
 
     @Test(timeout = 300_000)
+    fun `query local ledger by distribution record type`() {
+        val transaction1 = newTransaction()
+        // sender txn
+        transactionRecovery.addUnnotarisedTransaction(transaction1, TransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)), true)
+        val transaction2 = newTransaction()
+        // receiver txn
+        transactionRecovery.addUnnotarisedTransaction(transaction2, TransactionMetadata(BOB.party.name, StatesToRecord.ALL_VISIBLE, setOf(ALICE.party.name)), false)
+        val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
+        transactionRecovery.queryForTransactions(timeWindow, recordType = DistributionRecordType.SENDER).let {
+            assertEquals(1, it.size)
+            assertEquals(it[0].initiatorPartyId, ALICE.party.name.hashCode().toLong())
+        }
+        transactionRecovery.queryForTransactions(timeWindow, recordType = DistributionRecordType.RECEIVER).let {
+            assertEquals(1, it.size)
+            assertEquals(it[0].initiatorPartyId, BOB.party.name.hashCode().toLong())
+        }
+        val resultsAll = transactionRecovery.queryForTransactions(timeWindow, recordType = DistributionRecordType.ALL)
+        assertEquals(2, resultsAll.size)
+    }
+
+    @Test(timeout = 300_000)
     fun `create un-notarised transaction with flow metadata and validate status in db`() {
         val transaction = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)))
+        transactionRecovery.addUnnotarisedTransaction(transaction, TransactionMetadata(ALICE.party.name, StatesToRecord.ALL_VISIBLE, setOf(BOB.party.name)), true)
         val txn = readTransactionFromDB(transaction.id)
         assertEquals(IN_FLIGHT, txn.status)
         readTransactionRecoveryDataFromDB(transaction.id).let {
             assertEquals(StatesToRecord.ALL_VISIBLE, it.statesToRecord)
-            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId!!))
+            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId))
             assertEquals(listOf(BOB_NAME), it.peerPartyIds.map { partyInfoCache.getCordaX500NameByPartyId(it) })
         }
     }
@@ -118,19 +138,19 @@ class DBTransactionStorageLedgerRecoveryTests {
     fun `finalize transaction with recovery metadata`() {
         val transaction = newTransaction(notarySig = false)
         transactionRecovery.finalizeTransaction(transaction,
-                FlowTransactionMetadata(ALICE_NAME))
+                TransactionMetadata(ALICE_NAME), true)
 
         assertEquals(VERIFIED, readTransactionFromDB(transaction.id).status)
         readTransactionRecoveryDataFromDB(transaction.id).let {
             assertEquals(StatesToRecord.ONLY_RELEVANT, it.statesToRecord)
-            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId!!))
+            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId))
         }
     }
 
     @Test(timeout = 300_000)
     fun `remove un-notarised transaction and associated recovery metadata`() {
         val transaction = newTransaction(notarySig = false)
-        transactionRecovery.addUnnotarisedTransaction(transaction, FlowTransactionMetadata(ALICE.party.name))
+        transactionRecovery.addUnnotarisedTransaction(transaction, TransactionMetadata(ALICE.party.name), true)
         assertNull(transactionRecovery.getTransaction(transaction.id))
         assertEquals(IN_FLIGHT, readTransactionFromDB(transaction.id).status)
 
@@ -151,7 +171,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         return fromDb[0]
     }
 
-    private fun readTransactionRecoveryDataFromDB(id: SecureHash): TransactionRecoveryMetadata {
+    private fun readTransactionRecoveryDataFromDB(id: SecureHash): DistributionRecord {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java.name} where tx_id = :transactionId",

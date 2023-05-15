@@ -27,6 +27,9 @@
             <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
+            <column name="is_sender" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
     </changeSet>
 
@@ -52,6 +55,12 @@
     <changeSet author="R3.Corda" id="node_recovery_transaction_metadata_timestamp_idx">
         <createIndex indexName="node_recovery_transaction_metadata_timestamp_idx" tableName="node_recovery_transaction_metadata">
             <column name="timestamp"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_recovery_transaction_metadata_is_sender_idx">
+        <createIndex indexName="node_recovery_transaction_metadata_is_sender_idx" tableName="node_recovery_transaction_metadata">
+            <column name="is_sender"/>
         </createIndex>
     </changeSet>
 

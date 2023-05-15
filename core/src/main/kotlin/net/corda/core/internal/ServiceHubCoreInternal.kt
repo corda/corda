@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
@@ -37,7 +37,7 @@ interface ServiceHubCoreInternal : ServiceHub {
      * @param txn The transaction to record.
      * @param metadata Finality flow recovery metadata.
      */
-    fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: FlowTransactionMetadata)
+    fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: TransactionMetadata)
 
     /**
      * Removes transaction from data store.
@@ -63,7 +63,7 @@ interface ServiceHubCoreInternal : ServiceHub {
      * @param statesToRecord how the vault should treat the output states of the transaction.
      * @param metadata Finality flow recovery metadata.
      */
-    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: FlowTransactionMetadata)
+    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: TransactionMetadata)
 }
 
 interface TransactionsResolver {

@@ -17,7 +17,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
@@ -801,10 +801,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
-        override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata): Boolean {
+        override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
             database.transaction {
                 records.add(TxRecord.Add(transaction))
-                delegate.addUnnotarisedTransaction(transaction, metadata)
+                delegate.addUnnotarisedTransaction(transaction, metadata, isInitiator)
             }
             return true
         }
@@ -815,9 +815,9 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
-        override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata): Boolean {
+        override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
             database.transaction {
-                delegate.finalizeTransaction(transaction, metadata)
+                delegate.finalizeTransaction(transaction, metadata, isInitiator)
             }
             return true
         }

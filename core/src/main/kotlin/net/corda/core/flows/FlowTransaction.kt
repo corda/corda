@@ -1,6 +1,5 @@
 package net.corda.core.flows
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
@@ -11,20 +10,19 @@ import java.time.Instant
  */
 
 @CordaSerializable
-data class FlowTransaction(
+data class FlowTransactionInfo(
         val stateMachineRunId: StateMachineRunId,
         val txId: String,
         val status: TransactionStatus,
-        val signatures: ByteArray?,
         val timestamp: Instant,
-        val metadata: FlowTransactionMetadata?) {
-
+        val metadata: TransactionMetadata?
+) {
     fun isInitiator(myCordaX500Name: CordaX500Name) =
-        this.metadata?.initiator == myCordaX500Name
+            this.metadata?.initiator == myCordaX500Name
 }
 
 @CordaSerializable
-data class FlowTransactionMetadata(
+data class TransactionMetadata(
         val initiator: CordaX500Name,
         val statesToRecord: StatesToRecord? = StatesToRecord.ONLY_RELEVANT,
         val peers: Set<CordaX500Name>? = null
@@ -36,15 +34,6 @@ enum class TransactionStatus {
     VERIFIED,
     IN_FLIGHT;
 }
-
-@CordaSerializable
-data class TransactionRecoveryMetadata(
-        val txId: SecureHash,
-        val initiatorPartyId: Long?,    // CordaX500Name hashCode()
-        val peerPartyIds: Set<Long>,    // CordaX500Name hashCode()
-        val statesToRecord: StatesToRecord,
-        val timestamp: Instant
-)
 
 @CordaSerializable
 data class RecoveryTimeWindow(val fromTime: Instant, val untilTime: Instant = Instant.now()) {

@@ -3,7 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FlowTransactionMetadata
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
@@ -208,12 +208,12 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                 updateTransaction(transaction.id)
             }
 
-    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
             addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
                 false
             }
 
-    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
+    override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
             addTransaction(transaction) {
                 false
             }

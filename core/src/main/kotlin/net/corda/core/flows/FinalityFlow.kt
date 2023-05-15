@@ -227,7 +227,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             else {
                 if (newPlatformSessions.isNotEmpty())
                     finaliseLocallyAndBroadcast(newPlatformSessions, transaction,
-                            FlowTransactionMetadata(
+                            TransactionMetadata(
                                     serviceHub.myInfo.legalIdentities.first().name,
                                     statesToRecord,
                                     sessions.map { it.counterparty.name }.toSet()))
@@ -258,7 +258,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, metadata: FlowTransactionMetadata) {
+    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, metadata: TransactionMetadata) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocallyAndBroadcast", flowLogic = this) {
             finaliseLocally(tx, metadata = metadata)
             progressTracker.currentStep = BROADCASTING
@@ -310,7 +310,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun finaliseLocally(stx: SignedTransaction, notarySignatures: List<TransactionSignature> = emptyList(),
-                                metadata: FlowTransactionMetadata? = null) {
+                                metadata: TransactionMetadata? = null) {
         progressTracker.currentStep = FINALISING_TRANSACTION
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocally", flowLogic = this) {
             if (notarySignatures.isEmpty()) {
@@ -405,7 +405,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         progressTracker.currentStep = RECORD_UNNOTARISED
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
             (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(tx,
-                    FlowTransactionMetadata(
+                    TransactionMetadata(
                             serviceHub.myInfo.legalIdentities.first().name,
                             statesToRecord,
                             sessions.map { it.counterparty.name }.toSet()))
@@ -496,7 +496,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
                     logger.debug { "Peer recording transaction without notary signature." }
                     (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
-                            FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
+                            TransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
                 }
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
                 logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
@@ -523,7 +523,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             } else {
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransaction", flowLogic = this) {
                     (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord,
-                            FlowTransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
+                            TransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
                     logger.info("Peer recorded transaction with recovery metadata.")
                 }
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
