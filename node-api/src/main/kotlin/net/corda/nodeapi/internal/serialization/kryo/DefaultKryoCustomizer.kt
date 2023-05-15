@@ -143,7 +143,7 @@ object DefaultKryoCustomizer {
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
             register(java.lang.invoke.SerializedLambda::class.java)
-            register(ClosureSerializer.Closure::class.java, CordaClosureBlacklistSerializer)
+            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)
 

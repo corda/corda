@@ -6,6 +6,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.SerializableLambda2
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.services.statemachine.StateTransitionException
@@ -14,7 +15,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLTransientConnectionException
 import java.util.concurrent.CompletableFuture
@@ -106,7 +106,6 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     }
 
     @Test(timeout = 300_000)
-    @Ignore("TODO JDK17: Fix test after closure issue fixed")
     fun `external async operation with exception that hospital discharges is retried and runs the future again`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
@@ -198,15 +197,15 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @StartableByRPC
     class FlowWithExternalAsyncOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
         FlowWithExternalProcess(party) {
-
         @Suspendable
         override fun testCode(): Any {
             val e = createException()
-            return await(ExternalAsyncOperation(serviceHub) { _, _ ->
+
+            return await(ExternalAsyncOperation(serviceHub, (SerializableLambda2 { _, _ ->
                 CompletableFuture<Any>().apply {
                     completeExceptionally(e)
                 }
-            })
+            })))
         }
 
         private fun createException() = when (exceptionType) {

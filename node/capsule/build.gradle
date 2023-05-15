@@ -15,6 +15,8 @@ configurations {
 }
 
 dependencies {
+    testRuntimeOnly project(":node")
+
     // TypeSafe Config: for simple and human friendly config files.
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
     implementation "com.typesafe:config:$typesafe_config_version"
@@ -27,6 +29,7 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
+
 }
 
 jar.enabled = false
