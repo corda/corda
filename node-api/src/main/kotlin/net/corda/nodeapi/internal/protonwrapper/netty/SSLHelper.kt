@@ -14,33 +14,38 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.toHex
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.crypto.toBc
+import net.corda.nodeapi.internal.crypto.toSimpleString
 import net.corda.nodeapi.internal.crypto.x509
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Primitive
 import org.bouncycastle.asn1.ASN1IA5String
 import org.bouncycastle.asn1.DEROctetString
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.CRLDistPoint
 import org.bouncycastle.asn1.x509.DistributionPointName
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralNames
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.slf4j.LoggerFactory
 import java.net.Socket
 import java.net.URI
 import java.security.KeyStore
-import java.security.cert.*
-import java.util.*
+import java.security.cert.CertificateException
+import java.security.cert.PKIXBuilderParameters
+import java.security.cert.PKIXRevocationChecker
+import java.security.cert.X509CertSelector
+import java.security.cert.X509Certificate
 import java.util.concurrent.Executor
-import javax.net.ssl.*
+import javax.net.ssl.CertPathTrustManagerParameters
+import javax.net.ssl.KeyManagerFactory
+import javax.net.ssl.SNIHostName
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLEngine
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509ExtendedTrustManager
 import javax.security.auth.x500.X500Principal
-import kotlin.collections.HashMap
 import kotlin.system.measureTimeMillis
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
@@ -109,23 +114,7 @@ fun certPathToString(certPath: Array<out X509Certificate>?): String {
     if (certPath == null) {
         return "<empty certpath>"
     }
-    val certs = certPath.map {
-        val bcCert = it.toBc()
-        val subject = bcCert.subject.toString()
-        val issuer = bcCert.issuer.toString()
-        val keyIdentifier = try {
-            SubjectKeyIdentifier.getInstance(bcCert.getExtension(Extension.subjectKeyIdentifier).parsedValue).keyIdentifier.toHex()
-        } catch (ex: Exception) {
-            "null"
-        }
-        val authorityKeyIdentifier = try {
-            AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
-        } catch (ex: Exception) {
-            "null"
-        }
-        "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] [${it.distributionPointsToString()}]"
-    }
-    return certs.joinToString("\r\n")
+    return certPath.joinToString(System.lineSeparator()) { "  ${it.toSimpleString()}" }
 }
 
 @VisibleForTesting
