@@ -14,7 +14,6 @@ import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.NotaryError
@@ -24,6 +23,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
@@ -350,18 +350,28 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        assertThat(getTransactionRecoveryData(stx.id, aliceNode.database)).isNotNull
-        assertThat(getTransactionRecoveryData(stx.id, bobNode.database)).isNotNull
+        assertThat(getSenderRecoveryData(stx.id, aliceNode.database)).isNotNull
+        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
     }
 
-    private fun getTransactionRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java.name} where tx_id = :transactionId",
-                    DBTransactionStorageLedgerRecovery.DBRecoveryTransactionMetadata::class.java
+                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
-        return fromDb.singleOrNull()?.toTransactionRecoveryMetadata(MockCryptoService(emptyMap()))
+        return fromDb.singleOrNull()?.toSenderDistributionRecord()
+    }
+
+    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap()))
     }
 
     @StartableByRPC
