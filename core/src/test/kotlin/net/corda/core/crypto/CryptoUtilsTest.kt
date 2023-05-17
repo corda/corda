@@ -666,8 +666,7 @@ class CryptoUtilsTest {
         assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
     }
 
-    @Test(timeout = 300_000)
-    @Ignore("TODO JDK17: Fixme")
+    @Test(expected = IllegalArgumentException::class, timeout = 300_000)
     fun `Unsupported EC public key type on curve`() {
         val keyGen = KeyPairGenerator.getInstance("EC") // sun.security.ec.ECPublicKeyImpl
         keyGen.initialize(256, newSecureRandom())

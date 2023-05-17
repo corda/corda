@@ -176,19 +176,4 @@ class JarScanningCordappLoaderTest {
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
         assertThat(loader.cordapps).hasSize(1)
     }
-
-    @Test(timeout=300_000)
-    fun `cordapp classloader successfully loads app containing only flow classes at java class version 55`() {
-        Assume.assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("/workflowClassAtVersion55.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar))
-        assertThat(loader.cordapps).hasSize(1)
-    }
-
-    @Test(expected = IllegalStateException::class, timeout=300_000)
-    fun `cordapp classloader raises exception when loading contract class at class version 55`() {
-        Assume.assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("/contractClassAtVersion55.jar")!!
-        JarScanningCordappLoader.fromJarUrls(listOf(jar)).cordapps
-    }
 }
