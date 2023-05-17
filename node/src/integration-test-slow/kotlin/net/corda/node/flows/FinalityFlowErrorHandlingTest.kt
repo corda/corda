@@ -7,8 +7,6 @@ import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -76,8 +74,7 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 alice.rpc.startFlow(::GetFlowTransaction, txId).returnValue.getOrThrow().apply {
                     assertEquals("V", this.first)              // "V" -> VERIFIED
-                    assertEquals(ALICE_NAME.hashCode().toLong(), this.second)    // initiator
-                    assertEquals(CHARLIE_NAME.hashCode().toLong(), this.third.single())   // peers
+                    assertEquals(CHARLIE_NAME.hashCode().toLong(), this.second)   // peer
                 }
             }
         }
@@ -86,9 +83,9 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
 // Internal use for testing only!!
 @StartableByRPC
-class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Triple<String, Long, Set<Long>>>() {
+class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Pair<String, Long>>() {
     @Suspendable
-    override fun call(): Triple<String, Long, Set<Long>> {
+    override fun call(): Pair<String, Long> {
         val transactionStatus = serviceHub.jdbcSession().prepareStatement("select * from node_transactions where tx_id = ?")
                 .apply { setString(1, txId.toString()) }
                 .use { ps ->
@@ -97,16 +94,14 @@ class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Triple<String
                         rs.getString(4)   // TransactionStatus
                     }
                 }
-        val (initiatorId, peerPartyIds) = serviceHub.jdbcSession().prepareStatement("select * from node_recovery_transaction_metadata where tx_id = ?")
+        val receiverPartyId = serviceHub.jdbcSession().prepareStatement("select * from node_sender_distribution_records where tx_id = ?")
                 .apply { setString(1, txId.toString()) }
                 .use { ps ->
                     ps.executeQuery().use { rs ->
                         rs.next()
-                            Pair(
-                                rs.getLong(2),   // initiatorPartyId
-                                rs.getBytes(3))   // peerPartyIds
+                        rs.getLong(2)     // receiverPartyId
                     }
                 }
-        return Triple(transactionStatus, initiatorId, peerPartyIds.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
+        return Pair(transactionStatus, receiverPartyId)
     }
 }
