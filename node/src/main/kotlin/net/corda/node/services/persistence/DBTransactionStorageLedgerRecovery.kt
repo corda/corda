@@ -153,7 +153,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                     DBSenderDistributionRecord(senderDistributionRecord.txId,
                             senderDistributionRecord.peerPartyId,
                             senderDistributionRecord.statesToRecord,
-                            senderDistributionRecord.timestamp)
+                            key.timestamp)
                 },
                 persistentEntityClass = DBSenderDistributionRecord::class.java
         )
@@ -175,7 +175,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                             receiverDistributionRecord.initiatorPartyId,
                             receiverDistributionRecord.peerPartyIds,
                             receiverDistributionRecord.statesToRecord,
-                            receiverDistributionRecord.timestamp,
+                            key.timestamp,
                             cryptoService)
                 },
                 persistentEntityClass = DBReceiverDistributionRecord::class.java
