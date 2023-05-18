@@ -12,6 +12,12 @@
 
     <changeSet author="R3.Corda" id="create_sender_distribution_records_table">
         <createTable tableName="node_sender_distribution_records">
+            <column name="sequence_number" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
             <column name="tx_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
@@ -21,19 +27,17 @@
             <column name="states_to_record" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="timestamp" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
         </createTable>
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_sender_distribution_records_pkey">
-        <addPrimaryKey columnNames="timestamp" constraintName="node_sender_distribution_records_pkey"
+        <addPrimaryKey columnNames="sequence_number, timestamp" constraintName="node_sender_distribution_records_pkey"
                        tableName="node_sender_distribution_records"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_sender_distribution_records_idx">
         <createIndex indexName="node_sender_distribution_records_idx" tableName="node_sender_distribution_records">
+            <column name="sequence_number"/>
             <column name="timestamp"/>
             <column name="receiver_party_id"/>
         </createIndex>
@@ -41,6 +45,12 @@
 
     <changeSet author="R3.Corda" id="create_receiver_distribution_records_table">
         <createTable tableName="node_receiver_distribution_records">
+            <column name="sequence_number" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
             <column name="tx_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
@@ -53,18 +63,16 @@
             <column name="states_to_record" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="timestamp" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
         </createTable>
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_receiver_distribution_records_pkey">
-        <addPrimaryKey columnNames="timestamp" constraintName="node_receiver_distribution_records_pkey" tableName="node_receiver_distribution_records"/>
+        <addPrimaryKey columnNames="sequence_number, timestamp" constraintName="node_receiver_distribution_records_pkey" tableName="node_receiver_distribution_records"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_receiver_distribution_records_idx">
         <createIndex indexName="node_receiver_distribution_records_idx" tableName="node_receiver_distribution_records">
+            <column name="sequence_number"/>
             <column name="timestamp"/>
             <column name="sender_party_id"/>
         </createIndex>
