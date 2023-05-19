@@ -5,16 +5,17 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.netty.channel.EventLoop
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.ArtemisConstants.MESSAGE_ID_KEY
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
-import net.corda.nodeapi.internal.ArtemisConstants.MESSAGE_ID_KEY
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
@@ -503,7 +504,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
     }
 
     override fun start() {
-        sharedEventLoopGroup = NioEventLoopGroup(NUM_BRIDGE_THREADS)
+        sharedEventLoopGroup = NioEventLoopGroup(NUM_BRIDGE_THREADS, DefaultThreadFactory("AMQPBridge", Thread.MAX_PRIORITY))
         val artemis = artemisMessageClientFactory()
         this.artemis = artemis
         artemis.start()
