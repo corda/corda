@@ -55,15 +55,19 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         }
     }
 
-    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction): Boolean {
         return txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.IN_FLIGHT)) == null
+    }
+
+    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+        return true
     }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return txns.remove(id) != null
     }
 
-    override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
+    override fun finalizeTransaction(transaction: SignedTransaction) =
             addTransaction(transaction)
 
     override fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>): Boolean {

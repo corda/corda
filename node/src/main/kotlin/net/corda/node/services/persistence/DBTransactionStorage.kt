@@ -208,12 +208,16 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                 updateTransaction(transaction.id)
             }
 
-    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction) =
             addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
                 false
             }
 
-    override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
+    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+        return false
+    }
+
+    override fun finalizeTransaction(transaction: SignedTransaction) =
             addTransaction(transaction) {
                 false
             }

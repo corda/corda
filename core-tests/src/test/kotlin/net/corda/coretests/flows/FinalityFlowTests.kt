@@ -449,8 +449,8 @@ class FinalityFlowTests : WithFinality {
                         checkSufficientSignatures = false, statesToRecord = StatesToRecord.ONLY_RELEVANT, deferredAck = true))
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
-                (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
-                        TransactionMetadata(otherSideSession.counterparty.name, StatesToRecord.ONLY_RELEVANT))
+                (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
+                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id, TransactionMetadata(otherSideSession.counterparty.name, StatesToRecord.ONLY_RELEVANT), true)
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
                 logger.info("Peer recorded transaction without notary signature.")
 

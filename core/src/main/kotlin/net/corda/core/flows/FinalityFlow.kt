@@ -226,11 +226,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             else {
                 if (newPlatformSessions.isNotEmpty())
-                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction,
-                            TransactionMetadata(
-                                    serviceHub.myInfo.legalIdentities.first().name,
-                                    statesToRecord,
-                                    sessions.map { it.counterparty.name }.toSet()))
+                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction)
                 else
                     recordTransactionLocally(transaction)
                 transaction
@@ -258,9 +254,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, metadata: TransactionMetadata) {
+    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocallyAndBroadcast", flowLogic = this) {
-            finaliseLocally(tx, metadata = metadata)
+            finaliseLocally(tx)
             progressTracker.currentStep = BROADCASTING
             broadcast(sessions, tx)
         }
@@ -272,7 +268,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             sessions.forEach { session ->
                 try {
                     logger.debug { "Sending transaction to party $session." }
-                    subFlow(SendTransactionFlow(session, tx))
+                    val txnMetadata = TransactionMetadata(
+                            serviceHub.myInfo.legalIdentities.first().name,
+                            statesToRecord,
+                            sessions.map { it.counterparty.name }.toSet())
+                    subFlow(SendTransactionFlow(session, tx, txnMetadata))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "${session.counterparty} has finished prematurely and we're trying to send them a transaction." +
@@ -309,12 +309,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun finaliseLocally(stx: SignedTransaction, notarySignatures: List<TransactionSignature> = emptyList(),
-                                metadata: TransactionMetadata? = null) {
+    private fun finaliseLocally(stx: SignedTransaction, notarySignatures: List<TransactionSignature> = emptyList()) {
         progressTracker.currentStep = FINALISING_TRANSACTION
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocally", flowLogic = this) {
             if (notarySignatures.isEmpty()) {
-                (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord, metadata!!)
+                (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord)
                 logger.info("Finalised transaction locally.")
             } else {
                 (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
@@ -404,11 +403,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun recordUnnotarisedTransaction(tx: SignedTransaction): SignedTransaction {
         progressTracker.currentStep = RECORD_UNNOTARISED
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
-            (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(tx,
-                    TransactionMetadata(
-                            serviceHub.myInfo.legalIdentities.first().name,
-                            statesToRecord,
-                            sessions.map { it.counterparty.name }.toSet()))
+            (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(tx)
             logger.info("Recorded un-notarised transaction locally.")
             return tx
         }
@@ -487,7 +482,8 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
-        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true))
+        val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name, statesToRecord)
+        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true, txnMetadata = txnMetadata))
 
         val requiresNotarisation = needsNotarySignature(stx)
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
@@ -495,8 +491,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
             if (requiresNotarisation) {
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
                     logger.debug { "Peer recording transaction without notary signature." }
-                    (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
-                            TransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
+                    (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
                 }
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
                 logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
@@ -522,8 +517,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
                 }
             } else {
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransaction", flowLogic = this) {
-                    (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord,
-                            TransactionMetadata(otherSideSession.counterparty.name, statesToRecord))
+                    (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord)
                     logger.info("Peer recorded transaction with recovery metadata.")
                 }
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)

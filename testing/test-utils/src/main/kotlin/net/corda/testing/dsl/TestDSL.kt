@@ -139,13 +139,15 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
 
-        override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: TransactionMetadata) {}
+        override fun recordUnnotarisedTransaction(txn: SignedTransaction) {}
 
         override fun removeUnnotarisedTransaction(id: SecureHash) {}
 
         override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {}
 
-        override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: TransactionMetadata) {}
+        override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {}
+
+        override fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, initiator: Boolean) {}
     }
 
     private fun copy(): TestTransactionDSLInterpreter =

@@ -10,7 +10,6 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.SignedTransaction
 import net.corda.node.CordaClock
 import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
@@ -136,16 +135,9 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
         }
     }
 
-    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
-        return addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
-            addTransactionRecoveryMetadata(transaction.id, metadata, isInitiator, clock)
-        }
+    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+        return addTransactionRecoveryMetadata(id, metadata, isInitiator, clock)
     }
-
-    override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
-            addTransaction(transaction) {
-                addTransactionRecoveryMetadata(transaction.id, metadata, isInitiator, clock)
-            }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return database.transaction {
@@ -264,7 +256,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                     val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(clock.instant())),
                             txId.toString(),
                             partyInfoCache.getPartyIdByCordaX500Name(peer),
-                            metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT)
+                            metadata.statesToRecord)
                     session.save(senderDistributionRecord)
                 }
             } else {
@@ -273,7 +265,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                 txId,
                                 partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
                                 metadata.peers?.map { partyInfoCache.getPartyIdByCordaX500Name(it) }?.toSet() ?: emptySet(),
-                                metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT,
+                                metadata.statesToRecord,
                                 cryptoService)
                 session.save(receiverDistributionRecord)
             }

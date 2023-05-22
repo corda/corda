@@ -801,12 +801,18 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
-        override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+        override fun addUnnotarisedTransaction(transaction: SignedTransaction): Boolean {
             database.transaction {
                 records.add(TxRecord.Add(transaction))
-                delegate.addUnnotarisedTransaction(transaction, metadata, isInitiator)
+                delegate.addUnnotarisedTransaction(transaction)
             }
             return true
+        }
+
+        override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+            return database.transaction {
+                delegate.addTransactionRecoveryMetadata(id, metadata, isInitiator)
+            }
         }
 
         override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
@@ -815,9 +821,9 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
-        override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+        override fun finalizeTransaction(transaction: SignedTransaction): Boolean {
             database.transaction {
-                delegate.finalizeTransaction(transaction, metadata, isInitiator)
+                delegate.finalizeTransaction(transaction)
             }
             return true
         }

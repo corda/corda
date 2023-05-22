@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
@@ -34,7 +35,8 @@ import java.security.SignatureException
 open class ReceiveTransactionFlow constructor(private val otherSideSession: FlowSession,
                                               private val checkSufficientSignatures: Boolean = true,
                                               private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
-                                              private val deferredAck: Boolean = false) : FlowLogic<SignedTransaction>() {
+                                              private val deferredAck: Boolean = false,
+                                              private val txnMetadata: TransactionMetadata? = null) : FlowLogic<SignedTransaction>() {
     @JvmOverloads constructor(
             otherSideSession: FlowSession,
             checkSufficientSignatures: Boolean = true,
@@ -61,11 +63,14 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             logger.info("Transaction dependencies resolution completed.")
             try {
                 it.verify(serviceHub, checkSufficientSignatures)
-                it
             } catch (e: Exception) {
                 logger.warn("Transaction verification failed.")
                 throw e
             }
+            txnMetadata?.let { txnMetadata ->
+                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(it.id, txnMetadata, false)
+            }
+            it
         }
         if (checkSufficientSignatures) {
             // We should only send a transaction to the vault for processing if we did in fact fully verify it, and

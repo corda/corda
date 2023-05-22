@@ -67,7 +67,7 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * @param otherSide the target party.
  * @param stx the [SignedTransaction] being sent to the [otherSideSession].
  */
-open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
+open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, txnMetadata: TransactionMetadata? = null) : DataVendingFlow(otherSide, stx, txnMetadata)
 
 /**
  * The [SendStateAndRefFlow] should be used to send a list of input [StateAndRef] to another peer that wishes to verify
@@ -80,7 +80,7 @@ open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) :
  */
 open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSideSession, stateAndRefs)
 
-open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) : FlowLogic<Void?>() {
+open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, val txnMetadata: TransactionMetadata? = null) : FlowLogic<Void?>() {
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
 
@@ -134,6 +134,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     }
                     FetchDataFlow.Request.End -> {
                         logger.trace { "DataVendingFlow: END" }
+                        if (payload is SignedTransaction && txnMetadata != null) {
+                            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata((payload as SignedTransaction).id, txnMetadata, true)
+                        }
                         return null
                     }
                 }

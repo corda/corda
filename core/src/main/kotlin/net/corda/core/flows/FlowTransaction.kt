@@ -24,7 +24,7 @@ data class FlowTransactionInfo(
 @CordaSerializable
 data class TransactionMetadata(
         val initiator: CordaX500Name,
-        val statesToRecord: StatesToRecord? = StatesToRecord.ONLY_RELEVANT,
+        val statesToRecord: StatesToRecord = StatesToRecord.ONLY_RELEVANT,
         val peers: Set<CordaX500Name>? = null
 )
 
