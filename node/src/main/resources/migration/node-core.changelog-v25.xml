@@ -31,14 +31,14 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_sender_distribution_records_pkey">
-        <addPrimaryKey columnNames="sequence_number, timestamp" constraintName="node_sender_distribution_records_pkey"
+        <addPrimaryKey columnNames="timestamp, sequence_number" constraintName="node_sender_distribution_records_pkey"
                        tableName="node_sender_distribution_records"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_sender_distribution_records_idx">
         <createIndex indexName="node_sender_distribution_records_idx" tableName="node_sender_distribution_records">
-            <column name="sequence_number"/>
             <column name="timestamp"/>
+            <column name="sequence_number"/>
             <column name="receiver_party_id"/>
         </createIndex>
     </changeSet>
@@ -67,13 +67,14 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_receiver_distribution_records_pkey">
-        <addPrimaryKey columnNames="sequence_number, timestamp" constraintName="node_receiver_distribution_records_pkey" tableName="node_receiver_distribution_records"/>
+        <addPrimaryKey columnNames="timestamp, sequence_number" constraintName="node_receiver_distribution_records_pkey"
+                       tableName="node_receiver_distribution_records"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_receiver_distribution_records_idx">
         <createIndex indexName="node_receiver_distribution_records_idx" tableName="node_receiver_distribution_records">
-            <column name="sequence_number"/>
             <column name="timestamp"/>
+            <column name="sequence_number"/>
             <column name="sender_party_id"/>
         </createIndex>
     </changeSet>

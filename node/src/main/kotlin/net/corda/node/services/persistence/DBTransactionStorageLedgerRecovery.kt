@@ -5,19 +5,14 @@ import net.corda.core.flows.RecoveryTimeWindow
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.ThreadBox
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import net.corda.node.CordaClock
 import net.corda.node.services.network.PersistentPartyInfoCache
-import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -40,10 +35,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                          val clock: CordaClock,
                                          private val cryptoService: CryptoService,
                                          private val partyInfoCache: PersistentPartyInfoCache) : DBTransactionStorage(database, cacheFactory, clock) {
-    internal companion object {
-        private val logger = contextLogger()
-    }
-
     @Embeddable
     @Immutable
     data class PersistentKey(
@@ -53,7 +44,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @Column(name = "timestamp", nullable = false)
             var timestamp: Instant
     ) : Serializable {
-        constructor(key: TxRecoveryCacheValue.Key) : this(key.sequenceNumber, key.timestamp)
+        constructor(key: Key) : this(key.sequenceNumber, key.timestamp)
     }
 
     @Entity
@@ -74,13 +65,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             var statesToRecord: StatesToRecord
 
     ) {
-        constructor(key: TxRecoveryCacheValue.Key, txId: SecureHash, peerPartyId: Long, statesToRecord: StatesToRecord) :
-            this(PersistentKey(key),
-                 txId = txId.toString(),
-                 receiverPartyId = peerPartyId,
-                 statesToRecord = statesToRecord
-        )
-
         fun toSenderDistributionRecord() =
             SenderDistributionRecord(
                     SecureHash.parse(this.txId),
@@ -112,7 +96,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @Column(name = "states_to_record", nullable = false)
             var statesToRecord: StatesToRecord
     ) {
-        constructor(key: TxRecoveryCacheValue.Key, txId: SecureHash, initiatorPartyId: Long, peerPartyIds: Set<Long>, statesToRecord: StatesToRecord, cryptoService: CryptoService) :
+        constructor(key: Key, txId: SecureHash, initiatorPartyId: Long, peerPartyIds: Set<Long>, statesToRecord: StatesToRecord, cryptoService: CryptoService) :
             this(PersistentKey(key),
                  txId = txId.toString(),
                  senderPartyId = initiatorPartyId,
@@ -143,76 +127,24 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val partyName: String
     )
 
-    private val senderDistributionRecordStorage = ThreadBox(createSenderDistributionRecoveryMap(cacheFactory))
-    private val receiverDistributionRecordStorage = ThreadBox(createReceiverDistributionRecoveryMap(cacheFactory))
-
-    class TxRecoveryCacheValue(
-            val key: Key,
-            val metadata: DistributionRecord) {
-
+    class Key(
+            val timestamp: Instant,
+            val sequenceNumber: Long = nextSequenceNumber.andIncrement
+    ) {
         companion object {
             private val nextSequenceNumber = AtomicLong()
         }
-
-        class Key(
-                val timestamp: Instant,
-                val sequenceNumber: Long = nextSequenceNumber.andIncrement
-        )
-    }
-
-    private fun createSenderDistributionRecoveryMap(cacheFactory: NamedCacheFactory)
-            : AppendOnlyPersistentMapBase<TxRecoveryCacheValue.Key, TxRecoveryCacheValue, DBSenderDistributionRecord, PersistentKey> {
-        return AppendOnlyPersistentMap(
-                cacheFactory = cacheFactory,
-                name = "DBTransactionRecovery_senderDistributionRecords",
-                toPersistentEntityKey = { PersistentKey(it.sequenceNumber, it.timestamp) },
-                fromPersistentEntity = { dbTxn ->
-                    val key = TxRecoveryCacheValue.Key(dbTxn.compositeKey.timestamp)
-                    key to TxRecoveryCacheValue(key, dbTxn.toSenderDistributionRecord())
-                },
-                toPersistentEntity = { key: TxRecoveryCacheValue.Key, value: TxRecoveryCacheValue ->
-                    val senderDistributionRecord = value.metadata as SenderDistributionRecord
-                    DBSenderDistributionRecord(key,
-                            senderDistributionRecord.txId,
-                            senderDistributionRecord.peerPartyId,
-                            senderDistributionRecord.statesToRecord)
-                },
-                persistentEntityClass = DBSenderDistributionRecord::class.java
-        )
-    }
-
-    private fun createReceiverDistributionRecoveryMap(cacheFactory: NamedCacheFactory)
-            : AppendOnlyPersistentMapBase<TxRecoveryCacheValue.Key, TxRecoveryCacheValue, DBReceiverDistributionRecord, PersistentKey> {
-        return AppendOnlyPersistentMap(
-                cacheFactory = cacheFactory,
-                name = "DBTransactionRecovery_receiverDistributionRecords",
-                toPersistentEntityKey = { PersistentKey(it.sequenceNumber, it.timestamp) },
-                fromPersistentEntity = { dbTxn ->
-                    val key = TxRecoveryCacheValue.Key(dbTxn.compositeKey.timestamp)
-                    key to TxRecoveryCacheValue(key, dbTxn.toReceiverDistributionRecord(cryptoService))
-                },
-                toPersistentEntity = { key: TxRecoveryCacheValue.Key, value: TxRecoveryCacheValue ->
-                    val receiverDistributionRecord = value.metadata as ReceiverDistributionRecord
-                    DBReceiverDistributionRecord(key,
-                            receiverDistributionRecord.txId,
-                            receiverDistributionRecord.initiatorPartyId,
-                            receiverDistributionRecord.peerPartyIds,
-                            receiverDistributionRecord.statesToRecord,
-                            cryptoService)
-                },
-                persistentEntityClass = DBReceiverDistributionRecord::class.java
-        )
     }
 
     override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
         return addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
-            addTransactionRecoveryMetadata(transaction.id, metadata, isInitiator, clock) { false }
+            addTransactionRecoveryMetadata(transaction.id, metadata, isInitiator, clock)
         }
     }
 
     override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
             addTransaction(transaction) {
-                addTransactionRecoveryMetadata(transaction.id, metadata, isInitiator, clock) { false }
+                addTransactionRecoveryMetadata(transaction.id, metadata, isInitiator, clock)
             }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
@@ -222,23 +154,11 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val deleteSenderDistributionRecords = criteriaBuilder.createCriteriaDelete(DBSenderDistributionRecord::class.java)
             val root = deleteSenderDistributionRecords.from(DBSenderDistributionRecord::class.java)
             deleteSenderDistributionRecords.where(criteriaBuilder.equal(root.get<String>(DBSenderDistributionRecord::txId.name), id.toString()))
-            val deletedSenderDistributionRecords = if (session.createQuery(deleteSenderDistributionRecords).executeUpdate() != 0) {
-                senderDistributionRecordStorage.locked {
-                    senderDistributionRecordStorage.content.clear(id)
-                    logger.debug { "Sender distribution record(s) have been removed for un-notarised transaction $id." }
-                }
-                true
-            } else false
+            val deletedSenderDistributionRecords = session.createQuery(deleteSenderDistributionRecords).executeUpdate() != 0
             val deleteReceiverDistributionRecords = criteriaBuilder.createCriteriaDelete(DBReceiverDistributionRecord::class.java)
             val rootReceiverDistributionRecord = deleteReceiverDistributionRecords.from(DBReceiverDistributionRecord::class.java)
             deleteReceiverDistributionRecords.where(criteriaBuilder.equal(rootReceiverDistributionRecord.get<String>(DBReceiverDistributionRecord::txId.name), id.toString()))
-            val deletedReceiverDistributionRecords  = if (session.createQuery(deleteReceiverDistributionRecords).executeUpdate() != 0) {
-                receiverDistributionRecordStorage.locked {
-                    receiverDistributionRecordStorage.content.clear(id)
-                    logger.debug { "Receiver distribution record has been removed for un-notarised transaction $id." }
-                }
-                true
-            } else false
+            val deletedReceiverDistributionRecords = session.createQuery(deleteReceiverDistributionRecords).executeUpdate() != 0
             deletedSenderDistributionRecords || deletedReceiverDistributionRecords
         }
     }
@@ -336,46 +256,26 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
         }
     }
 
-    private fun addTransactionRecoveryMetadata(txId: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean, clock: CordaClock,
-                                               updateFn: (TxRecoveryCacheValue.Key) -> Boolean): Boolean {
+    @Suppress("IMPLICIT_CAST_TO_ANY")
+    private fun addTransactionRecoveryMetadata(txId: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean, clock: CordaClock): Boolean {
         database.transaction {
             if (isInitiator) {
-                senderDistributionRecordStorage.locked {
-                    metadata.peers?.map { peer ->
-                        val peerPartyId = partyInfoCache.getPartyIdByCordaX500Name(peer)
-                        val timestamp = clock.instant()
-                        val distributionRecord = SenderDistributionRecord(txId,
-                                peerPartyId,
-                                metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT,
-                                timestamp)
-                        val key = TxRecoveryCacheValue.Key(timestamp)
-                        val cachedValue = TxRecoveryCacheValue(key, distributionRecord)
-                        val addedOrUpdated = addOrUpdate(key, cachedValue) { k, _ -> updateFn(k) }
-                        if (addedOrUpdated) {
-                            logger.debug { "Sender distribution record for $txId has been recorded." }
-                        } else {
-                            logger.debug { "Sender distribution record for $txId is already recorded, so no need to re-record." }
-                        }
-                    }
+                metadata.peers?.map { peer ->
+                    val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(clock.instant())),
+                            txId.toString(),
+                            partyInfoCache.getPartyIdByCordaX500Name(peer),
+                            metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT)
+                    session.save(senderDistributionRecord)
                 }
             } else {
-                receiverDistributionRecordStorage.locked {
-                    val timestamp = clock.instant()
-                    val distributionRecord =
-                            ReceiverDistributionRecord(txId,
-                                    partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
-                                    metadata.peers?.map { partyInfoCache.getPartyIdByCordaX500Name(it) }?.toSet() ?: emptySet(),
-                                    metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT,
-                                    timestamp)
-                    val key = TxRecoveryCacheValue.Key(timestamp)
-                    val cachedValue = TxRecoveryCacheValue(key, distributionRecord)
-                    val addedOrUpdated = addOrUpdate(key, cachedValue) { k, _ -> updateFn(k) }
-                    if (addedOrUpdated) {
-                        logger.debug { "Receiver distribution record for $txId has been recorded." }
-                    } else {
-                        logger.debug { "Receiver distribution record for $txId is already recorded, so no need to re-record." }
-                    }
-                }
+                val receiverDistributionRecord =
+                        DBReceiverDistributionRecord(Key(clock.instant()),
+                                txId,
+                                partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
+                                metadata.peers?.map { partyInfoCache.getPartyIdByCordaX500Name(it) }?.toSet() ?: emptySet(),
+                                metadata.statesToRecord ?: StatesToRecord.ONLY_RELEVANT,
+                                cryptoService)
+                session.save(receiverDistributionRecord)
             }
         }
         return false
