@@ -63,6 +63,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                     warnAboutDuplicateSerializers(customSerializers)
                     val classToSerializer = mapInputClassToCustomSerializer(context.deserializationClassLoader, customSerializers)
                     addDefaultCustomSerializers(this, classToSerializer)
+                    referenceResolver
                 }
             }
         }

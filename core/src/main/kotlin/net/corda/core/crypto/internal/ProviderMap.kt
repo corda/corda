@@ -158,8 +158,8 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     // JDK 17: Add SunEC provider as lowest priority, as we use Bouncycastle for EDDSA
     val sunEC = Security.getProvider("SunEC")
     if (sunEC != null) {
-//        Security.removeProvider("SunEC")
-//        Security.addProvider(sunEC)
+        Security.removeProvider("SunEC")
+        Security.addProvider(sunEC)
 
         for(alg in jdk17SunEcKeys) {
             sunEC.remove(alg)

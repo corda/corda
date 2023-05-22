@@ -79,6 +79,10 @@ dependencies {
     integrationTestImplementation project(':node-driver')
 }
 
+test {
+    jvmArgs '--add-exports', 'javafx.base/com.sun.javafx.collections=ALL-UNNAMED'
+}
+
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath

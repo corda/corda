@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine.transitions
 
+import co.paralleluniverse.fibers.Fiber
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
@@ -49,6 +50,10 @@ class TopLevelTransition(
                 return KilledFlowTransition(context, startingState, event).transition()
             }
 
+            println("Event: ${event}")
+            if (Fiber.currentFiber() != null) {
+                println("Stack: ${Fiber.currentFiber().stackTrace}")
+            }
             when (event) {
                 is Event.DoRemainingWork -> DoRemainingWorkTransition(context, startingState).transition()
                 is Event.DeliverSessionMessage -> DeliverSessionMessageTransition(context, startingState, event).transition()

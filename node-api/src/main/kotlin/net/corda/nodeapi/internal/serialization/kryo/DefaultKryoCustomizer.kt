@@ -71,9 +71,15 @@ object DefaultKryoCustomizer {
 
     fun customize(kryo: Kryo, publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer): Kryo {
         return kryo.apply {
+            isRegistrationRequired = false
+            references = true
+            // Needed because of https://github.com/EsotericSoftware/kryo/issues/864
+            setOptimizedGenerics(false)
+
             val defaultFactoryConfig = FieldSerializer.FieldSerializerConfig()
             // Take the safest route here and allow subclasses to have fields named the same as super classes.
             defaultFactoryConfig.extendedFieldNames = true
+            defaultFactoryConfig.serializeTransient = false
             // For checkpoints we still want all the synthetic fields.  This allows inner classes to reference
             // their parents after deserialization.
             defaultFactoryConfig.ignoreSyntheticFields = false
@@ -83,6 +89,16 @@ object DefaultKryoCustomizer {
             //fieldSerializerConfig.cachedFieldNameStrategy = FieldSerializer.CachedFieldNameStrategy.EXTENDED
 
             instantiatorStrategy = CustomInstantiatorStrategy()
+
+            addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<IteratorSerializer>() {
+                override fun newSerializer(kryo: Kryo, type: Class<*>): IteratorSerializer {
+                    val config = CompatibleFieldSerializer.CompatibleFieldSerializerConfig().apply {
+                        ignoreSyntheticFields = false
+                        extendedFieldNames = true
+                    }
+                    return IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
+                }
+            })
 
             // Required for HashCheckingStream (de)serialization.
             // Note that return type should be specifically set to InputStream, otherwise it may not work,
@@ -113,7 +129,7 @@ object DefaultKryoCustomizer {
             // InputStream subclasses whitelisting, required for attachments.
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
-            noReferencesWithin<WireTransaction>()
+//            noReferencesWithin<WireTransaction>()
             register(PublicKey::class.java, publicKeySerializer)
             register(PrivateKey::class.java, PrivateKeySerializer)
             register(EdDSAPublicKey::class.java, publicKeySerializer)
@@ -146,16 +162,6 @@ object DefaultKryoCustomizer {
             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)
-
-            addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<IteratorSerializer>() {
-                override fun newSerializer(kryo: Kryo, type: Class<*>): IteratorSerializer {
-                    val config = CompatibleFieldSerializer.CompatibleFieldSerializerConfig().apply {
-                        ignoreSyntheticFields = false
-                        extendedFieldNames = true
-                    }
-                    return IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
-                }
-            })
 
             for (whitelistProvider in serializationWhitelists) {
                 val types = whitelistProvider.whitelist
