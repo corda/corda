@@ -11,6 +11,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.ssl.SslContext
+import io.netty.util.concurrent.DefaultThreadFactory
 import java.io.Closeable
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -45,8 +46,8 @@ class NettyTestServer(
 
     fun run() {
         // Configure the server.
-        val bossGroup = NioEventLoopGroup(1)
-        val workerGroup = NioEventLoopGroup()
+        val bossGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyTestServer-boss"))
+        val workerGroup = NioEventLoopGroup(DefaultThreadFactory("NettyTestServer-worker"))
         try {
             val b = ServerBootstrap()
             b.group(bossGroup, workerGroup)

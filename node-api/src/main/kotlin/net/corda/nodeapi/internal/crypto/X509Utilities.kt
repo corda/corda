@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber", "TooGenericExceptionCaught")
+
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
@@ -12,6 +14,8 @@ import net.corda.core.internal.validate
 import net.corda.core.internal.writer
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
+import net.corda.core.utilities.toHex
+import net.corda.nodeapi.internal.protonwrapper.netty.distributionPointsToString
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.ASN1Sequence
@@ -393,7 +397,6 @@ object X509Utilities {
         }
     }
 
-    @Suppress("MagicNumber")
     private fun generateCertificateSerialNumber(): BigInteger {
         val bytes = ByteArray(CERTIFICATE_SERIAL_NUMBER_LENGTH)
         newSecureRandom().nextBytes(bytes)
@@ -431,6 +434,29 @@ val Array<Certificate>.x509: List<X509Certificate> get() = map { it.x509 }
  */
 fun PKCS10CertificationRequest.isSignatureValid(): Boolean {
     return this.isSignatureValid(JcaContentVerifierProviderBuilder().build(this.subjectPublicKeyInfo))
+}
+
+fun X509Certificate.toSimpleString(): String {
+    val bcCert = toBc()
+    val keyIdentifier = try {
+        SubjectKeyIdentifier.getInstance(bcCert.getExtension(Extension.subjectKeyIdentifier).parsedValue).keyIdentifier.toHex()
+    } catch (e: Exception) {
+        "null"
+    }
+    val authorityKeyIdentifier = try {
+        AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
+    } catch (e: Exception) {
+        "null"
+    }
+    val subject = bcCert.subject
+    val issuer = bcCert.issuer
+    val role = CertRole.extract(this)
+    return "$subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] $role $serialNumber [${distributionPointsToString()}]"
+}
+
+fun X509CRL.toSimpleString(): String {
+    val revokedSerialNumbers = revokedCertificates?.map { it.serialNumber }
+    return "$issuerX500Principal ${thisUpdate.toInstant()} ${nextUpdate.toInstant()} ${revokedSerialNumbers ?: "[]"}"
 }
 
 /**
