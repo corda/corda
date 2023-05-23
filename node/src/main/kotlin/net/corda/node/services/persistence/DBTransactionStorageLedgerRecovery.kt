@@ -86,29 +86,34 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @Column(name = "sender_party_id", nullable = true)
             val senderPartyId: Long,
 
-            /** Encrypted partyId's of flow peers **/
+            /** Encrypted information for use by Sender (eg. partyId's of flow peers) **/
             @Lob
-            @Column(name = "receiver_party_ids", nullable = false)
-            val receiverPartyIds: ByteArray,
+            @Column(name = "distribution_list", nullable = false)
+            val distributionList: ByteArray,
 
             /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
-            @Column(name = "states_to_record", nullable = false)
-            var statesToRecord: StatesToRecord
-    ) {
+            @Column(name = "receiver_states_to_record", nullable = false)
+            val receiverStatesToRecord: StatesToRecord,
+
+            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
+            @Column(name = "sender_states_to_record", nullable = false)
+            val senderStatesToRecord: StatesToRecord
+) {
         constructor(key: Key, txId: SecureHash, initiatorPartyId: Long, peerPartyIds: Set<Long>, statesToRecord: StatesToRecord, cryptoService: CryptoService) :
             this(PersistentKey(key),
                  txId = txId.toString(),
                  senderPartyId = initiatorPartyId,
-                 receiverPartyIds = cryptoService.encrypt(peerPartyIds.serialize(context = contextToUse().withEncoding(CordaSerializationEncoding.SNAPPY)).bytes),
-                 statesToRecord = statesToRecord
+                 distributionList = cryptoService.encrypt(peerPartyIds.serialize(context = contextToUse().withEncoding(CordaSerializationEncoding.SNAPPY)).bytes),
+                 receiverStatesToRecord = statesToRecord,
+                 senderStatesToRecord = StatesToRecord.NONE    // to be set in follow-up PR.
             )
 
         fun toReceiverDistributionRecord(cryptoService: CryptoService) =
             ReceiverDistributionRecord(
                     SecureHash.parse(this.txId),
                     this.senderPartyId,
-                    cryptoService.decrypt(this.receiverPartyIds).deserialize(context = contextToUse()),
-                    this.statesToRecord,
+                    cryptoService.decrypt(this.distributionList).deserialize(context = contextToUse()),
+                    this.receiverStatesToRecord,
                     this.compositeKey.timestamp
             )
     }
