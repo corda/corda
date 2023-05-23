@@ -31,6 +31,7 @@ import java.security.SignatureException
  * @property deferredAck if set then the caller of this flow is responsible for explicitly sending a FetchDataFlow.Request.End
  *           acknowledgement to indicate transaction resolution is complete. See usage within [FinalityFlow].
  *           Not recommended for 3rd party use.
+ * @property txnMetadata transaction recovery metadata (eg. used by Two Phase Finality).
  */
 open class ReceiveTransactionFlow constructor(private val otherSideSession: FlowSession,
                                               private val checkSufficientSignatures: Boolean = true,
@@ -55,22 +56,25 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         } else {
             logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
-        val stx = otherSideSession.receive<SignedTransaction>().unwrap {
-            it.pushToLoggingContext()
+        val stx = otherSideSession.receive<SignedTransactionWithStatesToRecord>().unwrap { (stx, senderStatesToRecord) ->
+            stx.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
-            checkParameterHash(it.networkParametersHash)
-            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord, deferredAck))
+            checkParameterHash(stx.networkParametersHash)
+            subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, deferredAck))
             logger.info("Transaction dependencies resolution completed.")
             try {
-                it.verify(serviceHub, checkSufficientSignatures)
+                stx.verify(serviceHub, checkSufficientSignatures)
             } catch (e: Exception) {
                 logger.warn("Transaction verification failed.")
                 throw e
             }
             txnMetadata?.let { txnMetadata ->
-                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(it.id, txnMetadata, false)
+                senderStatesToRecord?.let {
+                    (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id,
+                            txnMetadata.copy(senderStatesToRecord = StatesToRecord.valueOf(senderStatesToRecord)), false)
+                }
             }
-            it
+            stx
         }
         if (checkSufficientSignatures) {
             // We should only send a transaction to the vault for processing if we did in fact fully verify it, and

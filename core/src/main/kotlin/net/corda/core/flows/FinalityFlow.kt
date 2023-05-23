@@ -482,8 +482,8 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
-        val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name, statesToRecord)
-        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false, statesToRecord = statesToRecord, deferredAck = true, txnMetadata = txnMetadata))
+        val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name, receiverStatesToRecord = statesToRecord)
+        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, statesToRecord, true, txnMetadata))
 
         val requiresNotarisation = needsNotarySignature(stx)
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY

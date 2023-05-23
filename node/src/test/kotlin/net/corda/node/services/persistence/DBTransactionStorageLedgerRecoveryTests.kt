@@ -164,19 +164,19 @@ class DBTransactionStorageLedgerRecoveryTests {
     fun `query for receiver distribution records by initiator`() {
         val txn1 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn1)
-        transactionRecovery.addTransactionRecoveryMetadata(txn1.id, TransactionMetadata(ALICE_NAME, StatesToRecord.ALL_VISIBLE, setOf(BOB_NAME, CHARLIE_NAME)), false)
+        transactionRecovery.addTransactionRecoveryMetadata(txn1.id, TransactionMetadata(ALICE_NAME, receiverStatesToRecord = StatesToRecord.ALL_VISIBLE, peers = setOf(BOB_NAME, CHARLIE_NAME)), false)
         val txn2 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn2)
-        transactionRecovery.addTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, StatesToRecord.ONLY_RELEVANT, setOf(BOB_NAME)), false)
+        transactionRecovery.addTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, receiverStatesToRecord = StatesToRecord.ONLY_RELEVANT, peers = setOf(BOB_NAME)), false)
         val txn3 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn3)
-        transactionRecovery.addTransactionRecoveryMetadata(txn3.id, TransactionMetadata(ALICE_NAME, StatesToRecord.NONE, setOf(CHARLIE_NAME)), false)
+        transactionRecovery.addTransactionRecoveryMetadata(txn3.id, TransactionMetadata(ALICE_NAME, receiverStatesToRecord = StatesToRecord.NONE, peers = setOf(CHARLIE_NAME)), false)
         val txn4 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn4)
-        transactionRecovery.addTransactionRecoveryMetadata(txn4.id, TransactionMetadata(BOB_NAME, StatesToRecord.ALL_VISIBLE, setOf(ALICE_NAME)), false)
+        transactionRecovery.addTransactionRecoveryMetadata(txn4.id, TransactionMetadata(BOB_NAME, receiverStatesToRecord = StatesToRecord.ALL_VISIBLE, peers = setOf(ALICE_NAME)), false)
         val txn5 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn5)
-        transactionRecovery.addTransactionRecoveryMetadata(txn5.id, TransactionMetadata(CHARLIE_NAME, StatesToRecord.ONLY_RELEVANT), false)
+        transactionRecovery.addTransactionRecoveryMetadata(txn5.id, TransactionMetadata(CHARLIE_NAME, receiverStatesToRecord = StatesToRecord.ONLY_RELEVANT), false)
 
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(ALICE_NAME)).let {
@@ -204,10 +204,11 @@ class DBTransactionStorageLedgerRecoveryTests {
 
         val receiverTransaction = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(receiverTransaction)
-        transactionRecovery.addTransactionRecoveryMetadata(receiverTransaction.id, TransactionMetadata(ALICE_NAME, StatesToRecord.ONLY_RELEVANT, setOf(BOB_NAME)), false)
+        transactionRecovery.addTransactionRecoveryMetadata(receiverTransaction.id, TransactionMetadata(ALICE_NAME, StatesToRecord.ONLY_RELEVANT, setOf(BOB_NAME), StatesToRecord.ALL_VISIBLE), false)
         assertEquals(IN_FLIGHT, readTransactionFromDB(receiverTransaction.id).status)
         readReceiverDistributionRecordFromDB(receiverTransaction.id).let {
-            assertEquals(StatesToRecord.ONLY_RELEVANT, it.statesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, it.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, it.senderStatesToRecord)
             assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId))
             assertEquals(setOf(BOB_NAME), it.peerPartyIds.map { partyInfoCache.getCordaX500NameByPartyId(it) }.toSet() )
         }
@@ -217,9 +218,12 @@ class DBTransactionStorageLedgerRecoveryTests {
     fun `finalize transaction with recovery metadata`() {
         val transaction = newTransaction(notarySig = false)
         transactionRecovery.finalizeTransaction(transaction)
-        transactionRecovery.addTransactionRecoveryMetadata(transaction.id, TransactionMetadata(ALICE_NAME), false)
+        transactionRecovery.addTransactionRecoveryMetadata(transaction.id, TransactionMetadata(ALICE_NAME, receiverStatesToRecord = StatesToRecord.ALL_VISIBLE), false)
         assertEquals(VERIFIED, readTransactionFromDB(transaction.id).status)
-        assertEquals(StatesToRecord.ONLY_RELEVANT, readReceiverDistributionRecordFromDB(transaction.id).statesToRecord)
+        readReceiverDistributionRecordFromDB(transaction.id).apply {
+            assertEquals(StatesToRecord.ALL_VISIBLE, this.statesToRecord)
+            assertEquals(StatesToRecord.NONE, this.senderStatesToRecord)
+        }
     }
 
     @Test(timeout = 300_000)

@@ -10,8 +10,16 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.unwrap
 import net.corda.core.utilities.trace
+import net.corda.core.utilities.unwrap
+import kotlin.collections.List
+import kotlin.collections.MutableSet
+import kotlin.collections.Set
+import kotlin.collections.flatMap
+import kotlin.collections.map
+import kotlin.collections.mutableSetOf
+import kotlin.collections.plus
+import kotlin.collections.toSet
 
 /**
  * In the words of Matt working code is more important then pretty code. This class that contains code that may
@@ -66,8 +74,11 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  *
  * @param otherSide the target party.
  * @param stx the [SignedTransaction] being sent to the [otherSideSession].
+ * @property txnMetadata transaction recovery metadata (eg. used by Two Phase Finality).
  */
-open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, txnMetadata: TransactionMetadata? = null) : DataVendingFlow(otherSide, stx, txnMetadata)
+open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, txnMetadata: TransactionMetadata? = null) : DataVendingFlow(otherSide, stx, txnMetadata) {
+    constructor(otherSide: FlowSession, stx: SignedTransaction) : this(otherSide, stx, null)
+}
 
 /**
  * The [SendStateAndRefFlow] should be used to send a list of input [StateAndRef] to another peer that wishes to verify
@@ -124,6 +135,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         while (true) {
             val loopCnt = loopCount++
             logger.trace { "DataVendingFlow: Main While [$loopCnt]..." }
+            if (loopCnt == 0 && payload is SignedTransaction)
+                payload = SignedTransactionWithStatesToRecord(payload, txnMetadata?.senderStatesToRecord?.name)
             val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
                 logger.trace { "sendPayloadAndReceiveDataRequest(): ${request.javaClass.name}" }
                 when (request) {
@@ -243,3 +256,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         }
     }
 }
+
+@CordaSerializable
+data class SignedTransactionWithStatesToRecord(
+        val stx: SignedTransaction,
+        val statesToRecord: String? = null
+)
