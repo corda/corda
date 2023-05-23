@@ -147,8 +147,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
                     }
                     FetchDataFlow.Request.End -> {
                         logger.trace { "DataVendingFlow: END" }
-                        if (payload is SignedTransaction && txnMetadata != null) {
-                            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata((payload as SignedTransaction).id, txnMetadata, true)
+                        if (payload is SignedTransactionWithStatesToRecord && txnMetadata != null) {
+                            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata((payload as SignedTransactionWithStatesToRecord).stx.id, txnMetadata, true)
                         }
                         return null
                     }
