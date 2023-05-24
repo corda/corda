@@ -26,6 +26,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.PLATFORM_VERSION
@@ -47,6 +48,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.issuedBy
 import net.corda.finance.test.flows.CashIssueWithObserversFlow
+import net.corda.finance.test.flows.CashPaymentWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
 import net.corda.node.services.persistence.DistributionRecord
@@ -350,18 +352,71 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        assertThat(getSenderRecoveryData(stx.id, aliceNode.database)).isNotNull
+        assertEquals(1, getSenderRecoveryData(stx.id, aliceNode.database).size)
         assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
     }
 
-    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+    @Test(timeout=300_000)
+    fun `two phase finality flow payment transaction with observers`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+        val charlieNode = createNode(CHARLIE_NAME, platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        // issue some cash
+        aliceNode.startFlow(CashIssueFlow(Amount(1000L, GBP), OpaqueBytes.of(1), notary)).resultFuture.getOrThrow().stx
+
+        // standard issuance with observers passed in as FinalityFlow sessions
+        val stx = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
+                amount = Amount(100L, GBP),
+                recipient = bobNode.info.singleIdentity(),
+                observers = setOf(charlieNode.info.singleIdentity()))).resultFuture.getOrThrow()
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(charlieNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+
+        assertEquals(4, getSenderRecoveryData(stx.id, aliceNode.database).size)
+        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
+        assertThat(getReceiverRecoveryData(stx.id, charlieNode.database)).isNotNull
+
+        // standard issuance using confidential identities with observers passed in as FinalityFlow sessions
+//        val stx2 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
+//                amount = Amount(100L, GBP),
+//                recipient = bobNode.info.singleIdentity(),
+//                observers = setOf(charlieNode.info.singleIdentity()),
+//                anonymous = true)).resultFuture.getOrThrow()
+//
+//        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx2.id)).isNotNull
+//        assertThat(bobNode.services.validatedTransactions.getTransaction(stx2.id)).isNotNull
+//        assertThat(charlieNode.services.validatedTransactions.getTransaction(stx2.id)).isNotNull
+//
+//        assertEquals(4, getSenderRecoveryData(stx2.id, aliceNode.database).size)
+//        assertThat(getReceiverRecoveryData(stx2.id, bobNode.database)).isNotNull
+//        assertThat(getReceiverRecoveryData(stx2.id, charlieNode.database)).isNotNull
+
+        // exercise the new FinalityFlow observerSessions constructor parameter
+        val stx3 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
+                amount = Amount(100L, GBP),
+                recipient = bobNode.info.singleIdentity(),
+                observers = setOf(charlieNode.info.singleIdentity()),
+                useObserverSessions = true)).resultFuture.getOrThrow()
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
+        assertThat(charlieNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
+
+        assertEquals(4, getSenderRecoveryData(stx3.id, aliceNode.database).size)
+        assertThat(getReceiverRecoveryData(stx3.id, bobNode.database)).isNotNull
+        assertThat(getReceiverRecoveryData(stx3.id, charlieNode.database)).isNotNull
+    }
+
+    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<DistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
-        return fromDb.singleOrNull()?.toSenderDistributionRecord()
+        return fromDb.map { it.toSenderDistributionRecord() }
     }
 
     private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
@@ -512,6 +567,11 @@ class FinalityFlowTests : WithFinality {
     private fun createBob(cordapps: List<TestCordappInternal> = emptyList(), platformVersion: Int = PLATFORM_VERSION): TestStartedNode {
         return mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, additionalCordapps = cordapps,
             version = MOCK_VERSION_INFO.copy(platformVersion = platformVersion)))
+    }
+
+    private fun createNode(legalName: CordaX500Name, cordapps: List<TestCordappInternal> = emptyList(), platformVersion: Int = PLATFORM_VERSION): TestStartedNode {
+        return mockNet.createNode(InternalMockNodeParameters(legalName = legalName, additionalCordapps = cordapps,
+                version = MOCK_VERSION_INFO.copy(platformVersion = platformVersion)))
     }
 
     private fun TestStartedNode.issuesCashTo(recipient: TestStartedNode): SignedTransaction {

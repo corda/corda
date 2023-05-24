@@ -2,17 +2,21 @@ package net.corda.finance.test.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.NotaryException
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.AbstractCashFlow
+import net.corda.finance.flows.CashException
 import net.corda.finance.issuedBy
 import java.util.Currency
 
@@ -32,8 +36,17 @@ class CashIssueWithObserversFlow(private val amount: Amount<Currency>,
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = Companion.FINALISING_TX
         val observerSessions = observers.map { initiateFlow(it) }
-        val notarised = finaliseTx(tx, observerSessions, "Unable to notarise issue")
+        val notarised = finalise(tx, observerSessions, "Unable to notarise issue")
         return Result(notarised, ourIdentity)
+    }
+
+    @Suspendable
+    private fun finalise(tx: SignedTransaction, sessions: Collection<FlowSession>, message: String): SignedTransaction {
+        try {
+            return subFlow(FinalityFlow(tx, sessions))
+        } catch (e: NotaryException) {
+            throw CashException(message, e)
+        }
     }
 }
 

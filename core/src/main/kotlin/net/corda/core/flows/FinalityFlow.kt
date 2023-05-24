@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.NotarySigCheck.needsNotarySignature
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.FetchDataFlow
@@ -16,6 +17,7 @@ import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
+import net.corda.core.node.StatesToRecord.ALL_VISIBLE
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -41,6 +43,9 @@ import java.time.Duration
  * can also be included, but they must specify [StatesToRecord.ALL_VISIBLE] for statesToRecord if they wish to record the
  * contract states into their vaults.
  *
+ * As of 4.11 a list of observer [FlowSession] can be specified to indicate sessions with transaction non-participants (e.g. observers),
+ * and thereby default associated StatesToRecord value to [StatesToRecord.ALL_VISIBLE]
+ *
  * The flow returns the same transaction but with the additional signatures from the notary.
  *
  * NOTE: This is an inlined flow but for backwards compatibility is annotated with [InitiatingFlow].
@@ -55,7 +60,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
                                        private val newApi: Boolean,
-                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
+                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT,
+                                       private val observerSessions: Collection<FlowSession> = emptySet()) : FlowLogic<SignedTransaction>() {
 
     @CordaInternal
     data class ExtraConstructorArgs(val oldParticipants: Collection<Party>, val sessions: Collection<FlowSession>, val newApi: Boolean, val statesToRecord: StatesToRecord)
@@ -133,6 +139,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             progressTracker: ProgressTracker
     ) : this(transaction, oldParticipants, progressTracker, sessions, true)
 
+    constructor(transaction: SignedTransaction,
+                sessions: Collection<FlowSession>,
+                observerSessions: Collection<FlowSession>) : this(transaction, emptyList(), tracker(), sessions, true, observerSessions = observerSessions)
+
     companion object {
         private const val DEPRECATION_MSG = "It is unsafe to use this constructor as it requires nodes to automatically " +
                 "accept notarised transactions without first checking their relevancy. Instead, use one of the constructors " +
@@ -158,6 +168,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         fun tracker() = ProgressTracker(RECORD_UNNOTARISED, BROADCASTING_PRE_NOTARISATION, NOTARISING, BROADCASTING_POST_NOTARISATION, BROADCASTING_NOTARY_ERROR, FINALISING_TRANSACTION, BROADCASTING)
     }
 
+    private lateinit var externalTxParticipants: Set<Party>
+
     @Suspendable
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Throws(NotaryException::class)
@@ -169,6 +181,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             require(sessions.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
                 "Do not provide flow sessions for the local node. FinalityFlow will record the notarised transaction locally."
             }
+            sessions.intersect(observerSessions.toSet()).let {
+                require(it.isEmpty()) { "The following parties are specified both in flow sessions and observer flow sessions: $it" }
+            }
         }
 
         // Note: this method is carefully broken up to minimize the amount of data reachable from the stack at
@@ -179,7 +194,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         transaction.pushToLoggingContext()
         logCommandData()
         val ledgerTransaction = verifyTx()
-        val externalTxParticipants = extractExternalParticipants(ledgerTransaction)
+        externalTxParticipants = extractExternalParticipants(ledgerTransaction)
 
         if (newApi) {
             val sessionParties = sessions.map { it.counterparty }.toSet()
@@ -199,7 +214,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // - broadcast notary signature to external participants (finalise remotely)
         // - finalise locally
 
-        val (oldPlatformSessions, newPlatformSessions) = sessions.partition {
+        val (oldPlatformSessions, newPlatformSessions) = (sessions + observerSessions).partition {
             serviceHub.networkMapCache.getNodeByLegalIdentity(it.counterparty)?.platformVersion!! < PlatformVersionSwitches.TWO_PHASE_FINALITY
         }
 
@@ -271,7 +286,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     val txnMetadata = TransactionMetadata(
                             serviceHub.myInfo.legalIdentities.first().name,
                             statesToRecord,
-                            sessions.map { it.counterparty.name }.toSet())
+                            sessions.map { it.counterparty.name }.toSet(),
+                            peersToStatesToRecord = deriveStatesToRecord(sessions))
                     subFlow(SendTransactionFlow(session, tx, txnMetadata))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -283,6 +299,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 }
             }
         }
+    }
+
+    private fun deriveStatesToRecord(newPlatformSessions: Collection<FlowSession>): Map<CordaX500Name, StatesToRecord> {
+        val derivedObserverSessions = newPlatformSessions.map { it.counterparty }.toSet() - externalTxParticipants - oldParticipants
+        val txParticipantSessions = externalTxParticipants - oldParticipants
+        return txParticipantSessions.map { it.name to ONLY_RELEVANT }.toMap() +
+                (derivedObserverSessions + observerSessions.map { it.counterparty }).map { it.name to ALL_VISIBLE }
     }
 
     @Suspendable

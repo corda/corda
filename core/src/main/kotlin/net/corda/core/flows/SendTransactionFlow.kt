@@ -135,8 +135,10 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         while (true) {
             val loopCnt = loopCount++
             logger.trace { "DataVendingFlow: Main While [$loopCnt]..." }
-            if (loopCnt == 0 && payload is SignedTransaction)
-                payload = SignedTransactionWithStatesToRecord(payload, txnMetadata?.senderStatesToRecord?.name)
+            if (txnMetadata != null && loopCnt == 0 && payload is SignedTransaction) {
+                payload = SignedTransactionWithStatesToRecord(payload, txnMetadata.senderStatesToRecord.name)
+                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, true)
+            }
             val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
                 logger.trace { "sendPayloadAndReceiveDataRequest(): ${request.javaClass.name}" }
                 when (request) {
@@ -147,9 +149,6 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
                     }
                     FetchDataFlow.Request.End -> {
                         logger.trace { "DataVendingFlow: END" }
-                        if (payload is SignedTransactionWithStatesToRecord && txnMetadata != null) {
-                            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata((payload as SignedTransactionWithStatesToRecord).stx.id, txnMetadata, true)
-                        }
                         return null
                     }
                 }
