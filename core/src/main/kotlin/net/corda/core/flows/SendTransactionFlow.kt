@@ -94,6 +94,8 @@ open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, t
 open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSideSession, stateAndRefs)
 
 open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, val txnMetadata: TransactionMetadata? = null) : FlowLogic<Void?>() {
+    constructor(otherSideSession: FlowSession, payload: Any) : this(otherSideSession, payload, null)
+
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
 
