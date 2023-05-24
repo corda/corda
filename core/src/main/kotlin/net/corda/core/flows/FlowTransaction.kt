@@ -26,7 +26,12 @@ data class TransactionMetadata(
         val initiator: CordaX500Name,
         val senderStatesToRecord: StatesToRecord = StatesToRecord.NONE,
         val receiverStatesToRecord: StatesToRecord? = null,
-        val peersToStatesToRecord: Map<CordaX500Name, StatesToRecord>? = null
+        val distributionList: DistributionList? = null
+)
+
+@CordaSerializable
+class DistributionList(
+    val peersToStatesToRecord: Map<CordaX500Name, StatesToRecord>
 )
 
 @CordaSerializable

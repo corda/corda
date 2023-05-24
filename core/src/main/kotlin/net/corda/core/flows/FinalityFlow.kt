@@ -286,7 +286,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     val txnMetadata = TransactionMetadata(
                             serviceHub.myInfo.legalIdentities.first().name,
                             statesToRecord,
-                            peersToStatesToRecord = deriveStatesToRecord(sessions))
+                            distributionList = DistributionList(deriveStatesToRecord(sessions)))
                     subFlow(SendTransactionFlow(session, tx, txnMetadata))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(

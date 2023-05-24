@@ -4,7 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -136,7 +138,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
             val loopCnt = loopCount++
             logger.trace { "DataVendingFlow: Main While [$loopCnt]..." }
             if (txnMetadata != null && loopCnt == 0 && payload is SignedTransaction) {
-                payload = SignedTransactionWithStatesToRecord(payload, txnMetadata.senderStatesToRecord.name)
+                payload = SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, txnMetadata.distributionList)
                 (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, true)
             }
             val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
@@ -257,7 +259,15 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
 }
 
 @CordaSerializable
-data class SignedTransactionWithStatesToRecord(
+data class SignedTransactionWithDistributionList(
         val stx: SignedTransaction,
-        val statesToRecord: String? = null
-)
+        val senderStatesToRecord: String,
+        val distributionList: Map<CordaX500Name, String>? = null
+
+) {
+    constructor(stx: SignedTransaction, senderStatesToRecord: StatesToRecord, distributionList: DistributionList?):
+            this(stx, senderStatesToRecord.toString(), distributionList?.peersToStatesToRecord?.map { (peer, statesToRecord) ->
+                peer to statesToRecord.toString()
+            }?.toMap()
+    )
+}

@@ -460,7 +460,7 @@ class ResolveTransactionsFlowTest {
     private open class TestResponseResolveTwiceFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val (tx, _) = otherSideSession.receive<SignedTransactionWithStatesToRecord>().unwrap { it }
+            val (tx, _) = otherSideSession.receive<SignedTransactionWithDistributionList>().unwrap { it }
             val parent1 = tx.inputs.first().txhash
             otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION))
                     .unwrap { it }

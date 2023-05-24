@@ -56,7 +56,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         } else {
             logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
-        val stx = otherSideSession.receive<SignedTransactionWithStatesToRecord>().unwrap { (stx, senderStatesToRecord) ->
+        val stx = otherSideSession.receive<SignedTransactionWithDistributionList>().unwrap { (stx, senderStatesToRecord, distributionList) ->
             stx.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(stx.networkParametersHash)
@@ -69,9 +69,17 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
                 throw e
             }
             txnMetadata?.let { txnMetadata ->
-                senderStatesToRecord?.let {
+                distributionList?.let {
                     (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id,
-                            txnMetadata.copy(senderStatesToRecord = StatesToRecord.valueOf(senderStatesToRecord)), false)
+                            txnMetadata.copy(senderStatesToRecord = StatesToRecord.valueOf(senderStatesToRecord),
+                                distributionList = DistributionList(
+                                    distributionList.map { (peer, statesToRecord) ->
+                                        if (peer == ourIdentity.name)
+                                            peer to txnMetadata.receiverStatesToRecord!!    // use actual value
+                                        else
+                                            peer to StatesToRecord.valueOf(statesToRecord)  // use hinted value
+                                    }.toMap()
+                            )), false)
                 }
             }
             stx

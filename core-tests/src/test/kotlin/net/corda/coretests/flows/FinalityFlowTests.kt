@@ -51,7 +51,8 @@ import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.finance.test.flows.CashPaymentWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
-import net.corda.node.services.persistence.DistributionRecord
+import net.corda.node.services.persistence.ReceiverDistributionRecord
+import net.corda.node.services.persistence.SenderDistributionRecord
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -352,8 +353,17 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        assertEquals(1, getSenderRecoveryData(stx.id, aliceNode.database).size)
-        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
+        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+            assertEquals(1, this.size)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+        }
+        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+            assertEquals(StatesToRecord.ALL_VISIBLE, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
+        }
     }
 
     @Test(timeout=300_000)
@@ -374,9 +384,28 @@ class FinalityFlowTests : WithFinality {
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        assertEquals(4, getSenderRecoveryData(stx.id, aliceNode.database).size)
-        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
-        assertThat(getReceiverRecoveryData(stx.id, charlieNode.database)).isNotNull
+        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+            assertEquals(4, this.size)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[1].statesToRecord)
+            assertEquals(CHARLIE_NAME.hashCode().toLong(), this[1].peerPartyId)
+        }
+        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
+            // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
+                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
+        }
+        getReceiverRecoveryData(stx.id, charlieNode.database).apply {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            // note: Charlie assertion here is using actually default StatesToRecord.ONLY_RELEVANT
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
+                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
+        }
 
         // exercise the new FinalityFlow observerSessions constructor parameter
         val stx3 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
@@ -407,11 +436,20 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        assertEquals(1, getSenderRecoveryData(stx.id, aliceNode.database).size)
-        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
+        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+            assertEquals(1, this.size)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+        }
+        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
+        }
     }
 
-    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<DistributionRecord> {
+    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
@@ -421,7 +459,7 @@ class FinalityFlowTests : WithFinality {
         return fromDb.map { it.toSenderDistributionRecord() }.also { println("SenderDistributionRecord\n$it") }
     }
 
-    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): ReceiverDistributionRecord? {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where tx_id = :transactionId",
