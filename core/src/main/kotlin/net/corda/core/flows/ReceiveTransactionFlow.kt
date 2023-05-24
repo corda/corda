@@ -44,7 +44,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             statesToRecord: StatesToRecord = StatesToRecord.NONE
     ) : this(otherSideSession, checkSufficientSignatures, statesToRecord, false)
 
-    @Suppress("KDocMissingDocumentation")
+    @Suppress("KDocMissingDocumentation", "ComplexMethod")
     @Suspendable
     @Throws(SignatureException::class,
             AttachmentResolutionException::class,
