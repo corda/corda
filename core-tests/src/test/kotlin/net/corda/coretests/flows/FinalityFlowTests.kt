@@ -18,8 +18,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
-import net.corda.core.flows.NotarySigCheck
-import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.StartableByRPC

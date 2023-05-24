@@ -10,6 +10,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.SignedTransaction
 import net.corda.node.CordaClock
 import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
