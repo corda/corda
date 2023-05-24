@@ -6,6 +6,7 @@ import co.paralleluniverse.fibers.instrument.JavaAgent
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import net.corda.core.internal.uncheckedCast
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
@@ -44,7 +45,6 @@ import net.corda.core.internal.packageName_
 import net.corda.core.internal.readObject
 import net.corda.core.internal.readText
 import net.corda.core.internal.toPath
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.writeText
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
@@ -1035,11 +1035,24 @@ class DriverDSLImpl(
                         && !cpPathEntry.isExcludedJar
             }
 
+            val moduleOpens = listOf(
+                    "--add-opens", "java.base/java.time=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.util=ALL-UNNAMED", "--add-opens", "java.base/java.net=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.nio=ALL-UNNAMED", "--add-opens", "java.base/java.lang.invoke=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.security.cert=ALL-UNNAMED", "--add-opens", "java.base/javax.net.ssl=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED", "--add-opens", "java.sql/java.sql=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+            )
+
+            val moduleExports = listOf(
+                    "--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED"
+            )
+
             return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + "-Dnet.corda.node.printErrorsToStdErr=true",
+                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + moduleOpens + moduleExports + "-Dnet.corda.node.printErrorsToStdErr=true",
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize,
                     classPath = cp,
