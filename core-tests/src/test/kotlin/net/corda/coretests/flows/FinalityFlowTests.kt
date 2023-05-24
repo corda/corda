@@ -378,21 +378,6 @@ class FinalityFlowTests : WithFinality {
         assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
         assertThat(getReceiverRecoveryData(stx.id, charlieNode.database)).isNotNull
 
-        // standard issuance using confidential identities with observers passed in as FinalityFlow sessions
-//        val stx2 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
-//                amount = Amount(100L, GBP),
-//                recipient = bobNode.info.singleIdentity(),
-//                observers = setOf(charlieNode.info.singleIdentity()),
-//                anonymous = true)).resultFuture.getOrThrow()
-//
-//        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx2.id)).isNotNull
-//        assertThat(bobNode.services.validatedTransactions.getTransaction(stx2.id)).isNotNull
-//        assertThat(charlieNode.services.validatedTransactions.getTransaction(stx2.id)).isNotNull
-//
-//        assertEquals(4, getSenderRecoveryData(stx2.id, aliceNode.database).size)
-//        assertThat(getReceiverRecoveryData(stx2.id, bobNode.database)).isNotNull
-//        assertThat(getReceiverRecoveryData(stx2.id, charlieNode.database)).isNotNull
-
         // exercise the new FinalityFlow observerSessions constructor parameter
         val stx3 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
                 amount = Amount(100L, GBP),
@@ -409,6 +394,23 @@ class FinalityFlowTests : WithFinality {
         assertThat(getReceiverRecoveryData(stx3.id, charlieNode.database)).isNotNull
     }
 
+    @Test(timeout=300_000)
+    fun `two phase finality flow payment transaction using confidential identities`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        aliceNode.startFlow(CashIssueFlow(Amount(1000L, GBP), OpaqueBytes.of(1), notary)).resultFuture.getOrThrow().stx
+        val stx = aliceNode.startFlowAndRunNetwork(CashPaymentFlow(
+                amount = Amount(100L, GBP),
+                recipient = bobNode.info.singleIdentity(),
+                anonymous = true)).resultFuture.getOrThrow().stx
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+
+        assertEquals(1, getSenderRecoveryData(stx.id, aliceNode.database).size)
+        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
+    }
+
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<DistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
@@ -416,7 +418,7 @@ class FinalityFlowTests : WithFinality {
                     DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
-        return fromDb.map { it.toSenderDistributionRecord() }
+        return fromDb.map { it.toSenderDistributionRecord() }.also { println("SenderDistributionRecord\n$it") }
     }
 
     private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
@@ -426,7 +428,7 @@ class FinalityFlowTests : WithFinality {
                     DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
-        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap()))
+        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap())).also { println("ReceiverDistributionRecord\n$it") }
     }
 
     @StartableByRPC

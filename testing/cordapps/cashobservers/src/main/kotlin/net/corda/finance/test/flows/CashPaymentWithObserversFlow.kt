@@ -25,19 +25,12 @@ open class CashPaymentWithObserversFlow(
         val amount: Amount<Currency>,
         val recipient: Party,
         val observers: Set<Party>,
-        private val useObserverSessions: Boolean = false,
-        private val anonymous: Boolean = false
+        private val useObserverSessions: Boolean = false
 ) : AbstractCashFlow<SignedTransaction>(tracker()) {
 
     @Suspendable
     override fun call(): SignedTransaction {
         val recipientSession = initiateFlow(recipient)
-//        recipientSession.send(anonymous)
-//        val anonymousRecipient: AbstractParty = if (anonymous) {
-//            subFlow(SwapIdentitiesFlow(recipientSession))[recipient]!!
-//        } else {
-//            recipient
-//        }
         val observerSessions = observers.map { initiateFlow(it) }
         val builder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
         logger.info("Generating spend for: ${builder.lockId}")
@@ -82,10 +75,6 @@ open class CashPaymentWithObserversFlow(
 class CashPaymentReceiverWithObserversFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-//        val anonymous = otherSide.receive<Boolean>().unwrap { it }
-//        if (anonymous) {
-//            subFlow(SwapIdentitiesFlow(otherSide))
-//        }
         if (!serviceHub.myInfo.isLegalIdentity(otherSide.counterparty)) {
             subFlow(ReceiveFinalityFlow(otherSide))
         }
