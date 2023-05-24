@@ -145,7 +145,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
         database.transaction {
             if (isInitiator) {
-                metadata.peers?.map { peer ->
+                metadata.peersToStatesToRecord?.map { (peer, _) ->
                     val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(clock.instant())),
                             id.toString(),
                             partyInfoCache.getPartyIdByCordaX500Name(peer),
@@ -158,7 +158,8 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                         DBReceiverDistributionRecord(Key(clock.instant()),
                                 id,
                                 partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
-                                metadata.peers?.map { partyInfoCache.getPartyIdByCordaX500Name(it) }?.toSet() ?: emptySet(),
+                                metadata.peersToStatesToRecord?.map { (peer, _) ->
+                                    partyInfoCache.getPartyIdByCordaX500Name(peer) }?.toSet() ?: emptySet(),
                                 metadata.senderStatesToRecord,
                                 metadata.receiverStatesToRecord!!,
                                 cryptoService)
