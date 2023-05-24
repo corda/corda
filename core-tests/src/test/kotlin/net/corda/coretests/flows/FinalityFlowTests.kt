@@ -14,7 +14,6 @@ import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.FlowTransactionMetadata
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.NotaryError
@@ -24,6 +23,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
@@ -48,6 +48,9 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.issuedBy
 import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
+import net.corda.node.services.persistence.DistributionRecord
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -61,6 +64,7 @@ import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
+import net.corda.testing.node.internal.MockCryptoService
 import net.corda.testing.node.internal.TestCordappInternal
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappWithPackages
@@ -345,6 +349,29 @@ class FinalityFlowTests : WithFinality {
 
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+
+        assertThat(getSenderRecoveryData(stx.id, aliceNode.database)).isNotNull
+        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
+    }
+
+    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        return fromDb.singleOrNull()?.toSenderDistributionRecord()
+    }
+
+    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
+            ).setParameter("transactionId", id.toString()).resultList.map { it }
+        }
+        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap()))
     }
 
     @StartableByRPC
@@ -423,7 +450,7 @@ class FinalityFlowTests : WithFinality {
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
                 (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
-                        FlowTransactionMetadata(otherSideSession.counterparty.name, StatesToRecord.ONLY_RELEVANT))
+                        TransactionMetadata(otherSideSession.counterparty.name, StatesToRecord.ONLY_RELEVANT))
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
                 logger.info("Peer recorded transaction without notary signature.")
 

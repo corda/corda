@@ -30,6 +30,7 @@
     <include file="migration/node-core.changelog-v22.xml"/>
     <include file="migration/node-core.changelog-v23.xml"/>
     <include file="migration/node-core.changelog-v24.xml"/>
+    <include file="migration/node-core.changelog-v25.xml"/>
     <!-- This must run after node-core.changelog-init.xml, to prevent database columns being created twice. -->
     <include file="migration/vault-schema.changelog-v9.xml"/>
 

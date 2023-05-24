@@ -74,8 +74,7 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 alice.rpc.startFlow(::GetFlowTransaction, txId).returnValue.getOrThrow().apply {
                     assertEquals("V", this.first)              // "V" -> VERIFIED
-                    assertEquals(ALICE_NAME.toString(), this.second)    // initiator
-                    assertEquals(CHARLIE_NAME.toString(), this.third)   // peers
+                    assertEquals(CHARLIE_NAME.hashCode().toLong(), this.second)   // peer
                 }
             }
         }
@@ -84,18 +83,25 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
 // Internal use for testing only!!
 @StartableByRPC
-class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Triple<String, String, String>>() {
+class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Pair<String, Long>>() {
     @Suspendable
-    override fun call(): Triple<String, String, String> {
-        return serviceHub.jdbcSession().prepareStatement("select * from node_transactions where tx_id = ?")
+    override fun call(): Pair<String, Long> {
+        val transactionStatus = serviceHub.jdbcSession().prepareStatement("select * from node_transactions where tx_id = ?")
                 .apply { setString(1, txId.toString()) }
                 .use { ps ->
                     ps.executeQuery().use { rs ->
                         rs.next()
-                        Triple(rs.getString(4),   // TransactionStatus
-                               rs.getString(7),   // initiator
-                               rs.getString(8))   // participants
+                        rs.getString(4)   // TransactionStatus
                     }
                 }
+        val receiverPartyId = serviceHub.jdbcSession().prepareStatement("select * from node_sender_distribution_records where tx_id = ?")
+                .apply { setString(1, txId.toString()) }
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getLong(2)     // receiverPartyId
+                    }
+                }
+        return Pair(transactionStatus, receiverPartyId)
     }
 }

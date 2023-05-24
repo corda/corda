@@ -3,15 +3,13 @@ package net.corda.node.services.persistence
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.FlowTransactionMetadata
-import net.corda.core.identity.CordaX500Name
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -52,8 +50,8 @@ import javax.persistence.Table
 import kotlin.streams.toList
 
 @Suppress("TooManyFunctions")
-class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
-                           private val clock: CordaClock) : WritableTransactionStorage, SingletonSerializeAsToken() {
+open class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory,
+                                private val clock: CordaClock) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
     @Suppress("MagicNumber") // database column width
     @Entity
@@ -78,26 +76,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val timestamp: Instant,
 
             @Column(name = "signatures")
-            val signatures: ByteArray?,
-
-            /**
-             * Flow finality metadata used for recovery
-             * TODO: create association table solely for Flow metadata and recovery purposes.
-             * See https://r3-cev.atlassian.net/browse/ENT-9521
-             */
-
-            /** X500Name of flow initiator **/
-            @Column(name = "initiator")
-            val initiator: String? = null,
-
-            /** X500Name of flow participant parties **/
-            @Column(name = "participants")
-            @Convert(converter = StringListConverter::class)
-            val participants: List<String>? = null,
-
-            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
-            @Column(name = "states_to_record")
-            val statesToRecord: StatesToRecord? = null
+            val signatures: ByteArray?
     )
 
     enum class TransactionStatus {
@@ -150,21 +129,6 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    @Converter
-    class StringListConverter : AttributeConverter<List<String>?, String?> {
-        override fun convertToDatabaseColumn(stringList: List<String>?): String? {
-            return stringList?.let { if (it.isEmpty()) null else it.joinToString(SPLIT_CHAR) }
-        }
-
-        override fun convertToEntityAttribute(string: String?): List<String>? {
-            return string?.split(SPLIT_CHAR)
-        }
-
-        companion object {
-            private const val SPLIT_CHAR = ";"
-        }
-    }
-
     internal companion object {
         const val TRANSACTION_ALREADY_IN_PROGRESS_WARNING = "trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions."
 
@@ -187,7 +151,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         private fun createTransactionsMap(cacheFactory: NamedCacheFactory, clock: CordaClock)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
-            return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
+            return WeightBasedAppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = SecureHash::toString,
@@ -195,14 +159,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                         SecureHash.create(dbTxn.txId) to TxCacheValue(
                                 dbTxn.transaction.deserialize(context = contextToUse()),
                                 dbTxn.status,
-                                dbTxn.signatures?.deserialize(context = contextToUse()),
-                                dbTxn.initiator?.let { initiator ->
-                                    FlowTransactionMetadata(
-                                            CordaX500Name.parse(initiator),
-                                            dbTxn.statesToRecord!!,
-                                            dbTxn.participants?.let { it.map { CordaX500Name.parse(it) }.toSet() }
-                                    )
-                                }
+                                dbTxn.signatures?.deserialize(context = contextToUse())
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
@@ -212,10 +169,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                                 transaction = value.toSignedTx().serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
                                 status = value.status,
                                 timestamp = clock.instant(),
-                                signatures = value.sigs.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes,
-                                statesToRecord = value.metadata?.statesToRecord,
-                                initiator = value.metadata?.initiator?.toString(),
-                                participants = value.metadata?.peers?.map { it.toString() }
+                                signatures = value.sigs.serialize(context = contextToUse().withEncoding(SNAPPY)).bytes
                         )
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -254,18 +208,18 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 updateTransaction(transaction.id)
             }
 
-    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
-            addTransaction(transaction, metadata, TransactionStatus.IN_FLIGHT) {
+    override fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
+            addTransaction(transaction, TransactionStatus.IN_FLIGHT) {
                 false
             }
 
-    override fun finalizeTransaction(transaction: SignedTransaction, metadata: FlowTransactionMetadata) =
-            addTransaction(transaction, metadata) {
+    override fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean) =
+            addTransaction(transaction) {
                 false
             }
+
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return database.transaction {
-            val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             val delete = criteriaBuilder.createCriteriaDelete(DBTransaction::class.java)
             val root = delete.from(DBTransaction::class.java)
@@ -289,13 +243,12 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                 finalizeTransactionWithExtraSignatures(transaction.id, signatures)
             }
 
-    private fun addTransaction(transaction: SignedTransaction,
-                               metadata: FlowTransactionMetadata? = null,
+    protected fun addTransaction(transaction: SignedTransaction,
                                status: TransactionStatus = TransactionStatus.VERIFIED,
                                updateFn: (SecureHash) -> Boolean): Boolean {
         return database.transaction {
             txStorage.locked {
-                val cachedValue = TxCacheValue(transaction, status, metadata)
+                val cachedValue = TxCacheValue(transaction, status)
                 val addedOrUpdated = addOrUpdate(transaction.id, cachedValue) { k, _ -> updateFn(k) }
                 if (addedOrUpdated) {
                     logger.debug { "Transaction ${transaction.id} has been recorded as $status" }
@@ -436,29 +389,21 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     // Cache value type to just store the immutable bits of a signed transaction plus conversion helpers
-    private class TxCacheValue(
+    internal class TxCacheValue(
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
-            val status: TransactionStatus,
-            // flow metadata recorded for recovery
-            val metadata: FlowTransactionMetadata? = null
+            val status: TransactionStatus
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
                 Collections.unmodifiableList(stx.sigs),
                 status
         )
-        constructor(stx: SignedTransaction, status: TransactionStatus, metadata: FlowTransactionMetadata?) : this(
-                stx.txBits,
-                Collections.unmodifiableList(stx.sigs),
-                status,
-                metadata
-        )
-        constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?, metadata: FlowTransactionMetadata?) : this(
+
+        constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?) : this(
                 stx.txBits,
                 if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs).distinct(),
-                status,
-                metadata
+                status
         )
         fun toSignedTx() = SignedTransaction(txBits, sigs)
     }

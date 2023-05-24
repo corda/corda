@@ -64,6 +64,10 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "PublicKeyToOwningIdentityCache_cache" -> caffeine.maximumSize(defaultCacheSize)
                 name == "NodeAttachmentTrustCalculator_trustedKeysCache" -> caffeine.maximumSize(defaultCacheSize)
                 name == "AttachmentsClassLoader_cache" -> caffeine.maximumSize(defaultAttachmentsClassLoaderCacheSize)
+                name == "RecoveryPartyInfoCache_byCordaX500Name" -> caffeine.maximumSize(defaultCacheSize)
+                name == "RecoveryPartyInfoCache_byPartyId" -> caffeine.maximumSize(defaultCacheSize)
+                name == "DBTransactionRecovery_senderDistributionRecords" -> caffeine.maximumSize(defaultCacheSize)
+                name == "DBTransactionRecovery_receiverDistributionRecords" -> caffeine.maximumSize(defaultCacheSize)
                 else -> throw IllegalArgumentException("Unexpected cache name $name. Did you add a new cache?")
             }
         }

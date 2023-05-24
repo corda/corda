@@ -1,0 +1,112 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="remove_flow_metadata_columns">
+        <dropColumn tableName="node_transactions" columnName="initiator"/>
+        <dropColumn tableName="node_transactions" columnName="participants"/>
+        <dropColumn tableName="node_transactions" columnName="states_to_record"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="create_sender_distribution_records_table">
+        <createTable tableName="node_sender_distribution_records">
+            <column name="sequence_number" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tx_id" type="NVARCHAR(144)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="receiver_party_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="states_to_record" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_sender_distribution_records_pkey">
+        <addPrimaryKey columnNames="timestamp, sequence_number" constraintName="node_sender_distribution_records_pkey"
+                       tableName="node_sender_distribution_records"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_sender_distribution_records_idx">
+        <createIndex indexName="node_sender_distribution_records_idx" tableName="node_sender_distribution_records">
+            <column name="timestamp"/>
+            <column name="sequence_number"/>
+            <column name="receiver_party_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="create_receiver_distribution_records_table">
+        <createTable tableName="node_receiver_distribution_records">
+            <column name="sequence_number" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tx_id" type="NVARCHAR(144)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sender_party_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="distribution_list" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sender_states_to_record" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="receiver_states_to_record" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_receiver_distribution_records_pkey">
+        <addPrimaryKey columnNames="timestamp, sequence_number" constraintName="node_receiver_distribution_records_pkey"
+                       tableName="node_receiver_distribution_records"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_receiver_distribution_records_idx">
+        <createIndex indexName="node_receiver_distribution_records_idx" tableName="node_receiver_distribution_records">
+            <column name="timestamp"/>
+            <column name="sequence_number"/>
+            <column name="sender_party_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="create_recovery_party_info_table">
+        <createTable tableName="node_recovery_party_info">
+            <column name="party_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="party_name" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="node_recovery_party_info_pkey">
+        <addPrimaryKey columnNames="party_id" constraintName="node_recovery_party_info_pkey" tableName="node_recovery_party_info"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="FK__sender_distribution_records__receiver_party_id">
+        <addForeignKeyConstraint baseColumnNames="receiver_party_id" baseTableName="node_sender_distribution_records"
+                                 constraintName="FK__sender_distribution_records__receiver_party_id"
+                                 referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="FK__receiver_distribution_records__initiator_party_id">
+        <addForeignKeyConstraint baseColumnNames="sender_party_id" baseTableName="node_receiver_distribution_records"
+                                 constraintName="FK__receiver_distribution_records__initiator_party_id"
+                                 referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
+    </changeSet>
+
+</databaseChangeLog>
