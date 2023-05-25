@@ -14,14 +14,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
-import kotlin.collections.List
-import kotlin.collections.MutableSet
-import kotlin.collections.Set
-import kotlin.collections.flatMap
-import kotlin.collections.map
-import kotlin.collections.mutableSetOf
-import kotlin.collections.plus
-import kotlin.collections.toSet
 
 /**
  * In the words of Matt working code is more important then pretty code. This class that contains code that may
@@ -104,7 +96,6 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         // User can override this method to perform custom request verification.
     }
 
-    @Suppress("ComplexCondition", "ComplexMethod")
     @Suspendable
     override fun call(): Void? {
         val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
@@ -133,6 +124,13 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
         }
 
+        // store transaction recovery metadata if required
+        val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (txnMetadata != null && useTwoPhaseFinality && payload is SignedTransaction) {
+            payload = SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, txnMetadata.distributionList)
+            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, true)
+        }
+
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
         // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSideSession` to indicate end of
         // data request.
@@ -140,11 +138,6 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         while (true) {
             val loopCnt = loopCount++
             logger.trace { "DataVendingFlow: Main While [$loopCnt]..." }
-            val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-            if (useTwoPhaseFinality && txnMetadata != null && loopCnt == 0 && payload is SignedTransaction) {
-                payload = SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, txnMetadata.distributionList)
-                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, true)
-            }
             val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
                 logger.trace { "sendPayloadAndReceiveDataRequest(): ${request.javaClass.name}" }
                 when (request) {
