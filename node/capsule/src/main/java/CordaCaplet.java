@@ -189,6 +189,7 @@ public class CordaCaplet extends Capsule {
                 "--add-opens=java.base/java.io=ALL-UNNAMED",
                 "--add-opens=java.base/java.net=ALL-UNNAMED",
                 "--add-opens=java.base/javax.net.ssl=ALL-UNNAMED",
+                "--add-opens=java.base/java.security.cert=ALL-UNNAMED",
                 "--add-opens=java.base/java.nio=ALL-UNNAMED");
             args.addAll(1, myArgs);
             pb.command(args);
