@@ -43,8 +43,8 @@ import java.time.Duration
  * can also be included, but they must specify [StatesToRecord.ALL_VISIBLE] for statesToRecord if they wish to record the
  * contract states into their vaults.
  *
- * As of 4.11 a list of observer [FlowSession] can be specified to indicate sessions with transaction non-participants (e.g. observers),
- * and thereby default associated StatesToRecord value to [StatesToRecord.ALL_VISIBLE]
+ * As of 4.11 a list of observer [FlowSession] can be specified to indicate sessions with transaction non-participants (e.g. observers).
+ * This enables ledger recovery to default these sessions associated StatesToRecord value to [StatesToRecord.ALL_VISIBLE].
  *
  * The flow returns the same transaction but with the additional signatures from the notary.
  *
@@ -169,6 +169,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private lateinit var externalTxParticipants: Set<Party>
+    private var txnMetadata: TransactionMetadata? = null
 
     @Suspendable
     @Suppress("ComplexMethod", "NestedBlockDepth")
@@ -221,10 +222,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (useTwoPhaseFinality) {
-            val txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name, statesToRecord,
+            txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name, statesToRecord,
                     DistributionList(deriveStatesToRecord(newPlatformSessions)))
             val stxn = if (requiresNotarisation) {
-                recordLocallyAndBroadcast(newPlatformSessions, transaction, txnMetadata)
+                recordLocallyAndBroadcast(newPlatformSessions, transaction)
                 try {
                     val (notarisedTxn, notarySignatures) = notarise()
                     if (newPlatformSessions.isNotEmpty()) {
@@ -243,12 +244,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             else {
                 if (newPlatformSessions.isNotEmpty())
-                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction, txnMetadata)
+                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction)
                 else
                     recordTransactionLocally(transaction)
                 transaction
             }
-            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn, txnMetadata)
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
             return stxn
         }
         else {
@@ -262,25 +263,25 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, txnMetadata: TransactionMetadata) {
+    private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
-            broadcast(sessions, tx, txnMetadata)
+            broadcast(sessions, tx)
         }
     }
 
     @Suspendable
-    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, txnMetadata: TransactionMetadata) {
+    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocallyAndBroadcast", flowLogic = this) {
             finaliseLocally(tx)
             progressTracker.currentStep = BROADCASTING
-            broadcast(sessions, tx, txnMetadata)
+            broadcast(sessions, tx)
         }
     }
 
     @Suspendable
-    private fun broadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, txnMetadata: TransactionMetadata) {
+    private fun broadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcast", flowLogic = this) {
             sessions.forEach { session ->
                 try {
@@ -364,14 +365,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction,
-                                             txnMetadata: TransactionMetadata? = null) {
+    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
         if (externalTxParticipants.isEmpty() && sessions.isEmpty() && oldParticipants.isEmpty()) return
         progressTracker.currentStep = BROADCASTING
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastToOtherParticipants", flowLogic = this) {
             logger.info("Broadcasting complete transaction to other participants.")
             if (newApi) {
-                oldV3Broadcast(tx, oldParticipants.toSet(), txnMetadata)
+                oldV3Broadcast(tx, oldParticipants.toSet())
                 for (session in sessions) {
                     try {
                         logger.debug { "Sending transaction to party $session." }
@@ -386,14 +386,14 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     }
                 }
             } else {
-                oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet(), txnMetadata)
+                oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
             }
             logger.info("Broadcasted complete transaction to other participants.")
         }
     }
 
     @Suspendable
-    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>, txnMetadata: TransactionMetadata? = null) {
+    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>) {
         for (recipient in recipients) {
             if (!serviceHub.myInfo.isLegalIdentity(recipient)) {
                 logger.debug { "Sending transaction to party $recipient." }
