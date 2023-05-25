@@ -104,6 +104,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         // User can override this method to perform custom request verification.
     }
 
+    @Suppress("ComplexCondition", "ComplexMethod")
     @Suspendable
     override fun call(): Void? {
         val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
