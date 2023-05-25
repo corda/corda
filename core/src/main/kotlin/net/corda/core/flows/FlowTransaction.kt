@@ -25,7 +25,6 @@ data class FlowTransactionInfo(
 data class TransactionMetadata(
         val initiator: CordaX500Name,
         val senderStatesToRecord: StatesToRecord = StatesToRecord.NONE,
-        val receiverStatesToRecord: StatesToRecord? = null,
         val distributionList: DistributionList? = null
 )
 

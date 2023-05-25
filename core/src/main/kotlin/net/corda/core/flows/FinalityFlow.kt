@@ -16,8 +16,8 @@ import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.node.StatesToRecord.ALL_VISIBLE
+import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -221,8 +221,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (useTwoPhaseFinality) {
+            val txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name, statesToRecord,
+                    DistributionList(deriveStatesToRecord(newPlatformSessions)))
             val stxn = if (requiresNotarisation) {
-                recordLocallyAndBroadcast(newPlatformSessions, transaction)
+                recordLocallyAndBroadcast(newPlatformSessions, transaction, txnMetadata)
                 try {
                     val (notarisedTxn, notarySignatures) = notarise()
                     if (newPlatformSessions.isNotEmpty()) {
@@ -241,12 +243,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             else {
                 if (newPlatformSessions.isNotEmpty())
-                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction)
+                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction, txnMetadata)
                 else
                     recordTransactionLocally(transaction)
                 transaction
             }
-            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn, txnMetadata)
             return stxn
         }
         else {
@@ -260,33 +262,29 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, txnMetadata: TransactionMetadata) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
-            broadcast(sessions, tx)
+            broadcast(sessions, tx, txnMetadata)
         }
     }
 
     @Suspendable
-    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, txnMetadata: TransactionMetadata) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocallyAndBroadcast", flowLogic = this) {
             finaliseLocally(tx)
             progressTracker.currentStep = BROADCASTING
-            broadcast(sessions, tx)
+            broadcast(sessions, tx, txnMetadata)
         }
     }
 
     @Suspendable
-    private fun broadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun broadcast(sessions: Collection<FlowSession>, tx: SignedTransaction, txnMetadata: TransactionMetadata) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcast", flowLogic = this) {
             sessions.forEach { session ->
                 try {
                     logger.debug { "Sending transaction to party $session." }
-                    val txnMetadata = TransactionMetadata(
-                            serviceHub.myInfo.legalIdentities.first().name,
-                            statesToRecord,
-                            distributionList = DistributionList(deriveStatesToRecord(sessions)))
                     subFlow(SendTransactionFlow(session, tx, txnMetadata))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
@@ -301,8 +299,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private fun deriveStatesToRecord(newPlatformSessions: Collection<FlowSession>): Map<CordaX500Name, StatesToRecord> {
-        val derivedObserverSessions = newPlatformSessions.map { it.counterparty }.toSet() - externalTxParticipants - oldParticipants
-        val txParticipantSessions = externalTxParticipants - oldParticipants
+        val derivedObserverSessions = newPlatformSessions.map { it.counterparty }.toSet() - externalTxParticipants
+        val txParticipantSessions = externalTxParticipants
         return txParticipantSessions.map { it.name to ONLY_RELEVANT }.toMap() +
                 (derivedObserverSessions + observerSessions.map { it.counterparty }).map { it.name to ALL_VISIBLE }
     }
@@ -366,17 +364,18 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction,
+                                             txnMetadata: TransactionMetadata? = null) {
         if (externalTxParticipants.isEmpty() && sessions.isEmpty() && oldParticipants.isEmpty()) return
         progressTracker.currentStep = BROADCASTING
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastToOtherParticipants", flowLogic = this) {
             logger.info("Broadcasting complete transaction to other participants.")
             if (newApi) {
-                oldV3Broadcast(tx, oldParticipants.toSet())
+                oldV3Broadcast(tx, oldParticipants.toSet(), txnMetadata)
                 for (session in sessions) {
                     try {
                         logger.debug { "Sending transaction to party $session." }
-                        subFlow(SendTransactionFlow(session, tx))
+                        subFlow(SendTransactionFlow(session, tx, txnMetadata))
                     } catch (e: UnexpectedFlowEndException) {
                         throw UnexpectedFlowEndException(
                                 "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
@@ -387,19 +386,19 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     }
                 }
             } else {
-                oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
+                oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet(), txnMetadata)
             }
             logger.info("Broadcasted complete transaction to other participants.")
         }
     }
 
     @Suspendable
-    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>) {
+    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>, txnMetadata: TransactionMetadata? = null) {
         for (recipient in recipients) {
             if (!serviceHub.myInfo.isLegalIdentity(recipient)) {
                 logger.debug { "Sending transaction to party $recipient." }
                 val session = initiateFlow(recipient)
-                subFlow(SendTransactionFlow(session, notarised))
+                subFlow(SendTransactionFlow(session, notarised, txnMetadata))
                 logger.info("Party $recipient received the transaction.")
             }
         }
@@ -504,8 +503,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
-        val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name, receiverStatesToRecord = statesToRecord)
-        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, statesToRecord, true, txnMetadata))
+        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, statesToRecord, true))
 
         val requiresNotarisation = needsNotarySignature(stx)
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY

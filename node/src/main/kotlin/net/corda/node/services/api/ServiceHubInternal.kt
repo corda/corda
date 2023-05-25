@@ -8,6 +8,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.TransactionStatus
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ResolveTransactionsFlow
@@ -194,9 +195,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
             recordTransactions(statesToRecord, txs, SIGNATURE_VERIFICATION_DISABLED)
 
-    override fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, initiator: Boolean) {
-        validatedTransactions.addTransactionRecoveryMetadata(txnId, txnMetadata, initiator)
-    }
+    override fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, caller: CordaX500Name) =
+        validatedTransactions.addTransactionRecoveryMetadata(txnId, txnMetadata, caller)
 
     @Suppress("NestedBlockDepth")
     @VisibleForTesting
@@ -367,13 +367,13 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addUnnotarisedTransaction(transaction: SignedTransaction): Boolean
 
     /**
-     * Add an un-notarised transaction to the store with a status of *MISSING_TRANSACTION_SIG* and inclusive of flow recovery metadata.
+     * Record transaction recovery metadata for a given transaction id.
      *
      * @param id The SecureHash of the transaction to be recorded.
-     * @param metadata Finality flow recovery metadata.
-     * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
+     * @param metadata transaction recovery metadata.
+     * @param caller The CordaX500Name of the party calling this operation.
      */
-    fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean
+    fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name)
 
     /**
      * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.

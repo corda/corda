@@ -33,13 +33,11 @@ import java.security.SignatureException
  * @property deferredAck if set then the caller of this flow is responsible for explicitly sending a FetchDataFlow.Request.End
  *           acknowledgement to indicate transaction resolution is complete. See usage within [FinalityFlow].
  *           Not recommended for 3rd party use.
- * @property txnMetadata transaction recovery metadata (eg. used by Two Phase Finality).
  */
 open class ReceiveTransactionFlow constructor(private val otherSideSession: FlowSession,
                                               private val checkSufficientSignatures: Boolean = true,
                                               private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
-                                              private val deferredAck: Boolean = false,
-                                              private val txnMetadata: TransactionMetadata? = null) : FlowLogic<SignedTransaction>() {
+                                              private val deferredAck: Boolean = false) : FlowLogic<SignedTransaction>() {
     @JvmOverloads constructor(
             otherSideSession: FlowSession,
             checkSufficientSignatures: Boolean = true,
@@ -61,10 +59,10 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val stx =
-            if (fromTwoPhaseFinalityNode && useTwoPhaseFinality && txnMetadata != null) {
+            if (fromTwoPhaseFinalityNode && useTwoPhaseFinality) {
                 otherSideSession.receive<SignedTransactionWithDistributionList>()
                         .unwrap { (stx, senderStatesToRecord, distributionList) ->
-                            recordTransactionMetadata(txnMetadata, stx, senderStatesToRecord, distributionList)
+                            recordTransactionMetadata(stx, senderStatesToRecord, distributionList)
                             stx
                         }
             } else {
@@ -94,18 +92,17 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
     }
 
     @Suspendable
-    private fun recordTransactionMetadata(txnMetadata: TransactionMetadata, stx: SignedTransaction, senderStatesToRecord: String, distributionList: Map<CordaX500Name, String>?) {
+    private fun recordTransactionMetadata(stx: SignedTransaction, senderStatesToRecord: String, distributionList: Map<CordaX500Name, String>?) {
         distributionList?.let {
-            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id,
-                    txnMetadata.copy(senderStatesToRecord = StatesToRecord.valueOf(senderStatesToRecord),
-                            distributionList = DistributionList(
-                                    distributionList.map { (peer, statesToRecord) ->
-                                        if (peer == ourIdentity.name && txnMetadata.receiverStatesToRecord != null)
-                                            peer to txnMetadata.receiverStatesToRecord      // use actual value
-                                        else
-                                            peer to StatesToRecord.valueOf(statesToRecord)  // use hinted value
-                                    }.toMap()
-                            )), false)
+            val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name,
+                    StatesToRecord.valueOf(senderStatesToRecord),
+                    DistributionList(distributionList.map { (peer, peerStatesToRecord) ->
+                        if (peer == ourIdentity.name)
+                            peer to statesToRecord  // use actual value
+                        else
+                            peer to StatesToRecord.valueOf(peerStatesToRecord)  // use hinted value
+                    }.toMap()))
+            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id, txnMetadata, ourIdentity.name)
         }
     }
 

@@ -4,6 +4,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.TransactionMetadata
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
@@ -213,9 +214,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                 false
             }
 
-    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
-        return false
-    }
+    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name) { }
 
     override fun finalizeTransaction(transaction: SignedTransaction) =
             addTransaction(transaction) {

@@ -541,8 +541,7 @@ class FinalityFlowTests : WithFinality {
             // Mimic ReceiveFinalityFlow but fail to finalise
             try {
                 val stx = subFlow(ReceiveTransactionFlow(otherSideSession,
-                        checkSufficientSignatures = false, statesToRecord = StatesToRecord.ONLY_RELEVANT, deferredAck = true,
-                        txnMetadata = TransactionMetadata(otherSideSession.counterparty.name, receiverStatesToRecord = StatesToRecord.ONLY_RELEVANT)))
+                        checkSufficientSignatures = false, statesToRecord = StatesToRecord.ONLY_RELEVANT, deferredAck = true))
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
                 (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)

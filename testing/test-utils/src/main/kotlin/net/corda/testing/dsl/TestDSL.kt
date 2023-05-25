@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.TransactionMetadata
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.notary.NotaryService
@@ -147,7 +148,7 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {}
 
-        override fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, initiator: Boolean) {}
+        override fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, caller: CordaX500Name) {}
     }
 
     private fun copy(): TestTransactionDSLInterpreter =

@@ -96,6 +96,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         // User can override this method to perform custom request verification.
     }
 
+    @Suppress("ComplexCondition", "ComplexMethod")
     @Suspendable
     override fun call(): Void? {
         val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
@@ -124,11 +125,12 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
         }
 
-        // store transaction recovery metadata if required
+        // store and share transaction recovery metadata if required
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        if (txnMetadata != null && useTwoPhaseFinality && payload is SignedTransaction) {
+        val toTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
             payload = SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, txnMetadata.distributionList)
-            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, true)
+            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, ourIdentity.name)
         }
 
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need

@@ -809,9 +809,9 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return true
         }
 
-        override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
-            return database.transaction {
-                delegate.addTransactionRecoveryMetadata(id, metadata, isInitiator)
+        override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name) {
+            database.transaction {
+                delegate.addTransactionRecoveryMetadata(id, metadata, caller)
             }
         }
 

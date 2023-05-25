@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.serialization.internal.CordaSerializationEncoding
 import org.hibernate.annotations.Immutable
 import java.io.Serializable
+import java.lang.IllegalStateException
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
 import javax.persistence.Column
@@ -142,9 +143,9 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     }
 
     @Suppress("IMPLICIT_CAST_TO_ANY")
-    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, isInitiator: Boolean): Boolean {
+    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name) {
         database.transaction {
-            if (isInitiator) {
+            if (caller == metadata.initiator) {
                 metadata.distributionList?.peersToStatesToRecord?.map { (peer, _) ->
                     val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(clock.instant())),
                             id.toString(),
@@ -153,7 +154,8 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                     session.save(senderDistributionRecord)
                 }
             } else {
-                assert(metadata.receiverStatesToRecord != null) { "Missing receiver distribution record metadata: must specify receiverStatesToRecord" }
+                assert(metadata.distributionList != null) { "Missing peer distribution list in Receiver recovery metadata" }
+                val receiverStatesToRecord = metadata.distributionList!!.peersToStatesToRecord[caller] ?: throw IllegalStateException("Missing peer $caller in distribution list of Receiver recovery metadata")
                 val receiverDistributionRecord =
                         DBReceiverDistributionRecord(Key(clock.instant()),
                                 id,
@@ -161,12 +163,11 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                 metadata.distributionList?.peersToStatesToRecord?.map { (peer, statesToRecord) ->
                                     partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }?.toMap() ?: emptyMap(),
                                 metadata.senderStatesToRecord,
-                                metadata.receiverStatesToRecord!!,
+                                receiverStatesToRecord,
                                 cryptoService)
                 session.save(receiverDistributionRecord)
             }
         }
-        return false
     }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
