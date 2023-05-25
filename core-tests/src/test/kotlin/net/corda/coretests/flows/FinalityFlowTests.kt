@@ -541,11 +541,11 @@ class FinalityFlowTests : WithFinality {
             // Mimic ReceiveFinalityFlow but fail to finalise
             try {
                 val stx = subFlow(ReceiveTransactionFlow(otherSideSession,
-                        checkSufficientSignatures = false, statesToRecord = StatesToRecord.ONLY_RELEVANT, deferredAck = true))
+                        checkSufficientSignatures = false, statesToRecord = StatesToRecord.ONLY_RELEVANT, deferredAck = true,
+                        txnMetadata = TransactionMetadata(otherSideSession.counterparty.name, receiverStatesToRecord = StatesToRecord.ONLY_RELEVANT)))
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
                 (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
-                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id, TransactionMetadata(otherSideSession.counterparty.name, StatesToRecord.ONLY_RELEVANT), true)
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
                 logger.info("Peer recorded transaction without notary signature.")
 
@@ -589,7 +589,7 @@ class FinalityFlowTests : WithFinality {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val stxn = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
-            subFlow(SendTransactionFlow(sessionWithCounterParty, stxn))
+            subFlow(SendTransactionFlow(sessionWithCounterParty, stxn, TransactionMetadata(ourIdentity.name)))
             throw UnexpectedFlowEndException("${stxn.id}")
         }
     }

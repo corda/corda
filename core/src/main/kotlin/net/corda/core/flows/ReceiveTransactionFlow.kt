@@ -2,6 +2,8 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.checkParameterHash
@@ -44,7 +46,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             statesToRecord: StatesToRecord = StatesToRecord.NONE
     ) : this(otherSideSession, checkSufficientSignatures, statesToRecord, false)
 
-    @Suppress("KDocMissingDocumentation", "ComplexMethod")
+    @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
             AttachmentResolutionException::class,
@@ -56,33 +58,29 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         } else {
             logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
-        val stx = otherSideSession.receive<SignedTransactionWithDistributionList>().unwrap { (stx, senderStatesToRecord, distributionList) ->
-            stx.pushToLoggingContext()
-            logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
-            checkParameterHash(stx.networkParametersHash)
-            subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, deferredAck))
-            logger.info("Transaction dependencies resolution completed.")
-            try {
-                stx.verify(serviceHub, checkSufficientSignatures)
-            } catch (e: Exception) {
-                logger.warn("Transaction verification failed.")
-                throw e
+        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        val stx =
+            if (fromTwoPhaseFinalityNode && useTwoPhaseFinality && txnMetadata != null) {
+                otherSideSession.receive<SignedTransactionWithDistributionList>()
+                        .unwrap { (stx, senderStatesToRecord, distributionList) ->
+                            recordTransactionMetadata(txnMetadata, stx, senderStatesToRecord, distributionList)
+                            stx
+                        }
+            } else {
+                otherSideSession.receive<SignedTransaction>().unwrap { it }
             }
-            txnMetadata?.let { txnMetadata ->
-                distributionList?.let {
-                    (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id,
-                            txnMetadata.copy(senderStatesToRecord = StatesToRecord.valueOf(senderStatesToRecord),
-                                distributionList = DistributionList(
-                                    distributionList.map { (peer, statesToRecord) ->
-                                        if (peer == ourIdentity.name)
-                                            peer to txnMetadata.receiverStatesToRecord!!    // use actual value
-                                        else
-                                            peer to StatesToRecord.valueOf(statesToRecord)  // use hinted value
-                                    }.toMap()
-                            )), false)
-                }
-            }
-            stx
+
+        stx.pushToLoggingContext()
+        logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
+        checkParameterHash(stx.networkParametersHash)
+        subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, deferredAck))
+        logger.info("Transaction dependencies resolution completed.")
+        try {
+            stx.verify(serviceHub, checkSufficientSignatures)
+        } catch (e: Exception) {
+            logger.warn("Transaction verification failed.")
+            throw e
         }
         if (checkSufficientSignatures) {
             // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
@@ -93,6 +91,22 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             logger.info("Successfully recorded received transaction locally.")
         }
         return stx
+    }
+
+    @Suspendable
+    private fun recordTransactionMetadata(txnMetadata: TransactionMetadata, stx: SignedTransaction, senderStatesToRecord: String, distributionList: Map<CordaX500Name, String>?) {
+        distributionList?.let {
+            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id,
+                    txnMetadata.copy(senderStatesToRecord = StatesToRecord.valueOf(senderStatesToRecord),
+                            distributionList = DistributionList(
+                                    distributionList.map { (peer, statesToRecord) ->
+                                        if (peer == ourIdentity.name && txnMetadata.receiverStatesToRecord != null)
+                                            peer to txnMetadata.receiverStatesToRecord      // use actual value
+                                        else
+                                            peer to StatesToRecord.valueOf(statesToRecord)  // use hinted value
+                                    }.toMap()
+                            )), false)
+        }
     }
 
     /**

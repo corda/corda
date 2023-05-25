@@ -139,7 +139,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         while (true) {
             val loopCnt = loopCount++
             logger.trace { "DataVendingFlow: Main While [$loopCnt]..." }
-            if (txnMetadata != null && loopCnt == 0 && payload is SignedTransaction) {
+            val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+            if (useTwoPhaseFinality && txnMetadata != null && loopCnt == 0 && payload is SignedTransaction) {
                 payload = SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, txnMetadata.distributionList)
                 (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, true)
             }
