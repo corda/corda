@@ -33,11 +33,13 @@ import java.security.SignatureException
  * @property deferredAck if set then the caller of this flow is responsible for explicitly sending a FetchDataFlow.Request.End
  *           acknowledgement to indicate transaction resolution is complete. See usage within [FinalityFlow].
  *           Not recommended for 3rd party use.
+ * @property expectRecoveryMetadata should be set to true when the corresponding [SendTransactionFlow] passes in transaction recovery metadata using [TransactionMetadata].
  */
 open class ReceiveTransactionFlow constructor(private val otherSideSession: FlowSession,
                                               private val checkSufficientSignatures: Boolean = true,
                                               private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
-                                              private val deferredAck: Boolean = false) : FlowLogic<SignedTransaction>() {
+                                              private val deferredAck: Boolean = false,
+                                              private val expectRecoveryMetadata: Boolean = false) : FlowLogic<SignedTransaction>() {
     @JvmOverloads constructor(
             otherSideSession: FlowSession,
             checkSufficientSignatures: Boolean = true,
@@ -59,7 +61,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val stx =
-            if (fromTwoPhaseFinalityNode && useTwoPhaseFinality) {
+            if (expectRecoveryMetadata && fromTwoPhaseFinalityNode && useTwoPhaseFinality) {
                 otherSideSession.receive<SignedTransactionWithDistributionList>()
                         .unwrap { (stx, senderStatesToRecord, distributionList) ->
                             recordTransactionMetadata(stx, senderStatesToRecord, distributionList)
