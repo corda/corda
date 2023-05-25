@@ -2,7 +2,6 @@ package net.corda.node.migration
 
 import liquibase.database.Database
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
@@ -19,6 +18,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
+import net.corda.node.services.vault.toStateRef
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.SchemaMigration
@@ -62,8 +62,7 @@ class VaultStateMigration : CordaMigration() {
     private fun getStateAndRef(persistentState: VaultSchemaV1.VaultStates): StateAndRef<ContractState> {
         val persistentStateRef = persistentState.stateRef ?:
                 throw VaultStateMigrationException("Persistent state ref missing from state")
-        val txHash = SecureHash.create(persistentStateRef.txId)
-        val stateRef = StateRef(txHash, persistentStateRef.index)
+        val stateRef = persistentStateRef.toStateRef()
         val state = try {
             servicesForResolution.loadState(stateRef)
         } catch (e: Exception) {
