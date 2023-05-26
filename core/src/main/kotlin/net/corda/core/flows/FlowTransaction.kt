@@ -25,7 +25,8 @@ data class FlowTransactionInfo(
 data class TransactionMetadata(
         val initiator: CordaX500Name,
         val senderStatesToRecord: StatesToRecord = StatesToRecord.NONE,
-        val distributionList: DistributionList? = null
+        val distributionList: DistributionList? = null,
+        val persist: Boolean = true     // whether to persist to transactional store
 )
 
 @CordaSerializable

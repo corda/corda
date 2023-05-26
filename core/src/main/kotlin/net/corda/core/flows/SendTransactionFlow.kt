@@ -130,7 +130,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         val toTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
             payload = SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, txnMetadata.distributionList)
-            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, ourIdentity.name)
+            if (txnMetadata.persist)
+                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, ourIdentity.name)
         }
 
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need

@@ -385,7 +385,7 @@ class FinalityFlowTests : WithFinality {
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
         getSenderRecoveryData(stx.id, aliceNode.database).apply {
-            assertEquals(4, this.size)
+            assertEquals(2, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[1].statesToRecord)
@@ -418,7 +418,7 @@ class FinalityFlowTests : WithFinality {
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
 
-        assertEquals(4, getSenderRecoveryData(stx3.id, aliceNode.database).size)
+        assertEquals(2, getSenderRecoveryData(stx3.id, aliceNode.database).size)
         assertThat(getReceiverRecoveryData(stx3.id, bobNode.database)).isNotNull
         assertThat(getReceiverRecoveryData(stx3.id, charlieNode.database)).isNotNull
     }
