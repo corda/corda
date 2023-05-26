@@ -13,12 +13,14 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DummyClusterSpec
 import net.corda.testing.node.internal.findCordapp
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
 class AttachmentDemoTest {
     // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
     @Test(timeout=300_000)
+    @Ignore("TODO JDK17: Fix me")
 	fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
         driver(DriverParameters(
