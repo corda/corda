@@ -4,9 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -14,6 +12,14 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
+import kotlin.collections.List
+import kotlin.collections.MutableSet
+import kotlin.collections.Set
+import kotlin.collections.flatMap
+import kotlin.collections.map
+import kotlin.collections.mutableSetOf
+import kotlin.collections.plus
+import kotlin.collections.toSet
 
 /**
  * In the words of Matt working code is more important then pretty code. This class that contains code that may
@@ -129,7 +135,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val toTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
-            payload = SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, txnMetadata.distributionList)
+            assert(txnMetadata.distributionList != null) { "Transaction recovery distribution list must be specified" }
+            payload = SignedTransactionWithDistributionList(payload, txnMetadata.distributionList!!)
             if (txnMetadata.persist)
                 (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, ourIdentity.name)
         }
@@ -261,13 +268,5 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
 @CordaSerializable
 data class SignedTransactionWithDistributionList(
         val stx: SignedTransaction,
-        val senderStatesToRecord: String,
-        val distributionList: Map<CordaX500Name, String>? = null
-
-) {
-    constructor(stx: SignedTransaction, senderStatesToRecord: StatesToRecord, distributionList: DistributionList?):
-            this(stx, senderStatesToRecord.toString(), distributionList?.peersToStatesToRecord?.map { (peer, statesToRecord) ->
-                peer to statesToRecord.toString()
-            }?.toMap()
-    )
-}
+        val distributionList: DistributionList
+)

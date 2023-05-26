@@ -1,8 +1,11 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
-import net.corda.core.identity.CordaX500Name
+import net.corda.core.contracts.AttachmentResolutionException
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ServiceHubCoreInternal
@@ -63,8 +66,8 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         val stx =
             if (expectRecoveryMetadata && fromTwoPhaseFinalityNode && useTwoPhaseFinality) {
                 otherSideSession.receive<SignedTransactionWithDistributionList>()
-                        .unwrap { (stx, senderStatesToRecord, distributionList) ->
-                            recordTransactionMetadata(stx, senderStatesToRecord, distributionList)
+                        .unwrap { (stx, distributionList) ->
+                            recordTransactionMetadata(stx, distributionList)
                             stx
                         }
             } else {
@@ -94,16 +97,16 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
     }
 
     @Suspendable
-    private fun recordTransactionMetadata(stx: SignedTransaction, senderStatesToRecord: String, distributionList: Map<CordaX500Name, String>?) {
+    private fun recordTransactionMetadata(stx: SignedTransaction, distributionList: DistributionList?) {
         distributionList?.let {
             val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name,
-                    StatesToRecord.valueOf(senderStatesToRecord),
-                    DistributionList(distributionList.map { (peer, peerStatesToRecord) ->
-                        if (peer == ourIdentity.name)
-                            peer to statesToRecord  // use actual value
-                        else
-                            peer to StatesToRecord.valueOf(peerStatesToRecord)  // use hinted value
-                    }.toMap()))
+                    DistributionList(distributionList.senderStatesToRecord,
+                        distributionList.peersToStatesToRecord.map { (peer, peerStatesToRecord) ->
+                            if (peer == ourIdentity.name)
+                                peer to statesToRecord  // use actual value
+                            else
+                                peer to peerStatesToRecord  // use hinted value
+                        }.toMap()))
             (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id, txnMetadata, ourIdentity.name)
         }
     }

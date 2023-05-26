@@ -222,8 +222,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (useTwoPhaseFinality) {
-            txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name, statesToRecord,
-                    DistributionList(deriveStatesToRecord(newPlatformSessions)))
+            txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name,
+                    DistributionList(statesToRecord, deriveStatesToRecord(newPlatformSessions)))
             val stxn = if (requiresNotarisation) {
                 recordLocallyAndBroadcast(newPlatformSessions, transaction)
                 try {

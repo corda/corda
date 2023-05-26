@@ -150,7 +150,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                     val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(clock.instant())),
                             id.toString(),
                             partyInfoCache.getPartyIdByCordaX500Name(peer),
-                            metadata.senderStatesToRecord)
+                            metadata.distributionList?.senderStatesToRecord ?: throw IllegalStateException("Missing senderStatesToRecord in distribution list of Sender recovery metadata"))
                     session.save(senderDistributionRecord)
                 }
             } else {
@@ -162,7 +162,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                 partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
                                 metadata.distributionList?.peersToStatesToRecord?.map { (peer, statesToRecord) ->
                                     partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }?.toMap() ?: emptyMap(),
-                                metadata.senderStatesToRecord,
+                                metadata.distributionList?.senderStatesToRecord ?: throw IllegalStateException("Missing senderStatesToRecord in distribution list of Receiver recovery metadata"),
                                 receiverStatesToRecord,
                                 cryptoService)
                 session.save(receiverDistributionRecord)
