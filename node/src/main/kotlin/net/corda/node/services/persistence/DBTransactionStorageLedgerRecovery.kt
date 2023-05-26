@@ -146,23 +146,22 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name) {
         database.transaction {
             if (caller == metadata.initiator) {
-                metadata.distributionList?.peersToStatesToRecord?.map { (peer, _) ->
+                metadata.distributionList.peersToStatesToRecord.map { (peer, _) ->
                     val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(clock.instant())),
                             id.toString(),
                             partyInfoCache.getPartyIdByCordaX500Name(peer),
-                            metadata.distributionList?.senderStatesToRecord ?: throw IllegalStateException("Missing senderStatesToRecord in distribution list of Sender recovery metadata"))
+                            metadata.distributionList.senderStatesToRecord)
                     session.save(senderDistributionRecord)
                 }
             } else {
-                assert(metadata.distributionList != null) { "Missing peer distribution list in Receiver recovery metadata" }
-                val receiverStatesToRecord = metadata.distributionList!!.peersToStatesToRecord[caller] ?: throw IllegalStateException("Missing peer $caller in distribution list of Receiver recovery metadata")
+                val receiverStatesToRecord = metadata.distributionList.peersToStatesToRecord[caller] ?: throw IllegalStateException("Missing peer $caller in distribution list of Receiver recovery metadata")
                 val receiverDistributionRecord =
                         DBReceiverDistributionRecord(Key(clock.instant()),
                                 id,
                                 partyInfoCache.getPartyIdByCordaX500Name(metadata.initiator),
-                                metadata.distributionList?.peersToStatesToRecord?.map { (peer, statesToRecord) ->
-                                    partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }?.toMap() ?: emptyMap(),
-                                metadata.distributionList?.senderStatesToRecord ?: throw IllegalStateException("Missing senderStatesToRecord in distribution list of Receiver recovery metadata"),
+                                metadata.distributionList.peersToStatesToRecord.map { (peer, statesToRecord) ->
+                                    partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }.toMap(),
+                                metadata.distributionList.senderStatesToRecord,
                                 receiverStatesToRecord,
                                 cryptoService)
                 session.save(receiverDistributionRecord)

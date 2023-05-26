@@ -135,8 +135,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val toTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
-            assert(txnMetadata.distributionList != null) { "Transaction recovery distribution list must be specified" }
-            payload = SignedTransactionWithDistributionList(payload, txnMetadata.distributionList!!)
+            payload = SignedTransactionWithDistributionList(payload, txnMetadata.distributionList)
             if (txnMetadata.persist)
                 (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, ourIdentity.name)
         }

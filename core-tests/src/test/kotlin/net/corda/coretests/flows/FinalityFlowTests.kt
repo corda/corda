@@ -10,6 +10,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.DistributionList
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -587,7 +588,8 @@ class FinalityFlowTests : WithFinality {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val stxn = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
-            subFlow(SendTransactionFlow(sessionWithCounterParty, stxn, TransactionMetadata(ourIdentity.name)))
+            subFlow(SendTransactionFlow(sessionWithCounterParty, stxn,
+                    TransactionMetadata(ourIdentity.name, DistributionList(StatesToRecord.ONLY_RELEVANT, mapOf(BOB_NAME to StatesToRecord.ONLY_RELEVANT)))))
             throw UnexpectedFlowEndException("${stxn.id}")
         }
     }
