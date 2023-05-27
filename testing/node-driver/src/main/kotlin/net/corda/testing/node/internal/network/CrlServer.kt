@@ -4,30 +4,26 @@ package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.toX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.toGeneralNames
 import net.corda.nodeapi.internal.crypto.certificateType
 import net.corda.nodeapi.internal.crypto.toJca
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.testing.core.createCRL
 import org.bouncycastle.asn1.x509.CRLDistPoint
 import org.bouncycastle.asn1.x509.DistributionPoint
 import org.bouncycastle.asn1.x509.DistributionPointName
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralNames
-import org.bouncycastle.asn1.x509.IssuingDistributionPoint
-import org.bouncycastle.asn1.x509.ReasonFlags
-import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
-import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509v2CRLBuilder
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -36,11 +32,12 @@ import org.eclipse.jetty.servlet.ServletHolder
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
-import java.math.BigInteger
 import java.net.InetSocketAddress
+import java.net.URI
 import java.security.KeyPair
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
+import java.time.Duration
 import java.util.*
 import javax.security.auth.x500.X500Principal
 import javax.ws.rs.GET
@@ -51,7 +48,7 @@ import kotlin.collections.ArrayList
 
 class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
     companion object {
-        private const val SIGNATURE_ALGORITHM = "SHA256withECDSA"
+        private val logger = contextLogger()
 
         const val NODE_CRL = "node.crl"
         const val FORBIDDEN_CRL = "forbidden.crl"
@@ -72,8 +69,8 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
                     null
             )
             if (crlDistPoint != null) {
-                val distPointName = DistributionPointName(GeneralNames(GeneralName(GeneralName.uniformResourceIdentifier, crlDistPoint)))
-                val crlIssuerGeneralNames = crlIssuer?.let { GeneralNames(GeneralName(X500Name.getInstance(it.encoded))) }
+                val distPointName = DistributionPointName(toGeneralNames(crlDistPoint, GeneralName.uniformResourceIdentifier))
+                val crlIssuerGeneralNames = crlIssuer?.let { GeneralNames(GeneralName(it.toX500Name())) }
                 val distPoint = DistributionPoint(distPointName, null, crlIssuerGeneralNames)
                 builder.addExtension(Extension.cRLDistributionPoints, false, CRLDistPoint(arrayOf(distPoint)))
             }
@@ -87,13 +84,16 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
         }
     }
 
-    val revokedNodeCerts: MutableList<BigInteger> = ArrayList()
-    val revokedIntermediateCerts: MutableList<BigInteger> = ArrayList()
+    val revokedNodeCerts: MutableList<X509Certificate> = ArrayList()
+    val revokedIntermediateCerts: MutableList<X509Certificate> = ArrayList()
 
     val rootCa: CertificateAndKeyPair = DEV_ROOT_CA
 
     private lateinit var _intermediateCa: CertificateAndKeyPair
     val intermediateCa: CertificateAndKeyPair get() = _intermediateCa
+
+    @Volatile
+    var delay: Duration? = null
 
     val hostAndPort: NetworkHostAndPort
         get() = server.connectors.mapNotNull { it as? ServerConnector }
@@ -106,7 +106,7 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
                 DEV_INTERMEDIATE_CA.certificate.withCrlDistPoint(rootCa.keyPair, "http://$hostAndPort/crl/$INTERMEDIATE_CRL"),
                 DEV_INTERMEDIATE_CA.keyPair
         )
-        println("Network management web services started on $hostAndPort")
+        logger.info("Network management web services started on $hostAndPort")
     }
 
     fun replaceNodeCertDistPoint(nodeCaCert: X509Certificate,
@@ -115,29 +115,20 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
         return nodeCaCert.withCrlDistPoint(intermediateCa.keyPair, nodeCaCrlDistPoint, crlIssuer)
     }
 
-    fun createRevocationList(signatureAlgorithm: String,
-                             ca: CertificateAndKeyPair,
-                             endpoint: String,
-                             indirect: Boolean,
-                             serialNumbers: List<BigInteger>): X509CRL {
-        println("Generating CRL for $endpoint")
-        val builder = JcaX509v2CRLBuilder(ca.certificate.subjectX500Principal, Date(System.currentTimeMillis() - 1.minutes.toMillis()))
-        val extensionUtils = JcaX509ExtensionUtils()
-        builder.addExtension(Extension.authorityKeyIdentifier, false, extensionUtils.createAuthorityKeyIdentifier(ca.certificate))
-        val issuingDistPointName = GeneralName(GeneralName.uniformResourceIdentifier, "http://$hostAndPort/crl/$endpoint")
-        // This is required and needs to match the certificate settings with respect to being indirect
-        val issuingDistPoint = IssuingDistributionPoint(DistributionPointName(GeneralNames(issuingDistPointName)), indirect, false)
-        builder.addExtension(Extension.issuingDistributionPoint, true, issuingDistPoint)
-        builder.setNextUpdate(Date(System.currentTimeMillis() + 1.seconds.toMillis()))
-        serialNumbers.forEach {
-            builder.addCRLEntry(it, Date(System.currentTimeMillis() - 10.minutes.toMillis()), ReasonFlags.certificateHold)
-        }
-        val signer = JcaContentSignerBuilder(signatureAlgorithm).setProvider(Crypto.findProvider("BC")).build(ca.keyPair.private)
-        return JcaX509CRLConverter().setProvider(Crypto.findProvider("BC")).getCRL(builder.build(signer))
+    private fun createServerCRL(issuer: CertificateAndKeyPair,
+                                endpoint: String,
+                                indirect: Boolean,
+                                revokedCerts: List<X509Certificate>): X509CRL {
+        logger.info("Generating CRL for /$endpoint: ${revokedCerts.map { it.serialNumber }}")
+        return createCRL(
+                issuer,
+                revokedCerts,
+                issuingDistPoint = URI("http://$hostAndPort/crl/$endpoint"),
+                indirect = indirect
+        )
     }
 
     override fun close() {
-        println("Shutting down network management web services...")
         server.stop()
         server.join()
     }
@@ -159,8 +150,8 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
         @Path(NODE_CRL)
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
-            return Response.ok(crlServer.createRevocationList(
-                    SIGNATURE_ALGORITHM,
+            crlServer.delay?.toMillis()?.let(Thread::sleep)
+            return Response.ok(crlServer.createServerCRL(
                     crlServer.intermediateCa,
                     NODE_CRL,
                     false,
@@ -179,8 +170,8 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
         @Path(INTERMEDIATE_CRL)
         @Produces("application/pkcs7-crl")
         fun getIntermediateCRL(): Response {
-            return Response.ok(crlServer.createRevocationList(
-                    SIGNATURE_ALGORITHM,
+            crlServer.delay?.toMillis()?.let(Thread::sleep)
+            return Response.ok(crlServer.createServerCRL(
                     crlServer.rootCa,
                     INTERMEDIATE_CRL,
                     false,
@@ -192,11 +183,11 @@ class CrlServer(hostAndPort: NetworkHostAndPort) : Closeable {
         @Path(EMPTY_CRL)
         @Produces("application/pkcs7-crl")
         fun getEmptyCRL(): Response {
-            return Response.ok(crlServer.createRevocationList(
-                    SIGNATURE_ALGORITHM,
+            return Response.ok(crlServer.createServerCRL(
                     crlServer.rootCa,
                     EMPTY_CRL,
-                    true, emptyList()
+                    true,
+                    emptyList()
             ).encoded).build()
         }
     }

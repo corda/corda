@@ -100,7 +100,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
     private class AMQPBridge(val sourceX500Name: String,
                              val queueName: String,
                              val targets: List<NetworkHostAndPort>,
-                             val legalNames: Set<CordaX500Name>,
+                             val allowedRemoteLegalNames: Set<CordaX500Name>,
                              private val amqpConfig: AMQPConfiguration,
                              sharedEventGroup: EventLoopGroup,
                              private val artemis: ArtemisSessionProvider,
@@ -116,7 +116,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 MDC.put("queueName", queueName)
                 MDC.put("source", amqpConfig.sourceX500Name)
                 MDC.put("targets", targets.joinToString(separator = ";") { it.toString() })
-                MDC.put("legalNames", legalNames.joinToString(separator = ";") { it.toString() })
+                MDC.put("allowedRemoteLegalNames", allowedRemoteLegalNames.joinToString(separator = ";") { it.toString() })
                 MDC.put("maxMessageSize", amqpConfig.maxMessageSize.toString())
                 block()
             } finally {
@@ -134,7 +134,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
 
         private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
 
-        val amqpClient = AMQPClient(targets, legalNames, amqpConfig, sharedThreadPool = sharedEventGroup)
+        val amqpClient = AMQPClient(targets, allowedRemoteLegalNames, amqpConfig, sharedThreadPool = sharedEventGroup)
         private var session: ClientSession? = null
         private var consumer: ClientConsumer? = null
         private var connectedSubscription: Subscription? = null
@@ -231,7 +231,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 }
                 ArtemisState.STOPPING
             }
-            bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
+            bridgeMetricsService?.bridgeDisconnected(targets, allowedRemoteLegalNames)
             connectedSubscription?.unsubscribe()
             connectedSubscription = null
             // Do this last because we already scheduled the Artemis stop, so it's okay to unsubscribe onConnected first.
@@ -243,7 +243,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
             if (connected) {
                 logInfoWithMDC("Bridge Connected")
 
-                bridgeMetricsService?.bridgeConnected(targets, legalNames)
+                bridgeMetricsService?.bridgeConnected(targets, allowedRemoteLegalNames)
                 if (bridgeConnectionTTLSeconds > 0) {
                     // AMQP outbound connection will be restarted periodically with bridgeConnectionTTLSeconds interval
                     amqpRestartEvent = scheduledArtemisInExecutor(bridgeConnectionTTLSeconds.toLong(), TimeUnit.SECONDS,
@@ -286,7 +286,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 logInfoWithMDC("Bridge Disconnected")
                 amqpRestartEvent?.cancel(false)
                 if (artemisState != ArtemisState.AMQP_STARTING && artemisState != ArtemisState.STOPPED) {
-                    bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
+                    bridgeMetricsService?.bridgeDisconnected(targets, allowedRemoteLegalNames)
                 }
                 artemis(ArtemisState.STOPPING) { precedingState: ArtemisState ->
                     logInfoWithMDC("Stopping Artemis because AMQP bridge disconnected")
@@ -418,10 +418,10 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                     properties[key] = value
                 }
             }
-            logDebugWithMDC { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty(MESSAGE_ID_KEY)}" }
+            logDebugWithMDC { "Bridged Send to ${allowedRemoteLegalNames.first()} uuid: ${artemisMessage.getObjectProperty(MESSAGE_ID_KEY)}" }
             val peerInbox = translateLocalQueueToInboxAddress(queueName)
             val sendableMessage = amqpClient.createMessage(artemisMessage.payload(), peerInbox,
-                    legalNames.first().toString(),
+                    allowedRemoteLegalNames.first().toString(),
                     properties)
             sendableMessage.onComplete.then {
                 logDebugWithMDC { "Bridge ACK ${sendableMessage.onComplete.get()}" }
@@ -486,7 +486,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                         queueNamesToBridgesMap.remove(queueName)
                     }
                     bridge.stop()
-                    bridgeMetricsService?.bridgeDestroyed(bridge.targets, bridge.legalNames)
+                    bridgeMetricsService?.bridgeDestroyed(bridge.targets, bridge.allowedRemoteLegalNames)
                 }
             }
         }
@@ -498,7 +498,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
             val bridges = queueNamesToBridgesMap[queueName]?.toList()
             destroyBridge(queueName, bridges?.flatMap { it.targets } ?: emptyList())
             bridges?.map {
-                it.sourceX500Name to BridgeEntry(it.queueName, it.targets, it.legalNames.toList(), serviceAddress = false)
+                it.sourceX500Name to BridgeEntry(it.queueName, it.targets, it.allowedRemoteLegalNames.toList(), serviceAddress = false)
             }?.toMap() ?: emptyMap()
         }
     }

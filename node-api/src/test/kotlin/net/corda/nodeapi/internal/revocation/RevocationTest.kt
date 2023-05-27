@@ -1,20 +1,16 @@
-package net.corda.node.internal.artemis
+package net.corda.nodeapi.internal.revocation
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.utilities.days
-import net.corda.node.internal.artemis.CertificateChainCheckPolicy.RevocationCheck
+import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfigImpl
+import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactoryWithRevocation
+import net.corda.testing.core.createCRL
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.CRLReason
-import org.bouncycastle.asn1.x509.Extension
-import org.bouncycastle.asn1.x509.ExtensionsGenerator
-import org.bouncycastle.asn1.x509.GeneralName
-import org.bouncycastle.asn1.x509.GeneralNames
-import org.bouncycastle.asn1.x509.IssuingDistributionPoint
-import org.bouncycastle.cert.jcajce.JcaX509v2CRLBuilder
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -22,15 +18,18 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.io.File
+import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import java.util.*
+import javax.net.ssl.X509TrustManager
 import javax.security.auth.x500.X500Principal
-import kotlin.test.assertFails
+import kotlin.test.assertFailsWith
 
 @RunWith(Parameterized::class)
-class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
+class RevocationTest(private val revocationMode: RevocationConfig.Mode) {
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "revocationMode = {0}")
@@ -45,8 +44,7 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
     private lateinit var doormanCRL: File
     private lateinit var tlsCRL: File
 
-    private val keyStore = KeyStore.getInstance("JKS")
-    private val trustStore = KeyStore.getInstance("JKS")
+    private lateinit var trustManager: X509TrustManager
 
     private val rootKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
     private val tlsCRLIssuerKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
@@ -61,9 +59,7 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
     private lateinit var tlsCert: X509Certificate
 
     private val chain
-        get() = listOf(tlsCert, nodeCACert, doormanCert, rootCert).map {
-            javax.security.cert.X509Certificate.getInstance(it.encoded)
-        }.toTypedArray()
+        get() = arrayOf(tlsCert, nodeCACert, doormanCert, rootCert)
 
     @Before
     fun before() {
@@ -74,9 +70,17 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
         rootCert = X509Utilities.createSelfSignedCACertificate(X500Principal("CN=root"), rootKeyPair)
         tlsCRLIssuerCert = X509Utilities.createSelfSignedCACertificate(X500Principal("CN=issuer"), tlsCRLIssuerKeyPair)
 
+        val trustStore = KeyStore.getInstance("JKS")
         trustStore.load(null, null)
         trustStore.setCertificateEntry("cordatlscrlsigner", tlsCRLIssuerCert)
         trustStore.setCertificateEntry("cordarootca", rootCert)
+
+        val trustManagerFactory = trustManagerFactoryWithRevocation(
+                CertificateStore.of(X509KeyStore(trustStore, "pass"), "pass", "pass"),
+                RevocationConfigImpl(revocationMode),
+                CertDistPointCrlSource()
+        )
+        trustManager = trustManagerFactory.trustManagers.single() as X509TrustManager
 
         doormanCert = X509Utilities.createCertificate(
                 CertificateType.INTERMEDIATE_CA, rootCert, rootKeyPair, X500Principal("CN=doorman"), doormanKeyPair.public,
@@ -91,43 +95,34 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
                 crlDistPoint = tlsCRL.toURI().toString(), crlIssuer = X500Name.getInstance(tlsCRLIssuerCert.issuerX500Principal.encoded)
         )
 
-        rootCRL.createCRL(rootCert, rootKeyPair.private, false)
-        doormanCRL.createCRL(doormanCert, doormanKeyPair.private, false)
-        tlsCRL.createCRL(tlsCRLIssuerCert, tlsCRLIssuerKeyPair.private, true)
+        rootCRL.writeCRL(rootCert, rootKeyPair.private, false)
+        doormanCRL.writeCRL(doormanCert, doormanKeyPair.private, false)
+        tlsCRL.writeCRL(tlsCRLIssuerCert, tlsCRLIssuerKeyPair.private, true)
     }
 
-    private fun File.createCRL(certificate: X509Certificate, privateKey: PrivateKey, indirect: Boolean, vararg revoked: X509Certificate) {
-        val builder = JcaX509v2CRLBuilder(certificate.subjectX500Principal, Date())
-        builder.setNextUpdate(Date.from(Date().toInstant() + 7.days))
-        builder.addExtension(Extension.issuingDistributionPoint, true, IssuingDistributionPoint(null, indirect, false))
-        revoked.forEach {
-            val extensionsGenerator = ExtensionsGenerator()
-            extensionsGenerator.addExtension(Extension.reasonCode, false, CRLReason.lookup(CRLReason.keyCompromise))
-            // Certificate issuer is required for indirect CRL
-            val certificateIssuerName = X500Name.getInstance(it.issuerX500Principal.encoded)
-            extensionsGenerator.addExtension(Extension.certificateIssuer, true, GeneralNames(GeneralName(certificateIssuerName)))
-            builder.addCRLEntry(it.serialNumber, Date(), extensionsGenerator.generate())
-        }
-        val holder = builder.build(JcaContentSignerBuilder("SHA256withECDSA").setProvider(Crypto.findProvider("BC")).build(privateKey))
-        outputStream().use { it.write(holder.encoded) }
+    private fun File.writeCRL(certificate: X509Certificate, privateKey: PrivateKey, indirect: Boolean, vararg revoked: X509Certificate) {
+        val crl = createCRL(
+                CertificateAndKeyPair(certificate, KeyPair(certificate.publicKey, privateKey)),
+                revoked.asList(),
+                indirect = indirect
+        )
+        writeBytes(crl.encoded)
     }
 
-    private fun assertFailsFor(vararg modes: RevocationConfig.Mode, block: () -> Unit) {
-        if (revocationMode in modes) assertFails(block) else block()
+    private fun assertFailsFor(vararg modes: RevocationConfig.Mode) {
+        if (revocationMode in modes) assertFailsWith(CertificateException::class, ::doRevocationCheck) else doRevocationCheck()
     }
 
     @Test(timeout = 300_000)
     fun `ok with empty CRLs`() {
-        RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
+        doRevocationCheck()
     }
 
     @Test(timeout = 300_000)
     fun `soft fail with revoked TLS certificate`() {
-        tlsCRL.createCRL(tlsCRLIssuerCert, tlsCRLIssuerKeyPair.private, true, tlsCert)
+        tlsCRL.writeCRL(tlsCRLIssuerCert, tlsCRLIssuerKeyPair.private, true, tlsCert)
 
-        assertFailsFor(RevocationConfig.Mode.SOFT_FAIL, RevocationConfig.Mode.HARD_FAIL) {
-            RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
-        }
+        assertFailsFor(RevocationConfig.Mode.SOFT_FAIL, RevocationConfig.Mode.HARD_FAIL)
     }
 
     @Test(timeout = 300_000)
@@ -138,9 +133,7 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
                 crlIssuer = X500Name.getInstance(tlsCRLIssuerCert.issuerX500Principal.encoded)
         )
 
-        assertFailsFor(RevocationConfig.Mode.HARD_FAIL) {
-            RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
-        }
+        assertFailsFor(RevocationConfig.Mode.HARD_FAIL)
     }
 
     @Test(timeout = 300_000)
@@ -150,9 +143,7 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
                 crlDistPoint = tlsCRL.toURI().toString(), crlIssuer = X500Name("CN=unknown")
         )
 
-        assertFailsFor(RevocationConfig.Mode.HARD_FAIL) {
-            RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
-        }
+        assertFailsFor(RevocationConfig.Mode.HARD_FAIL)
     }
 
     @Test(timeout = 300_000)
@@ -162,9 +153,7 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
                 crlDistPoint = tlsCRL.toURI().toString()
         )
 
-        assertFailsFor(RevocationConfig.Mode.HARD_FAIL) {
-            RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
-        }
+        assertFailsFor(RevocationConfig.Mode.HARD_FAIL)
     }
 
     @Test(timeout = 300_000)
@@ -174,18 +163,16 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
                 CertificateType.TLS, nodeCACert, nodeCAKeyPair, X500Principal("CN=other"), otherKeyPair.public,
                 crlDistPoint = tlsCRL.toURI().toString(), crlIssuer = X500Name.getInstance(tlsCRLIssuerCert.issuerX500Principal.encoded)
         )
-        tlsCRL.createCRL(tlsCRLIssuerCert, tlsCRLIssuerKeyPair.private, true, otherCert)
+        tlsCRL.writeCRL(tlsCRLIssuerCert, tlsCRLIssuerKeyPair.private, true, otherCert)
 
-        RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
+        doRevocationCheck()
     }
 
     @Test(timeout = 300_000)
     fun `soft fail with revoked node CA certificate`() {
-        doormanCRL.createCRL(doormanCert, doormanKeyPair.private, false, nodeCACert)
+        doormanCRL.writeCRL(doormanCert, doormanKeyPair.private, false, nodeCACert)
 
-        assertFailsFor(RevocationConfig.Mode.SOFT_FAIL, RevocationConfig.Mode.HARD_FAIL) {
-            RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
-        }
+        assertFailsFor(RevocationConfig.Mode.SOFT_FAIL, RevocationConfig.Mode.HARD_FAIL)
     }
 
     @Test(timeout = 300_000)
@@ -195,9 +182,7 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
                 crlDistPoint = "http://unknown-host:10000/certificate-revocation-list/doorman"
         )
 
-        assertFailsFor(RevocationConfig.Mode.HARD_FAIL) {
-            RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
-        }
+        assertFailsFor(RevocationConfig.Mode.HARD_FAIL)
     }
 
     @Test(timeout = 300_000)
@@ -207,8 +192,12 @@ class RevocationCheckTest(private val revocationMode: RevocationConfig.Mode) {
                 CertificateType.NODE_CA, doormanCert, doormanKeyPair, X500Principal("CN=other"), otherKeyPair.public,
                 crlDistPoint = doormanCRL.toURI().toString()
         )
-        doormanCRL.createCRL(doormanCert, doormanKeyPair.private, false, otherCert)
+        doormanCRL.writeCRL(doormanCert, doormanKeyPair.private, false, otherCert)
 
-        RevocationCheck(revocationMode).createCheck(keyStore, trustStore).checkCertificateChain(chain)
+        doRevocationCheck()
+    }
+
+    private fun doRevocationCheck() {
+        trustManager.checkClientTrusted(chain, "ECDHE_ECDSA")
     }
 }

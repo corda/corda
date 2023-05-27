@@ -1,30 +1,50 @@
-@file:Suppress("UNUSED_PARAMETER")
 @file:JvmName("TestUtils")
+@file:Suppress("TooGenericExceptionCaught", "MagicNumber", "ComplexMethod", "LongParameterList")
 
 package net.corda.testing.core
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.toX500Name
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.millis
+import net.corda.core.utilities.minutes
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
-import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.toGeneralNames
+import org.bouncycastle.asn1.x509.CRLReason
+import org.bouncycastle.asn1.x509.DistributionPointName
+import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.ExtensionsGenerator
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralNames
+import org.bouncycastle.asn1.x509.IssuingDistributionPoint
+import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
+import org.bouncycastle.cert.jcajce.JcaX509v2CRLBuilder
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import java.math.BigInteger
+import java.net.URI
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.fail
 
@@ -109,6 +129,44 @@ fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): Party
     return getTestPartyAndCertificate(Party(name, publicKey))
 }
 
+fun createCRL(issuer: CertificateAndKeyPair,
+              revokedCerts: List<X509Certificate>,
+              issuingDistPoint: URI? = null,
+              thisUpdate: Instant = Instant.now(),
+              nextUpdate: Instant = thisUpdate + 5.minutes,
+              indirect: Boolean = false,
+              revocationDate: Instant = thisUpdate,
+              crlReason: Int = CRLReason.keyCompromise,
+              signatureAlgorithm: String = "SHA256withECDSA"): X509CRL {
+    val builder = JcaX509v2CRLBuilder(issuer.certificate.subjectX500Principal, Date.from(thisUpdate))
+    val extensionUtils = JcaX509ExtensionUtils()
+    builder.addExtension(Extension.authorityKeyIdentifier, false, extensionUtils.createAuthorityKeyIdentifier(issuer.certificate))
+    // This is required and needs to match the certificate settings with respect to being indirect
+    builder.addExtension(
+            Extension.issuingDistributionPoint,
+            true,
+            IssuingDistributionPoint(
+                    issuingDistPoint?.let { DistributionPointName(toGeneralNames(it.toString(), GeneralName.uniformResourceIdentifier)) },
+                    indirect,
+                    false
+            )
+    )
+    builder.setNextUpdate(Date.from(nextUpdate))
+    for (revokedCert in revokedCerts) {
+        val extensionsGenerator = ExtensionsGenerator()
+        extensionsGenerator.addExtension(Extension.reasonCode, false, CRLReason.lookup(crlReason))
+        // Certificate issuer is required for indirect CRL
+        extensionsGenerator.addExtension(
+                Extension.certificateIssuer,
+                true,
+                GeneralNames(GeneralName(revokedCert.issuerX500Principal.toX500Name()))
+        )
+        builder.addCRLEntry(revokedCert.serialNumber, Date.from(revocationDate), extensionsGenerator.generate())
+    }
+    val bcProvider = Crypto.findProvider("BC")
+    val signer = JcaContentSignerBuilder(signatureAlgorithm).setProvider(bcProvider).build(issuer.keyPair.private)
+    return JcaX509CRLConverter().setProvider(bcProvider).getCRL(builder.build(signer))
+}
 
 private val count = AtomicInteger(0)
 /**
@@ -188,7 +246,6 @@ fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
  * The above will test our expectation that the getWaitingFlows action was executed successfully considering
  * that it may take a few hundreds of milliseconds for the flow state machine states to settle.
  */
-@Suppress("TooGenericExceptionCaught", "MagicNumber", "ComplexMethod")
 fun <T> executeTest(
         timeout: Duration,
         cleanup: (() -> Unit)? = null,
