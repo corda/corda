@@ -64,7 +64,7 @@ interface ServicesForResolution {
     /**
      * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
      *
-     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
+     * @throws TransactionResolutionException if any of the [stateRefs] point to a non-existent transaction.
      */
     // TODO: future implementation to use a Vault state ref -> contract state BLOB table and perform single query bulk load
     // as the existing transaction store will become encrypted at some point
