@@ -1,7 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     implementation project(':core')
@@ -53,6 +52,6 @@ jar {
     }
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}

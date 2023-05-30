@@ -2,7 +2,6 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda core'
 
@@ -178,9 +177,9 @@ scanApi {
     ]
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}
 
 tasks.register("writeTestResources", JavaExec) {
     classpath sourceSets.obfuscator.output

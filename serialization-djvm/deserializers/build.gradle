@@ -1,6 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
 }
@@ -25,9 +24,9 @@ jar {
     }
 }
 
-publish {
-    name jar.archiveBaseName.get()
-}
+//publish {
+//    name jar.archiveBaseName.get()
+//}
 
 idea {
     module {

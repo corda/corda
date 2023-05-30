@@ -99,7 +99,7 @@ buildscript {
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.hikari_version = constants.getProperty("hikariVersion")
     ext.liquibase_version = constants.getProperty("liquibaseVersion")
-    ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
+    ext.artifactory_contextUrl = constants.getProperty("artifactoryContextUrl")
     ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
     ext.selenium_version = constants.getProperty("seleniumVersion")
     ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
@@ -198,15 +198,14 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.jpa' apply false
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "org.ajoberstar.grgit" version "4.0.0"
+    id 'corda.root-publish'
 }
 
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
-apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'com.r3.testing.distributed-testing'
 
-
-// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
+// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve
 // the latest git commit hash and timestamp and create a version postfix from that
 if (project.hasProperty("versionFromGit")){
     ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"

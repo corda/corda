@@ -1,6 +1,5 @@
 plugins {
     id 'java-library'
-    id 'com.jfrog.artifactory'
     id 'idea'
 }
 //apply from: "${rootProject.projectDir}/deterministic.gradle"
@@ -38,13 +37,13 @@ artifacts {
 //    publish jar
 }
 
-publish {
-    // Our published POM will contain dependencies on the non-deterministic Corda artifacts.
-    dependenciesFrom(configurations.runtimeArtifacts) {
-        defaultScope = 'compile'
-    }
-    name jar.archiveBaseName.get()
-}
+//publish {
+//    // Our published POM will contain dependencies on the non-deterministic Corda artifacts.
+//    dependenciesFrom(configurations.runtimeArtifacts) {
+//        defaultScope = 'compile'
+//    }
+//    name jar.archiveBaseName.get()
+//}
 
 idea {
     module {

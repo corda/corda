@@ -1,6 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'java'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node web server'
 
@@ -95,6 +94,6 @@ jar {
     baseName 'corda-testserver-impl'
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}

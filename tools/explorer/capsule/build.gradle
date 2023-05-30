@@ -2,7 +2,6 @@
  * This build.gradle exists to package Node Explorer as an executable fat jar.
  */
 apply plugin: 'us.kirchmeier.capsule'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Node Explorer'
 
@@ -53,7 +52,7 @@ jar {
     enabled = false
 }
 
-publish {
-//    disableDefaultJar = true
-    name 'corda-tools-explorer'
-}
+//publish {
+////    disableDefaultJar = true
+//    name 'corda-tools-explorer'
+//}

@@ -3,7 +3,6 @@
  * node project because the bintray plugin cannot publish two modules from one project.
  */
 apply plugin: 'us.kirchmeier.capsule'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda standalone node'
 
@@ -120,7 +119,7 @@ artifacts {
 //    }
 }
 
-publish {
-//    disableDefaultJar = true
-    name  'corda'
-}
+//publish {
+////    disableDefaultJar = true
+//    name  'corda'
+//}

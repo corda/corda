@@ -2,7 +2,6 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
@@ -146,9 +145,9 @@ tasks.named('javadoc', Javadoc) {
     enabled = false
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}
 
 scanApi {
     //Constructors that are synthesized by Kotlin unexpectedly

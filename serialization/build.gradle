@@ -1,5 +1,4 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda serialization'
 
@@ -77,6 +76,6 @@ jar {
     }
 }
 
-publish {
-    name jar.archiveBaseName
-}
+//publish {
+//    name jar.archiveBaseName
+//}

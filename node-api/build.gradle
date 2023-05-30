@@ -1,6 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node API'
 
@@ -112,6 +111,6 @@ test {
             '--add-opens', 'java.base/java.security=ALL-UNNAMED'
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}

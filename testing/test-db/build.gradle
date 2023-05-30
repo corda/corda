@@ -1,5 +1,4 @@
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
 //    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
@@ -22,6 +21,6 @@ jar {
     }
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}

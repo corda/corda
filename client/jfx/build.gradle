@@ -14,7 +14,6 @@ javafx {
 
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda client JavaFX modules'
 
@@ -95,6 +94,6 @@ jar {
     }
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}

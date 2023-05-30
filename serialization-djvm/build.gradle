@@ -1,6 +1,5 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
 }
@@ -83,9 +82,9 @@ tasks.withType(Test).configureEach {
     systemProperty 'user.timezone', 'UTC'
 }
 
-publish {
-    name jar.archiveBaseName
-}
+//publish {
+//    name jar.archiveBaseName
+//}
 
 idea {
     module {

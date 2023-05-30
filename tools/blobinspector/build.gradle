@@ -1,6 +1,5 @@
 apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
-apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     implementation project(':core')
@@ -52,6 +51,6 @@ test {
     jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
 }
 
-publish {
-    name 'corda-tools-blob-inspector'
-}
+//publish {
+//    name 'corda-tools-blob-inspector'
+//}

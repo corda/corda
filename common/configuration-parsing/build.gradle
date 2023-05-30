@@ -1,7 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 
-apply plugin: 'com.jfrog.artifactory'
-
 dependencies {
 //    implementation group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
     implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
@@ -25,6 +23,6 @@ jar {
     baseName 'corda-common-configuration-parsing'
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}

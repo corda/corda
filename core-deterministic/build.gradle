@@ -4,7 +4,6 @@ import proguard.gradle.ProGuardTask
 
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'com.jfrog.artifactory'
     id 'java-library'
     id 'idea'
 }
@@ -220,10 +219,10 @@ artifacts {
 //    include 'README.md'
 //}
 
-publish {
-//    dependenciesFrom configurations.deterministicArtifacts
-    name jarBaseName
-}
+//publish {
+////    dependenciesFrom configurations.deterministicArtifacts
+//    name jarBaseName
+//}
 
 idea {
     module {

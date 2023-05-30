@@ -1,5 +1,4 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Network bootstrapper'
 
@@ -49,6 +48,6 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-publish {
-    name 'corda-tools-network-bootstrapper'
-}
+//publish {
+//    name 'corda-tools-network-bootstrapper'
+//}

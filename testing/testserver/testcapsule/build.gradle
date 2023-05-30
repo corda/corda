@@ -3,7 +3,6 @@
  * webserver project because the bintray plugin cannot publish two modules from one project.
  */
 apply plugin: 'us.kirchmeier.capsule'
-apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node web server capsule'
 
@@ -69,7 +68,7 @@ artifacts {
 //    }
 }
 
-publish {
-//    disableDefaultJar = true
-    name 'corda-testserver'
-}
+//publish {
+////    disableDefaultJar = true
+//    name 'corda-testserver'
+//}

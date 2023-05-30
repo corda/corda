@@ -1,7 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'net.corda.plugins.api-scanner'
-    id 'com.jfrog.artifactory'
     id 'java-library'
 }
 
@@ -45,6 +44,6 @@ jar {
     }
 }
 
-publish {
-    name jar.baseName
-}
+//publish {
+//    name jar.baseName
+//}

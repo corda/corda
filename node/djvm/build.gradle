@@ -1,5 +1,4 @@
 //apply from: '../../deterministic.gradle'
-apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'java-library'
 
 description 'Internal Corda Node modules for deterministic contract verification.'
@@ -21,6 +20,6 @@ jar {
     }
 }
 
-publish {
-    name jar.archiveBaseName.get()
-}
+//publish {
+//    name jar.archiveBaseName.get()
+//}

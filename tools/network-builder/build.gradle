@@ -25,7 +25,6 @@ apply plugin: 'application'
 mainClassName = 'net.corda.networkbuilder.Main'
 
 apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'com.jfrog.artifactory'
 
 configurations {
     implementation {
@@ -95,7 +94,7 @@ jar {
     enabled = false
 }
 
-publish {
-//    disableDefaultJar = true
-    name 'corda-tools-network-builder'
-}
+//publish {
+////    disableDefaultJar = true
+//    name 'corda-tools-network-builder'
+//}
