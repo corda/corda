@@ -64,10 +64,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                                        private val observerSessions: Collection<FlowSession> = emptySet()) : FlowLogic<SignedTransaction>() {
 
     @CordaInternal
-    data class ExtraConstructorArgs(val oldParticipants: Collection<Party>, val sessions: Collection<FlowSession>, val newApi: Boolean, val statesToRecord: StatesToRecord)
+    data class ExtraConstructorArgs(val oldParticipants: Collection<Party>, val sessions: Collection<FlowSession>, val newApi: Boolean, val statesToRecord: StatesToRecord, val observerSessions: Collection<FlowSession>)
 
     @CordaInternal
-    fun getExtraConstructorArgs() = ExtraConstructorArgs(oldParticipants, sessions, newApi, statesToRecord)
+    fun getExtraConstructorArgs() = ExtraConstructorArgs(oldParticipants, sessions, newApi, statesToRecord, observerSessions)
 
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(

@@ -29,7 +29,7 @@ data class TransactionMetadata(
 )
 
 @CordaSerializable
-class DistributionList(
+data class DistributionList(
     val senderStatesToRecord: StatesToRecord,
     val peersToStatesToRecord: Map<CordaX500Name, StatesToRecord>
 )
