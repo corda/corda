@@ -2,6 +2,7 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda core'
 
@@ -18,8 +19,6 @@ configurations {
 }
 
 dependencies {
-
-//    obfuscatorImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
     implementation project(':opentelemetry')
 
@@ -35,7 +34,6 @@ dependencies {
     // Guava: Google test library (collections test suite)
     testImplementation "com.google.guava:guava-testlib:$guava_version"
 
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
@@ -115,7 +113,6 @@ configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
 }
 
-
 processTestResources {
     inputs.files(jar)
     into("zip") {
@@ -165,21 +162,12 @@ quasar {
             "io.opentelemetry.**")
 }
 
-artifacts {
-    testArtifacts testJar
-//    publish testJar
-}
-
 scanApi {
     excludeClasses = [
         // Kotlin should probably have declared this class as "synthetic".
         "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
     ]
 }
-
-//publish {
-//    name jar.baseName
-//}
 
 tasks.register("writeTestResources", JavaExec) {
     classpath sourceSets.obfuscator.output
