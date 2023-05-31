@@ -36,13 +36,11 @@ import java.security.SignatureException
  * @property deferredAck if set then the caller of this flow is responsible for explicitly sending a FetchDataFlow.Request.End
  *           acknowledgement to indicate transaction resolution is complete. See usage within [FinalityFlow].
  *           Not recommended for 3rd party use.
- * @property expectRecoveryMetadata should be set to true when the corresponding [SendTransactionFlow] passes in transaction recovery metadata using [TransactionMetadata].
  */
 open class ReceiveTransactionFlow constructor(private val otherSideSession: FlowSession,
                                               private val checkSufficientSignatures: Boolean = true,
                                               private val statesToRecord: StatesToRecord = StatesToRecord.NONE,
-                                              private val deferredAck: Boolean = false,
-                                              private val expectRecoveryMetadata: Boolean = false) : FlowLogic<SignedTransaction>() {
+                                              private val deferredAck: Boolean = false) : FlowLogic<SignedTransaction>() {
     @JvmOverloads constructor(
             otherSideSession: FlowSession,
             checkSufficientSignatures: Boolean = true,
@@ -61,19 +59,15 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         } else {
             logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
+
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        val payload = otherSideSession.receive<Any>().unwrap { it }
         val stx =
-            if (expectRecoveryMetadata && fromTwoPhaseFinalityNode && useTwoPhaseFinality) {
-                otherSideSession.receive<SignedTransactionWithDistributionList>()
-                        .unwrap { (stx, distributionList) ->
-                            recordTransactionMetadata(stx, distributionList)
-                            stx
-                        }
-            } else {
-                otherSideSession.receive<SignedTransaction>().unwrap { it }
-            }
-
+            if (payload is SignedTransactionWithDistributionList && fromTwoPhaseFinalityNode && useTwoPhaseFinality) {
+                recordTransactionMetadata(payload.stx, payload.distributionList)
+                payload.stx
+            } else payload as SignedTransaction
         stx.pushToLoggingContext()
         logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
         checkParameterHash(stx.networkParametersHash)
