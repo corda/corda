@@ -60,11 +60,9 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
 
-        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val payload = otherSideSession.receive<Any>().unwrap { it }
         val stx =
-            if (payload is SignedTransactionWithDistributionList && fromTwoPhaseFinalityNode && useTwoPhaseFinality) {
+            if (payload is SignedTransactionWithDistributionList) {
                 recordTransactionMetadata(payload.stx, payload.distributionList)
                 payload.stx
             } else payload as SignedTransaction
