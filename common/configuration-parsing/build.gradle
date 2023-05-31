@@ -1,4 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
 //    implementation group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
@@ -23,6 +24,3 @@ jar {
     baseName 'corda-common-configuration-parsing'
 }
 
-//publish {
-//    name jar.baseName
-//}

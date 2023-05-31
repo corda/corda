@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
     implementation project(':core')
@@ -51,6 +52,10 @@ test {
     jvmArgs '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
 }
 
-//publish {
-//    name 'corda-tools-blob-inspector'
-//}
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-tools-blob-inspector'
+        }
+    }
+}

@@ -2,6 +2,7 @@
  * This build.gradle exists to package Node Explorer as an executable fat jar.
  */
 apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'corda.common-publishing'
 
 description 'Node Explorer'
 
@@ -39,20 +40,15 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').ta
     }
 }
 
-artifacts {
-    archives buildExplorerJAR
-    runtimeArtifacts buildExplorerJAR
-//    publish buildExplorerJAR {
-//        classifier ""
-//    }
-}
-
 jar {
     classifier "ignore"
     enabled = false
 }
 
-//publish {
-////    disableDefaultJar = true
-//    name 'corda-tools-explorer'
-//}
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-tools-explorer'
+        }
+    }
+}

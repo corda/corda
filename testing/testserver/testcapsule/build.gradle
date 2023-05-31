@@ -59,16 +59,3 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
         attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
     }
 }
-
-artifacts {
-    archives buildWebserverJar
-    runtimeArtifacts buildWebserverJar
-//    publish buildWebserverJar {
-//        classifier ''
-//    }
-}
-
-//publish {
-////    disableDefaultJar = true
-//    name 'corda-testserver'
-//}

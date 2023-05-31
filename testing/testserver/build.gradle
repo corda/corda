@@ -1,5 +1,6 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'java'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda node web server'
 
@@ -93,7 +94,3 @@ task integrationTest(type: Test) {
 jar {
     baseName 'corda-testserver-impl'
 }
-
-//publish {
-//    name jar.baseName
-//}

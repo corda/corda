@@ -1,4 +1,5 @@
 apply plugin: 'net.corda.plugins.api-scanner'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
 //    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
@@ -20,7 +21,3 @@ jar {
         attributes('Corda-Testing': true)
     }
 }
-
-//publish {
-//    name jar.baseName
-//}

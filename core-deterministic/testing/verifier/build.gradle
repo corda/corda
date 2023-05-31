@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'idea'
+    id 'corda.common-publishing'
 }
 //apply from: "${rootProject.projectDir}/deterministic.gradle"
 
@@ -36,14 +37,6 @@ artifacts {
     runtimeArtifacts jar
 //    publish jar
 }
-
-//publish {
-//    // Our published POM will contain dependencies on the non-deterministic Corda artifacts.
-//    dependenciesFrom(configurations.runtimeArtifacts) {
-//        defaultScope = 'compile'
-//    }
-//    name jar.archiveBaseName.get()
-//}
 
 idea {
     module {

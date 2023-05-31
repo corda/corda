@@ -1,5 +1,6 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda client mock modules'
 
@@ -36,7 +37,3 @@ jar {
         )
     }
 }
-
-//publish {
-//    name jar.baseName
-//}

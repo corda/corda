@@ -1,5 +1,6 @@
 plugins {
     id 'com.google.cloud.tools.jib' version '0.9.4'
+    id 'corda.common-publishing'
 }
 
 apply plugin: 'org.jetbrains.kotlin.jvm'
@@ -380,10 +381,6 @@ jar {
         attributes('Add-Opens': 'java.base/java.time java.base/java.io java.base/java.util java.base/java.net')
     }
 }
-
-//publish {
-//    name jar.baseName
-//}
 
 tasks.named('test', Test) {
     maxHeapSize = "3g"

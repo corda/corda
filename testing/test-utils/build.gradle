@@ -2,6 +2,7 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
+apply plugin: 'corda.common-publishing'
 
 description 'Testing utilities for Corda'
 
@@ -54,7 +55,3 @@ jar {
         attributes('Corda-Testing': true)
     }
 }
-
-//publish {
-//    name jar.baseName
-//}

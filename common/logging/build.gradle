@@ -1,6 +1,7 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 
 apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
 //    implementation group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
@@ -36,6 +37,3 @@ jar {
     baseName 'corda-common-logging'
 }
 
-//publish {
-//    name jar.baseName
-//}

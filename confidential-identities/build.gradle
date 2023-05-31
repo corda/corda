@@ -2,6 +2,7 @@
 // TODO: Merge this into core: the original plan was to develop it independently but in practice it's too widely used to break compatibility now, as finance uses it.
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda Experimental Confidential Identities'
 
@@ -49,7 +50,3 @@ test {
             '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED',
             '--add-opens', 'java.base/java.net=ALL-UNNAMED'
 }
-
-//publish {
-//    name jar.baseName
-//}

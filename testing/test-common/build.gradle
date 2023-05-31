@@ -28,7 +28,3 @@ jar {
         attributes('Corda-Testing': true)
     }
 }
-
-//publish {
-//    name jar.baseName
-//}

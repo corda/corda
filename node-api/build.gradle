@@ -1,5 +1,6 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda node API'
 
@@ -110,7 +111,3 @@ test {
             '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED',
             '--add-opens', 'java.base/java.security=ALL-UNNAMED'
 }
-
-//publish {
-//    name jar.baseName
-//}

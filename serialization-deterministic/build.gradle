@@ -7,7 +7,6 @@ plugins {
     id 'java-library'
     id 'idea'
 }
-//apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Corda serialization (deterministic)'
 
@@ -199,13 +198,6 @@ artifacts {
 //tasks.named('javadocJar', Jar) {
 //    from 'README.md'
 //    include 'README.md'
-//}
-
-//publish {
-////    dependenciesFrom(configurations.deterministicArtifacts) {
-////        defaultScope = 'compile'
-////    }
-//    name jarBaseName
 //}
 
 idea {

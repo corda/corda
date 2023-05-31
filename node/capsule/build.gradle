@@ -28,7 +28,6 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
-
 }
 
 jar.enabled = false
@@ -45,6 +44,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
         project(':core-deterministic').tasks.named('assemble'),
         project(':serialization-deterministic').tasks.named('assemble')
     ]) {
+    group = 'build'
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
     archiveVersion = corda_release_version
@@ -111,15 +111,10 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     }
 }
 
-artifacts {
-    archives buildCordaJAR
-    runtimeArtifacts buildCordaJAR
-//    publish buildCordaJAR {
-//        classifier ''
-//    }
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda'
+        }
+    }
 }
-
-//publish {
-////    disableDefaultJar = true
-//    name  'corda'
-//}

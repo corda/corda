@@ -24,6 +24,7 @@ repositories {
 
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
+apply plugin: 'corda.common-publishing'
 
 description 'A javaagent to allow hooking into Kryo checkpoints'
 
@@ -63,6 +64,10 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-//publish {
-//    name 'corda-tools-checkpoint-agent'
-//}
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-tools-checkpoint-agent'
+        }
+    }
+}

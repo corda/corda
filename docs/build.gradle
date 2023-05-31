@@ -96,26 +96,3 @@ task archiveApiDocs(type: Tar) {
     extension 'tgz'
     compression Compression.GZIP
 }
-
-//publishing {
-//    publications {
-//        if (System.getProperty('publishApiDocs') != null) {
-//            archivedApiDocs(MavenPublication) {
-//                artifact archiveApiDocs {
-//                    artifactId archivedApiDocsBaseFilename
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//artifactory {
-//    publish {
-//        contextUrl = artifactory_contextUrl
-//        repository {
-//            repoKey = 'corda-dependencies-dev'
-//            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
-//            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
-//        }
-//    }
-//}

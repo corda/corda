@@ -1,6 +1,8 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
+apply plugin: 'corda.common-publishing'
+apply plugin: 'us.kirchmeier.capsule'
 
 description 'Corda client RPC modules'
 
@@ -9,7 +11,7 @@ configurations {
     integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
-    smokeTestCompile.extendsFrom compile
+    smokeTestImplementation.extendsFrom compile
     smokeTestRuntimeOnly.extendsFrom runtimeOnly
 }
 
@@ -46,9 +48,9 @@ sourceSets {
 }
 
 processSmokeTestResources {
-    from(project(':node:capsule').tasks['buildCordaJAR']) {
-        rename 'corda-(.*)', 'corda.jar'
-    }
+//    from(project(':node:capsule').tasks['buildCordaJAR']) {
+//        rename 'corda-(.*)', 'corda.jar'
+//    }
     from(project(':finance:workflows').tasks['jar']) {
         rename '.*finance-workflows-.*', 'cordapp-finance-workflows.jar'
     }
@@ -99,20 +101,20 @@ dependencies {
     integrationTestImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
-    smokeTestCompile project(':core')
-    smokeTestCompile project(':node-api')
-    smokeTestCompile project(':smoke-test-utils')
-    smokeTestCompile project(':finance:contracts')
-    smokeTestCompile project(':finance:workflows')
-    smokeTestCompile project(':testing:cordapps:sleeping')
-    smokeTestCompile "io.reactivex:rxjava:$rxjava_version"
-    smokeTestCompile "commons-io:commons-io:$commons_io_version"
-    smokeTestCompile "org.hamcrest:hamcrest-library:2.1"
-    smokeTestCompile "com.google.guava:guava-testlib:$guava_version"
-    smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
-    smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestImplementation project(':core')
+    smokeTestImplementation project(':node-api')
+    smokeTestImplementation project(':smoke-test-utils')
+    smokeTestImplementation project(':finance:contracts')
+    smokeTestImplementation project(':finance:workflows')
+    smokeTestImplementation project(':testing:cordapps:sleeping')
+    smokeTestImplementation "io.reactivex:rxjava:$rxjava_version"
+    smokeTestImplementation "commons-io:commons-io:$commons_io_version"
+    smokeTestImplementation "org.hamcrest:hamcrest-library:2.1"
+    smokeTestImplementation "com.google.guava:guava-testlib:$guava_version"
+    smokeTestImplementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    smokeTestImplementation "org.apache.logging.log4j:log4j-core:$log4j_version"
+    smokeTestImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    smokeTestImplementation "org.assertj:assertj-core:${assertj_version}"
     smokeTestImplementation "junit:junit:$junit_version"
     smokeTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
@@ -164,7 +166,3 @@ jar {
         attributes 'Automatic-Module-Name': 'net.corda.client.rpc'
     }
 }
-
-//publish {
-//    name jar.baseName
-//}

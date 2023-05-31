@@ -219,11 +219,6 @@ artifacts {
 //    include 'README.md'
 //}
 
-//publish {
-////    dependenciesFrom configurations.deterministicArtifacts
-//    name jarBaseName
-//}
-
 idea {
     module {
         if (project.hasProperty("deterministic_idea_sdk")) {

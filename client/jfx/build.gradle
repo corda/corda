@@ -1,6 +1,7 @@
 // JDK 11 JavaFX
 plugins {
     id 'org.openjfx.javafxplugin' version '0.0.7' apply false
+    id 'corda.common-publishing'
 }
 
 apply plugin: 'org.openjfx.javafxplugin'
@@ -93,7 +94,3 @@ jar {
         attributes 'Automatic-Module-Name': 'net.corda.client.jfx'
     }
 }
-
-//publish {
-//    name jar.baseName
-//}

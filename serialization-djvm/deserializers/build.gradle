@@ -3,7 +3,6 @@ plugins {
     id 'java-library'
     id 'idea'
 }
-//apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Deserializers for the DJVM'
 
@@ -12,7 +11,6 @@ dependencies {
 
     api project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     api project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
-//    api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
 }
 
 jar {
@@ -23,10 +21,6 @@ jar {
         attributes('Sealed': true)
     }
 }
-
-//publish {
-//    name jar.archiveBaseName.get()
-//}
 
 idea {
     module {

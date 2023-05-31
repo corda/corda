@@ -1,9 +1,11 @@
 // JDK 11 JavaFX
 plugins {
     id 'org.openjfx.javafxplugin' version '0.0.7' apply false
+    id 'corda.common-publishing'
 }
 
 apply plugin: 'org.openjfx.javafxplugin'
+
 javafx {
     version = "11.0.2"
     modules = [
@@ -85,16 +87,6 @@ tasks.register('buildNetworkBuilder') {
     dependsOn shadowJar
 }
 
-artifacts {
-    archives shadowJar
-//    publish shadowJar
-}
-
 jar {
     enabled = false
 }
-
-//publish {
-////    disableDefaultJar = true
-//    name 'corda-tools-network-builder'
-//}

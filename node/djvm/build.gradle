@@ -1,5 +1,6 @@
 //apply from: '../../deterministic.gradle'
 apply plugin: 'java-library'
+apply plugin: 'corda.common-publishing'
 
 description 'Internal Corda Node modules for deterministic contract verification.'
 
@@ -19,7 +20,3 @@ jar {
         attributes('Sealed': true)
     }
 }
-
-//publish {
-//    name jar.archiveBaseName.get()
-//}

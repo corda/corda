@@ -2,6 +2,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'java-library'
     id 'idea'
+    id 'corda.common-publishing'
 }
 
 // The DJVM only supports Java 8 byte-code, so the tests must
@@ -81,10 +82,6 @@ tasks.withType(Test).configureEach {
     // Configure the host timezone to match the DJVM's.
     systemProperty 'user.timezone', 'UTC'
 }
-
-//publish {
-//    name jar.archiveBaseName
-//}
 
 idea {
     module {

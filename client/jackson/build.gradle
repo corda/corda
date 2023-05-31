@@ -1,6 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.api-scanner'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
     implementation project(':core')
@@ -51,7 +52,3 @@ jar {
         attributes 'Automatic-Module-Name': 'net.corda.client.jackson'
     }
 }
-
-//publish {
-//    name jar.baseName
-//}

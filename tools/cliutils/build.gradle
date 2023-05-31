@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'corda.common-publishing'
 
 description 'CLI Utilities'
 
@@ -20,10 +21,6 @@ dependencies {
 }
 
 jar {
-    baseName = "corda-tools-cliutils"
+    archiveBaseName = "corda-tools-cliutils"
 }
-
-//publish {
-//    name jar.baseName
-//}
 

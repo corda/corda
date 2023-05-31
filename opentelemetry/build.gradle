@@ -1,12 +1,12 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'java-library'
+    id 'corda.common-publishing'
 }
 
 description 'OpenTelemetry SDK Bundle'
 
 dependencies {
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation platform("io.opentelemetry:opentelemetry-bom:$open_telemetry_version")
     implementation "io.opentelemetry:opentelemetry-sdk"
     implementation "io.opentelemetry:opentelemetry-exporter-otlp"
@@ -16,7 +16,11 @@ dependencies {
     }
 }
 
-//publish {
-//    name  'corda-opentelemetry'
-//}
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-opentelemetry'
+        }
+    }
+}
 
