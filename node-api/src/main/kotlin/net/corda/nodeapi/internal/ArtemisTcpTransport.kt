@@ -85,7 +85,7 @@ class ArtemisTcpTransport {
 
         fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
                                     config: MutualSslConfiguration?,
-                                    trustManagerFactory: TrustManagerFactory?,
+                                    trustManagerFactory: TrustManagerFactory? = config?.trustStore?.get()?.let(::trustManagerFactory),
                                     enableSSL: Boolean = true,
                                     threadPoolName: String = "P2PServer",
                                     trace: Boolean = false,

@@ -31,6 +31,7 @@ import org.apache.activemq.artemis.spi.core.remoting.BufferHandler
 import org.apache.activemq.artemis.spi.core.remoting.ServerConnectionLifeCycleListener
 import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.apache.activemq.artemis.utils.actors.OrderedExecutor
+import java.net.SocketAddress
 import java.nio.channels.ClosedChannelException
 import java.nio.file.Paths
 import java.security.PrivilegedExceptionAction
@@ -41,6 +42,7 @@ import java.util.regex.Pattern
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLEngine
+import javax.net.ssl.SSLPeerUnverifiedException
 import javax.net.ssl.TrustManagerFactory
 import javax.security.auth.Subject
 
@@ -231,7 +233,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
         }
 
         override fun handlerAdded(ctx: ChannelHandlerContext) {
-            logHandshake()
+            logHandshake(ctx.channel().remoteAddress())
             super.handlerAdded(ctx)
             // Unfortunately NettyAcceptor does not let us add extra child handlers, so we have to add our logger this way.
             if (trace) {
@@ -239,17 +241,22 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
             }
         }
 
-        private fun logHandshake() {
+        private fun logHandshake(remoteAddress: SocketAddress) {
             val start = System.currentTimeMillis()
             handshakeFuture().addListener {
                 val duration = System.currentTimeMillis() - start
+                val peer = try {
+                    engine().session.peerPrincipal
+                } catch (e: SSLPeerUnverifiedException) {
+                    remoteAddress
+                }
                 when {
-                    it.isSuccess -> logger.info("SSL handshake completed in ${duration}ms with ${engine().session.peerPrincipal}")
-                    it.isCancelled -> logger.warn("SSL handshake cancelled after ${duration}ms")
+                    it.isSuccess -> logger.info("SSL handshake completed in ${duration}ms with $peer")
+                    it.isCancelled -> logger.warn("SSL handshake cancelled after ${duration}ms with $peer")
                     else -> when (it.cause()) {
-                        is ClosedChannelException -> logger.warn("SSL handshake closed early after ${duration}ms")
-                        is SslHandshakeTimeoutException -> logger.warn("SSL handshake timed out after ${duration}ms")
-                        else -> logger.warn("SSL handshake failed after ${duration}ms", it.cause())
+                        is ClosedChannelException -> logger.warn("SSL handshake closed early after ${duration}ms with $peer")
+                        is SslHandshakeTimeoutException -> logger.warn("SSL handshake timed out after ${duration}ms with $peer")
+                        else -> logger.warn("SSL handshake failed after ${duration}ms with $peer", it.cause())
                     }
                 }
             }
