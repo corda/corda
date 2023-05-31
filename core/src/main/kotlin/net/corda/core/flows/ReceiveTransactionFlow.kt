@@ -6,7 +6,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.checkParameterHash
