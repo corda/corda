@@ -305,9 +305,11 @@ internal fun splitKeystore(config: AMQPConfiguration): Map<String, CertHoldingKe
 
 // As per Javadoc in: https://docs.oracle.com/javase/8/docs/api/javax/net/ssl/KeyManagerFactory.html `init` method
 // 2nd parameter `password` - the password for recovering keys in the KeyStore
+fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.entryPassword.toCharArray())
+
 fun keyManagerFactory(keyStore: CertificateStore): KeyManagerFactory {
     val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-    keyManagerFactory.init(keyStore.value.internal, keyStore.entryPassword.toCharArray())
+    keyManagerFactory.init(keyStore)
     return keyManagerFactory
 }
 
