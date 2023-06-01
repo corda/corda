@@ -5,24 +5,14 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.group.ChannelGroup
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
-import io.netty.handler.ssl.SslContext
-import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeTimeoutException
-import io.netty.handler.ssl.SslProvider
 import net.corda.core.internal.declaredField
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisTcpTransport
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.protonwrapper.netty.createAndInitSslContext
-import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
 import net.corda.nodeapi.internal.protonwrapper.netty.sslDelegatedTaskExecutor
-import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.BaseInterceptor
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptor
-import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
-import org.apache.activemq.artemis.core.remoting.impl.ssl.SSLSupport
-import org.apache.activemq.artemis.core.server.ActiveMQServerLogger
 import org.apache.activemq.artemis.core.server.balancing.RedirectHandler
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection
 import org.apache.activemq.artemis.spi.core.protocol.ProtocolManager
@@ -30,24 +20,20 @@ import org.apache.activemq.artemis.spi.core.remoting.Acceptor
 import org.apache.activemq.artemis.spi.core.remoting.AcceptorFactory
 import org.apache.activemq.artemis.spi.core.remoting.BufferHandler
 import org.apache.activemq.artemis.spi.core.remoting.ServerConnectionLifeCycleListener
+import org.apache.activemq.artemis.spi.core.remoting.ssl.OpenSSLContextFactoryProvider
+import org.apache.activemq.artemis.spi.core.remoting.ssl.SSLContextFactoryProvider
 import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.apache.activemq.artemis.utils.actors.OrderedExecutor
 import java.net.SocketAddress
 import java.nio.channels.ClosedChannelException
-import java.nio.file.Paths
-import java.security.PrivilegedExceptionAction
 import java.time.Duration
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
 import java.util.regex.Pattern
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLPeerUnverifiedException
-import javax.net.ssl.TrustManagerFactory
-import javax.security.auth.Subject
 
-@Suppress("unused", "TooGenericExceptionCaught", "ComplexMethod", "MagicNumber", "TooManyFunctions")
+@Suppress("unused")  // Used via reflection in ArtemisTcpTransport
 class NodeNettyAcceptorFactory : AcceptorFactory {
     override fun createAcceptor(name: String?,
                                 clusterConnection: ClusterConnection?,
@@ -74,6 +60,12 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
     {
         companion object {
             private val defaultThreadPoolNamePattern = Pattern.compile("""Thread-(\d+) \(activemq-netty-threads\)""")
+
+            init {
+                // Make sure Artemis isn't using another (Open)SSLContextFactory
+                check(SSLContextFactoryProvider.getSSLContextFactory() is NodeSSLContextFactory)
+                check(OpenSSLContextFactoryProvider.getOpenSSLContextFactory() is NodeOpenSSLContextFactory)
+            }
         }
 
         private val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "NodeNettyAcceptor", configuration)
@@ -100,7 +92,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
         @Synchronized
         override fun getSslHandler(alloc: ByteBufAllocator?, peerHost: String?, peerPort: Int): SslHandler {
             applyThreadPoolName()
-            val engine = getSSLEngine(alloc, peerHost, peerPort)
+            val engine = super.getSslHandler(alloc, peerHost, peerPort).engine()
             val sslHandler = NodeAcceptorSslHandler(engine, sslDelegatedTaskExecutor, trace)
             val handshakeTimeout = configuration[ArtemisTcpTransport.SSL_HANDSHAKE_TIMEOUT_NAME] as Duration?
             if (handshakeTimeout != null) {
@@ -118,111 +110,6 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                 Thread.currentThread().name = "$threadPoolName-${matcher.group(1)}" // Preserve the pool thread number
             }
         }
-
-        /**
-         * This is a copy of [NettyAcceptor.getSslHandler] so that we can provide different implementations for [loadOpenSslEngine] and
-         * [loadJdkSslEngine]. [NodeNettyAcceptor], instead of creating a default [TrustManagerFactory], will simply use the provided one in
-         * the [ArtemisTcpTransport.TRUST_MANAGER_FACTORY_NAME] configuration.
-         */
-        private fun getSSLEngine(alloc: ByteBufAllocator?): SSLEngine {
-            val engine = if (sslProvider == TransportConstants.OPENSSL_PROVIDER) {
-                loadOpenSslEngine(alloc)
-            } else {
-                loadJdkSslEngine()
-            }
-            engine.useClientMode = false
-            if (needClientAuth) {
-                engine.needClientAuth = true
-            }
-
-            // setting the enabled cipher suites resets the enabled protocols so we need
-            // to save the enabled protocols so that after the customer cipher suite is enabled
-            // we can reset the enabled protocols if a customer protocol isn't specified
-            val originalProtocols = engine.enabledProtocols
-            if (enabledCipherSuites != null) {
-                try {
-                    engine.enabledCipherSuites = SSLSupport.parseCommaSeparatedListIntoArray(enabledCipherSuites)
-                } catch (e: IllegalArgumentException) {
-                    ActiveMQServerLogger.LOGGER.invalidCipherSuite(SSLSupport.parseArrayIntoCommandSeparatedList(engine.supportedCipherSuites))
-                    throw e
-                }
-            }
-            if (enabledProtocols != null) {
-                try {
-                    engine.enabledProtocols = SSLSupport.parseCommaSeparatedListIntoArray(enabledProtocols)
-                } catch (e: IllegalArgumentException) {
-                    ActiveMQServerLogger.LOGGER.invalidProtocol(SSLSupport.parseArrayIntoCommandSeparatedList(engine.supportedProtocols))
-                    throw e
-                }
-            } else {
-                engine.enabledProtocols = originalProtocols
-            }
-            return engine
-        }
-
-        /**
-         * Copy of [NettyAcceptor.loadOpenSslEngine] which invokes our custom [createOpenSslContext].
-         */
-        private fun loadOpenSslEngine(alloc: ByteBufAllocator?): SSLEngine {
-            val context = try {
-                // We copied all this code just so we could replace the SSLSupport.createNettyContext method call with our own one.
-                createOpenSslContext()
-            } catch (e: Exception) {
-                throw IllegalStateException("Unable to create NodeNettyAcceptor", e)
-            }
-            return Subject.doAs<SSLEngine>(null, PrivilegedExceptionAction {
-                context.newEngine(alloc)
-            })
-        }
-
-        /**
-         * Copy of [NettyAcceptor.loadJdkSslEngine] which invokes our custom [createJdkSSLContext].
-         */
-        private fun loadJdkSslEngine(): SSLEngine {
-            val context = try {
-                // We copied all this code just so we could replace the SSLHelper.createContext method call with our own one.
-                createJdkSSLContext()
-            } catch (e: Exception) {
-                throw IllegalStateException("Unable to create NodeNettyAcceptor", e)
-            }
-            return Subject.doAs<SSLEngine>(null, PrivilegedExceptionAction {
-                context.createSSLEngine()
-            })
-        }
-
-        /**
-         * Create an [SSLContext] using the [TrustManagerFactory] provided on the [ArtemisTcpTransport.TRUST_MANAGER_FACTORY_NAME] config.
-         */
-        private fun createJdkSSLContext(): SSLContext {
-            return createAndInitSslContext(
-                    createKeyManagerFactory(),
-                    configuration[ArtemisTcpTransport.TRUST_MANAGER_FACTORY_NAME] as TrustManagerFactory?
-            )
-        }
-
-        /**
-         * Create an [SslContext] using the the [TrustManagerFactory] provided on the [ArtemisTcpTransport.TRUST_MANAGER_FACTORY_NAME] config.
-         */
-        private fun createOpenSslContext(): SslContext {
-            return SslContextBuilder
-                    .forServer(createKeyManagerFactory())
-                    .sslProvider(SslProvider.OPENSSL)
-                    .trustManager(configuration[ArtemisTcpTransport.TRUST_MANAGER_FACTORY_NAME] as TrustManagerFactory?)
-                    .build()
-        }
-
-        private fun createKeyManagerFactory(): KeyManagerFactory {
-            return keyManagerFactory(CertificateStore.fromFile(Paths.get(keyStorePath), keyStorePassword, keyStorePassword, false))
-        }
-
-        // Replicate the fields which are private in NettyAcceptor
-        private val sslProvider = ConfigurationHelper.getStringProperty(TransportConstants.SSL_PROVIDER, TransportConstants.DEFAULT_SSL_PROVIDER, configuration)
-        private val needClientAuth = ConfigurationHelper.getBooleanProperty(TransportConstants.NEED_CLIENT_AUTH_PROP_NAME, TransportConstants.DEFAULT_NEED_CLIENT_AUTH, configuration)
-        private val enabledCipherSuites = ConfigurationHelper.getStringProperty(TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME, TransportConstants.DEFAULT_ENABLED_CIPHER_SUITES, configuration)
-        private val enabledProtocols = ConfigurationHelper.getStringProperty(TransportConstants.ENABLED_PROTOCOLS_PROP_NAME, TransportConstants.DEFAULT_ENABLED_PROTOCOLS, configuration)
-        private val keyStorePath = ConfigurationHelper.getStringProperty(TransportConstants.KEYSTORE_PATH_PROP_NAME, TransportConstants.DEFAULT_KEYSTORE_PATH, configuration)
-        private val keyStoreProvider = ConfigurationHelper.getStringProperty(TransportConstants.KEYSTORE_PROVIDER_PROP_NAME, TransportConstants.DEFAULT_KEYSTORE_PROVIDER, configuration)
-        private val keyStorePassword = ConfigurationHelper.getPasswordProperty(TransportConstants.KEYSTORE_PASSWORD_PROP_NAME, TransportConstants.DEFAULT_KEYSTORE_PASSWORD, configuration, ActiveMQDefaultConfiguration.getPropMaskPassword(), ActiveMQDefaultConfiguration.getPropPasswordCodec())
     }
 
 

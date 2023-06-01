@@ -183,10 +183,7 @@ class ArtemisTcpTransport {
             options[TransportConstants.HANDSHAKE_TIMEOUT] = 0
             if (trustManagerFactory != null) {
                 // NettyAcceptor only creates default TrustManagerFactorys with the provided trust store details. However, we need to use
-                // more customised instances which use our revocation checkers, which we pass directly into NodeNettyAcceptorFactory.
-                //
-                // This, however, requires copying a lot of code from NettyAcceptor into NodeNettyAcceptor. The version of Artemis in
-                // Corda 4.9 solves this problem by introducing a "trustManagerFactoryPlugin" config option.
+                // more customised instances which use our revocation checkers, so we pass them in, to be picked up by Node(Open)SSLContextFactory.
                 options[TRUST_MANAGER_FACTORY_NAME] = trustManagerFactory
             }
             return createTransport(
@@ -208,6 +205,10 @@ class ArtemisTcpTransport {
                                              threadPoolName: String,
                                              trace: Boolean,
                                              remotingThreads: Int?): TransportConfiguration {
+            if (enableSSL) {
+                // This is required to stop Client checking URL address vs. Server provided certificate
+                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
+            }
             return createTransport(
                     NodeNettyConnectorFactory::class.java.name,
                     hostAndPort,
@@ -232,8 +233,6 @@ class ArtemisTcpTransport {
             if (enableSSL) {
                 options[TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME] = CIPHER_SUITES.joinToString(",")
                 options[TransportConstants.ENABLED_PROTOCOLS_PROP_NAME] = TLS_VERSIONS.joinToString(",")
-                // This is required to stop Client checking URL address vs. Server provided certificate
-                options[TransportConstants.VERIFY_HOST_PROP_NAME] = false
             }
             // By default, use only one remoting thread in tests (https://github.com/corda/corda/pull/2357)
             options[TransportConstants.REMOTING_THREADS_PROPNAME] = remotingThreads ?: if (nodeSerializationEnv == null) 1 else -1

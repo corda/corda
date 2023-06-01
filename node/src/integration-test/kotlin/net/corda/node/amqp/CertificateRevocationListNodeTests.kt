@@ -497,7 +497,9 @@ class ArtemisServerRevocationTest : AbstractServerRevocationTest() {
         }
 
         val queueName = "${P2P_PREFIX}Test"
-        artemisNode.client.started!!.session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+        artemisNode.client.started!!.session.createQueue(
+                QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true)
+        )
 
         val clientConnectionChangeStatus = client.waitForInitialConnectionAndCaptureChanges(expectedConnectedStatus)
 

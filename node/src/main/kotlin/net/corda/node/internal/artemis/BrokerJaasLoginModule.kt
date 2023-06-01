@@ -140,7 +140,7 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
                 // This check is redundant as it was performed already during the SSL handshake
                 CertificateChainCheckPolicy.RootMustMatch
                         .createCheck(p2pJaasConfig.keyStore, p2pJaasConfig.trustStore)
-                        .checkCertificateChain(certificates!!)
+                        .checkCertificateChain(certificates)
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(PEER_ROLE)))
             }
             else -> {
