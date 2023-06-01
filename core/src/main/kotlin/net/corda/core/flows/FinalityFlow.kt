@@ -169,7 +169,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private lateinit var externalTxParticipants: Set<Party>
-    private var txnMetadata: TransactionMetadata? = null
+    private lateinit var txnMetadata: TransactionMetadata
 
     @Suspendable
     @Suppress("ComplexMethod", "NestedBlockDepth")
@@ -221,9 +221,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name,
+                DistributionList(statesToRecord, deriveStatesToRecord(newPlatformSessions)))
         if (useTwoPhaseFinality) {
-            txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name,
-                    DistributionList(statesToRecord, deriveStatesToRecord(newPlatformSessions)))
             val stxn = if (requiresNotarisation) {
                 recordLocallyAndBroadcast(newPlatformSessions, transaction)
                 try {
@@ -287,7 +287,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 try {
                     logger.debug { "Sending transaction to party $session." }
                     subFlow(SendTransactionFlow(session, tx, txnMetadata))
-                    txnMetadata = txnMetadata?.copy(persist = false)
+                    txnMetadata = txnMetadata.copy(persist = false)
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "${session.counterparty} has finished prematurely and we're trying to send them a transaction." +
@@ -377,7 +377,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     try {
                         logger.debug { "Sending transaction to party $session." }
                         subFlow(SendTransactionFlow(session, tx, txnMetadata))
-                        txnMetadata = txnMetadata?.copy(persist = false)
+                        txnMetadata = txnMetadata.copy(persist = false)
                     } catch (e: UnexpectedFlowEndException) {
                         throw UnexpectedFlowEndException(
                                 "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
@@ -401,7 +401,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 logger.debug { "Sending transaction to party $recipient." }
                 val session = initiateFlow(recipient)
                 subFlow(SendTransactionFlow(session, notarised, txnMetadata))
-                txnMetadata = txnMetadata?.copy(persist = false)
+                txnMetadata = txnMetadata.copy(persist = false)
                 logger.info("Party $recipient received the transaction.")
             }
         }

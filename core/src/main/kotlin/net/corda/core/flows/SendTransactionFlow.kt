@@ -5,6 +5,7 @@ import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
+import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -76,8 +77,10 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * @param stx the [SignedTransaction] being sent to the [otherSideSession].
  * @property txnMetadata transaction recovery metadata (eg. used by Two Phase Finality).
  */
-open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, txnMetadata: TransactionMetadata? = null) : DataVendingFlow(otherSide, stx, txnMetadata) {
-    constructor(otherSide: FlowSession, stx: SignedTransaction) : this(otherSide, stx, null)
+open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, txnMetadata: TransactionMetadata) : DataVendingFlow(otherSide, stx, txnMetadata) {
+    constructor(otherSide: FlowSession, stx: SignedTransaction) : this(otherSide, stx,
+        TransactionMetadata(otherSide.counterparty.name, DistributionList(StatesToRecord.NONE, mapOf(otherSide.counterparty.name to StatesToRecord.NONE))))
+        // Note: "ourIdentity.name" not available in constructor so override later in flow call()
 }
 
 /**
@@ -137,7 +140,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
             payload = SignedTransactionWithDistributionList(payload, txnMetadata.distributionList)
             if (txnMetadata.persist)
-                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata, ourIdentity.name)
+                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata.copy(initiator = ourIdentity.name), ourIdentity.name)
         }
 
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need

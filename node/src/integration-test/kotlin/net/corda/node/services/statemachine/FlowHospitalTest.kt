@@ -332,7 +332,7 @@ class FlowHospitalTest {
     }
 
     @Test(timeout = 300_000)
-    fun `unexpected payload errors outside of ReceiveFinalityFlow are not handled`() {
+    fun `unexpected session end errors outside of ReceiveFinalityFlow are not handled`() {
         var dischargedCounter = 0
         var observationCounter = 0
         StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
@@ -677,9 +677,8 @@ class FlowHospitalTest {
             val id = session.receive<SecureHash>().unwrap { it }
             try {
                 subFlow(ReceiveFinalityFlow(session, id))
-            } catch (e: IllegalArgumentException) {
-                if (e.message?.contains("Payload invalid") == true)
-                    exceptionSeenInUserFlow = true
+            } catch (e: UnexpectedFlowEndException) {
+                exceptionSeenInUserFlow = true
                 throw e
             }
         }
