@@ -135,12 +135,12 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
                 Pair(ArtemisMessagingComponent.NODE_RPC_USER, listOf(RolePrincipal(NODE_RPC_ROLE)))
             }
             ArtemisMessagingComponent.PEER_USER -> {
-                requireNotNull(p2pJaasConfig) { "Attempted to connect as a peer to the rpc broker." }
+                val p2pJaasConfig = requireNotNull(p2pJaasConfig) { "Attempted to connect as a peer to the rpc broker." }
                 requireTls(certificates)
                 // This check is redundant as it was performed already during the SSL handshake
-                CertificateChainCheckPolicy.RootMustMatch.createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates)
-                CertificateChainCheckPolicy.RevocationCheck(p2pJaasConfig!!.revocationMode)
-                        .createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates)
+                CertificateChainCheckPolicy.RootMustMatch
+                        .createCheck(p2pJaasConfig.keyStore, p2pJaasConfig.trustStore)
+                        .checkCertificateChain(certificates!!)
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(PEER_ROLE)))
             }
             else -> {

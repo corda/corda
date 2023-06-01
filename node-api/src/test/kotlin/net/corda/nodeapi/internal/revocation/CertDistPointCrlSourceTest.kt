@@ -2,15 +2,13 @@ package net.corda.nodeapi.internal.revocation
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.createDevNodeCa
-import net.corda.testing.core.ALICE_NAME
+import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.node.internal.network.CrlServer
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.math.BigInteger
 
 class CertDistPointCrlSourceTest {
     private lateinit var crlServer: CrlServer
@@ -39,13 +37,14 @@ class CertDistPointCrlSourceTest {
             assertThat(single().revokedCertificates).isNull()
         }
 
-        val nodeCaCert = crlServer.replaceNodeCertDistPoint(createDevNodeCa(crlServer.intermediateCa, ALICE_NAME).certificate)
+        crlSource.clearCache()
 
-        crlServer.revokedNodeCerts += listOf(BigInteger.ONE, BigInteger.TEN)
-        with(crlSource.fetch(nodeCaCert)) {  // Use a different cert to avoid the cache
+        crlServer.revokedIntermediateCerts += DEV_INTERMEDIATE_CA.certificate
+        with(crlSource.fetch(crlServer.intermediateCa.certificate)) {
             assertThat(size).isEqualTo(1)
             val revokedCertificates = single().revokedCertificates
-            assertThat(revokedCertificates.map { it.serialNumber }).containsExactlyInAnyOrder(BigInteger.ONE, BigInteger.TEN)
+            // This also tests clearCache() works.
+            assertThat(revokedCertificates.map { it.serialNumber }).containsExactly(DEV_INTERMEDIATE_CA.certificate.serialNumber)
         }
     }
 }

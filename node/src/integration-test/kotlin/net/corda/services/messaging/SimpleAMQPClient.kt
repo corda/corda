@@ -3,6 +3,8 @@ package net.corda.services.messaging
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
+import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactory
 import org.apache.qpid.jms.JmsConnectionFactory
 import org.apache.qpid.jms.meta.JmsConnectionInfo
 import org.apache.qpid.jms.provider.Provider
@@ -24,9 +26,7 @@ import javax.jms.Connection
 import javax.jms.Message
 import javax.jms.MessageProducer
 import javax.jms.Session
-import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
 
 /**
  * Simple AMQP client connecting to broker using JMS.
@@ -59,12 +59,8 @@ class SimpleAMQPClient(private val target: NetworkHostAndPort, private val confi
     private lateinit var connection: Connection
 
     private fun sslContext(): SSLContext {
-        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply {
-            init(config.keyStore.get().value.internal, config.keyStore.entryPassword.toCharArray())
-        }
-        val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply {
-            init(config.trustStore.get().value.internal)
-        }
+        val keyManagerFactory = keyManagerFactory(config.keyStore.get())
+        val trustManagerFactory = trustManagerFactory(config.trustStore.get())
         val sslContext = SSLContext.getInstance("TLS")
         val keyManagers = keyManagerFactory.keyManagers
         val trustManagers = trustManagerFactory.trustManagers
