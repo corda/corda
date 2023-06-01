@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.SendTransactionFlow.Companion.DUMMY_PARTICIPANT_NAME
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
@@ -79,8 +81,11 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  */
 open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction, txnMetadata: TransactionMetadata) : DataVendingFlow(otherSide, stx, txnMetadata) {
     constructor(otherSide: FlowSession, stx: SignedTransaction) : this(otherSide, stx,
-        TransactionMetadata(otherSide.counterparty.name, DistributionList(StatesToRecord.NONE, mapOf(otherSide.counterparty.name to StatesToRecord.NONE))))
-        // Note: "ourIdentity.name" not available in constructor so override later in flow call()
+        TransactionMetadata(DUMMY_PARTICIPANT_NAME, DistributionList(StatesToRecord.NONE, mapOf(DUMMY_PARTICIPANT_NAME to StatesToRecord.ALL_VISIBLE))))
+        // Note: DUMMY_PARTICIPANT_NAME to be substituted with actual "ourIdentity.name" in flow call()
+    companion object {
+        val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
+    }
 }
 
 /**
@@ -138,9 +143,16 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any, 
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         val toTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
-            payload = SignedTransactionWithDistributionList(payload, txnMetadata.distributionList)
+            val enrichedTxnMetadata = txnMetadata.copy(initiator = ourIdentity.name, distributionList =
+                DistributionList(txnMetadata.distributionList.senderStatesToRecord,
+                    txnMetadata.distributionList.peersToStatesToRecord.map {
+                        if (it.key == DUMMY_PARTICIPANT_NAME)
+                            ourIdentity.name to it.value
+                        else it.key to it.value
+                    }.toMap()))
+                payload = SignedTransactionWithDistributionList(payload, enrichedTxnMetadata.distributionList)
             if (txnMetadata.persist)
-                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, txnMetadata.copy(initiator = ourIdentity.name), ourIdentity.name)
+                (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(payload.stx.id, enrichedTxnMetadata, ourIdentity.name)
         }
 
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
