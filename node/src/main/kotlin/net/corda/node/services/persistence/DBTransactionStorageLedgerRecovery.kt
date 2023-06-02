@@ -294,7 +294,7 @@ private fun CryptoService.decrypt(bytes: ByteArray): ByteArray {
 }
 
 // TO DO: https://r3-cev.atlassian.net/browse/ENT-9876
-private fun CryptoService.encrypt(bytes: ByteArray): ByteArray {
+fun CryptoService.encrypt(bytes: ByteArray): ByteArray {
     return bytes
 }
 
