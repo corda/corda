@@ -87,6 +87,21 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         return stx
     }
 
+    @Suspendable
+    private fun recordTransactionMetadata(stx: SignedTransaction, distributionList: DistributionList?) {
+        distributionList?.let {
+            val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name,
+                    DistributionList(distributionList.senderStatesToRecord,
+                        distributionList.peersToStatesToRecord.map { (peer, peerStatesToRecord) ->
+                            if (peer == ourIdentity.name)
+                                peer to statesToRecord  // use actual value
+                            else
+                                peer to peerStatesToRecord  // use hinted value
+                        }.toMap()))
+            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id, txnMetadata, ourIdentity.name)
+        }
+    }
+
     /**
      * Hook to perform extra checks on the received transaction just before it's recorded. The transaction has already
      * been resolved and verified at this point.
