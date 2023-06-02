@@ -11,6 +11,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -214,7 +215,9 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                 false
             }
 
-    override fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name) { }
+    override fun addSenderTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata): ByteArray? { return null }
+
+    override fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) { }
 
     override fun finalizeTransaction(transaction: SignedTransaction) =
             addTransaction(transaction) {

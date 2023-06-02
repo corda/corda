@@ -65,13 +65,24 @@ interface ServiceHubCoreInternal : ServiceHub {
     fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord)
 
     /**
-     * Records [TransactionMetadata] for a given txnId.
+     * Records Sender [TransactionMetadata] for a given txnId.
      *
      * @param txnId The SecureHash of a transaction.
      * @param txnMetadata The recovery metadata associated with a transaction.
-     * @param caller The CordaX500Name of the party calling this operation.
+     * @return encrypted distribution list (hashed peers -> StatesToRecord values).
      */
-    fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, caller: CordaX500Name)
+    fun recordSenderTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata): ByteArray?
+
+    /**
+     * Records Received [TransactionMetadata] for a given txnId.
+     *
+     * @param txnId The SecureHash of a transaction.
+     * @param sender The sender of the transaction.
+     * @param receiver The receiver of the transaction.
+     * @param receiverStatesToRecord The StatesToRecord value of the receiver.
+     * @param encryptedDistributionList encrypted distribution list (hashed peers -> StatesToRecord values)
+     */
+    fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray)
 }
 
 interface TransactionsResolver {

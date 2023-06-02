@@ -62,7 +62,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         val payload = otherSideSession.receive<Any>().unwrap { it }
         val stx =
             if (payload is SignedTransactionWithDistributionList) {
-                recordTransactionMetadata(payload.stx, payload.distributionList)
+                (serviceHub as ServiceHubCoreInternal).recordReceiverTransactionRecoveryMetadata(payload.stx.id, otherSideSession.counterparty.name, ourIdentity.name, statesToRecord, payload.distributionList)
                 payload.stx
             } else payload as SignedTransaction
         stx.pushToLoggingContext()
@@ -85,21 +85,6 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             logger.info("Successfully recorded received transaction locally.")
         }
         return stx
-    }
-
-    @Suspendable
-    private fun recordTransactionMetadata(stx: SignedTransaction, distributionList: DistributionList?) {
-        distributionList?.let {
-            val txnMetadata = TransactionMetadata(otherSideSession.counterparty.name,
-                    DistributionList(distributionList.senderStatesToRecord,
-                        distributionList.peersToStatesToRecord.map { (peer, peerStatesToRecord) ->
-                            if (peer == ourIdentity.name)
-                                peer to statesToRecord  // use actual value
-                            else
-                                peer to peerStatesToRecord  // use hinted value
-                        }.toMap()))
-            (serviceHub as ServiceHubCoreInternal).recordTransactionRecoveryMetadata(stx.id, txnMetadata, ourIdentity.name)
-        }
     }
 
     /**
