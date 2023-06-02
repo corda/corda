@@ -18,7 +18,6 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.serialization.internal.CordaSerializationEncoding
 import org.hibernate.annotations.Immutable
 import java.io.Serializable
-import java.lang.IllegalStateException
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
 import javax.persistence.Column
