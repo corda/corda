@@ -8,6 +8,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.TransactionStatus
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ResolveTransactionsFlow
@@ -194,6 +195,9 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
             recordTransactions(statesToRecord, txs, SIGNATURE_VERIFICATION_DISABLED)
 
+    override fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, caller: CordaX500Name) =
+        validatedTransactions.addTransactionRecoveryMetadata(txnId, txnMetadata, caller)
+
     @Suppress("NestedBlockDepth")
     @VisibleForTesting
     fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean) {
@@ -240,27 +244,25 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
         )
     }
 
-    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: TransactionMetadata) {
+    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {
         requireSupportedHashType(txn)
         if (txn.coreTransaction is WireTransaction)
             txn.verifyRequiredSignatures()
         database.transaction {
             recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
-                val isInitiator = metadata.initiator == myInfo.legalIdentities.first().name
-                validatedTransactions.finalizeTransaction(txn, metadata, isInitiator)
+                validatedTransactions.finalizeTransaction(txn)
             }
         }
     }
 
-    override fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: TransactionMetadata) {
+    override fun recordUnnotarisedTransaction(txn: SignedTransaction) {
         if (txn.coreTransaction is WireTransaction) {
             txn.notary?.let { notary ->
                 txn.verifySignaturesExcept(notary.owningKey)
             } ?: txn.verifyRequiredSignatures()
         }
         database.transaction {
-            val isInitiator = metadata.initiator == myInfo.legalIdentities.first().name
-            validatedTransactions.addUnnotarisedTransaction(txn, metadata, isInitiator)
+            validatedTransactions.addUnnotarisedTransaction(txn)
         }
     }
 
@@ -360,10 +362,18 @@ interface WritableTransactionStorage : TransactionStorage {
      * Add an un-notarised transaction to the store with a status of *MISSING_TRANSACTION_SIG* and inclusive of flow recovery metadata.
      *
      * @param transaction The transaction to be recorded.
-     * @param metadata Finality flow recovery metadata.
      * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
      */
-    fun addUnnotarisedTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean
+    fun addUnnotarisedTransaction(transaction: SignedTransaction): Boolean
+
+    /**
+     * Record transaction recovery metadata for a given transaction id.
+     *
+     * @param id The SecureHash of the transaction to be recorded.
+     * @param metadata transaction recovery metadata.
+     * @param caller The CordaX500Name of the party calling this operation.
+     */
+    fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name)
 
     /**
      * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.
@@ -375,10 +385,9 @@ interface WritableTransactionStorage : TransactionStorage {
      * Add a finalised transaction to the store with flow recovery metadata.
      *
      * @param transaction The transaction to be recorded.
-     * @param metadata Finality flow recovery metadata.
      * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
      */
-    fun finalizeTransaction(transaction: SignedTransaction, metadata: TransactionMetadata, isInitiator: Boolean): Boolean
+    fun finalizeTransaction(transaction: SignedTransaction): Boolean
 
     /**
      * Update a previously un-notarised transaction including associated notary signatures.

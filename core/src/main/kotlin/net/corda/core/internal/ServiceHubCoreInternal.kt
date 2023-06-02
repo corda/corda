@@ -5,6 +5,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.TransactionMetadata
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
@@ -35,9 +36,8 @@ interface ServiceHubCoreInternal : ServiceHub {
      * This is expected to be run within a database transaction.
      *
      * @param txn The transaction to record.
-     * @param metadata Finality flow recovery metadata.
      */
-    fun recordUnnotarisedTransaction(txn: SignedTransaction, metadata: TransactionMetadata)
+    fun recordUnnotarisedTransaction(txn: SignedTransaction)
 
     /**
      * Removes transaction from data store.
@@ -61,9 +61,17 @@ interface ServiceHubCoreInternal : ServiceHub {
      *
      * @param txn The transaction to record.
      * @param statesToRecord how the vault should treat the output states of the transaction.
-     * @param metadata Finality flow recovery metadata.
      */
-    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord, metadata: TransactionMetadata)
+    fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord)
+
+    /**
+     * Records [TransactionMetadata] for a given txnId.
+     *
+     * @param txnId The SecureHash of a transaction.
+     * @param txnMetadata The recovery metadata associated with a transaction.
+     * @param caller The CordaX500Name of the party calling this operation.
+     */
+    fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, caller: CordaX500Name)
 }
 
 interface TransactionsResolver {

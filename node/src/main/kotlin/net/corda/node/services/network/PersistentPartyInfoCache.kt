@@ -56,7 +56,6 @@ class PersistentPartyInfoCache(private val networkMapCache: PersistentNetworkMap
     private fun updateInfoDB(partyHashCode: Long, partyName: CordaX500Name) {
         database.transaction {
             if (queryByPartyId(session, partyHashCode) == null) {
-                println("PartyInfo: $partyHashCode -> $partyName")
                 session.save(DBTransactionStorageLedgerRecovery.DBRecoveryPartyInfo(partyHashCode, partyName.toString()))
             }
         }

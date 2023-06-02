@@ -14,6 +14,7 @@ import net.corda.core.internal.PlatformVersionSwitches.TWO_PHASE_FINALITY
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
@@ -90,6 +91,7 @@ interface ServicesForResolution {
  * Controls whether the transaction is sent to the vault at all, and if so whether states have to be relevant
  * or not in order to be recorded. Used in [ServiceHub.recordTransactions]
  */
+@CordaSerializable
 enum class StatesToRecord {
     /** The received transaction is not sent to the vault at all. This is used within transaction resolution. */
     NONE,

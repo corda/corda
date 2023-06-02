@@ -10,6 +10,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.DistributionList
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -26,6 +27,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.PLATFORM_VERSION
@@ -47,9 +49,11 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.issuedBy
 import net.corda.finance.test.flows.CashIssueWithObserversFlow
+import net.corda.finance.test.flows.CashPaymentWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
-import net.corda.node.services.persistence.DistributionRecord
+import net.corda.node.services.persistence.ReceiverDistributionRecord
+import net.corda.node.services.persistence.SenderDistributionRecord
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -350,28 +354,120 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        assertThat(getSenderRecoveryData(stx.id, aliceNode.database)).isNotNull
-        assertThat(getReceiverRecoveryData(stx.id, bobNode.database)).isNotNull
+        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+            assertEquals(1, this.size)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+        }
+        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+            assertEquals(StatesToRecord.ALL_VISIBLE, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
+        }
     }
 
-    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+    @Test(timeout=300_000)
+    fun `two phase finality flow payment transaction with observers`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+        val charlieNode = createNode(CHARLIE_NAME, platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        // issue some cash
+        aliceNode.startFlow(CashIssueFlow(Amount(1000L, GBP), OpaqueBytes.of(1), notary)).resultFuture.getOrThrow().stx
+
+        // standard issuance with observers passed in as FinalityFlow sessions
+        val stx = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
+                amount = Amount(100L, GBP),
+                recipient = bobNode.info.singleIdentity(),
+                observers = setOf(charlieNode.info.singleIdentity()))).resultFuture.getOrThrow()
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(charlieNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+
+        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+            assertEquals(2, this.size)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[1].statesToRecord)
+            assertEquals(CHARLIE_NAME.hashCode().toLong(), this[1].peerPartyId)
+        }
+        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
+            // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
+                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
+        }
+        getReceiverRecoveryData(stx.id, charlieNode.database).apply {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            // note: Charlie assertion here is using actually default StatesToRecord.ONLY_RELEVANT
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
+                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
+        }
+
+        // exercise the new FinalityFlow observerSessions constructor parameter
+        val stx3 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
+                amount = Amount(100L, GBP),
+                recipient = bobNode.info.singleIdentity(),
+                observers = setOf(charlieNode.info.singleIdentity()),
+                useObserverSessions = true)).resultFuture.getOrThrow()
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
+        assertThat(charlieNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
+
+        assertEquals(2, getSenderRecoveryData(stx3.id, aliceNode.database).size)
+        assertThat(getReceiverRecoveryData(stx3.id, bobNode.database)).isNotNull
+        assertThat(getReceiverRecoveryData(stx3.id, charlieNode.database)).isNotNull
+    }
+
+    @Test(timeout=300_000)
+    fun `two phase finality flow payment transaction using confidential identities`() {
+        val bobNode = createBob(platformVersion = PlatformVersionSwitches.TWO_PHASE_FINALITY)
+
+        aliceNode.startFlow(CashIssueFlow(Amount(1000L, GBP), OpaqueBytes.of(1), notary)).resultFuture.getOrThrow().stx
+        val stx = aliceNode.startFlowAndRunNetwork(CashPaymentFlow(
+                amount = Amount(100L, GBP),
+                recipient = bobNode.info.singleIdentity(),
+                anonymous = true)).resultFuture.getOrThrow().stx
+
+        assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+        assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
+
+        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+            assertEquals(1, this.size)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+        }
+        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
+        }
+    }
+
+    private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
-        return fromDb.singleOrNull()?.toSenderDistributionRecord()
+        return fromDb.map { it.toSenderDistributionRecord() }.also { println("SenderDistributionRecord\n$it") }
     }
 
-    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): DistributionRecord? {
+    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): ReceiverDistributionRecord? {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where tx_id = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
-        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap()))
+        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap())).also { println("ReceiverDistributionRecord\n$it") }
     }
 
     @StartableByRPC
@@ -445,12 +541,10 @@ class FinalityFlowTests : WithFinality {
         override fun call(): SignedTransaction {
             // Mimic ReceiveFinalityFlow but fail to finalise
             try {
-                val stx = subFlow(ReceiveTransactionFlow(otherSideSession,
-                        checkSufficientSignatures = false, statesToRecord = StatesToRecord.ONLY_RELEVANT, deferredAck = true))
+                val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, StatesToRecord.ONLY_RELEVANT, true))
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
-                (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx,
-                        TransactionMetadata(otherSideSession.counterparty.name, StatesToRecord.ONLY_RELEVANT))
+                (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (overrideAutoAck)
                 logger.info("Peer recorded transaction without notary signature.")
 
@@ -494,7 +588,8 @@ class FinalityFlowTests : WithFinality {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val stxn = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
-            subFlow(SendTransactionFlow(sessionWithCounterParty, stxn))
+            subFlow(SendTransactionFlow(sessionWithCounterParty, stxn,
+                    TransactionMetadata(ourIdentity.name, DistributionList(StatesToRecord.ONLY_RELEVANT, mapOf(BOB_NAME to StatesToRecord.ONLY_RELEVANT)))))
             throw UnexpectedFlowEndException("${stxn.id}")
         }
     }
@@ -512,6 +607,11 @@ class FinalityFlowTests : WithFinality {
     private fun createBob(cordapps: List<TestCordappInternal> = emptyList(), platformVersion: Int = PLATFORM_VERSION): TestStartedNode {
         return mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, additionalCordapps = cordapps,
             version = MOCK_VERSION_INFO.copy(platformVersion = platformVersion)))
+    }
+
+    private fun createNode(legalName: CordaX500Name, cordapps: List<TestCordappInternal> = emptyList(), platformVersion: Int = PLATFORM_VERSION): TestStartedNode {
+        return mockNet.createNode(InternalMockNodeParameters(legalName = legalName, additionalCordapps = cordapps,
+                version = MOCK_VERSION_INFO.copy(platformVersion = platformVersion)))
     }
 
     private fun TestStartedNode.issuesCashTo(recipient: TestStartedNode): SignedTransaction {
