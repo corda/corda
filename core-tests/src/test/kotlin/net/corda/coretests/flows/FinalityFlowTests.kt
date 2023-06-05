@@ -400,13 +400,6 @@ class FinalityFlowTests : WithFinality {
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
                     CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
         }
-        getReceiverRecoveryData(stx.id, charlieNode.database).apply {
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
-            // note: Charlie assertion here is using actually default StatesToRecord.ONLY_RELEVANT
-            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
-                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
-        }
 
         // exercise the new FinalityFlow observerSessions constructor parameter
         val stx3 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(

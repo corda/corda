@@ -195,8 +195,11 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
             recordTransactions(statesToRecord, txs, SIGNATURE_VERIFICATION_DISABLED)
 
-    override fun recordTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata, caller: CordaX500Name) =
-        validatedTransactions.addTransactionRecoveryMetadata(txnId, txnMetadata, caller)
+    override fun recordSenderTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata) =
+        validatedTransactions.addSenderTransactionRecoveryMetadata(txnId, txnMetadata)
+
+    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) =
+            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, receiver, receiverStatesToRecord, encryptedDistributionList)
 
     @Suppress("NestedBlockDepth")
     @VisibleForTesting
@@ -367,13 +370,24 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addUnnotarisedTransaction(transaction: SignedTransaction): Boolean
 
     /**
-     * Record transaction recovery metadata for a given transaction id.
+     * Records Sender [TransactionMetadata] for a given txnId.
      *
-     * @param id The SecureHash of the transaction to be recorded.
-     * @param metadata transaction recovery metadata.
-     * @param caller The CordaX500Name of the party calling this operation.
+     * @param id The SecureHash of a transaction.
+     * @param metadata The recovery metadata associated with a transaction.
+     * @return encrypted distribution list (hashed peers -> StatesToRecord values).
      */
-    fun addTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata, caller: CordaX500Name)
+    fun addSenderTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata): ByteArray?
+
+    /**
+     * Records Received [TransactionMetadata] for a given txnId.
+     *
+     * @param id The SecureHash of a transaction.
+     * @param sender The sender of the transaction.
+     * @param receiver The receiver of the transaction.
+     * @param receiverStatesToRecord The StatesToRecord value of the receiver.
+     * @param encryptedDistributionList encrypted distribution list (hashed peers -> StatesToRecord values)
+     */
+    fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray)
 
     /**
      * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.

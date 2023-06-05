@@ -60,9 +60,6 @@
             <column name="distribution_list" type="BLOB">
                 <constraints nullable="false"/>
             </column>
-            <column name="sender_states_to_record" type="INT">
-                <constraints nullable="false"/>
-            </column>
             <column name="receiver_states_to_record" type="INT">
                 <constraints nullable="false"/>
             </column>
