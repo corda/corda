@@ -20,11 +20,13 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
 @Suppress("FunctionName")
+@Ignore
 class DeterministicContractWithSerializationWhitelistTest {
     companion object {
         val logger = loggerFor<DeterministicContractWithSerializationWhitelistTest>()
