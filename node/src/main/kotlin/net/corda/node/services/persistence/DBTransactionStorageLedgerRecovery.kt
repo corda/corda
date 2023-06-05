@@ -327,6 +327,7 @@ data class HashedDistributionList(
         val baos = ByteArrayOutputStream()
         val out = DataOutputStream(baos)
         out.use {
+            out.writeByte(SERIALIZER_VERSION_ID)
             out.writeByte(senderStatesToRecord.ordinal)
             out.writeInt(peerHashToStatesToRecord.size)
             for(entry in peerHashToStatesToRecord) {
@@ -338,9 +339,11 @@ data class HashedDistributionList(
         }
     }
     companion object {
+        const val SERIALIZER_VERSION_ID = 1
         fun deserialize(bytes: ByteArray): HashedDistributionList {
             val input = DataInputStream(ByteArrayInputStream(bytes))
             input.use {
+                assert(input.readByte().toInt() == SERIALIZER_VERSION_ID) { "Serialization version conflict." }
                 val senderStatesToRecord = StatesToRecord.values()[input.readByte().toInt()]
                 val numPeerHashToStatesToRecords = input.readInt()
                 val peerHashToStatesToRecord = mutableMapOf<Long, StatesToRecord>()
