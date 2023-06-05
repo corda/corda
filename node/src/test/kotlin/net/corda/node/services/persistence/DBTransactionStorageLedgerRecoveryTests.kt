@@ -13,7 +13,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.StatesToRecord.ALL_VISIBLE
 import net.corda.core.node.StatesToRecord.NONE
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -28,7 +27,6 @@ import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -278,6 +276,13 @@ class DBTransactionStorageLedgerRecoveryTests {
         assertNull(transactionRecovery.getTransactionInternal(receiverTransaction.id))
     }
 
+    @Test(timeout = 300_000)
+    fun `test lightweight serialization and deserialization of hashed distribution list payload`() {
+        val dl = HashedDistributionList(ALL_VISIBLE,
+                mapOf(BOB.name.hashCode().toLong() to NONE, CHARLIE_NAME.hashCode().toLong() to ONLY_RELEVANT))
+        assertEquals(dl, dl.serialize().let { HashedDistributionList.deserialize(it) })
+    }
+
     private fun readTransactionFromDB(id: SecureHash): DBTransactionStorage.DBTransaction {
         val fromDb = database.transaction {
             session.createQuery(
@@ -369,7 +374,6 @@ class DBTransactionStorageLedgerRecoveryTests {
         val hashedPeersToStatesToRecord = this.peersToStatesToRecord.map { (peer, statesToRecord) ->
             partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }.toMap()
         val hashedDistributionList = HashedDistributionList(this.senderStatesToRecord, hashedPeersToStatesToRecord)
-        return cryptoService.encrypt(hashedDistributionList.serialize(context = DBTransactionStorage.contextToUse()
-                .withEncoding(CordaSerializationEncoding.SNAPPY)).bytes)
+        return cryptoService.encrypt(hashedDistributionList.serialize())
     }
 }
