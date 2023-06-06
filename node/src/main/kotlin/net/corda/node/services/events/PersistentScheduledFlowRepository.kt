@@ -2,8 +2,8 @@ package net.corda.node.services.events
 
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.SecureHash
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.node.services.vault.toStateRef
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 interface ScheduledFlowRepository {
@@ -25,9 +25,8 @@ class PersistentScheduledFlowRepository(val database: CordaPersistence) : Schedu
     }
 
     private fun fromPersistentEntity(scheduledStateRecord: NodeSchedulerService.PersistentScheduledState): Pair<StateRef, ScheduledStateRef> {
-        val txId = scheduledStateRecord.output.txId
-        val index = scheduledStateRecord.output.index
-        return Pair(StateRef(SecureHash.create(txId), index), ScheduledStateRef(StateRef(SecureHash.create(txId), index), scheduledStateRecord.scheduledAt))
+        val stateRef = scheduledStateRecord.output.toStateRef()
+        return Pair(stateRef, ScheduledStateRef(stateRef, scheduledStateRecord.scheduledAt))
     }
 
     override fun delete(key: StateRef): Boolean {
