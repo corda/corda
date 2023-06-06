@@ -3,28 +3,65 @@ package net.corda.node.services.vault
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.FungibleState
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.OwnableState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.HospitalizeFlowException
-import net.corda.core.internal.*
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TransactionDeserialisationException
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.tee
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.*
-import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.node.services.vault.builder
 import net.corda.core.observable.internal.OnResilientSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.transactions.*
-import net.corda.core.utilities.*
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.FullTransaction
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.trace
+import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
+import org.hibernate.query.Query
 import rx.Observable
 import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.PublishSubject
@@ -32,7 +69,8 @@ import java.security.PublicKey
 import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
-import java.util.*
+import java.util.Arrays
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import javax.persistence.PersistenceException
@@ -54,9 +92,9 @@ import javax.persistence.criteria.Root
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
-        private val servicesForResolution: ServicesForResolution,
+        private val servicesForResolution: NodeServicesForResolution,
         private val database: CordaPersistence,
-        private val schemaService: SchemaService,
+        schemaService: SchemaService,
         private val appClassloader: ClassLoader
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     companion object {
@@ -196,7 +234,7 @@ class NodeVaultService(
                         if (lockId != null) {
                             lockId = null
                             lockUpdateTime = clock.instant()
-                            log.trace("Releasing soft lock on consumed state: $stateRef")
+                            log.trace { "Releasing soft lock on consumed state: $stateRef" }
                         }
                         session.save(state)
                     }
@@ -227,7 +265,7 @@ class NodeVaultService(
             }
             // we are not inside a flow, we are most likely inside a CordaService;
             // we will expose, by default, subscribing of -non unsubscribing- rx.Observers to rawUpdates.
-            return _rawUpdatesPublisher.resilientOnError()
+            _rawUpdatesPublisher.resilientOnError()
         }
 
     override val updates: Observable<Vault.Update<ContractState>>
@@ -639,7 +677,20 @@ class NodeVaultService(
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
         try {
-            return _queryBy(criteria, paging, sorting, contractStateType, false)
+            // We decrement by one if the client requests MAX_VALUE, assuming they can not notice this because they don't have enough memory
+            // to request MAX_VALUE states at once.
+            val validPaging = if (paging.pageSize == Integer.MAX_VALUE) {
+                paging.copy(pageSize = Integer.MAX_VALUE - 1)
+            } else {
+                checkVaultQuery(paging.pageSize >= 1) { "Page specification: invalid page size ${paging.pageSize} [minimum is 1]" }
+                paging
+            }
+            if (!validPaging.isDefault) {
+                checkVaultQuery(validPaging.pageNumber >= DEFAULT_PAGE_NUM) {
+                    "Page specification: invalid page number ${validPaging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]"
+                }
+            }
+            return queryBy(criteria, validPaging, sorting, contractStateType)
         } catch (e: VaultQueryException) {
             throw e
         } catch (e: Exception) {
@@ -647,98 +698,98 @@ class NodeVaultService(
         }
     }
 
-    @Throws(VaultQueryException::class)
-    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
-        // We decrement by one if the client requests MAX_PAGE_SIZE, assuming they can not notice this because they don't have enough memory
-        // to request `MAX_PAGE_SIZE` states at once.
-        val paging = if (paging_.pageSize == Integer.MAX_VALUE) {
-            paging_.copy(pageSize = Integer.MAX_VALUE - 1)
-        } else {
-            paging_
-        }
+    private fun <T : ContractState> queryBy(criteria: QueryCriteria,
+                                            paging: PageSpecification,
+                                            sorting: Sort,
+                                            contractStateType: Class<out T>): Vault.Page<T> {
         log.debug { "Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting" }
         return database.transaction {
             // calculate total results where a page specification has been defined
-            var totalStates = -1L
-            if (!skipPagingChecks && !paging.isDefault) {
-                val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-                val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
-                val results = _queryBy(criteria.and(countCriteria), PageSpecification(), Sort(emptyList()), contractStateType, true)  // only skip pagination checks for total results count query
-                totalStates = results.otherResults.last() as Long
-            }
+            val totalStatesAvailable = if (paging.isDefault) -1 else queryTotalStateCount(criteria, contractStateType)
 
-            val session = getSession()
-
-            val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
-            val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-
-            // TODO: revisit (use single instance of parser for all queries)
-            val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
-
-            // parse criteria and build where predicates
-            criteriaParser.parse(criteria, sorting)
-
-            // prepare query for execution
-            val query = session.createQuery(criteriaQuery)
-
-            // pagination checks
-            if (!skipPagingChecks && !paging.isDefault) {
-                // pagination
-                if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
-                if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [minimum is 1]")
-                if (paging.pageSize > MAX_PAGE_SIZE) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [maximum is $MAX_PAGE_SIZE]")
-            }
-
-            // For both SQLServer and PostgresSQL, firstResult must be >= 0. So we set a floor at 0.
-            // TODO: This is a catch-all solution. But why is the default pageNumber set to be -1 in the first place?
-            // Even if we set the default pageNumber to be 1 instead, that may not cover the non-default cases.
-            // So the floor may be necessary anyway.
-            query.firstResult = maxOf(0, (paging.pageNumber - 1) * paging.pageSize)
-            val pageSize = paging.pageSize + 1
-            query.maxResults = if (pageSize > 0) pageSize else Integer.MAX_VALUE // detection too many results, protected against overflow
+            val (query, stateTypes) = createQuery(criteria, contractStateType, sorting)
+            query.setResultWindow(paging)
 
             // execution
             val results = query.resultList
 
             // final pagination check (fail-fast on too many results when no pagination specified)
-            if (!skipPagingChecks && paging.isDefault && results.size > DEFAULT_PAGE_SIZE) {
-                throw VaultQueryException("There are ${results.size} results, which exceeds the limit of $DEFAULT_PAGE_SIZE for queries that do not specify paging. In order to retrieve these results, provide a `PageSpecification(pageNumber, pageSize)` to the method invoked.")
+            checkVaultQuery(!paging.isDefault || results.size != paging.pageSize + 1) {
+                "There are more results than the limit of $DEFAULT_PAGE_SIZE for queries that do not specify paging. " +
+                        "In order to retrieve these results, provide a PageSpecification to the method invoked."
             }
-            val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
-            val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
+
+            val resultsIterator = results.iterator()
+
+            // From page 2 and onwards, the first result is the previous page anchor
+            val previousPageAnchor = if (paging.pageNumber > DEFAULT_PAGE_NUM && resultsIterator.hasNext()) {
+                val previousVaultState = resultsIterator.next()[0] as VaultSchemaV1.VaultStates
+                previousVaultState.stateRef!!.toStateRef()
+            } else {
+                null
+            }
+
+            val statesMetadata: MutableList<Vault.StateMetadata> = mutableListOf()
             val otherResults: MutableList<Any> = mutableListOf()
-            val stateRefs = mutableSetOf<StateRef>()
 
-            results.asSequence()
-                    .forEachIndexed { index, result ->
-                        if (result[0] is VaultSchemaV1.VaultStates) {
-                            if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
-                                return@forEachIndexed
-                            val vaultState = result[0] as VaultSchemaV1.VaultStates
-                            val stateRef = StateRef(SecureHash.create(vaultState.stateRef!!.txId), vaultState.stateRef!!.index)
-                            stateRefs.add(stateRef)
-                            statesMeta.add(Vault.StateMetadata(stateRef,
-                                    vaultState.contractStateClassName,
-                                    vaultState.recordedTime,
-                                    vaultState.consumedTime,
-                                    vaultState.stateStatus,
-                                    vaultState.notary,
-                                    vaultState.lockId,
-                                    vaultState.lockUpdateTime,
-                                    vaultState.relevancyStatus,
-                                    constraintInfo(vaultState.constraintType, vaultState.constraintData)
-                            ))
-                        } else {
-                            // TODO: improve typing of returned other results
-                            log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
-                            otherResults.addAll(result.toArray().asList())
-                        }
-                    }
-            if (stateRefs.isNotEmpty())
-                statesAndRefs.addAll(uncheckedCast(servicesForResolution.loadStates(stateRefs)))
+            for (result in resultsIterator) {
+                val result0 = result[0]
+                if (result0 is VaultSchemaV1.VaultStates) {
+                    statesMetadata.add(result0.toStateMetadata())
+                } else {
+                    log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
+                    otherResults.addAll(result.toArray().asList())
+                }
+            }
 
-            Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
+            val states: List<StateAndRef<T>> = servicesForResolution.loadStates(
+                    statesMetadata.mapTo(LinkedHashSet()) { it.ref },
+                    ArrayList()
+            )
+
+            Vault.Page(states, statesMetadata, totalStatesAvailable, stateTypes, otherResults, previousPageAnchor)
         }
+    }
+
+    private fun Query<*>.setResultWindow(paging: PageSpecification) {
+        // For both SQLServer and PostgresSQL, firstResult must be >= 0.
+        firstResult = 0
+        if (paging.isDefault) {
+            // Peek ahead and see if there are more results in case pagination should be done
+            maxResults = paging.pageSize + 1
+        } else if (paging.pageNumber == DEFAULT_PAGE_NUM) {
+            maxResults = paging.pageSize
+        } else {
+            // In addition to aligning the query to the correct result window for the page, also include the previous page's last
+            // result for the previousPageAnchor value.
+            firstResult = ((paging.pageNumber - 1) * paging.pageSize) - 1
+            maxResults = paging.pageSize + 1
+        }
+    }
+
+    private fun <T : ContractState> queryTotalStateCount(baseCriteria: QueryCriteria, contractStateType: Class<out T>): Long {
+        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
+        val criteria = baseCriteria.and(countCriteria)
+        val (query) = createQuery(criteria, contractStateType, null)
+        val results = query.resultList
+        return results.last().toArray().last() as Long
+    }
+
+    private fun <T : ContractState> createQuery(criteria: QueryCriteria,
+                                                contractStateType: Class<out T>,
+                                                sorting: Sort?): Pair<Query<Tuple>, Vault.StateStatus> {
+        val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
+        val criteriaParser = HibernateQueryCriteriaParser(
+                contractStateType,
+                contractStateTypeMappings,
+                criteriaBuilder,
+                criteriaQuery,
+                criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+        )
+        criteriaParser.parse(criteria, sorting)
+        val query = getSession().createQuery(criteriaQuery)
+        return Pair(query, criteriaParser.stateTypes)
     }
 
     /**
@@ -775,6 +826,12 @@ class NodeVaultService(
         }
     }
 
+    private inline fun checkVaultQuery(value: Boolean, lazyMessage: () -> Any) {
+        if (!value) {
+            throw VaultQueryException(lazyMessage().toString())
+        }
+    }
+
     private fun <T : ContractState> filterContractStates(update: Vault.Update<T>, contractStateType: Class<out T>) =
             update.copy(consumed = filterByContractState(contractStateType, update.consumed),
                     produced = filterByContractState(contractStateType, update.produced))
@@ -802,6 +859,7 @@ class NodeVaultService(
     }
 
     private fun getSession() = database.currentOrNew().session
+
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */

@@ -1,10 +1,17 @@
 package net.corda.node.internal
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentResolutionException
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
@@ -20,7 +27,7 @@ data class ServicesForResolutionImpl(
         override val cordappProvider: CordappProvider,
         override val networkParametersService: NetworkParametersService,
         private val validatedTransactions: TransactionStorage
-) : ServicesForResolution {
+) : NodeServicesForResolution {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")
 
@@ -30,13 +37,13 @@ data class ServicesForResolutionImpl(
         return stx.resolveBaseTransaction(this).outputs[stateRef.index]
     }
 
-    @Throws(TransactionResolutionException::class)
-    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-        return stateRefs.groupBy { it.txhash }.flatMap {
+    override fun <T : ContractState, C : MutableCollection<StateAndRef<T>>> loadStates(input: Iterable<StateRef>, output: C): C {
+        input.groupBy { it.txhash }.forEach {
             val stx = validatedTransactions.getTransaction(it.key) ?: throw TransactionResolutionException(it.key)
             val baseTx = stx.resolveBaseTransaction(this)
-            it.value.map { ref -> StateAndRef(baseTx.outputs[ref.index], ref) }
-        }.toSet()
+            it.value.mapTo(output) { ref -> StateAndRef(uncheckedCast(baseTx.outputs[ref.index]), ref) }
+        }
+        return output
     }
 
     @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)

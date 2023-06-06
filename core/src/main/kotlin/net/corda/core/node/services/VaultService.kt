@@ -1,10 +1,23 @@
+@file:Suppress("LongParameterList")
+
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.FungibleState
+import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.ReferencedStateAndRef
+import net.corda.core.contracts.SignatureAttachmentConstraint
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
@@ -13,9 +26,16 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.Vault.RelevancyStatus.*
+import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.Vault.RelevancyStatus.ALL
+import net.corda.core.node.services.Vault.RelevancyStatus.NOT_RELEVANT
+import net.corda.core.node.services.Vault.RelevancyStatus.RELEVANT
 import net.corda.core.node.services.Vault.StateStatus
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
+import net.corda.core.node.services.vault.MAX_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
@@ -196,16 +216,28 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *     otherwise it defaults to -1.
      *  4) Status types used in this query: [StateStatus.UNCONSUMED], [StateStatus.CONSUMED], [StateStatus.ALL].
      *  5) Other results as a [List] of any type (eg. aggregate function results with/without group by).
+     *  6) A [StateRef] pointing to the last state of the previous page. Use this to detect if the database has changed whilst loading pages
+     *     by checking it matches your last loaded state.
      *
-     *  Note: currently otherResults are used only for Aggregate Functions (in which case, the states and statesMetadata
-     *  results will be empty).
+     *  Note: currently [otherResults] is used only for aggregate functions (in which case, [states] and [statesMetadata] will be empty).
      */
     @CordaSerializable
-    data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
-                                           val statesMetadata: List<StateMetadata>,
-                                           val totalStatesAvailable: Long,
-                                           val stateTypes: StateStatus,
-                                           val otherResults: List<Any>)
+    data class Page<T : ContractState> @JvmOverloads constructor(
+            val states: List<StateAndRef<T>>,
+            val statesMetadata: List<StateMetadata>,
+            val totalStatesAvailable: Long,
+            val stateTypes: StateStatus,
+            val otherResults: List<Any>,
+            val previousPageAnchor: StateRef? = null
+    ) {
+        fun copy(states: List<StateAndRef<T>> = this.states,
+                 statesMetadata: List<StateMetadata> = this.statesMetadata,
+                 totalStatesAvailable: Long = this.totalStatesAvailable,
+                 stateTypes: StateStatus = this.stateTypes,
+                 otherResults: List<Any> = this.otherResults): Page<T> {
+            return Page(states, statesMetadata, totalStatesAvailable, stateTypes, otherResults, null)
+        }
+    }
 
     @CordaSerializable
     data class StateMetadata @JvmOverloads constructor(
@@ -213,11 +245,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val contractStateClassName: String,
             val recordedTime: Instant,
             val consumedTime: Instant?,
-            val status: Vault.StateStatus,
+            val status: StateStatus,
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val relevancyStatus: Vault.RelevancyStatus? = null,
+            val relevancyStatus: RelevancyStatus? = null,
             val constraintInfo: ConstraintInfo? = null
     ) {
         fun copy(
@@ -225,7 +257,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 contractStateClassName: String = this.contractStateClassName,
                 recordedTime: Instant = this.recordedTime,
                 consumedTime: Instant? = this.consumedTime,
-                status: Vault.StateStatus = this.status,
+                status: StateStatus = this.status,
                 notary: AbstractParty? = this.notary,
                 lockId: String? = this.lockId,
                 lockUpdateTime: Instant? = this.lockUpdateTime
@@ -237,11 +269,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 contractStateClassName: String = this.contractStateClassName,
                 recordedTime: Instant = this.recordedTime,
                 consumedTime: Instant? = this.consumedTime,
-                status: Vault.StateStatus = this.status,
+                status: StateStatus = this.status,
                 notary: AbstractParty? = this.notary,
                 lockId: String? = this.lockId,
                 lockUpdateTime: Instant? = this.lockUpdateTime,
-                relevancyStatus: Vault.RelevancyStatus?
+                relevancyStatus: RelevancyStatus?
         ): StateMetadata {
             return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, relevancyStatus, ConstraintInfo(AlwaysAcceptAttachmentConstraint))
         }
@@ -249,9 +281,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
     companion object {
         @Deprecated("No longer used. The vault does not emit empty updates")
-        val NoUpdate = Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL, references = emptySet())
+        val NoUpdate = Update(emptySet(), emptySet(), type = UpdateType.GENERAL, references = emptySet())
         @Deprecated("No longer used. The vault does not emit empty updates")
-        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE, references = emptySet())
+        val NoNotaryUpdate = Update(emptySet(), emptySet(), type = UpdateType.NOTARY_CHANGE, references = emptySet())
     }
 }
 
@@ -302,7 +334,7 @@ interface VaultService {
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         val query = QueryCriteria.VaultQueryCriteria(
                 stateRefs = listOf(ref),
-                status = Vault.StateStatus.CONSUMED
+                status = StateStatus.CONSUMED
         )
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states
@@ -358,8 +390,8 @@ interface VaultService {
     /**
      * Helper function to determine spendable states and soft locking them.
      * Currently performance will be worse than for the hand optimised version in
-     * [Cash.unconsumedCashStatesForSpending]. However, this is fully generic and can operate with custom [FungibleState]
-     * and [FungibleAsset] states.
+     * [net.corda.finance.workflows.asset.selection.AbstractCashSelection.unconsumedCashStatesForSpending]. However, this is fully generic
+     * and can operate with custom [FungibleState] and [FungibleAsset] states.
      * @param lockId The [FlowLogic.runId]'s [UUID] of the current flow used to soft lock the states.
      * @param eligibleStatesQuery A custom query object that selects down to the appropriate subset of all states of the
      * [contractStateType]. e.g. by selecting on account, issuer, etc. The query is internally augmented with the

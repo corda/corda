@@ -44,6 +44,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.VersionInfo
 import net.corda.node.internal.ServicesForResolutionImpl
+import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
@@ -498,7 +499,14 @@ open class MockServices private constructor(
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
-        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }
+        return NodeVaultService(
+                clock,
+                keyManagementService,
+                servicesForResolution as NodeServicesForResolution,
+                database,
+                schemaService,
+                cordappLoader.appClassLoader
+        ).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API
