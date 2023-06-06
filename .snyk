@@ -131,7 +131,7 @@ ignore:
           this vulnerability.
         expires: 2023-09-01T11:32:38.120Z
         created: 2022-09-21T11:32:38.125Z
- SNYK-JAVA-COMFASTERXMLJACKSONCORE-3038424:
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-3038424:
     - '*':
         reason: >-
           Corda does not set the non-default UNWRAP_SINGLE_VALUE_ARRAYS required
@@ -145,7 +145,7 @@ ignore:
           nesting are potentially susceptible.
         expires: 2023-09-01T12:04:40.180Z
         created: 2023-02-09T12:04:40.209Z
- SNYK-JAVA-COMFASTERXMLJACKSONCORE-3038426:
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-3038426:
     - '*':
         reason: >-
           Corda does not set the non-default UNWRAP_SINGLE_VALUE_ARRAYS required
@@ -159,7 +159,7 @@ ignore:
           nesting are potentially susceptible.
         expires: 2023-09-01T12:05:03.931Z
         created: 2023-02-09T12:05:03.962Z
- SNYK-JAVA-ORGYAML-2806360:
+  SNYK-JAVA-ORGYAML-2806360:
     - '*':
         reason: >-
           Snakeyaml is being used by Jackson and liquidbase. Corda does not use
@@ -172,7 +172,7 @@ ignore:
           not exposed to this DOS vulnerability.
         expires: 2023-09-01T13:40:55.262Z
         created: 2022-09-21T13:40:55.279Z
- SNYK-JAVA-ORGYAML-3016891:
+  SNYK-JAVA-ORGYAML-3016891:
     - '*':
         reason: >-
           Snakeyaml is being used by Jackson and liquidbase. Corda does not use
@@ -186,7 +186,7 @@ ignore:
           vulnerability.
         expires: 2023-09-01T16:37:28.911Z
         created: 2023-02-06T16:37:28.933Z
- SNYK-JAVA-ORGYAML-3016888:
+  SNYK-JAVA-ORGYAML-3016888:
     - '*':
         reason: >-
           Snakeyaml is being used by Jackson and liquidbase. Corda does not use
@@ -200,7 +200,7 @@ ignore:
           vulnerability.
         expires: 2023-09-01T13:39:49.450Z
         created: 2022-09-21T13:39:49.470Z
- SNYK-JAVA-ORGYAML-3016889:
+  SNYK-JAVA-ORGYAML-3016889:
     - '*':
         reason: >-
           Snakeyaml is being used by Jackson and liquidbase. Corda does not use
@@ -214,7 +214,7 @@ ignore:
           vulnerability.
         expires: 2023-09-01T16:35:13.840Z
         created: 2023-02-06T16:35:13.875Z
- SNYK-JAVA-ORGYAML-3113851:
+  SNYK-JAVA-ORGYAML-3113851:
     - '*':
         reason: >-
           Snakeyaml is being used by Jackson and liquidbase. Corda does not use
