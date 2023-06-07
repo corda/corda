@@ -99,7 +99,7 @@ class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Pair<String, 
                 .use { ps ->
                     ps.executeQuery().use { rs ->
                         rs.next()
-                        rs.getLong(2)     // receiverPartyId
+                        rs.getLong(4)     // receiverPartyId
                     }
                 }
         return Pair(transactionStatus, receiverPartyId)
