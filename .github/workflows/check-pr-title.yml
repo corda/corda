@@ -9,6 +9,6 @@ jobs:
     steps:
       - uses: morrisoncole/pr-lint-action@v1.6.1
         with:
-          title-regex: '^((CORDA|AG|EG|ENT|INFRA|NAAS|ES)-\d+)(.*)'
+          title-regex: '^((CORDA|AG|EG|ENT|INFRA|ES)-\d+)(.*)'
           on-failed-regex-comment: "PR title failed to match regex -> `%regex%`"
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
