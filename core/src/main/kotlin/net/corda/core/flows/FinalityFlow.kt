@@ -249,7 +249,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     recordTransactionLocally(transaction)
                 transaction
             }
-            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions.toSet(), stxn)
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
             return stxn
         }
         else {
@@ -257,7 +257,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 notarise().first
             } else transaction
             recordTransactionLocally(stxn)
-            broadcastToOtherParticipants(externalTxParticipants, (newPlatformSessions + oldPlatformSessions).toSet(), stxn)
+            broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, stxn)
             return stxn
         }
     }
