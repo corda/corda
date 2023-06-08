@@ -2532,8 +2532,6 @@ public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.F
   public final java.util.Set<net.corda.core.flows.FlowSession> getOtherSessions()
   @NotNull
   public final Object getPayload()
-  @Nullable
-  public final net.corda.core.flows.TransactionMetadata getTxnMetadata()
   @Suspendable
   @NotNull
   protected net.corda.core.utilities.UntrustworthyData<net.corda.core.internal.FetchDataFlow$Request> sendPayloadAndReceiveDataRequest(net.corda.core.flows.FlowSession, Object)
