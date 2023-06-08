@@ -225,7 +225,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 DistributionList(statesToRecord, deriveStatesToRecord(newPlatformSessions)))
         if (useTwoPhaseFinality) {
             val stxn = if (requiresNotarisation) {
-                recordLocallyAndBroadcast(newPlatformSessions.toSet(), transaction)
+                recordLocallyAndBroadcast(newPlatformSessions, transaction)
                 try {
                     val (notarisedTxn, notarySignatures) = notarise()
                     if (newPlatformSessions.isNotEmpty()) {
@@ -244,7 +244,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             else {
                 if (newPlatformSessions.isNotEmpty())
-                    finaliseLocallyAndBroadcast(newPlatformSessions.toSet(), transaction)
+                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction)
                 else
                     recordTransactionLocally(transaction)
                 transaction
@@ -263,7 +263,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun recordLocallyAndBroadcast(sessions: Set<FlowSession>, tx: SignedTransaction) {
+    private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
@@ -272,7 +272,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun finaliseLocallyAndBroadcast(sessions: Set<FlowSession>, tx: SignedTransaction) {
+    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocallyAndBroadcast", flowLogic = this) {
             finaliseLocally(tx)
             progressTracker.currentStep = BROADCASTING
@@ -281,11 +281,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcast(sessions: Set<FlowSession>, tx: SignedTransaction) {
+    private fun broadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcast", flowLogic = this) {
             try {
                 logger.debug { "Sending transaction to party sessions: $sessions." }
-                subFlow(SendTransactionFlow(sessions, tx, txnMetadata))
+                subFlow(SendTransactionFlow(sessions.toSet(), tx, txnMetadata))
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
                         "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them a transaction." +
@@ -363,7 +363,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Set<FlowSession>, tx: SignedTransaction) {
+    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
         if (externalTxParticipants.isEmpty() && sessions.isEmpty() && oldParticipants.isEmpty()) return
         progressTracker.currentStep = BROADCASTING
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastToOtherParticipants", flowLogic = this) {
@@ -372,7 +372,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 oldV3Broadcast(tx, oldParticipants.toSet())
                 try {
                     logger.debug { "Sending transaction to party sessions $sessions." }
-                    subFlow(SendTransactionFlow(sessions, tx, txnMetadata))
+                    subFlow(SendTransactionFlow(sessions.toSet(), tx, txnMetadata))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them the finalised transaction. " +
