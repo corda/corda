@@ -659,6 +659,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
+            partyInfoCache.start()
+
             /* Note the .get() at the end of the distributeEvent call, below.
                This will block until all Corda Services have returned from processing the event, allowing a service to prevent the
                state machine manager from starting (just below this) until the service is ready.
@@ -697,9 +699,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.warn("Not distributing events as NetworkMap is not ready")
             }
         }
-        nodeReadyFuture.thenMatch({
-            partyInfoCache.start()
-        }, { th -> log.error("Unexpected exception during cache initialisation", th) })
 
         setNodeStatus(NodeStatus.STARTED)
         return resultingNodeInfo
