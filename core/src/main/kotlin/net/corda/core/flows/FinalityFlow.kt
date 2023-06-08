@@ -286,7 +286,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             try {
                 logger.debug { "Sending transaction to party sessions: $sessions." }
                 subFlow(SendTransactionFlow(sessions, tx, txnMetadata))
-                txnMetadata = txnMetadata.copy(persist = false)
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
                         "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them a transaction." +
@@ -374,7 +373,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 try {
                     logger.debug { "Sending transaction to party sessions $sessions." }
                     subFlow(SendTransactionFlow(sessions, tx, txnMetadata))
-                    txnMetadata = txnMetadata.copy(persist = false)
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them the finalised transaction. " +
@@ -396,7 +394,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         logger.debug { "Sending transaction to parties $remoteRecipients." }
         val sessions = remoteRecipients.map { initiateFlow(it) }.toSet()
         subFlow(SendTransactionFlow(sessions, notarised, txnMetadata))
-        txnMetadata = txnMetadata.copy(persist = false)
         logger.info("Parties $remoteRecipients received the transaction.")
     }
 

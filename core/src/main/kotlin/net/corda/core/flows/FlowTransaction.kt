@@ -23,9 +23,8 @@ data class FlowTransactionInfo(
 
 @CordaSerializable
 data class TransactionMetadata(
-        val initiator: CordaX500Name,
-        val distributionList: DistributionList,
-        val persist: Boolean = true     // hint to persist to transactional store
+    val initiator: CordaX500Name,
+    val distributionList: DistributionList
 )
 
 @CordaSerializable
