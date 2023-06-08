@@ -225,7 +225,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 DistributionList(statesToRecord, deriveStatesToRecord(newPlatformSessions)))
         if (useTwoPhaseFinality) {
             val stxn = if (requiresNotarisation) {
-                recordLocallyAndBroadcast(newPlatformSessions, transaction)
+                recordLocallyAndBroadcast(newPlatformSessions.toSet(), transaction)
                 try {
                     val (notarisedTxn, notarySignatures) = notarise()
                     if (newPlatformSessions.isNotEmpty()) {
@@ -244,12 +244,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
             else {
                 if (newPlatformSessions.isNotEmpty())
-                    finaliseLocallyAndBroadcast(newPlatformSessions, transaction)
+                    finaliseLocallyAndBroadcast(newPlatformSessions.toSet(), transaction)
                 else
                     recordTransactionLocally(transaction)
                 transaction
             }
-            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions, stxn)
+            broadcastToOtherParticipants(externalTxParticipants, oldPlatformSessions.toSet(), stxn)
             return stxn
         }
         else {
@@ -257,13 +257,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 notarise().first
             } else transaction
             recordTransactionLocally(stxn)
-            broadcastToOtherParticipants(externalTxParticipants, newPlatformSessions + oldPlatformSessions, stxn)
+            broadcastToOtherParticipants(externalTxParticipants, (newPlatformSessions + oldPlatformSessions).toSet(), stxn)
             return stxn
         }
     }
 
     @Suspendable
-    private fun recordLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun recordLocallyAndBroadcast(sessions: Set<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordLocallyAndBroadcast", flowLogic = this) {
             recordUnnotarisedTransaction(tx)
             progressTracker.currentStep = BROADCASTING_PRE_NOTARISATION
@@ -272,7 +272,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun finaliseLocallyAndBroadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun finaliseLocallyAndBroadcast(sessions: Set<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finaliseLocallyAndBroadcast", flowLogic = this) {
             finaliseLocally(tx)
             progressTracker.currentStep = BROADCASTING
@@ -281,21 +281,19 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcast(sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun broadcast(sessions: Set<FlowSession>, tx: SignedTransaction) {
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcast", flowLogic = this) {
-            sessions.forEach { session ->
-                try {
-                    logger.debug { "Sending transaction to party $session." }
-                    subFlow(SendTransactionFlow(session, tx, txnMetadata))
-                    txnMetadata = txnMetadata.copy(persist = false)
-                } catch (e: UnexpectedFlowEndException) {
-                    throw UnexpectedFlowEndException(
-                            "${session.counterparty} has finished prematurely and we're trying to send them a transaction." +
-                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
-                            e.cause,
-                            e.originalErrorId
-                    )
-                }
+            try {
+                logger.debug { "Sending transaction to party sessions: $sessions." }
+                subFlow(SendTransactionFlow(sessions, tx, txnMetadata))
+                txnMetadata = txnMetadata.copy(persist = false)
+            } catch (e: UnexpectedFlowEndException) {
+                throw UnexpectedFlowEndException(
+                        "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them a transaction." +
+                                "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                        e.cause,
+                        e.originalErrorId
+                )
             }
         }
     }
@@ -366,26 +364,24 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     @Suspendable
-    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Collection<FlowSession>, tx: SignedTransaction) {
+    private fun broadcastToOtherParticipants(externalTxParticipants: Set<Party>, sessions: Set<FlowSession>, tx: SignedTransaction) {
         if (externalTxParticipants.isEmpty() && sessions.isEmpty() && oldParticipants.isEmpty()) return
         progressTracker.currentStep = BROADCASTING
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcastToOtherParticipants", flowLogic = this) {
             logger.info("Broadcasting complete transaction to other participants.")
             if (newApi) {
                 oldV3Broadcast(tx, oldParticipants.toSet())
-                for (session in sessions) {
-                    try {
-                        logger.debug { "Sending transaction to party $session." }
-                        subFlow(SendTransactionFlow(session, tx, txnMetadata))
-                        txnMetadata = txnMetadata.copy(persist = false)
-                    } catch (e: UnexpectedFlowEndException) {
-                        throw UnexpectedFlowEndException(
-                                "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
-                                        "Did they forget to call ReceiveFinalityFlow? (${e.message})",
-                                e.cause,
-                                e.originalErrorId
-                        )
-                    }
+                try {
+                    logger.debug { "Sending transaction to party sessions $sessions." }
+                    subFlow(SendTransactionFlow(sessions, tx, txnMetadata))
+                    txnMetadata = txnMetadata.copy(persist = false)
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them the finalised transaction. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
                 }
             } else {
                 oldV3Broadcast(tx, (externalTxParticipants + oldParticipants).toSet())
@@ -396,15 +392,12 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>) {
-        for (recipient in recipients) {
-            if (!serviceHub.myInfo.isLegalIdentity(recipient)) {
-                logger.debug { "Sending transaction to party $recipient." }
-                val session = initiateFlow(recipient)
-                subFlow(SendTransactionFlow(session, notarised, txnMetadata))
-                txnMetadata = txnMetadata.copy(persist = false)
-                logger.info("Party $recipient received the transaction.")
-            }
-        }
+        val remoteRecipients = recipients.filter { !serviceHub.myInfo.isLegalIdentity(it) }
+        logger.debug { "Sending transaction to parties $remoteRecipients." }
+        val sessions = remoteRecipients.map { initiateFlow(it) }.toSet()
+        subFlow(SendTransactionFlow(sessions, notarised, txnMetadata))
+        txnMetadata = txnMetadata.copy(persist = false)
+        logger.info("Parties $remoteRecipients received the transaction.")
     }
 
     private fun logCommandData() {
