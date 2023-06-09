@@ -38,11 +38,14 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
+import net.corda.core.internal.telemetry.OpenTelemetryComponent
+import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
@@ -57,10 +60,6 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
-import net.corda.core.internal.telemetry.TelemetryComponent
-import net.corda.core.internal.telemetry.OpenTelemetryComponent
-import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.node.services.TelemetryService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
@@ -659,6 +658,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
+            partyInfoCache.start()
+
             /* Note the .get() at the end of the distributeEvent call, below.
                This will block until all Corda Services have returned from processing the event, allowing a service to prevent the
                state machine manager from starting (just below this) until the service is ready.
@@ -697,9 +698,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.warn("Not distributing events as NetworkMap is not ready")
             }
         }
-        nodeReadyFuture.thenMatch({
-            partyInfoCache.start()
-        }, { th -> log.error("Unexpected exception during cache initialisation", th) })
 
         setNodeStatus(NodeStatus.STARTED)
         return resultingNodeInfo

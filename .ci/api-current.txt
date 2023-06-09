@@ -1798,6 +1798,8 @@ public final class net.corda.core.crypto.Crypto extends java.lang.Object
   public static final boolean doVerify(net.corda.core.crypto.SecureHash, net.corda.core.crypto.TransactionSignature)
   public static final boolean doVerify(net.corda.core.crypto.SignatureScheme, java.security.PublicKey, byte[], byte[])
   @NotNull
+  public static final byte[] encodePublicKey(java.security.PublicKey)
+  @NotNull
   public static final java.security.Provider findProvider(String)
   @NotNull
   public static final net.corda.core.crypto.SignatureScheme findSignatureScheme(int)
@@ -2518,12 +2520,16 @@ public static final class net.corda.core.flows.ContractUpgradeFlow$Initiate exte
   protected net.corda.core.flows.AbstractStateReplacementFlow$UpgradeTx assembleTx()
 ##
 public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.FlowLogic
+  public <init>(java.util.Set<? extends net.corda.core.flows.FlowSession>, Object, net.corda.core.flows.TransactionMetadata)
+  public <init>(java.util.Set, Object, net.corda.core.flows.TransactionMetadata, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.flows.FlowSession, Object)
+  public <init>(net.corda.core.flows.FlowSession, Object, net.corda.core.flows.TransactionMetadata)
+  public <init>(net.corda.core.flows.FlowSession, Object, net.corda.core.flows.TransactionMetadata, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Suspendable
   @Nullable
   public Void call()
   @NotNull
-  public final net.corda.core.flows.FlowSession getOtherSideSession()
+  public final java.util.Set<net.corda.core.flows.FlowSession> getOtherSessions()
   @NotNull
   public final Object getPayload()
   @Suspendable
@@ -2535,10 +2541,29 @@ public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.F
 @DoNotImplement
 public interface net.corda.core.flows.Destination
 ##
+@CordaSerializable
+public final class net.corda.core.flows.DistributionList extends java.lang.Object
+  public <init>(net.corda.core.node.StatesToRecord, java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
+  @NotNull
+  public final net.corda.core.node.StatesToRecord component1()
+  @NotNull
+  public final java.util.Map<net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord> component2()
+  @NotNull
+  public final net.corda.core.flows.DistributionList copy(net.corda.core.node.StatesToRecord, java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
+  public boolean equals(Object)
+  @NotNull
+  public final java.util.Map<net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord> getPeersToStatesToRecord()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord getSenderStatesToRecord()
+  public int hashCode()
+  @NotNull
+  public String toString()
+##
 @InitiatingFlow
 public final class net.corda.core.flows.FinalityFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.transactions.SignedTransaction)
   public <init>(net.corda.core.transactions.SignedTransaction, java.util.Collection<? extends net.corda.core.flows.FlowSession>)
+  public <init>(net.corda.core.transactions.SignedTransaction, java.util.Collection<? extends net.corda.core.flows.FlowSession>, java.util.Collection<? extends net.corda.core.flows.FlowSession>)
   public <init>(net.corda.core.transactions.SignedTransaction, java.util.Collection<? extends net.corda.core.flows.FlowSession>, java.util.Collection<net.corda.core.identity.Party>, net.corda.core.utilities.ProgressTracker)
   public <init>(net.corda.core.transactions.SignedTransaction, java.util.Collection<? extends net.corda.core.flows.FlowSession>, net.corda.core.node.StatesToRecord)
   public <init>(net.corda.core.transactions.SignedTransaction, java.util.Collection<? extends net.corda.core.flows.FlowSession>, net.corda.core.node.StatesToRecord, net.corda.core.utilities.ProgressTracker)
@@ -2570,10 +2595,30 @@ public static final class net.corda.core.flows.FinalityFlow$Companion$BROADCASTI
   public static final net.corda.core.flows.FinalityFlow$Companion$BROADCASTING INSTANCE
 ##
 @CordaSerializable
+public static final class net.corda.core.flows.FinalityFlow$Companion$BROADCASTING_NOTARY_ERROR extends net.corda.core.utilities.ProgressTracker$Step
+  public static final net.corda.core.flows.FinalityFlow$Companion$BROADCASTING_NOTARY_ERROR INSTANCE
+##
+@CordaSerializable
+public static final class net.corda.core.flows.FinalityFlow$Companion$BROADCASTING_POST_NOTARISATION extends net.corda.core.utilities.ProgressTracker$Step
+  public static final net.corda.core.flows.FinalityFlow$Companion$BROADCASTING_POST_NOTARISATION INSTANCE
+##
+@CordaSerializable
+public static final class net.corda.core.flows.FinalityFlow$Companion$BROADCASTING_PRE_NOTARISATION extends net.corda.core.utilities.ProgressTracker$Step
+  public static final net.corda.core.flows.FinalityFlow$Companion$BROADCASTING_PRE_NOTARISATION INSTANCE
+##
+@CordaSerializable
+public static final class net.corda.core.flows.FinalityFlow$Companion$FINALISING_TRANSACTION extends net.corda.core.utilities.ProgressTracker$Step
+  public static final net.corda.core.flows.FinalityFlow$Companion$FINALISING_TRANSACTION INSTANCE
+##
+@CordaSerializable
 public static final class net.corda.core.flows.FinalityFlow$Companion$NOTARISING extends net.corda.core.utilities.ProgressTracker$Step
   @NotNull
   public net.corda.core.utilities.ProgressTracker childProgressTracker()
   public static final net.corda.core.flows.FinalityFlow$Companion$NOTARISING INSTANCE
+##
+@CordaSerializable
+public static final class net.corda.core.flows.FinalityFlow$Companion$RECORD_UNNOTARISED extends net.corda.core.utilities.ProgressTracker$Step
+  public static final net.corda.core.flows.FinalityFlow$Companion$RECORD_UNNOTARISED INSTANCE
 ##
 @CordaSerializable
 public class net.corda.core.flows.FlowException extends net.corda.core.CordaException implements net.corda.core.flows.IdentifiableException
@@ -2877,6 +2922,37 @@ public static final class net.corda.core.flows.FlowStackSnapshot$Frame extends j
   public String toString()
 ##
 @CordaSerializable
+public final class net.corda.core.flows.FlowTransactionInfo extends java.lang.Object
+  public <init>(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.TransactionStatus, java.time.Instant, net.corda.core.flows.TransactionMetadata)
+  @NotNull
+  public final net.corda.core.flows.StateMachineRunId component1()
+  @NotNull
+  public final String component2()
+  @NotNull
+  public final net.corda.core.flows.TransactionStatus component3()
+  @NotNull
+  public final java.time.Instant component4()
+  @Nullable
+  public final net.corda.core.flows.TransactionMetadata component5()
+  @NotNull
+  public final net.corda.core.flows.FlowTransactionInfo copy(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.TransactionStatus, java.time.Instant, net.corda.core.flows.TransactionMetadata)
+  public boolean equals(Object)
+  @Nullable
+  public final net.corda.core.flows.TransactionMetadata getMetadata()
+  @NotNull
+  public final net.corda.core.flows.StateMachineRunId getStateMachineRunId()
+  @NotNull
+  public final net.corda.core.flows.TransactionStatus getStatus()
+  @NotNull
+  public final java.time.Instant getTimestamp()
+  @NotNull
+  public final String getTxId()
+  public int hashCode()
+  public final boolean isInitiator(net.corda.core.identity.CordaX500Name)
+  @NotNull
+  public String toString()
+##
+@CordaSerializable
 public class net.corda.core.flows.HospitalizeFlowException extends net.corda.core.CordaRuntimeException
   public <init>()
   public <init>(String)
@@ -3138,10 +3214,16 @@ public static final class net.corda.core.flows.NotaryFlow$Client$Companion$REQUE
 public static final class net.corda.core.flows.NotaryFlow$Client$Companion$VALIDATING extends net.corda.core.utilities.ProgressTracker$Step
   public static final net.corda.core.flows.NotaryFlow$Client$Companion$VALIDATING INSTANCE
 ##
+public final class net.corda.core.flows.NotarySigCheck extends java.lang.Object
+  public final boolean needsNotarySignature(net.corda.core.transactions.SignedTransaction)
+  public static final net.corda.core.flows.NotarySigCheck INSTANCE
+##
 public final class net.corda.core.flows.ReceiveFinalityFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash)
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord)
+  public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord, Boolean)
+  public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord, Boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Suspendable
   @NotNull
   public net.corda.core.transactions.SignedTransaction call()
@@ -3157,11 +3239,48 @@ public class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.
   public <init>(net.corda.core.flows.FlowSession, boolean)
   public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord)
   public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord, boolean)
+  public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Suspendable
   @NotNull
   public net.corda.core.transactions.SignedTransaction call()
   @Suspendable
   protected void checkBeforeRecording(net.corda.core.transactions.SignedTransaction)
+##
+@CordaSerializable
+public final class net.corda.core.flows.RecoveryTimeWindow extends java.lang.Object
+  public <init>(java.time.Instant, java.time.Instant)
+  public <init>(java.time.Instant, java.time.Instant, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public static final net.corda.core.flows.RecoveryTimeWindow between(java.time.Instant, java.time.Instant)
+  @NotNull
+  public final java.time.Instant component1()
+  @NotNull
+  public final java.time.Instant component2()
+  @NotNull
+  public final net.corda.core.flows.RecoveryTimeWindow copy(java.time.Instant, java.time.Instant)
+  public boolean equals(Object)
+  @NotNull
+  public static final net.corda.core.flows.RecoveryTimeWindow fromOnly(java.time.Instant)
+  @NotNull
+  public final java.time.Instant getFromTime()
+  @NotNull
+  public final java.time.Instant getUntilTime()
+  public int hashCode()
+  @NotNull
+  public String toString()
+  @NotNull
+  public static final net.corda.core.flows.RecoveryTimeWindow untilOnly(java.time.Instant)
+  public static final net.corda.core.flows.RecoveryTimeWindow$Companion Companion
+##
+public static final class net.corda.core.flows.RecoveryTimeWindow$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final net.corda.core.flows.RecoveryTimeWindow between(java.time.Instant, java.time.Instant)
+  @NotNull
+  public final net.corda.core.flows.RecoveryTimeWindow fromOnly(java.time.Instant)
+  @NotNull
+  public final net.corda.core.flows.RecoveryTimeWindow untilOnly(java.time.Instant)
 ##
 @CordaSerializable
 public final class net.corda.core.flows.ResultSerializationException extends net.corda.core.CordaRuntimeException
@@ -3174,6 +3293,12 @@ public class net.corda.core.flows.SendStateAndRefFlow extends net.corda.core.flo
 ##
 public class net.corda.core.flows.SendTransactionFlow extends net.corda.core.flows.DataVendingFlow
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.transactions.SignedTransaction)
+  public static final net.corda.core.flows.SendTransactionFlow$Companion Companion
+##
+public static final class net.corda.core.flows.SendTransactionFlow$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final net.corda.core.identity.CordaX500Name getDUMMY_PARTICIPANT_NAME()
 ##
 public abstract class net.corda.core.flows.SignTransactionFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
@@ -3208,6 +3333,24 @@ public static final class net.corda.core.flows.SignTransactionFlow$Companion$SIG
 @CordaSerializable
 public static final class net.corda.core.flows.SignTransactionFlow$Companion$VERIFYING extends net.corda.core.utilities.ProgressTracker$Step
   public static final net.corda.core.flows.SignTransactionFlow$Companion$VERIFYING INSTANCE
+##
+@CordaSerializable
+public final class net.corda.core.flows.SignedTransactionWithDistributionList extends java.lang.Object
+  public <init>(net.corda.core.transactions.SignedTransaction, byte[])
+  @NotNull
+  public final net.corda.core.transactions.SignedTransaction component1()
+  @NotNull
+  public final byte[] component2()
+  @NotNull
+  public final net.corda.core.flows.SignedTransactionWithDistributionList copy(net.corda.core.transactions.SignedTransaction, byte[])
+  public boolean equals(Object)
+  @NotNull
+  public final byte[] getDistributionList()
+  @NotNull
+  public final net.corda.core.transactions.SignedTransaction getStx()
+  public int hashCode()
+  @NotNull
+  public String toString()
 ##
 public final class net.corda.core.flows.StackFrameDataToken extends java.lang.Object
   public <init>(String)
@@ -3279,6 +3422,29 @@ public class net.corda.core.flows.StateReplacementException extends net.corda.co
   public <init>(String)
   public <init>(String, Throwable)
   public <init>(String, Throwable, int, kotlin.jvm.internal.DefaultConstructorMarker)
+##
+@CordaSerializable
+public final class net.corda.core.flows.TransactionMetadata extends java.lang.Object
+  public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.flows.DistributionList)
+  @NotNull
+  public final net.corda.core.identity.CordaX500Name component1()
+  @NotNull
+  public final net.corda.core.flows.DistributionList component2()
+  @NotNull
+  public final net.corda.core.flows.TransactionMetadata copy(net.corda.core.identity.CordaX500Name, net.corda.core.flows.DistributionList)
+  public boolean equals(Object)
+  @NotNull
+  public final net.corda.core.flows.DistributionList getDistributionList()
+  @NotNull
+  public final net.corda.core.identity.CordaX500Name getInitiator()
+  public int hashCode()
+  @NotNull
+  public String toString()
+##
+@CordaSerializable
+public final class net.corda.core.flows.TransactionStatus extends java.lang.Enum
+  public static net.corda.core.flows.TransactionStatus valueOf(String)
+  public static net.corda.core.flows.TransactionStatus[] values()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.UnexpectedFlowEndException extends net.corda.core.CordaRuntimeException implements net.corda.core.flows.IdentifiableException
@@ -4140,6 +4306,7 @@ public interface net.corda.core.node.ServicesForResolution
   @NotNull
   public net.corda.core.transactions.LedgerTransaction specialise(net.corda.core.transactions.LedgerTransaction)
 ##
+@CordaSerializable
 public final class net.corda.core.node.StatesToRecord extends java.lang.Enum
   public static net.corda.core.node.StatesToRecord valueOf(String)
   public static net.corda.core.node.StatesToRecord[] values()
@@ -4473,6 +4640,8 @@ public static final class net.corda.core.node.services.Vault$ConstraintInfo$Type
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$Page extends java.lang.Object
   public <init>(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends T>>, java.util.List<net.corda.core.node.services.Vault$StateMetadata>, long, net.corda.core.node.services.Vault$StateStatus, java.util.List<?>)
+  public <init>(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends T>>, java.util.List<net.corda.core.node.services.Vault$StateMetadata>, long, net.corda.core.node.services.Vault$StateStatus, java.util.List<?>, net.corda.core.contracts.StateRef)
+  public <init>(java.util.List, java.util.List, long, net.corda.core.node.services.Vault$StateStatus, java.util.List, net.corda.core.contracts.StateRef, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final java.util.List<net.corda.core.contracts.StateAndRef<T>> component1()
   @NotNull
@@ -4482,11 +4651,17 @@ public static final class net.corda.core.node.services.Vault$Page extends java.l
   public final net.corda.core.node.services.Vault$StateStatus component4()
   @NotNull
   public final java.util.List<Object> component5()
+  @Nullable
+  public final net.corda.core.contracts.StateRef component6()
   @NotNull
   public final net.corda.core.node.services.Vault$Page<T> copy(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends T>>, java.util.List<net.corda.core.node.services.Vault$StateMetadata>, long, net.corda.core.node.services.Vault$StateStatus, java.util.List<?>)
+  @NotNull
+  public final net.corda.core.node.services.Vault$Page<T> copy(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends T>>, java.util.List<net.corda.core.node.services.Vault$StateMetadata>, long, net.corda.core.node.services.Vault$StateStatus, java.util.List<?>, net.corda.core.contracts.StateRef)
   public boolean equals(Object)
   @NotNull
   public final java.util.List<Object> getOtherResults()
+  @Nullable
+  public final net.corda.core.contracts.StateRef getPreviousPageAnchor()
   @NotNull
   public final net.corda.core.node.services.Vault$StateStatus getStateTypes()
   @NotNull
@@ -8383,6 +8558,8 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, java.util.Collection, java.nio.file.Path, java.util.List, java.util.Map, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.nio.file.Path, java.util.List<? extends java.nio.file.Path>, java.util.Map<String, String>, boolean, boolean)
   public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, java.util.Collection, java.nio.file.Path, java.util.List, java.util.Map, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.nio.file.Path, java.util.List<? extends java.nio.file.Path>, java.util.Map<String, String>, boolean, boolean, java.time.Duration)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, java.util.Collection, java.nio.file.Path, java.util.List, java.util.Map, boolean, boolean, java.time.Duration, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, boolean)
   public final boolean component1()
   @NotNull
@@ -8407,6 +8584,8 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public final java.nio.file.Path component2()
   public final boolean component20()
   @NotNull
+  public final java.time.Duration component21()
+  @NotNull
   public final net.corda.testing.driver.PortAllocation component3()
   @NotNull
   public final net.corda.testing.driver.PortAllocation component4()
@@ -8425,6 +8604,8 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.nio.file.Path, java.util.List<? extends java.nio.file.Path>, java.util.Map<String, String>, boolean)
   @NotNull
   public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.nio.file.Path, java.util.List<? extends java.nio.file.Path>, java.util.Map<String, String>, boolean, boolean)
+  @NotNull
+  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.nio.file.Path, java.util.List<? extends java.nio.file.Path>, java.util.Map<String, String>, boolean, boolean, java.time.Duration)
   @NotNull
   public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Set<? extends net.corda.testing.node.TestCordapp>)
   public boolean equals(Object)
@@ -8450,6 +8631,8 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public final net.corda.core.node.NetworkParameters getNetworkParameters()
   @NotNull
   public final java.util.Map<String, Object> getNotaryCustomOverrides()
+  @NotNull
+  public final java.time.Duration getNotaryHandleTimeout()
   @NotNull
   public final java.util.List<net.corda.testing.node.NotarySpec> getNotarySpecs()
   @NotNull
@@ -8490,6 +8673,8 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public final net.corda.testing.driver.DriverParameters withNetworkParameters(net.corda.core.node.NetworkParameters)
   @NotNull
   public final net.corda.testing.driver.DriverParameters withNotaryCustomOverrides(java.util.Map<String, ?>)
+  @NotNull
+  public final net.corda.testing.driver.DriverParameters withNotaryHandleTimeout(java.time.Duration)
   @NotNull
   public final net.corda.testing.driver.DriverParameters withNotarySpecs(java.util.List<net.corda.testing.node.NotarySpec>)
   @NotNull
@@ -8723,6 +8908,7 @@ public final class net.corda.testing.flows.FlowTestsUtilsKt extends java.lang.Ob
   public static final java.util.Map<net.corda.core.flows.FlowSession, net.corda.core.utilities.UntrustworthyData<Object>> receiveAll(net.corda.core.flows.FlowLogic<?>, kotlin.Pair<? extends net.corda.core.flows.FlowSession, ? extends Class<?>>, kotlin.Pair<? extends net.corda.core.flows.FlowSession, ? extends Class<?>>...)
   @NotNull
   public static final rx.Observable<T> registerCoreFlowFactory(net.corda.testing.node.internal.TestStartedNode, Class<? extends net.corda.core.flows.FlowLogic<?>>, Class<T>, kotlin.jvm.functions.Function1<? super net.corda.core.flows.FlowSession, ? extends T>, boolean)
+  public static final void waitForAllFlowsToComplete(net.corda.testing.driver.NodeHandle, int, long)
 ##
 @DoNotImplement
 public abstract class net.corda.testing.node.ClusterSpec extends java.lang.Object
@@ -9144,7 +9330,9 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public static final kotlin.Pair<net.corda.nodeapi.internal.persistence.CordaPersistence, net.corda.testing.node.MockServices> makeTestDatabaseAndPersistentServices(java.util.List<String>, net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters, java.util.Set<java.security.KeyPair>, java.util.Set<net.corda.core.identity.PartyAndCertificate>, net.corda.testing.internal.TestingNamedCacheFactory)
   public void recordTransactions(Iterable<net.corda.core.transactions.SignedTransaction>)
+  public final void recordTransactions(Iterable<net.corda.core.transactions.SignedTransaction>, boolean)
   public void recordTransactions(net.corda.core.node.StatesToRecord, Iterable<net.corda.core.transactions.SignedTransaction>)
+  public final void recordTransactions(net.corda.core.transactions.SignedTransaction, boolean)
   public void recordTransactions(net.corda.core.transactions.SignedTransaction, net.corda.core.transactions.SignedTransaction...)
   public void recordTransactions(boolean, Iterable<net.corda.core.transactions.SignedTransaction>)
   public void recordTransactions(boolean, net.corda.core.transactions.SignedTransaction, net.corda.core.transactions.SignedTransaction...)
