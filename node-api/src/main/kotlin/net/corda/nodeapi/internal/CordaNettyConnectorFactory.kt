@@ -14,15 +14,16 @@ import org.apache.activemq.artemis.utils.ConfigurationHelper
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
 
-class NodeNettyConnectorFactory : ConnectorFactory {
+class CordaNettyConnectorFactory : ConnectorFactory {
     override fun createConnector(configuration: MutableMap<String, Any>?,
                                  handler: BufferHandler?,
                                  listener: ClientConnectionLifeCycleListener?,
-                                 closeExecutor: Executor?,
-                                 threadPool: Executor?,
-                                 scheduledThreadPool: ScheduledExecutorService?,
+                                 closeExecutor: Executor,
+                                 threadPool: Executor,
+                                 scheduledThreadPool: ScheduledExecutorService,
                                  protocolManager: ClientProtocolManager?): Connector {
         val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "Connector", configuration)
+        setThreadPoolName(threadPool, closeExecutor, scheduledThreadPool, threadPoolName)
         val trace = ConfigurationHelper.getBooleanProperty(ArtemisTcpTransport.TRACE_NAME, false, configuration)
         return NettyConnector(
                 configuration,
@@ -31,13 +32,24 @@ class NodeNettyConnectorFactory : ConnectorFactory {
                 closeExecutor,
                 threadPool,
                 scheduledThreadPool,
-                MyClientProtocolManager(threadPoolName, trace)
+                MyClientProtocolManager("$threadPoolName-netty", trace)
         )
     }
 
     override fun isReliable(): Boolean = false
 
     override fun getDefaults(): Map<String?, Any?> = NettyConnector.DEFAULT_CONFIG
+
+    private fun setThreadPoolName(threadPool: Executor, closeExecutor: Executor, scheduledThreadPool: ScheduledExecutorService, name: String) {
+        threadPool.setThreadPoolName("$name-artemis")
+        // Artemis will actually wrap the same backing Executor to create multiple "OrderedExecutors". In this scenerio both the threadPool
+        // and the closeExecutor are the same when it comes to the pool names. If however they are different then given them separate names.
+        if (threadPool.rootExecutor !== closeExecutor.rootExecutor) {
+            closeExecutor.setThreadPoolName("$name-artemis-closer")
+        }
+        // The scheduler is separate
+        scheduledThreadPool.setThreadPoolName("$name-artemis-scheduler")
+    }
 
 
     private class MyClientProtocolManager(private val threadPoolName: String, private val trace: Boolean) : ActiveMQClientProtocolManager() {

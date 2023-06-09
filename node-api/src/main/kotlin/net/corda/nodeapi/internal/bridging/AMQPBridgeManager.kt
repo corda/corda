@@ -22,6 +22,7 @@ import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.sslDelegatedTaskExecutor
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -31,6 +32,7 @@ import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.slf4j.MDC
 import rx.Subscription
 import java.time.Duration
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -53,7 +55,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                              maxMessageSize: Int,
                              revocationConfig: RevocationConfig,
                              enableSNI: Boolean,
-                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                             private val artemisMessageClientFactory: (String) -> ArtemisSessionProvider,
                              private val bridgeMetricsService: BridgeMetricsService? = null,
                              trace: Boolean,
                              sslHandshakeTimeout: Duration?,
@@ -78,9 +80,11 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
 
     private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(keyStore, trustStore, proxyConfig, maxMessageSize, revocationConfig,useOpenSSL, enableSNI, trace = trace, _sslHandshakeTimeout = sslHandshakeTimeout)
     private var sharedEventLoopGroup: EventLoopGroup? = null
+    private var sslDelegatedTaskExecutor: ExecutorService? = null
     private var artemis: ArtemisSessionProvider? = null
 
     companion object {
+        private val log = contextLogger()
 
         private const val CORDA_NUM_BRIDGE_THREADS_PROP_NAME = "net.corda.nodeapi.amqpbridgemanager.NumBridgeThreads"
 
@@ -97,18 +101,11 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
      * however Artemis and the remote Corda instanced will deduplicate these messages.
      */
     @Suppress("TooManyFunctions")
-    private class AMQPBridge(val sourceX500Name: String,
-                             val queueName: String,
-                             val targets: List<NetworkHostAndPort>,
-                             val allowedRemoteLegalNames: Set<CordaX500Name>,
-                             private val amqpConfig: AMQPConfiguration,
-                             sharedEventGroup: EventLoopGroup,
-                             private val artemis: ArtemisSessionProvider,
-                             private val bridgeMetricsService: BridgeMetricsService?,
-                             private val bridgeConnectionTTLSeconds: Int) {
-        companion object {
-            private val log = contextLogger()
-        }
+    private inner class AMQPBridge(val sourceX500Name: String,
+                                   val queueName: String,
+                                   val targets: List<NetworkHostAndPort>,
+                                   val allowedRemoteLegalNames: Set<CordaX500Name>,
+                                   private val amqpConfig: AMQPConfiguration) {
 
         private fun withMDC(block: () -> Unit) {
             val oldMDC = MDC.getCopyOfContextMap() ?: emptyMap<String, String>()
@@ -134,13 +131,18 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
 
         private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
 
-        val amqpClient = AMQPClient(targets, allowedRemoteLegalNames, amqpConfig, sharedThreadPool = sharedEventGroup)
+        val amqpClient = AMQPClient(
+                targets,
+                allowedRemoteLegalNames,
+                amqpConfig,
+                AMQPClient.NettyThreading.Shared(sharedEventLoopGroup!!, sslDelegatedTaskExecutor!!)
+        )
         private var session: ClientSession? = null
         private var consumer: ClientConsumer? = null
         private var connectedSubscription: Subscription? = null
         @Volatile
         private var messagesReceived: Boolean = false
-        private val eventLoop: EventLoop = sharedEventGroup.next()
+        private val eventLoop: EventLoop = sharedEventLoopGroup!!.next()
         private var artemisState: ArtemisState = ArtemisState.STOPPED
             set(value) {
                 logDebugWithMDC { "State change $field to $value" }
@@ -152,32 +154,9 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
         private var scheduledExecutorService: ScheduledExecutorService
                 = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("bridge-connection-reset-%d").build())
 
-        @Suppress("ClassNaming")
-        private sealed class ArtemisState {
-            object STARTING : ArtemisState()
-            data class STARTED(override val pending: ScheduledFuture<Unit>) : ArtemisState()
-
-            object CHECKING : ArtemisState()
-            object RESTARTED : ArtemisState()
-            object RECEIVING : ArtemisState()
-
-            object AMQP_STOPPED : ArtemisState()
-            object AMQP_STARTING : ArtemisState()
-            object AMQP_STARTED : ArtemisState()
-            object AMQP_RESTARTED : ArtemisState()
-
-            object STOPPING : ArtemisState()
-            object STOPPED : ArtemisState()
-            data class STOPPED_AMQP_START_SCHEDULED(override val pending: ScheduledFuture<Unit>) : ArtemisState()
-
-            open val pending: ScheduledFuture<Unit>? = null
-
-            override fun toString(): String = javaClass.simpleName
-        }
-
         private fun artemis(inProgress: ArtemisState, block: (precedingState: ArtemisState) -> ArtemisState) {
             val runnable = {
-                synchronized(artemis) {
+                synchronized(artemis!!) {
                     try {
                         val precedingState = artemisState
                         artemisState.pending?.cancel(false)
@@ -253,7 +232,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                     }
                 }
                 artemis(ArtemisState.STARTING) {
-                    val startedArtemis = artemis.started
+                    val startedArtemis = artemis!!.started
                     if (startedArtemis == null) {
                         logInfoWithMDC("Bridge Connected but Artemis is disconnected")
                         ArtemisState.STOPPED
@@ -457,6 +436,29 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
         }
     }
 
+    @Suppress("ClassNaming")
+    private sealed class ArtemisState {
+        object STARTING : ArtemisState()
+        data class STARTED(override val pending: ScheduledFuture<Unit>) : ArtemisState()
+
+        object CHECKING : ArtemisState()
+        object RESTARTED : ArtemisState()
+        object RECEIVING : ArtemisState()
+
+        object AMQP_STOPPED : ArtemisState()
+        object AMQP_STARTING : ArtemisState()
+        object AMQP_STARTED : ArtemisState()
+        object AMQP_RESTARTED : ArtemisState()
+
+        object STOPPING : ArtemisState()
+        object STOPPED : ArtemisState()
+        data class STOPPED_AMQP_START_SCHEDULED(override val pending: ScheduledFuture<Unit>) : ArtemisState()
+
+        open val pending: ScheduledFuture<Unit>? = null
+
+        override fun toString(): String = javaClass.simpleName
+    }
+
     override fun deployBridge(sourceX500Name: String, queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
         lock.withLock {
             val bridges = queueNamesToBridgesMap.getOrPut(queueName) { mutableListOf() }
@@ -467,8 +469,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
             }
             val newAMQPConfig = with(amqpConfig) { AMQPConfigurationImpl(keyStore, trustStore, proxyConfig, maxMessageSize,
                                                    revocationConfig, useOpenSsl, enableSNI, sourceX500Name, trace, sslHandshakeTimeout) }
-            val newBridge = AMQPBridge(sourceX500Name, queueName, targets, legalNames, newAMQPConfig, sharedEventLoopGroup!!, artemis!!,
-                                       bridgeMetricsService, bridgeConnectionTTLSeconds)
+            val newBridge = AMQPBridge(sourceX500Name, queueName, targets, legalNames, newAMQPConfig)
             bridges += newBridge
             bridgeMetricsService?.bridgeCreated(targets, legalNames)
             newBridge
@@ -497,15 +498,16 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
             // queueNamesToBridgesMap returns a mutable list, .toList converts it to a immutable list so it won't be changed by the [destroyBridge] method.
             val bridges = queueNamesToBridgesMap[queueName]?.toList()
             destroyBridge(queueName, bridges?.flatMap { it.targets } ?: emptyList())
-            bridges?.map {
+            bridges?.associate {
                 it.sourceX500Name to BridgeEntry(it.queueName, it.targets, it.allowedRemoteLegalNames.toList(), serviceAddress = false)
-            }?.toMap() ?: emptyMap()
+            } ?: emptyMap()
         }
     }
 
     override fun start() {
-        sharedEventLoopGroup = NioEventLoopGroup(NUM_BRIDGE_THREADS, DefaultThreadFactory("AMQPBridge", Thread.MAX_PRIORITY))
-        val artemis = artemisMessageClientFactory()
+        sharedEventLoopGroup = NioEventLoopGroup(NUM_BRIDGE_THREADS, DefaultThreadFactory("NettyBridge", Thread.MAX_PRIORITY))
+        sslDelegatedTaskExecutor = sslDelegatedTaskExecutor("NettyBridge")
+        val artemis = artemisMessageClientFactory("ArtemisBridge")
         this.artemis = artemis
         artemis.start()
     }
@@ -522,6 +524,8 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
             sharedEventLoopGroup = null
             queueNamesToBridgesMap.clear()
             artemis?.stop()
+            sslDelegatedTaskExecutor?.shutdown()
+            sslDelegatedTaskExecutor = null
         }
     }
 }

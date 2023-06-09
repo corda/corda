@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.createAndInitSslContext
 import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
 import net.corda.nodeapi.internal.protonwrapper.netty.sslDelegatedTaskExecutor
+import net.corda.nodeapi.internal.setThreadPoolName
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.BaseInterceptor
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptor
@@ -54,10 +55,23 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                 handler: BufferHandler?,
                                 listener: ServerConnectionLifeCycleListener?,
                                 threadPool: Executor,
-                                scheduledThreadPool: ScheduledExecutorService?,
+                                scheduledThreadPool: ScheduledExecutorService,
                                 protocolMap: Map<String, ProtocolManager<BaseInterceptor<*>>>?): Acceptor {
+        val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "Acceptor", configuration)
+        threadPool.setThreadPoolName("$threadPoolName-artemis")
+        scheduledThreadPool.setThreadPoolName("$threadPoolName-artemis-scheduler")
         val failureExecutor = OrderedExecutor(threadPool)
-        return NodeNettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
+        return NodeNettyAcceptor(
+                name,
+                clusterConnection,
+                configuration,
+                handler,
+                listener,
+                scheduledThreadPool,
+                failureExecutor,
+                protocolMap,
+                "$threadPoolName-netty"
+        )
     }
 
 
@@ -68,14 +82,14 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                     listener: ServerConnectionLifeCycleListener?,
                                     scheduledThreadPool: ScheduledExecutorService?,
                                     failureExecutor: Executor,
-                                    protocolMap: Map<String, ProtocolManager<BaseInterceptor<*>>>?) :
+                                    protocolMap: Map<String, ProtocolManager<BaseInterceptor<*>>>?,
+                                    private val threadPoolName: String) :
             NettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
     {
         companion object {
             private val defaultThreadPoolNamePattern = Pattern.compile("""Thread-(\d+) \(activemq-netty-threads\)""")
         }
 
-        private val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "NodeNettyAcceptor", configuration)
         private val sslDelegatedTaskExecutor = sslDelegatedTaskExecutor(threadPoolName)
         private val trace = ConfigurationHelper.getBooleanProperty(ArtemisTcpTransport.TRACE_NAME, false, configuration)
 
