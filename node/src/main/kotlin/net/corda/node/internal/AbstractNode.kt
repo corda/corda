@@ -1077,7 +1077,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  networkParameters: NetworkParameters)
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
-                                        services: ServicesForResolution,
+                                        services: NodeServicesForResolution,
                                         database: CordaPersistence,
                                         cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
