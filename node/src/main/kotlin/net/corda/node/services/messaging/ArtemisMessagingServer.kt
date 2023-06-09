@@ -65,7 +65,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
                              private val maxMessageSize: Int,
                              private val journalBufferTimeout : Int? = null,
-                             private val threadPoolName: String = "ArtemisServer",
+                             private val threadPoolName: String = "P2PServer",
                              private val trace: Boolean = false,
                              private val distPointCrlSource: CertDistPointCrlSource = CertDistPointCrlSource.SINGLETON,
                              private val remotingThreads: Int? = null) : ArtemisBroker, SingletonSerializeAsToken() {

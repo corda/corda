@@ -122,6 +122,7 @@ class ArtemisTcpTransport {
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
                                     config: BrokerRpcSslOptions?,
                                     enableSSL: Boolean = true,
+                                    threadPoolName: String = "RPCServer",
                                     trace: Boolean = false,
                                     remotingThreads: Int? = null): TransportConfiguration {
             val options = mutableMapOf<String, Any>()
@@ -129,7 +130,7 @@ class ArtemisTcpTransport {
                 config.keyStorePath.requireOnDefaultFileSystem()
                 options.putAll(config.toTransportOptions())
             }
-            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, null, enableSSL, "RPCServer", trace, remotingThreads)
+            return createAcceptorTransport(hostAndPort, RPC_PROTOCOLS, options, null, enableSSL, threadPoolName, trace, remotingThreads)
         }
 
         fun rpcConnectorTcpTransport(hostAndPort: NetworkHostAndPort,
@@ -147,14 +148,16 @@ class ArtemisTcpTransport {
 
         fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort,
                                           config: SslConfiguration,
+                                          threadPoolName: String = "Internal-RPCClient",
                                           trace: Boolean = false): TransportConfiguration {
             val options = mutableMapOf<String, Any>()
             config.addToTransportOptions(options)
-            return createConnectorTransport(hostAndPort, RPC_PROTOCOLS, options, true, "Internal-RPCClient", trace, null)
+            return createConnectorTransport(hostAndPort, RPC_PROTOCOLS, options, true, threadPoolName, trace, null)
         }
 
         fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort,
                                             config: SslConfiguration,
+                                            threadPoolName: String = "Internal-RPCServer",
                                             trace: Boolean = false,
                                             remotingThreads: Int? = null): TransportConfiguration {
             val options = mutableMapOf<String, Any>()
@@ -165,7 +168,7 @@ class ArtemisTcpTransport {
                     options,
                     trustManagerFactory(requireNotNull(config.trustStore).get()),
                     true,
-                    "Internal-RPCServer",
+                    threadPoolName,
                     trace,
                     remotingThreads
             )
@@ -209,7 +212,7 @@ class ArtemisTcpTransport {
                                              trace: Boolean,
                                              remotingThreads: Int?): TransportConfiguration {
             return createTransport(
-                    NodeNettyConnectorFactory::class.java.name,
+                    CordaNettyConnectorFactory::class.java.name,
                     hostAndPort,
                     protocols,
                     options,

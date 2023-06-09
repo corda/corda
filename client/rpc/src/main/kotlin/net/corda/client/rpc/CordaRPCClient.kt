@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.client.rpc.internal.SerializationEnvironmentHelper
@@ -52,7 +53,7 @@ class CordaRPCConnection private constructor(
                 sslConfiguration: ClientRpcSslOptions? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCConnection {
-            val observersPool: ExecutorService = Executors.newCachedThreadPool()
+            val observersPool: ExecutorService = Executors.newCachedThreadPool(DefaultThreadFactory("RPCObserver"))
             return CordaRPCConnection(null, observersPool, ReconnectingCordaRPCOps(
                     addresses,
                     username,
