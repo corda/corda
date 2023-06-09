@@ -3292,9 +3292,7 @@ public class net.corda.core.flows.SendStateAndRefFlow extends net.corda.core.flo
   public <init>(net.corda.core.flows.FlowSession, java.util.List<? extends net.corda.core.contracts.StateAndRef<?>>)
 ##
 public class net.corda.core.flows.SendTransactionFlow extends net.corda.core.flows.DataVendingFlow
-  public <init>(java.util.Set<? extends net.corda.core.flows.FlowSession>, net.corda.core.transactions.SignedTransaction, net.corda.core.flows.TransactionMetadata)
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.transactions.SignedTransaction)
-  public <init>(net.corda.core.flows.FlowSession, net.corda.core.transactions.SignedTransaction, net.corda.core.flows.TransactionMetadata)
   public static final net.corda.core.flows.SendTransactionFlow$Companion Companion
 ##
 public static final class net.corda.core.flows.SendTransactionFlow$Companion extends java.lang.Object
