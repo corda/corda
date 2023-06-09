@@ -74,15 +74,22 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * the right point in the conversation to receive the sent transaction and perform the resolution back-and-forth required
  * to check the dependencies and download any missing attachments.
  *
- * @param otherSessions the target parties.
  * @param stx the [SignedTransaction] being sent to the [otherSessions].
- * @param txnMetadata transaction recovery metadata (eg. used by Two Phase Finality).
+ * @param participantSessions the target parties which are participants to the transaction.
+ * @param observerSessions the target parties which are observers to the transaction.
+ * @param senderStatesToRecord the [StatesToRecord] relevancy information of the sender.
  */
-open class SendTransactionFlow(otherSessions: Set<FlowSession>, stx: SignedTransaction, txnMetadata: TransactionMetadata) : DataVendingFlow(otherSessions, stx, txnMetadata) {
-    constructor(otherSide: FlowSession, stx: SignedTransaction) : this(otherSide, stx,
-        TransactionMetadata(DUMMY_PARTICIPANT_NAME, DistributionList(StatesToRecord.NONE, mapOf(otherSide.counterparty.name to StatesToRecord.ALL_VISIBLE))))
-    constructor(otherSide: FlowSession, stx: SignedTransaction, txnMetadata: TransactionMetadata) : this(setOf(otherSide), stx, txnMetadata)
-        // Note: DUMMY_PARTICIPANT_NAME to be substituted with actual "ourIdentity.name" in flow call()
+open class SendTransactionFlow(val stx: SignedTransaction,
+                               val participantSessions: Set<FlowSession>,
+                               val observerSessions: Set<FlowSession>,
+                               val senderStatesToRecord: StatesToRecord) : DataVendingFlow(participantSessions + observerSessions, stx,
+                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME,
+                                       DistributionList(senderStatesToRecord,
+                                       (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
+                                                           (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()
+                                   ))) {
+    constructor(otherSide: FlowSession, stx: SignedTransaction) : this(stx, setOf(otherSide), emptySet(), StatesToRecord.NONE)
+    // Note: DUMMY_PARTICIPANT_NAME to be substituted with actual "ourIdentity.name" in flow call()
     companion object {
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
     }

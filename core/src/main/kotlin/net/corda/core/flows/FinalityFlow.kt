@@ -6,7 +6,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.NotarySigCheck.needsNotarySignature
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.FetchDataFlow
@@ -16,7 +15,6 @@ import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.StatesToRecord.ALL_VISIBLE
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -169,7 +167,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     }
 
     private lateinit var externalTxParticipants: Set<Party>
-    private lateinit var txnMetadata: TransactionMetadata
 
     @Suspendable
     @Suppress("ComplexMethod", "NestedBlockDepth")
@@ -221,8 +218,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        txnMetadata = TransactionMetadata(serviceHub.myInfo.legalIdentities.first().name,
-                DistributionList(statesToRecord, deriveStatesToRecord(newPlatformSessions)))
+
         if (useTwoPhaseFinality) {
             val stxn = if (requiresNotarisation) {
                 recordLocallyAndBroadcast(newPlatformSessions, transaction)
@@ -285,7 +281,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#broadcast", flowLogic = this) {
             try {
                 logger.debug { "Sending transaction to party sessions: $sessions." }
-                subFlow(SendTransactionFlow(sessions.toSet(), tx, txnMetadata))
+                val (participantSessions, observerSessions) = deriveSessions(sessions)
+                subFlow(SendTransactionFlow(tx, participantSessions, observerSessions, statesToRecord))
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
                         "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them a transaction." +
@@ -297,12 +294,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
     }
 
-    private fun deriveStatesToRecord(newPlatformSessions: Collection<FlowSession>): Map<CordaX500Name, StatesToRecord> {
-        val derivedObserverSessions = newPlatformSessions.map { it.counterparty }.toSet() - externalTxParticipants
-        val txParticipantSessions = externalTxParticipants
-        return txParticipantSessions.map { it.name to ONLY_RELEVANT }.toMap() +
-                (derivedObserverSessions + observerSessions.map { it.counterparty }).map { it.name to ALL_VISIBLE }
-    }
+    private fun deriveSessions(newPlatformSessions: Collection<FlowSession>) =
+        Pair(newPlatformSessions.filter { it.counterparty in externalTxParticipants }.toSet(),
+            (observerSessions + newPlatformSessions.filter { it.counterparty !in externalTxParticipants }).toSet())
 
     @Suspendable
     private fun broadcastSignaturesAndFinalise(sessions: Collection<FlowSession>, notarySignatures: List<TransactionSignature>) {
@@ -372,7 +366,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 oldV3Broadcast(tx, oldParticipants.toSet())
                 try {
                     logger.debug { "Sending transaction to party sessions $sessions." }
-                    subFlow(SendTransactionFlow(sessions.toSet(), tx, txnMetadata))
+                    subFlow(SendTransactionFlow(tx, sessions.toSet(), emptySet(), statesToRecord))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them the finalised transaction. " +
@@ -393,7 +387,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val remoteRecipients = recipients.filter { !serviceHub.myInfo.isLegalIdentity(it) }
         logger.debug { "Sending transaction to parties $remoteRecipients." }
         val sessions = remoteRecipients.map { initiateFlow(it) }.toSet()
-        subFlow(SendTransactionFlow(sessions, notarised, txnMetadata))
+        subFlow(SendTransactionFlow(notarised, sessions, emptySet(), statesToRecord))
         logger.info("Parties $remoteRecipients received the transaction.")
     }
 
