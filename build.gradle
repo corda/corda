@@ -79,7 +79,7 @@ buildscript {
     ext.djvm_version = constants.getProperty("djvmVersion")
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = '3.14.2'
-    ext.netty_version = '4.1.68.Final'
+    ext.netty_version = '4.1.77.Final'
     ext.tcnative_version = '2.0.42.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
