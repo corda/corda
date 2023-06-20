@@ -4,18 +4,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent {
-        docker {
-                image "build-zulu-openjdk:17"
-                label "standard"
-                registryUrl 'https://engineering-docker.software.r3.com/'
-                registryCredentialsId 'artifactory-credentials'
-                // Used to mount storage from the host as a volume to persist the cache between builds
-                args '-v /tmp:/host_tmp'
-                alwaysPull true
-        }
-    }
-
+    agent { label 'standard-latest-ami' }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
@@ -28,7 +17,7 @@ pipeline {
     environment {
         SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret')
         C4_OS_SNYK_ORG_ID = credentials('c4-os-snyk-org-id')
-        GRADLE_USER_HOME = "/host_tmp/gradle"
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {
@@ -42,16 +31,15 @@ pipeline {
         stage('Compilation warnings check') {
             steps {
                 /*
-                 * TODO JDK17: Reset warningsAsErrors=true once all warnings have been fixed.
+                 * TODO JDK17: Re-enable warnings as errors
                  */
                 sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=false compileAll"
             }
         }
 
         stage('Snyk Delta') {
+            agent { label 'standard-latest-ami' }
             steps {
-                authenticateGradleWrapper()
-                sh 'mkdir -p ${GRADLE_USER_HOME}'
                 authenticateGradleWrapper()
                 snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }

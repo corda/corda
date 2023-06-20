@@ -31,7 +31,7 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'standard' }
+    agent { label 'standard-latest-ami' }
 
     /*
      * List options in alphabetical order
@@ -61,6 +61,7 @@ pipeline {
         SNYK_API_KEY = "c4-os-snyk" //Jenkins credential type: Snyk Api token
         SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
         C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {
@@ -124,7 +125,7 @@ pipeline {
             parallel {
                 stage('Another agent') {
                     agent {
-                        label 'standard'
+                        label 'standard-latest-ami'
                     }
                     options {
                         skipDefaultCheckout true

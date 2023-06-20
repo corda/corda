@@ -15,17 +15,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent {
-        docker {
-            image "build-zulu-openjdk:17"
-            label "standard"
-            registryUrl 'https://engineering-docker.software.r3.com/'
-            registryCredentialsId 'artifactory-credentials'
-            // Used to mount storage from the host as a volume to persist the cache between builds
-            args '-v /tmp:/host_tmp'
-            alwaysPull true
-        }
-    }
+    agent { label 'standard-latest-ami' }
 
     options {
         timestamps()
@@ -45,7 +35,7 @@ pipeline {
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Nightly to Artifactory"
                 .replaceAll("/", " :: ")
         DOCKER_URL = "https://index.docker.io/v1/"
-        GRADLE_USER_HOME = "/host_tmp/gradle"
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {
