@@ -34,7 +34,12 @@ import java.util.Collections.unmodifiableMap
  * @property packageOwnership ([AutoAcceptable]) List of the network-wide java packages that were successfully claimed by their owners.
  * Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
- * during this period
+ * during this period.
+ * @property transactionRecoveryPeriod Time period in days for how far back transactions will be recovered. The assumption is that
+ * transaction prior to this time have already been backed up.
+ * during this period.
+ * @property confidentialIdentityPreGenerationPeriod Time period in days for when Confidential Identities keys were last backed up. The
+ * cut off time is the current time minus this period.
  */
 @KeepForDJVM
 @CordaSerializable
@@ -47,7 +52,9 @@ data class NetworkParameters(
         @AutoAcceptable val epoch: Int,
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
-        @AutoAcceptable val packageOwnership: Map<String, PublicKey>
+        @AutoAcceptable val packageOwnership: Map<String, PublicKey>,
+        val transactionRecoveryPeriod: Duration?,
+        val confidentialIdentityPreGenerationPeriod: Duration?
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(1)
@@ -66,7 +73,9 @@ data class NetworkParameters(
             epoch,
             whitelistedContractImplementations,
             Int.MAX_VALUE.days,
-            emptyMap()
+            emptyMap(),
+            Int.MAX_VALUE.days,
+            Int.MAX_VALUE.days
     )
 
     @DeprecatedConstructorForDeserialization(2)
@@ -86,7 +95,32 @@ data class NetworkParameters(
             epoch,
             whitelistedContractImplementations,
             eventHorizon,
-            emptyMap()
+            emptyMap(),
+            Int.MAX_VALUE.days,
+            Int.MAX_VALUE.days
+    )
+
+    @DeprecatedConstructorForDeserialization(3)
+    constructor(minimumPlatformVersion: Int,
+                notaries: List<NotaryInfo>,
+                maxMessageSize: Int,
+                maxTransactionSize: Int,
+                modifiedTime: Instant,
+                epoch: Int,
+                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                eventHorizon: Duration,
+                packageOwnership: Map<String, PublicKey>
+    ) : this(minimumPlatformVersion,
+            notaries,
+            maxMessageSize,
+            maxTransactionSize,
+            modifiedTime,
+            epoch,
+            whitelistedContractImplementations,
+            eventHorizon,
+            packageOwnership,
+            Int.MAX_VALUE.days,
+            Int.MAX_VALUE.days
     )
 
     init {
@@ -98,6 +132,41 @@ data class NetworkParameters(
         require(!eventHorizon.isNegative) { "Event Horizon must be a positive value" }
         packageOwnership.keys.forEach(::requirePackageValid)
         require(noPackageOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
+        require(transactionRecoveryPeriod == null || !transactionRecoveryPeriod.isNegative) {
+            "Transaction Recovery period must be a positive value (in days)"
+        }
+        require(confidentialIdentityPreGenerationPeriod == null || !confidentialIdentityPreGenerationPeriod.isNegative) {
+            "Confidential Identities pre-generation period must be a positive value (in days)"
+        }
+    }
+
+    /**
+     * This is to address backwards compatibility of the API, invariant to package ownership
+     * addresses bug CORDA-2769
+     */
+    fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
+             notaries: List<NotaryInfo> = this.notaries,
+             maxMessageSize: Int = this.maxMessageSize,
+             maxTransactionSize: Int = this.maxTransactionSize,
+             modifiedTime: Instant = this.modifiedTime,
+             epoch: Int = this.epoch,
+             whitelistedContractImplementations: Map<String, List<AttachmentId>> = this.whitelistedContractImplementations,
+             eventHorizon: Duration = this.eventHorizon,
+             packageOwnership: Map<String, PublicKey> = this.packageOwnership
+    ): NetworkParameters {
+        return NetworkParameters(
+                minimumPlatformVersion = minimumPlatformVersion,
+                notaries = notaries,
+                maxMessageSize = maxMessageSize,
+                maxTransactionSize = maxTransactionSize,
+                modifiedTime = modifiedTime,
+                epoch = epoch,
+                whitelistedContractImplementations = whitelistedContractImplementations,
+                eventHorizon = eventHorizon,
+                packageOwnership = packageOwnership,
+                transactionRecoveryPeriod = transactionRecoveryPeriod,
+                confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
+        )
     }
 
     /**
@@ -122,7 +191,9 @@ data class NetworkParameters(
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
-                packageOwnership = packageOwnership
+                packageOwnership = packageOwnership,
+                transactionRecoveryPeriod = transactionRecoveryPeriod,
+                confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
         )
     }
 
@@ -147,7 +218,9 @@ data class NetworkParameters(
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
-                packageOwnership = packageOwnership
+                packageOwnership = packageOwnership,
+                transactionRecoveryPeriod = transactionRecoveryPeriod,
+                confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
         )
     }
 
@@ -166,6 +239,8 @@ data class NetworkParameters(
       }
       modifiedTime=$modifiedTime
       epoch=$epoch
+      transactionRecoveryPeriod=$transactionRecoveryPeriod
+      confidentialIdentityPreGenerationPeriod=$confidentialIdentityPreGenerationPeriod
   }"""
     }
 
@@ -181,7 +256,9 @@ data class NetworkParameters(
                 unmodifiableList(entry.value)
             },
             eventHorizon = eventHorizon,
-            packageOwnership = unmodifiable(packageOwnership)
+            packageOwnership = unmodifiable(packageOwnership),
+            transactionRecoveryPeriod = transactionRecoveryPeriod,
+            confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
         )
     }
 }
