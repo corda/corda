@@ -43,6 +43,7 @@ import java.util.Collections.unmodifiableMap
  */
 @KeepForDJVM
 @CordaSerializable
+@Suppress("LongParameterList")
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
@@ -57,7 +58,7 @@ data class NetworkParameters(
         val confidentialIdentityPreGenerationPeriod: Duration?
 ) {
     // DOCEND 1
-    @DeprecatedConstructorForDeserialization(1)
+    @DeprecatedConstructorForDeserialization(version = 1)
     constructor(minimumPlatformVersion: Int,
                 notaries: List<NotaryInfo>,
                 maxMessageSize: Int,
@@ -78,7 +79,7 @@ data class NetworkParameters(
             Int.MAX_VALUE.days
     )
 
-    @DeprecatedConstructorForDeserialization(2)
+    @DeprecatedConstructorForDeserialization(version = 2)
     constructor(minimumPlatformVersion: Int,
                 notaries: List<NotaryInfo>,
                 maxMessageSize: Int,
@@ -100,7 +101,7 @@ data class NetworkParameters(
             Int.MAX_VALUE.days
     )
 
-    @DeprecatedConstructorForDeserialization(3)
+    @DeprecatedConstructorForDeserialization(version = 3)
     constructor(minimumPlatformVersion: Int,
                 notaries: List<NotaryInfo>,
                 maxMessageSize: Int,
