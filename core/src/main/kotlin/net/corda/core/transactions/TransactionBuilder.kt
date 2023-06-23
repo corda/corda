@@ -2,7 +2,6 @@
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
-import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
@@ -179,8 +178,7 @@ open class TransactionBuilder(
         return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
     }
 
-    @CordaInternal
-    internal fun toWireTransactionWithContext(
+    fun toWireTransactionWithContext(
         services: ServicesForResolution,
         serializationContext: SerializationContext?
     ) : WireTransaction = toWireTransactionWithContext(services, serializationContext, 0)
@@ -667,7 +665,7 @@ open class TransactionBuilder(
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
 
-    internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
+    fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
         return toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
     }
 
