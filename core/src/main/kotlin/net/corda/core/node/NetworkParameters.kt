@@ -43,6 +43,7 @@ import java.util.Collections.unmodifiableMap
  */
 @KeepForDJVM
 @CordaSerializable
+@Suppress("LongParameterList")
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
