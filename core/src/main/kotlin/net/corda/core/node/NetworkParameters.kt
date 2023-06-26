@@ -43,7 +43,6 @@ import java.util.Collections.unmodifiableMap
  */
 @KeepForDJVM
 @CordaSerializable
-@Suppress("LongParameterList")
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
@@ -54,8 +53,8 @@ data class NetworkParameters(
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
         @AutoAcceptable val packageOwnership: Map<String, PublicKey>,
-        val transactionRecoveryPeriod: Duration?,
-        val confidentialIdentityPreGenerationPeriod: Duration?
+        val transactionRecoveryPeriod: Duration? = null,
+        val confidentialIdentityPreGenerationPeriod: Duration? = null
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(version = 1)
@@ -74,9 +73,7 @@ data class NetworkParameters(
             epoch,
             whitelistedContractImplementations,
             Int.MAX_VALUE.days,
-            emptyMap(),
-            Int.MAX_VALUE.days,
-            Int.MAX_VALUE.days
+            emptyMap()
     )
 
     @DeprecatedConstructorForDeserialization(version = 2)
@@ -96,32 +93,7 @@ data class NetworkParameters(
             epoch,
             whitelistedContractImplementations,
             eventHorizon,
-            emptyMap(),
-            Int.MAX_VALUE.days,
-            Int.MAX_VALUE.days
-    )
-
-    @DeprecatedConstructorForDeserialization(version = 3)
-    constructor(minimumPlatformVersion: Int,
-                notaries: List<NotaryInfo>,
-                maxMessageSize: Int,
-                maxTransactionSize: Int,
-                modifiedTime: Instant,
-                epoch: Int,
-                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-                eventHorizon: Duration,
-                packageOwnership: Map<String, PublicKey>
-    ) : this(minimumPlatformVersion,
-            notaries,
-            maxMessageSize,
-            maxTransactionSize,
-            modifiedTime,
-            epoch,
-            whitelistedContractImplementations,
-            eventHorizon,
-            packageOwnership,
-            Int.MAX_VALUE.days,
-            Int.MAX_VALUE.days
+            emptyMap()
     )
 
     init {
