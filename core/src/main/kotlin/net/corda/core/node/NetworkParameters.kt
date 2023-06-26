@@ -97,6 +97,29 @@ data class NetworkParameters(
             emptyMap()
     )
 
+    @DeprecatedConstructorForDeserialization(version = 3)
+    constructor(minimumPlatformVersion: Int,
+                notaries: List<NotaryInfo>,
+                maxMessageSize: Int,
+                maxTransactionSize: Int,
+                modifiedTime: Instant,
+                epoch: Int,
+                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                eventHorizon: Duration,
+                packageOwnership: Map<String, PublicKey>
+    ) : this(minimumPlatformVersion,
+            notaries,
+            maxMessageSize,
+            maxTransactionSize,
+            modifiedTime,
+            epoch,
+            whitelistedContractImplementations,
+            eventHorizon,
+            packageOwnership,
+            transactionRecoveryPeriod = null,
+            confidentialIdentityPreGenerationPeriod = null
+    )
+
     init {
         require(minimumPlatformVersion > 0) { "Minimum platform level must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }
