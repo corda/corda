@@ -6,7 +6,7 @@ import io.netty.handler.ssl.SniHandler
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslProvider
-import io.netty.util.DomainNameMappingBuilder
+import io.netty.util.DomainWildcardMappingBuilder
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
@@ -307,7 +307,7 @@ internal fun createServerSNIOpenSslHandler(keyManagerFactoriesMap: Map<String, K
 
     // Default value can be any in the map.
     val sslCtxBuilder = getServerSslContextBuilder(keyManagerFactoriesMap.values.first(), trustManagerFactory)
-    val mapping = DomainNameMappingBuilder(sslCtxBuilder.build())
+    val mapping = DomainWildcardMappingBuilder(sslCtxBuilder.build())
     keyManagerFactoriesMap.forEach {
         mapping.add(it.key, sslCtxBuilder.keyManager(it.value).build())
     }
