@@ -65,8 +65,8 @@ dependencies {
     implementation "net.i2p.crypto:eddsa:$eddsa_version"
 
     // Bouncy castle support needed for X509 certificate manipulation
-    implementation "org.bouncycastle:bcprov-debug-jdk18on:${bouncycastle_version}"
-    implementation "org.bouncycastle:bcpkix-debug-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastle_version}"
 
     // JPA 2.2 annotations.
     implementation "javax.persistence:javax.persistence-api:2.2"

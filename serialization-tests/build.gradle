@@ -15,8 +15,8 @@ dependencies {
     testImplementation project(':test-utils')
 
     // Bouncy castle support needed for X509 certificate manipulation
-    testImplementation "org.bouncycastle:bcprov-debug-jdk18on:${bouncycastle_version}"
-    testImplementation "org.bouncycastle:bcpkix-debug-jdk18on:${bouncycastle_version}"
+    testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastle_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

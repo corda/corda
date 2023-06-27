@@ -135,8 +135,8 @@ dependencies {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
     // Bouncy castle support needed for X509 certificate manipulation
-    implementation "org.bouncycastle:bcprov-debug-jdk18on:${bouncycastle_version}"
-    implementation "org.bouncycastle:bcpkix-debug-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastle_version}"
 
     implementation "com.esotericsoftware:kryo:$kryo_version"
 
