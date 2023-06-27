@@ -484,25 +484,19 @@ object NotarySigCheck {
  * @param statesToRecord Which states to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
  * @param handlePropagatedNotaryError Whether to catch and propagate Double Spend exception to peers.
  */
-class ReceiveFinalityFlow constructor(private val otherSideSession: FlowSession,
-                                      private val expectedTxId: SecureHash? = null,
-                                      private val statesToRecord: StatesToRecord = ONLY_RELEVANT,
-                                      private val handlePropagatedNotaryError: Boolean? = null) : FlowLogic<SignedTransaction>() {
+class ReceiveFinalityFlow(private val otherSideSession: FlowSession,
+                          private val expectedTxId: SecureHash? = null,
+                          private val statesToRecord: StatesToRecord = ONLY_RELEVANT,
+                          private val handlePropagatedNotaryError: Boolean? = null) : FlowLogic<SignedTransaction>() {
+
     @DeprecatedConstructorForDeserialization(version = 1)
-    constructor(otherSideSession: FlowSession,
+    @JvmOverloads constructor(otherSideSession: FlowSession,
                 expectedTxId: SecureHash? = null,
                 statesToRecord: StatesToRecord = ONLY_RELEVANT) : this(otherSideSession, expectedTxId, statesToRecord, null)
 
     @DeprecatedConstructorForDeserialization(version = 1)
     constructor(otherSideSession: FlowSession,
                 statesToRecord: StatesToRecord = ONLY_RELEVANT) : this(otherSideSession, null, statesToRecord, null)
-
-    @DeprecatedConstructorForDeserialization(version = 1)
-    constructor(otherSideSession: FlowSession,
-                expectedTxId: SecureHash) : this(otherSideSession, expectedTxId, ONLY_RELEVANT, null)
-
-    @DeprecatedConstructorForDeserialization(version = 1)
-    constructor(otherSideSession: FlowSession) : this(otherSideSession, null, ONLY_RELEVANT, null)
 
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
