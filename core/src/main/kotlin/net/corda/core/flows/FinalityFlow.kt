@@ -494,10 +494,6 @@ class ReceiveFinalityFlow(private val otherSideSession: FlowSession,
                 expectedTxId: SecureHash? = null,
                 statesToRecord: StatesToRecord = ONLY_RELEVANT) : this(otherSideSession, expectedTxId, statesToRecord, null)
 
-    @DeprecatedConstructorForDeserialization(version = 1)
-    constructor(otherSideSession: FlowSession,
-                statesToRecord: StatesToRecord = ONLY_RELEVANT) : this(otherSideSession, null, statesToRecord, null)
-
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
