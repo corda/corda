@@ -20,7 +20,9 @@ fun testNetworkParameters(
         whitelistedContractImplementations: Map<String, List<AttachmentId>> = emptyMap(),
         epoch: Int = 1,
         eventHorizon: Duration = 30.days,
-        packageOwnership: Map<String, PublicKey> = emptyMap()
+        packageOwnership: Map<String, PublicKey> = emptyMap(),
+        transactionRecoveryPeriod: Duration = 30.days,
+        confidentialIdentityPreGenerationPeriod: Duration = 30.days
 ): NetworkParameters {
     return NetworkParameters(
             minimumPlatformVersion = minimumPlatformVersion,
@@ -31,7 +33,9 @@ fun testNetworkParameters(
             epoch = epoch,
             whitelistedContractImplementations = whitelistedContractImplementations,
             eventHorizon = eventHorizon,
-            packageOwnership = packageOwnership
+            packageOwnership = packageOwnership,
+            transactionRecoveryPeriod = transactionRecoveryPeriod,
+            confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
     )
 }
 

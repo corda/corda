@@ -35,10 +35,9 @@ import java.util.Collections.unmodifiableMap
  * Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
  * during this period.
- * @property transactionRecoveryPeriod Time period in days for how far back transactions will be recovered. The assumption is that
+ * @property transactionRecoveryPeriod Time period for how far back transactions will be recovered. The assumption is that
  * transaction prior to this time have already been backed up.
- * during this period.
- * @property confidentialIdentityPreGenerationPeriod Time period in days for when Confidential Identities keys were last backed up. The
+ * @property confidentialIdentityPreGenerationPeriod Time period for when Confidential Identities keys were last backed up. The
  * cut off time is the current time minus this period.
  */
 @KeepForDJVM
