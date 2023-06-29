@@ -16,6 +16,7 @@ import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -483,10 +484,16 @@ object NotarySigCheck {
  * @param statesToRecord Which states to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
  * @param handlePropagatedNotaryError Whether to catch and propagate Double Spend exception to peers.
  */
-class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
-                                                    private val expectedTxId: SecureHash? = null,
-                                                    private val statesToRecord: StatesToRecord = ONLY_RELEVANT,
-                                                    private val handlePropagatedNotaryError: Boolean? = null) : FlowLogic<SignedTransaction>() {
+class ReceiveFinalityFlow(private val otherSideSession: FlowSession,
+                          private val expectedTxId: SecureHash? = null,
+                          private val statesToRecord: StatesToRecord = ONLY_RELEVANT,
+                          private val handlePropagatedNotaryError: Boolean? = null) : FlowLogic<SignedTransaction>() {
+
+    @DeprecatedConstructorForDeserialization(version = 1)
+    @JvmOverloads constructor(otherSideSession: FlowSession,
+                expectedTxId: SecureHash? = null,
+                statesToRecord: StatesToRecord = ONLY_RELEVANT) : this(otherSideSession, expectedTxId, statesToRecord, null)
+
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
