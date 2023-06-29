@@ -384,10 +384,10 @@ interface WritableTransactionStorage : TransactionStorage {
      * @param id The SecureHash of a transaction.
      * @param sender The sender of the transaction.
      * @param receiver The receiver of the transaction.
-     * @param receiverStatesToRecord The StatesToRecord value of the receiver.
+     * @param senderStatesToRecord The StatesToRecord value of the receiver.
      * @param encryptedDistributionList encrypted distribution list (hashed peers -> StatesToRecord values)
      */
-    fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray)
+    fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, senderStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray)
 
     /**
      * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.
