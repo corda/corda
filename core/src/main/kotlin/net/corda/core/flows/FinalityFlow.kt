@@ -282,7 +282,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             try {
                 logger.debug { "Sending transaction to party sessions: $sessions." }
                 val (participantSessions, observerSessions) = deriveSessions(sessions)
-                subFlow(SendTransactionFlow(tx, participantSessions, observerSessions, statesToRecord))
+                subFlow(SendRecoverableTransactionFlow(tx, participantSessions, observerSessions, statesToRecord))
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
                         "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them a transaction." +
@@ -366,7 +366,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 oldV3Broadcast(tx, oldParticipants.toSet())
                 try {
                     logger.debug { "Sending transaction to party sessions $sessions." }
-                    subFlow(SendTransactionFlow(tx, sessions.toSet(), emptySet(), statesToRecord))
+                    subFlow(SendRecoverableTransactionFlow(tx, sessions.toSet(), emptySet(), statesToRecord))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them the finalised transaction. " +
@@ -387,7 +387,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val remoteRecipients = recipients.filter { !serviceHub.myInfo.isLegalIdentity(it) }
         logger.debug { "Sending transaction to parties $remoteRecipients." }
         val sessions = remoteRecipients.map { initiateFlow(it) }.toSet()
-        subFlow(SendTransactionFlow(notarised, sessions, emptySet(), statesToRecord))
+        subFlow(SendTransactionFlow(sessions, notarised))
         logger.info("Parties $remoteRecipients received the transaction.")
     }
 
@@ -490,7 +490,7 @@ class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
-        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, statesToRecord, true))
+        val stx = subFlow(ReceiveRecoverableTransactionFlow(otherSideSession, false, statesToRecord, true))
 
         val requiresNotarisation = needsNotarySignature(stx)
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY

@@ -20,8 +20,8 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotarySigCheck
 import net.corda.core.flows.ReceiveFinalityFlow
-import net.corda.core.flows.ReceiveTransactionFlow
-import net.corda.core.flows.SendTransactionFlow
+import net.corda.core.flows.ReceiveRecoverableTransactionFlow
+import net.corda.core.flows.SendRecoverableTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
@@ -529,7 +529,7 @@ class FinalityFlowTests : WithFinality {
         override fun call(): SignedTransaction {
             // Mimic ReceiveFinalityFlow but fail to finalise
             try {
-                val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, StatesToRecord.ONLY_RELEVANT, true))
+                val stx = subFlow(ReceiveRecoverableTransactionFlow(otherSideSession, false, StatesToRecord.ONLY_RELEVANT, true))
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
                 (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
@@ -576,7 +576,7 @@ class FinalityFlowTests : WithFinality {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val stxn = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
-            subFlow(SendTransactionFlow(stxn, setOf(sessionWithCounterParty), emptySet(), StatesToRecord.ONLY_RELEVANT))
+            subFlow(SendRecoverableTransactionFlow(stxn, setOf(sessionWithCounterParty), emptySet(), StatesToRecord.ONLY_RELEVANT))
             throw UnexpectedFlowEndException("${stxn.id}")
         }
     }

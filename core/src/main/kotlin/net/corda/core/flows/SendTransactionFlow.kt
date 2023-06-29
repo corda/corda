@@ -4,9 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -14,13 +12,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
-import kotlin.collections.List
-import kotlin.collections.MutableSet
-import kotlin.collections.Set
-import kotlin.collections.flatMap
-import kotlin.collections.map
-import kotlin.collections.mutableSetOf
-import kotlin.collections.plus
 import kotlin.collections.toSet
 
 /**
@@ -74,24 +65,11 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * the right point in the conversation to receive the sent transaction and perform the resolution back-and-forth required
  * to check the dependencies and download any missing attachments.
  *
- * @param stx the [SignedTransaction] being sent to the [otherSessions].
- * @param participantSessions the target parties which are participants to the transaction.
- * @param observerSessions the target parties which are observers to the transaction.
- * @param senderStatesToRecord the [StatesToRecord] relevancy information of the sender.
+ * @param otherSide the target party.
+ * @param stx the [SignedTransaction] being sent to the [otherSideSession].
  */
-open class SendTransactionFlow(val stx: SignedTransaction,
-                               val participantSessions: Set<FlowSession>,
-                               val observerSessions: Set<FlowSession>,
-                               val senderStatesToRecord: StatesToRecord) : DataVendingFlow(participantSessions + observerSessions, stx,
-                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME, senderStatesToRecord,
-                                       DistributionList((participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
-                                               (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()
-                                   ))) {
-    constructor(otherSide: FlowSession, stx: SignedTransaction) : this(stx, setOf(otherSide), emptySet(), StatesToRecord.NONE)
-    // Note: DUMMY_PARTICIPANT_NAME to be substituted with actual "ourIdentity.name" in flow call()
-    companion object {
-        val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
-    }
+open class SendTransactionFlow(otherSessions: Set<FlowSession>, stx: SignedTransaction) : DataVendingFlow(otherSessions, stx) {
+    constructor(otherSide: FlowSession, stx: SignedTransaction) : this(setOf(otherSide), stx)
 }
 
 /**
@@ -146,17 +124,19 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
         }
 
-        // store and share transaction recovery metadata if required
-        val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        val toTwoPhaseFinalityNode = otherSessions.any { otherSideSession ->
-            serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-        }
         // record transaction recovery metadata once
-        val payloadWithMetadata =
-            if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
-                val encryptedDistributionList = (serviceHub as ServiceHubCoreInternal).recordSenderTransactionRecoveryMetadata(payload.id, txnMetadata.copy(initiator = ourIdentity.name))
-                SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, encryptedDistributionList!!)
+        val payloadWithMetadata = txnMetadata?.let {
+            // store and share transaction recovery metadata if required
+            val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+            val toTwoPhaseFinalityNode = otherSessions.any { otherSideSession ->
+                serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+            }
+            if (toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
+                val stx = payload as SignedTransaction
+                val encryptedDistributionList = (serviceHub as ServiceHubCoreInternal).recordSenderTransactionRecoveryMetadata(stx.id, txnMetadata.copy(initiator = ourIdentity.name))
+                SignedTransactionWithDistributionList(stx, txnMetadata.senderStatesToRecord, encryptedDistributionList!!)
             } else null
+        }
 
         otherSessions.forEachIndexed { idx, otherSideSession ->
             if (payloadWithMetadata != null)
@@ -288,10 +268,3 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
         }
     }
 }
-
-@CordaSerializable
-data class SignedTransactionWithDistributionList(
-        val stx: SignedTransaction,
-        val senderStatesToRecord: StatesToRecord,
-        val distributionList: ByteArray
-)

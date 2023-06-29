@@ -60,16 +60,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         }
 
         val payload = otherSideSession.receive<Any>().unwrap { it }
-        val stx =
-            if (payload is SignedTransactionWithDistributionList) {
-                (serviceHub as ServiceHubCoreInternal).recordReceiverTransactionRecoveryMetadata(
-                        payload.stx.id,
-                        otherSideSession.counterparty.name,
-                        ourIdentity.name,
-                        payload.senderStatesToRecord,
-                        payload.distributionList)
-                payload.stx
-            } else payload as SignedTransaction
+        val stx = resolvePayload(payload)
         stx.pushToLoggingContext()
         logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
         checkParameterHash(stx.networkParametersHash)
@@ -90,6 +81,10 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             logger.info("Successfully recorded received transaction locally.")
         }
         return stx
+    }
+
+    open fun resolvePayload(payload: Any): SignedTransaction {
+        return payload as SignedTransaction
     }
 
     /**
