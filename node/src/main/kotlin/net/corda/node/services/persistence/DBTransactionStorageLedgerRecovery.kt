@@ -61,7 +61,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val receiverPartyId: Long,
 
             /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
-            @Column(name = "states_to_record", nullable = false)
+            @Column(name = "receiver_states_to_record", nullable = false)
             var receiverStatesToRecord: StatesToRecord
 
     ) {
@@ -87,14 +87,15 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @Column(name = "sender_party_id", nullable = true)
             val senderPartyId: Long,
 
+            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
+            @Column(name = "sender_states_to_record", nullable = false)
+            val senderStatesToRecord: StatesToRecord,
+
             /** Encrypted recovery information for sole use by Sender **/
             @Lob
             @Column(name = "distribution_list", nullable = false)
-            val distributionList: ByteArray,
+            val distributionList: ByteArray
 
-            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
-            @Column(name = "receiver_states_to_record", nullable = false)
-            val senderStatesToRecord: StatesToRecord
 ) {
         constructor(key: Key, txId: SecureHash, initiatorPartyId: Long, encryptedDistributionList: ByteArray, senderStatesToRecord: StatesToRecord) :
             this(PersistentKey(key),

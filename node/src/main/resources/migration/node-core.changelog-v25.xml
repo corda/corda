@@ -24,7 +24,7 @@
             <column name="receiver_party_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="states_to_record" type="INT">
+            <column name="receiver_states_to_record" type="INT">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -57,10 +57,10 @@
             <column name="sender_party_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="distribution_list" type="BLOB">
+            <column name="sender_states_to_record" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="receiver_states_to_record" type="INT">
+            <column name="distribution_list" type="BLOB">
                 <constraints nullable="false"/>
             </column>
         </createTable>
