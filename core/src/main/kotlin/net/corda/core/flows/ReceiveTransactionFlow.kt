@@ -62,7 +62,12 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         val payload = otherSideSession.receive<Any>().unwrap { it }
         val stx =
             if (payload is SignedTransactionWithDistributionList) {
-                (serviceHub as ServiceHubCoreInternal).recordReceiverTransactionRecoveryMetadata(payload.stx.id, otherSideSession.counterparty.name, ourIdentity.name, statesToRecord, payload.distributionList)
+                (serviceHub as ServiceHubCoreInternal).recordReceiverTransactionRecoveryMetadata(
+                        payload.stx.id,
+                        otherSideSession.counterparty.name,
+                        ourIdentity.name,
+                        payload.senderStatesToRecord,
+                        payload.distributionList)
                 payload.stx
             } else payload as SignedTransaction
         stx.pushToLoggingContext()

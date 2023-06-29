@@ -198,8 +198,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     override fun recordSenderTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata) =
         validatedTransactions.addSenderTransactionRecoveryMetadata(txnId, txnMetadata)
 
-    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) =
-            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, receiver, receiverStatesToRecord, encryptedDistributionList)
+    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, senderStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) =
+            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, receiver, senderStatesToRecord, encryptedDistributionList)
 
     @Suppress("NestedBlockDepth")
     @VisibleForTesting

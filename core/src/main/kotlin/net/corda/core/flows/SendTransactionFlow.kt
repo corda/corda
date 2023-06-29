@@ -83,10 +83,9 @@ open class SendTransactionFlow(val stx: SignedTransaction,
                                val participantSessions: Set<FlowSession>,
                                val observerSessions: Set<FlowSession>,
                                val senderStatesToRecord: StatesToRecord) : DataVendingFlow(participantSessions + observerSessions, stx,
-                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME,
-                                       DistributionList(senderStatesToRecord,
-                                       (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
-                                                           (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()
+                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME, senderStatesToRecord,
+                                       DistributionList((participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
+                                               (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()
                                    ))) {
     constructor(otherSide: FlowSession, stx: SignedTransaction) : this(stx, setOf(otherSide), emptySet(), StatesToRecord.NONE)
     // Note: DUMMY_PARTICIPANT_NAME to be substituted with actual "ourIdentity.name" in flow call()
@@ -156,7 +155,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
         val payloadWithMetadata =
             if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
                 val encryptedDistributionList = (serviceHub as ServiceHubCoreInternal).recordSenderTransactionRecoveryMetadata(payload.id, txnMetadata.copy(initiator = ourIdentity.name))
-                SignedTransactionWithDistributionList(payload, encryptedDistributionList!!)
+                SignedTransactionWithDistributionList(payload, txnMetadata.senderStatesToRecord, encryptedDistributionList!!)
             } else null
 
         otherSessions.forEachIndexed { idx, otherSideSession ->
@@ -293,5 +292,6 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
 @CordaSerializable
 data class SignedTransactionWithDistributionList(
         val stx: SignedTransaction,
+        val senderStatesToRecord: StatesToRecord,
         val distributionList: ByteArray
 )
