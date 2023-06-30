@@ -20,8 +20,8 @@ class SendRecoverableTransactionFlow(val stx: SignedTransaction,
                                val participantSessions: Set<FlowSession>,
                                val observerSessions: Set<FlowSession>,
                                val senderStatesToRecord: StatesToRecord) : DataVendingFlow(participantSessions + observerSessions, stx,
-                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME, senderStatesToRecord,
-                                       DistributionList((participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
+                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME,
+                                       DistributionList(senderStatesToRecord, (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
                                                (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()
                                    ))) {
     constructor(otherSide: FlowSession, stx: SignedTransaction) : this(stx, setOf(otherSide), emptySet(), StatesToRecord.NONE)
@@ -34,6 +34,5 @@ class SendRecoverableTransactionFlow(val stx: SignedTransaction,
 @CordaSerializable
 data class SignedTransactionWithDistributionList(
         val stx: SignedTransaction,
-        val senderStatesToRecord: StatesToRecord,
         val distributionList: ByteArray
 )

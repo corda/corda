@@ -150,7 +150,7 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override fun recordSenderTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata): ByteArray? { return null }
 
-        override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, senderStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) {}
+        override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) {}
     }
 
     private fun copy(): TestTransactionDSLInterpreter =

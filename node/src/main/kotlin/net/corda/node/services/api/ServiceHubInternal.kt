@@ -198,8 +198,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     override fun recordSenderTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata) =
         validatedTransactions.addSenderTransactionRecoveryMetadata(txnId, txnMetadata)
 
-    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, senderStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) =
-            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, receiver, senderStatesToRecord, encryptedDistributionList)
+    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) =
+            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, receiver, receiverStatesToRecord, encryptedDistributionList)
 
     @Suppress("NestedBlockDepth")
     @VisibleForTesting
@@ -384,10 +384,10 @@ interface WritableTransactionStorage : TransactionStorage {
      * @param id The SecureHash of a transaction.
      * @param sender The sender of the transaction.
      * @param receiver The receiver of the transaction.
-     * @param senderStatesToRecord The StatesToRecord value of the receiver.
+     * @param receiverStatesToRecord The StatesToRecord value of the receiver.
      * @param encryptedDistributionList encrypted distribution list (hashed peers -> StatesToRecord values)
      */
-    fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, senderStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray)
+    fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray)
 
     /**
      * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.

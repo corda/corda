@@ -63,7 +63,7 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     override fun addSenderTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata): ByteArray? { return null }
 
-    override fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, senderStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) { }
+    override fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) { }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return txns.remove(id) != null

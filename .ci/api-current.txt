@@ -2543,14 +2543,18 @@ public interface net.corda.core.flows.Destination
 ##
 @CordaSerializable
 public final class net.corda.core.flows.DistributionList extends java.lang.Object
-  public <init>(java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
+  public <init>(net.corda.core.node.StatesToRecord, java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
   @NotNull
-  public final java.util.Map<net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord> component1()
+  public final net.corda.core.node.StatesToRecord component1()
   @NotNull
-  public final net.corda.core.flows.DistributionList copy(java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
+  public final java.util.Map<net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord> component2()
+  @NotNull
+  public final net.corda.core.flows.DistributionList copy(net.corda.core.node.StatesToRecord, java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
   public boolean equals(Object)
   @NotNull
   public final java.util.Map<net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord> getPeersToStatesToRecord()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord getSenderStatesToRecord()
   public int hashCode()
   @NotNull
   public String toString()
@@ -3289,15 +3293,6 @@ public class net.corda.core.flows.SendStateAndRefFlow extends net.corda.core.flo
 ##
 public class net.corda.core.flows.SendTransactionFlow extends net.corda.core.flows.DataVendingFlow
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.transactions.SignedTransaction)
-  public <init>(net.corda.core.transactions.SignedTransaction, java.util.Set<? extends net.corda.core.flows.FlowSession>, java.util.Set<? extends net.corda.core.flows.FlowSession>, net.corda.core.node.StatesToRecord)
-  @NotNull
-  public final java.util.Set<net.corda.core.flows.FlowSession> getObserverSessions()
-  @NotNull
-  public final java.util.Set<net.corda.core.flows.FlowSession> getParticipantSessions()
-  @NotNull
-  public final net.corda.core.node.StatesToRecord getSenderStatesToRecord()
-  @NotNull
-  public final net.corda.core.transactions.SignedTransaction getStx()
   public static final net.corda.core.flows.SendTransactionFlow$Companion Companion
 ##
 public static final class net.corda.core.flows.SendTransactionFlow$Companion extends java.lang.Object
@@ -3341,20 +3336,16 @@ public static final class net.corda.core.flows.SignTransactionFlow$Companion$VER
 ##
 @CordaSerializable
 public final class net.corda.core.flows.SignedTransactionWithDistributionList extends java.lang.Object
-  public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.node.StatesToRecord, byte[])
+  public <init>(net.corda.core.transactions.SignedTransaction, byte[])
   @NotNull
   public final net.corda.core.transactions.SignedTransaction component1()
   @NotNull
-  public final net.corda.core.node.StatesToRecord component2()
+  public final byte[] component2()
   @NotNull
-  public final byte[] component3()
-  @NotNull
-  public final net.corda.core.flows.SignedTransactionWithDistributionList copy(net.corda.core.transactions.SignedTransaction, net.corda.core.node.StatesToRecord, byte[])
+  public final net.corda.core.flows.SignedTransactionWithDistributionList copy(net.corda.core.transactions.SignedTransaction, byte[])
   public boolean equals(Object)
   @NotNull
   public final byte[] getDistributionList()
-  @NotNull
-  public final net.corda.core.node.StatesToRecord getSenderStatesToRecord()
   @NotNull
   public final net.corda.core.transactions.SignedTransaction getStx()
   public int hashCode()
@@ -3434,22 +3425,18 @@ public class net.corda.core.flows.StateReplacementException extends net.corda.co
 ##
 @CordaSerializable
 public final class net.corda.core.flows.TransactionMetadata extends java.lang.Object
-  public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord, net.corda.core.flows.DistributionList)
+  public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.flows.DistributionList)
   @NotNull
   public final net.corda.core.identity.CordaX500Name component1()
   @NotNull
-  public final net.corda.core.node.StatesToRecord component2()
+  public final net.corda.core.flows.DistributionList component2()
   @NotNull
-  public final net.corda.core.flows.DistributionList component3()
-  @NotNull
-  public final net.corda.core.flows.TransactionMetadata copy(net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord, net.corda.core.flows.DistributionList)
+  public final net.corda.core.flows.TransactionMetadata copy(net.corda.core.identity.CordaX500Name, net.corda.core.flows.DistributionList)
   public boolean equals(Object)
   @NotNull
   public final net.corda.core.flows.DistributionList getDistributionList()
   @NotNull
   public final net.corda.core.identity.CordaX500Name getInitiator()
-  @NotNull
-  public final net.corda.core.node.StatesToRecord getSenderStatesToRecord()
   public int hashCode()
   @NotNull
   public String toString()

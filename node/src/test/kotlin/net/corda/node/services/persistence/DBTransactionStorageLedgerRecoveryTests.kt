@@ -84,7 +84,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         val beforeFirstTxn = now()
         val txn = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn.id, TransactionMetadata(ALICE_NAME, ALL_VISIBLE, DistributionList(mapOf(BOB_NAME to ONLY_RELEVANT))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(txn.id, TransactionMetadata(ALICE_NAME, DistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
         val timeWindow = RecoveryTimeWindow(fromTime = beforeFirstTxn,
                                             untilTime = beforeFirstTxn.plus(1, ChronoUnit.MINUTES))
         val results = transactionRecovery.querySenderDistributionRecords(timeWindow)
@@ -93,7 +93,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         val afterFirstTxn = now()
         val txn2 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn2)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, ONLY_RELEVANT, DistributionList(mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, DistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
         assertEquals(2, transactionRecovery.querySenderDistributionRecords(timeWindow).size)
         assertEquals(1, transactionRecovery.querySenderDistributionRecords(RecoveryTimeWindow(fromTime = afterFirstTxn)).size)
     }
@@ -102,10 +102,10 @@ class DBTransactionStorageLedgerRecoveryTests {
     fun `query local ledger for transactions within timeWindow and excluding remoteTransactionIds`() {
         val transaction1 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(transaction1)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction1.id, TransactionMetadata(ALICE_NAME, ALL_VISIBLE, DistributionList(mapOf(BOB_NAME to ONLY_RELEVANT))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction1.id, TransactionMetadata(ALICE_NAME, DistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
         val transaction2 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(transaction2)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction2.id, TransactionMetadata(ALICE_NAME, ALL_VISIBLE, DistributionList(mapOf(BOB_NAME to ONLY_RELEVANT))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction2.id, TransactionMetadata(ALICE_NAME, DistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         val results = transactionRecovery.querySenderDistributionRecords(timeWindow, excludingTxnIds = setOf(transaction1.id))
         assertEquals(1, results.size)
@@ -116,22 +116,22 @@ class DBTransactionStorageLedgerRecoveryTests {
         val transaction1 = newTransaction()
         // sender txn
         transactionRecovery.addUnnotarisedTransaction(transaction1)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction1.id, TransactionMetadata(ALICE_NAME, ALL_VISIBLE, DistributionList(mapOf(BOB_NAME to ALL_VISIBLE))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction1.id, TransactionMetadata(ALICE_NAME, DistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ALL_VISIBLE))))
         val transaction2 = newTransaction()
         // receiver txn
         transactionRecovery.addUnnotarisedTransaction(transaction2)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(transaction2.id, BOB_NAME, ALICE_NAME, ALL_VISIBLE,
-                DistributionList(mapOf(ALICE_NAME to ALL_VISIBLE)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(ALICE_NAME to ALL_VISIBLE)).toWire())
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.SENDER).let {
             assertEquals(1, it.size)
             assertEquals(BOB_NAME.hashCode().toLong(), (it[0] as SenderDistributionRecord).peerPartyId)
-            assertEquals(ALL_VISIBLE, (it[0] as SenderDistributionRecord).receiverStatesToRecord)
+            assertEquals(ALL_VISIBLE, (it[0] as SenderDistributionRecord).statesToRecord)
         }
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.RECEIVER).let {
             assertEquals(1, it.size)
             assertEquals(BOB_NAME.hashCode().toLong(), (it[0] as ReceiverDistributionRecord).initiatorPartyId)
-            assertEquals(ALL_VISIBLE, (it[0] as ReceiverDistributionRecord).senderStatesToRecord)
+            assertEquals(ALL_VISIBLE, (it[0] as ReceiverDistributionRecord).statesToRecord)
         }
         val resultsAll = transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.ALL)
         assertEquals(2, resultsAll.size)
@@ -141,26 +141,26 @@ class DBTransactionStorageLedgerRecoveryTests {
     fun `query for sender distribution records by peers`() {
         val txn1 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn1)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn1.id, TransactionMetadata(ALICE_NAME, ALL_VISIBLE, DistributionList(mapOf(BOB_NAME to ALL_VISIBLE))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(txn1.id, TransactionMetadata(ALICE_NAME, DistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ALL_VISIBLE))))
         val txn2 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn2)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, ONLY_RELEVANT, DistributionList(mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, DistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
         val txn3 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn3)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn3.id, TransactionMetadata(ALICE_NAME, ONLY_RELEVANT, DistributionList(mapOf(BOB_NAME to ONLY_RELEVANT, CHARLIE_NAME to ALL_VISIBLE))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(txn3.id, TransactionMetadata(ALICE_NAME, DistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ONLY_RELEVANT, CHARLIE_NAME to ALL_VISIBLE))))
         val txn4 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn4)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn4.id, TransactionMetadata(BOB_NAME, ONLY_RELEVANT, DistributionList(mapOf(ALICE_NAME to ONLY_RELEVANT))))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(txn4.id, TransactionMetadata(BOB_NAME, DistributionList(ONLY_RELEVANT, mapOf(ALICE_NAME to ONLY_RELEVANT))))
         val txn5 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn5)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn5.id, TransactionMetadata(CHARLIE_NAME, ONLY_RELEVANT, DistributionList(emptyMap())))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(txn5.id, TransactionMetadata(CHARLIE_NAME, DistributionList(ONLY_RELEVANT, emptyMap())))
         assertEquals(5, readSenderDistributionRecordFromDB().size)
 
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(BOB_NAME)).let {
             assertEquals(2, it.size)
-            assertEquals(it[0].receiverStatesToRecord, ALL_VISIBLE)
-            assertEquals(it[1].receiverStatesToRecord, ONLY_RELEVANT)
+            assertEquals(it[0].statesToRecord, ALL_VISIBLE)
+            assertEquals(it[1].statesToRecord, ONLY_RELEVANT)
         }
         assertEquals(1, transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(ALICE_NAME)).size)
         assertEquals(2, transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(CHARLIE_NAME)).size)
@@ -171,30 +171,30 @@ class DBTransactionStorageLedgerRecoveryTests {
         val txn1 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn1)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(txn1.id, ALICE_NAME, BOB_NAME, ALL_VISIBLE,
-                DistributionList(mapOf(BOB_NAME to ALL_VISIBLE, CHARLIE_NAME to ALL_VISIBLE)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ALL_VISIBLE, CHARLIE_NAME to ALL_VISIBLE)).toWire())
         val txn2 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn2)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(txn2.id, ALICE_NAME, BOB_NAME, ONLY_RELEVANT,
-                DistributionList(mapOf(BOB_NAME to ONLY_RELEVANT)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ONLY_RELEVANT)).toWire())
         val txn3 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn3)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(txn3.id, ALICE_NAME, CHARLIE_NAME, NONE,
-                DistributionList(mapOf(CHARLIE_NAME to NONE)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to NONE)).toWire())
         val txn4 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn4)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(txn4.id, BOB_NAME, ALICE_NAME, ONLY_RELEVANT,
-                DistributionList(mapOf(ALICE_NAME to ALL_VISIBLE)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(ALICE_NAME to ALL_VISIBLE)).toWire())
         val txn5 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn5)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(txn5.id, CHARLIE_NAME, BOB_NAME, ONLY_RELEVANT,
-                DistributionList(mapOf(BOB_NAME to ONLY_RELEVANT)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ONLY_RELEVANT)).toWire())
 
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(ALICE_NAME)).let {
             assertEquals(3, it.size)
-            assertEquals(it[0].senderStatesToRecord, ALL_VISIBLE)
-            assertEquals(it[1].senderStatesToRecord, ONLY_RELEVANT)
-            assertEquals(it[2].senderStatesToRecord, NONE)
+            assertEquals(it[0].statesToRecord, ALL_VISIBLE)
+            assertEquals(it[1].statesToRecord, ONLY_RELEVANT)
+            assertEquals(it[2].statesToRecord, NONE)
         }
         assertEquals(1, transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(BOB_NAME)).size)
         assertEquals(1, transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(CHARLIE_NAME)).size)
@@ -205,7 +205,7 @@ class DBTransactionStorageLedgerRecoveryTests {
     fun `transaction without peers does not store recovery metadata in database`() {
         val senderTransaction = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(senderTransaction)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(senderTransaction.id, TransactionMetadata(ALICE_NAME, ONLY_RELEVANT, DistributionList(emptyMap())))
+        transactionRecovery.addSenderTransactionRecoveryMetadata(senderTransaction.id, TransactionMetadata(ALICE_NAME, DistributionList(ONLY_RELEVANT, emptyMap())))
         assertEquals(IN_FLIGHT, readTransactionFromDB(senderTransaction.id).status)
         assertEquals(0, readSenderDistributionRecordFromDB(senderTransaction.id).size)
     }
@@ -215,21 +215,22 @@ class DBTransactionStorageLedgerRecoveryTests {
         val senderTransaction = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(senderTransaction)
         transactionRecovery.addSenderTransactionRecoveryMetadata(senderTransaction.id,
-                TransactionMetadata(ALICE_NAME, ALL_VISIBLE, DistributionList(mapOf(BOB_NAME to ALL_VISIBLE))))
+                TransactionMetadata(ALICE_NAME, DistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ALL_VISIBLE))))
         assertEquals(IN_FLIGHT, readTransactionFromDB(senderTransaction.id).status)
         readSenderDistributionRecordFromDB(senderTransaction.id).let {
             assertEquals(1, it.size)
-            assertEquals(ALL_VISIBLE, it[0].receiverStatesToRecord)
+            assertEquals(ALL_VISIBLE, it[0].statesToRecord)
             assertEquals(BOB_NAME, partyInfoCache.getCordaX500NameByPartyId(it[0].peerPartyId))
         }
 
         val receiverTransaction = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(receiverTransaction)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(receiverTransaction.id, ALICE_NAME, BOB_NAME, ALL_VISIBLE,
-                DistributionList(mapOf(BOB_NAME to ALL_VISIBLE)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ALL_VISIBLE)).toWire())
         assertEquals(IN_FLIGHT, readTransactionFromDB(receiverTransaction.id).status)
         readReceiverDistributionRecordFromDB(receiverTransaction.id).let {
-            assertEquals(ALL_VISIBLE, it.senderStatesToRecord)
+            assertEquals(ALL_VISIBLE, it.statesToRecord)
+            assertEquals(ONLY_RELEVANT, it.senderStatesToRecord)
             assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId))
             assertEquals(setOf(BOB_NAME), it.peersToStatesToRecord.map { (peer, _) -> partyInfoCache.getCordaX500NameByPartyId(peer) }.toSet() )
         }
@@ -240,11 +241,11 @@ class DBTransactionStorageLedgerRecoveryTests {
         val transaction = newTransaction(notarySig = false)
         transactionRecovery.finalizeTransaction(transaction)
         transactionRecovery.addSenderTransactionRecoveryMetadata(transaction.id,
-                TransactionMetadata(ALICE_NAME, ONLY_RELEVANT, DistributionList(mapOf(CHARLIE_NAME to ALL_VISIBLE))))
+                TransactionMetadata(ALICE_NAME, DistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to ALL_VISIBLE))))
         assertEquals(VERIFIED, readTransactionFromDB(transaction.id).status)
         readSenderDistributionRecordFromDB(transaction.id).apply {
             assertEquals(1, this.size)
-            assertEquals(ALL_VISIBLE, this[0].receiverStatesToRecord)
+            assertEquals(ONLY_RELEVANT, this[0].statesToRecord)
         }
     }
 
@@ -253,7 +254,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         val senderTransaction = newTransaction(notarySig = false)
         transactionRecovery.addUnnotarisedTransaction(senderTransaction)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(senderTransaction.id, ALICE.name, BOB.name, ONLY_RELEVANT,
-                DistributionList(mapOf(BOB.name to ONLY_RELEVANT, CHARLIE_NAME to ONLY_RELEVANT)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(BOB.name to ONLY_RELEVANT, CHARLIE_NAME to ONLY_RELEVANT)).toWire())
         assertNull(transactionRecovery.getTransaction(senderTransaction.id))
         assertEquals(IN_FLIGHT, readTransactionFromDB(senderTransaction.id).status)
 
@@ -265,7 +266,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         val receiverTransaction = newTransaction(notarySig = false)
         transactionRecovery.addUnnotarisedTransaction(receiverTransaction)
         transactionRecovery.addReceiverTransactionRecoveryMetadata(receiverTransaction.id, ALICE.name, BOB.name, ONLY_RELEVANT,
-                DistributionList(mapOf(BOB.name to ONLY_RELEVANT)).toWire())
+                DistributionList(ONLY_RELEVANT, mapOf(BOB.name to ONLY_RELEVANT)).toWire())
         assertNull(transactionRecovery.getTransaction(receiverTransaction.id))
         assertEquals(IN_FLIGHT, readTransactionFromDB(receiverTransaction.id).status)
 
@@ -277,7 +278,8 @@ class DBTransactionStorageLedgerRecoveryTests {
 
     @Test(timeout = 300_000)
     fun `test lightweight serialization and deserialization of hashed distribution list payload`() {
-        val dl = HashedDistributionList(mapOf(BOB.name.hashCode().toLong() to NONE, CHARLIE_NAME.hashCode().toLong() to ONLY_RELEVANT))
+        val dl = HashedDistributionList(ALL_VISIBLE,
+                mapOf(BOB.name.hashCode().toLong() to NONE, CHARLIE_NAME.hashCode().toLong() to ONLY_RELEVANT))
         assertEquals(dl, dl.serialize().let { HashedDistributionList.deserialize(it) })
     }
 
@@ -371,7 +373,7 @@ class DBTransactionStorageLedgerRecoveryTests {
     private fun DistributionList.toWire(cryptoService: CryptoService = MockCryptoService(emptyMap())): ByteArray {
         val hashedPeersToStatesToRecord = this.peersToStatesToRecord.map { (peer, statesToRecord) ->
             partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }.toMap()
-        val hashedDistributionList = HashedDistributionList(hashedPeersToStatesToRecord)
+        val hashedDistributionList = HashedDistributionList(this.senderStatesToRecord, hashedPeersToStatesToRecord)
         return cryptoService.encrypt(hashedDistributionList.serialize())
     }
 }

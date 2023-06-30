@@ -134,7 +134,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
             if (toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
                 val stx = payload as SignedTransaction
                 val encryptedDistributionList = (serviceHub as ServiceHubCoreInternal).recordSenderTransactionRecoveryMetadata(stx.id, txnMetadata.copy(initiator = ourIdentity.name))
-                SignedTransactionWithDistributionList(stx, txnMetadata.senderStatesToRecord, encryptedDistributionList!!)
+                SignedTransactionWithDistributionList(stx, encryptedDistributionList!!)
             } else null
         }
 
