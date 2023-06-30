@@ -20,8 +20,8 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotarySigCheck
 import net.corda.core.flows.ReceiveFinalityFlow
-import net.corda.core.flows.ReceiveRecoverableTransactionFlow
-import net.corda.core.flows.SendRecoverableTransactionFlow
+import net.corda.core.flows.ReceiveTransactionFlow
+import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
@@ -434,6 +434,7 @@ class FinalityFlowTests : WithFinality {
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
         getReceiverRecoveryData(stx.id, bobNode.database).apply {
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
@@ -531,7 +532,7 @@ class FinalityFlowTests : WithFinality {
         override fun call(): SignedTransaction {
             // Mimic ReceiveFinalityFlow but fail to finalise
             try {
-                val stx = subFlow(ReceiveRecoverableTransactionFlow(otherSideSession, false, StatesToRecord.ONLY_RELEVANT, true))
+                val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, StatesToRecord.ONLY_RELEVANT, true))
                 require(NotarySigCheck.needsNotarySignature(stx))
                 logger.info("Peer recording transaction without notary signature.")
                 (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
@@ -578,7 +579,7 @@ class FinalityFlowTests : WithFinality {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val stxn = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
-            subFlow(SendRecoverableTransactionFlow(stxn, setOf(sessionWithCounterParty), emptySet(), StatesToRecord.ONLY_RELEVANT))
+            subFlow(SendTransactionFlow(stxn, setOf(sessionWithCounterParty), emptySet(), StatesToRecord.ONLY_RELEVANT))
             throw UnexpectedFlowEndException("${stxn.id}")
         }
     }

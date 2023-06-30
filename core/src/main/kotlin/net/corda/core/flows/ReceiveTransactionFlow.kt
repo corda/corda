@@ -7,6 +7,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
@@ -83,7 +84,10 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
     }
 
     open fun resolvePayload(payload: Any): SignedTransaction {
-        return payload as SignedTransaction
+        return if (payload is SignedTransactionWithDistributionList) {
+            (serviceHub as ServiceHubCoreInternal).recordReceiverTransactionRecoveryMetadata(payload.stx.id, otherSideSession.counterparty.name, ourIdentity.name, statesToRecord, payload.distributionList)
+            payload.stx
+        } else payload as SignedTransaction
     }
 
     /**

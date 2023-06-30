@@ -2,7 +2,6 @@ package net.corda.core.flows
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.StatesToRecord
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 
 /**
@@ -21,9 +20,3 @@ class SendRecoverableTransactionFlow(val stx: SignedTransaction,
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
     }
 }
-
-@CordaSerializable
-data class SignedTransactionWithDistributionList(
-        val stx: SignedTransaction,
-        val distributionList: ByteArray
-)
