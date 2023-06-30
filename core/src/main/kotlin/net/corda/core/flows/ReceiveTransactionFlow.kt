@@ -84,7 +84,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
     }
 
     open fun resolvePayload(payload: Any): SignedTransaction {
-        return if (payload is SignedTransactionWithDistributionList) {
+        return if (payload is SignedTransactionWithDistributionList && checkSufficientSignatures && deferredAck) {
             (serviceHub as ServiceHubCoreInternal).recordReceiverTransactionRecoveryMetadata(payload.stx.id, otherSideSession.counterparty.name, ourIdentity.name, statesToRecord, payload.distributionList)
             payload.stx
         } else payload as SignedTransaction
