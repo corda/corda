@@ -10,6 +10,7 @@ import java.time.Duration
 import java.time.Instant
 
 @JvmOverloads
+@Suppress("LongParameterList")
 fun testNetworkParameters(
         notaries: List<NotaryInfo> = emptyList(),
         minimumPlatformVersion: Int = 1,
@@ -34,8 +35,8 @@ fun testNetworkParameters(
             whitelistedContractImplementations = whitelistedContractImplementations,
             eventHorizon = eventHorizon,
             packageOwnership = packageOwnership,
-            transactionRecoveryPeriod = transactionRecoveryPeriod,
-            confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
+            recoveryMaximumBackupInterval = transactionRecoveryPeriod,
+            confidentialIdentityMaximumBackupInterval = confidentialIdentityPreGenerationPeriod
     )
 }
 

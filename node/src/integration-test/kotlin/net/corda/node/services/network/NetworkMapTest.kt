@@ -78,10 +78,10 @@ class NetworkMapTest {
                     epoch = 3,
                     modifiedTime = Instant.ofEpochMilli(random63BitValue()),
                     maxMessageSize = networkMapServer.networkParameters.maxMessageSize + 1,
-                    transactionRecoveryPeriod = networkMapServer.networkParameters
-                            .transactionRecoveryPeriod?.minus(10.days) ?: 10.days,
-                    confidentialIdentityPreGenerationPeriod = networkMapServer.networkParameters
-                            .confidentialIdentityPreGenerationPeriod?.minus(10.days) ?: 10.days)
+                    recoveryMaximumBackupInterval = networkMapServer.networkParameters
+                            .recoveryMaximumBackupInterval?.minus(10.days) ?: 10.days,
+                    confidentialIdentityMaximumBackupInterval = networkMapServer.networkParameters
+                            .confidentialIdentityMaximumBackupInterval?.minus(10.days) ?: 10.days)
             val nextHash = nextParams.serialize().hash
             val snapshot = alice.rpc.networkParametersFeed().snapshot
             val updates = alice.rpc.networkParametersFeed().updates.bufferUntilSubscribed()

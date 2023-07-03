@@ -35,9 +35,9 @@ import java.util.Collections.unmodifiableMap
  * Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
  * during this period.
- * @property transactionRecoveryPeriod Time period for how far back transactions will be recovered. The assumption is that
+ * @property recoveryMaximumBackupInterval Time period for how far back transactions will be recovered. The assumption is that
  * transaction prior to this time have already been backed up.
- * @property confidentialIdentityPreGenerationPeriod Time period for when Confidential Identities keys were last backed up. The
+ * @property confidentialIdentityMaximumBackupInterval Time period for when Confidential Identities keys were last backed up. The
  * cut off time is the current time minus this period.
  */
 @KeepForDJVM
@@ -53,8 +53,8 @@ data class NetworkParameters(
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
         @AutoAcceptable val packageOwnership: Map<String, PublicKey>,
-        val transactionRecoveryPeriod: Duration? = null,
-        val confidentialIdentityPreGenerationPeriod: Duration? = null
+        val recoveryMaximumBackupInterval: Duration? = null,
+        val confidentialIdentityMaximumBackupInterval: Duration? = null
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(version = 1)
@@ -115,8 +115,8 @@ data class NetworkParameters(
             whitelistedContractImplementations,
             eventHorizon,
             packageOwnership,
-            transactionRecoveryPeriod = null,
-            confidentialIdentityPreGenerationPeriod = null
+            recoveryMaximumBackupInterval = null,
+            confidentialIdentityMaximumBackupInterval = null
     )
 
     init {
@@ -128,11 +128,11 @@ data class NetworkParameters(
         require(!eventHorizon.isNegative) { "Event Horizon must be a positive value" }
         packageOwnership.keys.forEach(::requirePackageValid)
         require(noPackageOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
-        require(transactionRecoveryPeriod == null || !transactionRecoveryPeriod.isNegative) {
-            "Transaction Recovery period must be a positive value (in days)"
+        require(recoveryMaximumBackupInterval == null || !recoveryMaximumBackupInterval.isNegative) {
+            "Recovery maximum backup interval must be a positive value"
         }
-        require(confidentialIdentityPreGenerationPeriod == null || !confidentialIdentityPreGenerationPeriod.isNegative) {
-            "Confidential Identities pre-generation period must be a positive value (in days)"
+        require(confidentialIdentityMaximumBackupInterval == null || !confidentialIdentityMaximumBackupInterval.isNegative) {
+            "Confidential Identities maximum backup interval must be a positive value"
         }
     }
 
@@ -160,8 +160,8 @@ data class NetworkParameters(
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
                 packageOwnership = packageOwnership,
-                transactionRecoveryPeriod = transactionRecoveryPeriod,
-                confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
+                recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+                confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
         )
     }
 
@@ -188,8 +188,8 @@ data class NetworkParameters(
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
                 packageOwnership = packageOwnership,
-                transactionRecoveryPeriod = transactionRecoveryPeriod,
-                confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
+                recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+                confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
         )
     }
 
@@ -215,8 +215,8 @@ data class NetworkParameters(
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
                 packageOwnership = packageOwnership,
-                transactionRecoveryPeriod = transactionRecoveryPeriod,
-                confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
+                recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+                confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
         )
     }
 
@@ -235,8 +235,8 @@ data class NetworkParameters(
       }
       modifiedTime=$modifiedTime
       epoch=$epoch
-      transactionRecoveryPeriod=$transactionRecoveryPeriod
-      confidentialIdentityPreGenerationPeriod=$confidentialIdentityPreGenerationPeriod
+      transactionRecoveryPeriod=$recoveryMaximumBackupInterval
+      confidentialIdentityPreGenerationPeriod=$confidentialIdentityMaximumBackupInterval
   }"""
     }
 
@@ -253,8 +253,8 @@ data class NetworkParameters(
             },
             eventHorizon = eventHorizon,
             packageOwnership = unmodifiable(packageOwnership),
-            transactionRecoveryPeriod = transactionRecoveryPeriod,
-            confidentialIdentityPreGenerationPeriod = confidentialIdentityPreGenerationPeriod
+            recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+            confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
         )
     }
 }
