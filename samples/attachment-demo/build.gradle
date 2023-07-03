@@ -78,14 +78,9 @@ dependencies {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    jvmArgs += [
-            '--add-opens', 'java.base/java.time=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.net=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.nio=ALL-UNNAMED', '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.security.cert=ALL-UNNAMED', '--add-opens', 'java.base/javax.net.ssl=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.util.concurrent=ALL-UNNAMED', '--add-opens', 'java.sql/java.sql=ALL-UNNAMED',
-            '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
-    ]
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
@@ -151,10 +146,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
 task runSender(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
-    jvmArgs = [
-            '--add-opens', 'java.base/java.time=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.io=ALL-UNNAMED',
-    ]
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'SENDER'
 }
@@ -162,10 +157,10 @@ task runSender(type: JavaExec, dependsOn: jar) {
 task runRecipient(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
-    jvmArgs = [
-            '--add-opens', 'java.base/java.time=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.io=ALL-UNNAMED',
-    ]
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'RECIPIENT'
 }

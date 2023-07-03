@@ -116,10 +116,10 @@ idea {
 task runRPCCashIssue(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.IssueCash'
-    jvmArgs = [
-            '--add-opens', 'java.base/java.time=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.io=ALL-UNNAMED',
-    ]
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'ISSUE_CASH_RPC'
     args '--quantity'
@@ -127,19 +127,17 @@ task runRPCCashIssue(type: JavaExec) {
     args '--currency'
     args 'USD'
 
-    jvmArgs '--add-opens'
-    jvmArgs 'java.base/java.time=ALL-UNNAMED'
-    jvmArgs '--add-opens'
-    jvmArgs 'java.base/java.io=ALL-UNNAMED'
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 task runWebCashIssue(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.IssueCash'
-    jvmArgs = [
-            '--add-opens', 'java.base/java.time=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.io=ALL-UNNAMED',
-    ]
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'ISSUE_CASH_WEB'
     args '--quantity'
@@ -147,10 +145,8 @@ task runWebCashIssue(type: JavaExec) {
     args '--currency'
     args 'GBP'
 
-    jvmArgs '--add-opens'
-    jvmArgs 'java.base/java.time=ALL-UNNAMED'
-    jvmArgs '--add-opens'
-    jvmArgs 'java.base/java.io=ALL-UNNAMED'
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 jar {

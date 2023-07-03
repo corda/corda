@@ -64,8 +64,8 @@ jar {
 }
 
 test {
-    jvmArgs '--add-opens', 'java.base/java.io=ALL-UNNAMED', '--add-opens', 'java.base/java.time=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 tasks.withType(Javadoc).configureEach {

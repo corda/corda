@@ -80,7 +80,8 @@ dependencies {
 }
 
 test {
-    jvmArgs '--add-exports', 'javafx.base/com.sun.javafx.collections=ALL-UNNAMED'
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 task integrationTest(type: Test) {
