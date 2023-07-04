@@ -279,7 +279,7 @@ pipeline {
 
         stage('Publish Release Candidate to Internal Repository') {
             when {
-                expression { isReleaseCandidate }
+                expression { return false} // keeping stage to preserve Jenkins history on release branches, but not supported for patch builds pre 4.9
             }
             steps {
                 withCredentials([
