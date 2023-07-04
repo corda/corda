@@ -1678,6 +1678,7 @@
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField&lt;SerializationEnvironment&gt;("inheritableContextSerializationEnv") { stack -&gt; stack.fold(false) { isAGlobalThreadBeingCreated, e -&gt; isAGlobalThreadBeingCreated || (e.className == "io.netty.util.concurrent.GlobalEventExecutor" &amp;&amp; e.methodName == "startThread") || (e.className == "java.util.concurrent.ForkJoinPool\$DefaultForkJoinWorkerThreadFactory" &amp;&amp; e.methodName == "newThread") } }</ID>
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _rpcClientSerializationEnv = SimpleToggleField&lt;SerializationEnvironment&gt;("rpcClientSerializationEnv")</ID>
     <ID>TopLevelPropertyNaming:SerializationFormat.kt$const val encodingNotPermittedFormat = "Encoding not permitted: %s"</ID>
+    <ID>TopLevelPropertyNaming:ConcurrencyUtils.kt$const val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"</ID>
     <ID>UnusedImports:Amount.kt$import net.corda.core.crypto.CompositeKey</ID>
     <ID>UnusedImports:Amount.kt$import net.corda.core.identity.Party</ID>
     <ID>UnusedImports:DummyLinearStateSchemaV1.kt$import net.corda.core.contracts.ContractState</ID>
