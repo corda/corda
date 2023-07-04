@@ -37,8 +37,9 @@ dependencies {
     implementation project(':test-utils')
     implementation project(':tools:cliutils')
 
-    implementation group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
+    implementation "net.corda.djvm:corda-djvm:$djvm_version"
 
+    implementation group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
     // Integration test helpers
     testImplementation "org.assertj:assertj-core:$assertj_version"
 
