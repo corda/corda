@@ -83,32 +83,38 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
 open class SendTransactionFlow(val stx: SignedTransaction,
                                val participantSessions: Set<FlowSession>,
                                val observerSessions: Set<FlowSession>,
-                               val senderStatesToRecord: StatesToRecord,
-                               recordMetaDataEvenIfNotFullySigned: Boolean = false) : DataVendingFlow(participantSessions + observerSessions, stx,
-                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME,
-                                       DistributionList(senderStatesToRecord,
-                                       (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
-                                                           (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()
-                                   )), recordMetaDataEvenIfNotFullySigned(stx)) {
+                               val senderStatesToRecord: StatesToRecord)
+    : DataVendingFlow(participantSessions + observerSessions, stx,
+        makeMetaData(senderStatesToRecord, participantSessions, observerSessions),
+        recordMetaDataEvenIfNotFullySigned(stx)) {
+
     constructor(otherSide: FlowSession, stx: SignedTransaction) : this(stx, setOf(otherSide), emptySet(), StatesToRecord.NONE)
+
     // Note: DUMMY_PARTICIPANT_NAME to be substituted with actual "ourIdentity.name" in flow call()
     companion object {
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
-    }
-}
 
-private operator fun Boolean.invoke(stx: SignedTransaction): Boolean {
-    return try {
-        val notary = stx.tx.notary
-        // The notary signature(s) are allowed to be missing but no others.
-        if (notary != null) stx.verifySignaturesExcept(notary.owningKey) else stx.verifyRequiredSignatures()
-        true
-    }
-    catch (e: SignedTransaction.SignaturesMissingException) {
-        false
-    }
-    catch (e: SignatureException) {
-        false
+        fun makeMetaData(senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata {
+            return TransactionMetadata(DUMMY_PARTICIPANT_NAME,
+                    DistributionList(senderStatesToRecord,
+                            (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
+                                    (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()))
+        }
+
+        fun recordMetaDataEvenIfNotFullySigned(stx: SignedTransaction): Boolean {
+            return try {
+                val notary = stx.tx.notary
+                // The notary signature(s) are allowed to be missing but no others.
+                if (notary != null) stx.verifySignaturesExcept(notary.owningKey) else stx.verifyRequiredSignatures()
+                true
+            }
+            catch (e: SignedTransaction.SignaturesMissingException) {
+                false
+            }
+            catch (e: SignatureException) {
+                false
+            }
+        }
     }
 }
 
