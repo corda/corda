@@ -12,7 +12,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.protonwrapper.netty.sslDelegatedTaskExecutor
 import net.corda.nodeapi.internal.setThreadPoolName
-import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.BaseInterceptor
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptor
 import org.apache.activemq.artemis.core.server.balancing.RedirectHandler
