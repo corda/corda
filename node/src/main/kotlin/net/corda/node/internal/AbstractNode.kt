@@ -5,6 +5,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.zaxxer.hikari.pool.HikariPool
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
@@ -333,7 +334,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val schedulerService = makeNodeSchedulerService()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
-    private val shutdownExecutor = Executors.newSingleThreadExecutor()
+    private val shutdownExecutor = Executors.newSingleThreadExecutor(DefaultThreadFactory("Shutdown"))
 
     protected abstract val transactionVerifierWorkerCount: Int
     /**
@@ -769,7 +770,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             1.days
         }
-        val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater"))
+        val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("NetworkMapPublisher"))
         executor.submit(object : Runnable {
             override fun run() {
                 val republishInterval = try {
@@ -1076,7 +1077,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  networkParameters: NetworkParameters)
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
-                                        services: ServicesForResolution,
+                                        services: NodeServicesForResolution,
                                         database: CordaPersistence,
                                         cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)

@@ -28,12 +28,14 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
+import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
+import net.corda.node.services.vault.toStateRef
 import net.corda.node.testing.DummyFungibleContract
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -48,7 +50,6 @@ import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
-import org.assertj.core.api.Assertions.`in`
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.SessionFactory
@@ -122,7 +123,14 @@ class HibernateConfigurationTest {
             services = object : MockServices(cordappPackages, BOB_NAME, mock<IdentityService>().also {
                 doReturn(null).whenever(it).verifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService, cordappClassloader).apply { start() }
+                override val vaultService = NodeVaultService(
+                        Clock.systemUTC(),
+                        keyManagementService,
+                        servicesForResolution as NodeServicesForResolution,
+                        database,
+                        schemaService,
+                        cordappClassloader
+                ).apply { start() }
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
@@ -183,7 +191,7 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         val coins = queryResults.map {
-            services.loadState(toStateRef(it.stateRef!!)).data
+            services.loadState(it.stateRef!!.toStateRef()).data
         }.sumCash()
         assertThat(coins.toDecimal() >= BigDecimal("50.00"))
     }
@@ -739,7 +747,7 @@ class HibernateConfigurationTest {
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
 
         queryResults.forEach {
-            val cashState = services.loadState(toStateRef(it.stateRef!!)).data as Cash.State
+            val cashState = services.loadState(it.stateRef!!.toStateRef()).data as Cash.State
             println("${it.stateRef} with owner: ${cashState.owner.owningKey.toBase58String()}")
         }
 
@@ -823,7 +831,7 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         queryResults.forEach {
-            val cashState = services.loadState(toStateRef(it.stateRef!!)).data as Cash.State
+            val cashState = services.loadState(it.stateRef!!.toStateRef()).data as Cash.State
             println("${it.stateRef} with owner ${cashState.owner.owningKey.toBase58String()} and participants ${cashState.participants.map { it.owningKey.toBase58String() }}")
         }
 
@@ -959,10 +967,6 @@ class HibernateConfigurationTest {
             }
             Assert.assertEquals(cashStates.count(), count)
         }
-    }
-
-    private fun toStateRef(pStateRef: PersistentStateRef): StateRef {
-        return StateRef(SecureHash.create(pStateRef.txId), pStateRef.index)
     }
 
     @Test(timeout=300_000)

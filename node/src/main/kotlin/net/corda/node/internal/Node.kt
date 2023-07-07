@@ -415,12 +415,13 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters): BridgeControlListener {
-        val artemisMessagingClientFactory = {
+        val artemisMessagingClientFactory = { threadPoolName: String ->
             ArtemisMessagingClient(
                     configuration.p2pSslOptions,
                     serverAddress,
                     networkParameters.maxMessageSize,
-                    failoverCallback = { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) }
+                    failoverCallback = { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) },
+                    threadPoolName = threadPoolName
             )
         }
         return BridgeControlListener(
@@ -431,7 +432,8 @@ open class Node(configuration: NodeConfiguration,
                 networkParameters.maxMessageSize,
                 configuration.crlCheckSoftFail.toRevocationConfig(),
                 false,
-                artemisMessagingClientFactory)
+                artemisMessagingClientFactory
+        )
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {

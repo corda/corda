@@ -42,8 +42,8 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
     override fun start(): Started = synchronized(this) {
         check(started == null) { "start can't be called twice" }
         val tcpTransport = p2pConnectorTcpTransport(serverAddress, config, threadPoolName = threadPoolName, trace = trace)
-        val backupTransports = backupServerAddressPool.map {
-            p2pConnectorTcpTransport(it, config, threadPoolName = threadPoolName, trace = trace)
+        val backupTransports = backupServerAddressPool.mapIndexed { index, address ->
+            p2pConnectorTcpTransport(address, config, threadPoolName = "$threadPoolName-backup${index+1}", trace = trace)
         }
 
         log.info("Connecting to message broker: $serverAddress")

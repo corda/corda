@@ -1,5 +1,6 @@
 package net.corda.client.rpc.internal
 
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
@@ -99,7 +100,8 @@ class ReconnectingCordaRPCOps private constructor(
                     ErrorInterceptingHandler(reconnectingRPCConnection)) as CordaRPCOps
         }
     }
-    private val retryFlowsPool = Executors.newScheduledThreadPool(1)
+    private val retryFlowsPool = Executors.newScheduledThreadPool(1, DefaultThreadFactory("FlowRetry"))
+
     /**
      * This function runs a flow and retries until it completes successfully.
      *
