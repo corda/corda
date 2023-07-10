@@ -6,6 +6,8 @@
 @Library('corda-shared-build-pipeline-steps')
 
 import com.r3.build.utils.GitUtils
+import com.r3.build.enums.SnykOrganisation
+import com.r3.build.utils.SnykUtils
 
 GitUtils gitUtils = new GitUtils(this)
 
@@ -58,6 +60,7 @@ pipeline {
         CORDA_BUILD_EDITION = "${buildEdition}"
         DOCKER_URL = "https://index.docker.io/v1/"
         EMAIL_RECIPIENTS = credentials('corda4-email-recipient')
+        INTEGRATION_ID = credentials('snyk-artifactory-c5')
         SNYK_API_KEY = "c4-os-snyk" //Jenkins credential type: Snyk Api token
         SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
         C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
@@ -286,18 +289,35 @@ pipeline {
             }
             steps {
                 withCredentials([
-                        usernamePassword(credentialsId: 'docker-image-pusher-os',
-                                usernameVariable: 'DOCKER_USERNAME',
-                                passwordVariable: 'DOCKER_PASSWORD')
+                    usernamePassword(credentialsId: 'docker-image-pusher-os',
+                            usernameVariable: 'DOCKER_USERNAME',
+                            passwordVariable: 'DOCKER_PASSWORD')
                 ]) {
                     sh script: [
-                            './gradlew',
-                            COMMON_GRADLE_PARAMS,
-                            '-Pdocker.image.repository=entdocker.software.r3.com/corda',
-                            'docker:pushDockerImage',
-                            '--image OFFICIAL',
-                            '--registry-url=entdocker.software.r3.com'
-                            ].join(' ')
+                        './gradlew',
+                        COMMON_GRADLE_PARAMS,
+                        '-Pdocker.image.repository=entdocker.software.r3.com/corda',
+                        'docker:pushDockerImage',
+                        '--image OFFICIAL',
+                        '--registry-url=entdocker.software.r3.com'
+                        ].join(' ')
+                }
+            }
+            post {
+                success {
+                    script {
+                    // Read the file and get the properties
+                    def cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+                    def versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+
+                    echo "Corda Version: ${cordaVersion}"
+                    echo "Version Suffix: ${versionSuffix}"
+
+                    Strign dockerTagName = versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion
+
+                    echo "****Full value: ${cordaVersion}-${versionSuffix}"
+                        //snykUtils.SnykApiImport(params.RELEASE_NAME, SnykOrganisation.CORDA_4_OS , env.SNYK_ORG_ID)
+                    }
                 }
             }
         }
