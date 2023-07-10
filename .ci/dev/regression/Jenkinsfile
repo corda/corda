@@ -313,9 +313,9 @@ pipeline {
                     echo "Corda Version: ${cordaVersion}"
                     echo "Version Suffix: ${versionSuffix}"
 
-                    Strign dockerTagName = versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion
+                    String dockerTag = versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion
 
-                    echo "****Full value: ${cordaVersion}-${versionSuffix}"
+                    echo "****Full value: ${dockerTag}-zulu-openjdk8"
                         //snykUtils.SnykApiImport(params.RELEASE_NAME, SnykOrganisation.CORDA_4_OS , env.SNYK_ORG_ID)
                     }
                 }
