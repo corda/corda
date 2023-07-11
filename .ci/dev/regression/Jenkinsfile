@@ -289,18 +289,18 @@ pipeline {
             }
             steps {
                 withCredentials([
-                    usernamePassword(credentialsId: 'docker-image-pusher-os',
-                            usernameVariable: 'DOCKER_USERNAME',
-                            passwordVariable: 'DOCKER_PASSWORD')
+                        usernamePassword(credentialsId: 'docker-image-pusher-os',
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD')
                 ]) {
                     sh script: [
-                        './gradlew',
-                        COMMON_GRADLE_PARAMS,
-                        '-Pdocker.image.repository=entdocker.software.r3.com/corda',
-                        'docker:pushDockerImage',
-                        '--image OFFICIAL',
-                        '--registry-url=entdocker.software.r3.com'
-                        ].join(' ')
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            '-Pdocker.image.repository=entdocker.software.r3.com/corda',
+                            'docker:pushDockerImage',
+                            '--image OFFICIAL',
+                            '--registry-url=entdocker.software.r3.com'
+                            ].join(' ')
                 }
             }
         }
