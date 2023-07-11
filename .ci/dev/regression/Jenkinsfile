@@ -10,7 +10,7 @@ import com.r3.build.enums.SnykOrganisation
 import com.r3.build.utils.SnykUtils
 
 GitUtils gitUtils = new GitUtils(this)
-
+SnykUtils snykUtils = new SnykUtils(this)
 /**
  * Sense environment
  */
@@ -62,7 +62,7 @@ pipeline {
         EMAIL_RECIPIENTS = credentials('corda4-email-recipient')
         INTEGRATION_ID = credentials('snyk-artifactory-c4')
         SNYK_API_KEY = "c4-os-snyk" //Jenkins credential type: Snyk Api token
-        SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
+        SNYK_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
         C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
     }
 
@@ -108,7 +108,7 @@ pipeline {
                 expression { isReleaseTag || isReleaseCandidate || isReleaseBranch }
             }
             steps {
-                snykLicenseGeneration(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
+                snykLicenseGeneration(env.SNYK_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }
             post {
                 always {
@@ -306,17 +306,10 @@ pipeline {
             post {
                 success {
                     script {
-                    // Read the file and get the properties
-                    def cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                    def versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-
-                    echo "Corda Version: ${cordaVersion}"
-                    echo "Version Suffix: ${versionSuffix}"
-
-                    String dockerTag = versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion
-
-                    echo "****Full value: ${dockerTag}-zulu-openjdk8"
-                        //snykUtils.SnykApiImport(params.RELEASE_NAME, SnykOrganisation.CORDA_4_OS , env.SNYK_ORG_ID)
+                        def cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+                        def versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+                        snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, 
+                            SnykOrganisation.CORDA_4_OS, env.SNYK_ORG_ID)
                     }
                 }
             }
@@ -410,6 +403,9 @@ pipeline {
                 if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
                     snykSecurityScan.generateHtmlElements()
                 }
+                String cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+                String versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+                snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, SnykOrganisation.CORDA_4_OS, env.SNYK_ORG_ID)
             }
         }
         unstable {
