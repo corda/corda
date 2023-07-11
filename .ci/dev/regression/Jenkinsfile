@@ -393,9 +393,13 @@ pipeline {
                 if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
                     snykSecurityScan.generateHtmlElements()
                 }
-                String cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                String versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, SnykOrganisation.CORDA_4_OS, env.SNYK_ORG_ID)
+
+                if (isReleaseTag || isReleaseCandidate) {
+                    // auto import and scanning of Docker images tag is dictated by below properties, so retrieve these first to build the approproate tag
+                    String cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+                    String versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+                    snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, SnykOrganisation.CORDA_4_OS, env.SNYK_ORG_ID)
+                }
             }
         }
         unstable {
