@@ -37,7 +37,7 @@ import java.util.Collections.unmodifiableMap
  * during this period.
  * @property recoveryMaximumBackupInterval Time period for how far back transactions will be recovered. The assumption is that
  * transaction prior to this time have already been backed up.
- * @property confidentialIdentityMaximumBackupInterval Time period for when Confidential Identities keys were last backed up. The
+ * @property confidentialIdentityMinimumBackupInterval Time period for when Confidential Identities keys were last backed up. The
  * cut off time is the current time minus this period.
  */
 @KeepForDJVM
@@ -54,7 +54,7 @@ data class NetworkParameters(
         val eventHorizon: Duration,
         @AutoAcceptable val packageOwnership: Map<String, PublicKey>,
         val recoveryMaximumBackupInterval: Duration? = null,
-        val confidentialIdentityMaximumBackupInterval: Duration? = null
+        val confidentialIdentityMinimumBackupInterval: Duration? = null
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(version = 1)
@@ -116,7 +116,7 @@ data class NetworkParameters(
             eventHorizon,
             packageOwnership,
             recoveryMaximumBackupInterval = null,
-            confidentialIdentityMaximumBackupInterval = null
+            confidentialIdentityMinimumBackupInterval = null
     )
 
     init {
@@ -131,7 +131,7 @@ data class NetworkParameters(
         require(recoveryMaximumBackupInterval == null || !recoveryMaximumBackupInterval.isNegative) {
             "Recovery maximum backup interval must be a positive value"
         }
-        require(confidentialIdentityMaximumBackupInterval == null || !confidentialIdentityMaximumBackupInterval.isNegative) {
+        require(confidentialIdentityMinimumBackupInterval == null || !confidentialIdentityMinimumBackupInterval.isNegative) {
             "Confidential Identities maximum backup interval must be a positive value"
         }
     }
@@ -161,7 +161,7 @@ data class NetworkParameters(
                 eventHorizon = eventHorizon,
                 packageOwnership = packageOwnership,
                 recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
-                confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
+                confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
     }
 
@@ -189,7 +189,7 @@ data class NetworkParameters(
                 eventHorizon = eventHorizon,
                 packageOwnership = packageOwnership,
                 recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
-                confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
+                confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
     }
 
@@ -216,7 +216,7 @@ data class NetworkParameters(
                 eventHorizon = eventHorizon,
                 packageOwnership = packageOwnership,
                 recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
-                confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
+                confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
     }
 
@@ -236,7 +236,7 @@ data class NetworkParameters(
       modifiedTime=$modifiedTime
       epoch=$epoch
       transactionRecoveryPeriod=$recoveryMaximumBackupInterval
-      confidentialIdentityPreGenerationPeriod=$confidentialIdentityMaximumBackupInterval
+      confidentialIdentityPreGenerationPeriod=$confidentialIdentityMinimumBackupInterval
   }"""
     }
 
@@ -254,7 +254,7 @@ data class NetworkParameters(
             eventHorizon = eventHorizon,
             packageOwnership = unmodifiable(packageOwnership),
             recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
-            confidentialIdentityMaximumBackupInterval = confidentialIdentityMaximumBackupInterval
+            confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
     }
 }

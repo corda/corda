@@ -22,8 +22,8 @@ fun testNetworkParameters(
         epoch: Int = 1,
         eventHorizon: Duration = 30.days,
         packageOwnership: Map<String, PublicKey> = emptyMap(),
-        transactionRecoveryPeriod: Duration = 30.days,
-        confidentialIdentityPreGenerationPeriod: Duration = 30.days
+        recoveryMaximumBackupInterval: Duration = 30.days,
+        confidentialIdentityMinimumBackupInterval: Duration = 30.days
 ): NetworkParameters {
     return NetworkParameters(
             minimumPlatformVersion = minimumPlatformVersion,
@@ -35,8 +35,8 @@ fun testNetworkParameters(
             whitelistedContractImplementations = whitelistedContractImplementations,
             eventHorizon = eventHorizon,
             packageOwnership = packageOwnership,
-            recoveryMaximumBackupInterval = transactionRecoveryPeriod,
-            confidentialIdentityMaximumBackupInterval = confidentialIdentityPreGenerationPeriod
+            recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+            confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
     )
 }
 

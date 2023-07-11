@@ -112,12 +112,12 @@ class NetworkParametersTest {
         )
 
         assertNull(nm1.recoveryMaximumBackupInterval)
-        assertNull(nm1.confidentialIdentityMaximumBackupInterval)
+        assertNull(nm1.confidentialIdentityMinimumBackupInterval)
 
-        val nm2 = nm1.copy(recoveryMaximumBackupInterval = 10.days, confidentialIdentityMaximumBackupInterval = 10.days)
+        val nm2 = nm1.copy(recoveryMaximumBackupInterval = 10.days, confidentialIdentityMinimumBackupInterval = 10.days)
 
         assertNotEquals(nm1.recoveryMaximumBackupInterval, nm2.recoveryMaximumBackupInterval)
-        assertNotEquals(nm1.confidentialIdentityMaximumBackupInterval, nm2.confidentialIdentityMaximumBackupInterval)
+        assertNotEquals(nm1.confidentialIdentityMinimumBackupInterval, nm2.confidentialIdentityMinimumBackupInterval)
 
     }
 
