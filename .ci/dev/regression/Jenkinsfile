@@ -303,16 +303,6 @@ pipeline {
                         ].join(' ')
                 }
             }
-            post {
-                success {
-                    script {
-                        def cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                        def versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                        snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, 
-                            SnykOrganisation.CORDA_4_OS, env.SNYK_ORG_ID)
-                    }
-                }
-            }
         }
 
         stage('Publish Release to Docker Hub') {
