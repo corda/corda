@@ -113,6 +113,7 @@ buildscript {
     ext.hikari_version = '3.3.1'
     ext.liquibase_version = '3.6.3'
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
+    ext.publicArtifactURL = 'https://download.corda.net/maven'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = '1.5.0'
     ext.selenium_version = '3.141.59'
@@ -174,14 +175,14 @@ buildscript {
             }
         } else {
             maven {
-                url "${artifactory_contextUrl}/corda-dependencies-dev"
+                url "${publicArtifactURL}/corda-dependencies-dev"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
                 }
             }
             maven {
-                url "${artifactory_contextUrl}/corda-releases"
+                url "${publicArtifactURL}/corda-releases"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
@@ -398,7 +399,7 @@ allprojects {
             }
         } else {
             maven {
-                url "${artifactory_contextUrl}/corda-dependencies"
+                url "${publicArtifactURL}/corda-dependencies"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
@@ -409,7 +410,7 @@ allprojects {
                 }
             }
             maven {
-                url "${artifactory_contextUrl}/corda-dev"
+                url "${publicArtifactURL}/corda-dev"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
