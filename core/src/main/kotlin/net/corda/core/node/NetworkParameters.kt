@@ -35,10 +35,14 @@ import java.util.Collections.unmodifiableMap
  * Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
  * during this period.
- * @property recoveryMaximumBackupInterval Time period for how far back transactions will be recovered. The assumption is that
- * transaction prior to this time have already been backed up.
- * @property confidentialIdentityMinimumBackupInterval Time period for when Confidential Identities keys were last backed up. The
- * cut off time is the current time minus this period.
+ * @property recoveryMaximumBackupInterval A default value, that will be used by the Ledger Recovery flows to set how far back in time to
+ * consider for recovery. The expectation is that a node will restore to a database backup that is no older than this, by default, when
+ * attempting a recovery. This value can be overridden by specifying an override to the flow. It can also be overridden if the same parameter
+ * is specified, per-node in the node configuration. An override to the flow takes priority in terms of overrides. It is optional in both
+ * the network parameters and the node configuration however if no values are set then it needs to be specified in the flow.
+ * @property confidentialIdentityMinimumBackupInterval A default value for the  minimum age of a generated confidential identity key before
+ * it can be used. This can be overridden in the node configuration or if a more recent database backup is indicated via RPC / shell. It is
+ * optional in both the network parameters and the node configuration and if no value is set for either then it is assumed to be zero.
  */
 @KeepForDJVM
 @CordaSerializable
