@@ -1,5 +1,4 @@
 pluginManagement {
-    ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
     ext.publicArtifactURL = 'https://download.corda.net/maven'
 
     repositories {
