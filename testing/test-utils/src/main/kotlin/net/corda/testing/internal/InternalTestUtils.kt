@@ -42,6 +42,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.protonwrapper.netty.CrlSource
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.core.ALICE_NAME
@@ -52,6 +53,8 @@ import java.io.IOException
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.security.KeyPair
+import java.security.cert.X509CRL
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
@@ -145,6 +148,12 @@ fun p2pSslOptions(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "L
     val trustStore = sslConfig.trustStore.get(true)
     trustStore[X509Utilities.CORDA_ROOT_CA] = rootCa.certificate
     return sslConfig
+}
+
+fun fixedCrlSource(crls: Set<X509CRL>): CrlSource {
+    return object : CrlSource {
+        override fun fetch(certificate: X509Certificate): Set<X509CRL> = crls
+    }
 }
 
 /** This is the same as the deprecated [WireTransaction] c'tor but avoids the deprecation warning. */

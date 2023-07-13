@@ -37,7 +37,7 @@ class LoopbackBridgeManager(keyStore: CertificateStore,
                             maxMessageSize: Int,
                             revocationConfig: RevocationConfig,
                             enableSNI: Boolean,
-                            private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                            private val artemisMessageClientFactory: (String) -> ArtemisSessionProvider,
                             private val bridgeMetricsService: BridgeMetricsService? = null,
                             private val isLocalInbox: (String) -> Boolean,
                             trace: Boolean,
@@ -204,7 +204,7 @@ class LoopbackBridgeManager(keyStore: CertificateStore,
 
     override fun start() {
         super.start()
-        val artemis = artemisMessageClientFactory()
+        val artemis = artemisMessageClientFactory("LoopbackBridge")
         this.artemis = artemis
         artemis.start()
     }

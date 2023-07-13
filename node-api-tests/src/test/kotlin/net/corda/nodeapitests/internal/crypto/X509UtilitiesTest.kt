@@ -21,14 +21,29 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.coretesting.internal.NettyTestClient
+import net.corda.coretesting.internal.NettyTestHandler
+import net.corda.coretesting.internal.NettyTestServer
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
+import net.corda.nodeapi.internal.crypto.checkValidity
+import net.corda.nodeapi.internal.crypto.getSupportedKey
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
+import net.corda.nodeapi.internal.crypto.save
+import net.corda.nodeapi.internal.crypto.toBc
+import net.corda.nodeapi.internal.crypto.x509
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.installDevNodeCaCertPath
-import net.corda.nodeapi.internal.protonwrapper.netty.init
+import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
+import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactory
 import net.corda.nodeapi.internal.registerDevP2pCertificates
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -37,25 +52,16 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.coretesting.internal.NettyTestClient
-import net.corda.coretesting.internal.NettyTestHandler
-import net.corda.coretesting.internal.NettyTestServer
-import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.checkValidity
-import net.corda.nodeapi.internal.crypto.getSupportedKey
-import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
-import net.corda.nodeapi.internal.crypto.save
-import net.corda.nodeapi.internal.crypto.toBc
-import net.corda.nodeapi.internal.crypto.x509
-import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.internal.IS_OPENJ9
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
+import org.bouncycastle.asn1.x509.BasicConstraints
+import org.bouncycastle.asn1.x509.CRLDistPoint
+import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.junit.Assume
@@ -74,10 +80,19 @@ import java.security.PrivateKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.*
-import javax.net.ssl.*
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLParameters
+import javax.net.ssl.SSLServerSocket
+import javax.net.ssl.SSLSocket
 import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class X509UtilitiesTest {
     private companion object {
@@ -295,15 +310,10 @@ class X509UtilitiesTest {
         sslConfig.keyStore.get(true).registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa)
         sslConfig.createTrustStore(rootCa.certificate)
 
-        val keyStore = sslConfig.keyStore.get()
-        val trustStore = sslConfig.trustStore.get()
-
         val context = SSLContext.getInstance("TLS")
-        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        keyManagerFactory.init(keyStore)
+        val keyManagerFactory = keyManagerFactory(sslConfig.keyStore.get())
         val keyManagers = keyManagerFactory.keyManagers
-        val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        trustMgrFactory.init(trustStore)
+        val trustMgrFactory = trustManagerFactory(sslConfig.trustStore.get())
         val trustManagers = trustMgrFactory.trustManagers
         context.init(keyManagers, trustManagers, newSecureRandom())
 
@@ -388,15 +398,8 @@ class X509UtilitiesTest {
         sslConfig.keyStore.get(true).registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa)
         sslConfig.createTrustStore(rootCa.certificate)
 
-        val keyStore = sslConfig.keyStore.get()
-        val trustStore = sslConfig.trustStore.get()
-
-        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        keyManagerFactory.init(keyStore)
-
-        val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        trustManagerFactory.init(trustStore)
-
+        val keyManagerFactory = keyManagerFactory(sslConfig.keyStore.get())
+        val trustManagerFactory = trustManagerFactory(sslConfig.trustStore.get())
 
         val sslServerContext = SslContextBuilder
                 .forServer(keyManagerFactory)
