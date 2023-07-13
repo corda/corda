@@ -26,6 +26,7 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactory
@@ -46,11 +47,14 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLException
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLParameters
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
+import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -237,7 +241,7 @@ class ProtonWrapperTests {
         keyManagerFactory.init(keyStore)
         val keyManagers = keyManagerFactory.keyManagers
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        trustMgrFactory.init(trustStore)
+        trustMgrFactory.init(trustStore.value.internal)
         val trustManagers = trustMgrFactory.trustManagers
         context.init(keyManagers, trustManagers, newSecureRandom())
 
