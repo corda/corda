@@ -439,8 +439,6 @@ allprojects {
         all {
             resolutionStrategy {
                 // Force dependencies to use the same version of Kotlin as Corda.
-                force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-                force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
                 // Force dependencies to use the same version of Guava as Corda.
@@ -497,8 +495,6 @@ allprojects {
             cfg.resolutionStrategy {
                 dependencySubstitution {
                     // Force dependencies to use the same version of Kotlin as Corda.
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk8') with module("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk7') with module("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
                     substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') with module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
                     substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
                     substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")

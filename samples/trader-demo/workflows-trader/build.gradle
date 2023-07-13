@@ -3,7 +3,6 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 
 dependencies {
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     cordaProvided project(':core')
 
     // The trader demo CorDapp depends upon Cash CorDapp features

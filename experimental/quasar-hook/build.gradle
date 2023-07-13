@@ -8,7 +8,6 @@ apply plugin: 'idea'
 description 'A javaagent to allow hooking into the instrumentation by Quasar'
 
 dependencies {
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     implementation "javassist:javassist:$javaassist_version"
 }

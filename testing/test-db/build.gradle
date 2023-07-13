@@ -2,7 +2,6 @@ apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
 
 dependencies {
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"

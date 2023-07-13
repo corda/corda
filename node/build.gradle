@@ -110,7 +110,6 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-web:${log4j_version}"
     implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
 
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 

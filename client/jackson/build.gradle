@@ -7,7 +7,6 @@ dependencies {
     implementation project(':core')
     implementation project(':serialization')
 
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_kotlin_version") {
         exclude module: "jackson-databind"
