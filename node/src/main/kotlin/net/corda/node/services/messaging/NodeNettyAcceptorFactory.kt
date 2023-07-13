@@ -12,8 +12,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import org.apache.activemq.artemis.api.core.BaseInterceptor
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptor
-import org.apache.activemq.artemis.core.server.balancing.RedirectHandler
 import org.apache.activemq.artemis.core.server.cluster.ClusterConnection
+import org.apache.activemq.artemis.core.server.routing.RoutingHandler
 import org.apache.activemq.artemis.spi.core.protocol.ProtocolManager
 import org.apache.activemq.artemis.spi.core.remoting.Acceptor
 import org.apache.activemq.artemis.spi.core.remoting.AcceptorFactory
@@ -37,7 +37,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                 listener: ServerConnectionLifeCycleListener?,
                                 threadPool: Executor,
                                 scheduledThreadPool: ScheduledExecutorService?,
-                                protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?): Acceptor {
+                                protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RoutingHandler<*>>>?): Acceptor {
         val failureExecutor = OrderedExecutor(threadPool)
         return NodeNettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
     }
@@ -50,7 +50,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                     listener: ServerConnectionLifeCycleListener?,
                                     scheduledThreadPool: ScheduledExecutorService?,
                                     failureExecutor: Executor,
-                                    protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?) :
+                                    protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RoutingHandler<*>>>?) :
             NettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
     {
         companion object {

@@ -116,6 +116,7 @@ dependencies {
 
     implementation "org.fusesource.jansi:jansi:$jansi_version"
     implementation "com.google.guava:guava:$guava_version"
+    implementation "commons-io:commons-io:$commons_io_version"
 
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"

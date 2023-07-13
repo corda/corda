@@ -20,6 +20,8 @@ dependencies {
         exclude group: 'org.jgroups', module: 'jgroups'
     }
     implementation "org.apache.activemq:artemis-commons:${artemis_version}"
+    implementation "javax.json:javax.json-api:$json_api_version"
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
 
     implementation "io.netty:netty-handler-proxy:$netty_version"
 
