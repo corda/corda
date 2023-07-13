@@ -301,7 +301,7 @@ abstract class AbstractServerRevocationTest {
                 listOf(NetworkHostAndPort("localhost", targetPort)),
                 setOf(CHARLIE_NAME),
                 amqpConfig,
-                threadPoolName = legalName.organisation,
+                nettyThreading = AMQPClient.NettyThreading.NonShared(legalName.organisation),
                 distPointCrlSource = CertDistPointCrlSource(connectTimeout = crlConnectTimeout)
         )
         amqpClients += amqpClient

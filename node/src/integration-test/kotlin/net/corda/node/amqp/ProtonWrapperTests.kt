@@ -509,7 +509,7 @@ class ProtonWrapperTests {
                 listOf(NetworkHostAndPort("localhost", serverPort)),
                 setOf(ALICE_NAME),
                 amqpConfig,
-                sharedThreadPool = sharedEventGroup)
+                nettyThreading = AMQPClient.NettyThreading.Shared(sharedEventGroup))
     }
 
     private fun createServer(port: Int,

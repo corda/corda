@@ -2,6 +2,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
@@ -148,7 +149,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     // from the database
     private val startingStateRefs: MutableSet<ScheduledStateRef> = ConcurrentHashMap.newKeySet<ScheduledStateRef>()
     private val mutex = ThreadBox(InnerState())
-    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
+    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor(DefaultThreadFactory("SchedulerService"))
 
     // if there's nothing to do, check every minute if something fell through the cracks.
     // any new state should trigger a reschedule immediately if nothing is scheduled, so I would not expect

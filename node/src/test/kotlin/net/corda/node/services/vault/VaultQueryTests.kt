@@ -1674,7 +1674,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 
     // pagination: last page
     @Test(timeout=300_000)
-	fun `all states with paging specification  - last`() {
+	fun `all states with paging specification - last`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(95.DOLLARS, notaryServices, 95, DUMMY_CASH_ISSUER)
             // Last page implies we need to perform a row count for the Query first,
@@ -1723,7 +1723,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @Test(timeout=300_000)
 	fun `pagination not specified but more than default results available`() {
         expectedEx.expect(VaultQueryException::class.java)
-        expectedEx.expectMessage("provide a `PageSpecification(pageNumber, pageSize)`")
+        expectedEx.expectMessage("provide a PageSpecification")
 
         database.transaction {
             vaultFiller.fillWithSomeTestCash(201.DOLLARS, notaryServices, 201, DUMMY_CASH_ISSUER)

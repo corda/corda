@@ -2,7 +2,9 @@ package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
+import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -192,3 +194,19 @@ object VaultSchemaV1 : MappedSchema(
     ) : IndirectStatePersistable<PersistentStateRefAndKey>
 }
 
+fun PersistentStateRef.toStateRef(): StateRef = StateRef(SecureHash.create(txId), index)
+
+fun VaultSchemaV1.VaultStates.toStateMetadata(): Vault.StateMetadata {
+    return Vault.StateMetadata(
+            stateRef!!.toStateRef(),
+            contractStateClassName,
+            recordedTime,
+            consumedTime,
+            stateStatus,
+            notary,
+            lockId,
+            lockUpdateTime,
+            relevancyStatus,
+            Vault.ConstraintInfo.constraintInfo(constraintType, constraintData)
+    )
+}

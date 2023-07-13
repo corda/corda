@@ -25,6 +25,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.vault.toStateRef
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -157,13 +158,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
                         toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                         fromPersistentEntity = {
                             //TODO null check will become obsolete after making DB/JPA columns not nullable
-                            val txId = it.id.txId
-                            val index = it.id.index
-                            Pair(
-                                    StateRef(txhash = SecureHash.create(txId), index = index),
-                                    SecureHash.create(it.consumingTxHash)
-                            )
-
+                            Pair(it.id.toStateRef(), SecureHash.create(it.consumingTxHash))
                         },
                         toPersistentEntity = { (txHash, index): StateRef, id: SecureHash ->
                             CommittedState(
