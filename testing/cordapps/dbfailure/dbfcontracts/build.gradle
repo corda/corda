@@ -5,8 +5,8 @@ apply plugin: 'kotlin'
 repositories {
     mavenLocal()
     mavenCentral()
-    maven { url "$artifactory_contextUrl/corda-dependencies" }
-    maven { url "$artifactory_contextUrl/corda" }
+    maven { url "$publicArtifactURL/corda-dependencies" }
+    maven { url "$publicArtifactURL/corda" }
 }
 
 dependencies {
