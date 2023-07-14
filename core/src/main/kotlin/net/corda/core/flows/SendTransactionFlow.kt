@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -95,13 +96,19 @@ open class SendTransactionFlow(val stx: SignedTransaction,
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
 
         fun makeMetaData(stx: SignedTransaction, recordMetaDataEvenIfNotFullySigned: Boolean, senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata? {
-            val isTxnFullySigned = (stx.sigs.size >= stx.requiredSigningKeys.size)
-            return if (isTxnFullySigned || recordMetaDataEvenIfNotFullySigned)
+            return if (recordMetaDataEvenIfNotFullySigned || isFullySigned(stx))
                 TransactionMetadata(DUMMY_PARTICIPANT_NAME,
                     DistributionList(senderStatesToRecord,
                             (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
                                     (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()))
             else null
+        }
+
+        private fun isFullySigned(stx: SignedTransaction): Boolean {
+            val serviceHub = (currentTopLevel?.serviceHub as? ServicesForResolution)
+            return if (serviceHub != null)
+                stx.resolveTransactionWithSignatures(serviceHub).getMissingSigners().isEmpty()
+            else false
         }
     }
 }
