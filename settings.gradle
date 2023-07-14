@@ -1,5 +1,6 @@
 pluginManagement {
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
+    ext.publicArtifactURL = 'https://download.corda.net/maven'
 
     repositories {
         // Use system environment to activate caching with Artifactory,
@@ -21,7 +22,7 @@ pluginManagement {
         } else {
             mavenLocal()
             gradlePluginPortal()
-            maven { url "${artifactory_contextUrl}/corda-dependencies" }
+            maven { url "${publicArtifactURL}/corda-dependencies" }
         }
     }
 }
