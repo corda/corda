@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.internal.LazyPool
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
 import net.corda.core.serialization.EncodingWhitelist
@@ -73,35 +74,30 @@ class DeserializationInput constructor(
             }
         }
 
+        private val decoderPool = LazyPool<DecoderImpl>(shouldReturnToPool = { false }) {
+            val decoder = DecoderImpl().apply {
+                this.register(Envelope.DESCRIPTOR, Envelope.FastPathConstructor(this))
+                this.register(Schema.DESCRIPTOR, Schema)
+                this.register(Descriptor.DESCRIPTOR, Descriptor)
+                this.register(Field.DESCRIPTOR, Field)
+                this.register(CompositeType.DESCRIPTOR, CompositeType)
+                this.register(Choice.DESCRIPTOR, Choice)
+                this.register(RestrictedType.DESCRIPTOR, RestrictedType)
+                this.register(ReferencedObject.DESCRIPTOR, ReferencedObject)
+                this.register(TransformsSchema.DESCRIPTOR, TransformsSchema)
+                this.register(TransformTypes.DESCRIPTOR, TransformTypes)
+            }
+            EncoderImpl(decoder)
+            decoder
+        }
+
         @Throws(AMQPNoTypeNotSerializableException::class)
         fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
             return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
-                val decoder = DecoderImpl().apply {
-                    this.register(Envelope.DESCRIPTOR, Envelope.FastPathConstructor(this)) // TODO: Make this fast path
-                    this.register(Schema.DESCRIPTOR, Schema)
-                    this.register(Descriptor.DESCRIPTOR, Descriptor)
-                    this.register(Field.DESCRIPTOR, Field)
-                    this.register(CompositeType.DESCRIPTOR, CompositeType)
-                    this.register(Choice.DESCRIPTOR, Choice)
-                    this.register(RestrictedType.DESCRIPTOR, RestrictedType)
-                    this.register(ReferencedObject.DESCRIPTOR, ReferencedObject)
-                    this.register(TransformsSchema.DESCRIPTOR, TransformsSchema)
-                    this.register(TransformTypes.DESCRIPTOR, TransformTypes)
+                decoderPool.run {
+                    it.byteBuffer = dataBytes
+                    it.readObject() as Envelope
                 }
-                EncoderImpl(decoder)
-                decoder.byteBuffer = dataBytes
-
-                /*
-                val data = Data.Factory.create()
-                val expectedSize = dataBytes.remaining()
-                if (data.decode(dataBytes) != expectedSize.toLong()) {
-                    throw AMQPNoTypeNotSerializableException(
-                            "Unexpected size of data",
-                            "Blob is corrupted!.")
-                }
-                Envelope.get(data)
-                */
-                decoder.readObject() as Envelope
             }
         }
     }
@@ -174,10 +170,10 @@ class DeserializationInput constructor(
 
     private fun <T: Any> doReadObject(envelope: Envelope, clazz: Class<T>, context: SerializationContext): T {
         return clazz.cast(readObjectOrNull(
-            obj = redescribe(envelope.obj, clazz),
-            schema = SerializationSchemas(envelope.schema, envelope.transformsSchema),
-            type = clazz,
-            context = context
+                obj = redescribe(envelope.obj, clazz),
+                schema = SerializationSchemas({ envelope.resolvedSchema }),
+                type = clazz,
+                context = context
         ))
     }
 

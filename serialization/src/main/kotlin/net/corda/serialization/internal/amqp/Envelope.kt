@@ -18,9 +18,9 @@ import java.nio.ByteBuffer
 // TODO: make the schema parsing lazy since mostly schemas will have been seen before and we only need it if we
 // TODO: don't recognise a type descriptor.
 @KeepForDJVM
-class Envelope(val obj: Any?, val resolveSchema: () -> Pair<Schema, TransformsSchema>) : DescribedType {
+class Envelope(val obj: Any?, private val resolveSchema: () -> Pair<Schema, TransformsSchema>) : DescribedType {
 
-    private val resolvedSchema: Pair<Schema, TransformsSchema> by lazy { resolveSchema() }
+    val resolvedSchema: Pair<Schema, TransformsSchema> by lazy { resolveSchema() }
 
     val schema: Schema get() = resolvedSchema.first
     val transformsSchema: TransformsSchema get() = resolvedSchema.second

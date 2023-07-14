@@ -5,9 +5,13 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AMQPTypeIdentifiers.isPrimitive
 import net.corda.serialization.internal.model.TypeIdentifier
-import net.corda.serialization.internal.model.TypeIdentifier.TopType
 import net.corda.serialization.internal.model.TypeIdentifier.Companion.forGenericType
-import org.apache.qpid.proton.amqp.*
+import net.corda.serialization.internal.model.TypeIdentifier.TopType
+import org.apache.qpid.proton.amqp.Binary
+import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.amqp.Symbol
+import org.apache.qpid.proton.amqp.UnsignedInteger
+import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
 import java.lang.reflect.Type
