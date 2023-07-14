@@ -18,7 +18,8 @@ import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedInteger
-import org.apache.qpid.proton.codec.Data
+import org.apache.qpid.proton.codec.DecoderImpl
+import org.apache.qpid.proton.codec.EncoderImpl
 import java.io.InputStream
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -75,6 +76,22 @@ class DeserializationInput constructor(
         @Throws(AMQPNoTypeNotSerializableException::class)
         fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
             return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
+                val decoder = DecoderImpl().apply {
+                    this.register(Envelope.DESCRIPTOR, Envelope.FastPathConstructor(this)) // TODO: Make this fast path
+                    this.register(Schema.DESCRIPTOR, Schema)
+                    this.register(Descriptor.DESCRIPTOR, Descriptor)
+                    this.register(Field.DESCRIPTOR, Field)
+                    this.register(CompositeType.DESCRIPTOR, CompositeType)
+                    this.register(Choice.DESCRIPTOR, Choice)
+                    this.register(RestrictedType.DESCRIPTOR, RestrictedType)
+                    this.register(ReferencedObject.DESCRIPTOR, ReferencedObject)
+                    this.register(TransformsSchema.DESCRIPTOR, TransformsSchema)
+                    this.register(TransformTypes.DESCRIPTOR, TransformTypes)
+                }
+                EncoderImpl(decoder)
+                decoder.byteBuffer = dataBytes
+
+                /*
                 val data = Data.Factory.create()
                 val expectedSize = dataBytes.remaining()
                 if (data.decode(dataBytes) != expectedSize.toLong()) {
@@ -83,6 +100,8 @@ class DeserializationInput constructor(
                             "Blob is corrupted!.")
                 }
                 Envelope.get(data)
+                */
+                decoder.readObject() as Envelope
             }
         }
     }
