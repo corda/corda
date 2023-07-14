@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
+import io.netty.util.concurrent.ImmediateExecutor
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
@@ -8,10 +9,9 @@ import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_PRIVATE_KEY_PASS
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.testing.internal.fixedCrlSource
 import org.junit.Test
-import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SNIHostName
-import javax.net.ssl.TrustManagerFactory
 import kotlin.test.assertEquals
 
 class SSLHelperTest {
@@ -20,15 +20,21 @@ class SSLHelperTest {
         val legalName = CordaX500Name("Test", "London", "GB")
         val sslConfig = configureTestSSL(legalName)
 
-        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        val keyManagerFactory = keyManagerFactory(sslConfig.keyStore.get())
 
-        val keyStore = sslConfig.keyStore
-        keyManagerFactory.init(CertificateStore.fromFile(keyStore.path, keyStore.storePassword, keyStore.entryPassword, false))
-        val trustStore = sslConfig.trustStore
-        trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(CertificateStore.fromFile(trustStore.path, trustStore.storePassword, trustStore.entryPassword, false), RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL)))
+        val trustManagerFactory = trustManagerFactoryWithRevocation(
+                sslConfig.trustStore.get(),
+                RevocationConfigImpl(RevocationConfig.Mode.HARD_FAIL),
+                fixedCrlSource(emptySet())
+        )
 
-        val sslHandler = createClientSslHandler(NetworkHostAndPort("localhost", 1234), setOf(legalName), keyManagerFactory, trustManagerFactory)
+        val sslHandler = createClientSslHandler(
+                NetworkHostAndPort("localhost", 1234),
+                setOf(legalName),
+                keyManagerFactory,
+                trustManagerFactory,
+                ImmediateExecutor.INSTANCE
+        )
         val legalNameHash = SecureHash.sha256(legalName.toString()).toString().take(32).toLowerCase()
 
         // These hardcoded values must not be changed, something is broken if you have to change these hardcoded values.

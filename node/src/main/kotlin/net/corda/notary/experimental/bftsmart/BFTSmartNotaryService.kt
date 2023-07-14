@@ -21,6 +21,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.services.vault.toStateRef
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.PublicKey
@@ -41,6 +42,8 @@ class BFTSmartNotaryService(
 ) : NotaryService() {
     companion object {
         private val log = contextLogger()
+
+        @Suppress("unused")  // Used by NotaryLoader via reflection
         @JvmStatic
         val serializationFilter
             get() = { clazz: Class<*> ->
@@ -147,12 +150,7 @@ class BFTSmartNotaryService(
                 toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                 fromPersistentEntity = {
                     //TODO null check will become obsolete after making DB/JPA columns not nullable
-                    val txId = it.id.txId
-                    val index = it.id.index
-                    Pair(
-                            StateRef(txhash = SecureHash.create(txId), index = index),
-                            SecureHash.create(it.consumingTxHash)
-                    )
+                    Pair(it.id.toStateRef(), SecureHash.create(it.consumingTxHash))
                 },
                 toPersistentEntity = { (txHash, index): StateRef, id: SecureHash ->
                     CommittedState(

@@ -159,7 +159,7 @@ ignore:
           assessment. Liquibase is used to apply the database migration changes.
           XML files are used here to define the changes not YAML and therefore
           the Corda node itself is not exposed to this deserialisation
-          vulnerability. 
+          vulnerability.
         expires: 2023-07-12T17:00:51.957Z
         created: 2022-12-29T17:00:51.970Z
   SNYK-JAVA-ORGYAML-3016889:
@@ -180,7 +180,7 @@ ignore:
     - '*':
         reason: >-
           H2 console is not enabled for any of the applications we are running.
-          When it comes to DB connectivity parameters, we do not allow changing 
+          When it comes to DB connectivity parameters, we do not allow changing
           them as they are supplied by Corda Node configuration file.
         expires: 2023-07-28T11:36:39.068Z
         created: 2022-12-29T11:36:39.089Z

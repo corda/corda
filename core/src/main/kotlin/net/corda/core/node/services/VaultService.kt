@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList")
+
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
@@ -197,8 +199,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *  4) Status types used in this query: [StateStatus.UNCONSUMED], [StateStatus.CONSUMED], [StateStatus.ALL].
      *  5) Other results as a [List] of any type (eg. aggregate function results with/without group by).
      *
-     *  Note: currently otherResults are used only for Aggregate Functions (in which case, the states and statesMetadata
-     *  results will be empty).
+     *  Note: currently [otherResults] is used only for aggregate functions (in which case, [states] and [statesMetadata] will be empty).
      */
     @CordaSerializable
     data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
@@ -213,11 +214,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val contractStateClassName: String,
             val recordedTime: Instant,
             val consumedTime: Instant?,
-            val status: Vault.StateStatus,
+            val status: StateStatus,
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val relevancyStatus: Vault.RelevancyStatus? = null,
+            val relevancyStatus: RelevancyStatus? = null,
             val constraintInfo: ConstraintInfo? = null
     ) {
         fun copy(
@@ -225,7 +226,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 contractStateClassName: String = this.contractStateClassName,
                 recordedTime: Instant = this.recordedTime,
                 consumedTime: Instant? = this.consumedTime,
-                status: Vault.StateStatus = this.status,
+                status: StateStatus = this.status,
                 notary: AbstractParty? = this.notary,
                 lockId: String? = this.lockId,
                 lockUpdateTime: Instant? = this.lockUpdateTime
@@ -237,11 +238,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 contractStateClassName: String = this.contractStateClassName,
                 recordedTime: Instant = this.recordedTime,
                 consumedTime: Instant? = this.consumedTime,
-                status: Vault.StateStatus = this.status,
+                status: StateStatus = this.status,
                 notary: AbstractParty? = this.notary,
                 lockId: String? = this.lockId,
                 lockUpdateTime: Instant? = this.lockUpdateTime,
-                relevancyStatus: Vault.RelevancyStatus?
+                relevancyStatus: RelevancyStatus?
         ): StateMetadata {
             return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, relevancyStatus, ConstraintInfo(AlwaysAcceptAttachmentConstraint))
         }
@@ -249,9 +250,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
     companion object {
         @Deprecated("No longer used. The vault does not emit empty updates")
-        val NoUpdate = Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL, references = emptySet())
+        val NoUpdate = Update(emptySet(), emptySet(), type = UpdateType.GENERAL, references = emptySet())
         @Deprecated("No longer used. The vault does not emit empty updates")
-        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE, references = emptySet())
+        val NoNotaryUpdate = Update(emptySet(), emptySet(), type = UpdateType.NOTARY_CHANGE, references = emptySet())
     }
 }
 
@@ -302,7 +303,7 @@ interface VaultService {
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         val query = QueryCriteria.VaultQueryCriteria(
                 stateRefs = listOf(ref),
-                status = Vault.StateStatus.CONSUMED
+                status = StateStatus.CONSUMED
         )
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states
@@ -358,8 +359,8 @@ interface VaultService {
     /**
      * Helper function to determine spendable states and soft locking them.
      * Currently performance will be worse than for the hand optimised version in
-     * [Cash.unconsumedCashStatesForSpending]. However, this is fully generic and can operate with custom [FungibleState]
-     * and [FungibleAsset] states.
+     * [net.corda.finance.workflows.asset.selection.AbstractCashSelection.unconsumedCashStatesForSpending]. However, this is fully generic
+     * and can operate with custom [FungibleState] and [FungibleAsset] states.
      * @param lockId The [FlowLogic.runId]'s [UUID] of the current flow used to soft lock the states.
      * @param eligibleStatesQuery A custom query object that selects down to the appropriate subset of all states of the
      * [contractStateType]. e.g. by selecting on account, issuer, etc. The query is internally augmented with the
