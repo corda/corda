@@ -108,7 +108,6 @@ buildscript {
     ext.liquibase_version = constants.getProperty("liquibaseVersion")
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
     ext.publicArtifactURL = 'https://download.corda.net/maven'
-    ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
     ext.selenium_version = constants.getProperty("seleniumVersion")
     ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
