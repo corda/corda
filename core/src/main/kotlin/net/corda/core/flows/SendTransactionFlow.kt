@@ -14,7 +14,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
-import java.security.SignatureException
 import kotlin.collections.List
 import kotlin.collections.MutableSet
 import kotlin.collections.Set
@@ -79,14 +78,15 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * @param participantSessions the target parties which are participants to the transaction.
  * @param observerSessions the target parties which are observers to the transaction.
  * @param senderStatesToRecord the [StatesToRecord] relevancy information of the sender.
+ * @param recordMetaDataEvenIfNotFullySigned whether to store recovery metadata when a txn is not fully signed.
  */
 open class SendTransactionFlow(val stx: SignedTransaction,
                                val participantSessions: Set<FlowSession>,
                                val observerSessions: Set<FlowSession>,
-                               val senderStatesToRecord: StatesToRecord)
+                               val senderStatesToRecord: StatesToRecord,
+                               private val recordMetaDataEvenIfNotFullySigned: Boolean = false)
     : DataVendingFlow(participantSessions + observerSessions, stx,
-        makeMetaData(senderStatesToRecord, participantSessions, observerSessions),
-        recordMetaDataEvenIfNotFullySigned(stx)) {
+        makeMetaData(stx, recordMetaDataEvenIfNotFullySigned, senderStatesToRecord, participantSessions, observerSessions)) {
 
     constructor(otherSide: FlowSession, stx: SignedTransaction) : this(stx, setOf(otherSide), emptySet(), StatesToRecord.NONE)
 
@@ -94,26 +94,14 @@ open class SendTransactionFlow(val stx: SignedTransaction,
     companion object {
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
 
-        fun makeMetaData(senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata {
-            return TransactionMetadata(DUMMY_PARTICIPANT_NAME,
+        fun makeMetaData(stx: SignedTransaction, recordMetaDataEvenIfNotFullySigned: Boolean, senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata? {
+            val isTxnFullySigned = (stx.sigs.size >= stx.requiredSigningKeys.size)
+            return if (isTxnFullySigned || recordMetaDataEvenIfNotFullySigned)
+                TransactionMetadata(DUMMY_PARTICIPANT_NAME,
                     DistributionList(senderStatesToRecord,
                             (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
                                     (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()))
-        }
-
-        fun recordMetaDataEvenIfNotFullySigned(stx: SignedTransaction): Boolean {
-            return try {
-                val notary = stx.tx.notary
-                // The notary signature(s) are allowed to be missing but no others.
-                if (notary != null) stx.verifySignaturesExcept(notary.owningKey) else stx.verifyRequiredSignatures()
-                true
-            }
-            catch (e: SignedTransaction.SignaturesMissingException) {
-                false
-            }
-            catch (e: SignatureException) {
-                false
-            }
+            else null
         }
     }
 }
@@ -129,11 +117,8 @@ open class SendTransactionFlow(val stx: SignedTransaction,
  */
 open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSideSession, stateAndRefs)
 
-open class DataVendingFlow(val otherSessions: Set<FlowSession>,
-                           val payload: Any,
-                           private val txnMetadata: TransactionMetadata? = null,
-                           private val recordMetaDataEvenIfNotFullySigned: Boolean) : FlowLogic<Void?>() {
-    constructor(otherSideSession: FlowSession, payload: Any, txnMetadata: TransactionMetadata? = null) : this(setOf(otherSideSession), payload, txnMetadata, false)
+open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any, private val txnMetadata: TransactionMetadata? = null) : FlowLogic<Void?>() {
+    constructor(otherSideSession: FlowSession, payload: Any, txnMetadata: TransactionMetadata? = null) : this(setOf(otherSideSession), payload, txnMetadata)
     constructor(otherSideSession: FlowSession, payload: Any) : this(otherSideSession, payload, null)
 
     @Suspendable
@@ -180,7 +165,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>,
         }
         // record transaction recovery metadata once
         val payloadWithMetadata =
-            if (txnMetadata != null && recordMetaDataEvenIfNotFullySigned && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
+            if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
                 val encryptedDistributionList = (serviceHub as ServiceHubCoreInternal).recordSenderTransactionRecoveryMetadata(payload.id, txnMetadata.copy(initiator = ourIdentity.name))
                 SignedTransactionWithDistributionList(payload, encryptedDistributionList!!)
             } else null
