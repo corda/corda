@@ -71,7 +71,7 @@ class Envelope(val obj: Any?, resolveSchema: () -> Pair<Schema, TransformsSchema
                         "Malformed list, bad length of ${list.size} (should be 2 or 3)")
             }
 
-            return Envelope(list[BLOB_IDX], { list[SCHEMA_IDX] as Schema to transformSchema })
+            return Envelope(list[BLOB_IDX]) { list[SCHEMA_IDX] as Schema to transformSchema }
         }
 
         override fun getTypeClass(): Class<*> = Envelope::class.java
