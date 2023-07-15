@@ -5,10 +5,10 @@ import java.io.NotSerializableException
 import javax.annotation.concurrent.ThreadSafe
 
 @KeepForDJVM
-class SerializationSchemas(val resolveSchema: () -> Pair<Schema, TransformsSchema>) {
+class SerializationSchemas(resolveSchema: () -> Pair<Schema, TransformsSchema>) {
         constructor(schema: Schema, transforms: TransformsSchema) : this({ schema to transforms })
 
-        private val resolvedSchema: Pair<Schema, TransformsSchema> by lazy { resolveSchema() }
+        private val resolvedSchema: Pair<Schema, TransformsSchema> by lazy(resolveSchema)
 
         val schema: Schema get() = resolvedSchema.first
         val transforms: TransformsSchema get() = resolvedSchema.second

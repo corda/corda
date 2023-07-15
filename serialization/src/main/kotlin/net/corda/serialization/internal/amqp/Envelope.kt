@@ -16,9 +16,9 @@ import java.nio.ByteBuffer
  * (relationally) normalised out schema to avoid excessive duplication.
  */
 @KeepForDJVM
-class Envelope(val obj: Any?, private val resolveSchema: () -> Pair<Schema, TransformsSchema>) : DescribedType {
+class Envelope(val obj: Any?, resolveSchema: () -> Pair<Schema, TransformsSchema>) : DescribedType {
 
-    val resolvedSchema: Pair<Schema, TransformsSchema> by lazy { resolveSchema() }
+    val resolvedSchema: Pair<Schema, TransformsSchema> by lazy(resolveSchema)
 
     val schema: Schema get() = resolvedSchema.first
     val transformsSchema: TransformsSchema get() = resolvedSchema.second
