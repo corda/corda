@@ -74,7 +74,16 @@ class CompatibilityTest {
         for (loop in 0 until loops) {
             val start = System.nanoTime()
             for (count in 0 until counts) {
-                input.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
+                val stx = input.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
+                for (input in stx.inputs) {
+                    input
+                }
+                for (output in stx.tx.outputs) {
+                    output
+                }
+                for (command in stx.tx.commands) {
+                    command
+                }
             }
             val end = System.nanoTime()
             println("Time per transaction deserialize on loop $loop = ${(end - start) / counts} nanoseconds")
