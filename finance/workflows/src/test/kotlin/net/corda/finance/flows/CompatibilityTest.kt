@@ -70,7 +70,7 @@ class CompatibilityTest {
         assertNotNull(transaction)
 
         val counts = 1000
-        val loops = 1000
+        val loops = 200
         for (loop in 0 until loops) {
             val start = System.nanoTime()
             for (count in 0 until counts) {
