@@ -91,24 +91,10 @@ class DeserializationInput constructor(
             decoder
         }
 
-        private val currentDecoder = ThreadLocal<DecoderImpl>()
-        fun <R> borrowAndRun(block: (DecoderImpl) -> R): R {
-            return currentDecoder.get()?.let {
-                block(it)
-            } ?: decoderPool.run {
-                currentDecoder.set(it)
-                try {
-                    block(it)
-                } finally {
-                    currentDecoder.set(null)
-                }
-            }
-        }
-
         @Throws(AMQPNoTypeNotSerializableException::class)
         fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist, lazy: Boolean = false): Envelope {
             return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
-                borrowAndRun {
+                decoderPool.reentrantRun {
                     it.byteBuffer = dataBytes
                     (it.readObject() as Envelope).apply {
                         if (!lazy) this.resolvedSchema
@@ -159,7 +145,7 @@ class DeserializationInput constructor(
                  * since we are using lazy when getting the [Envelope] which means [Schema] and
                  * [TransformsSchema] are only parsed out of the [bytes] if demanded by [doReadObject].
                  */
-                borrowAndRun {
+                decoderPool.reentrantRun {
                     /**
                      * The cache uses object identity rather than [ByteSequence.equals] and
                      * [ByteSequence.hashCode]. This is for speed: each [ByteSequence] object
