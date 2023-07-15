@@ -57,17 +57,41 @@ class CompatibilityTest {
         assertTrue(inByteArray.contentEquals(serializedBytes.bytes))
     }
 
+    @Test(timeout = 300_000)
+    fun performanceTest() {
+        val inputStream = javaClass.classLoader.getResourceAsStream("compatibilityData/v3/node_transaction.dat")
+        assertNotNull(inputStream)
+
+        val inByteArray: ByteArray = inputStream.readBytes()
+        val input = DeserializationInput(serializerFactory)
+
+        val bytes = SerializedBytes<SignedTransaction>(inByteArray)
+        val transaction = input.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
+        assertNotNull(transaction)
+
+        val counts = 1000
+        val loops = 1000
+        for (loop in 0 until loops) {
+            val start = System.nanoTime()
+            for (count in 0 until counts) {
+                input.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
+            }
+            val end = System.nanoTime()
+            println("Time per transaction deserialize on loop $loop = ${(end - start) / counts} nanoseconds")
+        }
+    }
+
     private fun assertSchemasMatch(original: Schema, reserialized: Schema) {
         if (original.toString() == reserialized.toString()) return
         original.types.forEach { originalType ->
-            val reserializedType = reserialized.types.firstOrNull { it.name == originalType.name } ?:
-            fail("""Schema mismatch between original and re-serialized data. Could not find reserialized schema matching:
+            val reserializedType = reserialized.types.firstOrNull { it.name == originalType.name }
+                    ?: fail("""Schema mismatch between original and re-serialized data. Could not find reserialized schema matching:
 
 $originalType
 """)
 
-                if (originalType.toString() != reserializedType.toString())
-                    fail("""Schema mismatch between original and re-serialized data. Expected:
+            if (originalType.toString() != reserializedType.toString())
+                fail("""Schema mismatch between original and re-serialized data. Expected:
 
 $originalType
 
