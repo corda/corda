@@ -74,7 +74,7 @@ class DeserializationInput constructor(
             }
         }
 
-        private val decoderPool = LazyPool<DecoderImpl>(shouldReturnToPool = { false }) {
+        private val decoderPool = LazyPool<DecoderImpl> {
             val decoder = DecoderImpl().apply {
                 this.register(Envelope.DESCRIPTOR, Envelope.FastPathConstructor(this))
                 this.register(Schema.DESCRIPTOR, Schema)
@@ -91,12 +91,28 @@ class DeserializationInput constructor(
             decoder
         }
 
+        private val currentDecoder = ThreadLocal<DecoderImpl>()
+        fun <R> borrowAndRun(block: (DecoderImpl) -> R): R {
+            return currentDecoder.get()?.let {
+                block(it)
+            } ?: decoderPool.run {
+                currentDecoder.set(it)
+                try {
+                    block(it)
+                } finally {
+                    currentDecoder.set(null)
+                }
+            }
+        }
+
         @Throws(AMQPNoTypeNotSerializableException::class)
-        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
+        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist, lazy: Boolean = false): Envelope {
             return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
-                decoderPool.run {
+                borrowAndRun {
                     it.byteBuffer = dataBytes
-                    it.readObject() as Envelope
+                    (it.readObject() as Envelope).apply {
+                        if (!lazy) this.resolvedSchema
+                    }
                 }
             }
         }
@@ -139,22 +155,29 @@ class DeserializationInput constructor(
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext): T =
             des {
                 /**
-                 * The cache uses object identity rather than [ByteSequence.equals] and
-                 * [ByteSequence.hashCode]. This is for speed: each [ByteSequence] object
-                 * can potentially be large, and we are optimizing for the case when we
-                 * know we will be deserializing the exact same objects multiple times.
-                 * This also means that the cache MUST be short-lived, as otherwise it
-                 * becomes a memory leak.
+                 * So that the [DecoderImpl] is held whilst we get the [Envelope] and [doReadObject],
+                 * since we are using lazy when getting the [Envelope] which means [Schema] and
+                 * [TransformsSchema] are only parsed out of the [bytes] if demanded by [doReadObject].
                  */
-                @Suppress("unchecked_cast")
-                val envelope = (context.properties[AMQP_ENVELOPE_CACHE_PROPERTY] as? MutableMap<IdentityKey, Envelope>)
-                    ?.computeIfAbsent(IdentityKey(bytes)) { key ->
-                        getEnvelope(key.bytes, context.encodingWhitelist)
-                    } ?: getEnvelope(bytes, context.encodingWhitelist)
+                borrowAndRun {
+                    /**
+                     * The cache uses object identity rather than [ByteSequence.equals] and
+                     * [ByteSequence.hashCode]. This is for speed: each [ByteSequence] object
+                     * can potentially be large, and we are optimizing for the case when we
+                     * know we will be deserializing the exact same objects multiple times.
+                     * This also means that the cache MUST be short-lived, as otherwise it
+                     * becomes a memory leak.
+                     */
+                    @Suppress("unchecked_cast")
+                    val envelope = (context.properties[AMQP_ENVELOPE_CACHE_PROPERTY] as? MutableMap<IdentityKey, Envelope>)
+                            ?.computeIfAbsent(IdentityKey(bytes)) { key ->
+                                getEnvelope(key.bytes, context.encodingWhitelist, true)
+                            } ?: getEnvelope(bytes, context.encodingWhitelist, true)
 
-                logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
+                    logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
 
-                doReadObject(envelope, clazz, context)
+                    doReadObject(envelope, clazz, context)
+                }
             }
 
     @Throws(NotSerializableException::class)
