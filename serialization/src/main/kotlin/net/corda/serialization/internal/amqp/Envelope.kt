@@ -15,8 +15,6 @@ import java.nio.ByteBuffer
  * internal utilities to decompose and recompose with/without schema etc so that e.g. we can store objects with a
  * (relationally) normalised out schema to avoid excessive duplication.
  */
-// TODO: make the schema parsing lazy since mostly schemas will have been seen before and we only need it if we
-// TODO: don't recognise a type descriptor.
 @KeepForDJVM
 class Envelope(val obj: Any?, private val resolveSchema: () -> Pair<Schema, TransformsSchema>) : DescribedType {
 

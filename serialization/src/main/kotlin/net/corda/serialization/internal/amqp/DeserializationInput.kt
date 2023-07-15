@@ -76,16 +76,16 @@ class DeserializationInput constructor(
 
         private val decoderPool = LazyPool<DecoderImpl> {
             val decoder = DecoderImpl().apply {
-                this.register(Envelope.DESCRIPTOR, Envelope.FastPathConstructor(this))
-                this.register(Schema.DESCRIPTOR, Schema)
-                this.register(Descriptor.DESCRIPTOR, Descriptor)
-                this.register(Field.DESCRIPTOR, Field)
-                this.register(CompositeType.DESCRIPTOR, CompositeType)
-                this.register(Choice.DESCRIPTOR, Choice)
-                this.register(RestrictedType.DESCRIPTOR, RestrictedType)
-                this.register(ReferencedObject.DESCRIPTOR, ReferencedObject)
-                this.register(TransformsSchema.DESCRIPTOR, TransformsSchema)
-                this.register(TransformTypes.DESCRIPTOR, TransformTypes)
+                register(Envelope.DESCRIPTOR, Envelope.FastPathConstructor(this))
+                register(Schema.DESCRIPTOR, Schema)
+                register(Descriptor.DESCRIPTOR, Descriptor)
+                register(Field.DESCRIPTOR, Field)
+                register(CompositeType.DESCRIPTOR, CompositeType)
+                register(Choice.DESCRIPTOR, Choice)
+                register(RestrictedType.DESCRIPTOR, RestrictedType)
+                register(ReferencedObject.DESCRIPTOR, ReferencedObject)
+                register(TransformsSchema.DESCRIPTOR, TransformsSchema)
+                register(TransformTypes.DESCRIPTOR, TransformTypes)
             }
             EncoderImpl(decoder)
             decoder
@@ -180,7 +180,7 @@ class DeserializationInput constructor(
     private fun <T: Any> doReadObject(envelope: Envelope, clazz: Class<T>, context: SerializationContext): T {
         return clazz.cast(readObjectOrNull(
                 obj = redescribe(envelope.obj, clazz),
-                schema = SerializationSchemas({ envelope.resolvedSchema }),
+                schema = SerializationSchemas(envelope::resolvedSchema),
                 type = clazz,
                 context = context
         ))
