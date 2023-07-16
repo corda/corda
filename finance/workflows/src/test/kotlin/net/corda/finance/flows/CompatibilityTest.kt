@@ -63,10 +63,10 @@ class CompatibilityTest {
         assertNotNull(inputStream)
 
         val inByteArray: ByteArray = inputStream.readBytes()
-        val input = DeserializationInput(serializerFactory)
+        val deserializationInput = DeserializationInput(serializerFactory)
 
         val bytes = SerializedBytes<SignedTransaction>(inByteArray)
-        val transaction = input.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
+        val transaction = deserializationInput.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
         assertNotNull(transaction)
 
         val counts = 1000
@@ -74,15 +74,15 @@ class CompatibilityTest {
         for (loop in 0 until loops) {
             val start = System.nanoTime()
             for (count in 0 until counts) {
-                val stx = input.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
+                val stx = deserializationInput.deserialize(bytes, SignedTransaction::class.java, SerializationDefaults.STORAGE_CONTEXT)
                 for (input in stx.inputs) {
-                    input
+                    assertNotNull(input)
                 }
                 for (output in stx.tx.outputs) {
-                    output
+                    assertNotNull(output)
                 }
                 for (command in stx.tx.commands) {
-                    command
+                    assertNotNull(command)
                 }
             }
             val end = System.nanoTime()
