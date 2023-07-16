@@ -81,6 +81,7 @@ class Envelope(val obj: Any?, resolveSchema: () -> Pair<Schema, TransformsSchema
 
         private val _buffer: ByteBuffer get() = decoder.byteBuffer
 
+        @Suppress("ComplexMethod", "MagicNumber")
         private fun readEncodingAndReturnSize(buffer: ByteBuffer, inBytes: Boolean = true): Int {
             val encodingCode: Byte = buffer.get()
             return when (encodingCode) {
