@@ -8,6 +8,7 @@ import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import org.apache.qpid.proton.codec.EncodingCodes
 import org.apache.qpid.proton.codec.FastPathDescribedTypeConstructor
+import java.nio.Buffer
 import java.nio.ByteBuffer
 
 /**
@@ -116,7 +117,7 @@ class Envelope(val obj: Any?, resolveSchema: () -> Pair<Schema, TransformsSchema
         override fun skipValue() {
             val buffer = _buffer
             val size = readEncodingAndReturnSize(buffer)
-            buffer.position(buffer.position() + size)
+            (buffer as Buffer).position(buffer.position() + size)
         }
 
         override fun encodesJavaPrimitive(): Boolean = false
