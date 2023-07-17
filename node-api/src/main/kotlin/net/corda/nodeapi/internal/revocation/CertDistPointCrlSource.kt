@@ -5,6 +5,9 @@ import com.github.benmanes.caffeine.cache.LoadingCache
 import net.corda.core.internal.readFully
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.toSimpleString
 import net.corda.nodeapi.internal.protonwrapper.netty.CrlSource
@@ -12,60 +15,71 @@ import net.corda.nodeapi.internal.protonwrapper.netty.distributionPoints
 import java.net.URI
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
 /**
- * [CrlSource] which downloads CRLs from the distribution points in the X509 certificate.
+ * [CrlSource] which downloads CRLs from the distribution points in the X509 certificate and caches them.
  */
 @Suppress("TooGenericExceptionCaught")
-class CertDistPointCrlSource : CrlSource {
+class CertDistPointCrlSource(cacheSize: Long = DEFAULT_CACHE_SIZE,
+                             cacheExpiry: Duration = DEFAULT_CACHE_EXPIRY,
+                             private val connectTimeout: Duration = DEFAULT_CONNECT_TIMEOUT,
+                             private val readTimeout: Duration = DEFAULT_READ_TIMEOUT) : CrlSource {
     companion object {
         private val logger = contextLogger()
 
         // The default SSL handshake timeout is 60s (DEFAULT_SSL_HANDSHAKE_TIMEOUT). Considering there are 3 CRLs endpoints to check in a
         // node handshake, we want to keep the total timeout within that.
-        private const val DEFAULT_CONNECT_TIMEOUT = 9_000
-        private const val DEFAULT_READ_TIMEOUT = 9_000
+        private val DEFAULT_CONNECT_TIMEOUT = 9.seconds
+        private val DEFAULT_READ_TIMEOUT = 9.seconds
         private const val DEFAULT_CACHE_SIZE = 185L  // Same default as the JDK (URICertStore)
-        private const val DEFAULT_CACHE_EXPIRY = 5 * 60 * 1000L
+        private val DEFAULT_CACHE_EXPIRY = 5.minutes
 
-        private val cache: LoadingCache<URI, X509CRL> = Caffeine.newBuilder()
-                .maximumSize(java.lang.Long.getLong("net.corda.dpcrl.cache.size", DEFAULT_CACHE_SIZE))
-                .expireAfterWrite(java.lang.Long.getLong("net.corda.dpcrl.cache.expiry", DEFAULT_CACHE_EXPIRY), TimeUnit.MILLISECONDS)
-                .build(::retrieveCRL)
+        val SINGLETON = CertDistPointCrlSource(
+                cacheSize = java.lang.Long.getLong("net.corda.dpcrl.cache.size", DEFAULT_CACHE_SIZE),
+                cacheExpiry = java.lang.Long.getLong("net.corda.dpcrl.cache.expiry")?.let(Duration::ofMillis) ?: DEFAULT_CACHE_EXPIRY,
+                connectTimeout = java.lang.Long.getLong("net.corda.dpcrl.connect.timeout")?.let(Duration::ofMillis) ?: DEFAULT_CONNECT_TIMEOUT,
+                readTimeout = java.lang.Long.getLong("net.corda.dpcrl.read.timeout")?.let(Duration::ofMillis) ?: DEFAULT_READ_TIMEOUT
+        )
+    }
 
-        private val connectTimeout = Integer.getInteger("net.corda.dpcrl.connect.timeout", DEFAULT_CONNECT_TIMEOUT)
-        private val readTimeout = Integer.getInteger("net.corda.dpcrl.read.timeout", DEFAULT_READ_TIMEOUT)
+    private val cache: LoadingCache<URI, X509CRL> = Caffeine.newBuilder()
+            .maximumSize(cacheSize)
+            .expireAfterWrite(cacheExpiry)
+            .build(::retrieveCRL)
 
-        private fun retrieveCRL(uri: URI): X509CRL {
-            val start = System.currentTimeMillis()
-            val bytes = try {
-                val conn = uri.toURL().openConnection()
-                conn.connectTimeout = connectTimeout
-                conn.readTimeout = readTimeout
-                // Read all bytes first and then pass them into the CertificateFactory. This may seem unnecessary when generateCRL already takes
-                // in an InputStream, but the JDK implementation (sun.security.provider.X509Factory.engineGenerateCRL) converts any IOException
-                // into CRLException and drops the cause chain.
-                conn.getInputStream().readFully()
-            } catch (e: Exception) {
-                if (logger.isDebugEnabled) {
-                    logger.debug("Unable to download CRL from $uri (${System.currentTimeMillis() - start}ms)", e)
-                }
-                throw e
+    private fun retrieveCRL(uri: URI): X509CRL {
+        val start = System.currentTimeMillis()
+        val bytes = try {
+            val conn = uri.toURL().openConnection()
+            conn.connectTimeout = connectTimeout.toMillis().toInt()
+            conn.readTimeout = readTimeout.toMillis().toInt()
+            // Read all bytes first and then pass them into the CertificateFactory. This may seem unnecessary when generateCRL already takes
+            // in an InputStream, but the JDK implementation (sun.security.provider.X509Factory.engineGenerateCRL) converts any IOException
+            // into CRLException and drops the cause chain.
+            conn.getInputStream().readFully()
+        } catch (e: Exception) {
+            if (logger.isDebugEnabled) {
+                logger.debug("Unable to download CRL from $uri (${System.currentTimeMillis() - start}ms)", e)
             }
-            val duration = System.currentTimeMillis() - start
-            val crl = try {
-                X509CertificateFactory().generateCRL(bytes.inputStream())
-            } catch (e: Exception) {
-                if (logger.isDebugEnabled) {
-                    logger.debug("Invalid CRL from $uri (${duration}ms)", e)
-                }
-                throw e
-            }
-            logger.debug { "CRL from $uri (${duration}ms): ${crl.toSimpleString()}" }
-            return crl
+            throw e
         }
+        val duration = System.currentTimeMillis() - start
+        val crl = try {
+            X509CertificateFactory().generateCRL(bytes.inputStream())
+        } catch (e: Exception) {
+            if (logger.isDebugEnabled) {
+                logger.debug("Invalid CRL from $uri (${duration}ms)", e)
+            }
+            throw e
+        }
+        logger.debug { "CRL from $uri (${duration}ms): ${crl.toSimpleString()}" }
+        return crl
+    }
+
+    fun clearCache() {
+        cache.invalidateAll()
     }
 
     override fun fetch(certificate: X509Certificate): Set<X509CRL> {

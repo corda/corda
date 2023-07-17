@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine
 
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
@@ -22,10 +23,6 @@ internal class FlowMonitor(
 ) : LifecycleSupport {
 
     private companion object {
-        private fun defaultScheduler(): ScheduledExecutorService {
-            return Executors.newSingleThreadScheduledExecutor()
-        }
-
         private val logger = loggerFor<FlowMonitor>()
     }
 
@@ -36,7 +33,7 @@ internal class FlowMonitor(
     override fun start() {
         synchronized(this) {
             if (scheduler == null) {
-                scheduler = defaultScheduler()
+                scheduler = Executors.newSingleThreadScheduledExecutor(DefaultThreadFactory("FlowMonitor"))
                 shutdownScheduler = true
             }
             scheduler!!.scheduleAtFixedRate({ logFlowsWaitingForParty() }, 0, monitoringPeriod.toMillis(), TimeUnit.MILLISECONDS)
