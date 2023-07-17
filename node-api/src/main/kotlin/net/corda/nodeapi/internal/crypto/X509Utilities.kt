@@ -386,7 +386,7 @@ object X509Utilities {
 
     private fun addCrlInfo(builder: X509v3CertificateBuilder, crlDistPoint: String?, crlIssuer: X500Name?) {
         if (crlDistPoint != null) {
-            val distPointName = DistributionPointName(GeneralNames(GeneralName(GeneralName.uniformResourceIdentifier, crlDistPoint)))
+            val distPointName = DistributionPointName(toGeneralNames(crlDistPoint, GeneralName.uniformResourceIdentifier))
             val crlIssuerGeneralNames = crlIssuer?.let {
                 GeneralNames(GeneralName(crlIssuer))
             }
@@ -406,6 +406,8 @@ object X509Utilities {
         bytes[0] = bytes[0].and(0x3F).or(0x40)
         return BigInteger(bytes)
     }
+
+    fun toGeneralNames(string: String, tag: Int = GeneralName.directoryName): GeneralNames = GeneralNames(GeneralName(tag, string))
 }
 
 // Assuming cert type to role is 1:1

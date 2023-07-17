@@ -244,7 +244,6 @@ class FlowSoftLocksTests {
                     100.DOLLARS,
                     bankNode.services,
                     thisManyStates,
-                    thisManyStates,
                     cashIssuer
             )
         }

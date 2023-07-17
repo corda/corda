@@ -7,9 +7,16 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.internal.artemis.*
+import net.corda.node.internal.artemis.ArtemisBroker
+import net.corda.node.internal.artemis.BrokerAddresses
+import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
+import net.corda.node.internal.artemis.NodeJaasConfig
+import net.corda.node.internal.artemis.P2PJaasConfig
+import net.corda.node.internal.artemis.SecureArtemisConfiguration
+import net.corda.node.internal.artemis.UserValidationPlugin
+import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.artemis.startSynchronously
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
@@ -21,7 +28,10 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.SECURITY_INVALIDATION_INTERVAL
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
 import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfigImpl
+import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactoryWithRevocation
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
+import net.corda.nodeapi.internal.revocation.CertDistPointCrlSource
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -32,9 +42,7 @@ import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
-import java.io.IOException
 import java.lang.Long.max
-import java.security.KeyStoreException
 import javax.annotation.concurrent.ThreadSafe
 import javax.security.auth.login.AppConfigurationEntry
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.REQUIRED
@@ -57,8 +65,10 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
                              private val maxMessageSize: Int,
                              private val journalBufferTimeout : Int? = null,
-                             private val threadPoolName: String = "ArtemisServer",
-                             private val trace: Boolean = false) : ArtemisBroker, SingletonSerializeAsToken() {
+                             private val threadPoolName: String = "P2PServer",
+                             private val trace: Boolean = false,
+                             private val distPointCrlSource: CertDistPointCrlSource = CertDistPointCrlSource.SINGLETON,
+                             private val remotingThreads: Int? = null) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
@@ -92,7 +102,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     override val started: Boolean
         get() = activeMQServer.isStarted
 
-    @Throws(IOException::class, AddressBindingException::class, KeyStoreException::class)
+    @Suppress("ThrowsCount")
     private fun configureAndStartServer() {
         val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
@@ -132,11 +142,23 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         // The transaction cache is configurable, and drives other cache sizes.
         globalMaxSize = max(config.transactionCacheSizeBytes, 10L * maxMessageSize)
 
+        val revocationMode = if (config.crlCheckArtemisServer) {
+            if (config.crlCheckSoftFail) RevocationConfig.Mode.SOFT_FAIL else RevocationConfig.Mode.HARD_FAIL
+        } else {
+            RevocationConfig.Mode.OFF
+        }
+        val trustManagerFactory = trustManagerFactoryWithRevocation(
+                config.p2pSslOptions.trustStore.get(),
+                RevocationConfigImpl(revocationMode),
+                distPointCrlSource
+        )
         addAcceptorConfiguration(p2pAcceptorTcpTransport(
                 NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port),
                 config.p2pSslOptions,
+                trustManagerFactory,
                 threadPoolName = threadPoolName,
-                trace = trace
+                trace = trace,
+                remotingThreads = remotingThreads
         ))
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.

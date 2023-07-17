@@ -74,7 +74,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private val parametersUpdatesTrack = PublishSubject.create<ParametersUpdateInfo>()
-    private val networkMapPoller = ScheduledThreadPoolExecutor(1, NamedThreadFactory("Network Map Updater Thread")).apply {
+    private val networkMapPoller = ScheduledThreadPoolExecutor(1, NamedThreadFactory("NetworkMapUpdater")).apply {
         executeExistingDelayedTasksAfterShutdownPolicy = false
     }
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
@@ -261,9 +261,12 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         //as HTTP GET is mostly IO bound, use more threads than CPU's
         //maximum threads to use = 24, as if we did not limit this on large machines it could result in 100's of concurrent requests
         val threadsToUseForNetworkMapDownload = min(Runtime.getRuntime().availableProcessors() * 4, 24)
-        val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, NamedThreadFactory("NetworkMapUpdaterNodeInfoDownloadThread"))
+        val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(
+                threadsToUseForNetworkMapDownload,
+                NamedThreadFactory("NetworkMapUpdaterNodeInfoDownload")
+        )
         //DB insert is single threaded - use a single threaded executor for it.
-        val executorToUseForInsertionIntoDB = Executors.newSingleThreadExecutor(NamedThreadFactory("NetworkMapUpdateDBInsertThread"))
+        val executorToUseForInsertionIntoDB = Executors.newSingleThreadExecutor(NamedThreadFactory("NetworkMapUpdateDBInsert"))
         val hashesToFetch = (allHashesFromNetworkMap - allNodeHashes)
         val networkMapDownloadStartTime = System.currentTimeMillis()
         if (hashesToFetch.isNotEmpty()) {

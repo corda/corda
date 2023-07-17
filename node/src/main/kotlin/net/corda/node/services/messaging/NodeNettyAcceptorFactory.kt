@@ -10,6 +10,8 @@ import io.netty.handler.ssl.SslHandshakeTimeoutException
 import net.corda.core.internal.declaredField
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisTcpTransport
+import net.corda.nodeapi.internal.protonwrapper.netty.sslDelegatedTaskExecutor
+import net.corda.nodeapi.internal.setThreadPoolName
 import org.apache.activemq.artemis.api.core.BaseInterceptor
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptor
 import org.apache.activemq.artemis.core.server.balancing.RedirectHandler
@@ -19,14 +21,18 @@ import org.apache.activemq.artemis.spi.core.remoting.Acceptor
 import org.apache.activemq.artemis.spi.core.remoting.AcceptorFactory
 import org.apache.activemq.artemis.spi.core.remoting.BufferHandler
 import org.apache.activemq.artemis.spi.core.remoting.ServerConnectionLifeCycleListener
+import org.apache.activemq.artemis.spi.core.remoting.ssl.OpenSSLContextFactoryProvider
+import org.apache.activemq.artemis.spi.core.remoting.ssl.SSLContextFactoryProvider
 import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.apache.activemq.artemis.utils.actors.OrderedExecutor
+import java.net.SocketAddress
 import java.nio.channels.ClosedChannelException
 import java.time.Duration
 import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledExecutorService
 import java.util.regex.Pattern
 import javax.net.ssl.SSLEngine
+import javax.net.ssl.SSLPeerUnverifiedException
 
 @Suppress("unused")  // Used via reflection in ArtemisTcpTransport
 class NodeNettyAcceptorFactory : AcceptorFactory {
@@ -36,10 +42,23 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                 handler: BufferHandler?,
                                 listener: ServerConnectionLifeCycleListener?,
                                 threadPool: Executor,
-                                scheduledThreadPool: ScheduledExecutorService?,
+                                scheduledThreadPool: ScheduledExecutorService,
                                 protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?): Acceptor {
+        val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "Acceptor", configuration)
+        threadPool.setThreadPoolName("$threadPoolName-artemis")
+        scheduledThreadPool.setThreadPoolName("$threadPoolName-artemis-scheduler")
         val failureExecutor = OrderedExecutor(threadPool)
-        return NodeNettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
+        return NodeNettyAcceptor(
+                name,
+                clusterConnection,
+                configuration,
+                handler,
+                listener,
+                scheduledThreadPool,
+                failureExecutor,
+                protocolMap,
+                "$threadPoolName-netty"
+        )
     }
 
 
@@ -50,14 +69,21 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                     listener: ServerConnectionLifeCycleListener?,
                                     scheduledThreadPool: ScheduledExecutorService?,
                                     failureExecutor: Executor,
-                                    protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?) :
+                                    protocolMap: MutableMap<String, ProtocolManager<BaseInterceptor<*>, RedirectHandler<*>>>?,
+                                    private val threadPoolName: String) :
             NettyAcceptor(name, clusterConnection, configuration, handler, listener, scheduledThreadPool, failureExecutor, protocolMap)
     {
         companion object {
             private val defaultThreadPoolNamePattern = Pattern.compile("""Thread-(\d+) \(activemq-netty-threads\)""")
+
+            init {
+                // Make sure Artemis isn't using another (Open)SSLContextFactory
+                check(SSLContextFactoryProvider.getSSLContextFactory() is NodeSSLContextFactory)
+                check(OpenSSLContextFactoryProvider.getOpenSSLContextFactory() is NodeOpenSSLContextFactory)
+            }
         }
 
-        private val threadPoolName = ConfigurationHelper.getStringProperty(ArtemisTcpTransport.THREAD_POOL_NAME_NAME, "NodeNettyAcceptor", configuration)
+        private val sslDelegatedTaskExecutor = sslDelegatedTaskExecutor(threadPoolName)
         private val trace = ConfigurationHelper.getBooleanProperty(ArtemisTcpTransport.TRACE_NAME, false, configuration)
 
         @Synchronized
@@ -72,10 +98,16 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
         }
 
         @Synchronized
+        override fun stop() {
+            super.stop()
+            sslDelegatedTaskExecutor.shutdown()
+        }
+
+        @Synchronized
         override fun getSslHandler(alloc: ByteBufAllocator?, peerHost: String?, peerPort: Int): SslHandler {
             applyThreadPoolName()
             val engine = super.getSslHandler(alloc, peerHost, peerPort).engine()
-            val sslHandler = NodeAcceptorSslHandler(engine, trace)
+            val sslHandler = NodeAcceptorSslHandler(engine, sslDelegatedTaskExecutor, trace)
             val handshakeTimeout = configuration[ArtemisTcpTransport.SSL_HANDSHAKE_TIMEOUT_NAME] as Duration?
             if (handshakeTimeout != null) {
                 sslHandler.handshakeTimeoutMillis = handshakeTimeout.toMillis()
@@ -95,13 +127,15 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
     }
 
 
-    private class NodeAcceptorSslHandler(engine: SSLEngine, private val trace: Boolean) : SslHandler(engine) {
+    private class NodeAcceptorSslHandler(engine: SSLEngine,
+                                         delegatedTaskExecutor: Executor,
+                                         private val trace: Boolean) : SslHandler(engine, delegatedTaskExecutor) {
         companion object {
             private val logger = contextLogger()
         }
 
         override fun handlerAdded(ctx: ChannelHandlerContext) {
-            logHandshake()
+            logHandshake(ctx.channel().remoteAddress())
             super.handlerAdded(ctx)
             // Unfortunately NettyAcceptor does not let us add extra child handlers, so we have to add our logger this way.
             if (trace) {
@@ -109,17 +143,22 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
             }
         }
 
-        private fun logHandshake() {
+        private fun logHandshake(remoteAddress: SocketAddress) {
             val start = System.currentTimeMillis()
             handshakeFuture().addListener {
                 val duration = System.currentTimeMillis() - start
+                val peer = try {
+                    engine().session.peerPrincipal
+                } catch (e: SSLPeerUnverifiedException) {
+                    remoteAddress
+                }
                 when {
-                    it.isSuccess -> logger.info("SSL handshake completed in ${duration}ms with ${engine().session.peerPrincipal}")
-                    it.isCancelled -> logger.warn("SSL handshake cancelled after ${duration}ms")
+                    it.isSuccess -> logger.info("SSL handshake completed in ${duration}ms with $peer")
+                    it.isCancelled -> logger.warn("SSL handshake cancelled after ${duration}ms with $peer")
                     else -> when (it.cause()) {
-                        is ClosedChannelException -> logger.warn("SSL handshake closed early after ${duration}ms")
-                        is SslHandshakeTimeoutException -> logger.warn("SSL handshake timed out after ${duration}ms")
-                        else -> logger.warn("SSL handshake failed after ${duration}ms", it.cause())
+                        is ClosedChannelException -> logger.warn("SSL handshake closed early after ${duration}ms with $peer")
+                        is SslHandshakeTimeoutException -> logger.warn("SSL handshake timed out after ${duration}ms with $peer")
+                        else -> logger.warn("SSL handshake failed after ${duration}ms with $peer", it.cause())
                     }
                 }
             }
