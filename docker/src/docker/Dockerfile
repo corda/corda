@@ -1,7 +1,7 @@
 FROM azul/zulu-openjdk:8u192
 
 ## Remove Azul Zulu repo, as it is gone by now
-RUN rm /etc/apt/sources.list.d/zulu.list
+RUN rm -rf /etc/apt/sources.list.d/zulu.list
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN apt-get update && \
