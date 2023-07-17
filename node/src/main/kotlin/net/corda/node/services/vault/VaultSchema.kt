@@ -91,7 +91,11 @@ object VaultSchemaV1 : MappedSchema(
             /** associated constraint type data (if any) */
             @Column(name = "constraint_data", length = MAX_CONSTRAINT_DATA_SIZE, nullable = true)
             @Type(type = "corda-wrapper-binary")
-            var constraintData: ByteArray? = null
+            var constraintData: ByteArray? = null,
+
+            /** consuming transaction */
+            @Column(name = "consuming_tx_id", length = 144, nullable = false)
+            var consumingTxId: String = ""
     ) : PersistentState()
 
     @Entity
