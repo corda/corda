@@ -283,7 +283,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             try {
                 logger.debug { "Sending transaction to party sessions: $sessions." }
                 val (participantSessions, observerSessions) = deriveSessions(sessions)
-                subFlow(SendTransactionFlow(tx, participantSessions, observerSessions, statesToRecord))
+                subFlow(SendTransactionFlow(tx, participantSessions, observerSessions, statesToRecord, true))
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
                         "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them a transaction." +
@@ -367,7 +367,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                 oldV3Broadcast(tx, oldParticipants.toSet())
                 try {
                     logger.debug { "Sending transaction to party sessions $sessions." }
-                    subFlow(SendTransactionFlow(tx, sessions.toSet(), emptySet(), statesToRecord))
+                    subFlow(SendTransactionFlow(tx, sessions.toSet(), emptySet(), statesToRecord, true))
                 } catch (e: UnexpectedFlowEndException) {
                     throw UnexpectedFlowEndException(
                             "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them the finalised transaction. " +

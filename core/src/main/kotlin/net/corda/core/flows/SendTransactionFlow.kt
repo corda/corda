@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -78,20 +79,37 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * @param participantSessions the target parties which are participants to the transaction.
  * @param observerSessions the target parties which are observers to the transaction.
  * @param senderStatesToRecord the [StatesToRecord] relevancy information of the sender.
+ * @param recordMetaDataEvenIfNotFullySigned whether to store recovery metadata when a txn is not fully signed.
  */
 open class SendTransactionFlow(val stx: SignedTransaction,
                                val participantSessions: Set<FlowSession>,
                                val observerSessions: Set<FlowSession>,
-                               val senderStatesToRecord: StatesToRecord) : DataVendingFlow(participantSessions + observerSessions, stx,
-                                   TransactionMetadata(DUMMY_PARTICIPANT_NAME,
-                                       DistributionList(senderStatesToRecord,
-                                       (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
-                                                           (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()
-                                   ))) {
+                               val senderStatesToRecord: StatesToRecord,
+                               private val recordMetaDataEvenIfNotFullySigned: Boolean = false)
+    : DataVendingFlow(participantSessions + observerSessions, stx,
+        makeMetaData(stx, recordMetaDataEvenIfNotFullySigned, senderStatesToRecord, participantSessions, observerSessions)) {
+
     constructor(otherSide: FlowSession, stx: SignedTransaction) : this(stx, setOf(otherSide), emptySet(), StatesToRecord.NONE)
+
     // Note: DUMMY_PARTICIPANT_NAME to be substituted with actual "ourIdentity.name" in flow call()
     companion object {
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
+
+        fun makeMetaData(stx: SignedTransaction, recordMetaDataEvenIfNotFullySigned: Boolean, senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata? {
+            return if (recordMetaDataEvenIfNotFullySigned || isFullySigned(stx))
+                TransactionMetadata(DUMMY_PARTICIPANT_NAME,
+                    DistributionList(senderStatesToRecord,
+                            (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
+                                    (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()))
+            else null
+        }
+
+        private fun isFullySigned(stx: SignedTransaction): Boolean {
+            val serviceHub = (currentTopLevel?.serviceHub as? ServicesForResolution)
+            return if (serviceHub != null)
+                stx.resolveTransactionWithSignatures(serviceHub).getMissingSigners().isEmpty()
+            else false
+        }
     }
 }
 
