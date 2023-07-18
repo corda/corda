@@ -231,7 +231,7 @@ class NodeVaultService(
                     if (stateStatus != Vault.StateStatus.CONSUMED) {
                         stateStatus = Vault.StateStatus.CONSUMED
                         consumedTime = clock.instant()
-                        consumingTxId = update.consumingTxIds[stateRef]?.toString() ?: ""
+                        consumingTxId = update.consumingTxIds[stateRef]?.toString()
                         // remove lock (if held)
                         if (lockId != null) {
                             lockId = null

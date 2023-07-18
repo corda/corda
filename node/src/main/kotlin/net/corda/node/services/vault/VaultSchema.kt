@@ -94,8 +94,8 @@ object VaultSchemaV1 : MappedSchema(
             var constraintData: ByteArray? = null,
 
             /** consuming transaction */
-            @Column(name = "consuming_tx_id", length = 144, nullable = false)
-            var consumingTxId: String = ""
+            @Column(name = "consuming_tx_id", length = 144, nullable = true)
+            var consumingTxId: String? = null
     ) : PersistentState()
 
     @Entity
