@@ -141,8 +141,9 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
 
     override fun addSenderTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata): ByteArray {
         return database.transaction {
-            metadata.distributionList.peersToStatesToRecord.map { (peer, _) ->
-                val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(clock.instant())),
+            val senderRecordingTimestamp = clock.instant()
+            metadata.distributionList.peersToStatesToRecord.forEach { (peer, _) ->
+                val senderDistributionRecord = DBSenderDistributionRecord(PersistentKey(Key(senderRecordingTimestamp)),
                         id.toString(),
                         partyInfoCache.getPartyIdByCordaX500Name(peer),
                         metadata.distributionList.senderStatesToRecord)
@@ -150,15 +151,16 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             }
             val hashedPeersToStatesToRecord = metadata.distributionList.peersToStatesToRecord.map { (peer, statesToRecord) ->
                 partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }.toMap()
-            val hashedDistributionList = HashedDistributionList(metadata.distributionList.senderStatesToRecord, hashedPeersToStatesToRecord)
+            val hashedDistributionList = HashedDistributionList(metadata.distributionList.senderStatesToRecord, hashedPeersToStatesToRecord, senderRecordingTimestamp)
             cryptoService.encrypt(hashedDistributionList.serialize())
         }
     }
 
     override fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) {
+        val senderRecordedTimestamp = HashedDistributionList.deserialize(cryptoService.decrypt(encryptedDistributionList)).senderRecordedTimestamp
         database.transaction {
             val receiverDistributionRecord =
-                    DBReceiverDistributionRecord(Key(clock.instant()),
+                    DBReceiverDistributionRecord(Key(senderRecordedTimestamp),
                             id,
                             partyInfoCache.getPartyIdByCordaX500Name(sender),
                             encryptedDistributionList,
@@ -320,7 +322,8 @@ enum class DistributionRecordType {
 @CordaSerializable
 data class HashedDistributionList(
         val senderStatesToRecord: StatesToRecord,
-        val peerHashToStatesToRecord: Map<Long, StatesToRecord>
+        val peerHashToStatesToRecord: Map<Long, StatesToRecord>,
+        val senderRecordedTimestamp: Instant
 ) {
     fun serialize(): ByteArray {
         val baos = ByteArrayOutputStream()
@@ -333,6 +336,7 @@ data class HashedDistributionList(
                 out.writeLong(entry.key)
                 out.writeByte(entry.value.ordinal)
             }
+            out.writeLong(senderRecordedTimestamp.toEpochMilli())
             out.flush()
             return baos.toByteArray()
         }
@@ -349,7 +353,8 @@ data class HashedDistributionList(
                 repeat (numPeerHashToStatesToRecords) {
                     peerHashToStatesToRecord[input.readLong()] = StatesToRecord.values()[input.readByte().toInt()]
                 }
-                return HashedDistributionList(senderStatesToRecord, peerHashToStatesToRecord)
+                val senderRecordedTimestamp = Instant.ofEpochMilli(input.readLong())
+                return HashedDistributionList(senderStatesToRecord, peerHashToStatesToRecord, senderRecordedTimestamp)
             }
         }
     }
