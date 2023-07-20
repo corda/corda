@@ -119,7 +119,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val combinedProduced = produced.filter { it !in rhs.consumed }.toSet() + rhs.produced
             return copy(consumed = combinedConsumed, produced = combinedProduced, references = references + rhs.references, consumingTxIds = consumingTxIds + rhs.consumingTxIds)
         }
-        //val consumingTxIds: Map<StateRef, SecureHash> = emptyMap()
+        
         override fun toString(): String {
             val sb = StringBuilder()
             sb.appendln("${consumed.size} consumed, ${produced.size} produced")
