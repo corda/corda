@@ -7,6 +7,8 @@ import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
 object PublicKeyCache {
+    private val DISABLE = java.lang.Boolean.getBoolean("net.corda.core.pubkeycache.disable")
+
     private val collectedWeakPubKeys = ReferenceQueue<PublicKey>()
 
     private class WeakPubKey(key: PublicKey, val bytes: ByteSequence? = null) : WeakReference<PublicKey>(key, collectedWeakPubKeys) {
@@ -14,8 +16,8 @@ object PublicKeyCache {
 
         override fun hashCode(): Int = hashCode
         override fun equals(other: Any?): Boolean {
-            if(this === other) return true
-            if(other !is WeakPubKey) return false
+            if (this === other) return true
+            if (other !is WeakPubKey) return false
             if(this.hashCode != other.hashCode) return false
             val thisGet = this.get()
             val otherGet = other.get()
@@ -36,15 +38,18 @@ object PublicKeyCache {
     }
 
     fun bytesForCachedPublicKey(key: PublicKey): ByteSequence? {
+        if (DISABLE) return null
         val weakPubKey = WeakPubKey(key)
         return pubKeyToBytes[weakPubKey]
     }
 
     fun publicKeyForCachedBytes(bytes: ByteSequence): PublicKey? {
+        if (DISABLE) return null
         return bytesToPubKey[bytes]?.get()
     }
 
     fun cachePublicKey(key: PublicKey): PublicKey {
+        if (DISABLE) return key
         reapCollectedWeakPubKeys()
         val weakPubKey = WeakPubKey(key, ByteSequence.of(key.encoded))
         pubKeyToBytes.putIfAbsent(weakPubKey, weakPubKey.bytes!!)
