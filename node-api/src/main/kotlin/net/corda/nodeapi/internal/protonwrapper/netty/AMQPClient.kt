@@ -27,16 +27,17 @@ import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPChannelHandler.Companion.PROXY_LOGGER_NAME
 import net.corda.nodeapi.internal.requireMessageSize
+import net.corda.nodeapi.internal.revocation.CertDistPointCrlSource
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
 import java.net.InetSocketAddress
-import java.security.cert.CertPathValidatorException
+import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ThreadPoolExecutor
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.withLock
 
 enum class ProxyVersion {
@@ -63,8 +64,8 @@ data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostA
 class AMQPClient(private val targets: List<NetworkHostAndPort>,
                  val allowedRemoteLegalNames: Set<CordaX500Name>,
                  private val configuration: AMQPConfiguration,
-                 private val sharedThreadPool: EventLoopGroup? = null,
-                 private val threadPoolName: String = "AMQPClient") : AutoCloseable {
+                 private val nettyThreading: NettyThreading = NettyThreading.NonShared("AMQPClient"),
+                 private val distPointCrlSource: CertDistPointCrlSource = CertDistPointCrlSource.SINGLETON) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
@@ -84,14 +85,12 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     private val lock = ReentrantLock()
     @Volatile
     private var started: Boolean = false
-    private var workerGroup: EventLoopGroup? = null
     @Volatile
     private var clientChannel: Channel? = null
     // Offset into the list of targets, so that we can implement round-robin reconnect logic.
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
     private var retryInterval = MIN_RETRY_INTERVAL
-    private val revocationChecker = configuration.revocationConfig.createPKIXRevocationChecker()
     private val handshakeFailureRetryTargets = mutableSetOf<NetworkHostAndPort>()
     private var retryingHandshakeFailures = false
     private var retryOffset = 0
@@ -172,7 +171,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
             log.info("Failed to connect to $currentTarget", future.cause())
 
             if (started) {
-                workerGroup?.schedule({
+                nettyThreading.eventLoopGroup.schedule({
                     nextTarget()
                     restart()
                 }, retryInterval, TimeUnit.MILLISECONDS)
@@ -191,7 +190,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
         clientChannel = null
         if (started && !amqpActive) {
             log.debug { "Scheduling restart of $currentTarget (AMQP inactive)" }
-            workerGroup?.schedule({
+            nettyThreading.eventLoopGroup.schedule({
                 nextTarget()
                 restart()
             }, retryInterval, TimeUnit.MILLISECONDS)
@@ -199,16 +198,15 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     }
 
     private class ClientChannelInitializer(val parent: AMQPClient) : ChannelInitializer<SocketChannel>() {
-        private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        private val keyManagerFactory = keyManagerFactory(parent.configuration.keyStore)
+        private val trustManagerFactory = trustManagerFactoryWithRevocation(
+                parent.configuration.trustStore,
+                parent.configuration.revocationConfig,
+                parent.distPointCrlSource
+        )
         private val conf = parent.configuration
         @Volatile
         private lateinit var amqpChannelHandler: AMQPChannelHandler
-
-        init {
-            keyManagerFactory.init(conf.keyStore)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, parent.revocationChecker))
-        }
 
         @Suppress("ComplexMethod")
         override fun initChannel(ch: SocketChannel) {
@@ -249,9 +247,22 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
             val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, parent.configuration)
             val target = parent.currentTarget
             val handler = if (parent.configuration.useOpenSsl) {
-                createClientOpenSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
+                createClientOpenSslHandler(
+                        target,
+                        parent.allowedRemoteLegalNames,
+                        wrappedKeyManagerFactory,
+                        trustManagerFactory,
+                        ch.alloc(),
+                        parent.nettyThreading.sslDelegatedTaskExecutor
+                )
             } else {
-                createClientSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
+                createClientSslHandler(
+                        target,
+                        parent.allowedRemoteLegalNames,
+                        wrappedKeyManagerFactory,
+                        trustManagerFactory,
+                        parent.nettyThreading.sslDelegatedTaskExecutor
+                )
             }
             handler.handshakeTimeoutMillis = conf.sslHandshakeTimeout.toMillis()
             pipeline.addLast("sslHandler", handler)
@@ -292,7 +303,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
 
                 if (started && amqpActive) {
                     log.debug { "Scheduling restart of $currentTarget (AMQP active)" }
-                    workerGroup?.schedule({
+                    nettyThreading.eventLoopGroup.schedule({
                         nextTarget()
                         restart()
                     }, retryInterval, TimeUnit.MILLISECONDS)
@@ -309,7 +320,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
                 return
             }
             log.info("Connect to: $currentTarget")
-            workerGroup = sharedThreadPool ?: NioEventLoopGroup(NUM_CLIENT_THREADS, DefaultThreadFactory(threadPoolName, Thread.MAX_PRIORITY))
+            (nettyThreading as? NettyThreading.NonShared)?.start()
             started = true
             restart()
         }
@@ -321,7 +332,7 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
         }
         val bootstrap = Bootstrap()
         // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
-        bootstrap.group(workerGroup).channel(NioSocketChannel::class.java).handler(ClientChannelInitializer(this))
+        bootstrap.group(nettyThreading.eventLoopGroup).channel(NioSocketChannel::class.java).handler(ClientChannelInitializer(this))
         // Delegate DNS Resolution to the proxy side, if we are using proxy.
         if (configuration.proxyConfig != null) {
             bootstrap.resolver(NoopAddressResolverGroup.INSTANCE)
@@ -335,14 +346,12 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
         lock.withLock {
             log.info("Stopping connection to: $currentTarget, Local address: $localAddressString")
             started = false
-            if (sharedThreadPool == null) {
-                workerGroup?.shutdownGracefully()
-                workerGroup?.terminationFuture()?.sync()
+            if (nettyThreading is NettyThreading.NonShared) {
+                nettyThreading.stop()
             } else {
                 clientChannel?.close()?.sync()
             }
             clientChannel = null
-            workerGroup = null
             log.info("Stopped connection to $currentTarget")
         }
     }
@@ -384,5 +393,35 @@ class AMQPClient(private val targets: List<NetworkHostAndPort>,
     val onConnection: Observable<ConnectionChange>
         get() = _onConnection
 
-    val softFailExceptions: List<CertPathValidatorException> get() = revocationChecker.softFailExceptions
+
+    sealed class NettyThreading {
+        abstract val eventLoopGroup: EventLoopGroup
+        abstract val sslDelegatedTaskExecutor: Executor
+
+        class Shared(override val eventLoopGroup: EventLoopGroup,
+                     override val sslDelegatedTaskExecutor: ExecutorService = sslDelegatedTaskExecutor("AMQPClient")) : NettyThreading()
+
+        class NonShared(val threadPoolName: String) : NettyThreading() {
+            private var _eventLoopGroup: NioEventLoopGroup? = null
+            override val eventLoopGroup: EventLoopGroup get() = checkNotNull(_eventLoopGroup)
+
+            private var _sslDelegatedTaskExecutor: ThreadPoolExecutor? = null
+            override val sslDelegatedTaskExecutor: ExecutorService get() = checkNotNull(_sslDelegatedTaskExecutor)
+
+            fun start() {
+                check(_eventLoopGroup == null)
+                check(_sslDelegatedTaskExecutor == null)
+                _eventLoopGroup = NioEventLoopGroup(NUM_CLIENT_THREADS, DefaultThreadFactory(threadPoolName, Thread.MAX_PRIORITY))
+                _sslDelegatedTaskExecutor = sslDelegatedTaskExecutor(threadPoolName)
+            }
+
+            fun stop() {
+                eventLoopGroup.shutdownGracefully()
+                eventLoopGroup.terminationFuture().sync()
+                sslDelegatedTaskExecutor.shutdown()
+                _eventLoopGroup = null
+                _sslDelegatedTaskExecutor = null
+            }
+        }
+    }
 }

@@ -45,6 +45,7 @@ pipeline {
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
+        CORDA_USE_CACHE = "corda-remotes"
     }
 
     stages {

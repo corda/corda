@@ -4,7 +4,8 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.protonwrapper.netty.init
+import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
+import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactory
 import org.assertj.core.api.Assertions
 import org.junit.Rule
 import org.junit.Test
@@ -161,11 +162,9 @@ class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAl
 
     private fun createSslContext(keyStore: CertificateStore, trustStore: CertificateStore): SSLContext {
         return SSLContext.getInstance("TLS").apply {
-            val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-            keyManagerFactory.init(keyStore)
+            val keyManagerFactory = keyManagerFactory(keyStore)
             val keyManagers = keyManagerFactory.keyManagers
-            val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            trustMgrFactory.init(trustStore)
+            val trustMgrFactory = trustManagerFactory(trustStore)
             val trustManagers = trustMgrFactory.trustManagers
             init(keyManagers, trustManagers, newSecureRandom())
         }

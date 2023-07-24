@@ -100,7 +100,8 @@ buildscript {
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.hikari_version = constants.getProperty("hikariVersion")
     ext.liquibase_version = constants.getProperty("liquibaseVersion")
-    ext.artifactory_contextUrl = constants.getProperty("artifactoryContextUrl")
+    ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
+    ext.publicArtifactURL = 'https://download.corda.net/maven'
     ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
     ext.selenium_version = constants.getProperty("seleniumVersion")
     ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
@@ -161,7 +162,7 @@ buildscript {
             }
         } else {
             maven {
-                url "${artifactory_contextUrl}/corda-dependencies-dev"
+                url "${publicArtifactURL}/corda-dependencies-dev"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
@@ -169,7 +170,7 @@ buildscript {
                 }
             }
             maven {
-                url "${artifactory_contextUrl}/corda-releases"
+                url "${publicArtifactURL}/corda-releases"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
@@ -390,7 +391,7 @@ allprojects {
             }
         } else {
             maven {
-                url "${artifactory_contextUrl}/corda-dependencies"
+                url "${publicArtifactURL}/corda-dependencies"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'
@@ -411,7 +412,7 @@ allprojects {
                 }
             }
             maven {
-                url "${artifactory_contextUrl}/corda-dev"
+                url "${publicArtifactURL}/corda-dev"
                 content {
                     includeGroupByRegex 'net\\.corda(\\..*)?'
                     includeGroupByRegex 'com\\.r3(\\..*)?'

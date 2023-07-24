@@ -279,7 +279,7 @@ class DBTransactionStorageLedgerRecoveryTests {
     @Test(timeout = 300_000)
     fun `test lightweight serialization and deserialization of hashed distribution list payload`() {
         val dl = HashedDistributionList(ALL_VISIBLE,
-                mapOf(BOB.name.hashCode().toLong() to NONE, CHARLIE_NAME.hashCode().toLong() to ONLY_RELEVANT))
+                mapOf(BOB.name.hashCode().toLong() to NONE, CHARLIE_NAME.hashCode().toLong() to ONLY_RELEVANT), now())
         assertEquals(dl, dl.serialize().let { HashedDistributionList.deserialize(it) })
     }
 
@@ -373,7 +373,7 @@ class DBTransactionStorageLedgerRecoveryTests {
     private fun DistributionList.toWire(cryptoService: CryptoService = MockCryptoService(emptyMap())): ByteArray {
         val hashedPeersToStatesToRecord = this.peersToStatesToRecord.map { (peer, statesToRecord) ->
             partyInfoCache.getPartyIdByCordaX500Name(peer) to statesToRecord }.toMap()
-        val hashedDistributionList = HashedDistributionList(this.senderStatesToRecord, hashedPeersToStatesToRecord)
+        val hashedDistributionList = HashedDistributionList(this.senderStatesToRecord, hashedPeersToStatesToRecord, now())
         return cryptoService.encrypt(hashedDistributionList.serialize())
     }
 }
