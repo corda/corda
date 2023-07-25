@@ -61,9 +61,13 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         return txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.IN_FLIGHT)) == null
     }
 
-    override fun addSenderTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata): ByteArray? { return null }
+    override fun addSenderTransactionRecoveryMetadata(txId: SecureHash, metadata: TransactionMetadata): ByteArray? { return null }
 
-    override fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) { }
+    override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
+                                                        sender: CordaX500Name,
+                                                        receiver: CordaX500Name,
+                                                        receiverStatesToRecord: StatesToRecord,
+                                                        encryptedDistributionList: ByteArray) { }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return txns.remove(id) != null

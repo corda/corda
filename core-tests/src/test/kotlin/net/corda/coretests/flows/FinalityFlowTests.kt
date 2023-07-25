@@ -66,7 +66,6 @@ import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
-import net.corda.testing.node.internal.MockCryptoService
 import net.corda.testing.node.internal.TestCordappInternal
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappWithPackages
@@ -75,6 +74,7 @@ import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
+import org.junit.jupiter.api.assertThrows
 import java.sql.SQLException
 import java.util.Random
 import kotlin.test.assertEquals
@@ -239,9 +239,9 @@ class FinalityFlowTests : WithFinality {
     private fun assertTxnRemovedFromDatabase(node: TestStartedNode, stxId: SecureHash) {
         val fromDb = node.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
-            ).setParameter("transactionId", stxId.toString()).resultList.map { it }
+            ).setParameter("transactionId", stxId.toString()).resultList
         }
         assertEquals(0, fromDb.size)
     }
@@ -357,7 +357,7 @@ class FinalityFlowTests : WithFinality {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+        getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ALL_VISIBLE, this?.statesToRecord)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
@@ -390,7 +390,7 @@ class FinalityFlowTests : WithFinality {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[1].statesToRecord)
             assertEquals(CHARLIE_NAME.hashCode().toLong(), this[1].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+        getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
@@ -411,8 +411,8 @@ class FinalityFlowTests : WithFinality {
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
 
         assertEquals(2, getSenderRecoveryData(stx3.id, aliceNode.database).size)
-        assertThat(getReceiverRecoveryData(stx3.id, bobNode.database)).isNotNull
-        assertThat(getReceiverRecoveryData(stx3.id, charlieNode.database)).isNotNull
+        assertThat(getReceiverRecoveryData(stx3.id, bobNode, aliceNode)).isNotNull
+        assertThat(getReceiverRecoveryData(stx3.id, charlieNode, aliceNode)).isNotNull
     }
 
     @Test(timeout=300_000)
@@ -433,7 +433,7 @@ class FinalityFlowTests : WithFinality {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode.database).apply {
+        getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
@@ -444,21 +444,28 @@ class FinalityFlowTests : WithFinality {
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
-            ).setParameter("transactionId", id.toString()).resultList.map { it }
+            ).setParameter("transactionId", id.toString()).resultList
         }
         return fromDb.map { it.toSenderDistributionRecord() }.also { println("SenderDistributionRecord\n$it") }
     }
 
-    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): ReceiverDistributionRecord? {
-        val fromDb = database.transaction {
+    private fun getReceiverRecoveryData(txId: SecureHash, receiver: TestStartedNode, sender: TestStartedNode): ReceiverDistributionRecord? {
+        val fromDb = receiver.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
-            ).setParameter("transactionId", id.toString()).resultList.map { it }
+            ).setParameter("transactionId", txId.toString()).resultList
+        }.singleOrNull()
+
+        // The receiver should not be able to decrypt the distribution list
+        assertThrows<Exception> {
+            fromDb?.toReceiverDistributionRecord(receiver.internals.encryptionService)
         }
-        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap())).also { println("ReceiverDistributionRecord\n$it") }
+
+        // Only the sender can
+        return fromDb?.toReceiverDistributionRecord(sender.internals.encryptionService)
     }
 
     @StartableByRPC
