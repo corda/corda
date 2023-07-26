@@ -1,9 +1,12 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow.Companion.tracker
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import java.time.Instant
@@ -20,6 +23,12 @@ class FinalityRecoveryFlow(
         private val forceRecover: Boolean = false,
         private val recoverAll: Boolean = false,
         override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<Map<FlowTransactionInfo, Boolean>>() {
+
+    @CordaInternal
+    data class ExtraConstructorArgs(val txIds: Collection<SecureHash>, val flowIds: Collection<StateMachineRunId>, val matchingCriteria: FlowRecoveryQuery?, val forceRecover: Boolean, val recoverAll: Boolean)
+
+    @CordaInternal
+    fun getExtraConstructorArgs() = ExtraConstructorArgs(txIds, flowIds, matchingCriteria, forceRecover, recoverAll)
 
     constructor(txId: SecureHash, forceRecover: Boolean = false) : this(setOf(txId), forceRecover)
     constructor(txIds: Collection<SecureHash>, forceRecover: Boolean = false, recoverAll: Boolean = false) : this(txIds, emptySet(), null, forceRecover, recoverAll, tracker())
