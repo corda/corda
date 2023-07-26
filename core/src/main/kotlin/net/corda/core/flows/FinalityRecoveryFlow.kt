@@ -30,15 +30,7 @@ class FinalityRecoveryFlow(
     @CordaInternal
     fun getExtraConstructorArgs() = ExtraConstructorArgs(txIds, flowIds, matchingCriteria, forceRecover, recoverAll)
 
-    constructor(txId: SecureHash, forceRecover: Boolean = false) : this(setOf(txId), forceRecover)
-    constructor(txIds: Collection<SecureHash>, forceRecover: Boolean = false, recoverAll: Boolean = false) : this(txIds, emptySet(), null, forceRecover, recoverAll, tracker())
-    constructor(flowId: StateMachineRunId, forceRecover: Boolean = false) : this(emptySet(), setOf(flowId), null, forceRecover)
-    constructor(flowIds: Collection<StateMachineRunId>, forceRecover: Boolean = false) : this(emptySet(), flowIds, null, forceRecover, false, tracker())
-    constructor(recoverAll: Boolean, forceRecover: Boolean = false) : this(emptySet(), emptySet(), null, forceRecover, recoverAll, tracker())
-    constructor(matchingCriteria: FlowRecoveryQuery, forceRecover: Boolean = false) : this(emptySet(), emptySet(), matchingCriteria, forceRecover, false, tracker())
-
     @Suspendable
-    @Suppress("ComplexMethod")
     @Throws(FlowRecoveryException::class)
     override fun call(): Map<FlowTransactionInfo, Boolean> {
         throw NotImplementedError("Enterprise only feature")
