@@ -5,8 +5,6 @@ import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow.Companion.tracker
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
-import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import java.time.Instant
@@ -25,10 +23,20 @@ class FinalityRecoveryFlow(
         override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<Map<FlowTransactionInfo, Boolean>>() {
 
     @CordaInternal
-    data class ExtraConstructorArgs(val txIds: Collection<SecureHash>, val flowIds: Collection<StateMachineRunId>, val matchingCriteria: FlowRecoveryQuery?, val forceRecover: Boolean, val recoverAll: Boolean)
-
+    data class ExtraConstructorArgs(val txIds: Collection<SecureHash>,
+                                    val flowIds: Collection<StateMachineRunId>,
+                                    val matchingCriteria: FlowRecoveryQuery?,
+                                    val forceRecover: Boolean,
+                                    val recoverAll: Boolean)
     @CordaInternal
     fun getExtraConstructorArgs() = ExtraConstructorArgs(txIds, flowIds, matchingCriteria, forceRecover, recoverAll)
+
+    constructor(txId: SecureHash, forceRecover: Boolean = false) : this(setOf(txId), forceRecover)
+    constructor(txIds: Collection<SecureHash>, forceRecover: Boolean = false, recoverAll: Boolean = false) : this(txIds, emptySet(), null, forceRecover, recoverAll, tracker())
+    constructor(flowId: StateMachineRunId, forceRecover: Boolean = false) : this(emptySet(), setOf(flowId), null, forceRecover)
+    constructor(flowIds: Collection<StateMachineRunId>, forceRecover: Boolean = false) : this(emptySet(), flowIds, null, forceRecover, false, tracker())
+    constructor(recoverAll: Boolean, forceRecover: Boolean = false) : this(emptySet(), emptySet(), null, forceRecover, recoverAll, tracker())
+    constructor(matchingCriteria: FlowRecoveryQuery, forceRecover: Boolean = false) : this(emptySet(), emptySet(), matchingCriteria, forceRecover, false, tracker())
 
     @Suspendable
     @Throws(FlowRecoveryException::class)
