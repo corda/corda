@@ -158,7 +158,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             bobNode.database.transaction {
-                VaultFiller(bobNode.services, dummyNotary, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, cashIssuer)
+                VaultFiller(bobNode.services, dummyNotary, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, cashIssuer, atMostThisManyStates = 10)
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
@@ -267,7 +267,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val issuer = bank.ref(1, 2, 3)
 
             bobNode.database.transaction {
-                VaultFiller(bobNode.services, dummyNotary, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, issuer)
+                VaultFiller(bobNode.services, dummyNotary, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, issuer, atMostThisManyStates = 10)
             }
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, issuer, alice,

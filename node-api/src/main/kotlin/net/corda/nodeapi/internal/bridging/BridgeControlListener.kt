@@ -35,7 +35,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
                             maxMessageSize: Int,
                             revocationConfig: RevocationConfig,
                             enableSNI: Boolean,
-                            private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                            private val artemisMessageClientFactory: (String) -> ArtemisSessionProvider,
                             bridgeMetricsService: BridgeMetricsService? = null,
                             trace: Boolean = false,
                             sslHandshakeTimeout: Duration? = null,
@@ -80,7 +80,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
             bridgeNotifyQueue = "$BRIDGE_NOTIFY.$queueDisambiguityId"
 
             bridgeManager.start()
-            val artemis = artemisMessageClientFactory()
+            val artemis = artemisMessageClientFactory("BridgeControl")
             this.artemis = artemis
             artemis.start()
             val artemisClient = artemis.started!!

@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.internal.LazyPool
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
 import net.corda.core.serialization.EncodingWhitelist
@@ -18,7 +19,8 @@ import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedInteger
-import org.apache.qpid.proton.codec.Data
+import org.apache.qpid.proton.codec.DecoderImpl
+import org.apache.qpid.proton.codec.EncoderImpl
 import java.io.InputStream
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -72,17 +74,32 @@ class DeserializationInput constructor(
             }
         }
 
+        private val decoderPool = LazyPool<DecoderImpl> {
+            val decoder = DecoderImpl().apply {
+                register(Envelope.DESCRIPTOR, Envelope.FastPathConstructor(this))
+                register(Schema.DESCRIPTOR, Schema)
+                register(Descriptor.DESCRIPTOR, Descriptor)
+                register(Field.DESCRIPTOR, Field)
+                register(CompositeType.DESCRIPTOR, CompositeType)
+                register(Choice.DESCRIPTOR, Choice)
+                register(RestrictedType.DESCRIPTOR, RestrictedType)
+                register(ReferencedObject.DESCRIPTOR, ReferencedObject)
+                register(TransformsSchema.DESCRIPTOR, TransformsSchema)
+                register(TransformTypes.DESCRIPTOR, TransformTypes)
+            }
+            EncoderImpl(decoder)
+            decoder
+        }
+
         @Throws(AMQPNoTypeNotSerializableException::class)
-        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
+        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist, lazy: Boolean = false): Envelope {
             return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
-                val data = Data.Factory.create()
-                val expectedSize = dataBytes.remaining()
-                if (data.decode(dataBytes) != expectedSize.toLong()) {
-                    throw AMQPNoTypeNotSerializableException(
-                            "Unexpected size of data",
-                            "Blob is corrupted!.")
+                decoderPool.reentrantRun {
+                    it.byteBuffer = dataBytes
+                    (it.readObject() as Envelope).apply {
+                        if (!lazy) this.resolvedSchema
+                    }
                 }
-                Envelope.get(data)
             }
         }
     }
@@ -124,22 +141,29 @@ class DeserializationInput constructor(
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext): T =
             des {
                 /**
-                 * The cache uses object identity rather than [ByteSequence.equals] and
-                 * [ByteSequence.hashCode]. This is for speed: each [ByteSequence] object
-                 * can potentially be large, and we are optimizing for the case when we
-                 * know we will be deserializing the exact same objects multiple times.
-                 * This also means that the cache MUST be short-lived, as otherwise it
-                 * becomes a memory leak.
+                 * So that the [DecoderImpl] is held whilst we get the [Envelope] and [doReadObject],
+                 * since we are using lazy when getting the [Envelope] which means [Schema] and
+                 * [TransformsSchema] are only parsed out of the [bytes] if demanded by [doReadObject].
                  */
-                @Suppress("unchecked_cast")
-                val envelope = (context.properties[AMQP_ENVELOPE_CACHE_PROPERTY] as? MutableMap<IdentityKey, Envelope>)
-                    ?.computeIfAbsent(IdentityKey(bytes)) { key ->
-                        getEnvelope(key.bytes, context.encodingWhitelist)
-                    } ?: getEnvelope(bytes, context.encodingWhitelist)
+                decoderPool.reentrantRun {
+                    /**
+                     * The cache uses object identity rather than [ByteSequence.equals] and
+                     * [ByteSequence.hashCode]. This is for speed: each [ByteSequence] object
+                     * can potentially be large, and we are optimizing for the case when we
+                     * know we will be deserializing the exact same objects multiple times.
+                     * This also means that the cache MUST be short-lived, as otherwise it
+                     * becomes a memory leak.
+                     */
+                    @Suppress("unchecked_cast")
+                    val envelope = (context.properties[AMQP_ENVELOPE_CACHE_PROPERTY] as? MutableMap<IdentityKey, Envelope>)
+                            ?.computeIfAbsent(IdentityKey(bytes)) { key ->
+                                getEnvelope(key.bytes, context.encodingWhitelist, true)
+                            } ?: getEnvelope(bytes, context.encodingWhitelist, true)
 
-                logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
+                    logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
 
-                doReadObject(envelope, clazz, context)
+                    doReadObject(envelope, clazz, context)
+                }
             }
 
     @Throws(NotSerializableException::class)
@@ -155,10 +179,10 @@ class DeserializationInput constructor(
 
     private fun <T: Any> doReadObject(envelope: Envelope, clazz: Class<T>, context: SerializationContext): T {
         return clazz.cast(readObjectOrNull(
-            obj = redescribe(envelope.obj, clazz),
-            schema = SerializationSchemas(envelope.schema, envelope.transformsSchema),
-            type = clazz,
-            context = context
+                obj = redescribe(envelope.obj, clazz),
+                schema = SerializationSchemas(envelope::resolvedSchema),
+                type = clazz,
+                context = context
         ))
     }
 

@@ -5,7 +5,7 @@ import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.DEV_CA_PRIVATE_KEY_PASS
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.protonwrapper.netty.CrlSource
+import net.corda.testing.internal.fixedCrlSource
 import org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory
 import org.junit.Test
 import java.math.BigInteger
@@ -41,10 +41,8 @@ class CordaRevocationCheckerTest {
         val resourceAsStream = javaClass.getResourceAsStream("/net/corda/nodeapi/internal/protonwrapper/netty/doorman.crl")
         val crl = CertificateFactory().engineGenerateCRL(resourceAsStream) as X509CRL
 
-        val crlSource = object : CrlSource {
-            override fun fetch(certificate: X509Certificate): Set<X509CRL> = setOf(crl)
-        }
-        val checker = CordaRevocationChecker(crlSource,
+        val checker = CordaRevocationChecker(
+                crlSource = fixedCrlSource(setOf(crl)),
                 softFail = true,
                 dateSource = { Date.from(date.atStartOfDay().toInstant(ZoneOffset.UTC)) }
         )

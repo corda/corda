@@ -7,6 +7,7 @@ import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -76,7 +77,11 @@ class NetworkMapTest {
             val nextParams = networkMapServer.networkParameters.copy(
                     epoch = 3,
                     modifiedTime = Instant.ofEpochMilli(random63BitValue()),
-                    maxMessageSize = networkMapServer.networkParameters.maxMessageSize + 1)
+                    maxMessageSize = networkMapServer.networkParameters.maxMessageSize + 1,
+                    recoveryMaximumBackupInterval = networkMapServer.networkParameters
+                            .recoveryMaximumBackupInterval?.minus(10.days) ?: 10.days,
+                    confidentialIdentityMinimumBackupInterval = networkMapServer.networkParameters
+                            .confidentialIdentityMinimumBackupInterval?.minus(10.days) ?: 10.days)
             val nextHash = nextParams.serialize().hash
             val snapshot = alice.rpc.networkParametersFeed().snapshot
             val updates = alice.rpc.networkParametersFeed().updates.bufferUntilSubscribed()

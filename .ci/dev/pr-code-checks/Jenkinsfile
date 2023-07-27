@@ -17,6 +17,10 @@ pipeline {
     environment {
         SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret')
         C4_OS_SNYK_ORG_ID = credentials('c4-os-snyk-org-id')
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_USE_CACHE = "corda-remotes"
     }
 
     stages {
