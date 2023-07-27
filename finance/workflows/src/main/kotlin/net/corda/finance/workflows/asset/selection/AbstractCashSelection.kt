@@ -2,14 +2,12 @@ package net.corda.finance.workflows.asset.selection
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.utilities.*

@@ -9,7 +9,6 @@ import net.corda.core.internal.CertRole
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.reader
 import net.corda.core.internal.signWithCert
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
 import net.corda.core.internal.writer
 import net.corda.core.utilities.days

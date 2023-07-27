@@ -2,7 +2,6 @@ package net.corda.core.identity
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
