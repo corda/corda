@@ -25,12 +25,12 @@ class LedgerRecoveryFlow(
     @CordaInternal
     data class ExtraConstructorArgs(val recoveryPeers: Collection<Party>,
                                     val timeWindow: RecoveryTimeWindow,
-                                    val useAllNetworkNodes: Boolean = false,
-                                    val transactionRole: TransactionRole = TransactionRole.ALL,
-                                    val dryRun: Boolean = false,
-                                    val optimisticInitiatorRecovery: Boolean = false)
+                                    val useAllNetworkNodes: Boolean,
+                                    val transactionRole: TransactionRole,
+                                    val dryRun: Boolean,
+                                    val optimisticInitiatorRecovery: Boolean)
     @CordaInternal
-    fun getExtraConstructorArgs() = ExtraConstructorArgs(recoveryPeers, timeWindow, useAllNetworkNodes, transactionRole, optimisticInitiatorRecovery)
+    fun getExtraConstructorArgs() = ExtraConstructorArgs(recoveryPeers, timeWindow, useAllNetworkNodes, transactionRole, dryRun, optimisticInitiatorRecovery)
 
     // unused constructors added to facilitate Node Shell command invocation
     constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow) : this(setOf(recoveryPeer), timeWindow, false, TransactionRole.ALL, false, false)
