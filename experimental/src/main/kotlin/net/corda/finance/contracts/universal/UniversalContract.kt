@@ -281,15 +281,15 @@ class UniversalContract : Contract {
                 is Const -> perceivable
                 is UnaryPlus -> UnaryPlus(replaceFixing(tx, perceivable.arg, fixings, unusedFixings))
                 is PerceivableOperation -> PerceivableOperation(replaceFixing(tx, perceivable.left, fixings, unusedFixings),
-                        perceivable.op, replaceFixing(tx, perceivable.right, fixings, unusedFixings))
-                is Interest -> uncheckedCast(Interest(replaceFixing(tx, perceivable.amount, fixings, unusedFixings),
+                        perceivable.op, replaceFixing(tx, perceivable.right, fixings, unusedFixings)) as Perceivable<T>
+                is Interest -> Interest(replaceFixing(tx, perceivable.amount, fixings, unusedFixings),
                         perceivable.dayCountConvention, replaceFixing(tx, perceivable.interest, fixings, unusedFixings),
-                        perceivable.start, perceivable.end))
+                        perceivable.start, perceivable.end) as Perceivable<T>
                 is Fixing -> {
                     val dt = evalInstant(perceivable.date)
                     if (dt != null && fixings.containsKey(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))) {
                         unusedFixings.remove(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))
-                        uncheckedCast(Const(fixings[FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor)]!!))
+                        Const(fixings[FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor)]!!) as Perceivable<T>
                     } else perceivable
                 }
                 else -> throw NotImplementedError("replaceFixing - " + perceivable.javaClass.name)

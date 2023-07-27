@@ -426,7 +426,7 @@ val CertPath.x509Certificates: List<X509Certificate>
     get() {
         require(type == "X.509") { "Not an X.509 cert path: $this" }
         // We're not mapping the list to avoid creating a new one.
-        return uncheckedCast(certificates)
+        return certificates as List<X509Certificate>
     }
 
 val Certificate.x509: X509Certificate get() = requireNotNull(this as? X509Certificate) { "Not an X.509 certificate: $this" }

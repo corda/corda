@@ -2,6 +2,7 @@ package net.corda.finance.workflows.asset.selection
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
@@ -139,7 +140,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
                 if (stateRefs.isNotEmpty()) {
                     // TODO: future implementation to retrieve contract states from a Vault BLOB store
-                    stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
+                    stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<out StateAndRef<Cash.State>>)
                 }
 
                 val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity

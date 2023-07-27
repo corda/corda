@@ -61,12 +61,13 @@ sealed class Try<out A> {
      * Maps the given function to the values from this [Success] and [other], or returns `this` if this is a [Failure]
      * or [other] if [other] is a [Failure].
      */
+
     inline fun <B, C> combine(other: Try<B>, function: (A, B) -> C): Try<C> = when (this) {
         is Success -> when (other) {
             is Success -> Success(function(value, other.value))
-            is Failure -> uncheckedCast(other)
+            is Failure -> other as Try<C>
         }
-        is Failure -> uncheckedCast(this)
+        is Failure -> this as Try<C>
     }
 
     /** Applies the given action to the value if [Success], or does nothing if [Failure]. Returns `this` for chaining. */
