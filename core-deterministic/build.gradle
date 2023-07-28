@@ -49,9 +49,10 @@ dependencies {
 
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
-    deterministicLibraries "org.bouncycastle:bcprov-jdk18on:$bouncycastle_version"
-    deterministicLibraries "org.bouncycastle:bcpkix-jdk18on:$bouncycastle_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
+    // From 1.71 BC validates the RSA modulus is prime using random numbers, which is not supported inside the DJVM
+    deterministicLibraries "org.bouncycastle:bcprov-jdk15on:1.70"
+    deterministicLibraries "org.bouncycastle:bcpkix-jdk15on:1.70"
 }
 
 tasks.named('jar', Jar) {
