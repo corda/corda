@@ -83,7 +83,7 @@ class CashIssueAndPaymentTest {
             val result = assertDoesNotThrow {
 
                 val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.CONSUMED)
-                val (vault, vaultUpdates) = alice.rpc.vaultTrackBy<Cash.State>(criteria = criteria, paging = PageSpecification(DEFAULT_PAGE_NUM))
+                val (_, vaultUpdates) = alice.rpc.vaultTrackBy<Cash.State>(criteria = criteria, paging = PageSpecification(DEFAULT_PAGE_NUM))
                 val updateLatch = CountDownLatch(1)
                 vaultUpdates.subscribe { update ->
                     val consumedRef = update.consumed.single().ref
