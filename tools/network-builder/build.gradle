@@ -90,3 +90,12 @@ tasks.register('buildNetworkBuilder') {
 jar {
     enabled = false
 }
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            artifactId 'corda-tools-network-builder'
+            project.shadow.component(publication)
+        }
+    }
+}
