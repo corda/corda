@@ -37,6 +37,7 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -81,6 +82,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val references: Set<StateAndRef<U>> = emptySet(),
             val consumingTxIds: Map<StateRef, SecureHash> = emptyMap()
     ) {
+        @DeprecatedConstructorForDeserialization(1)
         @JvmOverloads constructor( consumed: Set<StateAndRef<U>>,
                      produced: Set<StateAndRef<U>>,
                      flowId: UUID? = null,
@@ -151,7 +153,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 flowId: UUID? = null,
                 type: UpdateType = UpdateType.GENERAL
         ): Update<U> {
-            return Update(consumed, produced, flowId, type, references)
+            return Update(consumed, produced, flowId, type, references, consumingTxIds)
         }
 
         /** Additional copy method to maintain backwards compatibility. */
