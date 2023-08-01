@@ -1,7 +1,6 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.TransactionMetadata
@@ -14,7 +13,6 @@ import net.corda.core.transactions.SignedTransaction
 import java.util.concurrent.ExecutorService
 
 // TODO: This should really be called ServiceHubInternal but that name is already taken by net.corda.node.services.api.ServiceHubInternal.
-@DeleteForDJVM
 interface ServiceHubCoreInternal : ServiceHub {
 
     val externalOperationExecutor: ExecutorService
