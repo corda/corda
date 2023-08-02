@@ -2,6 +2,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'maven-publish'
+apply plugin: 'org.jetbrains.dokka'
 
 dependencies {
     implementation rootProject
@@ -22,67 +23,66 @@ def internalPackagePrefixes(sourceDirs) {
 
 ext {
     // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
-    dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../finance/contracts/src/main/kotlin', '../client/jackson/src/main/kotlin',
-            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
+    dokkaSourceDirs = files(
+            '../core/src/main/kotlin',
+            '../client/rpc/src/main/kotlin',
+            '../finance/workflows/src/main/kotlin',
+            '../finance/contracts/src/main/kotlin',
+            '../client/jackson/src/main/kotlin',
+            '../testing/test-utils/src/main/kotlin',
+            '../testing/node-driver/src/main/kotlin'
+    )
     internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
     archivedApiDocsBaseFilename = 'api-docs'
 }
 
-dokka {
-    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/kotlin")
-}
-
-task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
-    outputFormat = "javadoc"
+dokkaJavadoc {
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
-}
+    archivesBaseName = "api-docs"
+    dokkaSourceSets {
+        customSourceSet {
+            sourceRoot(file('../core/src/main/kotlin'))
+            sourceRoot(file('../client/rpc/src/main/kotlin'))
+            sourceRoot(file('../finance/workflows/src/main/kotlin'))
+            sourceRoot(file('../finance/contracts/src/main/kotlin'))
+            sourceRoot(file('../client/jackson/src/main/kotlin'))
+            sourceRoot(file('../testing/test-utils/src/main/kotlin'))
+            sourceRoot(file('../testing/node-driver/src/main/kotlin'))
+            sourceRoot(file('../core/src/main/kotlin'))
+            sourceRoot(file('../client/rpc/src/main/kotlin'))
+            sourceRoot(file('../client/rpc/src/main/kotlin'))
 
-[dokka, dokkaJavadoc].collect {
-    it.configuration {
-        moduleName = 'corda'
-        dokkaSourceDirs.collect { sourceDir ->
-            sourceRoot {
-                path = sourceDir.path
+            externalDocumentationLink {
+                url.set(new URL("https://fasterxml.github.io/jackson-core/javadoc/2.9/"))
             }
-        }
-        includes = ['packages.md']
-        jdkVersion = 8
-        externalDocumentationLink {
-            url = new URL("https://fasterxml.github.io/jackson-core/javadoc/2.9/")
-        }
-        externalDocumentationLink {
-            url = new URL("https://docs.oracle.com/javafx/2/api/")
-        }
-        externalDocumentationLink {
-            url = new URL("https://www.bouncycastle.org/docs/docs1.5on/")
-        }
-        internalPackagePrefixes.collect { packagePrefix ->
-            perPackageOption {
-                prefix = packagePrefix
-                suppress = true
+            externalDocumentationLink {
+                url.set(new URL("https://docs.oracle.com/javafx/2/api/"))
+            }
+            externalDocumentationLink {
+                url.set(new URL("https://www.bouncycastle.org/docs/docs1.5on/"))
             }
         }
     }
 }
 
-task apidocs(dependsOn: ['dokka', 'dokkaJavadoc']) {
+task apidocs(dependsOn: ['dokkaJavadoc']) {
     group "Documentation"
     description "Build API documentation"
 }
 
-task makeHTMLDocs(type: Exec){
+task makeHTMLDocs(type: Exec) {
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite-html.sh"
     } else {
-        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-html.sh"
+        commandLine "bash", "-c", "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-html.sh"
     }
 }
 
-task makePDFDocs(type: Exec){
+task makePDFDocs(type: Exec) {
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite-pdf.sh"
     } else {
-        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-pdf.sh"
+        commandLine "bash", "-c", "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-pdf.sh"
     }
 }
 

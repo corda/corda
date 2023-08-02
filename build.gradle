@@ -189,7 +189,7 @@ buildscript {
         classpath "com.guardsquare:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
 //        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
+        classpath "org.jetbrains.dokka:dokka-base:$dokka_version"
 //        classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:$dependency_checker_version"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
@@ -213,6 +213,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "org.ajoberstar.grgit" version "4.0.0"
     id 'corda.root-publish'
+    id "org.jetbrains.dokka" version "1.8.20"
 }
 
 apply plugin: 'project-report'
