@@ -1,8 +1,8 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
-apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'maven-publish'
 apply plugin: 'org.jetbrains.dokka'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
     implementation rootProject
@@ -36,10 +36,16 @@ ext {
     archivedApiDocsBaseFilename = 'api-docs'
 }
 
+dokkaHtml {
+    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/html")
+}
+
 dokkaJavadoc {
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
-    archivesBaseName = "api-docs"
-    dokkaSourceSets {
+}
+
+[dokkaHtml, dokkaJavadoc].forEach {
+    it.dokkaSourceSets {
         customSourceSet {
             sourceRoot(file('../core/src/main/kotlin'))
             sourceRoot(file('../client/rpc/src/main/kotlin'))
@@ -65,7 +71,7 @@ dokkaJavadoc {
     }
 }
 
-task apidocs(dependsOn: ['dokkaJavadoc']) {
+task apidocs(dependsOn: ['dokkaHtml', 'dokkaJavadoc']) {
     group "Documentation"
     description "Build API documentation"
 }
@@ -95,4 +101,16 @@ task archiveApiDocs(type: Tar) {
     include 'html/**'
     extension 'tgz'
     compression Compression.GZIP
+}
+
+publishing {
+    publications {
+        if (System.getProperty('publishApiDocs') != null) {
+            archivedApiDocs(MavenPublication) {
+                artifact archiveApiDocs {
+                    artifactId archivedApiDocsBaseFilename
+                }
+            }
+        }
+    }
 }
