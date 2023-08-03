@@ -1,6 +1,5 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
-apply plugin: 'maven-publish'
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'corda.common-publishing'
 
@@ -22,17 +21,6 @@ def internalPackagePrefixes(sourceDirs) {
 }
 
 ext {
-    // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
-    dokkaSourceDirs = files(
-            '../core/src/main/kotlin',
-            '../client/rpc/src/main/kotlin',
-            '../finance/workflows/src/main/kotlin',
-            '../finance/contracts/src/main/kotlin',
-            '../client/jackson/src/main/kotlin',
-            '../testing/test-utils/src/main/kotlin',
-            '../testing/node-driver/src/main/kotlin'
-    )
-    internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
     archivedApiDocsBaseFilename = 'api-docs'
 }
 
