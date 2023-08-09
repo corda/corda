@@ -1,7 +1,6 @@
 @file:Suppress("TooManyFunctions")
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.CordappProvider
@@ -65,13 +64,11 @@ enum class JavaVersion(val versionString: String) {
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests. */
-@DeleteForDJVM
 fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests. */
-@DeleteForDJVM
 fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
     return toLedgerTransactionWithContext(services, serializationContext)
 }

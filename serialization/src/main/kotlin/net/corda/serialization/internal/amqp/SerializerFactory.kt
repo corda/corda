@@ -1,10 +1,8 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.KeepForDJVM
 import java.io.NotSerializableException
 import javax.annotation.concurrent.ThreadSafe
 
-@KeepForDJVM
 class SerializationSchemas(resolveSchema: () -> Pair<Schema, TransformsSchema>) {
         constructor(schema: Schema, transforms: TransformsSchema) : this({ schema to transforms })
 
@@ -26,7 +24,6 @@ class SerializationSchemas(resolveSchema: () -> Pair<Schema, TransformsSchema>) 
  * @property onlyCustomSerializers used for testing, when set will cause the factory to throw a
  * [NotSerializableException] if it cannot find a registered custom serializer for a given type
  */
-@KeepForDJVM
 @ThreadSafe
 interface SerializerFactory : LocalSerializerFactory, RemoteSerializerFactory, CustomSerializerRegistry
 
