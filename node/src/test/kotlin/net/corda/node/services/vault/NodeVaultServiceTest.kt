@@ -664,15 +664,14 @@ class NodeVaultServiceTest {
         database.transaction { vaultService.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(cashState), null)
 
-        val moveTx = database.transaction {
+        database.transaction {
             val moveBuilder = TransactionBuilder(notary).apply {
                 CashUtils.generateSpend(services, this, Amount(1000, GBP), identity, thirdPartyIdentity)
             }
             val moveTx = moveBuilder.toWireTransaction(services)
             vaultService.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
-            moveTx
         }
-        val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null, consumingTxIds = mapOf(cashState.ref to moveTx.id))
+        val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null)
 
         // ensure transaction contract state is persisted in DBStorage
         val signedMoveTx = services.signInitialTransaction(issueBuilder)
@@ -741,7 +740,7 @@ class NodeVaultServiceTest {
 
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(initialCashState), null)
         val expectedNotaryChangeUpdate = Vault.Update(setOf(initialCashState), setOf(cashStateWithNewNotary), null, Vault.UpdateType.NOTARY_CHANGE)
-        val expectedMoveUpdate = Vault.Update(setOf(cashStateWithNewNotary), emptySet(), null, consumingTxIds = mapOf(cashStateWithNewNotary.ref to moveTx.id))
+        val expectedMoveUpdate = Vault.Update(setOf(cashStateWithNewNotary), emptySet(), null)
 
         val observedUpdates = vaultSubscriber.onNextEvents
         assertEquals(observedUpdates, listOf(expectedIssueUpdate, expectedNotaryChangeUpdate, expectedMoveUpdate))
