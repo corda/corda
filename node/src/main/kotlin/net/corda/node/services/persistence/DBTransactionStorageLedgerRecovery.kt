@@ -53,7 +53,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @EmbeddedId
             var compositeKey: PersistentKey,
 
-            @Column(name = "tx_id", length = 144, nullable = false)
+            @Column(name = "transaction_id", length = 144, nullable = false)
             var txId: String,
 
             /** PartyId of flow peer **/
@@ -80,7 +80,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @EmbeddedId
             var compositeKey: PersistentKey,
 
-            @Column(name = "tx_id", length = 144, nullable = false)
+            @Column(name = "transaction_id", length = 144, nullable = false)
             var txId: String,
 
             /** PartyId of flow initiator **/
