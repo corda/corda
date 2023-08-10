@@ -91,6 +91,7 @@ dependencies {
     implementation project(':common-validation')
     implementation project(':common-configuration-parsing')
     implementation project(':common-logging')
+    implementation project(':serialization')
 
     implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.

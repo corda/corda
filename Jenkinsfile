@@ -27,7 +27,7 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-    agent { label 'standard-latest-ami' }
+    agent { label 'standard' }
 
     /*
      * List options in alphabetical order
@@ -74,7 +74,7 @@ pipeline {
             parallel {
                 stage('Another agent') {
                     agent {
-                        label 'standard-latest-ami'
+                        label 'standard'
                     }
                     options {
                         skipDefaultCheckout true

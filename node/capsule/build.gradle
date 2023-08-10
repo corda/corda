@@ -59,7 +59,6 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     with jar
 
     manifest {
-        attributes('Corda-DJVM-Dependencies': cordaResolved.values().collect { it.name }.join(' '))
         attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.net java.base/java.lang java.base/java.time')
     }
 

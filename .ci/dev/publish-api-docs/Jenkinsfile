@@ -15,7 +15,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'standard-latest-ami' }
+    agent { label 'standard' }
     options {
         ansiColor('xterm')
         timestamps()
