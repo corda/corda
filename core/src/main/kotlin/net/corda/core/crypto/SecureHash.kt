@@ -1,11 +1,8 @@
 @file:Suppress("TooManyFunctions", "MagicNumber")
-@file:KeepForDJVM
 package net.corda.core.crypto
 
 import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.CordaInternal
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.internal.utilities.Internable
 import net.corda.core.internal.utilities.PrivateInterner
@@ -22,7 +19,6 @@ import java.util.function.Supplier
  * Container for a cryptographically secure hash value.
  * Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).
  */
-@KeepForDJVM
 @CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
@@ -291,14 +287,12 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Generates a random SHA-256 value.
          */
-        @DeleteForDJVM
         @JvmStatic
         fun randomSHA256() = sha256(secureRandomBytes(32))
 
         /**
          * Generates a random hash value.
          */
-        @DeleteForDJVM
         @JvmStatic
         fun random(algorithm: String): SecureHash {
             return if (algorithm == SHA2_256) {

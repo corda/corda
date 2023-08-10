@@ -241,7 +241,7 @@ class FinalityFlowTests : WithFinality {
     private fun assertTxnRemovedFromDatabase(node: TestStartedNode, stxId: SecureHash) {
         val fromDb = node.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
             ).setParameter("transactionId", stxId.toString()).resultList.map { it }
         }
@@ -446,7 +446,7 @@ class FinalityFlowTests : WithFinality {
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
@@ -456,7 +456,7 @@ class FinalityFlowTests : WithFinality {
     private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): ReceiverDistributionRecord? {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }

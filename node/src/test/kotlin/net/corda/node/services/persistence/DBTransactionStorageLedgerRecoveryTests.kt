@@ -288,7 +288,7 @@ class DBTransactionStorageLedgerRecoveryTests {
     private fun readTransactionFromDB(id: SecureHash): DBTransactionStorage.DBTransaction {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }
@@ -300,7 +300,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         return database.transaction {
             if (id != null)
                 session.createQuery(
-                        "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where tx_id = :transactionId",
+                        "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
                         DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
                 ).setParameter("transactionId", id.toString()).resultList.map { it.toSenderDistributionRecord() }
             else
@@ -314,7 +314,7 @@ class DBTransactionStorageLedgerRecoveryTests {
     private fun readReceiverDistributionRecordFromDB(id: SecureHash): ReceiverDistributionRecord {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where tx_id = :transactionId",
+                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
                     DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList.map { it }
         }

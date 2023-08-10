@@ -69,8 +69,6 @@ buildscript {
     ext.disruptor_version = constants.getProperty("disruptorVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
-    ext.djvm_version = constants.getProperty("djvmVersion")
-    ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = constants.getProperty("okhttpVersion")
     ext.netty_version = constants.getProperty("nettyVersion")
     ext.tcnative_version = constants.getProperty("tcnativeVersion")
@@ -627,7 +625,6 @@ task testReport(type: TestReport) {
     reportOn subprojects*.test
 }
 
-// Build a ZIP of all JARs required to implementation the Cordapp template
 // Note: corda.jar is used at runtime so no runtime ZIP is necessary.
 // Resulting ZIP can be found in "build/distributions"
 task buildCordappDependenciesZip(type: Zip) {
@@ -712,8 +709,4 @@ distributedTesting {
             distribution DistributeTestsBy.METHOD
         }
     }
-
-    ignoredTests = [
-        ':core-deterministic:testing:data:test'
-    ]
 }

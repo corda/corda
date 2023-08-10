@@ -1,6 +1,5 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.Crypto
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -32,7 +31,7 @@ class X509EdDSAEngine : Signature {
     }
 
     override fun engineInitSign(privateKey: PrivateKey) = engine.initSign(privateKey)
-    @DeleteForDJVM
+
     override fun engineInitSign(privateKey: PrivateKey, random: SecureRandom) = engine.initSign(privateKey, random)
 
     override fun engineInitVerify(publicKey: PublicKey) {

@@ -152,9 +152,6 @@ class NodeTabView : Fragment() {
                         }
 
                         separator()
-                        checkbox("Deterministic Contract Verification", nodeController.djvmEnabled).apply {
-                            styleClass += "djvm"
-                        }
                         checkbox("Allow Hibernate to manage app schema", nodeController.allowHibernateToManageAppSchema).apply {
                             styleClass += "hibernate"
                         }

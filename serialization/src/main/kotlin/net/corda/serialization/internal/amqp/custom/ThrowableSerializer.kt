@@ -2,7 +2,6 @@ package net.corda.serialization.internal.amqp.custom
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.*
@@ -10,7 +9,6 @@ import net.corda.serialization.internal.model.LocalConstructorInformation
 import net.corda.serialization.internal.model.LocalTypeInformation
 import java.io.NotSerializableException
 
-@KeepForDJVM
 class ThrowableSerializer(
         factory: LocalSerializerFactory
 ) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(
@@ -111,6 +109,5 @@ class StackTraceElementSerializer(factory: LocalSerializerFactory) : CustomSeria
 
     override fun fromProxy(proxy: StackTraceElementProxy): StackTraceElement = StackTraceElement(proxy.declaringClass, proxy.methodName, proxy.fileName, proxy.lineNumber)
 
-    @KeepForDJVM
     data class StackTraceElementProxy(val declaringClass: String, val methodName: String, val fileName: String?, val lineNumber: Int)
 }

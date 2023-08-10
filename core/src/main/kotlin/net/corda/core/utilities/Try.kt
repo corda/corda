@@ -1,6 +1,5 @@
 package net.corda.core.utilities
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import java.util.function.Consumer
@@ -86,7 +85,6 @@ sealed class Try<out A> {
         return this
     }
 
-    @KeepForDJVM
     data class Success<out A>(val value: A) : Try<A>() {
         override val isSuccess: Boolean get() = true
         override val isFailure: Boolean get() = false
@@ -94,7 +92,6 @@ sealed class Try<out A> {
         override fun toString(): String = "Success($value)"
     }
 
-    @KeepForDJVM
     data class Failure<out A>(val exception: Throwable) : Try<A>() {
         override val isSuccess: Boolean get() = false
         override val isFailure: Boolean get() = true

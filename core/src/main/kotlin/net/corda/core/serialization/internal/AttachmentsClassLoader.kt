@@ -2,7 +2,6 @@ package net.corda.core.serialization.internal
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -477,7 +476,6 @@ interface AttachmentsClassLoaderCache {
     fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext
 }
 
-@DeleteForDJVM
 class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
 
     private class ToBeClosed(

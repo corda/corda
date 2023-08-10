@@ -467,7 +467,6 @@
     <ID>ForbiddenComment:WebServerConfig.kt$WebServerConfig$// TODO: remove this once config format is updated</ID>
     <ID>ForbiddenComment:WebServerConfig.kt$WebServerConfig$// TODO: replace with credentials supplied by a user</ID>
     <ID>ForbiddenComment:WireTransaction.kt$WireTransaction$// TODO: prevent notary field from being set if there are no inputs and no time-window.</ID>
-    <ID>ForbiddenComment:WireTransaction.kt$WireTransaction$// TODO: revisit once Deterministic JVM code updated</ID>
     <ID>ForbiddenComment:X509Utilities.kt$CertificateType.LEGAL_IDENTITY$// TODO: Identity certs should have tight name constraints on child certificates</ID>
     <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test(timeout=300_000) fun rpc_client_certificate_untrusted_to_server()</ID>
     <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test(timeout=300_000) fun rpc_with_no_ssl_on_client_side_and_ssl_on_server_side()</ID>
@@ -1170,7 +1169,6 @@
     <ID>MatchingDeclarationName:ReceiveAllFlowTests.kt$net.corda.coretests.flows.ReceiveAllFlowTests.kt</ID>
     <ID>MatchingDeclarationName:ReferenceInputStateTests.kt$net.corda.coretests.transactions.ReferenceInputStateTests.kt</ID>
     <ID>MatchingDeclarationName:SSLHelper.kt$net.corda.nodeapi.internal.protonwrapper.netty.SSLHelper.kt</ID>
-    <ID>MatchingDeclarationName:SampleData.kt$net.corda.deterministic.verifier.SampleData.kt</ID>
     <ID>MatchingDeclarationName:SerializationHelper.kt$net.corda.networkbuilder.serialization.SerializationHelper.kt</ID>
     <ID>MatchingDeclarationName:SerializationHelper.kt$net.corda.serialization.internal.amqp.SerializationHelper.kt</ID>
     <ID>MatchingDeclarationName:Specification.kt$net.corda.common.configuration.parsing.internal.Specification.kt</ID>
@@ -1388,7 +1386,6 @@
     <ID>ThrowsCount:RPCServer.kt$RPCServer$private fun invokeRpc(context: RpcAuthContext, inMethodName: String, arguments: List&lt;Any?&gt;): Try&lt;Any&gt;</ID>
     <ID>ThrowsCount:ServicesForResolutionImpl.kt$ServicesForResolutionImpl$// We may need to recursively chase transactions if there are notary changes. fun inner(stateRef: StateRef, forContractClassName: String?): Attachment</ID>
     <ID>ThrowsCount:SignedNodeInfo.kt$SignedNodeInfo$// TODO Add root cert param (or TrustAnchor) to make sure all the identities belong to the same root fun verified(): NodeInfo</ID>
-    <ID>ThrowsCount:SignedTransaction.kt$SignedTransaction$@DeleteForDJVM private fun resolveAndCheckNetworkParameters(services: ServiceHub)</ID>
     <ID>ThrowsCount:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$private fun getInitiatedFlowFactory(message: InitialSessionMessage): InitiatedFlowFactory&lt;*&gt;</ID>
     <ID>ThrowsCount:StringToMethodCallParser.kt$StringToMethodCallParser$ @Throws(UnparseableCallException::class) fun parse(target: T?, command: String): ParsedMethodCall</ID>
     <ID>ThrowsCount:StringToMethodCallParser.kt$StringToMethodCallParser$ @Throws(UnparseableCallException::class) fun parseArguments(methodNameHint: String, parameters: List&lt;Pair&lt;String, Type&gt;&gt;, args: String): Array&lt;Any?&gt;</ID>
@@ -1969,7 +1966,6 @@
     <ID>WildcardImport:DBTransactionStorage.kt$import javax.persistence.*</ID>
     <ID>WildcardImport:DBTransactionStorage.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:DBTransactionStorage.kt$import net.corda.nodeapi.internal.persistence.*</ID>
-    <ID>WildcardImport:DeleteForDJVM.kt$import kotlin.annotation.AnnotationTarget.*</ID>
     <ID>WildcardImport:DemoBench.kt$import tornadofx.*</ID>
     <ID>WildcardImport:DemoBenchNodeInfoFilesCopier.kt$import tornadofx.*</ID>
     <ID>WildcardImport:DemoBenchView.kt$import tornadofx.*</ID>
@@ -2326,7 +2322,6 @@
     <ID>WildcardImport:SpringDriver.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:StartedFlowTransition.kt$import net.corda.node.services.statemachine.*</ID>
     <ID>WildcardImport:StatePointerSearchTests.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:StubOutForDJVM.kt$import kotlin.annotation.AnnotationTarget.*</ID>
     <ID>WildcardImport:SubFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:SwapIdentitiesFlowTests.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:TLSAuthenticationTests.kt$import javax.net.ssl.*</ID>

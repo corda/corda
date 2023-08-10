@@ -3,6 +3,7 @@ package net.corda.serialization.internal.model
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.*
 import java.lang.reflect.Type
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A [TypeLoader] obtains local types whose [TypeIdentifier]s will reflect those of remote types.
@@ -20,9 +21,9 @@ interface TypeLoader {
  * A [TypeLoader] that uses the [ClassCarpenter] to build a class matching the supplied [RemoteTypeInformation] if none
  * is visible from the current classloader.
  */
-class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, private val classLoader: ClassLoader): TypeLoader {
+class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, private val classLoader: ClassLoader) : TypeLoader {
 
-    val cache = DefaultCacheProvider.createCache<TypeIdentifier, Type>()
+    val cache = ConcurrentHashMap<TypeIdentifier, Type>()
 
     override fun load(
             remoteTypeInformation: Collection<RemoteTypeInformation>,

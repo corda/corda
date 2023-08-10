@@ -231,6 +231,7 @@ class NodeVaultService(
                     if (stateStatus != Vault.StateStatus.CONSUMED) {
                         stateStatus = Vault.StateStatus.CONSUMED
                         consumedTime = clock.instant()
+                        consumingTxId = update.consumingTxIds[stateRef]?.toString()
                         // remove lock (if held)
                         if (lockId != null) {
                             lockId = null
@@ -370,8 +371,8 @@ class NodeVaultService(
                     }
                 }
             }
-
-            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet())
+            val consumedTxIds = consumedStates.associate { Pair(it.ref, tx.id) }
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet(), consumingTxIds = consumedTxIds)
         }
 
         fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {

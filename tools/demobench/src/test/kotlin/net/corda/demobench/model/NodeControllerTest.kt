@@ -11,7 +11,7 @@ import kotlin.test.*
 class NodeControllerTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
-    private val controller = NodeController(false) { _, _ -> }
+    private val controller = NodeController { _, _ -> }
     private val node1Name = "Organisation 1"
     private val organisation2Name = "Organisation 2"
 
@@ -70,7 +70,6 @@ class NodeControllerTest {
 
         val wrapper = controller.validate(data) ?: fail("No wrapped configuration!")
         val systemProperties = wrapper.nodeConfig.systemProperties
-        assertFalse(systemProperties["net.corda.djvm"] as Boolean)
         assertFalse(systemProperties["co.paralleluniverse.fibers.verifyInstrumentation"] as Boolean)
     }
 

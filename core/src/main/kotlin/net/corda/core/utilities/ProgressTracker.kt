@@ -1,6 +1,5 @@
 package net.corda.core.utilities
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.warnOnce
 import net.corda.core.serialization.CordaSerializable
@@ -34,7 +33,6 @@ import java.util.*
  * using the [Observable] subscribeOn call.
  */
 @CordaSerializable
-@DeleteForDJVM
 class ProgressTracker(vararg inputSteps: Step) {
 
     private companion object {
@@ -44,7 +42,6 @@ class ProgressTracker(vararg inputSteps: Step) {
     internal fun interface SerializableAction<T>: Action1<T>, Serializable
 
     @CordaSerializable
-    @DeleteForDJVM
     sealed class Change(val progressTracker: ProgressTracker) {
         data class Position(val tracker: ProgressTracker, val newStep: Step) : Change(tracker) {
             override fun toString() = newStep.label
@@ -91,17 +88,14 @@ class ProgressTracker(vararg inputSteps: Step) {
     }
 
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.
-    @DeleteForDJVM
     object UNSTARTED : Step("Unstarted") {
         override fun equals(other: Any?) = other === UNSTARTED
     }
 
-    @DeleteForDJVM
     object STARTING : Step("Starting") {
         override fun equals(other: Any?) = other === STARTING
     }
 
-    @DeleteForDJVM
     object DONE : Step("Done") {
         override fun equals(other: Any?) = other === DONE
     }
