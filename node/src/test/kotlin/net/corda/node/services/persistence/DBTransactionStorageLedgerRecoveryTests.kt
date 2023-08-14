@@ -140,12 +140,12 @@ class DBTransactionStorageLedgerRecoveryTests {
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.SENDER).let {
             assertEquals(1, it.size)
-            assertEquals(BOB_NAME.hashCode().toLong(), it.senderRecords[0].receiverPartyId)
+            assertEquals(BOB_NAME.hashCode().toLong(), it.senderRecords[0].compositeKey.receiverPartyId)
             assertEquals(ALL_VISIBLE, it.senderRecords[0].statesToRecord)
         }
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.RECEIVER).let {
             assertEquals(1, it.size)
-            assertEquals(BOB_NAME.hashCode().toLong(), it.receiverRecords[0].senderPartyId)
+            assertEquals(BOB_NAME.hashCode().toLong(), it.receiverRecords[0].compositeKey.senderPartyId)
             assertEquals(ALL_VISIBLE, (transactionRecovery.decrypt(it.receiverRecords[0].distributionList).peerHashToStatesToRecord.map { it.value }[0]))
         }
         val resultsAll = transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.ALL)
