@@ -22,7 +22,6 @@ import java.io.DataOutputStream
 import java.io.Serializable
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import javax.persistence.Column
 import javax.persistence.Embeddable
 import javax.persistence.EmbeddedId
