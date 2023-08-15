@@ -10,7 +10,8 @@ import net.corda.core.utilities.ProgressTracker
 import java.time.Instant
 
 /**
- * TWO_PHASE_FINALITY Recovery Flow (available in Enterprise only)
+ * TWO_PHASE_FINALITY Recovery Flow
+ * This flow is exposed via the Core API for use by any CorDapp but its implementation is available in Enterprise only.
  */
 @StartableByRPC
 @InitiatingFlow
