@@ -12,16 +12,16 @@
 
     <changeSet author="R3.Corda" id="create_sender_distribution_records_table">
         <createTable tableName="node_sender_distribution_records">
-            <column name="sequence_number" type="BIGINT">
+            <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="timestamp" type="TIMESTAMP">
+            <column name="timestamp_discriminator" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="transaction_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
-            <column name="receiver_party_id" type="BIGINT">
+            <column name="peer_party_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="states_to_record" type="INT">
@@ -31,52 +31,33 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_sender_distribution_records_pkey">
-        <addPrimaryKey columnNames="timestamp, sequence_number" constraintName="node_sender_distribution_records_pkey"
+        <addPrimaryKey columnNames="peer_party_id, timestamp, timestamp_discriminator" constraintName="node_sender_distribution_records_pkey"
                        tableName="node_sender_distribution_records"/>
-    </changeSet>
-
-    <changeSet author="R3.Corda" id="node_sender_distribution_records_idx">
-        <createIndex indexName="node_sender_distribution_records_idx" tableName="node_sender_distribution_records">
-            <column name="timestamp"/>
-            <column name="sequence_number"/>
-            <column name="receiver_party_id"/>
-        </createIndex>
     </changeSet>
 
     <changeSet author="R3.Corda" id="create_receiver_distribution_records_table">
         <createTable tableName="node_receiver_distribution_records">
-            <column name="sequence_number" type="BIGINT">
+            <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="timestamp" type="TIMESTAMP">
+            <column name="timestamp_discriminator" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="transaction_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
-            <column name="sender_party_id" type="BIGINT">
+            <column name="peer_party_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="distribution_list" type="BLOB">
-                <constraints nullable="false"/>
-            </column>
-            <column name="receiver_states_to_record" type="INT">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_receiver_distribution_records_pkey">
-        <addPrimaryKey columnNames="timestamp, sequence_number" constraintName="node_receiver_distribution_records_pkey"
+        <addPrimaryKey columnNames="peer_party_id, timestamp, timestamp_discriminator" constraintName="node_receiver_distribution_records_pkey"
                        tableName="node_receiver_distribution_records"/>
-    </changeSet>
-
-    <changeSet author="R3.Corda" id="node_receiver_distribution_records_idx">
-        <createIndex indexName="node_receiver_distribution_records_idx" tableName="node_receiver_distribution_records">
-            <column name="timestamp"/>
-            <column name="sequence_number"/>
-            <column name="sender_party_id"/>
-        </createIndex>
     </changeSet>
 
     <changeSet author="R3.Corda" id="create_recovery_party_info_table">
@@ -94,15 +75,15 @@
         <addPrimaryKey columnNames="party_id" constraintName="node_recovery_party_info_pkey" tableName="node_recovery_party_info"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="FK__sender_distribution_records__receiver_party_id">
-        <addForeignKeyConstraint baseColumnNames="receiver_party_id" baseTableName="node_sender_distribution_records"
-                                 constraintName="FK__sender_distribution_records__receiver_party_id"
+    <changeSet author="R3.Corda" id="FK__sender_distribution_records__peer_party_id">
+        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_sender_distribution_records"
+                                 constraintName="FK__sender_distribution_records__peer_party_id"
                                  referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="FK__receiver_distribution_records__initiator_party_id">
-        <addForeignKeyConstraint baseColumnNames="sender_party_id" baseTableName="node_receiver_distribution_records"
-                                 constraintName="FK__receiver_distribution_records__initiator_party_id"
+    <changeSet author="R3.Corda" id="FK__receiver_distribution_records__peer_party_id">
+        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_receiver_distribution_records"
+                                 constraintName="FK__receiver_distribution_records__peer_party_id"
                                  referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
     </changeSet>
 
