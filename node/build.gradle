@@ -20,11 +20,6 @@ ext {
     jolokia_version = constants.getProperty('jolokiaAgentVersion')
 }
 
-evaluationDependsOn(':core-deterministic')
-evaluationDependsOn(':serialization-deterministic')
-evaluationDependsOn(':serialization-djvm:deserializers')
-evaluationDependsOn(':node:djvm')
-
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -32,9 +27,6 @@ configurations {
     
     slowIntegrationTestCompile.extendsFrom testCompile
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-
-    jdkRt
-    deterministic
 }
 
 sourceSets {
@@ -150,19 +142,6 @@ dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 
-    // Sandbox for deterministic contract verification
-    compile "net.corda.djvm:corda-djvm:$djvm_version"
-    compile project(':serialization-djvm')
-    compile(project(':node:djvm')) {
-        transitive = false
-    }
-    jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
-    deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
-    deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
-    deterministic project(':serialization-djvm:deserializers')
-    deterministic project(':node:djvm')
-    deterministic "org.slf4j:slf4j-nop:$slf4j_version"
-
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
@@ -265,8 +244,6 @@ tasks.withType(Test).configureEach {
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         jvmArgs '-Djdk.attach.allowAttachSelf=true'
     }
-    systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
-    systemProperty 'deterministic-sources.path', configurations.deterministic.asPath
 }
 
 tasks.register('integrationTest', Test) {
@@ -284,7 +261,6 @@ tasks.register('slowIntegrationTest', Test) {
 // quasar exclusions upon agent code instrumentation at run-time
 quasar {
     excludeClassLoaders.addAll(
-            'net.corda.djvm.**',
             'net.corda.core.serialization.internal.**'
     )
     excludePackages.addAll(
@@ -295,12 +271,10 @@ quasar {
             "com.google.**",
             "com.lmax.**",
             "com.zaxxer.**",
-            "djvm**",
             "net.bytebuddy**",
             "io.github.classgraph**",
             "io.netty*",
             "liquibase**",
-            "net.corda.djvm**",
             "net.i2p.crypto.**",
             "nonapi.io.github.classgraph.**",
             "org.apiguardian.**",
@@ -319,15 +293,6 @@ quasar {
 
 jar {
     baseName 'corda-node'
-    exclude 'sandbox/java/**'
-    exclude 'sandbox/org/**'
-    exclude 'sandbox/net/corda/core/crypto/SecureHash.class'
-    exclude 'sandbox/net/corda/core/crypto/SignatureScheme.class'
-    exclude 'sandbox/net/corda/core/crypto/TransactionSignature.class'
-    manifest {
-        attributes('Corda-Deterministic-Runtime': configurations.jdkRt.singleFile.name)
-        attributes('Corda-Deterministic-Classpath': configurations.deterministic.collect { it.name }.join(' '))
-    }
 }
 
 publish {

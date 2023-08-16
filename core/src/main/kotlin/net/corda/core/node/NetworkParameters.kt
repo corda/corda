@@ -1,7 +1,6 @@
 package net.corda.core.node
 
 import net.corda.core.CordaRuntimeException
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.noPackageOverlap
@@ -44,7 +43,6 @@ import java.util.Collections.unmodifiableMap
  * it can be used. This can be overridden in the node configuration or if a more recent database backup is indicated via RPC / shell. It is
  * optional in both the network parameters and the node configuration and if no value is set for either then it is assumed to be zero.
  */
-@KeepForDJVM
 @CordaSerializable
 @Suppress("LongParameterList")
 data class NetworkParameters(
@@ -284,7 +282,6 @@ private inline fun <K, V> unmodifiable(map: Map<K, V>, transform: (Map.Entry<K, 
  * @property identity Identity of the notary (note that it can be an identity of the distributed node).
  * @property validating Indicates if the notary is validating.
  */
-@KeepForDJVM
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)
 

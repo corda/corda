@@ -1,13 +1,11 @@
 package net.corda.serialization.internal
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 
-@KeepForDJVM
 data class CheckpointSerializationContextImpl @JvmOverloads constructor(
                                                               override val deserializationClassLoader: ClassLoader,
                                                               override val whitelist: ClassWhitelist,

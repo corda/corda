@@ -1,9 +1,6 @@
 @file:JvmName("ByteArrays")
-@file:KeepForDJVM
-
 package net.corda.core.utilities
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.io.OutputStream
@@ -19,7 +16,6 @@ import java.nio.ByteBuffer
  * @property offset The start position of the sequence within the byte array.
  * @property size The number of bytes this sequence represents.
  */
-@KeepForDJVM
 sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val size: Int) : Comparable<ByteSequence> {
     /**
      * The underlying bytes.  Some implementations may choose to make a copy of the underlying [ByteArray] for
@@ -148,7 +144,6 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
  * In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
  * functionality to Java, but it won't arrive for a few years yet!
  */
-@KeepForDJVM
 @CordaSerializable
 open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes, 0, bytes.size) {
     companion object {
@@ -242,7 +237,6 @@ private fun parseHexBinary(s: String): ByteArray {
 /**
  * Class is public for serialization purposes.
  */
-@KeepForDJVM
 class OpaqueBytesSubSequence(override val bytes: ByteArray, offset: Int, size: Int) : ByteSequence(bytes, offset, size) {
     init {
         require(offset >= 0 && offset < bytes.size) { "Offset must be greater than or equal to 0, and less than the size of the backing array" }

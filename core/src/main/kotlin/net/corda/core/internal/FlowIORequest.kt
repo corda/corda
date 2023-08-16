@@ -1,6 +1,5 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowSession
@@ -13,7 +12,6 @@ import java.time.Instant
 /**
  * A [FlowIORequest] represents an IO request of a flow when it suspends. It is persisted in checkpoints.
  */
-@DeleteForDJVM
 sealed class FlowIORequest<out R : Any> {
     /**
      * Send messages to sessions.
