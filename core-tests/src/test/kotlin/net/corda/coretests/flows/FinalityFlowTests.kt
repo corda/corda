@@ -356,12 +356,11 @@ class FinalityFlowTests : WithFinality {
 
         getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
         getReceiverRecoveryData(stx.id, bobNode.database).apply {
-            assertEquals(StatesToRecord.ALL_VISIBLE, this?.statesToRecord)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
         }
@@ -389,12 +388,10 @@ class FinalityFlowTests : WithFinality {
             assertEquals(2, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this[1].statesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, this[1].statesToRecord)
             assertEquals(CHARLIE_NAME.hashCode().toLong(), this[1].peerPartyId)
         }
         getReceiverRecoveryData(stx.id, bobNode.database).apply {
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
@@ -436,8 +433,6 @@ class FinalityFlowTests : WithFinality {
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
         getReceiverRecoveryData(stx.id, bobNode.database).apply {
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
         }
