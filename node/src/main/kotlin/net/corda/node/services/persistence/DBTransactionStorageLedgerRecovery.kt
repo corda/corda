@@ -1,6 +1,7 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.DistributionList.SenderDistributionList
 import net.corda.core.flows.RecoveryTimeWindow
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
@@ -139,21 +140,22 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     override fun addSenderTransactionRecoveryMetadata(txId: SecureHash, metadata: TransactionMetadata): ByteArray {
         return database.transaction {
             val senderRecordingTimestamp = clock.instant()
-            for (peer in metadata.distributionList.peersToStatesToRecord.keys) {
+            val distributionList = metadata.distributionList as? SenderDistributionList ?: throw IllegalStateException("Expecting SenderDistributionList")
+            for (peer in distributionList.peersToStatesToRecord.keys) {
                 val senderDistributionRecord = DBSenderDistributionRecord(
                         PersistentKey(Key(senderRecordingTimestamp)),
                         txId.toString(),
                         partyInfoCache.getPartyIdByCordaX500Name(peer),
-                        metadata.distributionList.senderStatesToRecord
+                        distributionList.senderStatesToRecord
                 )
                 session.save(senderDistributionRecord)
             }
 
-            val hashedPeersToStatesToRecord = metadata.distributionList.peersToStatesToRecord.mapKeys { (peer) ->
+            val hashedPeersToStatesToRecord = distributionList.peersToStatesToRecord.mapKeys { (peer) ->
                 partyInfoCache.getPartyIdByCordaX500Name(peer)
             }
             val hashedDistributionList = HashedDistributionList(
-                    metadata.distributionList.senderStatesToRecord,
+                    distributionList.senderStatesToRecord,
                     hashedPeersToStatesToRecord,
                     HashedDistributionList.PublicHeader(senderRecordingTimestamp)
             )

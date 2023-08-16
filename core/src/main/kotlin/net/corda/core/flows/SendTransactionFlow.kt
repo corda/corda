@@ -23,6 +23,7 @@ import kotlin.collections.map
 import kotlin.collections.mutableSetOf
 import kotlin.collections.plus
 import kotlin.collections.toSet
+import net.corda.core.flows.DistributionList.SenderDistributionList
 
 /**
  * In the words of Matt working code is more important then pretty code. This class that contains code that may
@@ -98,9 +99,9 @@ open class SendTransactionFlow(val stx: SignedTransaction,
         fun makeMetaData(stx: SignedTransaction, recordMetaDataEvenIfNotFullySigned: Boolean, senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata? {
             return if (recordMetaDataEvenIfNotFullySigned || isFullySigned(stx))
                 TransactionMetadata(DUMMY_PARTICIPANT_NAME,
-                    DistributionList(senderStatesToRecord,
-                            (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
-                                    (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE}).toMap()))
+                        SenderDistributionList(senderStatesToRecord,
+                                (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT }).toMap() +
+                                        (observerSessions.map { it.counterparty.name to StatesToRecord.ALL_VISIBLE }).toMap()))
             else null
         }
 

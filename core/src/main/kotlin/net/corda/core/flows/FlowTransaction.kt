@@ -23,15 +23,25 @@ data class FlowTransactionInfo(
 
 @CordaSerializable
 data class TransactionMetadata(
-    val initiator: CordaX500Name,
-    val distributionList: DistributionList
+        val initiator: CordaX500Name,
+        val distributionList: DistributionList
 )
 
 @CordaSerializable
-data class DistributionList(
-    val senderStatesToRecord: StatesToRecord,
-    val peersToStatesToRecord: Map<CordaX500Name, StatesToRecord>
-)
+sealed class DistributionList {
+
+    @CordaSerializable
+    data class SenderDistributionList(
+            val senderStatesToRecord: StatesToRecord,
+            val peersToStatesToRecord: Map<CordaX500Name, StatesToRecord>
+    ) : DistributionList()
+
+    @CordaSerializable
+    data class ReceiverDistributionList(
+            val opaqueData: ByteArray,  // decipherable only by sender
+            val receiverStatesToRecord: StatesToRecord  // inferred or actual
+    ) : DistributionList()
+}
 
 @CordaSerializable
 enum class TransactionStatus {
