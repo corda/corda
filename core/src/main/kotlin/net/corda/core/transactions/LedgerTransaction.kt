@@ -1,8 +1,6 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
-import net.corda.core.KeepForDJVM
-import net.corda.core.StubOutForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
@@ -61,7 +59,6 @@ import java.util.function.Supplier
  * [LedgerTransaction]s should never be instantiated directly from client code, but rather via WireTransaction.toLedgerTransaction
  */
 @Suppress("LongParameterList")
-@KeepForDJVM
 class LedgerTransaction
 private constructor(
         // DOCSTART 1
@@ -125,7 +122,6 @@ private constructor(
             networkParameters, references, componentGroups, serializedInputs, serializedReferences,
             isAttachmentTrusted, verifierFactory, attachmentsClassLoaderCache, DigestService.sha2_256)
 
-    @KeepForDJVM
     companion object {
         private val logger = contextLogger()
 
@@ -183,8 +179,8 @@ private constructor(
 
         /**
          * This factory function will create an instance of [LedgerTransaction]
-         * that will be used for contract verification. See [BasicVerifier] and
-         * [DeterministicVerifier][net.corda.node.internal.djvm.DeterministicVerifier].
+         * that will be used for contract verification.
+         * @see BasicVerifier
          */
         @CordaInternal
         fun createForContractVerify(
@@ -323,18 +319,13 @@ private constructor(
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method would not be accurate.")
             // Roll the dice - we're probably in flow context if we got here at all, which means we can fish the current params out.
-            try {
-                params = getParamsFromFlowLogic()
-            } catch (e: UnsupportedOperationException) {
-                // Inside DJVM, ignore.
-            }
+            params = getParamsFromFlowLogic()
             if (params == null)
                 throw UnsupportedOperationException("Cannot verify a LedgerTransaction created using deprecated constructors outside of flow context.")
         }
         return params
     }
 
-    @StubOutForDJVM
     private fun getParamsFromFlowLogic(): NetworkParameters? {
         return FlowLogic.currentTopLevel?.serviceHub?.networkParameters
     }
@@ -398,7 +389,6 @@ private constructor(
      * be used to simplify this logic.
      */
     // DOCSTART 3
-    @KeepForDJVM
     data class InOutGroup<out T : ContractState, out K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
     // DOCEND 3
 

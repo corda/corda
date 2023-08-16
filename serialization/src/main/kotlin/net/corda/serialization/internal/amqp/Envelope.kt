@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.KeepForDJVM
 import org.apache.qpid.proton.ProtonException
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.Data
@@ -15,7 +14,6 @@ import java.nio.ByteBuffer
  * internal utilities to decompose and recompose with/without schema etc so that e.g. we can store objects with a
  * (relationally) normalised out schema to avoid excessive duplication.
  */
-@KeepForDJVM
 class Envelope(val obj: Any?, resolveSchema: () -> Pair<Schema, TransformsSchema>) : DescribedType {
 
     val resolvedSchema: Pair<Schema, TransformsSchema> by lazy(resolveSchema)

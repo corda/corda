@@ -94,7 +94,7 @@ class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Pair<String, 
                         rs.getString(4)   // TransactionStatus
                     }
                 }
-        val receiverPartyId = serviceHub.jdbcSession().prepareStatement("select * from node_sender_distribution_records where tx_id = ?")
+        val receiverPartyId = serviceHub.jdbcSession().prepareStatement("select * from node_sender_distribution_records where transaction_id = ?")
                 .apply { setString(1, txId.toString()) }
                 .use { ps ->
                     ps.executeQuery().use { rs ->

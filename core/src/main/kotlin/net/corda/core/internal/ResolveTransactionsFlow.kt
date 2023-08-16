@@ -1,7 +1,6 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -16,7 +15,6 @@ import net.corda.core.utilities.trace
  * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
  * Each retrieved transaction is validated and inserted into the local transaction storage.
  */
-@DeleteForDJVM
 class ResolveTransactionsFlow private constructor(
         val initialTx: SignedTransaction?,
         val txHashes: Set<SecureHash>,

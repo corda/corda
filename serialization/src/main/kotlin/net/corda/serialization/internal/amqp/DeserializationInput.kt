@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LazyPool
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
@@ -37,7 +36,6 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-@KeepForDJVM
 class DeserializationInput constructor(
         private val serializerFactory: SerializerFactory
 ) {

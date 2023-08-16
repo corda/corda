@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp.custom
 
-import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Year
@@ -19,6 +18,5 @@ class YearSerializer(
 
     override fun fromProxy(proxy: YearProxy): Year = Year.of(proxy.year)
 
-    @KeepForDJVM
     data class YearProxy(val year: Int)
 }

@@ -1,7 +1,6 @@
 package net.corda.core.identity
 
 import net.corda.core.CordaInternal
-import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.toAttributesMap
 import net.corda.core.internal.toX500Name
@@ -30,7 +29,6 @@ import javax.security.auth.x500.X500Principal
  * attribute type.
  */
 @CordaSerializable
-@KeepForDJVM
 data class CordaX500Name(val commonName: String?,
                          val organisationUnit: String?,
                          val organisation: String,

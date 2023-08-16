@@ -1,7 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.KeepForDJVM
-import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -19,7 +17,6 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 /**
  * Serialization / deserialization of certain supported [Map] types.
  */
-@KeepForDJVM
 class MapSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
 
@@ -150,11 +147,6 @@ private fun Class<*>.checkHashMap() {
     }
 }
 
-/**
- * The [WeakHashMap] class does not exist within the DJVM, and so we need
- * to isolate this reference.
- */
-@StubOutForDJVM
 private fun Class<*>.checkWeakHashMap() {
     if (WeakHashMap::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException("Weak references with map types not supported. Suggested fix: "

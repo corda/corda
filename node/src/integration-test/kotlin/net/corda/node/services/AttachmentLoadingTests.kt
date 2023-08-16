@@ -45,7 +45,7 @@ class AttachmentLoadingTests {
     }
 
     @Test(timeout=300_000)
-	fun `contracts downloaded from the network are not executed without the DJVM`() {
+	fun `contracts downloaded from the network are not executed`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),

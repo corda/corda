@@ -75,9 +75,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.minutes
-import net.corda.djvm.source.ApiSource
-import net.corda.djvm.source.EmptyApi
-import net.corda.djvm.source.UserSource
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.attachments.AttachmentTrustInfoRPCOpsImpl
@@ -144,10 +141,7 @@ import net.corda.node.services.statemachine.FlowOperator
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.BasicVerifierFactoryService
-import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.VerifierFactoryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
@@ -212,8 +206,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                protected val flowManager: FlowManager,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
-                               djvmBootstrapSource: ApiSource = EmptyApi,
-                               djvmCordaSource: UserSource? = null,
                                protected val allowHibernateToManageAppSchema: Boolean = false,
                                private val allowAppSchemaUpgradeWithCheckpoints: Boolean = false) : SingletonSerializeAsToken() {
 
@@ -323,18 +315,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         cordappProvider = cordappProvider,
         attachments = attachments
     ).tokenize()
-    val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
-        DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {
-            log.info("DJVM sandbox enabled for deterministic contract verification.")
-            if (!configuration.devMode) {
-                log.info("Generating Corda classes for DJVM sandbox.")
-                generateSandbox()
-            }
-            tokenize()
-        }
-    } else {
-        BasicVerifierFactoryService()
-    }
     private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
@@ -1321,8 +1301,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
-            val ledgerTransaction = servicesForResolution.specialise(ltx)
-            return verifierFactoryService.apply(ledgerTransaction)
+            return servicesForResolution.specialise(ltx)
         }
 
         override fun onNewNetworkParameters(networkParameters: NetworkParameters) {

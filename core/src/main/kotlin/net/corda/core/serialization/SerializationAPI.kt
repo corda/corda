@@ -1,9 +1,7 @@
-@file:KeepForDJVM
+
 package net.corda.core.serialization
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.serialization.internal.effectiveSerializationEnv
@@ -118,7 +116,6 @@ interface SerializationEncoding
 /**
  * Parameters to serialization and deserialization.
  */
-@KeepForDJVM
 @DoNotImplement
 interface SerializationContext {
     /**
@@ -254,7 +251,6 @@ interface SerializationContext {
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
-    @KeepForDJVM
     enum class UseCase {
         P2P,
         RPCServer,
@@ -269,7 +265,6 @@ interface SerializationContext {
  * others being set that aren't keyed on this enumeration, but for general use properties adding a
  * well known key here is preferred.
  */
-@KeepForDJVM
 enum class ContextPropertyKeys {
     SERIALIZERS
 }
@@ -277,13 +272,12 @@ enum class ContextPropertyKeys {
 /**
  * Global singletons to be used as defaults that are injected elsewhere (generally, in the node or in RPC client).
  */
-@KeepForDJVM
 object SerializationDefaults {
     val SERIALIZATION_FACTORY get() = effectiveSerializationEnv.serializationFactory
     val P2P_CONTEXT get() = effectiveSerializationEnv.p2pContext
-    @DeleteForDJVM val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
-    @DeleteForDJVM val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext
-    @DeleteForDJVM val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
+    val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
+    val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext
+    val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
 }
 
 /**
@@ -323,7 +317,6 @@ inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: Seriali
 /**
  * Convenience extension method for deserializing a JDBC Blob, utilising the defaults.
  */
-@DeleteForDJVM
 inline fun <reified T : Any> Blob.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
                                               context: SerializationContext = serializationFactory.defaultContext): T {
     return this.getBytes(1, this.length().toInt()).deserialize(serializationFactory, context)
@@ -342,7 +335,6 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  * to get the original object back.
  */
 @Suppress("unused")
-@KeepForDJVM
 @CordaSerializable
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     companion object {
@@ -362,12 +354,10 @@ class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     val hash: SecureHash by lazy { bytes.sha256() }
 }
 
-@KeepForDJVM
 interface ClassWhitelist {
     fun hasListed(type: Class<*>): Boolean
 }
 
-@KeepForDJVM
 @DoNotImplement
 interface EncodingWhitelist {
     fun acceptEncoding(encoding: SerializationEncoding): Boolean

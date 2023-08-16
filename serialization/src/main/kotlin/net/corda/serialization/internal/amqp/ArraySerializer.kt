@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -14,7 +13,6 @@ import java.lang.reflect.Type
 /**
  * Serialization / deserialization of arrays.
  */
-@KeepForDJVM
 open class ArraySerializer(override val type: Type, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     companion object {
         fun make(type: Type, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
