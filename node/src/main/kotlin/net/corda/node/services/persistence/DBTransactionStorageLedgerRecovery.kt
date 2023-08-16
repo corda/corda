@@ -6,7 +6,6 @@ import net.corda.core.flows.RecoveryTimeWindow
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
@@ -164,31 +163,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
         }
     }
 
-    fun createReceiverTransactionRecoverMetadata(txId: SecureHash,
-                                                 senderPartyId: Long,
-                                                 senderStatesToRecord: StatesToRecord,
-                                                 senderRecords: List<DBSenderDistributionRecord>): List<DBReceiverDistributionRecord> {
-        val senderRecordsByTimestampKey = senderRecords.groupBy { TimestampKey(it.compositeKey.timestamp, it.compositeKey.timestampDiscriminator) }
-        return senderRecordsByTimestampKey.map {
-            val hashedDistributionList = HashedDistributionList(
-                    senderStatesToRecord = senderStatesToRecord,
-                    peerHashToStatesToRecord = senderRecords.map { it.compositeKey.peerPartyId to it.statesToRecord }.toMap(),
-                    senderRecordedTimestamp = it.key.timestamp
-            )
-            DBReceiverDistributionRecord(
-                    compositeKey = PersistentKey(Key(TimestampKey(it.key.timestamp, it.key.timestampDiscriminator), senderPartyId)),
-                    txId = txId.toString(),
-                    distributionList = cryptoService.encrypt(hashedDistributionList.serialize())
-            )
-        }
-    }
-
-    fun addSenderTransactionRecoveryMetadata(record: DBSenderDistributionRecord) {
-        return database.transaction {
-            session.save(record)
-        }
-    }
-
     override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
                                                         sender: CordaX500Name,
                                                         receiver: CordaX500Name,
@@ -203,12 +177,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                     receiverStatesToRecord
             )
             session.save(receiverDistributionRecord)
-        }
-    }
-
-    fun addReceiverTransactionRecoveryMetadata(record: DBReceiverDistributionRecord) {
-        return database.transaction {
-            session.save(record)
         }
     }
 
@@ -281,20 +249,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                         }
                 criteriaQuery.orderBy(orderCriteria)
             }
-            session.createQuery(criteriaQuery).stream().use { results ->
-                results.map { it.toSenderDistributionRecord() }.toList()
-            }
-        }
-    }
-
-    fun querySenderDistributionRecordsByTxId(txId: SecureHash): List<DBSenderDistributionRecord> {
-        return database.transaction {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(DBSenderDistributionRecord::class.java)
-            val txnMetadata = criteriaQuery.from(DBSenderDistributionRecord::class.java)
-            criteriaQuery.where(criteriaBuilder.equal(txnMetadata.get<String>(DBSenderDistributionRecord::txId.name), txId.toString()))
-            val results = session.createQuery(criteriaQuery).stream()
-            results.toList()
+            session.createQuery(criteriaQuery).stream().toList()
         }
     }
 
@@ -331,9 +286,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                         }
                 criteriaQuery.orderBy(orderCriteria)
             }
-            session.createQuery(criteriaQuery).stream().use { results ->
-                results.map { it.toReceiverDistributionRecord(encryptionService) }.toList()
-            }
+            session.createQuery(criteriaQuery).stream().toList()
         }
     }
 }

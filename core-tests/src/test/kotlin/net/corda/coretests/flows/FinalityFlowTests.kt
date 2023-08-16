@@ -359,7 +359,6 @@ class FinalityFlowTests : WithFinality {
         }
         getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ALL_VISIBLE, this?.statesToRecord)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
         }
@@ -392,7 +391,6 @@ class FinalityFlowTests : WithFinality {
         }
         getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
@@ -435,7 +433,6 @@ class FinalityFlowTests : WithFinality {
         }
         getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.senderStatesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
         }
