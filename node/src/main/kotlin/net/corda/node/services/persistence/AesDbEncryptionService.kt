@@ -100,7 +100,7 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
 
     override fun extractUnauthenticatedAdditionalData(ciphertext: ByteArray): ByteArray? {
         val buffer = wrap(ciphertext)
-        buffer.position(UUID_BYTES)
+        buffer.position(buffer.position() + UUID_BYTES)
         return buffer.getAdditionaData()
     }
 
