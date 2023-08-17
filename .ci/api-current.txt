@@ -2542,14 +2542,36 @@ public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.F
 public interface net.corda.core.flows.Destination
 ##
 @CordaSerializable
-public final class net.corda.core.flows.DistributionList extends java.lang.Object
+public abstract class net.corda.core.flows.DistributionList extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+##
+@CordaSerializable
+public static final class net.corda.core.flows.DistributionList$ReceiverDistributionList extends net.corda.core.flows.DistributionList
+  public <init>(byte[], net.corda.core.node.StatesToRecord)
+  @NotNull
+  public final byte[] component1()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord component2()
+  @NotNull
+  public final net.corda.core.flows.DistributionList$ReceiverDistributionList copy(byte[], net.corda.core.node.StatesToRecord)
+  public boolean equals(Object)
+  @NotNull
+  public final byte[] getOpaqueData()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord getReceiverStatesToRecord()
+  public int hashCode()
+  @NotNull
+  public String toString()
+##
+@CordaSerializable
+public static final class net.corda.core.flows.DistributionList$SenderDistributionList extends net.corda.core.flows.DistributionList
   public <init>(net.corda.core.node.StatesToRecord, java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
   @NotNull
   public final net.corda.core.node.StatesToRecord component1()
   @NotNull
   public final java.util.Map<net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord> component2()
   @NotNull
-  public final net.corda.core.flows.DistributionList copy(net.corda.core.node.StatesToRecord, java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
+  public final net.corda.core.flows.DistributionList$SenderDistributionList copy(net.corda.core.node.StatesToRecord, java.util.Map<net.corda.core.identity.CordaX500Name, ? extends net.corda.core.node.StatesToRecord>)
   public boolean equals(Object)
   @NotNull
   public final java.util.Map<net.corda.core.identity.CordaX500Name, net.corda.core.node.StatesToRecord> getPeersToStatesToRecord()

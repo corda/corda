@@ -142,15 +142,13 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val senderRecordingTimestamp = clock.instant()
             val timeDiscriminator = Key.nextDiscriminatorNumber.andIncrement
             val distributionList = metadata.distributionList as? SenderDistributionList ?: throw IllegalStateException("Expecting SenderDistributionList")
-            for (peer in distributionList.peersToStatesToRecord.keys) {
+            distributionList.peersToStatesToRecord.map { (peerCordaX500Name, peerStatesToRecord) ->
                 val senderDistributionRecord = DBSenderDistributionRecord(
-                        PersistentKey(Key(TimestampKey(senderRecordingTimestamp, timeDiscriminator), partyInfoCache.getPartyIdByCordaX500Name(peer))),
+                        PersistentKey(Key(TimestampKey(senderRecordingTimestamp, timeDiscriminator), partyInfoCache.getPartyIdByCordaX500Name(peerCordaX500Name))),
                         txId.toString(),
-                        distributionList.senderStatesToRecord
-                )
+                        peerStatesToRecord)
                 session.save(senderDistributionRecord)
             }
-
             val hashedPeersToStatesToRecord = distributionList.peersToStatesToRecord.mapKeys { (peer) ->
                 partyInfoCache.getPartyIdByCordaX500Name(peer)
             }
