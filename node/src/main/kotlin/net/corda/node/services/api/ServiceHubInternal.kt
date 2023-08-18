@@ -198,8 +198,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     override fun recordSenderTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata) =
         validatedTransactions.addSenderTransactionRecoveryMetadata(txnId, txnMetadata)
 
-    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) =
-            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, receiver, receiverStatesToRecord, encryptedDistributionList)
+    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, txnMetadata: TransactionMetadata) =
+            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, txnMetadata)
 
     @Suppress("NestedBlockDepth")
     @VisibleForTesting
@@ -383,15 +383,11 @@ interface WritableTransactionStorage : TransactionStorage {
      *
      * @param txId The SecureHash of a transaction.
      * @param sender The sender of the transaction.
-     * @param receiver The receiver of the transaction.
-     * @param receiverStatesToRecord The StatesToRecord value of the receiver.
-     * @param encryptedDistributionList encrypted distribution list (hashed peers -> StatesToRecord values)
+     * @param metadata The recovery metadata associated with a transaction.
      */
     fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
                                                sender: CordaX500Name,
-                                               receiver: CordaX500Name,
-                                               receiverStatesToRecord: StatesToRecord,
-                                               encryptedDistributionList: ByteArray)
+                                               metadata: TransactionMetadata)
 
     /**
      * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.

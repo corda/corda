@@ -12,7 +12,6 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.StatesToRecord
 import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -65,9 +64,7 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
 
     override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
                                                         sender: CordaX500Name,
-                                                        receiver: CordaX500Name,
-                                                        receiverStatesToRecord: StatesToRecord,
-                                                        encryptedDistributionList: ByteArray) { }
+                                                        metadata: TransactionMetadata) { }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return txns.remove(id) != null

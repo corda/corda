@@ -42,9 +42,9 @@ class CashIssueWithObserversFlow(private val amount: Amount<Currency>,
     }
 
     @Suspendable
-    private fun finalise(tx: SignedTransaction, sessions: Collection<FlowSession>, message: String): SignedTransaction {
+    private fun finalise(tx: SignedTransaction, observerSessions: Collection<FlowSession>, message: String): SignedTransaction {
         try {
-            return subFlow(FinalityFlow(tx, sessions))
+            return subFlow(FinalityFlow(tx, sessions = emptySet(), observerSessions = observerSessions))
         } catch (e: NotaryException) {
             throw CashException(message, e)
         }

@@ -818,11 +818,9 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
         override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
                                                             sender: CordaX500Name,
-                                                            receiver: CordaX500Name,
-                                                            receiverStatesToRecord: StatesToRecord,
-                                                            encryptedDistributionList: ByteArray) {
+                                                            metadata: TransactionMetadata) {
             database.transaction {
-                delegate.addReceiverTransactionRecoveryMetadata(txId, sender, receiver, receiverStatesToRecord, encryptedDistributionList)
+                delegate.addReceiverTransactionRecoveryMetadata(txId, sender, metadata)
             }
         }
 

@@ -358,7 +358,7 @@ class FinalityFlowTests : WithFinality {
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
         getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
-            assertEquals(StatesToRecord.ALL_VISIBLE, this?.statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
         }

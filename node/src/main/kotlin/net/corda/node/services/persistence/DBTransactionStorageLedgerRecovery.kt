@@ -1,11 +1,13 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.DistributionList.ReceiverDistributionList
 import net.corda.core.flows.DistributionList.SenderDistributionList
 import net.corda.core.flows.RecoveryTimeWindow
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
@@ -26,7 +28,6 @@ import javax.persistence.Id
 import javax.persistence.Lob
 import javax.persistence.Table
 import javax.persistence.criteria.Predicate
-import kotlin.streams.toList
 
 class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                          cacheFactory: NamedCacheFactory,
@@ -98,7 +99,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                  distributionList = encryptedDistributionList,
                  receiverStatesToRecord = receiverStatesToRecord
             )
-
+        @VisibleForTesting
         fun toReceiverDistributionRecord(encryptionService: EncryptionService): ReceiverDistributionRecord {
             val hashedDL = HashedDistributionList.decrypt(this.distributionList, encryptionService)
             return ReceiverDistributionRecord(
@@ -163,18 +164,22 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
 
     override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
                                                         sender: CordaX500Name,
-                                                        receiver: CordaX500Name,
-                                                        receiverStatesToRecord: StatesToRecord,
-                                                        encryptedDistributionList: ByteArray) {
-        val publicHeader = HashedDistributionList.PublicHeader.unauthenticatedDeserialise(encryptedDistributionList, encryptionService)
-        database.transaction {
-            val receiverDistributionRecord = DBReceiverDistributionRecord(
-                    Key(partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp),
-                    txId,
-                    encryptedDistributionList,
-                    receiverStatesToRecord
-            )
-            session.save(receiverDistributionRecord)
+                                                        metadata: TransactionMetadata) {
+        when (metadata.distributionList) {
+            is ReceiverDistributionList -> {
+                val distributionList = metadata.distributionList as ReceiverDistributionList
+                val publicHeader = HashedDistributionList.PublicHeader.unauthenticatedDeserialise(distributionList.opaqueData, encryptionService)
+                database.transaction {
+                    val receiverDistributionRecord = DBReceiverDistributionRecord(
+                            Key(partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp),
+                            txId,
+                            distributionList.opaqueData,
+                            distributionList.receiverStatesToRecord
+                    )
+                    session.save(receiverDistributionRecord)
+                }
+            }
+            else -> throw IllegalStateException("Expecting ReceiverDistributionList")
         }
     }
 
@@ -247,7 +252,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                         }
                 criteriaQuery.orderBy(orderCriteria)
             }
-            session.createQuery(criteriaQuery).stream().toList()
+            session.createQuery(criteriaQuery).resultList
         }
     }
 
@@ -284,7 +289,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                         }
                 criteriaQuery.orderBy(orderCriteria)
             }
-            session.createQuery(criteriaQuery).stream().toList()
+            session.createQuery(criteriaQuery).resultList
         }
     }
 }

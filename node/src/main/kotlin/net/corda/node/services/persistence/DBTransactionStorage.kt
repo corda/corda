@@ -219,9 +219,8 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
 
     override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
                                                         sender: CordaX500Name,
-                                                        receiver: CordaX500Name,
-                                                        receiverStatesToRecord: StatesToRecord,
-                                                        encryptedDistributionList: ByteArray) { }
+                                                        metadata: TransactionMetadata
+                                                        ) { }
 
     override fun finalizeTransaction(transaction: SignedTransaction) =
             addTransaction(transaction) {
