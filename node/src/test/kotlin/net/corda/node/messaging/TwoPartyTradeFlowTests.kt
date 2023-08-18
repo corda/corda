@@ -31,7 +31,6 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
-import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
