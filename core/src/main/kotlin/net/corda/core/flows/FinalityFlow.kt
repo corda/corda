@@ -220,6 +220,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
                 && serviceHub.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (!useTwoPhaseFinality)
+            logger.warnOnce("The current usage of ReceiveFinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
 
         if (useTwoPhaseFinality) {
             val stxn = if (requiresNotarisation) {
@@ -503,6 +505,9 @@ class ReceiveFinalityFlow(private val otherSideSession: FlowSession,
         val requiresNotarisation = needsNotarySignature(stx)
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
                 && serviceHub.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+        if (!fromTwoPhaseFinalityNode)
+            logger.warnOnce("The current usage of ReceiveFinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
+
         if (fromTwoPhaseFinalityNode) {
             if (requiresNotarisation) {
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
