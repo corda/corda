@@ -221,7 +221,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
                 && serviceHub.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
         if (!useTwoPhaseFinality)
-            logger.warnOnce("The current usage of ReceiveFinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
+            logger.warnOnce("The current usage of FinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
 
         if (useTwoPhaseFinality) {
             val stxn = if (requiresNotarisation) {
