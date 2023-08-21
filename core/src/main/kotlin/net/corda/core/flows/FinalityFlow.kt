@@ -5,10 +5,8 @@ import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.flows.NotarySigCheck.needsNotarySignature
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
-import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.pushToLoggingContext
@@ -22,7 +20,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.unwrap
 import java.time.Duration
 
 /**
@@ -499,55 +496,13 @@ class ReceiveFinalityFlow(private val otherSideSession: FlowSession,
     @Suppress("ComplexMethod", "NestedBlockDepth")
     @Suspendable
     override fun call(): SignedTransaction {
-        val stx = subFlow(ReceiveTransactionFlow(otherSideSession, false, statesToRecord, true))
-
-        val requiresNotarisation = needsNotarySignature(stx)
-        val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-                && serviceHub.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-
-        if (fromTwoPhaseFinalityNode) {
-            if (requiresNotarisation) {
-                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
-                    logger.debug { "Peer recording transaction without notary signature." }
-                    (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
+        return subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = true, statesToRecord = statesToRecord, handlePropagatedNotaryError = handlePropagatedNotaryError) {
+            override fun checkBeforeRecording(stx: SignedTransaction) {
+                require(expectedTxId == null || expectedTxId == stx.id) {
+                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
+                            "not recorded and nor its states sent to the vault."
                 }
-                otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
-                logger.info("Peer recorded transaction without notary signature. Waiting to receive notary signature.")
-                try {
-                    val notarySignatures = otherSideSession.receive<Try<List<TransactionSignature>>>().unwrap { it.getOrThrow() }
-                    serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransactionWithExtraSignatures", flowLogic = this) {
-                        logger.debug { "Peer received notarised signature." }
-                        (serviceHub as ServiceHubCoreInternal).finalizeTransactionWithExtraSignatures(stx, notarySignatures, statesToRecord)
-                        logger.info("Peer finalised transaction with notary signature.")
-                    }
-                } catch (e: NotaryException) {
-                    logger.info("Peer received notary error.")
-                    val overrideHandlePropagatedNotaryError = handlePropagatedNotaryError ?:
-                    (serviceHub.cordappProvider.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY)
-                    if (overrideHandlePropagatedNotaryError) {
-                        (serviceHub as ServiceHubCoreInternal).removeUnnotarisedTransaction(stx.id)
-                        sleep(Duration.ZERO) // force checkpoint to persist db update.
-                        throw e
-                    }
-                    else {
-                        otherSideSession.receive<Any>() // simulate unexpected flow end
-                    }
-                }
-            } else {
-                serviceHub.telemetryServiceInternal.span("${this::class.java.name}#finalizeTransaction", flowLogic = this) {
-                    (serviceHub as ServiceHubCoreInternal).finalizeTransaction(stx, statesToRecord)
-                    logger.info("Peer recorded transaction with recovery metadata.")
-                }
-                otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
             }
-        } else {
-            logger.warnOnce("The current usage of ReceiveFinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
-            serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordTransactions", flowLogic = this) {
-                serviceHub.recordTransactions(statesToRecord, setOf(stx))
-            }
-            otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
-            logger.info("Peer successfully recorded received transaction.")
-        }
-        return stx
+        })
     }
 }
