@@ -95,6 +95,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         }
     }
 
+    @Suspendable
     private fun doReceiveFinality(payload: Any): SignedTransaction {
         val stx = resolvePayload(payload)
         stx.pushToLoggingContext()
@@ -132,7 +133,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
     }
 
     open fun isReallyReceiveFinality(payload: Any): Boolean {
-        return payload is SignedTransactionWithDistributionList && checkSufficientSignatures && NotarySigCheck.needsNotarySignature(payload.stx)
+        return payload is SignedTransactionWithDistributionList && checkSufficientSignatures && payload.isFinality && NotarySigCheck.needsNotarySignature(payload.stx)
     }
 
     open fun resolvePayload(payload: Any): SignedTransaction {

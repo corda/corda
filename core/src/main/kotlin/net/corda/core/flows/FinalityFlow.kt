@@ -280,7 +280,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             try {
                 logger.debug { "Sending transaction to party sessions: $sessions." }
                 val (participantSessions, observerSessions) = deriveSessions(sessions)
-                subFlow(SendTransactionFlow(tx, participantSessions, observerSessions, statesToRecord, true))
+                subFlow(object : SendTransactionFlow(tx, participantSessions, observerSessions, statesToRecord, true) {
+                    override fun isFinality(): Boolean = true
+                })
             } catch (e: UnexpectedFlowEndException) {
                 throw UnexpectedFlowEndException(
                         "One of the sessions ${sessions.map { it.counterparty }} has finished prematurely and we're trying to send them a transaction." +
