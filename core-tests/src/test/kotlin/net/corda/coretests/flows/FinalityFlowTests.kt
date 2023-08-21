@@ -352,16 +352,17 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+        val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
             assertEquals(StatesToRecord.ALL_VISIBLE, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
+        val rdr = getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
         }
+        validateSenderAndReceiverTimestamps(sdrs, rdr!!)
     }
 
     @Test(timeout=300_000)
@@ -382,20 +383,21 @@ class FinalityFlowTests : WithFinality {
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+        val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(2, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
             assertEquals(StatesToRecord.ALL_VISIBLE, this[1].statesToRecord)
             assertEquals(CHARLIE_NAME.hashCode().toLong(), this[1].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
+        val rdr = getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
                     CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
         }
+        validateSenderAndReceiverTimestamps(sdrs, rdr!!)
 
         // exercise the new FinalityFlow observerSessions constructor parameter
         val stx3 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
@@ -408,9 +410,24 @@ class FinalityFlowTests : WithFinality {
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
 
-        assertEquals(2, getSenderRecoveryData(stx3.id, aliceNode.database).size)
-        assertThat(getReceiverRecoveryData(stx3.id, bobNode, aliceNode)).isNotNull
-        assertThat(getReceiverRecoveryData(stx3.id, charlieNode, aliceNode)).isNotNull
+        val senderDistributionRecords = getSenderRecoveryData(stx3.id, aliceNode.database).apply {
+            assertEquals(2, this.size)
+            assertEquals(this[0].timestamp, this[1].timestamp)
+        }
+        getReceiverRecoveryData(stx3.id, bobNode, aliceNode).apply {
+            assertThat(getReceiverRecoveryData(stx3.id, bobNode, aliceNode)).isNotNull
+            assertEquals(senderDistributionRecords[0].timestamp, this!!.timestamp)
+        }
+        getReceiverRecoveryData(stx3.id, charlieNode, aliceNode).apply {
+            assertThat(getReceiverRecoveryData(stx3.id, charlieNode, aliceNode)).isNotNull
+            assertEquals(senderDistributionRecords[0].timestamp, this!!.timestamp)
+        }
+    }
+
+    private fun validateSenderAndReceiverTimestamps(sdrs: List<SenderDistributionRecord>, rdr: ReceiverDistributionRecord) {
+        sdrs.map {
+            assertEquals(it.timestamp, rdr.timestamp)
+        }
     }
 
     @Test(timeout=300_000)
@@ -426,16 +443,17 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+        val sdr = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
+        val rdr = getReceiverRecoveryData(stx.id, bobNode, aliceNode).apply {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
         }
+        validateSenderAndReceiverTimestamps(sdr, rdr!!)
     }
 
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
