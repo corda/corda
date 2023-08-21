@@ -60,7 +60,7 @@ dependencies {
     implementation "org.eclipse.jetty:jetty-webapp:${jetty_version}"
     implementation "javax.servlet:javax.servlet-api:${servlet_version}"
 
-    implementation "org.gradle:gradle-tooling-api:${gradle.gradleVersion}"
+    implementation "org.gradle:gradle-tooling-api:7.1"
 
     // Jersey for JAX-RS implementation for use in Jetty
     implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
