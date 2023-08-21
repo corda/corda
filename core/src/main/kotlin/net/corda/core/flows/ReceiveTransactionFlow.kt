@@ -71,11 +71,12 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         return if (isReallyReceiveFinality(payload)) {
             doReceiveFinality(payload)
         } else {
+            val deferredAck = isDeferredAck(payload)
             val stx = resolvePayload(payload)
             stx.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(stx.networkParametersHash)
-            subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, false))
+            subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, deferredAck))
             logger.info("Transaction dependencies resolution completed.")
             try {
                 stx.verify(serviceHub, checkSufficientSignatures)
@@ -90,9 +91,14 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
                 logger.info("Successfully received fully signed tx. Sending it to the vault for processing.")
                 serviceHub.recordTransactions(statesToRecord, setOf(stx))
                 logger.info("Successfully recorded received transaction locally.")
+                if (deferredAck) otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
             }
             stx
         }
+    }
+
+    private fun isDeferredAck(payload: Any): Boolean {
+        return payload is SignedTransactionWithDistributionList && checkSufficientSignatures && payload.isFinality
     }
 
     @Suspendable
