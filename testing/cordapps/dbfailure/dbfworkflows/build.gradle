@@ -3,13 +3,13 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.quasar-utils'
 
 dependencies {
-    cordProvided project(":core")
+    cordaProvided project(":core")
     cordapp project(":testing:cordapps:dbfailure:dbfcontracts")
 
-    cordProvided "org.hibernate:hibernate-core:$hibernate_version"
-    cordProvided "io.reactivex:rxjava:$rxjava_version"
-    cordProvided "org.slf4j:slf4j-api:$slf4j_version"
-    cordProvided "co.paralleluniverse:quasar-core:$quasar_version"
+    cordaProvided "org.hibernate:hibernate-core:$hibernate_version"
+    cordaProvided "io.reactivex:rxjava:$rxjava_version"
+    cordaProvided "org.slf4j:slf4j-api:$slf4j_version"
+    cordaProvided "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 jar {
