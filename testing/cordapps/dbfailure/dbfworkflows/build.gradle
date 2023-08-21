@@ -1,15 +1,15 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
-//apply plugin: 'net.corda.plugins.cordapp'
-//apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.quasar-utils'
 
 dependencies {
-    implementation project(":core")
-    implementation project(":testing:cordapps:dbfailure:dbfcontracts")
+    cordProvided project(":core")
+    cordapp project(":testing:cordapps:dbfailure:dbfcontracts")
 
-    implementation "org.hibernate:hibernate-core:$hibernate_version"
-    implementation "io.reactivex:rxjava:$rxjava_version"
-    implementation "org.slf4j:slf4j-api:$slf4j_version"
-    implementation "co.paralleluniverse:quasar-core:$quasar_version"
+    cordProvided "org.hibernate:hibernate-core:$hibernate_version"
+    cordProvided "io.reactivex:rxjava:$rxjava_version"
+    cordProvided "org.slf4j:slf4j-api:$slf4j_version"
+    cordProvided "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 jar {
@@ -18,5 +18,19 @@ jar {
         // This JAR is part of Corda's testing framework.
         // Driver will not include it as part of an out-of-process node.
         attributes('Corda-Testing': true)
+    }
+}
+
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    workflow {
+        name "Corda DB Failure Test CorDapp"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    signing {
+        enabled false
     }
 }

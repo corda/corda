@@ -219,6 +219,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+                && serviceHub.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
 
         if (useTwoPhaseFinality) {
             val stxn = if (requiresNotarisation) {
@@ -250,6 +251,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             return stxn
         }
         else {
+            logger.warnOnce("The current usage of FinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
             val stxn = if (requiresNotarisation) {
                 notarise().first
             } else transaction
@@ -501,6 +503,8 @@ class ReceiveFinalityFlow(private val otherSideSession: FlowSession,
 
         val requiresNotarisation = needsNotarySignature(stx)
         val fromTwoPhaseFinalityNode = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSideSession.counterparty)?.platformVersion!! >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+                && serviceHub.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
+
         if (fromTwoPhaseFinalityNode) {
             if (requiresNotarisation) {
                 serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
@@ -537,6 +541,7 @@ class ReceiveFinalityFlow(private val otherSideSession: FlowSession,
                 otherSideSession.send(FetchDataFlow.Request.End) // Finish fetching data (deferredAck)
             }
         } else {
+            logger.warnOnce("The current usage of ReceiveFinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
             serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordTransactions", flowLogic = this) {
                 serviceHub.recordTransactions(statesToRecord, setOf(stx))
             }

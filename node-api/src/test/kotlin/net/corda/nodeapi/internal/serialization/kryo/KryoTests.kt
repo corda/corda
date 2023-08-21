@@ -353,6 +353,20 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
     }
 
     @Test(timeout=300_000)
+    fun `serialize - deserialize primative void`() {
+        val original = JavaVoidHolder()
+        val roundtrip = original.checkpointSerialize(context).checkpointDeserialize(context)
+        assertThat(roundtrip.voidClass).isEqualTo(original.voidClass)
+    }
+
+    class JavaVoidHolder {
+        val voidClass: Class<Void> = Void.TYPE
+        init {
+            check(voidClass.name == "void") // Sanity check to make sure we're dealing with the primitive void
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `compression has the desired effect`() {
         compression ?: return
         val data = ByteArray(12345).also { Random(0).nextBytes(it) }.let { it + it }
@@ -374,6 +388,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test(timeout=300_000)
 	fun `compression reduces number of bytes significantly`() {
+        @Suppress("unused")
         class Holder(val holder: ByteArray)
 
         val obj = Holder(ByteArray(20000))

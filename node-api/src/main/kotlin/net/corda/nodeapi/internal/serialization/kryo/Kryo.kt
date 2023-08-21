@@ -433,7 +433,7 @@ object LoggerSerializer : Serializer<Logger>() {
 object ClassSerializer : Serializer<Class<*>>() {
     override fun read(kryo: Kryo, input: Input, type: Class<out Class<*>>): Class<*> {
         val className = input.readString()
-        return Class.forName(className, true, kryo.classLoader)
+        return if (className == "void") Void.TYPE else Class.forName(className, true, kryo.classLoader)
     }
 
     override fun write(kryo: Kryo, output: Output, clazz: Class<*>) {

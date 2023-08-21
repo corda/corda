@@ -40,6 +40,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.coretesting.internal.matchers.flow.willReturn
 import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.coretests.flows.WithFinality.FinalityInvoker
+import net.corda.coretests.flows.WithFinality.OldFinalityInvoker
 import net.corda.finance.GBP
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
@@ -59,7 +60,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
@@ -89,9 +89,7 @@ class FinalityFlowTests : WithFinality {
     }
 
     override val mockNet = InternalMockNetwork(cordappsForAllNodes = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP, DUMMY_CONTRACTS_CORDAPP, enclosedCordapp(),
-                                                       findCordapp("net.corda.finance.test.flows"),
-                                                       CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
-
+                                                       findCordapp("net.corda.finance.test.flows")))
     private val aliceNode = makeNode(ALICE_NAME)
 
     private val notary = mockNet.defaultNotaryIdentity
@@ -126,7 +124,7 @@ class FinalityFlowTests : WithFinality {
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)
         @Suppress("DEPRECATION")
-        aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture.getOrThrow()
+        aliceNode.startFlowAndRunNetwork(OldFinalityInvoker(stx)).resultFuture.getOrThrow()
         assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull
     }
 
