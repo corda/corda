@@ -216,8 +216,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         val requiresNotarisation = needsNotarySignature(transaction)
         val useTwoPhaseFinality = serviceHub.myInfo.platformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-                && serviceHub.getAppContext().cordapp.targetPlatformVersion >= PlatformVersionSwitches.TWO_PHASE_FINALITY
-
         if (useTwoPhaseFinality) {
             val stxn = if (requiresNotarisation) {
                 recordLocallyAndBroadcast(newPlatformSessions, transaction)
