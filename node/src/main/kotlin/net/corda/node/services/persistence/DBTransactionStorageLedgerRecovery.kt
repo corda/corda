@@ -11,6 +11,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.CordaClock
 import net.corda.node.services.EncryptionService
 import net.corda.node.services.network.PersistentPartyInfoCache
@@ -105,8 +106,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             return ReceiverDistributionRecord(
                     SecureHash.parse(this.txId),
                     this.compositeKey.peerPartyId,
-                    hashedDL.peerHashToStatesToRecord,
-                    hashedDL.senderStatesToRecord,
+                    OpaqueBytes(this.distributionList),
                     this.compositeKey.timestamp
             )
         }
@@ -132,7 +132,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val timestamp: Instant,
             val timestampDiscriminator: Int = nextDiscriminatorNumber.andIncrement
     ) {
-        constructor(key: TimestampKey, partyId: Long): this(partyId = partyId, timestamp = key.timestamp, timestampDiscriminator = key.timestampDiscriminator)
+        constructor(key: TimestampKey, partyId: Long): this(partyId, key.timestamp, key.timestampDiscriminator)
         companion object {
             val nextDiscriminatorNumber = AtomicInteger()
         }
@@ -268,29 +268,33 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val txnMetadata = criteriaQuery.from(DBReceiverDistributionRecord::class.java)
             val predicates = mutableListOf<Predicate>()
             val compositeKey = txnMetadata.get<PersistentKey>("compositeKey")
-            predicates.add(criteriaBuilder.greaterThanOrEqualTo(compositeKey.get<Instant>(PersistentKey::timestamp.name), timeWindow.fromTime))
-            predicates.add(criteriaBuilder.and(criteriaBuilder.lessThanOrEqualTo(compositeKey.get<Instant>(PersistentKey::timestamp.name), timeWindow.untilTime)))
+            val timestamp = compositeKey.get<Instant>(PersistentKey::timestamp.name)
+            predicates.add(criteriaBuilder.greaterThanOrEqualTo(timestamp, timeWindow.fromTime))
+            predicates.add(criteriaBuilder.and(criteriaBuilder.lessThanOrEqualTo(timestamp, timeWindow.untilTime)))
             if (excludingTxnIds.isNotEmpty()) {
-                predicates.add(criteriaBuilder.and(criteriaBuilder.not(txnMetadata.get<String>(DBSenderDistributionRecord::txId.name).`in`(
-                        excludingTxnIds.map { it.toString() }))))
+                val txId = txnMetadata.get<String>(DBSenderDistributionRecord::txId.name)
+                predicates.add(criteriaBuilder.and(criteriaBuilder.not(txId.`in`(excludingTxnIds.map { it.toString() }))))
             }
             if (initiators.isNotEmpty()) {
-                val initiatorPartyIds = initiators.map { partyInfoCache.getPartyIdByCordaX500Name(it) }
+                val initiatorPartyIds = initiators.map(partyInfoCache::getPartyIdByCordaX500Name)
                 predicates.add(criteriaBuilder.and(compositeKey.get<Long>(PersistentKey::peerPartyId.name).`in`(initiatorPartyIds)))
             }
             criteriaQuery.where(*predicates.toTypedArray())
             // optionally order by timestamp
             orderByTimestamp?.let {
-                val orderCriteria =
-                        when (orderByTimestamp) {
-                            // when adding column position of 'group by' shift in case columns were removed
-                            Sort.Direction.ASC -> criteriaBuilder.asc(compositeKey.get<Instant>(PersistentKey::timestamp.name))
-                            Sort.Direction.DESC -> criteriaBuilder.desc(compositeKey.get<Instant>(PersistentKey::timestamp.name))
-                        }
+                val orderCriteria = when (orderByTimestamp) {
+                    // when adding column position of 'group by' shift in case columns were removed
+                    Sort.Direction.ASC -> criteriaBuilder.asc(timestamp)
+                    Sort.Direction.DESC -> criteriaBuilder.desc(timestamp)
+                }
                 criteriaQuery.orderBy(orderCriteria)
             }
             session.createQuery(criteriaQuery).resultList
         }
+    }
+
+    fun decryptHashedDistributionList(encryptedBytes: ByteArray): HashedDistributionList {
+        return HashedDistributionList.decrypt(encryptedBytes, encryptionService)
     }
 }
 
@@ -301,35 +305,33 @@ class DistributionRecords(
         val receiverRecords: List<DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord> = emptyList()
 ) {
     init {
-        assert(senderRecords.isNotEmpty() || receiverRecords.isNotEmpty()) { "Must set senderRecords or receiverRecords or both." }
+        require(senderRecords.isNotEmpty() || receiverRecords.isNotEmpty()) { "Must set senderRecords or receiverRecords or both." }
     }
 
     val size = senderRecords.size + receiverRecords.size
 }
 
 @CordaSerializable
-open class DistributionRecord(
-        open val txId: SecureHash,
-        open val statesToRecord: StatesToRecord,
-        open val timestamp: Instant
-)
+abstract class DistributionRecord {
+    abstract val txId: SecureHash
+    abstract val timestamp: Instant
+}
 
 @CordaSerializable
 data class SenderDistributionRecord(
         override val txId: SecureHash,
         val peerPartyId: Long,     // CordaX500Name hashCode()
-        override val statesToRecord: StatesToRecord,
+        val statesToRecord: StatesToRecord,
         override val timestamp: Instant
-) : DistributionRecord(txId, statesToRecord, timestamp)
+) : DistributionRecord()
 
 @CordaSerializable
 data class ReceiverDistributionRecord(
         override val txId: SecureHash,
         val initiatorPartyId: Long,     // CordaX500Name hashCode()
-        val peersToStatesToRecord: Map<Long, StatesToRecord>,   // CordaX500Name hashCode() -> StatesToRecord
-        override val statesToRecord: StatesToRecord,
+        val encryptedDistributionList: OpaqueBytes,
         override val timestamp: Instant
-) : DistributionRecord(txId, statesToRecord, timestamp)
+) : DistributionRecord()
 
 @CordaSerializable
 enum class DistributionRecordType {

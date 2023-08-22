@@ -24,6 +24,8 @@ import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.PersistentPartyInfoCache
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.IN_FLIGHT
 import net.corda.node.services.persistence.DBTransactionStorage.TransactionStatus.VERIFIED
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -260,11 +262,12 @@ class DBTransactionStorageLedgerRecoveryTests {
         transactionRecovery.addReceiverTransactionRecoveryMetadata(receiverTransaction.id, ALICE_NAME,
                 TransactionMetadata(ALICE_NAME, ReceiverDistributionList(encryptedDL, ALL_VISIBLE)))
         assertEquals(IN_FLIGHT, readTransactionFromDB(receiverTransaction.id).status)
-        readReceiverDistributionRecordFromDB(receiverTransaction.id).let {
-            assertEquals(ONLY_RELEVANT, it.statesToRecord)
-            assertEquals(ALL_VISIBLE, it.peersToStatesToRecord.map { it.value }[0])
-            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(it.initiatorPartyId))
-            assertEquals(setOf(BOB_NAME), it.peersToStatesToRecord.map { (peer, _) -> partyInfoCache.getCordaX500NameByPartyId(peer) }.toSet() )
+        readReceiverDistributionRecordFromDB(receiverTransaction.id).let { record ->
+            val distList = transactionRecovery.decryptHashedDistributionList(record.encryptedDistributionList.bytes)
+            assertEquals(ONLY_RELEVANT, distList.senderStatesToRecord)
+            assertEquals(ALL_VISIBLE, distList.peerHashToStatesToRecord.values.first())
+            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(record.initiatorPartyId))
+            assertEquals(setOf(BOB_NAME), distList.peerHashToStatesToRecord.map { (peer) -> partyInfoCache.getCordaX500NameByPartyId(peer) }.toSet() )
         }
     }
 
@@ -323,7 +326,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         assertThat(roundtrip).isEqualTo(hashedDistList)
     }
 
-    private fun readTransactionFromDB(id: SecureHash): DBTransactionStorage.DBTransaction {
+    private fun readTransactionFromDB(txId: SecureHash): DBTransactionStorage.DBTransaction {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
@@ -334,22 +337,22 @@ class DBTransactionStorageLedgerRecoveryTests {
         return fromDb[0]
     }
 
-    private fun readSenderDistributionRecordFromDB(id: SecureHash? = null): List<SenderDistributionRecord> {
+    private fun readSenderDistributionRecordFromDB(txId: SecureHash? = null): List<SenderDistributionRecord> {
         return database.transaction {
-            if (id != null)
+            if (txId != null)
                 session.createQuery(
-                        "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
-                        DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
-                ).setParameter("transactionId", id.toString()).resultList.map { it.toSenderDistributionRecord() }
+                        "from ${DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
+                        DBSenderDistributionRecord::class.java
+                ).setParameter("transactionId", txId.toString()).resultList.map { it.toSenderDistributionRecord() }
             else
                 session.createQuery(
-                        "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name}",
-                        DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
+                        "from ${DBSenderDistributionRecord::class.java.name}",
+                        DBSenderDistributionRecord::class.java
                 ).resultList.map { it.toSenderDistributionRecord() }
         }
     }
 
-    private fun readReceiverDistributionRecordFromDB(id: SecureHash): ReceiverDistributionRecord {
+    private fun readReceiverDistributionRecordFromDB(txId: SecureHash): ReceiverDistributionRecord {
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",

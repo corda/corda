@@ -36,6 +36,7 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
     companion object {
         private const val INITIAL_KEY_COUNT = 10
         private const val UUID_BYTES = 16
+        private const val VERSION_TAG = 1
     }
 
     private val aesKeys = ArrayList<Pair<UUID, SecretKey>>()
@@ -73,7 +74,7 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
         val (keyId, aesKey) = aesKeys[newSecureRandom().nextInt(aesKeys.size)]
         val ciphertext = AesEncryption.encrypt(aesKey, plaintext, additionalData)
         val buffer = ByteBuffer.allocate(1 + UUID_BYTES + Integer.BYTES + (additionalData?.size ?: 0) + ciphertext.size)
-        buffer.put(1)  // Version tag
+        buffer.put(VERSION_TAG.toByte())
         // Prepend the key ID to the returned ciphertext. It's OK that this is not included in the authenticated additional data because
         // changing this value will lead to either an non-existent key or an another key which will not be able decrypt the ciphertext.
         buffer.putUUID(keyId)
@@ -88,9 +89,7 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
     }
 
     override fun decrypt(ciphertext: ByteArray): EncryptionService.PlaintextAndAAD {
-        val buffer = ByteBuffer.wrap(ciphertext)
-        val version = buffer.get().toInt()
-        require(version == 1)
+        val buffer = wrap(ciphertext)
         val keyId = buffer.getUUID()
         val aesKey = requireNotNull(aesKeys.find { it.first == keyId }?.second) { "Unable to decrypt" }
         val additionalData = buffer.getAdditionaData()
@@ -100,9 +99,16 @@ class AesDbEncryptionService(private val database: CordaPersistence) : Encryptio
     }
 
     override fun extractUnauthenticatedAdditionalData(ciphertext: ByteArray): ByteArray? {
-        val buffer = ByteBuffer.wrap(ciphertext)
-        buffer.position(1 + UUID_BYTES)
+        val buffer = wrap(ciphertext)
+        buffer.position(buffer.position() + UUID_BYTES)
         return buffer.getAdditionaData()
+    }
+
+    private fun wrap(ciphertext: ByteArray): ByteBuffer {
+        val buffer = ByteBuffer.wrap(ciphertext)
+        val version = buffer.get().toInt()
+        require(version == VERSION_TAG) { "Unknown version $version" }
+        return buffer
     }
 
     private fun ByteBuffer.getAdditionaData(): ByteArray? {

@@ -71,6 +71,7 @@ import net.corda.testing.internal.IS_OPENJ9
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
@@ -140,7 +141,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // We run this in parallel threads to help catch any race conditions that may exist. The other tests
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
-        mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP), threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP), threadPerNode = true)
         val notaryNode = mockNet.defaultNotaryNode
         val notary = mockNet.defaultNotaryIdentity
         notaryNode.services.ledger(notary) {
@@ -247,7 +248,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     @Test(timeout=300_000)
 	fun `shutdown and restore`() {
         Assume.assumeTrue(!IS_OPENJ9)
-        mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP))
         val notaryNode = mockNet.defaultNotaryNode
         val notary = mockNet.defaultNotaryIdentity
         notaryNode.services.ledger(notary) {

@@ -40,6 +40,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.coretesting.internal.matchers.flow.willReturn
 import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.coretests.flows.WithFinality.FinalityInvoker
+import net.corda.coretests.flows.WithFinality.OldFinalityInvoker
 import net.corda.finance.GBP
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
@@ -50,6 +51,9 @@ import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.finance.test.flows.CashPaymentWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord
+import net.corda.node.services.persistence.HashedDistributionList
 import net.corda.node.services.persistence.ReceiverDistributionRecord
 import net.corda.node.services.persistence.SenderDistributionRecord
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -59,7 +63,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
@@ -87,9 +90,7 @@ class FinalityFlowTests : WithFinality {
     }
 
     override val mockNet = InternalMockNetwork(cordappsForAllNodes = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP, DUMMY_CONTRACTS_CORDAPP, enclosedCordapp(),
-                                                       findCordapp("net.corda.finance.test.flows"),
-                                                       CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
-
+                                                       findCordapp("net.corda.finance.test.flows")))
     private val aliceNode = makeNode(ALICE_NAME)
 
     private val notary = mockNet.defaultNotaryIdentity
@@ -124,7 +125,7 @@ class FinalityFlowTests : WithFinality {
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)
         @Suppress("DEPRECATION")
-        aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture.getOrThrow()
+        aliceNode.startFlowAndRunNetwork(OldFinalityInvoker(stx)).resultFuture.getOrThrow()
         assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull
     }
 
@@ -394,8 +395,10 @@ class FinalityFlowTests : WithFinality {
             assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
             assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
             // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
-            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
-                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
+            assertEquals(mapOf(
+                    BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
+                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE
+            ), distList.peerHashToStatesToRecord)
         }
         validateSenderAndReceiverTimestamps(sdrs, rdr!!)
 
@@ -511,6 +514,7 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(SpendFlow::class)
     class AcceptSpendFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
@@ -547,6 +551,7 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(SpeedySpendFlow::class)
     class AcceptSpeedySpendFlow(private val otherSideSession: FlowSession) : FlowLogic<SignedTransaction>() {
 
@@ -580,7 +585,7 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
-    class FinaliseSpeedySpendFlow(val id: SecureHash, val sigs: List<TransactionSignature>) : FlowLogic<SignedTransaction>() {
+    class FinaliseSpeedySpendFlow(val id: SecureHash, private val sigs: List<TransactionSignature>) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -606,6 +611,7 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(MimicFinalityFailureFlow::class)
     class TriggerReceiveFinalityFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
