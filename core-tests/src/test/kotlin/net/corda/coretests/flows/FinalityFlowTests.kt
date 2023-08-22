@@ -50,7 +50,8 @@ import net.corda.finance.issuedBy
 import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.finance.test.flows.CashPaymentWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord
 import net.corda.node.services.persistence.HashedDistributionList
 import net.corda.node.services.persistence.ReceiverDistributionRecord
 import net.corda.node.services.persistence.SenderDistributionRecord
@@ -466,8 +467,8 @@ class FinalityFlowTests : WithFinality {
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
-                    DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
+                    "from ${DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
+                    DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList
         }
         return fromDb.map { it.toSenderDistributionRecord() }
@@ -476,8 +477,8 @@ class FinalityFlowTests : WithFinality {
     private fun getReceiverRecoveryData(txId: SecureHash, receiver: TestStartedNode): ReceiverDistributionRecord? {
         return receiver.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
-                    DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
+                    "from ${DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
+                    DBReceiverDistributionRecord::class.java
             ).setParameter("transactionId", txId.toString()).resultList
         }.singleOrNull()?.toReceiverDistributionRecord()
     }
