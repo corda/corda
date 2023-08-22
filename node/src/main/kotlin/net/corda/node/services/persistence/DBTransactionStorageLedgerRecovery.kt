@@ -101,8 +101,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                  receiverStatesToRecord = receiverStatesToRecord
             )
         @VisibleForTesting
-        fun toReceiverDistributionRecord(encryptionService: EncryptionService): ReceiverDistributionRecord {
-            val hashedDL = HashedDistributionList.decrypt(this.distributionList, encryptionService)
+        fun toReceiverDistributionRecord(): ReceiverDistributionRecord {
             return ReceiverDistributionRecord(
                     SecureHash.parse(this.txId),
                     this.compositeKey.peerPartyId,

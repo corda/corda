@@ -331,7 +331,7 @@ class DBTransactionStorageLedgerRecoveryTests {
             session.createQuery(
                     "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
-            ).setParameter("transactionId", id.toString()).resultList
+            ).setParameter("transactionId", txId.toString()).resultList
         }
         assertEquals(1, fromDb.size)
         return fromDb[0]
@@ -355,12 +355,12 @@ class DBTransactionStorageLedgerRecoveryTests {
     private fun readReceiverDistributionRecordFromDB(txId: SecureHash): ReceiverDistributionRecord {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
-                    DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
-            ).setParameter("transactionId", id.toString()).resultList
+                    "from ${DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
+                    DBReceiverDistributionRecord::class.java
+            ).setParameter("transactionId", txId.toString()).resultList
         }
         assertEquals(1, fromDb.size)
-        return fromDb[0].toReceiverDistributionRecord(encryptionService)
+        return fromDb[0].toReceiverDistributionRecord()
     }
 
     private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
@@ -415,15 +415,5 @@ class DBTransactionStorageLedgerRecoveryTests {
 
     private fun notarySig(txId: SecureHash) =
             DUMMY_NOTARY.keyPair.sign(SignableData(txId, SignatureMetadata(1, Crypto.findSignatureScheme(DUMMY_NOTARY.publicKey).schemeNumberID)))
-
-    private fun SenderDistributionList.toWire(): ByteArray {
-        val hashedPeersToStatesToRecord = this.peersToStatesToRecord.mapKeys { (peer) -> partyInfoCache.getPartyIdByCordaX500Name(peer) }
-        val hashedDistributionList = HashedDistributionList(
-                this.senderStatesToRecord,
-                hashedPeersToStatesToRecord,
-                HashedDistributionList.PublicHeader(now())
-        )
-        return hashedDistributionList.encrypt(encryptionService)
-    }
 }
 
