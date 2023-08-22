@@ -3222,8 +3222,7 @@ public final class net.corda.core.flows.ReceiveFinalityFlow extends net.corda.co
   public <init>(net.corda.core.flows.FlowSession)
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash)
   public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord)
-  public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord, Boolean)
-  public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord, Boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.flows.FlowSession, net.corda.core.crypto.SecureHash, net.corda.core.node.StatesToRecord, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Suspendable
   @NotNull
   public net.corda.core.transactions.SignedTransaction call()
@@ -3239,8 +3238,6 @@ public class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.
   public <init>(net.corda.core.flows.FlowSession, boolean)
   public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord)
   public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord, boolean)
-  public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Suspendable
   @NotNull
   public net.corda.core.transactions.SignedTransaction call()
