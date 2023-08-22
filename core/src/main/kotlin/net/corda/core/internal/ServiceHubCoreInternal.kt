@@ -80,7 +80,11 @@ interface ServiceHubCoreInternal : ServiceHub {
      * @param receiverStatesToRecord The StatesToRecord value of the receiver.
      * @param encryptedDistributionList encrypted distribution list (hashed peers -> StatesToRecord values)
      */
-    fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray)
+    fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash,
+                                                  sender: CordaX500Name,
+                                                  receiver: CordaX500Name,
+                                                  receiverStatesToRecord: StatesToRecord,
+                                                  encryptedDistributionList: ByteArray)
 }
 
 interface TransactionsResolver {
