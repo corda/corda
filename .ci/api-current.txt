@@ -3334,24 +3334,6 @@ public static final class net.corda.core.flows.SignTransactionFlow$Companion$SIG
 public static final class net.corda.core.flows.SignTransactionFlow$Companion$VERIFYING extends net.corda.core.utilities.ProgressTracker$Step
   public static final net.corda.core.flows.SignTransactionFlow$Companion$VERIFYING INSTANCE
 ##
-@CordaSerializable
-public final class net.corda.core.flows.SignedTransactionWithDistributionList extends java.lang.Object
-  public <init>(net.corda.core.transactions.SignedTransaction, byte[])
-  @NotNull
-  public final net.corda.core.transactions.SignedTransaction component1()
-  @NotNull
-  public final byte[] component2()
-  @NotNull
-  public final net.corda.core.flows.SignedTransactionWithDistributionList copy(net.corda.core.transactions.SignedTransaction, byte[])
-  public boolean equals(Object)
-  @NotNull
-  public final byte[] getDistributionList()
-  @NotNull
-  public final net.corda.core.transactions.SignedTransaction getStx()
-  public int hashCode()
-  @NotNull
-  public String toString()
-##
 public final class net.corda.core.flows.StackFrameDataToken extends java.lang.Object
   public <init>(String)
   @NotNull
