@@ -709,9 +709,6 @@ class NodeVaultService(
                                             paging: PageSpecification,
                                             sorting: Sort,
                                             contractStateType: Class<out T>): Vault.Page<T> {
-        // calculate total results where a page specification has been defined
-        val totalStatesAvailable = if (paging.isDefault) -1 else queryTotalStateCount(criteria, contractStateType)
-
         val (criteriaQuery, criteriaParser) = buildCriteriaQuery<Tuple>(criteria, contractStateType, sorting)
         val query = getSession().createQuery(criteriaQuery)
         query.setResultWindow(paging)
@@ -735,6 +732,13 @@ class NodeVaultService(
                 statesMetadata.mapTo(LinkedHashSet()) { it.ref },
                 ArrayList()
         )
+
+        val totalStatesAvailable = when {
+            paging.isDefault -> -1L
+            // If the first page isn't full then we know that's all the states that are available
+            paging.pageNumber == DEFAULT_PAGE_NUM && states.size < paging.pageSize -> states.size.toLong()
+            else -> queryTotalStateCount(criteria, contractStateType)
+        }
 
         return Vault.Page(states, statesMetadata, totalStatesAvailable, criteriaParser.stateTypes, otherResults)
     }
