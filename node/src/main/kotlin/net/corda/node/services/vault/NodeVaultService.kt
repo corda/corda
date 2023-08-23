@@ -35,7 +35,6 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.node.services.vault.builder
 import net.corda.core.observable.internal.OnResilientSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -69,17 +68,21 @@ import java.security.PublicKey
 import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
-import java.util.Arrays
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.stream.Stream
 import javax.persistence.PersistenceException
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
+import javax.persistence.criteria.CriteriaQuery
 import javax.persistence.criteria.CriteriaUpdate
 import javax.persistence.criteria.Predicate
 import javax.persistence.criteria.Root
+import kotlin.collections.ArrayList
+import kotlin.collections.LinkedHashSet
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 /**
  * The vault service handles storage, retrieval and querying of states.
@@ -707,10 +710,8 @@ class NodeVaultService(
                                             paging: PageSpecification,
                                             sorting: Sort,
                                             contractStateType: Class<out T>): Vault.Page<T> {
-        // calculate total results where a page specification has been defined
-        val totalStatesAvailable = if (paging.isDefault) -1 else queryTotalStateCount(criteria, contractStateType)
-
-        val (query, stateTypes) = createQuery(criteria, contractStateType, sorting)
+        val (criteriaQuery, criteriaParser) = buildCriteriaQuery<Tuple>(criteria, contractStateType, sorting)
+        val query = getSession().createQuery(criteriaQuery)
         query.setResultWindow(paging)
 
         var previousPageAnchor: StateRef? = null
@@ -742,7 +743,14 @@ class NodeVaultService(
                 ArrayList()
         )
 
-        return Vault.Page(states, statesMetadata, totalStatesAvailable, stateTypes, otherResults, previousPageAnchor)
+        val totalStatesAvailable = when {
+            paging.isDefault -> -1L
+            // If the first page isn't full then we know that's all the states that are available
+            paging.pageNumber == DEFAULT_PAGE_NUM && states.size < paging.pageSize -> states.size.toLong()
+            else -> queryTotalStateCount(criteria, contractStateType)
+        }
+
+        return Vault.Page(states, statesMetadata, totalStatesAvailable, criteriaParser.stateTypes, otherResults, previousPageAnchor)
     }
 
     private fun <R> Query<R>.resultStream(paging: PageSpecification): Stream<R> {
@@ -775,19 +783,17 @@ class NodeVaultService(
         }
     }
 
-    private fun <T : ContractState> queryTotalStateCount(baseCriteria: QueryCriteria, contractStateType: Class<out T>): Long {
-        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
-        val criteria = baseCriteria.and(countCriteria)
-        val (query) = createQuery(criteria, contractStateType, null)
-        val results = query.resultList
-        return results.last().toArray().last() as Long
+    private fun <T : ContractState> queryTotalStateCount(criteria: QueryCriteria, contractStateType: Class<out T>): Long {
+        val (criteriaQuery, criteriaParser) = buildCriteriaQuery<Long>(criteria, contractStateType, null)
+        criteriaQuery.select(criteriaBuilder.countDistinct(criteriaParser.vaultStates))
+        val query = getSession().createQuery(criteriaQuery)
+        return query.singleResult
     }
 
-    private fun <T : ContractState> createQuery(criteria: QueryCriteria,
-                                                contractStateType: Class<out T>,
-                                                sorting: Sort?): Pair<Query<Tuple>, Vault.StateStatus> {
-        val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
+    private inline fun <reified T> buildCriteriaQuery(criteria: QueryCriteria,
+                                                      contractStateType: Class<out ContractState>,
+                                                      sorting: Sort?): Pair<CriteriaQuery<T>, HibernateQueryCriteriaParser> {
+        val criteriaQuery = criteriaBuilder.createQuery(T::class.java)
         val criteriaParser = HibernateQueryCriteriaParser(
                 contractStateType,
                 contractStateTypeMappings,
@@ -796,8 +802,7 @@ class NodeVaultService(
                 criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
         )
         criteriaParser.parse(criteria, sorting)
-        val query = getSession().createQuery(criteriaQuery)
-        return Pair(query, criteriaParser.stateTypes)
+        return Pair(criteriaQuery, criteriaParser)
     }
 
     /**

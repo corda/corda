@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
@@ -37,6 +38,7 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndPersistentServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
@@ -102,7 +104,7 @@ interface VaultQueryParties {
     val cordappPackages: List<String>
 }
 
-open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
+open class VaultQueryTestRule(private val persistentServices: Boolean) : ExternalResource(), VaultQueryParties {
     override val alice = TestIdentity(ALICE_NAME, 70)
     override val bankOfCorda = TestIdentity(BOC_NAME)
     override val bigCorp = TestIdentity(CordaX500Name("BigCorporation", "New York", "US"))
@@ -135,12 +137,22 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
 
 
     override fun before() {
-        // register additional identities
-        val databaseAndServices = makeTestDatabaseAndMockServices(
-                cordappPackages,
-                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
-                megaCorp,
-                moreKeys = *arrayOf(DUMMY_NOTARY_KEY))
+        val databaseAndServices = if (persistentServices) {
+            makeTestDatabaseAndPersistentServices(
+                    cordappPackages,
+                    megaCorp,
+                    moreKeys = setOf(DUMMY_NOTARY_KEY),
+                    moreIdentities = setOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity)
+            )
+        } else {
+            @Suppress("SpreadOperator")
+            makeTestDatabaseAndMockServices(
+                    cordappPackages,
+                    makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
+                    megaCorp,
+                    moreKeys = *arrayOf(DUMMY_NOTARY_KEY)
+            )
+        }
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
@@ -2890,9 +2902,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 }
 
 class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
-
     companion object {
-        val delegate = VaultQueryTestRule()
+        val delegate = VaultQueryTestRule(persistentServices = false)
     }
 
     @Rule
@@ -3194,5 +3205,35 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
                     }
             )
         }
+    }
+}
+
+
+class PersistentServicesVaultQueryTests : VaultQueryParties by delegate {
+    companion object {
+        val delegate = VaultQueryTestRule(persistentServices = true)
+
+        @ClassRule
+        @JvmField
+        val testSerialization = SerializationEnvironmentRule()
+    }
+
+    @Rule
+    @JvmField
+    val vaultQueryTestRule = delegate
+
+    @Test(timeout = 300_000)
+    fun `query on externalId which maps to multiple keys`() {
+        val externalId = UUID.randomUUID()
+        val page = database.transaction {
+            val keys = Array(2) { services.keyManagementService.freshKey(externalId) }
+            vaultFiller.fillWithDummyState(participants = keys.map(::AnonymousParty))
+            services.vaultService.queryBy<ContractState>(
+                    VaultQueryCriteria(externalIds = listOf(externalId)),
+                    paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
+            )
+        }
+        assertThat(page.states).hasSize(1)
+        assertThat(page.totalStatesAvailable).isEqualTo(1)
     }
 }
