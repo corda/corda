@@ -15,13 +15,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
-import kotlin.collections.List
-import kotlin.collections.MutableSet
-import kotlin.collections.Set
-import kotlin.collections.flatMap
-import kotlin.collections.map
-import kotlin.collections.mutableSetOf
-import kotlin.collections.plus
 import kotlin.collections.toSet
 import net.corda.core.flows.DistributionList.SenderDistributionList
 
@@ -137,6 +130,8 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
         // User can override this method to perform custom request verification.
     }
 
+    protected open fun isFinality(): Boolean = false
+
     @Suppress("ComplexCondition", "ComplexMethod", "LongMethod")
     @Suspendable
     override fun call(): Void? {
@@ -175,7 +170,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
         val payloadWithMetadata =
             if (txnMetadata != null && toTwoPhaseFinalityNode && useTwoPhaseFinality && payload is SignedTransaction) {
                 val encryptedDistributionList = (serviceHub as ServiceHubCoreInternal).recordSenderTransactionRecoveryMetadata(payload.id, txnMetadata.copy(initiator = ourIdentity.name))
-                SignedTransactionWithDistributionList(payload, encryptedDistributionList!!)
+                SignedTransactionWithDistributionList(payload, encryptedDistributionList!!, isFinality())
             } else null
 
         otherSessions.forEachIndexed { idx, otherSideSession ->
@@ -312,5 +307,6 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
 @CordaSerializable
 data class SignedTransactionWithDistributionList(
         val stx: SignedTransaction,
-        val distributionList: ByteArray
+        val distributionList: ByteArray,
+        val isFinality: Boolean
 )
