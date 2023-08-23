@@ -93,6 +93,7 @@ import kotlin.collections.component2
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
+@Suppress("LargeClass")
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
