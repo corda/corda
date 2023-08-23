@@ -1,10 +1,13 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.DistributionList.ReceiverDistributionList
+import net.corda.core.flows.DistributionList.SenderDistributionList
 import net.corda.core.flows.RecoveryTimeWindow
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
@@ -85,14 +88,19 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             /** Encrypted recovery information for sole use by Sender **/
             @Lob
             @Column(name = "distribution_list", nullable = false)
-            val distributionList: ByteArray
-    ) {
-        constructor(key: Key, txId: SecureHash, encryptedDistributionList: ByteArray) : this(
-                PersistentKey(key),
-                txId.toString(),
-                encryptedDistributionList
-        )
+            val distributionList: ByteArray,
 
+            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
+            @Column(name = "receiver_states_to_record", nullable = false)
+            val receiverStatesToRecord: StatesToRecord
+) {
+        constructor(key: Key, txId: SecureHash, encryptedDistributionList: ByteArray, receiverStatesToRecord: StatesToRecord) :
+            this(PersistentKey(key),
+                 txId = txId.toString(),
+                 distributionList = encryptedDistributionList,
+                 receiverStatesToRecord = receiverStatesToRecord
+            )
+        @VisibleForTesting
         fun toReceiverDistributionRecord(): ReceiverDistributionRecord {
             return ReceiverDistributionRecord(
                     SecureHash.parse(this.txId),
@@ -130,27 +138,22 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     }
 
     override fun addSenderTransactionRecoveryMetadata(txId: SecureHash, metadata: TransactionMetadata): ByteArray {
-        val senderRecordingTimestamp = clock.instant()
         return database.transaction {
-            // sender distribution records must be unique per txnId and timestamp
+            val senderRecordingTimestamp = clock.instant()
             val timeDiscriminator = Key.nextDiscriminatorNumber.andIncrement
-            metadata.distributionList.peersToStatesToRecord.forEach { peerCordaX500Name, peerStatesToRecord ->
+            val distributionList = metadata.distributionList as? SenderDistributionList ?: throw IllegalStateException("Expecting SenderDistributionList")
+            distributionList.peersToStatesToRecord.map { (peerCordaX500Name, peerStatesToRecord) ->
                 val senderDistributionRecord = DBSenderDistributionRecord(
-                        PersistentKey(Key(
-                                TimestampKey(senderRecordingTimestamp, timeDiscriminator),
-                                partyInfoCache.getPartyIdByCordaX500Name(peerCordaX500Name)
-                        )),
+                        PersistentKey(Key(TimestampKey(senderRecordingTimestamp, timeDiscriminator), partyInfoCache.getPartyIdByCordaX500Name(peerCordaX500Name))),
                         txId.toString(),
-                        peerStatesToRecord
-                )
+                        peerStatesToRecord)
                 session.save(senderDistributionRecord)
             }
-
-            val hashedPeersToStatesToRecord = metadata.distributionList.peersToStatesToRecord.mapKeys { (peer) ->
+            val hashedPeersToStatesToRecord = distributionList.peersToStatesToRecord.mapKeys { (peer) ->
                 partyInfoCache.getPartyIdByCordaX500Name(peer)
             }
             val hashedDistributionList = HashedDistributionList(
-                    metadata.distributionList.senderStatesToRecord,
+                    distributionList.senderStatesToRecord,
                     hashedPeersToStatesToRecord,
                     HashedDistributionList.PublicHeader(senderRecordingTimestamp)
             )
@@ -158,50 +161,24 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
         }
     }
 
-    fun createReceiverTransactionRecoverMetadata(txId: SecureHash,
-                                                 senderPartyId: Long,
-                                                 senderStatesToRecord: StatesToRecord,
-                                                 senderRecords: List<DBSenderDistributionRecord>): List<DBReceiverDistributionRecord> {
-        val senderRecordsByTimestampKey = senderRecords.groupBy { TimestampKey(it.compositeKey.timestamp, it.compositeKey.timestampDiscriminator) }
-        return senderRecordsByTimestampKey.map { (key) ->
-            val hashedDistributionList = HashedDistributionList(
-                    senderStatesToRecord,
-                    senderRecords.associate { it.compositeKey.peerPartyId to it.statesToRecord },
-                    HashedDistributionList.PublicHeader(key.timestamp)
-            )
-            DBReceiverDistributionRecord(
-                    PersistentKey(Key(TimestampKey(key.timestamp, key.timestampDiscriminator), senderPartyId)),
-                    txId.toString(),
-                    hashedDistributionList.encrypt(encryptionService)
-            )
-        }
-    }
-
-    fun addSenderTransactionRecoveryMetadata(record: DBSenderDistributionRecord) {
-        return database.transaction {
-            session.save(record)
-        }
-    }
-
     override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
                                                         sender: CordaX500Name,
-                                                        receiver: CordaX500Name,
-                                                        receiverStatesToRecord: StatesToRecord,
-                                                        encryptedDistributionList: ByteArray) {
-        val publicHeader = HashedDistributionList.PublicHeader.unauthenticatedDeserialise(encryptedDistributionList, encryptionService)
-        database.transaction {
-            val receiverDistributionRecord = DBReceiverDistributionRecord(
-                    Key(partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp),
-                    txId,
-                    encryptedDistributionList
-            )
-            session.save(receiverDistributionRecord)
-        }
-    }
-
-    fun addReceiverTransactionRecoveryMetadata(record: DBReceiverDistributionRecord) {
-        return database.transaction {
-            session.save(record)
+                                                        metadata: TransactionMetadata) {
+        when (metadata.distributionList) {
+            is ReceiverDistributionList -> {
+                val distributionList = metadata.distributionList as ReceiverDistributionList
+                val publicHeader = HashedDistributionList.PublicHeader.unauthenticatedDeserialise(distributionList.opaqueData, encryptionService)
+                database.transaction {
+                    val receiverDistributionRecord = DBReceiverDistributionRecord(
+                            Key(partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp),
+                            txId,
+                            distributionList.opaqueData,
+                            distributionList.receiverStatesToRecord
+                    )
+                    session.save(receiverDistributionRecord)
+                }
+            }
+            else -> throw IllegalStateException("Expecting ReceiverDistributionList")
         }
     }
 
@@ -274,16 +251,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                         }
                 criteriaQuery.orderBy(orderCriteria)
             }
-            session.createQuery(criteriaQuery).resultList
-        }
-    }
-
-    fun querySenderDistributionRecordsByTxId(txId: SecureHash): List<DBSenderDistributionRecord> {
-        return database.transaction {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(DBSenderDistributionRecord::class.java)
-            val txnMetadata = criteriaQuery.from(DBSenderDistributionRecord::class.java)
-            criteriaQuery.where(criteriaBuilder.equal(txnMetadata.get<String>(DBSenderDistributionRecord::txId.name), txId.toString()))
             session.createQuery(criteriaQuery).resultList
         }
     }
