@@ -421,7 +421,7 @@ allprojects {
                 }
             }
             maven {
-                url "${artifactory_contextUrl}/corda-releases"
+                url "${publicArtifactURL}/corda-releases"
                 content {
                     includeModule('net.corda', 'corda-shell')
                 }
