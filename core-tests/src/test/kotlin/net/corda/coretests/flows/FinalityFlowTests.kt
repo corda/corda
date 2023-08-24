@@ -50,7 +50,9 @@ import net.corda.finance.issuedBy
 import net.corda.finance.test.flows.CashIssueWithObserversFlow
 import net.corda.finance.test.flows.CashPaymentWithObserversFlow
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord
+import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord
+import net.corda.node.services.persistence.HashedDistributionList
 import net.corda.node.services.persistence.ReceiverDistributionRecord
 import net.corda.node.services.persistence.SenderDistributionRecord
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -66,7 +68,6 @@ import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
-import net.corda.testing.node.internal.MockCryptoService
 import net.corda.testing.node.internal.TestCordappInternal
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappWithPackages
@@ -75,6 +76,7 @@ import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Ignore
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.sql.SQLException
 import java.util.Random
@@ -241,7 +243,7 @@ class FinalityFlowTests : WithFinality {
             session.createQuery(
                     "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
-            ).setParameter("transactionId", stxId.toString()).resultList.map { it }
+            ).setParameter("transactionId", stxId.toString()).resultList
         }
         assertEquals(0, fromDb.size)
     }
@@ -352,16 +354,19 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+        val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
             assertEquals(StatesToRecord.ALL_VISIBLE, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode.database).apply {
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this?.statesToRecord)
-            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
-            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
+        val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
+            assertNotNull(this)
+            val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this.initiatorPartyId)
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), hashedDL.peerHashToStatesToRecord)
         }
+        validateSenderAndReceiverTimestamps(sdrs, rdr!!)
     }
 
     @Test(timeout=300_000)
@@ -382,19 +387,25 @@ class FinalityFlowTests : WithFinality {
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+        val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(2, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
             assertEquals(StatesToRecord.ALL_VISIBLE, this[1].statesToRecord)
             assertEquals(CHARLIE_NAME.hashCode().toLong(), this[1].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode.database).apply {
-            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
+        val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
+            assertNotNull(this)
+            val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this.initiatorPartyId)
             // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
-            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
-                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), this?.peersToStatesToRecord)
+            assertEquals(mapOf(
+                    BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
+                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE
+            ), hashedDL.peerHashToStatesToRecord)
         }
+        validateSenderAndReceiverTimestamps(sdrs, rdr!!)
 
         // exercise the new FinalityFlow observerSessions constructor parameter
         val stx3 = aliceNode.startFlowAndRunNetwork(CashPaymentWithObserversFlow(
@@ -407,9 +418,24 @@ class FinalityFlowTests : WithFinality {
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
         assertThat(charlieNode.services.validatedTransactions.getTransaction(stx3.id)).isNotNull
 
-        assertEquals(2, getSenderRecoveryData(stx3.id, aliceNode.database).size)
-        assertThat(getReceiverRecoveryData(stx3.id, bobNode.database)).isNotNull
-        assertThat(getReceiverRecoveryData(stx3.id, charlieNode.database)).isNotNull
+        val senderDistributionRecords = getSenderRecoveryData(stx3.id, aliceNode.database).apply {
+            assertEquals(2, this.size)
+            assertEquals(this[0].timestamp, this[1].timestamp)
+        }
+        getReceiverRecoveryData(stx3.id, bobNode).apply {
+            assertThat(this).isNotNull
+            assertEquals(senderDistributionRecords[0].timestamp, this!!.timestamp)
+        }
+        getReceiverRecoveryData(stx3.id, charlieNode).apply {
+            assertThat(this).isNotNull
+            assertEquals(senderDistributionRecords[0].timestamp, this!!.timestamp)
+        }
+    }
+
+    private fun validateSenderAndReceiverTimestamps(sdrs: List<SenderDistributionRecord>, rdr: ReceiverDistributionRecord) {
+        sdrs.map {
+            assertEquals(it.timestamp, rdr.timestamp)
+        }
     }
 
     @Test(timeout=300_000)
@@ -425,35 +451,38 @@ class FinalityFlowTests : WithFinality {
         assertThat(aliceNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
         assertThat(bobNode.services.validatedTransactions.getTransaction(stx.id)).isNotNull
 
-        getSenderRecoveryData(stx.id, aliceNode.database).apply {
+        val sdr = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
             assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
         }
-        getReceiverRecoveryData(stx.id, bobNode.database).apply {
-            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this?.initiatorPartyId)
-            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), this?.peersToStatesToRecord)
+        val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
+            assertNotNull(this)
+            val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
+            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this.initiatorPartyId)
+            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), hashedDL.peerHashToStatesToRecord)
         }
+        validateSenderAndReceiverTimestamps(sdr, rdr!!)
     }
 
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
-                    DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord::class.java
-            ).setParameter("transactionId", id.toString()).resultList.map { it }
+                    "from ${DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
+                    DBSenderDistributionRecord::class.java
+            ).setParameter("transactionId", id.toString()).resultList
         }
-        return fromDb.map { it.toSenderDistributionRecord() }.also { println("SenderDistributionRecord\n$it") }
+        return fromDb.map { it.toSenderDistributionRecord() }
     }
 
-    private fun getReceiverRecoveryData(id: SecureHash, database: CordaPersistence): ReceiverDistributionRecord? {
-        val fromDb = database.transaction {
+    private fun getReceiverRecoveryData(txId: SecureHash, receiver: TestStartedNode): ReceiverDistributionRecord? {
+        return receiver.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
-                    DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord::class.java
-            ).setParameter("transactionId", id.toString()).resultList.map { it }
-        }
-        return fromDb.singleOrNull()?.toReceiverDistributionRecord(MockCryptoService(emptyMap())).also { println("ReceiverDistributionRecord\n$it") }
+                    "from ${DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
+                    DBReceiverDistributionRecord::class.java
+            ).setParameter("transactionId", txId.toString()).resultList
+        }.singleOrNull()?.toReceiverDistributionRecord()
     }
 
     @StartableByRPC
@@ -484,6 +513,7 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(SpendFlow::class)
     class AcceptSpendFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
@@ -520,6 +550,7 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(SpeedySpendFlow::class)
     class AcceptSpeedySpendFlow(private val otherSideSession: FlowSession) : FlowLogic<SignedTransaction>() {
 
@@ -553,7 +584,7 @@ class FinalityFlowTests : WithFinality {
         }
     }
 
-    class FinaliseSpeedySpendFlow(val id: SecureHash, val sigs: List<TransactionSignature>) : FlowLogic<SignedTransaction>() {
+    class FinaliseSpeedySpendFlow(val id: SecureHash, private val sigs: List<TransactionSignature>) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -574,11 +605,14 @@ class FinalityFlowTests : WithFinality {
             val txBuilder = DummyContract.move(stateAndRef, newOwner)
             val stxn = serviceHub.signInitialTransaction(txBuilder, ourIdentity.owningKey)
             val sessionWithCounterParty = initiateFlow(newOwner)
-            subFlow(SendTransactionFlow(stxn, setOf(sessionWithCounterParty), emptySet(), StatesToRecord.ONLY_RELEVANT))
+            subFlow(object : SendTransactionFlow(stxn, setOf(sessionWithCounterParty), emptySet(), StatesToRecord.ONLY_RELEVANT, true) {
+                override fun isFinality(): Boolean = true
+            })
             throw UnexpectedFlowEndException("${stxn.id}")
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(MimicFinalityFailureFlow::class)
     class TriggerReceiveFinalityFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
         @Suspendable

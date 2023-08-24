@@ -12,7 +12,6 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.StatesToRecord
 import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -61,9 +60,11 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         return txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.IN_FLIGHT)) == null
     }
 
-    override fun addSenderTransactionRecoveryMetadata(id: SecureHash, metadata: TransactionMetadata): ByteArray? { return null }
+    override fun addSenderTransactionRecoveryMetadata(txId: SecureHash, metadata: TransactionMetadata): ByteArray? { return null }
 
-    override fun addReceiverTransactionRecoveryMetadata(id: SecureHash, sender: CordaX500Name, receiver: CordaX500Name, receiverStatesToRecord: StatesToRecord, encryptedDistributionList: ByteArray) { }
+    override fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
+                                                        sender: CordaX500Name,
+                                                        metadata: TransactionMetadata) { }
 
     override fun removeUnnotarisedTransaction(id: SecureHash): Boolean {
         return txns.remove(id) != null

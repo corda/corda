@@ -125,6 +125,7 @@ import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConver
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.persistence.DBCheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.AesDbEncryptionService
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -278,6 +279,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
     val partyInfoCache = PersistentPartyInfoCache(networkMapCache, cacheFactory, database)
+    val encryptionService = AesDbEncryptionService(database)
     @Suppress("LeakingThis")
     val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
@@ -638,6 +640,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
             partyInfoCache.start()
+            encryptionService.start(nodeInfo.legalIdentities[0])
 
             /* Note the .get() at the end of the distributeEvent call, below.
                This will block until all Corda Services have returned from processing the event, allowing a service to prevent the
@@ -1060,7 +1063,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
-        return DBTransactionStorageLedgerRecovery(database, cacheFactory, platformClock, cryptoService, partyInfoCache)
+        return DBTransactionStorageLedgerRecovery(database, cacheFactory, platformClock, encryptionService, partyInfoCache)
     }
 
     protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {

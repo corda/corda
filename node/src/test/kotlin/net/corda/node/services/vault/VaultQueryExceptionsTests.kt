@@ -22,7 +22,7 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
 
         @ClassRule
         @JvmField
-        val rule = object : VaultQueryTestRule() {
+        val rule = object : VaultQueryTestRule(persistentServices = false) {
             override val cordappPackages = listOf(
                     "net.corda.testing.contracts",
                     "net.corda.finance.contracts",
