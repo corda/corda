@@ -740,7 +740,7 @@ class NodeVaultServiceTest {
         }
 
         val expectedIssueUpdate = Vault.Update(emptySet(), setOf(initialCashState), null)
-        val expectedNotaryChangeUpdate = Vault.Update(setOf(initialCashState), setOf(cashStateWithNewNotary), null, Vault.UpdateType.NOTARY_CHANGE)
+        val expectedNotaryChangeUpdate = Vault.Update(setOf(initialCashState), setOf(cashStateWithNewNotary), null, Vault.UpdateType.NOTARY_CHANGE, consumingTxIds = mapOf(initialCashState.ref to changeNotaryTx.id))
         val expectedMoveUpdate = Vault.Update(setOf(cashStateWithNewNotary), emptySet(), null, consumingTxIds = mapOf(cashStateWithNewNotary.ref to moveTx.id))
 
         val observedUpdates = vaultSubscriber.onNextEvents
