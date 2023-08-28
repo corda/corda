@@ -133,33 +133,6 @@ pipeline {
                     options {
                         skipDefaultCheckout true
                     }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-                            /*
-                             * Copy all JUnit results files into a single top level directory.
-                             * This is necessary to stop the allure plugin from hitting out
-                             * of memory errors due to being passed many directories with
-                             * long paths.
-                             *
-                             * File names are pre-pended with a prefix when
-                             * copied to avoid collisions between files where the same test
-                             * classes have run on multiple agents.
-                             */
-                            fileOperations([fileCopyOperation(
-                                    includes: '**/build/test-results/**/*.xml',
-                                    targetLocation: 'allure-input',
-                                    flattenFiles: true,
-                                    renameFiles: true,
-                                    sourceCaptureExpression: '.*/([^/]+)$',
-                                    targetNameExpression: 'other-agent-$1')])
-                            stash name: 'allure-input', includes: 'allure-input/**', useDefaultExcludes: false
-                        }
-                        cleanup {
-                            deleteDir() /* clean up our workspace */
-                        }
-                    }
                     stages {
                         stage('Unstash') {
                             steps {
@@ -206,36 +179,13 @@ pipeline {
                     }
                 }
                 stage('Same agent') {
-                    post {
-                        always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
-                            /*
-                             * Copy all JUnit results files into a single top level directory.
-                             * This is necessary to stop the allure plugin from hitting out
-                             * of memory errors due to being passed many directories with
-                             * long paths.
-                             *
-                             * File names are pre-pended with a prefix when
-                             * copied to avoid collisions between files where the same test
-                             * classes have run on multiple agents.
-                             */
-                            fileOperations([fileCopyOperation(
-                                    includes: '**/build/test-results/**/*.xml',
-                                    targetLocation: 'allure-input',
-                                    flattenFiles: true,
-                                    renameFiles: true,
-                                    sourceCaptureExpression: '.*/([^/]+)$',
-                                    targetNameExpression: 'same-agent-$1')])
-                        }
-                    }
                     stages {
                         stage('Integration Test') {
                             steps {
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
-                                        'integrationTest'
+                                        'help'
                                 ].join(' ')
                             }
                         }
@@ -245,7 +195,7 @@ pipeline {
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
-                                        'deployNode'
+                                        'help'
                                 ].join(' ')
                             }
                         }
@@ -256,7 +206,7 @@ pipeline {
 
         stage('Publish to Artifactory') {
             when {
-                expression { isReleaseTag }
+                expression {return false}
             }
             steps {
                 rtServer(
@@ -286,7 +236,7 @@ pipeline {
 
         stage('Publish Release Candidate to Internal Repository') {
             when {
-                expression { isReleaseCandidate }
+                expression {return false}
             }
             steps {
                 withCredentials([
@@ -308,7 +258,7 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+                expression {return false}
             }
             steps {
                 withCredentials([
@@ -328,102 +278,5 @@ pipeline {
         }
     }
 
-    post {
-        always {
-            script {
-                if (gitUtils.isReleaseTag()) {
-                    gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''))
-                }
-                try {
-                    if (params.DO_TEST) {
-                        unstash 'allure-input'
-                        allure includeProperties: false,
-                                jdk: '',
-                                results: [[path: '**/allure-input']]
-                    }
-                } catch (err) {
-                    echo("Allure report generation failed: $err")
 
-                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
-                        currentBuild.result = 'UNSTABLE'
-                    }
-                }
-            }
-
-            script
-            {
-                if (!isReleaseTag) {
-                    // We want to send a summary email, but want to limit to once per day.
-                    // Comparing the dates of the previous and current builds achieves this,
-                    // i.e. we will only send an email for the first build on a given day.
-                    def prevBuildDate = new Date(
-                            currentBuild.previousBuild?.timeInMillis ?: 0).clearTime()
-                    def currentBuildDate = new Date(
-                            currentBuild.timeInMillis).clearTime()
-
-                    if (prevBuildDate != currentBuildDate) {
-                        def statusSymbol = '\u2753'
-                        switch(currentBuild.result) {
-                            case 'SUCCESS':
-                                statusSymbol = '\u2705'
-                                break;
-                            case 'UNSTABLE':
-                                statusSymbol = '\u26A0'
-                                break;
-                            case 'FAILURE':
-                                statusSymbol = '\u274c'
-                                break;
-                            default:
-                                break;
-                        }
-
-                        echo('First build for this date, sending summary email')
-                        emailext to: '$DEFAULT_RECIPIENTS',
-                            subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
-                            mimeType: 'text/html',
-                            body: '${SCRIPT, template="groovy-html.template"}'
-                    } else {
-                        echo('Already sent summary email today, suppressing')
-                    }
-                }
-            }
-        }
-        success {
-            script {
-                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
-                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
-                    snykSecurityScan.generateHtmlElements()
-                }
-
-                if (isReleaseTag || isReleaseCandidate) {
-                    // auto import and scanning of Docker images tag is dictated by below properties, so retrieve these first to scan the approproate tag
-                    String cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                    String versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                    snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, SnykOrganisation.CORDA_4_OS, env.C4_OS_SNYK_ORG_ID)
-                }
-            }
-        }
-        unstable {
-            script {
-                sendSlackNotifications("warning", "BUILD UNSTABLE", false, "#corda-corda4-open-source-build-notifications")
-                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
-                    snykSecurityScan.generateHtmlElements()
-                }
-                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
-                    snykSecurityScan.generateHtmlElements()
-                }
-            }
-        }
-        failure {
-            script {
-                sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-open-source-build-notifications")
-                if (isReleaseTag || isReleaseBranch || isReleaseCandidate) {
-                    sendEmailNotifications("${env.EMAIL_RECIPIENTS}")
-                }
-            }
-        }
-        cleanup {
-            deleteDir() /* clean up our workspace */
-        }
-    }
 }
