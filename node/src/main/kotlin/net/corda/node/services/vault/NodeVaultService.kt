@@ -410,7 +410,8 @@ class NodeVaultService(
             } else {
                 Vault.UpdateType.NOTARY_CHANGE
             }
-            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType, referenceStateAndRefs.toSet())
+            val consumedTxIds = consumedStateAndRefs.associate { Pair(it.ref, tx.id) }
+            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType, referenceStateAndRefs.toSet(), consumingTxIds = consumedTxIds)
         }
 
 
