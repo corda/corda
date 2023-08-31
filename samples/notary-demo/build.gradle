@@ -53,6 +53,15 @@ task deployNodesSingle(type: Cordform) {
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
     node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10007"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+    }
+    node {
         name "O=Notary Node,L=Zurich,C=CH"
         p2pPort 10009
         rpcSettings {
@@ -81,6 +90,15 @@ task deployNodesCustom(type: Cordform) {
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+    }
+    node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10007"
         }
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
@@ -115,6 +133,15 @@ task deployNodesRaft(type: Cordform) {
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+    }
+    node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10007"
         }
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
@@ -184,6 +211,15 @@ task deployNodesBFT(type: Cordform) {
         rpcSettings {
             address "localhost:10003"
             adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+    }
+    node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10007"
         }
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
