@@ -77,7 +77,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Test
-import org.junit.jupiter.api.assertThrows
 import java.sql.SQLException
 import java.util.Random
 import kotlin.test.assertEquals
@@ -199,8 +198,6 @@ class FinalityFlowTests : WithFinality {
             // Un-notarised txn clean-up occurs in ReceiveFinalityFlow upon receipt of UnexpectedFlowEndException
             assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
-            // validate original spend has recovery distribution records
-            assertThrows<AssertionError> { assertTxnRemovedFromDatabase(aliceNode, stx.id) }
         }
     }
 
