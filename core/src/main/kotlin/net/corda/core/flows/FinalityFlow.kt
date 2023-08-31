@@ -246,7 +246,6 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             return stxn
         }
         else {
-            logger.warnOnce("The current usage of FinalityFlow is not using Two Phase Finality. Please consider upgrading your CorDapp (refer to Corda 4.11 release notes).")
             val stxn = if (requiresNotarisation) {
                 notarise().first
             } else transaction
