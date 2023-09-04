@@ -1,0 +1,8 @@
+@Library('corda-shared-build-pipeline-steps@5.1') _
+
+forwardMerger(
+    targetBranch: 'release/os/4.12',
+    originBranch: 'release/os/4.11',
+    slackChannel: '#build-team-automated-notifications'
+)
+
