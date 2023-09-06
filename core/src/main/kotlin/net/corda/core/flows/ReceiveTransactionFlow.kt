@@ -78,7 +78,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             checkParameterHash(stx.networkParametersHash)
             subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, deferredAck))
             logger.info("Transaction dependencies resolution completed.")
-            verifyTx(stx, true)
+            verifyTx(stx, checkSufficientSignatures)
             if (checkSufficientSignatures) {
                 // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
                 // there are no missing signatures. We don't want partly signed stuff in the vault.
