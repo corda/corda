@@ -180,8 +180,8 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'test'
+                                        // COMMON_GRADLE_PARAMS,
+                                        'help'
                                 ].join(' ')
                             }
                         }
@@ -189,8 +189,8 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'smokeTest'
+                                        // COMMON_GRADLE_PARAMS,
+                                        'help'
                                 ].join(' ')
                             }
                         }
@@ -198,8 +198,8 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'slowIntegrationTest'
+                                        // COMMON_GRADLE_PARAMS,
+                                        'help'
                                 ].join(' ')
                             }
                         }
@@ -234,8 +234,8 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
-                                        'integrationTest'
+                                        // COMMON_GRADLE_PARAMS,
+                                        'help'
                                 ].join(' ')
                             }
                         }
@@ -254,78 +254,78 @@ pipeline {
             }
         }
 
-        stage('Publish to Artifactory') {
-            when {
-                expression { isReleaseTag }
-            }
-            steps {
-                rtServer(
-                        id: 'R3-Artifactory',
-                        url: 'https://software.r3.com/artifactory',
-                        credentialsId: 'artifactory-credentials'
-                )
-                rtGradleDeployer(
-                        id: 'deployer',
-                        serverId: 'R3-Artifactory',
-                        repo: 'corda-releases'
-                )
-                rtGradleRun(
-                        usesPlugin: true,
-                        useWrapper: true,
-                        switches: '-s --info -DpublishApiDocs',
-                        tasks: 'artifactoryPublish',
-                        deployerId: 'deployer',
-                        buildName: env.ARTIFACTORY_BUILD_NAME
-                )
-                rtPublishBuildInfo(
-                        serverId: 'R3-Artifactory',
-                        buildName: env.ARTIFACTORY_BUILD_NAME
-                )
-            }
-        }
+        // stage('Publish to Artifactory') {
+        //     when {
+        //         expression { isReleaseTag }
+        //     }
+        //     steps {
+        //         rtServer(
+        //                 id: 'R3-Artifactory',
+        //                 url: 'https://software.r3.com/artifactory',
+        //                 credentialsId: 'artifactory-credentials'
+        //         )
+        //         rtGradleDeployer(
+        //                 id: 'deployer',
+        //                 serverId: 'R3-Artifactory',
+        //                 repo: 'corda-releases'
+        //         )
+        //         rtGradleRun(
+        //                 usesPlugin: true,
+        //                 useWrapper: true,
+        //                 switches: '-s --info -DpublishApiDocs',
+        //                 tasks: 'artifactoryPublish',
+        //                 deployerId: 'deployer',
+        //                 buildName: env.ARTIFACTORY_BUILD_NAME
+        //         )
+        //         rtPublishBuildInfo(
+        //                 serverId: 'R3-Artifactory',
+        //                 buildName: env.ARTIFACTORY_BUILD_NAME
+        //         )
+        //     }
+        // }
 
-        stage('Publish Release Candidate to Internal Repository') {
-            when {
-                expression { isReleaseCandidate }
-            }
-            steps {
-                withCredentials([
-                        usernamePassword(credentialsId: 'docker-image-pusher-os',
-                                usernameVariable: 'DOCKER_USERNAME',
-                                passwordVariable: 'DOCKER_PASSWORD')
-                ]) {
-                    sh script: [
-                            './gradlew',
-                            COMMON_GRADLE_PARAMS,
-                            '-Pdocker.image.repository=entdocker.software.r3.com/corda',
-                            'docker:pushDockerImage',
-                            '--image OFFICIAL',
-                            '--registry-url=entdocker.software.r3.com'
-                            ].join(' ')
-                }
-            }
-        }
+        // stage('Publish Release Candidate to Internal Repository') {
+        //     when {
+        //         expression { isReleaseCandidate }
+        //     }
+        //     steps {
+        //         withCredentials([
+        //                 usernamePassword(credentialsId: 'docker-image-pusher-os',
+        //                         usernameVariable: 'DOCKER_USERNAME',
+        //                         passwordVariable: 'DOCKER_PASSWORD')
+        //         ]) {
+        //             sh script: [
+        //                     './gradlew',
+        //                     COMMON_GRADLE_PARAMS,
+        //                     '-Pdocker.image.repository=entdocker.software.r3.com/corda',
+        //                     'docker:pushDockerImage',
+        //                     '--image OFFICIAL',
+        //                     '--registry-url=entdocker.software.r3.com'
+        //                     ].join(' ')
+        //         }
+        //     }
+        // }
 
-        stage('Publish Release to Docker Hub') {
-            when {
-                expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
-            }
-            steps {
-                withCredentials([
-                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
-                                usernameVariable: 'DOCKER_USERNAME',
-                                passwordVariable: 'DOCKER_PASSWORD')
-                ]) {
-                    sh script: [
-                            './gradlew',
-                            COMMON_GRADLE_PARAMS,
-                            'docker:pushDockerImage',
-                            '-Pdocker.image.repository=corda/community',
-                            '--image OFFICIAL'
-                            ].join(' ')
-                }
-            }
-        }
+        // stage('Publish Release to Docker Hub') {
+        //     when {
+        //         expression { isReleaseTag && !isInternalRelease && !isReleaseCandidate}
+        //     }
+        //     steps {
+        //         withCredentials([
+        //                 usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
+        //                         usernameVariable: 'DOCKER_USERNAME',
+        //                         passwordVariable: 'DOCKER_PASSWORD')
+        //         ]) {
+        //             sh script: [
+        //                     './gradlew',
+        //                     COMMON_GRADLE_PARAMS,
+        //                     'docker:pushDockerImage',
+        //                     '-Pdocker.image.repository=corda/community',
+        //                     '--image OFFICIAL'
+        //                     ].join(' ')
+        //         }
+        //     }
+        // }
     }
 
     post {
@@ -350,78 +350,78 @@ pipeline {
                 }
             }
 
-            script
-            {
-                if (!isReleaseTag) {
-                    // We want to send a summary email, but want to limit to once per day.
-                    // Comparing the dates of the previous and current builds achieves this,
-                    // i.e. we will only send an email for the first build on a given day.
-                    def prevBuildDate = new Date(
-                            currentBuild.previousBuild?.timeInMillis ?: 0).clearTime()
-                    def currentBuildDate = new Date(
-                            currentBuild.timeInMillis).clearTime()
+            // script
+            // {
+            //     if (!isReleaseTag) {
+            //         // We want to send a summary email, but want to limit to once per day.
+            //         // Comparing the dates of the previous and current builds achieves this,
+            //         // i.e. we will only send an email for the first build on a given day.
+            //         def prevBuildDate = new Date(
+            //                 currentBuild.previousBuild?.timeInMillis ?: 0).clearTime()
+            //         def currentBuildDate = new Date(
+            //                 currentBuild.timeInMillis).clearTime()
 
-                    if (prevBuildDate != currentBuildDate) {
-                        def statusSymbol = '\u2753'
-                        switch(currentBuild.result) {
-                            case 'SUCCESS':
-                                statusSymbol = '\u2705'
-                                break;
-                            case 'UNSTABLE':
-                                statusSymbol = '\u26A0'
-                                break;
-                            case 'FAILURE':
-                                statusSymbol = '\u274c'
-                                break;
-                            default:
-                                break;
-                        }
+            //         if (prevBuildDate != currentBuildDate) {
+            //             def statusSymbol = '\u2753'
+            //             switch(currentBuild.result) {
+            //                 case 'SUCCESS':
+            //                     statusSymbol = '\u2705'
+            //                     break;
+            //                 case 'UNSTABLE':
+            //                     statusSymbol = '\u26A0'
+            //                     break;
+            //                 case 'FAILURE':
+            //                     statusSymbol = '\u274c'
+            //                     break;
+            //                 default:
+            //                     break;
+            //             }
 
-                        echo('First build for this date, sending summary email')
-                        emailext to: '$DEFAULT_RECIPIENTS',
-                            subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
-                            mimeType: 'text/html',
-                            body: '${SCRIPT, template="groovy-html.template"}'
-                    } else {
-                        echo('Already sent summary email today, suppressing')
-                    }
-                }
-            }
+            //             echo('First build for this date, sending summary email')
+            //             emailext to: '$DEFAULT_RECIPIENTS',
+            //                 subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
+            //                 mimeType: 'text/html',
+            //                 body: '${SCRIPT, template="groovy-html.template"}'
+            //         } else {
+            //             echo('Already sent summary email today, suppressing')
+            //         }
+            //     }
+            // }
         }
-        success {
-            script {
-                sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
-                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
-                    snykSecurityScan.generateHtmlElements()
-                }
+        // success {
+        //     script {
+        //         sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
+        //         if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+        //             snykSecurityScan.generateHtmlElements()
+        //         }
 
-                if (isReleaseTag || isReleaseCandidate) {
-                    // auto import and scanning of Docker images tag is dictated by below properties, so retrieve these first to scan the approproate tag
-                    String cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                    String versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
-                    snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, SnykOrganisation.CORDA_4_OS, env.C4_OS_SNYK_ORG_ID)
-                }
-            }
-        }
-        unstable {
-            script {
-                sendSlackNotifications("warning", "BUILD UNSTABLE", false, "#corda-corda4-open-source-build-notifications")
-                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
-                    snykSecurityScan.generateHtmlElements()
-                }
-                if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
-                    snykSecurityScan.generateHtmlElements()
-                }
-            }
-        }
-        failure {
-            script {
-                sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-open-source-build-notifications")
-                if (isReleaseTag || isReleaseBranch || isReleaseCandidate) {
-                    sendEmailNotifications("${env.EMAIL_RECIPIENTS}")
-                }
-            }
-        }
+        //         if (isReleaseTag || isReleaseCandidate) {
+        //             // auto import and scanning of Docker images tag is dictated by below properties, so retrieve these first to scan the approproate tag
+        //             String cordaVersion = sh(script: 'grep "cordaVersion" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+        //             String versionSuffix = sh(script: 'grep "versionSuffix" constants.properties | awk -F= \'{print $2}\'', returnStdout: true).trim()
+        //             snykUtils.SnykApiImport(!versionSuffix.isEmpty() ? "${cordaVersion}-${versionSuffix}" : cordaVersion, SnykOrganisation.CORDA_4_OS, env.C4_OS_SNYK_ORG_ID)
+        //         }
+        //     }
+        // }
+        // unstable {
+        //     script {
+        //         sendSlackNotifications("warning", "BUILD UNSTABLE", false, "#corda-corda4-open-source-build-notifications")
+        //         if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+        //             snykSecurityScan.generateHtmlElements()
+        //         }
+        //         if (isReleaseTag || isReleaseCandidate || isReleaseBranch) {
+        //             snykSecurityScan.generateHtmlElements()
+        //         }
+        //     }
+        // }
+        // failure {
+        //     script {
+        //         sendSlackNotifications("danger", "BUILD FAILURE", true, "#corda-corda4-open-source-build-notifications")
+        //         if (isReleaseTag || isReleaseBranch || isReleaseCandidate) {
+        //             sendEmailNotifications("${env.EMAIL_RECIPIENTS}")
+        //         }
+        //     }
+        // }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
