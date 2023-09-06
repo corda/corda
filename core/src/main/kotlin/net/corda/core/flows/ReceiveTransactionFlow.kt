@@ -78,7 +78,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
             checkParameterHash(stx.networkParametersHash)
             subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, deferredAck))
             logger.info("Transaction dependencies resolution completed.")
-            verifyTx(stx)
+            verifyTx(stx, true)
             if (checkSufficientSignatures) {
                 // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
                 // there are no missing signatures. We don't want partly signed stuff in the vault.
@@ -92,9 +92,9 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         }
     }
 
-    private fun verifyTx(stx: SignedTransaction) {
+    private fun verifyTx(stx: SignedTransaction, localCheckSufficientSignatures: Boolean) {
         try {
-            stx.verify(serviceHub, checkSufficientSignatures)
+            stx.verify(serviceHub, localCheckSufficientSignatures)
         } catch (e: Exception) {
             logger.warn("Transaction verification failed.")
             throw e
@@ -113,7 +113,7 @@ open class ReceiveTransactionFlow constructor(private val otherSideSession: Flow
         checkParameterHash(stx.networkParametersHash)
         subFlow(ResolveTransactionsFlow(stx, otherSideSession, statesToRecord, true))
         logger.info("Transaction dependencies resolution completed.")
-        verifyTx(stx)
+        verifyTx(stx, false)
         serviceHub.telemetryServiceInternal.span("${this::class.java.name}#recordUnnotarisedTransaction", flowLogic = this) {
             logger.debug { "Peer recording transaction without notary signature." }
             (serviceHub as ServiceHubCoreInternal).recordUnnotarisedTransaction(stx)
