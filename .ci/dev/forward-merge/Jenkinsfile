@@ -3,6 +3,6 @@
 forwardMerger(
     targetBranch: 'release/os/4.7',
     originBranch: 'release/os/4.6',
-    slackChannel: '#build-team-automated-notifications'
+    slackChannel: '#c4-forward-merge-bot-notifications'
 )
 
