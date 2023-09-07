@@ -1,8 +1,31 @@
 @Library('corda-shared-build-pipeline-steps@5.1') _
 
-forwardMerger(
-    targetBranch: 'release/os/4.9',
-    originBranch: 'release/os/4.8',
-    slackChannel: '#build-team-automated-notifications'
-)
+/*
+ * Forward merge any changes in current branch to the branch with following version.
+ *
+ * Please note, the branches names are intentionally separated as variables, to minimised conflicts
+ * during automated merges for this file.
+ *
+ * These variables should be updated when a new version is cut
+ */
 
+/**
+ * the branch name of origin branch, it should match the current branch
+ * and it acts as a fail-safe inside {@code forwardMerger} pipeline
+ */
+String originBranch = 'release/os/4.8'
+
+/**
+ * the branch name of target branch, it should be the branch with the next version
+ * after the one in current branch.
+ */
+String targetBranch = 'release/os/4.9'
+
+/**
+ * Forward merge any changes between #originBranch and #targetBranch
+ */
+forwardMerger(
+    targetBranch: targetBranch,
+    originBranch: originBranch,
+    slackChannel: '#c4-forward-merge-bot-notifications',
+)
