@@ -9,13 +9,12 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 
 @InitiatingFlow
@@ -32,7 +31,7 @@ class AttachmentFlow(private val otherSide: Party,
     override fun call(): SignedTransaction {
         // Create a trivial transaction with an output that describes the attachment, and the attachment itself
         val ptx = TransactionBuilder(notary)
-                .addOutputState(AttachmentContract.State(OpaqueBytes(attachId.bytes)), ATTACHMENT_PROGRAM_ID)
+                .addOutputState(AttachmentContract.State(attachId), ATTACHMENT_PROGRAM_ID)
                 .addCommand(AttachmentContract.Command, ourIdentity.owningKey)
                 .addAttachment(attachId)
 
@@ -49,8 +48,11 @@ class AttachmentFlow(private val otherSide: Party,
 class StoreAttachmentFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        // As a non-participant to the transaction we need to record all states
-        subFlow(ReceiveFinalityFlow(otherSide, statesToRecord = StatesToRecord.ALL_VISIBLE))
+        // purposely prevent transaction verification and recording in ReceiveTransactionFlow
+        val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = false, statesToRecord = StatesToRecord.ALL_VISIBLE))
+        logger.info("StoreAttachmentFlow: successfully received fully signed tx. Sending it to the vault for processing.")
+
+        serviceHub.recordTransactions(StatesToRecord.ALL_VISIBLE, setOf(stx))
+        logger.info("StoreAttachmentFlow: successfully recorded received transaction locally.")
     }
 }
-

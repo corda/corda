@@ -1,6 +1,7 @@
 package net.corda.node
 
-import net.corda.contracts.incompatible.version1.AttachmentContract
+import junit.framework.TestCase.assertEquals
+import net.corda.contracts.incompatible.version1.AttachmentContract as AttachmentContractV1
 import net.corda.contracts.incompatible.version2.AttachmentContract as AttachmentContractV2
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.internal.deleteRecursively
@@ -20,15 +21,13 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.flows.waitForAllFlowsToComplete
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.util.concurrent.TimeoutException
 
-@Suppress("FunctionName")
 class VaultUpdateDeserializationTest {
     companion object {
         val user = User("u", "p", setOf(Permissions.all()))
@@ -37,14 +36,17 @@ class VaultUpdateDeserializationTest {
         val contractVersion1 = cordappWithPackages("net.corda.contracts.incompatible.version1")
         val contractVersion2 = cordappWithPackages("net.corda.contracts.incompatible.version2")
 
-        fun driverParameters(cordapps: List<TestCordapp>, runInProcess: Boolean = false,
-                             ignoreTransactionDeserializationErrors: Boolean = false): DriverParameters {
+        fun driverParameters(ignoreTransactionDeserializationErrors: Boolean = false,
+                             disableSignatureVerification: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = runInProcess,
+                inMemoryDB = false,
+                startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
-                cordappsForAllNodes = cordapps,
-                systemProperties = mapOf("net.corda.vaultupdate.ignore.transaction.deserialization.errors" to ignoreTransactionDeserializationErrors.toString())
+                cordappsForAllNodes = emptyList(),
+                systemProperties = mapOf(
+                        "net.corda.vaultupdate.ignore.transaction.deserialization.errors" to ignoreTransactionDeserializationErrors.toString(),
+                        "net.corda.recordtransaction.signature.verification.disabled" to disableSignatureVerification.toString())
             )
         }
     }
@@ -55,7 +57,7 @@ class VaultUpdateDeserializationTest {
      */
     @Test(timeout=300_000)
 	fun `receiver flow throws deserialization error when using incompatible contract jar`() {
-        driver(driverParameters(emptyList(), false)) {
+        driver(driverParameters()) {
             val alice = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1)),
                     providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val bob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion2)),
@@ -65,34 +67,62 @@ class VaultUpdateDeserializationTest {
             alice.rpc.uploadAttachment(inputStream)
 
             // ISSUE: exception is not propagating from Receiver
-//            val ex = assertFailsWith<TransactionDeserialisationException> {
-//            val ex = assertFailsWith<FlowException> {
-            println("Alice: Start AttachmentFlow")
             try {
                 alice.rpc.startFlow(::AttachmentFlow, bob.nodeInfo.singleIdentity(), defaultNotaryIdentity, hash).returnValue.getOrThrow(30.seconds)
             }
             catch(e: TimeoutException) {
                 println("Alice: Timeout awaiting flow completion.")
             }
-//            }
-//            println(ex.message)
-//            assertThat(ex).hasMessageContaining("Invalid data: $data")
 
-            println("Bob: Check vault")
-            assertThat(bob.rpc.vaultQueryBy<AttachmentContractV2.State>().states).hasSize(0)
+            assertEquals(0, bob.rpc.vaultQueryBy<AttachmentContractV2.State>().states.size)
 
             // restart Bob with correct contract jar version
-            println("Bob: stop and remove cordapps")
             (bob as OutOfProcess).process.destroyForcibly()
             bob.stop()
             (baseDirectory(BOB_NAME) / "cordapps").deleteRecursively()
 
-            println("Bob: re-start")
             val restartedBob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1)),
                     providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
-            // ISSUE: receiver is not re-processing hospitalized flow
-            println("Bob: Re-check vault")
-            assertThat(restartedBob.rpc.vaultQueryBy<AttachmentContract.State>().states).hasSize(1)
+            // original hospitalized transaction should now have been re-processed with correct contract jar
+            assertEquals(1, restartedBob.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
+        }
+    }
+
+    /*
+     * Test original deserialization failure behaviour by setting a new configurable java system property.
+     * The ledger will enter an inconsistent state from which is cannot auto-recover.
+     */
+    @Test(timeout = 300_000)
+    fun `receiver flow ignores deserialization failure when using override system property`() {
+        driver(driverParameters(ignoreTransactionDeserializationErrors = true,
+                                disableSignatureVerification = true)) {
+            val alice = startNode(NodeParameters(additionalCordapps = listOf(flowVersion2, contractVersion1)),
+                    providedName = ALICE_NAME).getOrThrow()
+            val bob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion2, contractVersion2)),
+                    providedName = BOB_NAME).getOrThrow()
+
+            val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(1024, 0)
+            alice.rpc.uploadAttachment(inputStream)
+
+            // Note: TransactionDeserialisationException is swallowed on the receiver node (without updating the vault).
+            val stx = alice.rpc.startFlow(::AttachmentFlow, bob.nodeInfo.singleIdentity(), defaultNotaryIdentity, hash).returnValue.getOrThrow(30.seconds)
+            println("Alice txId: ${stx.id}")
+
+            waitForAllFlowsToComplete(bob)
+            val txId = alice.rpc.stateMachineRecordedTransactionMappingSnapshot().single().transactionId
+            println("Bob txId: $txId")
+
+            assertEquals(0, bob.rpc.vaultQueryBy<AttachmentContractV2.State>().states.size)
+
+            // restart Bob with correct contract jar version
+            (bob as OutOfProcess).process.destroyForcibly()
+            bob.stop()
+            (baseDirectory(BOB_NAME) / "cordapps").deleteRecursively()
+
+            val restartedBob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion2, contractVersion1)),
+                    providedName = BOB_NAME).getOrThrow()
+            // NOTE: flow is not re-tried as it was never sent to flow hospital.
+            assertEquals(0, restartedBob.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
         }
     }
 }
