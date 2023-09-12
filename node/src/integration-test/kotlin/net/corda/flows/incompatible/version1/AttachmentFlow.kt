@@ -4,12 +4,19 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.incompatible.version1.ATTACHMENT_PROGRAM_ID
 import net.corda.contracts.incompatible.version1.AttachmentContract
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+
 @InitiatingFlow
 @StartableByRPC
 class AttachmentFlow(private val otherSide: Party,
