@@ -88,7 +88,9 @@ class VaultUpdateDeserializationTest {
             }
             assertEquals(0, bob.rpc.vaultQueryBy<AttachmentContractV2.State>().states.size)
             // check transaction records
+            @Suppress("DEPRECATION")
             assertTrue(alice.rpc.internalVerifiedTransactionsSnapshot().isNotEmpty())
+            @Suppress("DEPRECATION")
             assertTrue(bob.rpc.internalVerifiedTransactionsSnapshot().isEmpty())
 
             // restart Bob with correct contract jar version
@@ -100,6 +102,7 @@ class VaultUpdateDeserializationTest {
                     providedName = BOB_NAME).getOrThrow()
             // original hospitalized transaction should now have been re-processed with correct contract jar
             assertEquals(1, waitForVaultUpdate(restartedBob))
+            @Suppress("DEPRECATION")
             assertTrue(restartedBob.rpc.internalVerifiedTransactionsSnapshot().isNotEmpty())
         }
     }
@@ -140,6 +143,7 @@ class VaultUpdateDeserializationTest {
             val restartedBob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion2, contractVersion2)),
                     providedName = BOB_NAME).getOrThrow()
             // transaction recorded
+            @Suppress("DEPRECATION")
             assertNotNull(restartedBob.rpc.internalFindVerifiedTransaction(txId))
             // but vault states not updated
             assertEquals(0, restartedBob.rpc.vaultQueryBy<AttachmentContractV2.State>().states.size)
@@ -166,7 +170,9 @@ class VaultUpdateDeserializationTest {
                 println("Alice: Caught flow propagation error from peer.")
             }
             // check transaction records
+            @Suppress("DEPRECATION")
             assertTrue(alice.rpc.internalVerifiedTransactionsSnapshot().isNotEmpty())
+            @Suppress("DEPRECATION")
             assertTrue(bob.rpc.internalVerifiedTransactionsSnapshot().isEmpty())
 
             // restart Bob with correct contract jar version
@@ -179,6 +185,7 @@ class VaultUpdateDeserializationTest {
             // NOTE: flow is not re-tried as it was never sent to flow hospital.
             assertEquals(0, restartedBob.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
             // no transaction recorded
+            @Suppress("DEPRECATION")
             assertTrue(restartedBob.rpc.internalVerifiedTransactionsSnapshot().isEmpty())
         }
     }
