@@ -801,7 +801,7 @@ class NodeVaultService(
 
     private fun <T : ContractState> queryTotalStateCount(criteria: QueryCriteria, contractStateType: Class<out T>): Long {
         val (criteriaQuery, criteriaParser) = buildCriteriaQuery<Long>(criteria, contractStateType, null)
-        criteriaQuery.select(criteriaBuilder.countDistinct(criteriaParser.vaultStates))
+        criteriaQuery.select(criteriaBuilder.count(criteriaParser.vaultStates))
         val query = getSession().createQuery(criteriaQuery)
         return query.singleResult
     }

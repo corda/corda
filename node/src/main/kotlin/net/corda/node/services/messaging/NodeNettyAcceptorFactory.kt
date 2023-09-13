@@ -9,6 +9,7 @@ import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeTimeoutException
 import net.corda.core.internal.declaredField
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.protonwrapper.netty.sslDelegatedTaskExecutor
 import net.corda.nodeapi.internal.setThreadPoolName
@@ -131,6 +132,7 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                                          delegatedTaskExecutor: Executor,
                                          private val trace: Boolean) : SslHandler(engine, delegatedTaskExecutor) {
         companion object {
+            private val nettyLogHandshake = System.getProperty("net.corda.node.services.messaging.nettyLogHandshake")?.toBoolean() ?: false
             private val logger = contextLogger()
         }
 
@@ -153,14 +155,30 @@ class NodeNettyAcceptorFactory : AcceptorFactory {
                     remoteAddress
                 }
                 when {
-                    it.isSuccess -> logger.info("SSL handshake completed in ${duration}ms with $peer")
-                    it.isCancelled -> logger.warn("SSL handshake cancelled after ${duration}ms with $peer")
+                    it.isSuccess -> loggerInfo { "SSL handshake completed in ${duration}ms with $peer" }
+                    it.isCancelled -> loggerWarn { "SSL handshake cancelled after ${duration}ms with $peer" }
                     else -> when (it.cause()) {
-                        is ClosedChannelException -> logger.warn("SSL handshake closed early after ${duration}ms with $peer")
-                        is SslHandshakeTimeoutException -> logger.warn("SSL handshake timed out after ${duration}ms with $peer")
-                        else -> logger.warn("SSL handshake failed after ${duration}ms with $peer", it.cause())
+                        is ClosedChannelException -> loggerWarn { "SSL handshake closed early after ${duration}ms with $peer" }
+                        is SslHandshakeTimeoutException -> loggerWarn { "SSL handshake timed out after ${duration}ms with $peer" }
+                        else -> loggerWarn(it.cause()) {"SSL handshake failed after ${duration}ms with $peer" }
                     }
                 }
+            }
+        }
+        private fun loggerInfo(msgFn: () -> String) {
+            if (nettyLogHandshake && logger.isInfoEnabled) {
+                logger.info(msgFn())
+            }
+            else {
+                logger.trace { msgFn() }
+            }
+        }
+        private fun loggerWarn(t: Throwable? = null, msgFn: () -> String) {
+            if (nettyLogHandshake && logger.isWarnEnabled) {
+                logger.warn(msgFn(), t)
+            }
+            else if (logger.isTraceEnabled) {
+                logger.trace(msgFn(), t)
             }
         }
     }
