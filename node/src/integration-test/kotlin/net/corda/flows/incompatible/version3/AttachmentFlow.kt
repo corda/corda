@@ -48,12 +48,9 @@ class AttachmentFlow(private val otherSide: Party,
 class StoreAttachmentFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        // purposely prevent transaction verification and recording in ReceiveTransactionFlow
-        val stx = subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = true, statesToRecord = StatesToRecord.ALL_VISIBLE))
+        // purposely enable transaction verification and recording in ReceiveTransactionFlow
+        subFlow(ReceiveTransactionFlow(otherSide, checkSufficientSignatures = true, statesToRecord = StatesToRecord.ALL_VISIBLE))
         logger.info("StoreAttachmentFlow: successfully received fully signed tx. Sending it to the vault for processing.")
-
-        serviceHub.recordTransactions(StatesToRecord.ALL_VISIBLE, setOf(stx))
-        logger.info("StoreAttachmentFlow: successfully recorded received transaction locally.")
     }
 }
 
