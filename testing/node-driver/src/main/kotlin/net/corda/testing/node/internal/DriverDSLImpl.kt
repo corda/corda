@@ -755,7 +755,7 @@ class DriverDSLImpl(
                     debugPort,
                     bytemanJarPath,
                     bytemanPort,
-                    systemProperties,
+                    systemProperties + parameters.systemProperties,
                     parameters.maximumHeapSize,
                     parameters.logLevelOverride,
                     identifier,

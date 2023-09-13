@@ -36,7 +36,8 @@ data class NodeParameters(
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
         val logLevelOverride: String? = null,
-        val rpcAddress: NetworkHostAndPort? = null
+        val rpcAddress: NetworkHostAndPort? = null,
+        val systemProperties: Map<String, String> = emptyMap()
 ) {
     /**
      * Create a new node parameters object with default values. Each parameter can be specified with its wither method which returns a copy
