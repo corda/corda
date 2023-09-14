@@ -13,13 +13,13 @@
  * the branch name of origin branch, it should match the current branch
  * and it acts as a fail-safe inside {@code forwardMerger} pipeline
  */
-String originBranch = 'release/os/4.11'
+String originBranch = 'release/os/4.12'
 
 /**
  * the branch name of target branch, it should be the branch with the next version
  * after the one in current branch.
  */
-String targetBranch = 'release/os/4.12'
+String targetBranch = 'release/os/4.13'
 
 /**
  * Forward merge any changes between #originBranch and #targetBranch
