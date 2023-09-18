@@ -75,7 +75,7 @@ class VaultUpdateDeserializationTest {
             val stx = alice.rpc.startFlow(::AttachmentIssueFlow, hash, defaultNotaryIdentity).returnValue.getOrThrow(30.seconds)
             val spendableState = stx.coreTransaction.outRef<AttachmentContractV1.State>(0)
 
-            // ISSUE: exception is not propagating from Receiver
+            // ISSUE: exception is propagated from Receiver
             try {
                 alice.rpc.startFlow(::AttachmentFlowV1, bob.nodeInfo.singleIdentity(), defaultNotaryIdentity, hash, spendableState).returnValue.getOrThrow(30.seconds)
             }
