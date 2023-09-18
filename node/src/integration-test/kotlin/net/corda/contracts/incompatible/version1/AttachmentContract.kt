@@ -6,6 +6,7 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.transactions.LedgerTransaction
 
 class AttachmentContract : Contract {
@@ -21,7 +22,7 @@ class AttachmentContract : Contract {
     object Command : TypeOnlyCommandData()
 
     data class State(val hash: SecureHash.SHA256) : ContractState {
-        private val FAIL_CONTRACT_STATE = java.lang.Boolean.getBoolean("net.corda.contracts.incompatible.AttachmentContract.fail.state")
+        private val FAIL_CONTRACT_STATE = java.lang.Boolean.getBoolean("net.corda.contracts.incompatible.AttachmentContract.fail.state") && (this.javaClass.classLoader !is AttachmentsClassLoader)
         init {
             if (FAIL_CONTRACT_STATE) throw TransactionVerificationException.TransactionRequiredContractUnspecifiedException(hash,"AttachmentContract state initialisation failed.")
         }
