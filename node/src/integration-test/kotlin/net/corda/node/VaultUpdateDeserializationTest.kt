@@ -53,13 +53,13 @@ class VaultUpdateDeserializationTest {
     }
 
     /*
- * Transaction sent from A -> B with Notarisation
- * Test that a deserialization error is raised where the receiver node of a transaction has an incompatible contract jar.
- * In the case of a notarised transaction, a deserialisation error is thrown in the receiver SignTransactionFlow (before finality)
- * upon receiving the transaction to be signed and attempting to record its dependencies.
- * The ledger will not record any transactions, and the flow must be retried by the sender upon installing the correct contract jar
- * version at the receiver and re-starting the node.
- */
+     * Transaction sent from A -> B with Notarisation
+     * Test that a deserialization error is raised where the receiver node of a transaction has an incompatible contract jar.
+     * In the case of a notarised transaction, a deserialisation error is thrown in the receiver SignTransactionFlow (before finality)
+     * upon receiving the transaction to be signed and attempting to record its dependencies.
+     * The ledger will not record any transactions, and the flow must be retried by the sender upon installing the correct contract jar
+     * version at the receiver and re-starting the node.
+     */
     @Test(timeout=300_000)
     fun `Notarised transaction fails completely upon receiver deserialization failure collecting signatures when using incompatible contract jar`() {
         driver(driverParameters(listOf(flowVersion1, contractVersion1))) {
@@ -104,6 +104,44 @@ class VaultUpdateDeserializationTest {
             assertEquals(1, alice.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
             @Suppress("DEPRECATION")
             assertTrue(restartedBob.rpc.internalVerifiedTransactionsSnapshot().isNotEmpty())
+        }
+    }
+
+    /*
+     * Transaction sent from A -> B with Notarisation
+     *
+     * Test original deserialization failure behaviour by setting a new configurable java system property.
+     * The ledger will enter an inconsistent state from which is cannot auto-recover.
+     */
+    @Test(timeout=300_000)
+    fun `Notarised transaction when using incompatible contract jar and overriden system property`() {
+        driver(driverParameters(listOf(flowVersion1, contractVersion1))) {
+            val alice = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1)),
+                    providedName = ALICE_NAME).getOrThrow()
+            val bob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1),
+                    systemProperties = mapOf("net.corda.contracts.incompatible.AttachmentContract.fail.state" to "true",
+                    "net.corda.vaultupdate.ignore.transaction.deserialization.errors" to "true",
+                    "net.corda.recordtransaction.signature.verification.disabled" to "true")),
+                    providedName = BOB_NAME).getOrThrow()
+
+            val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(1024, 0)
+            alice.rpc.uploadAttachment(inputStream)
+
+            val stx = alice.rpc.startFlow(::AttachmentIssueFlow, hash, defaultNotaryIdentity).returnValue.getOrThrow(30.seconds)
+            val spendableState = stx.coreTransaction.outRef<AttachmentContractV1.State>(0)
+
+            // Flow completes successfully (deserialisation error on Receiver node is ignored)
+            alice.rpc.startFlow(::AttachmentFlowV1, bob.nodeInfo.singleIdentity(), defaultNotaryIdentity, hash, spendableState).returnValue.getOrThrow(30.seconds)
+
+            // sender node correctly updated
+            @Suppress("DEPRECATION")
+            assertEquals(2, alice.rpc.internalVerifiedTransactionsSnapshot().size)
+            assertEquals(1, alice.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
+
+            // receiver node has transaction but vault not updated!
+            @Suppress("DEPRECATION")
+            assertEquals(2, bob.rpc.internalVerifiedTransactionsSnapshot().size)
+            assertEquals(0, bob.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
         }
     }
 
