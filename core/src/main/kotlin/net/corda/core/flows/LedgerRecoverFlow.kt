@@ -15,7 +15,7 @@ import net.corda.core.utilities.ProgressTracker
 @InitiatingFlow
 class LedgerRecoveryFlow(
         private val recoveryPeers: Collection<Party>,
-        private val timeWindow: RecoveryTimeWindow,
+        private val timeWindow: RecoveryTimeWindow?,
         private val useAllNetworkNodes: Boolean = false,
         private val transactionRole: TransactionRole = TransactionRole.ALL,
         private val dryRun: Boolean = false,
@@ -24,7 +24,7 @@ class LedgerRecoveryFlow(
 
     @CordaInternal
     data class ExtraConstructorArgs(val recoveryPeers: Collection<Party>,
-                                    val timeWindow: RecoveryTimeWindow,
+                                    val timeWindow: RecoveryTimeWindow?,
                                     val useAllNetworkNodes: Boolean,
                                     val transactionRole: TransactionRole,
                                     val dryRun: Boolean,
