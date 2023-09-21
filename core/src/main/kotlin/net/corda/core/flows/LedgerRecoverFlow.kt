@@ -15,7 +15,7 @@ import net.corda.core.utilities.ProgressTracker
 @InitiatingFlow
 class LedgerRecoveryFlow(
         private val recoveryPeers: Collection<Party>,
-        private val timeWindow: RecoveryTimeWindow,
+        private val timeWindow: RecoveryTimeWindow? = null,
         private val useAllNetworkNodes: Boolean = false,
         private val transactionRole: TransactionRole = TransactionRole.ALL,
         private val dryRun: Boolean = false,
@@ -24,7 +24,7 @@ class LedgerRecoveryFlow(
 
     @CordaInternal
     data class ExtraConstructorArgs(val recoveryPeers: Collection<Party>,
-                                    val timeWindow: RecoveryTimeWindow,
+                                    val timeWindow: RecoveryTimeWindow? = null,
                                     val useAllNetworkNodes: Boolean,
                                     val transactionRole: TransactionRole,
                                     val dryRun: Boolean,
@@ -33,13 +33,13 @@ class LedgerRecoveryFlow(
     fun getExtraConstructorArgs() = ExtraConstructorArgs(recoveryPeers, timeWindow, useAllNetworkNodes, transactionRole, dryRun, optimisticInitiatorRecovery)
 
     // unused constructors added to facilitate Node Shell command invocation
-    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow) : this(setOf(recoveryPeer), timeWindow, false, TransactionRole.ALL, false, false)
-    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow, dryRun: Boolean) : this(setOf(recoveryPeer), timeWindow, false, TransactionRole.ALL, dryRun, false)
+    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow?) : this(setOf(recoveryPeer), timeWindow, false, TransactionRole.ALL, false, false)
+    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow?, dryRun: Boolean) : this(setOf(recoveryPeer), timeWindow, false, TransactionRole.ALL, dryRun, false)
 
-    constructor(timeWindow: RecoveryTimeWindow, dryRun: Boolean) : this(emptySet(), timeWindow, false, TransactionRole.ALL, dryRun, false)
-    constructor(timeWindow: RecoveryTimeWindow, dryRun: Boolean, optimisticInitiatorRecovery: Boolean) : this(emptySet(), timeWindow, false, TransactionRole.ALL, dryRun, optimisticInitiatorRecovery)
-    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, dryRun: Boolean) : this(recoveryPeers, timeWindow, false, TransactionRole.ALL, dryRun, false)
-    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, dryRun: Boolean, optimisticInitiatorRecovery: Boolean) : this(recoveryPeers, timeWindow, false, TransactionRole.ALL, dryRun, optimisticInitiatorRecovery)
+    constructor(timeWindow: RecoveryTimeWindow?, dryRun: Boolean) : this(emptySet(), timeWindow, false, TransactionRole.ALL, dryRun, false)
+    constructor(timeWindow: RecoveryTimeWindow?, dryRun: Boolean, optimisticInitiatorRecovery: Boolean) : this(emptySet(), timeWindow, false, TransactionRole.ALL, dryRun, optimisticInitiatorRecovery)
+    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow?, dryRun: Boolean) : this(recoveryPeers, timeWindow, false, TransactionRole.ALL, dryRun, false)
+    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow?, dryRun: Boolean, optimisticInitiatorRecovery: Boolean) : this(recoveryPeers, timeWindow, false, TransactionRole.ALL, dryRun, optimisticInitiatorRecovery)
 
     @Suspendable
     @Throws(LedgerRecoveryException::class)
