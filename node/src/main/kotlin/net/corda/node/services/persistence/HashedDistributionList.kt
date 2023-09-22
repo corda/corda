@@ -14,7 +14,7 @@ import java.time.Instant
 @CordaSerializable
 data class HashedDistributionList(
         val senderStatesToRecord: StatesToRecord,
-        internal val peerHashToStatesToRecord: Map<SecureHash, StatesToRecord>,
+        val peerHashToStatesToRecord: Map<SecureHash, StatesToRecord>,
         val publicHeader: PublicHeader
 ) {
     /**
