@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.node.services.EncryptionService
@@ -13,7 +14,7 @@ import java.time.Instant
 @CordaSerializable
 data class HashedDistributionList(
         val senderStatesToRecord: StatesToRecord,
-        val peerHashToStatesToRecord: Map<Long, StatesToRecord>,
+        internal val peerHashToStatesToRecord: Map<SecureHash, StatesToRecord>,
         val publicHeader: PublicHeader
 ) {
     /**
@@ -28,7 +29,7 @@ data class HashedDistributionList(
         out.writeByte(senderStatesToRecord.ordinal)
         out.writeInt(peerHashToStatesToRecord.size)
         for (entry in peerHashToStatesToRecord) {
-            out.writeLong(entry.key)
+            out.writeUTF(entry.key.toString())
             out.writeByte(entry.value.ordinal)
         }
         return encryptionService.encrypt(baos.toByteArray(), publicHeader.serialise())
@@ -91,9 +92,9 @@ data class HashedDistributionList(
             try {
                 val senderStatesToRecord = statesToRecordValues[input.readByte().toInt()]
                 val numPeerHashToStatesToRecords = input.readInt()
-                val peerHashToStatesToRecord = mutableMapOf<Long, StatesToRecord>()
+                val peerHashToStatesToRecord = mutableMapOf<SecureHash, StatesToRecord>()
                 repeat(numPeerHashToStatesToRecords) {
-                    peerHashToStatesToRecord[input.readLong()] = statesToRecordValues[input.readByte().toInt()]
+                    peerHashToStatesToRecord[SecureHash.parse(input.readUTF())] = statesToRecordValues[input.readByte().toInt()]
                 }
                 return HashedDistributionList(senderStatesToRecord, peerHashToStatesToRecord, publicHeader)
             } catch (e: Exception) {
