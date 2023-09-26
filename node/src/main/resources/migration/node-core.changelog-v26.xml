@@ -19,10 +19,4 @@
         <addPrimaryKey constraintName="node_aes_encryption_keys_pkey" tableName="node_aes_encryption_keys" columnNames="key_id"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="node_aes_encryption_keys_idx">
-        <createIndex indexName="node_aes_encryption_keys_idx" tableName="node_aes_encryption_keys">
-            <column name="key_id"/>
-        </createIndex>
-    </changeSet>
-
 </databaseChangeLog>
