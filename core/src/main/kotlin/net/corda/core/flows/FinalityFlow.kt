@@ -62,6 +62,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @CordaInternal
     data class ExtraConstructorArgs(val oldParticipants: Collection<Party>, val sessions: Collection<FlowSession>, val newApi: Boolean, val statesToRecord: StatesToRecord, val observerSessions: Collection<FlowSession>)
 
+    @Suppress("unused")  // Used in ENT
     @CordaInternal
     fun getExtraConstructorArgs() = ExtraConstructorArgs(oldParticipants, sessions, newApi, statesToRecord, observerSessions)
 

@@ -10,6 +10,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.services.asVerifying
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
@@ -28,7 +29,6 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
-import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.NodeSchemaService
@@ -85,7 +85,7 @@ class HibernateConfigurationTest {
     val vault: VaultService get() = services.vaultService
 
     // Hibernate configuration objects
-    lateinit var hibernateConfig: HibernateConfiguration
+    private lateinit var hibernateConfig: HibernateConfiguration
     private lateinit var hibernatePersister: PersistentStateService
     private lateinit var sessionFactory: SessionFactory
     private lateinit var entityManager: EntityManager
@@ -126,7 +126,7 @@ class HibernateConfigurationTest {
                 override val vaultService = NodeVaultService(
                         Clock.systemUTC(),
                         keyManagementService,
-                        servicesForResolution as NodeServicesForResolution,
+                        asVerifying(),
                         database,
                         schemaService,
                         cordappClassloader

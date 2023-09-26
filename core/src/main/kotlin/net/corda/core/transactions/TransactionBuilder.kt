@@ -2,13 +2,15 @@
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
-import net.corda.core.CordaInternal
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.services.ServicesForResolutionInternal
+import net.corda.core.internal.services.VerificationSupport
+import net.corda.core.internal.services.asInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -139,8 +141,9 @@ open class TransactionBuilder(
      * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
-            .apply { checkSupportedHashType() }
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction {
+        return toWireTransactionWithContext(services.asInternal(), null)
+    }
 
     /**
      * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
@@ -154,7 +157,7 @@ open class TransactionBuilder(
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution, schemeId: Int): WireTransaction {
-        return toWireTransaction(services, schemeId, emptyMap()).apply { checkSupportedHashType() }
+        return toWireTransaction(services, schemeId, emptyMap())
     }
 
     /**
@@ -174,17 +177,16 @@ open class TransactionBuilder(
     fun toWireTransaction(services: ServicesForResolution, schemeId: Int, properties: Map<Any, Any>): WireTransaction {
         val magic: SerializationMagic = getCustomSerializationMagicFromSchemeId(schemeId)
         val serializationContext = SerializationDefaults.P2P_CONTEXT.withPreferredSerializationVersion(magic).withProperties(properties)
-        return toWireTransactionWithContext(services, serializationContext).apply { checkSupportedHashType() }
+        return toWireTransactionWithContext(services.asInternal(), serializationContext)
     }
 
-    @CordaInternal
-    internal fun toWireTransactionWithContext(
-        services: ServicesForResolution,
+    private fun toWireTransactionWithContext(
+        services: ServicesForResolutionInternal,
         serializationContext: SerializationContext?
-    ) : WireTransaction = toWireTransactionWithContext(services, serializationContext, 0)
+    ) : WireTransaction = toWireTransactionWithContext(services, serializationContext, 0).apply { checkSupportedHashType() }
 
     private tailrec fun toWireTransactionWithContext(
-        services: ServicesForResolution,
+        services: ServicesForResolutionInternal,
         serializationContext: SerializationContext?,
         tryCount: Int
     ): WireTransaction {
@@ -241,9 +243,9 @@ open class TransactionBuilder(
     /**
      * @return true if a new dependency was successfully added.
      */
-    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction, tryCount: Int): Boolean {
+    private fun addMissingDependency(services: ServicesForResolutionInternal, wireTx: WireTransaction, tryCount: Int): Boolean {
         return try {
-            wireTx.toLedgerTransaction(services).verify()
+            wireTx.toLedgerTransactionInternal(services).verify()
             // The transaction verified successfully without adding any extra dependency.
             false
         } catch (e: Throwable) {
@@ -282,10 +284,10 @@ open class TransactionBuilder(
 
     private fun fixupAttachments(
         txAttachments: List<AttachmentId>,
-        services: ServicesForResolution,
+        services: ServicesForResolutionInternal,
         originalException: Throwable
     ): Boolean {
-        val replacementAttachments = services.cordappProvider.internalFixupAttachmentIds(txAttachments)
+        val replacementAttachments = services.fixupService.fixupAttachmentIds(txAttachments)
         if (replacementAttachments.deepEquals(txAttachments)) {
             return false
         }
@@ -315,7 +317,7 @@ open class TransactionBuilder(
         return true
     }
 
-    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution, originalException: Throwable): Boolean {
+    private fun addMissingAttachment(missingClass: String, services: VerificationSupport, originalException: Throwable): Boolean {
         if (!isValidJavaClass(missingClass)) {
             log.warn("Could not autodetect a valid attachment for the transaction being built.")
             throw originalException
@@ -324,7 +326,7 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass)
+        val attachment = services.getTrustedClassAttachment(missingClass)
 
         if (attachment == null) {
             log.error("""The transaction currently built is missing an attachment for class: $missingClass.
@@ -665,10 +667,6 @@ open class TransactionBuilder(
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
 
-    internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
-        return toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
-    }
-
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
         toLedgerTransaction(services).verify()
@@ -718,8 +716,6 @@ open class TransactionBuilder(
      *
      * If this method is called outside the context of a flow, a [ServiceHub] instance must be passed to this method
      * for it to be able to resolve [StatePointer]s. Usually for a unit test, this will be an instance of mock services.
-     *
-     * @param serviceHub a [ServiceHub] instance needed for performing vault queries.
      *
      * @throws IllegalStateException if no [ServiceHub] is provided and no flow context is available.
      */

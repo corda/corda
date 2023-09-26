@@ -13,6 +13,7 @@ import net.corda.core.internal.PlatformVersionSwitches.TWO_PHASE_FINALITY
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -24,6 +25,7 @@ import java.sql.Connection
 import java.time.Clock
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import javax.persistence.EntityTransaction
 
 /**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
@@ -170,12 +172,6 @@ interface ServiceHub : ServicesForResolution {
      * Provides operations to support telemetry and telemetry data between nodes.
      */
     val telemetryService: TelemetryService
-
-    /**
-     * INTERNAL. DO NOT USE.
-     * @suppress
-     */
-    val transactionVerifierService: TransactionVerifierService
 
     /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the
@@ -425,7 +421,8 @@ interface ServiceHub : ServicesForResolution {
      * When used within a flow, this session automatically forms part of the enclosing flow transaction boundary,
      * and thus queryable data will include everything committed as of the last checkpoint.
      *
-     * We want to make sure users have a restricted access to administrative functions, this function will return a [RestrictedConnection] instance.
+     * We want to make sure users have a restricted access to administrative functions, this function will return a restricted
+     * [Connection] instance.
      * The following methods are blocked:
      * - abort(executor: Executor?)
      * - clearWarnings()
@@ -470,7 +467,7 @@ interface ServiceHub : ServicesForResolution {
      * - lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?)
      * - setProperty(propertyName: String?, value: Any?)
      *
-     * getTransaction returns a [RestrictedEntityTransaction] to prevent unsafe manipulation of a flow's underlying
+     * getTransaction returns a [EntityTransaction] which prevents unsafe manipulation of a flow's underlying
      * database transaction.
      * The following methods are blocked:
      * - begin()
@@ -499,7 +496,7 @@ interface ServiceHub : ServicesForResolution {
      * - lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?)
      * - setProperty(propertyName: String?, value: Any?)
      *
-     * getTransaction returns a [RestrictedEntityTransaction] to prevent unsafe manipulation of a flow's underlying
+     * getTransaction returns an [EntityTransaction] which prevents unsafe manipulation of a flow's underlying
      * database transaction.
      * The following methods are blocked:
      * - begin()

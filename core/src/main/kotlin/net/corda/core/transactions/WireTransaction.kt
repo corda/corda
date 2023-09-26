@@ -4,11 +4,18 @@ import net.corda.core.CordaInternal
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.services.VerificationSupport
+import net.corda.core.internal.services.asInternal
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -102,19 +109,19 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return services.specialise(
-            toLedgerTransactionInternal(
-                resolveIdentity = { services.identityService.partyFromKey(it) },
-                resolveAttachment = { services.attachments.openAttachment(it) },
+        return toLedgerTransactionInternal(services.asInternal())
+    }
+
+    @CordaInternal
+    @JvmSynthetic
+    fun toLedgerTransactionInternal(services: VerificationSupport): LedgerTransaction {
+        return toLedgerTransactionInternal(
+                resolveIdentity = services::getParty,
+                resolveAttachment = services::getAttachment,
                 resolveStateRefAsSerialized = { resolveStateRefBinaryComponent(it, services) },
-                resolveParameters = {
-                    val hashToResolve = it ?: services.networkParametersService.defaultHash
-                    services.networkParametersService.lookup(hashToResolve)
-                },
-                // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
-                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true },
-                attachmentsClassLoaderCache = (services as? ServiceHubCoreInternal)?.attachmentsClassLoaderCache
-            )
+                resolveParameters = services::getNetworkParameters,
+                isAttachmentTrusted = services::isAttachmentTrusted,
+                attachmentsClassLoaderCache = services.attachmentsClassLoaderCache
         )
     }
 
@@ -348,27 +355,20 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
          * correct classloader independent of the node's classpath.
          */
         @CordaInternal
-        fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes<TransactionState<ContractState>>? {
-            return if (services is ServiceHub) {
-                val coreTransaction = services.validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
-                        ?: throw TransactionResolutionException(stateRef.txhash)
-                // Get the network parameters from the tx or whatever the default params are.
-                val paramsHash = coreTransaction.networkParametersHash ?: services.networkParametersService.defaultHash
-                val params = services.networkParametersService.lookup(paramsHash)
-                        ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
-                @Suppress("UNCHECKED_CAST")
-                when (coreTransaction) {
-                    is WireTransaction -> coreTransaction.componentGroups
-                            .firstOrNull { it.groupIndex == OUTPUTS_GROUP.ordinal }
-                            ?.components
-                            ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
-                    is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
-                    is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
-                    else -> throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
-                }
-            } else {
-                // For backwards compatibility revert to using the node classloader.
-                services.loadState(stateRef).serialize()
+        internal fun resolveStateRefBinaryComponent(stateRef: StateRef, verificationSupport: VerificationSupport): SerializedBytes<TransactionState<ContractState>>? {
+            val coreTransaction = verificationSupport.getRequiredSignedTransaction(stateRef.txhash).coreTransaction
+            // Get the network parameters from the tx or whatever the default params are.
+            val params = verificationSupport.getNetworkParameters(coreTransaction.networkParametersHash)
+                    ?: throw IllegalStateException("Should have been able to fetch parameters by this point")
+            @Suppress("UNCHECKED_CAST")
+            return when (coreTransaction) {
+                is WireTransaction -> coreTransaction.componentGroups
+                        .firstOrNull { it.groupIndex == OUTPUTS_GROUP.ordinal }
+                        ?.components
+                        ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
+                is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(verificationSupport, stateRef, params)
+                is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(verificationSupport, stateRef)
+                else -> throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
             }
         }
     }

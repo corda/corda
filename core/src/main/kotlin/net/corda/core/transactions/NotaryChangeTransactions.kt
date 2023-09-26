@@ -6,6 +6,9 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
+import net.corda.core.internal.services.StateResolutionSupport
+import net.corda.core.internal.services.asInternal
+import net.corda.core.internal.services.asVerifying
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -88,15 +91,13 @@ data class NotaryChangeWireTransaction(
 
     /** Resolves input states and network parameters and builds a [NotaryChangeLedgerTransaction]. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
-        val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        val hashToResolve = networkParametersHash ?: services.networkParametersService.defaultHash
-        val resolvedNetworkParameters = services.networkParametersService.lookup(hashToResolve)
-                ?: throw TransactionResolutionException(id)
-        return NotaryChangeLedgerTransaction.create(resolvedInputs, notary, newNotary, id, sigs, resolvedNetworkParameters)
+        return NotaryChangeLedgerTransaction.resolve(this, sigs, services.asInternal())
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
-    fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
+    fun resolve(services: ServiceHub, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
+        return NotaryChangeLedgerTransaction.resolve(this, sigs, services.asVerifying())
+    }
 
     /**
      * This should return a serialized virtual output state, that will be used to verify spending transactions.
@@ -109,9 +110,8 @@ data class NotaryChangeWireTransaction(
      */
     @CordaInternal
     internal fun resolveOutputComponent(
-            services: ServicesForResolution,
-            stateRef: StateRef,
-            @Suppress("UNUSED_PARAMETER") params: NetworkParameters
+            services: StateResolutionSupport,
+            stateRef: StateRef
     ): SerializedBytes<TransactionState<ContractState>> {
         return services.loadState(stateRef).serialize()
     }
@@ -140,13 +140,23 @@ private constructor(
 ) : FullTransaction(), TransactionWithSignatures {
     companion object {
         @CordaInternal
-        internal fun create(inputs: List<StateAndRef<ContractState>>,
-                            notary: Party,
-                            newNotary: Party,
-                            id: SecureHash,
-                            sigs: List<TransactionSignature>,
-                            networkParameters: NetworkParameters): NotaryChangeLedgerTransaction {
-            return NotaryChangeLedgerTransaction(inputs, notary, newNotary, id, sigs, networkParameters)
+        @JvmSynthetic
+        internal fun resolve(stx: SignedTransaction, resolutionSupport: StateResolutionSupport): NotaryChangeLedgerTransaction {
+            return resolve(stx.coreTransaction, stx.sigs, resolutionSupport)
+        }
+
+        @CordaInternal
+        @JvmSynthetic
+        fun resolve(coreTransaction: CoreTransaction,
+                    sigs: List<TransactionSignature>,
+                    resolutionSupport: StateResolutionSupport): NotaryChangeLedgerTransaction {
+            val wireTx = checkNotNull(coreTransaction as? NotaryChangeWireTransaction) {
+                "Expected a ${NotaryChangeWireTransaction::class.simpleName} but found ${coreTransaction::class.simpleName}"
+            }
+            val resolvedInputs = resolutionSupport.loadStates(wireTx.inputs, ArrayList())
+            val resolvedNetworkParameters = resolutionSupport.getNetworkParameters(wireTx.networkParametersHash)
+                    ?: throw TransactionResolutionException(wireTx.id)
+            return NotaryChangeLedgerTransaction(resolvedInputs, wireTx.notary, wireTx.newNotary, wireTx.id, sigs, resolvedNetworkParameters)
         }
     }
 

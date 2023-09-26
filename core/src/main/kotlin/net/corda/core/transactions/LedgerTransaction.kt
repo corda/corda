@@ -243,14 +243,14 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        internalPrepareVerify(attachments).verify()
+        createVerifier().verify()
     }
 
     /**
      * This method has to be called in a context where it has access to the database.
      */
     @CordaInternal
-    internal fun internalPrepareVerify(txAttachments: List<Attachment>): Verifier {
+    internal fun createVerifier(txAttachments: List<Attachment> = attachments): Verifier {
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(

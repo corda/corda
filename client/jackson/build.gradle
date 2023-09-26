@@ -19,6 +19,7 @@ dependencies {
     compile "com.google.guava:guava:$guava_version"
 
     testCompile project(':test-utils')
+    testCompile project(":node-driver")
     testCompile project(path: ':core', configuration: 'testArtifacts')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
@@ -29,7 +30,6 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    
 }
 
 jar {

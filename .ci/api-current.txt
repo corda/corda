@@ -4262,8 +4262,6 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @NotNull
   public abstract net.corda.core.node.services.TelemetryService getTelemetryService()
   @NotNull
-  public abstract net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
-  @NotNull
   public abstract net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull
   public abstract net.corda.core.node.services.VaultService getVaultService()
@@ -4585,11 +4583,6 @@ public interface net.corda.core.node.services.TransactionStorage
   public abstract net.corda.core.messaging.DataFeed<java.util.List<net.corda.core.transactions.SignedTransaction>, net.corda.core.transactions.SignedTransaction> track()
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture<net.corda.core.transactions.SignedTransaction> trackTransaction(net.corda.core.crypto.SecureHash)
-##
-@DoNotImplement
-public interface net.corda.core.node.services.TransactionVerifierService
-  @NotNull
-  public abstract net.corda.core.concurrent.CordaFuture<?> verify(net.corda.core.transactions.LedgerTransaction)
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.UnknownAnonymousPartyException extends net.corda.core.CordaException
@@ -9242,7 +9235,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, java.security.KeyPair, java.security.KeyPair...)
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, java.security.KeyPair, java.security.KeyPair[], int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(net.corda.nodeapi.internal.cordapp.CordappLoader, net.corda.core.node.services.IdentityService, net.corda.core.node.NetworkParameters, net.corda.testing.core.TestIdentity, java.security.KeyPair[], net.corda.core.node.services.KeyManagementService, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters, net.corda.testing.core.TestIdentity...)
   public <init>(net.corda.testing.core.TestIdentity, net.corda.testing.core.TestIdentity...)
   public final void addMockCordapp(String)
@@ -9292,8 +9284,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @NotNull
   public net.corda.core.internal.telemetry.TelemetryServiceImpl getTelemetryService()
-  @NotNull
-  public net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
   @NotNull
   public net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull

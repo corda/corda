@@ -100,6 +100,7 @@ import javax.management.ObjectName
 import kotlin.system.exitProcess
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
+    @Suppress("DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE")
     val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
     fun dispose() = node.stop()
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = node.registerInitiatedFlow(node.smm, initiatedFlowClass)
@@ -193,7 +194,6 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override val log: Logger get() = staticLog
-    override val transactionVerifierWorkerCount: Int get() = 4
 
     private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
     private var rpcBroker: ArtemisBroker? = null

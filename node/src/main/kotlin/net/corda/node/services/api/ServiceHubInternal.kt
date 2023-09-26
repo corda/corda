@@ -5,8 +5,8 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
@@ -14,6 +14,7 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.TransactionsResolver
+import net.corda.core.internal.Verifier
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.dependencies
@@ -30,7 +31,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
@@ -39,7 +39,7 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import java.lang.IllegalStateException
+import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import java.security.SignatureException
 import java.util.ArrayList
 import java.util.Collections
@@ -187,10 +187,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val configuration: NodeConfiguration
     val nodeProperties: NodePropertiesStore
     val networkMapUpdater: NetworkMapUpdater
-    override val cordappProvider: CordappProviderInternal
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
+
+    override fun doVerify(verifier: Verifier) {
+        withoutDatabaseAccess {
+            verifier.verify()
+        }
+    }
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
             recordTransactions(statesToRecord, txs, SIGNATURE_VERIFICATION_DISABLED)

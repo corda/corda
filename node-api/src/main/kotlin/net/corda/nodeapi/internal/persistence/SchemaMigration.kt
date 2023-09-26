@@ -12,10 +12,10 @@ import liquibase.resource.ClassLoaderResourceAccessor
 import liquibase.resource.Resource
 import liquibase.resource.URIResource
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.cordapp.CordappLoader
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.net.URI

@@ -3,7 +3,6 @@ package net.corda.testing.dsl
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -13,6 +12,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.services.CordappProviderInternal
+import net.corda.core.internal.services.FixupService
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
@@ -94,8 +95,9 @@ data class TestTransactionDSLInterpreter private constructor(
     ) : this(ledgerInterpreter, transactionBuilder, HashMap())
 
     // Implementing [ServiceHubCoreInternal] allows better use in internal Corda tests
+    @Suppress("DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE")
     val services: ServicesForResolution = object : ServiceHubCoreInternal, ServiceHub by ledgerInterpreter.services {
-
+        override val fixupService: FixupService = FixupService(appClassLoader)
         // [validatedTransactions.getTransaction] needs overriding as there are no calls to
         // [ServiceHub.recordTransactions] in the test dsl
         override val validatedTransactions: TransactionStorage =
@@ -109,7 +111,7 @@ data class TestTransactionDSLInterpreter private constructor(
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
 
-        override val attachmentTrustCalculator: AttachmentTrustCalculator =
+        private val attachmentTrustCalculator: AttachmentTrustCalculator =
             ledgerInterpreter.services.attachments.let {
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
                 // while still allowing the tests to work
@@ -123,6 +125,8 @@ data class TestTransactionDSLInterpreter private constructor(
                 )
             }
 
+        override fun isAttachmentTrusted(attachment: Attachment): Boolean = attachmentTrustCalculator.calculate(attachment)
+
         override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver =
             DbTransactionsResolver(flow)
 
@@ -133,8 +137,8 @@ data class TestTransactionDSLInterpreter private constructor(
             return stateRefs.map { StateAndRef(loadState(it), it) }.toSet()
         }
 
-        override val cordappProvider: CordappProvider =
-            ledgerInterpreter.services.cordappProvider
+        override val cordappProvider: CordappProviderInternal
+            get() = ledgerInterpreter.services.cordappProvider as CordappProviderInternal
 
         override val notaryService: NotaryService? = null
 
@@ -169,7 +173,6 @@ data class TestTransactionDSLInterpreter private constructor(
 
     override fun reference(stateRef: StateRef) {
         val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
-        @Suppress("DEPRECATION") // Will remove when feature finalised.
         transactionBuilder.addReferenceState(StateAndRef(state, stateRef).referenced())
     }
 
@@ -289,10 +292,6 @@ data class TestLedgerDSLInterpreter private constructor(
         } else {
             throw TypeMismatch(requested = S::class.java, actual = output.data.javaClass)
         }
-    }
-
-    internal fun resolveAttachment(attachmentId: SecureHash): Attachment {
-        return services.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
     }
 
     private fun <R> interpretTransactionDsl(

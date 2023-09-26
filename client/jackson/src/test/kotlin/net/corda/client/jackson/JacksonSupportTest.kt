@@ -8,9 +8,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.nhaarman.mockito_kotlin.spy
 import net.corda.client.jackson.internal.childrenAs
@@ -21,14 +18,9 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.PartialMerkleTree.PartialTree
 import net.corda.core.identity.*
-import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.NetworkParametersService
-import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -45,6 +37,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.coretesting.internal.rigorousMock
+import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
@@ -90,23 +83,12 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Before
     fun setup() {
-        val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }, "test") {
-            override val id: SecureHash get() = throw UnsupportedOperationException()
-        }
-
-        val attachments = rigorousMock<AttachmentStorage>().also {
-            doReturn(unsignedAttachment).whenever(it).openAttachment(any())
-        }
-        services = rigorousMock()
+        services = MockServices(
+                listOf("net.corda.testing.contracts"),
+                MINI_CORP,
+                testNetworkParameters(minimumPlatformVersion = 4)
+        )
         cordappProvider = rigorousMock()
-        val networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-        val networkParametersService = rigorousMock<NetworkParametersService>().also {
-            doReturn(networkParameters.serialize().hash).whenever(it).currentHash
-        }
-        doReturn(networkParametersService).whenever(services).networkParametersService
-        doReturn(cordappProvider).whenever(services).cordappProvider
-        doReturn(networkParameters).whenever(services).networkParameters
-        doReturn(attachments).whenever(services).attachments
     }
 
     @Test(timeout=300_000)
@@ -263,17 +245,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     @Test(timeout=300_000)
 	fun `SignedTransaction (WireTransaction)`() {
         val attachmentId = SecureHash.randomSHA256()
-        doReturn(attachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
-        val attachmentStorage = rigorousMock<AttachmentStorage>()
-        doReturn(attachmentStorage).whenever(services).attachments
-        doReturn(mock<TransactionStorage>()).whenever(services).validatedTransactions
-        doReturn(mock<IdentityService>()).whenever(services).identityService
-        val attachment = rigorousMock<ContractAttachment>()
-        doReturn(attachment).whenever(attachmentStorage).openAttachment(attachmentId)
-        doReturn(attachmentId).whenever(attachment).id
-        doReturn(emptyList<Party>()).whenever(attachment).signerKeys
-        doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
-        doReturn("app").whenever(attachment).uploader
 
         val wtx = TransactionBuilder(
                 notary = DUMMY_NOTARY,
