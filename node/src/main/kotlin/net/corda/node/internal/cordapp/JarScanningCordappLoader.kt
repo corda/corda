@@ -17,6 +17,7 @@ import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.services.CordaService
+import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -184,6 +185,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findServiceFlows(this),
                 findSchedulableFlows(this),
                 findServices(this),
+                findTelemetryComponents(this),
                 findWhitelists(url),
                 findSerializers(this),
                 findCheckpointSerializers(this),
@@ -279,6 +281,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun findServices(scanResult: RestrictedScanResult): List<Class<out SerializeAsToken>> {
         return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
+    }
+
+    private fun findTelemetryComponents(scanResult: RestrictedScanResult): List<Class<out TelemetryComponent>> {
+        return scanResult.getClassesImplementing(TelemetryComponent::class)
     }
 
     private fun findInitiatedFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
@@ -412,6 +418,15 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         loadClass(it.name, type) }
                     .filterNot { it.isAbstractClass }
                     .map { it.kotlin.objectOrNewInstance() }
+        }
+
+        fun <T : Any> getClassesImplementing(type: KClass<T>): List<Class<out T>> {
+            return scanResult
+                    .getClassesImplementing(type.java.name)
+                    .filter { it.name.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull {
+                        loadClass(it.name, type) }
+                    .filterNot { it.isAbstractClass }
         }
 
         fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {

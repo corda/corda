@@ -1,0 +1,39 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'java-library'
+    id 'com.github.johnrengelman.shadow'
+    id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
+}
+
+description 'OpenTelemetry Driver'
+
+// This driver is required by core, so must always be 1.8. See core build.gradle.
+targetCompatibility = VERSION_1_8
+
+dependencies {
+    implementation project(":opentelemetry")
+}
+
+shadowJar {
+    archiveClassifier = null
+    classifier = null
+    exclude "**/Log4j2Plugins.dat"
+    zip64 true
+}
+
+artifacts {
+    archives shadowJar
+    publish shadowJar
+}
+
+jar {
+    enabled = false
+}
+
+publish {
+    disableDefaultJar = true
+    name  'corda-opentelemetry-driver'
+}
