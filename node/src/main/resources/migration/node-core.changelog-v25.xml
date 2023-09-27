@@ -11,7 +11,7 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="create_sender_distribution_records_table">
-        <createTable tableName="node_sender_distribution_records">
+        <createTable tableName="node_sender_distr_recs">
             <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
@@ -30,13 +30,13 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="node_sender_distribution_records_pkey">
-        <addPrimaryKey columnNames="peer_party_id, timestamp, timestamp_discriminator" constraintName="node_sender_distribution_records_pkey"
-                       tableName="node_sender_distribution_records"/>
+    <changeSet author="R3.Corda" id="node_sender_distr_recs_pkey">
+        <addPrimaryKey columnNames="peer_party_id, timestamp, timestamp_discriminator" constraintName="node_sender_distr_recs_pkey"
+                       tableName="node_sender_distr_recs"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="create_receiver_distribution_records_table">
-        <createTable tableName="node_receiver_distribution_records">
+        <createTable tableName="node_receiver_distr_recs">
             <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
@@ -58,9 +58,9 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="node_receiver_distribution_records_pkey">
-        <addPrimaryKey columnNames="peer_party_id, timestamp, timestamp_discriminator" constraintName="node_receiver_distribution_records_pkey"
-                       tableName="node_receiver_distribution_records"/>
+    <changeSet author="R3.Corda" id="node_receiver_distr_recs_pkey">
+        <addPrimaryKey columnNames="peer_party_id, timestamp, timestamp_discriminator" constraintName="node_receiver_distr_recs_pkey"
+                       tableName="node_receiver_distr_recs"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="create_recovery_party_info_table">
@@ -79,14 +79,14 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="FK__sender_distribution_records__peer_party_id">
-        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_sender_distribution_records"
-                                 constraintName="FK__sender_distribution_records__peer_party_id"
+        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_sender_distr_recs"
+                                 constraintName="FK__send_distr__peer_party_id"
                                  referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
     </changeSet>
 
     <changeSet author="R3.Corda" id="FK__receiver_distribution_records__peer_party_id">
-        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_receiver_distribution_records"
-                                 constraintName="FK__receiver_distribution_records__peer_party_id"
+        <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_receiver_distr_recs"
+                                 constraintName="FK__recv_distr__peer_party_id"
                                  referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
     </changeSet>
 
