@@ -350,7 +350,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         private val entropyCounter = AtomicReference(args.entropyRoot)
         override val log get() = staticLog
-        override val transactionVerifierWorkerCount: Int get() = 1
 
         private var _rxIoScheduler: Scheduler? = null
         override val rxIoScheduler: Scheduler
@@ -368,6 +367,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                     this,
                     attachments,
                     network as MockNodeMessagingService,
+                    @Suppress("DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE")
                     object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter {},
                     nodeInfo,
                     smm,

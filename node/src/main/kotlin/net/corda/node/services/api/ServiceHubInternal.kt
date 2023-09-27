@@ -17,7 +17,6 @@ import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
@@ -26,6 +25,7 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
 import java.security.PublicKey
 import java.util.*
 
@@ -150,10 +150,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val configuration: NodeConfiguration
     val nodeProperties: NodePropertiesStore
     val networkMapUpdater: NetworkMapUpdater
-    override val cordappProvider: CordappProviderInternal
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
+
+    override fun doVerify(verifier: Verifier) {
+        withoutDatabaseAccess {
+            verifier.verify()
+        }
+    }
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach { requireSupportedHashType(it) }

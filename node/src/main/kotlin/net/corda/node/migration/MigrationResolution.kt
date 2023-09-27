@@ -1,26 +1,29 @@
 package net.corda.node.migration
 
-import net.corda.core.contracts.*
-import net.corda.core.cordapp.CordappContext
-import net.corda.core.cordapp.CordappProvider
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.div
 import net.corda.core.internal.readObject
+import net.corda.core.internal.services.StateResolutionSupport
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
+import net.corda.core.transactions.BaseTransaction
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeLedgerTransaction
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.persistence.AttachmentStorageInternal
@@ -33,30 +36,17 @@ import java.time.Clock
 import java.time.Duration
 import java.util.Comparator.comparingInt
 
-class MigrationServicesForResolution(
-        override val identityService: IdentityService,
-        override val attachments: AttachmentStorageInternal,
+@Suppress("TooGenericExceptionCaught")
+class MigrationResolution(
+        val attachments: AttachmentStorageInternal,
         private val transactions: TransactionStorage,
         private val cordaDB: CordaPersistence,
         cacheFactory: MigrationNamedCacheFactory
-): ServicesForResolution {
-
+): StateResolutionSupport {
     companion object {
         val logger = contextLogger()
     }
-    override val cordappProvider: CordappProvider
-        get() = object : CordappProvider {
 
-            val cordappLoader = SchemaMigration.loader.get()
-
-            override fun getAppContext(): CordappContext {
-                TODO("not implemented")
-            }
-
-            override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
-                TODO("not implemented")
-            }
-        }
     private val cordappLoader = SchemaMigration.loader.get()
 
     private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
@@ -65,6 +55,8 @@ class MigrationServicesForResolution(
     )
 
     private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory)
+
+    override val appClassLoader: ClassLoader get() = cordappLoader.appClassLoader
 
     private fun defaultNetworkParameters(): NetworkParameters {
         logger.warn("Using a dummy set of network parameters for migration.")
@@ -93,7 +85,7 @@ class MigrationServicesForResolution(
         }
     }
 
-    override val networkParametersService: NetworkParametersService = object : NetworkParametersService {
+    private val networkParametersService: NetworkParametersService = object : NetworkParametersService {
 
         private val storage = DBNetworkParametersStorage.createParametersMap(cacheFactory)
 
@@ -116,7 +108,7 @@ class MigrationServicesForResolution(
         }
     }
 
-    override val networkParameters: NetworkParameters = networkParametersService.lookup(networkParametersService.currentHash)
+    private val networkParameters: NetworkParameters = networkParametersService.lookup(networkParametersService.currentHash)
             ?: getNetworkParametersFromFile()?.raw?.deserialize()
             ?: defaultNetworkParameters()
 
@@ -136,40 +128,28 @@ class MigrationServicesForResolution(
         } catch (e: Exception) {
             // If there is no attachment that allows the state class to be deserialised correctly, then carpent a state class anyway. It
             // might still be possible to access the participants depending on how the state class was serialised.
-            logger.debug("Could not use attachments to deserialise transaction output states for transaction ${tx.id}")
+            logger.debug { "Could not use attachments to deserialise transaction output states for transaction ${tx.id}" }
             tx.outputs.filterIndexed { index, _ -> stateIndices.contains(index)}
         }
     }
 
+    override fun getSignedTransaction(id: SecureHash): SignedTransaction? = transactions.getTransaction(id)
+
+    override fun getNetworkParameters(id: SecureHash?): NetworkParameters? {
+        return networkParametersService.lookup(id ?: networkParametersService.defaultHash)
+    }
+
+    override fun getAttachment(id: SecureHash): Attachment? = attachments.openAttachment(id)
+
     override fun loadState(stateRef: StateRef): TransactionState<*> {
         val stx = transactions.getTransaction(stateRef.txhash)
                 ?: throw MigrationException("Could not get transaction with hash ${stateRef.txhash} out of vault")
-        val baseTx = stx.resolveBaseTransaction(this)
+        val baseTx = BaseTransaction.resolve(stx, this)
         return when (baseTx) {
             is NotaryChangeLedgerTransaction -> baseTx.outputs[stateRef.index]
             is ContractUpgradeLedgerTransaction -> baseTx.outputs[stateRef.index]
             is WireTransaction -> extractStateFromTx(baseTx, listOf(stateRef.index)).first()
             else -> throw MigrationException("Unknown transaction type ${baseTx::class.qualifiedName} found when loading a state")
         }
-    }
-
-    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-        return stateRefs.groupBy { it.txhash }.flatMap {
-            val stx = transactions.getTransaction(it.key)
-                    ?: throw MigrationException("Could not get transaction with hash ${it.key} out of vault")
-            val baseTx = stx.resolveBaseTransaction(this)
-            val stateList = when (baseTx) {
-                is NotaryChangeLedgerTransaction -> it.value.map { stateRef -> StateAndRef(baseTx.outputs[stateRef.index], stateRef) }
-                is ContractUpgradeLedgerTransaction -> it.value.map { stateRef -> StateAndRef(baseTx.outputs[stateRef.index], stateRef) }
-                is WireTransaction -> extractStateFromTx(baseTx, it.value.map { stateRef -> stateRef.index })
-                        .mapIndexed {index, state -> StateAndRef(state, StateRef(baseTx.id, index)) }
-                else -> throw MigrationException("Unknown transaction type ${baseTx::class.qualifiedName} found when loading a state")
-            }
-            stateList
-        }.toSet()
-    }
-
-    override fun loadContractAttachment(stateRef: StateRef): Attachment {
-        throw NotImplementedError()
     }
 }

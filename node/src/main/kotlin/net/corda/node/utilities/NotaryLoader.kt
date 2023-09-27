@@ -2,6 +2,7 @@ package net.corda.node.utilities
 
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.cordapp.CordappLoader
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.utilities.contextLogger
 import net.corda.node.SerialFilter
@@ -9,7 +10,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NotaryConfig
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotaryService
 import net.corda.notary.jpa.JPANotaryService

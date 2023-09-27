@@ -1,11 +1,14 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.indexOfOrThrow
+import net.corda.core.internal.services.StateResolutionSupport
 import net.corda.core.internal.uncheckedCast
 import java.util.function.Predicate
 
@@ -15,6 +18,21 @@ import java.util.function.Predicate
 @KeepForDJVM
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
+    companion object {
+        @CordaInternal
+        @JvmSynthetic
+        @DeleteForDJVM
+        fun resolve(stx: SignedTransaction, resolutionSupport: StateResolutionSupport): BaseTransaction {
+            return when (stx.coreTransaction) {
+                is NotaryChangeWireTransaction -> NotaryChangeLedgerTransaction.resolve(stx, resolutionSupport)
+                is ContractUpgradeWireTransaction -> ContractUpgradeLedgerTransaction.resolve(stx, resolutionSupport)
+                is WireTransaction -> stx.tx
+                is FilteredTransaction -> throw IllegalStateException("Persistence of filtered transactions is not supported.")
+                else -> throw IllegalStateException("Unknown transaction type ${stx.coreTransaction::class.qualifiedName}")
+            }
+        }
+    }
+
     /** A list of reusable reference data states which can be referred to by other contracts in this transaction. */
     abstract val references: List<*>
     /** The inputs of this transaction. Note that in BaseTransaction subclasses the type of this list may change! */

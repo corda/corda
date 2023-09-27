@@ -19,6 +19,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.services.ServicesForResolutionInternal
 import net.corda.core.internal.tee
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
@@ -38,10 +39,12 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.observable.internal.OnResilientSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FullTransaction
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -49,7 +52,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.trace
-import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
@@ -79,8 +81,6 @@ import javax.persistence.criteria.CriteriaQuery
 import javax.persistence.criteria.CriteriaUpdate
 import javax.persistence.criteria.Predicate
 import javax.persistence.criteria.Root
-import kotlin.collections.ArrayList
-import kotlin.collections.LinkedHashSet
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -96,7 +96,7 @@ import kotlin.collections.component2
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
-        private val servicesForResolution: NodeServicesForResolution,
+        private val servicesForResolution: ServicesForResolutionInternal,
         private val database: CordaPersistence,
         schemaService: SchemaService,
         private val appClassloader: ClassLoader
@@ -367,7 +367,7 @@ class NodeVaultService(
                     StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
                         val notSeenReferences = tx.references - loadStates(tx.references).map { it.ref }
                         // TODO: This is expensive - is there another way?
-                        tx.toLedgerTransaction(servicesForResolution).deserializableRefStates()
+                        tx.toLedgerTransactionInternal(servicesForResolution).deserializableRefStates()
                                 .filter { (_, stateAndRef) -> stateAndRef.ref in notSeenReferences }
                                 .values
                     }
@@ -382,8 +382,8 @@ class NodeVaultService(
             // We also can't do filtering beforehand, since for notary change transactions output encumbrance pointers
             // get recalculated based on input positions.
             val ltx: FullTransaction = when (tx) {
-                is NotaryChangeWireTransaction -> tx.resolve(servicesForResolution, emptyList())
-                is ContractUpgradeWireTransaction -> tx.resolve(servicesForResolution, emptyList())
+                is NotaryChangeWireTransaction -> NotaryChangeLedgerTransaction.resolve(tx, emptyList(), servicesForResolution)
+                is ContractUpgradeWireTransaction -> ContractUpgradeLedgerTransaction.resolve(tx, emptyList(), servicesForResolution)
                 else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
             }
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }

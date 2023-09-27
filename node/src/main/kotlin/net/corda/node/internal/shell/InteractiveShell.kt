@@ -1,9 +1,9 @@
 package net.corda.node.internal.shell
 
+import net.corda.core.internal.cordapp.CordappLoader
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shell.determineUnsafeUsers
 import net.corda.node.services.config.shell.toShellConfigMap
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import org.slf4j.LoggerFactory
 
 object InteractiveShell {

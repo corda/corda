@@ -64,7 +64,7 @@ class VaultStateMigration : CordaMigration() {
                 throw VaultStateMigrationException("Persistent state ref missing from state")
         val stateRef = persistentStateRef.toStateRef()
         val state = try {
-            servicesForResolution.loadState(stateRef)
+            migrationResolution.loadState(stateRef)
         } catch (e: Exception) {
             throw VaultStateMigrationException("Could not load state for stateRef $stateRef : ${e.message}", e)
         }

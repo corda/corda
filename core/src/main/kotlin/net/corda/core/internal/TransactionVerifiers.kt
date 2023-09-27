@@ -1,9 +1,6 @@
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
@@ -37,16 +34,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
 import java.util.function.Function
 import java.util.function.Supplier
-
-@DeleteForDJVM
-interface TransactionVerifierServiceInternal {
-    fun reverifyWithFixups(transaction: LedgerTransaction, missingClass: String?): CordaFuture<*>
-}
-
-/**
- * Defined here for visibility reasons.
- */
-fun LedgerTransaction.prepareVerify(attachments: List<Attachment>) = internalPrepareVerify(attachments)
 
 interface Verifier {
 
