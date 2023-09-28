@@ -29,7 +29,7 @@ data class HashedDistributionList(
         out.writeByte(senderStatesToRecord.ordinal)
         out.writeInt(peerHashToStatesToRecord.size)
         for (entry in peerHashToStatesToRecord) {
-            out.writeUTF(entry.key.toString())
+            entry.key.writeTo(out)
             out.writeByte(entry.value.ordinal)
         }
         return encryptionService.encrypt(baos.toByteArray(), publicHeader.serialise())
@@ -94,7 +94,9 @@ data class HashedDistributionList(
                 val numPeerHashToStatesToRecords = input.readInt()
                 val peerHashToStatesToRecord = mutableMapOf<SecureHash, StatesToRecord>()
                 repeat(numPeerHashToStatesToRecords) {
-                    peerHashToStatesToRecord[SecureHash.parse(input.readUTF())] = statesToRecordValues[input.readByte().toInt()]
+                    val secureHashBytes = ByteArray(32)
+                    input.readFully(secureHashBytes)
+                    peerHashToStatesToRecord[SecureHash.createSHA256(secureHashBytes)] = statesToRecordValues[input.readByte().toInt()]
                 }
                 return HashedDistributionList(senderStatesToRecord, peerHashToStatesToRecord, publicHeader)
             } catch (e: Exception) {
