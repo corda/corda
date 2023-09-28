@@ -79,6 +79,7 @@ data class HashedDistributionList(
         // The version tag is serialised in the header, even though it is separate from the encrypted main body of the distribution list.
         // This is because the header and the dist list are cryptographically coupled and we want to avoid declaring the version field twice.
         private const val VERSION_TAG = 1
+        private const val SECURE_HASH_LENGTH = 32
         private val statesToRecordValues = StatesToRecord.values()  // Cache the enum values since .values() returns a new array each time.
 
         /**
@@ -94,7 +95,7 @@ data class HashedDistributionList(
                 val numPeerHashToStatesToRecords = input.readInt()
                 val peerHashToStatesToRecord = mutableMapOf<SecureHash, StatesToRecord>()
                 repeat(numPeerHashToStatesToRecords) {
-                    val secureHashBytes = ByteArray(32)
+                    val secureHashBytes = ByteArray(SECURE_HASH_LENGTH)
                     input.readFully(secureHashBytes)
                     peerHashToStatesToRecord[SecureHash.createSHA256(secureHashBytes)] = statesToRecordValues[input.readByte().toInt()]
                 }
