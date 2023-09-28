@@ -331,9 +331,9 @@ pipeline {
     post {
         always {
             script {
-                if (gitUtils.isReleaseTag()) {
-                    gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''))
-                }
+                // if (gitUtils.isReleaseTag()) {
+                //     gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''))
+                // }
                 try {
                     if (params.DO_TEST) {
                         unstash 'allure-input'
