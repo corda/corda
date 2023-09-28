@@ -133,10 +133,10 @@ pipeline {
                     options {
                         skipDefaultCheckout true
                     }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                    // post {
+                    //     always {
+                            // archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                            // junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
                             /*
                              * Copy all JUnit results files into a single top level directory.
                              * This is necessary to stop the allure plugin from hitting out
@@ -147,19 +147,19 @@ pipeline {
                              * copied to avoid collisions between files where the same test
                              * classes have run on multiple agents.
                              */
-                            fileOperations([fileCopyOperation(
-                                    includes: '**/build/test-results/**/*.xml',
-                                    targetLocation: 'allure-input',
-                                    flattenFiles: true,
-                                    renameFiles: true,
-                                    sourceCaptureExpression: '.*/([^/]+)$',
-                                    targetNameExpression: 'other-agent-$1')])
-                            stash name: 'allure-input', includes: 'allure-input/**', useDefaultExcludes: false
-                        }
-                        cleanup {
-                            deleteDir() /* clean up our workspace */
-                        }
-                    }
+                        //     fileOperations([fileCopyOperation(
+                        //             includes: '**/build/test-results/**/*.xml',
+                        //             targetLocation: 'allure-input',
+                        //             flattenFiles: true,
+                        //             renameFiles: true,
+                        //             sourceCaptureExpression: '.*/([^/]+)$',
+                        //             targetNameExpression: 'other-agent-$1')])
+                        //     stash name: 'allure-input', includes: 'allure-input/**', useDefaultExcludes: false
+                        // }
+                        // cleanup {
+                        //     deleteDir() /* clean up our workspace */
+                        // }
+                    // }
                     stages {
                         stage('Unstash') {
                             steps {
@@ -206,10 +206,10 @@ pipeline {
                     }
                 }
                 stage('Same agent') {
-                    post {
-                        always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                    // post {
+                    //     always {
+                            // archiveArtifacts artifacts: '**/*.log', fingerprint: false
+                            // junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
                             /*
                              * Copy all JUnit results files into a single top level directory.
                              * This is necessary to stop the allure plugin from hitting out
@@ -220,15 +220,15 @@ pipeline {
                              * copied to avoid collisions between files where the same test
                              * classes have run on multiple agents.
                              */
-                            fileOperations([fileCopyOperation(
-                                    includes: '**/build/test-results/**/*.xml',
-                                    targetLocation: 'allure-input',
-                                    flattenFiles: true,
-                                    renameFiles: true,
-                                    sourceCaptureExpression: '.*/([^/]+)$',
-                                    targetNameExpression: 'same-agent-$1')])
-                        }
-                    }
+                    //         fileOperations([fileCopyOperation(
+                    //                 includes: '**/build/test-results/**/*.xml',
+                    //                 targetLocation: 'allure-input',
+                    //                 flattenFiles: true,
+                    //                 renameFiles: true,
+                    //                 sourceCaptureExpression: '.*/([^/]+)$',
+                    //                 targetNameExpression: 'same-agent-$1')])
+                    //     }
+                    // }
                     stages {
                         stage('Integration Test') {
                             steps {
@@ -254,35 +254,35 @@ pipeline {
             }
         }
 
-        // stage('Publish to Artifactory') {
-        //     when {
-        //         expression { isReleaseTag }
-        //     }
-        //     steps {
-        //         rtServer(
-        //                 id: 'R3-Artifactory',
-        //                 url: 'https://software.r3.com/artifactory',
-        //                 credentialsId: 'artifactory-credentials'
-        //         )
-        //         rtGradleDeployer(
-        //                 id: 'deployer',
-        //                 serverId: 'R3-Artifactory',
-        //                 repo: 'corda-releases'
-        //         )
-        //         rtGradleRun(
-        //                 usesPlugin: true,
-        //                 useWrapper: true,
-        //                 switches: '-s --info -DpublishApiDocs',
-        //                 tasks: 'artifactoryPublish',
-        //                 deployerId: 'deployer',
-        //                 buildName: env.ARTIFACTORY_BUILD_NAME
-        //         )
-        //         rtPublishBuildInfo(
-        //                 serverId: 'R3-Artifactory',
-        //                 buildName: env.ARTIFACTORY_BUILD_NAME
-        //         )
-        //     }
-        // }
+        stage('Publish to Artifactory') {
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                rtServer(
+                        id: 'R3-Artifactory',
+                        url: 'https://software.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials'
+                )
+                rtGradleDeployer(
+                        id: 'deployer',
+                        serverId: 'R3-Artifactory',
+                        repo: 'corda-releases'
+                )
+                rtGradleRun(
+                        usesPlugin: true,
+                        useWrapper: true,
+                        switches: '-s --info -DpublishApiDocs',
+                        tasks: 'artifactoryPublish',
+                        deployerId: 'deployer',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+                rtPublishBuildInfo(
+                        serverId: 'R3-Artifactory',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+            }
+        }
 
         // stage('Publish Release Candidate to Internal Repository') {
         //     when {
@@ -422,8 +422,8 @@ pipeline {
         //         }
         //     }
         // }
-        cleanup {
-            deleteDir() /* clean up our workspace */
-        }
+        // cleanup {
+        //     deleteDir() /* clean up our workspace */
+        // }
     }
 }
