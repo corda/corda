@@ -355,14 +355,14 @@ class FinalityFlowTests : WithFinality {
         val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
             assertEquals(StatesToRecord.ALL_VISIBLE, this[0].statesToRecord)
-            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+            assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
             assertNotNull(this)
             val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
             assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
-            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this.initiatorPartyId)
-            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE), hashedDL.peerHashToStatesToRecord)
+            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.initiatorPartyId)
+            assertEquals(mapOf<SecureHash, StatesToRecord>(SecureHash.sha256(BOB_NAME.toString()) to StatesToRecord.ALL_VISIBLE), hashedDL.peerHashToStatesToRecord)
         }
         validateSenderAndReceiverTimestamps(sdrs, rdr!!)
     }
@@ -388,19 +388,19 @@ class FinalityFlowTests : WithFinality {
         val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(2, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
-            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+            assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
             assertEquals(StatesToRecord.ALL_VISIBLE, this[1].statesToRecord)
-            assertEquals(CHARLIE_NAME.hashCode().toLong(), this[1].peerPartyId)
+            assertEquals(SecureHash.sha256(CHARLIE_NAME.toString()), this[1].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
             assertNotNull(this)
             val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
             assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
-            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this.initiatorPartyId)
+            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.initiatorPartyId)
             // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
-            assertEquals(mapOf(
-                    BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT,
-                    CHARLIE_NAME.hashCode().toLong() to StatesToRecord.ALL_VISIBLE
+            assertEquals(mapOf<SecureHash, StatesToRecord>(
+                    SecureHash.sha256(BOB_NAME.toString()) to StatesToRecord.ONLY_RELEVANT,
+                    SecureHash.sha256(CHARLIE_NAME.toString()) to StatesToRecord.ALL_VISIBLE
             ), hashedDL.peerHashToStatesToRecord)
         }
         validateSenderAndReceiverTimestamps(sdrs, rdr!!)
@@ -452,14 +452,14 @@ class FinalityFlowTests : WithFinality {
         val sdr = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
-            assertEquals(BOB_NAME.hashCode().toLong(), this[0].peerPartyId)
+            assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
             assertNotNull(this)
             val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
             assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
-            assertEquals(aliceNode.info.singleIdentity().name.hashCode().toLong(), this.initiatorPartyId)
-            assertEquals(mapOf(BOB_NAME.hashCode().toLong() to StatesToRecord.ONLY_RELEVANT), hashedDL.peerHashToStatesToRecord)
+            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.initiatorPartyId)
+            assertEquals(mapOf<SecureHash, StatesToRecord>(SecureHash.sha256(BOB_NAME.toString()) to StatesToRecord.ONLY_RELEVANT), hashedDL.peerHashToStatesToRecord)
         }
         validateSenderAndReceiverTimestamps(sdr, rdr!!)
     }
