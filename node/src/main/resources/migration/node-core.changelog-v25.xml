@@ -21,7 +21,7 @@
             <column name="transaction_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
-            <column name="peer_party_id" type="BIGINT">
+            <column name="peer_party_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
             <column name="states_to_record" type="INT">
@@ -46,7 +46,7 @@
             <column name="transaction_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
-            <column name="peer_party_id" type="BIGINT">
+            <column name="peer_party_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
             <column name="distribution_list" type="BLOB">
@@ -65,7 +65,7 @@
 
     <changeSet author="R3.Corda" id="create_recovery_party_info_table">
         <createTable tableName="node_recovery_party_info">
-            <column name="party_id" type="BIGINT">
+            <column name="party_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
             <column name="party_name" type="NVARCHAR(255)">
