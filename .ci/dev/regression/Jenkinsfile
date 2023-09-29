@@ -328,27 +328,27 @@ pipeline {
         // }
     }
 
-    post {
-        always {
-            script {
+    // post {
+    //     always {
+    //         script {
                 // if (gitUtils.isReleaseTag()) {
                 //     gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''))
                 // }
-                try {
-                    if (params.DO_TEST) {
-                        unstash 'allure-input'
-                        allure includeProperties: false,
-                                jdk: '',
-                                results: [[path: '**/allure-input']]
-                    }
-                } catch (err) {
-                    echo("Allure report generation failed: $err")
+            //     try {
+            //         if (params.DO_TEST) {
+            //             unstash 'allure-input'
+            //             allure includeProperties: false,
+            //                     jdk: '',
+            //                     results: [[path: '**/allure-input']]
+            //         }
+            //     } catch (err) {
+            //         echo("Allure report generation failed: $err")
 
-                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
-                        currentBuild.result = 'UNSTABLE'
-                    }
-                }
-            }
+            //         if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+            //             currentBuild.result = 'UNSTABLE'
+            //         }
+            //     }
+            // }
 
             // script
             // {
@@ -387,7 +387,7 @@ pipeline {
             //         }
             //     }
             // }
-        }
+        // }
         // success {
         //     script {
         //         sendSlackNotifications("good", "BUILD PASSED", false, "#corda-corda4-open-source-build-notifications")
@@ -425,5 +425,5 @@ pipeline {
         // cleanup {
         //     deleteDir() /* clean up our workspace */
         // }
-    }
+    // }
 }
