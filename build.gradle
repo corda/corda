@@ -221,7 +221,7 @@ apply plugin: 'com.r3.testing.distributed-testing'
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve
 // the latest git commit hash and timestamp and create a version postfix from that
 if (project.hasProperty("versionFromGit")){
-    ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
+    ext.versionSuffix = "202309-01"
 }
 
 // Need the `toString()` call on these, because they need to be converted from GStringImpl to Java Strings.
