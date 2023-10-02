@@ -24,13 +24,14 @@ def buildEdition = (isReleaseTag || isReleaseCandidate) ? "Corda Community Editi
  * Common Gradle arguments for all Gradle executions
  */
 String COMMON_GRADLE_PARAMS = [
-        '--no-daemon',
         '--stacktrace',
         '--info',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
         '-DexcludeShell',
 ].join(' ')
+
+String COMMON_GRADLE_PARAMS_PARALLEL = COMMON_GRADLE_PARAMS + ' --parallel'
 
 pipeline {
     agent { label 'standard' }
@@ -73,7 +74,7 @@ pipeline {
                 authenticateGradleWrapper()
                 sh script: [
                         './gradlew',
-                        COMMON_GRADLE_PARAMS,
+                        COMMON_GRADLE_PARAMS_PARALLEL,
                         'clean',
                         'jar'
                 ].join(' ')
@@ -171,7 +172,7 @@ pipeline {
                                 authenticateGradleWrapper()
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
+                                        COMMON_GRADLE_PARAMS_PARALLEL,
                                         'jar'
                                 ].join(' ')
                             }
@@ -180,7 +181,7 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
+                                        COMMON_GRADLE_PARAMS_PARALLEL,
                                         'test'
                                 ].join(' ')
                             }
@@ -189,7 +190,7 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
+                                        COMMON_GRADLE_PARAMS_PARALLEL,
                                         'smokeTest'
                                 ].join(' ')
                             }
@@ -198,7 +199,7 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
+                                        COMMON_GRADLE_PARAMS_PARALLEL,
                                         'slowIntegrationTest'
                                 ].join(' ')
                             }
@@ -234,7 +235,7 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        COMMON_GRADLE_PARAMS,
+                                        COMMON_GRADLE_PARAMS_PARALLEL,
                                         'integrationTest'
                                 ].join(' ')
                             }
