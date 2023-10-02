@@ -42,7 +42,7 @@ data class HashedDistributionList(
         val timeDiscriminator: Int
     ) {
         fun serialise(): ByteArray {
-            val buffer = ByteBuffer.allocate(1 + java.lang.Long.BYTES)
+            val buffer = ByteBuffer.allocate(1 + java.lang.Long.BYTES + Integer.BYTES)
             buffer.put(VERSION_TAG.toByte())
             buffer.putLong(senderRecordedTimestamp.toEpochMilli())
             buffer.putInt(timeDiscriminator)
