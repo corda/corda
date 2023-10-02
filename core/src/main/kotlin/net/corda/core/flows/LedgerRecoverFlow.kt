@@ -41,15 +41,15 @@ class ReceiveLedgerRecoveryFlow constructor(private val otherSideSession: FlowSe
 class LedgerRecoveryException(message: String) : FlowException("Ledger recovery failed: $message")
 
 data class LedgerRecoveryParameters(
-        private val recoveryPeers: Collection<Party>,
-        private val timeWindow: RecoveryTimeWindow? = null,
-        private val useAllNetworkNodes: Boolean = false,
-        private val transactionRole: TransactionRole = TransactionRole.ALL,
-        private val dryRun: Boolean = false,
-        private val optimisticInitiatorRecovery: Boolean = false,
-        private val useTimeWindowNarrowing: Boolean = false,
-        private val verboseLogging: Boolean = true,
-        private val recoveryBatchSize: Int = 1000
+    val recoveryPeers: Collection<Party>,
+    val timeWindow: RecoveryTimeWindow? = null,
+    val useAllNetworkNodes: Boolean = false,
+    val transactionRole: TransactionRole = TransactionRole.ALL,
+    val dryRun: Boolean = false,
+    val optimisticInitiatorRecovery: Boolean = false,
+    val useTimeWindowNarrowing: Boolean = false,
+    val verboseLogging: Boolean = true,
+    val recoveryBatchSize: Int = 1000
 )
 
 /**
