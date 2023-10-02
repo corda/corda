@@ -38,12 +38,14 @@ data class HashedDistributionList(
 
     @CordaSerializable
     data class PublicHeader(
-        val senderRecordedTimestamp: Instant
+        val senderRecordedTimestamp: Instant,
+        val timeDiscriminator: Int
     ) {
         fun serialise(): ByteArray {
-            val buffer = ByteBuffer.allocate(1 + java.lang.Long.BYTES)
+            val buffer = ByteBuffer.allocate(1 + java.lang.Long.BYTES + Integer.BYTES)
             buffer.put(VERSION_TAG.toByte())
             buffer.putLong(senderRecordedTimestamp.toEpochMilli())
+            buffer.putInt(timeDiscriminator)
             return buffer.array()
         }
 
@@ -67,7 +69,8 @@ data class HashedDistributionList(
                     val version = buffer.get().toInt()
                     require(version == VERSION_TAG) { "Unknown distribution list format $version" }
                     val senderRecordedTimestamp = Instant.ofEpochMilli(buffer.getLong())
-                    return PublicHeader(senderRecordedTimestamp)
+                    val timeDiscriminator = buffer.getInt()
+                    return PublicHeader(senderRecordedTimestamp, timeDiscriminator)
                 } catch (e: Exception) {
                     throw IllegalArgumentException("Corrupt or not a distribution list header", e)
                 }

@@ -320,7 +320,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         val hashedDistList = HashedDistributionList(
                 ALL_VISIBLE,
                 mapOf(SecureHash.sha256(BOB.name.toString()) to NONE, SecureHash.sha256(CHARLIE_NAME.toString()) to ONLY_RELEVANT),
-                HashedDistributionList.PublicHeader(now())
+                HashedDistributionList.PublicHeader(now(), 1)
         )
         val roundtrip = HashedDistributionList.decrypt(hashedDistList.encrypt(encryptionService), encryptionService)
         assertThat(roundtrip).isEqualTo(hashedDistList)
