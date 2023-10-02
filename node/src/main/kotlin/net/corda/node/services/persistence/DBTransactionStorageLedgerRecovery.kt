@@ -155,7 +155,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val hashedDistributionList = HashedDistributionList(
                     distributionList.senderStatesToRecord,
                     hashedPeersToStatesToRecord,
-                    HashedDistributionList.PublicHeader(senderRecordingTimestamp)
+                    HashedDistributionList.PublicHeader(senderRecordingTimestamp, timeDiscriminator)
             )
             hashedDistributionList.encrypt(encryptionService)
         }
@@ -170,7 +170,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                 val publicHeader = HashedDistributionList.PublicHeader.unauthenticatedDeserialise(distributionList.opaqueData, encryptionService)
                 database.transaction {
                     val receiverDistributionRecord = DBReceiverDistributionRecord(
-                            Key(partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp),
+                            Key(partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp, publicHeader.timeDiscriminator),
                             txId,
                             distributionList.opaqueData,
                             distributionList.receiverStatesToRecord
