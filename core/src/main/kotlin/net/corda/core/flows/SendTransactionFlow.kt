@@ -151,11 +151,14 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
             is NotarisationPayload -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload.signedTransaction))
             is SignedTransaction -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload))
             is RetrieveAnyTransactionPayload -> TransactionAuthorisationFilter(acceptAll = true)
-            is List<*> -> TransactionAuthorisationFilter().addAuthorised(payload.flatMap { stateAndRef ->
-                if (stateAndRef is StateAndRef<*>) {
-                    getInputTransactions(serviceHub.validatedTransactions.getTransaction(stateAndRef.ref.txhash)!!) + stateAndRef.ref.txhash
+            is List<*> -> TransactionAuthorisationFilter().addAuthorised(payload.flatMap { someObject ->
+                if (someObject is StateAndRef<*>) {
+                    getInputTransactions(serviceHub.validatedTransactions.getTransaction(someObject.ref.txhash)!!) + someObject.ref.txhash
+                }
+                else if (someObject is SecureHash) {
+                    getInputTransactions(serviceHub.validatedTransactions.getTransaction(someObject)!!)
                 } else {
-                    throw Exception("Unknown payload type: ${stateAndRef!!::class.java} ?")
+                    throw Exception("Unknown payload type: ${someObject!!::class.java} ?")
                 }
             }.toSet())
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")

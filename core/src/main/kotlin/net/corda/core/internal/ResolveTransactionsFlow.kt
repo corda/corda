@@ -26,6 +26,9 @@ class ResolveTransactionsFlow private constructor(
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(null, txHashes, otherSide, statesToRecord)
 
+    constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord, deferredAck: Boolean)
+            : this(null, txHashes, otherSide, statesToRecord, deferredAck)
+
     /**
      * Resolves and validates the dependencies of the specified [SignedTransaction]. Fetches the attachments, but does
      * *not* validate or store the [SignedTransaction] itself.

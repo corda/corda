@@ -78,7 +78,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     @CordaSerializable
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}receiver_distr_recs")
-    class DBReceiverDistributionRecord(
+    data class DBReceiverDistributionRecord(
             @EmbeddedId
             var compositeKey: PersistentKey,
 
