@@ -15,7 +15,7 @@ import net.corda.core.utilities.ProgressTracker
 @InitiatingFlow
 class LedgerRecoveryFlow(
         private val parameters: LedgerRecoveryParameters,
-        override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<Long>() {
+        override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<LedgerRecoveryResult>() {
 
     @CordaInternal
     data class ExtraConstructorArgs(val parameters: LedgerRecoveryParameters)
@@ -24,7 +24,7 @@ class LedgerRecoveryFlow(
 
     @Suspendable
     @Throws(LedgerRecoveryException::class)
-    override fun call(): Long {
+    override fun call(): LedgerRecoveryResult {
         throw NotImplementedError("Enterprise only feature")
     }
 }
@@ -40,6 +40,7 @@ class ReceiveLedgerRecoveryFlow constructor(private val otherSideSession: FlowSe
 @CordaSerializable
 class LedgerRecoveryException(message: String) : FlowException("Ledger recovery failed: $message")
 
+@CordaSerializable
 data class LedgerRecoveryParameters(
     val recoveryPeers: Collection<Party>,
     val timeWindow: RecoveryTimeWindow? = null,
@@ -47,9 +48,16 @@ data class LedgerRecoveryParameters(
     val transactionRole: TransactionRole = TransactionRole.ALL,
     val dryRun: Boolean = false,
     val optimisticInitiatorRecovery: Boolean = false,
-    val useTimeWindowNarrowing: Boolean = false,
+    val useTimeWindowNarrowing: Boolean = true,
     val verboseLogging: Boolean = true,
     val recoveryBatchSize: Int = 1000
+)
+
+@CordaSerializable
+data class LedgerRecoveryResult(
+    val totalRecoveredRecords: Long,
+    val totalRecoveredTransactions: Long,
+    val totalErrors: Long
 )
 
 /**
