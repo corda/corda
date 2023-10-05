@@ -155,9 +155,8 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
                 if (someObject is StateAndRef<*>) {
                     getInputTransactions(serviceHub.validatedTransactions.getTransaction(someObject.ref.txhash)!!) + someObject.ref.txhash
                 }
-                else if (someObject is SecureHash) {
-                    val txn = serviceHub.validatedTransactions.getTransaction(someObject)!!
-                    getInputTransactions(txn) + txn.id
+                else if (someObject is NamedByHash) {
+                    setOf(someObject.id)
                 } else {
                     throw Exception("Unknown payload type: ${someObject!!::class.java} ?")
                 }
