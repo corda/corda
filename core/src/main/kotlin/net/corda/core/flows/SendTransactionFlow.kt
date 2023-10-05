@@ -132,7 +132,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
 
     protected open fun isFinality(): Boolean = false
 
-    @Suppress("ComplexCondition", "ComplexMethod", "LongMethod")
+    @Suppress("ComplexCondition", "ComplexMethod", "LongMethod", "TooGenericExceptionThrown")
     @Suspendable
     override fun call(): Void? {
         val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
