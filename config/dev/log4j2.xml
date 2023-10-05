@@ -105,7 +105,7 @@
         </RollingFile>
 
         <Rewrite name="Console-ErrorCode-Selector">
-            <AppenderRef ref="Console-Selector"/>
+            <AppenderRef ref="Console-Appender"/>
         </Rewrite>
 
         <Rewrite name="Console-ErrorCode-Appender-Println">
