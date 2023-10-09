@@ -373,7 +373,7 @@ class NodeAttachmentService @JvmOverloads constructor(
             if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
                 val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }
                         .filter { it >= 0 }.map { it + 1 } // +1 as versions starts from 1 not 0
-                val max = if (versions.isNotEmpty()) versions.max() else null
+                val max = versions.maxOrNull()
                 if (max != null && max > contractVersionFromFile) {
                     val msg = "Updating version of attachment $attachmentId from '$contractVersionFromFile' to '$max'"
                     if (versions.toSet().size > 1)
