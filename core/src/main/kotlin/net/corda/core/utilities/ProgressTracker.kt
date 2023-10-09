@@ -207,10 +207,10 @@ class ProgressTracker(vararg inputSteps: Step) {
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
     fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
-        val subscription = childProgressTracker.changes.subscribe({
+        val subscription = childProgressTracker.changes.subscribe((SerializableAction<Change>{
             _changes.onNext(it)
             if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-        }, { _changes.onError(it) })
+        }), (SerializableAction { _changes.onError(it) }))
         childProgressTrackers[step] = Child(childProgressTracker, subscription)
         childProgressTracker.parent = this
         _changes.onNext(Change.Structural(this, step))
