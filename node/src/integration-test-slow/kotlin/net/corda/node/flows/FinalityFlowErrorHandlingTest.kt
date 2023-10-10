@@ -74,7 +74,7 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
                 alice.rpc.startFlow(::GetFlowTransaction, txId).returnValue.getOrThrow().apply {
                     assertEquals("V", this.first)              // "V" -> VERIFIED
-                    assertEquals(CHARLIE_NAME.hashCode().toLong(), this.second)   // peer
+                    assertEquals(SecureHash.sha256(CHARLIE_NAME.toString()).toString(), this.second)   // peer
                 }
             }
         }
@@ -83,9 +83,9 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
 // Internal use for testing only!!
 @StartableByRPC
-class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Pair<String, Long>>() {
+class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Pair<String, String>>() {
     @Suspendable
-    override fun call(): Pair<String, Long> {
+    override fun call(): Pair<String, String> {
         val transactionStatus = serviceHub.jdbcSession().prepareStatement("select * from node_transactions where tx_id = ?")
                 .apply { setString(1, txId.toString()) }
                 .use { ps ->
@@ -94,12 +94,12 @@ class GetFlowTransaction(private val txId: SecureHash) : FlowLogic<Pair<String, 
                         rs.getString(4)   // TransactionStatus
                     }
                 }
-        val receiverPartyId = serviceHub.jdbcSession().prepareStatement("select * from node_sender_distribution_records where transaction_id = ?")
+        val receiverPartyId = serviceHub.jdbcSession().prepareStatement("select * from node_sender_distr_recs where transaction_id = ?")
                 .apply { setString(1, txId.toString()) }
                 .use { ps ->
                     ps.executeQuery().use { rs ->
                         rs.next()
-                        rs.getLong(4)     // receiverPartyId
+                        rs.getString(4)     // receiverPartyId
                     }
                 }
         return Pair(transactionStatus, receiverPartyId)

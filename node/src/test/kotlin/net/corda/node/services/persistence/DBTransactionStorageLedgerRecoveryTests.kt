@@ -147,12 +147,12 @@ class DBTransactionStorageLedgerRecoveryTests {
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.SENDER).let {
             assertEquals(2, it.size)
-            assertEquals(BOB_NAME.hashCode().toLong(), it.senderRecords[0].compositeKey.peerPartyId)
+            assertEquals(SecureHash.sha256(BOB_NAME.toString()).toString(), it.senderRecords[0].compositeKey.peerPartyId)
             assertEquals(ALL_VISIBLE, it.senderRecords[0].statesToRecord)
         }
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.RECEIVER).let {
             assertEquals(1, it.size)
-            assertEquals(BOB_NAME.hashCode().toLong(), it.receiverRecords[0].compositeKey.peerPartyId)
+            assertEquals(SecureHash.sha256(BOB_NAME.toString()).toString(), it.receiverRecords[0].compositeKey.peerPartyId)
             assertEquals(ALL_VISIBLE, (HashedDistributionList.decrypt(it.receiverRecords[0].distributionList, encryptionService)).peerHashToStatesToRecord.map { it.value }[0])
         }
         val resultsAll = transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.ALL)
@@ -319,8 +319,8 @@ class DBTransactionStorageLedgerRecoveryTests {
     fun `test lightweight serialization and deserialization of hashed distribution list payload`() {
         val hashedDistList = HashedDistributionList(
                 ALL_VISIBLE,
-                mapOf(BOB.name.hashCode().toLong() to NONE, CHARLIE_NAME.hashCode().toLong() to ONLY_RELEVANT),
-                HashedDistributionList.PublicHeader(now())
+                mapOf(SecureHash.sha256(BOB.name.toString()) to NONE, SecureHash.sha256(CHARLIE_NAME.toString()) to ONLY_RELEVANT),
+                HashedDistributionList.PublicHeader(now(), 1)
         )
         val roundtrip = HashedDistributionList.decrypt(hashedDistList.encrypt(encryptionService), encryptionService)
         assertThat(roundtrip).isEqualTo(hashedDistList)

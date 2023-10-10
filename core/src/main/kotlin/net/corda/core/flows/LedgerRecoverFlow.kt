@@ -14,36 +14,17 @@ import net.corda.core.utilities.ProgressTracker
 @StartableByRPC
 @InitiatingFlow
 class LedgerRecoveryFlow(
-        private val recoveryPeers: Collection<Party>,
-        private val timeWindow: RecoveryTimeWindow,
-        private val useAllNetworkNodes: Boolean = false,
-        private val transactionRole: TransactionRole = TransactionRole.ALL,
-        private val dryRun: Boolean = false,
-        private val optimisticInitiatorRecovery: Boolean = false,
-        override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<Map<SecureHash, RecoveryResult>>() {
+        private val parameters: LedgerRecoveryParameters,
+        override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<LedgerRecoveryResult>() {
 
     @CordaInternal
-    data class ExtraConstructorArgs(val recoveryPeers: Collection<Party>,
-                                    val timeWindow: RecoveryTimeWindow,
-                                    val useAllNetworkNodes: Boolean,
-                                    val transactionRole: TransactionRole,
-                                    val dryRun: Boolean,
-                                    val optimisticInitiatorRecovery: Boolean)
+    data class ExtraConstructorArgs(val parameters: LedgerRecoveryParameters)
     @CordaInternal
-    fun getExtraConstructorArgs() = ExtraConstructorArgs(recoveryPeers, timeWindow, useAllNetworkNodes, transactionRole, dryRun, optimisticInitiatorRecovery)
-
-    // unused constructors added to facilitate Node Shell command invocation
-    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow) : this(setOf(recoveryPeer), timeWindow, false, TransactionRole.ALL, false, false)
-    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow, dryRun: Boolean) : this(setOf(recoveryPeer), timeWindow, false, TransactionRole.ALL, dryRun, false)
-
-    constructor(timeWindow: RecoveryTimeWindow, dryRun: Boolean) : this(emptySet(), timeWindow, false, TransactionRole.ALL, dryRun, false)
-    constructor(timeWindow: RecoveryTimeWindow, dryRun: Boolean, optimisticInitiatorRecovery: Boolean) : this(emptySet(), timeWindow, false, TransactionRole.ALL, dryRun, optimisticInitiatorRecovery)
-    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, dryRun: Boolean) : this(recoveryPeers, timeWindow, false, TransactionRole.ALL, dryRun, false)
-    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, dryRun: Boolean, optimisticInitiatorRecovery: Boolean) : this(recoveryPeers, timeWindow, false, TransactionRole.ALL, dryRun, optimisticInitiatorRecovery)
+    fun getExtraConstructorArgs() = ExtraConstructorArgs(parameters)
 
     @Suspendable
     @Throws(LedgerRecoveryException::class)
-    override fun call(): Map<SecureHash, RecoveryResult> {
+    override fun call(): LedgerRecoveryResult {
         throw NotImplementedError("Enterprise only feature")
     }
 }
@@ -58,6 +39,26 @@ class ReceiveLedgerRecoveryFlow constructor(private val otherSideSession: FlowSe
 
 @CordaSerializable
 class LedgerRecoveryException(message: String) : FlowException("Ledger recovery failed: $message")
+
+@CordaSerializable
+data class LedgerRecoveryParameters(
+    val recoveryPeers: Collection<Party>,
+    val timeWindow: RecoveryTimeWindow? = null,
+    val useAllNetworkNodes: Boolean = false,
+    val transactionRole: TransactionRole = TransactionRole.ALL,
+    val dryRun: Boolean = false,
+    val optimisticInitiatorRecovery: Boolean = false,
+    val useTimeWindowNarrowing: Boolean = true,
+    val verboseLogging: Boolean = true,
+    val recoveryBatchSize: Int = 1000
+)
+
+@CordaSerializable
+data class LedgerRecoveryResult(
+    val totalRecoveredRecords: Long,
+    val totalRecoveredTransactions: Long,
+    val totalErrors: Long
+)
 
 /**
  * This specifies which type of transactions to recover based on the transaction role of the recovering node
@@ -80,6 +81,3 @@ data class RecoveryResult(
         val synchronisedInitiated: Boolean = false,    // only attempted if [optimisticInitiatorRecovery] option set to true and [TransactionRecoveryType.INITIATOR]
         val failureCause: String? = null    // reason why a transaction failed to synchronise
 )
-
-
-

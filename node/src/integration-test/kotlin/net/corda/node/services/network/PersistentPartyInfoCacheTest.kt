@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -35,9 +36,9 @@ class PersistentPartyInfoCacheTest {
                 createNodeInfo(listOf(CHARLIE))))
         val partyInfoCache = PersistentPartyInfoCache(charlieNetMapCache, TestingNamedCacheFactory(), database)
         partyInfoCache.start()
-        assertThat(partyInfoCache.getPartyIdByCordaX500Name(ALICE.name)).isEqualTo(ALICE.name.hashCode().toLong())
-        assertThat(partyInfoCache.getPartyIdByCordaX500Name(BOB.name)).isEqualTo(BOB.name.hashCode().toLong())
-        assertThat(partyInfoCache.getPartyIdByCordaX500Name(CHARLIE.name)).isEqualTo(CHARLIE.name.hashCode().toLong())
+        assertThat(partyInfoCache.getPartyIdByCordaX500Name(ALICE.name)).isEqualTo(SecureHash.sha256(ALICE.name.toString()))
+        assertThat(partyInfoCache.getPartyIdByCordaX500Name(BOB.name)).isEqualTo(SecureHash.sha256(BOB.name.toString()))
+        assertThat(partyInfoCache.getPartyIdByCordaX500Name(CHARLIE.name)).isEqualTo(SecureHash.sha256(CHARLIE.name.toString()))
     }
 
     @Test(timeout=300_000)
@@ -50,9 +51,9 @@ class PersistentPartyInfoCacheTest {
         // clear network map cache & bootstrap another PersistentInfoCache
         charlieNetMapCache.clearNetworkMapCache()
         val partyInfoCache = PersistentPartyInfoCache(charlieNetMapCache, TestingNamedCacheFactory(), database)
-        assertThat(partyInfoCache.getPartyIdByCordaX500Name(ALICE.name)).isEqualTo(ALICE.name.hashCode().toLong())
-        assertThat(partyInfoCache.getPartyIdByCordaX500Name(BOB.name)).isEqualTo(BOB.name.hashCode().toLong())
-        assertThat(partyInfoCache.getPartyIdByCordaX500Name(CHARLIE.name)).isEqualTo(CHARLIE.name.hashCode().toLong())
+        assertThat(partyInfoCache.getPartyIdByCordaX500Name(ALICE.name)).isEqualTo(SecureHash.sha256(ALICE.name.toString()))
+        assertThat(partyInfoCache.getPartyIdByCordaX500Name(BOB.name)).isEqualTo(SecureHash.sha256(BOB.name.toString()))
+        assertThat(partyInfoCache.getPartyIdByCordaX500Name(CHARLIE.name)).isEqualTo(SecureHash.sha256(CHARLIE.name.toString()))
     }
 
     @Test(timeout=300_000)
@@ -63,9 +64,9 @@ class PersistentPartyInfoCacheTest {
                 createNodeInfo(listOf(CHARLIE))))
         val partyInfoCache = PersistentPartyInfoCache(charlieNetMapCache, TestingNamedCacheFactory(), database)
         partyInfoCache.start()
-        assertThat(partyInfoCache.getCordaX500NameByPartyId(ALICE.name.hashCode().toLong())).isEqualTo(ALICE.name)
-        assertThat(partyInfoCache.getCordaX500NameByPartyId(BOB.name.hashCode().toLong())).isEqualTo(BOB.name)
-        assertThat(partyInfoCache.getCordaX500NameByPartyId(CHARLIE.name.hashCode().toLong())).isEqualTo(CHARLIE.name)
+        assertThat(partyInfoCache.getCordaX500NameByPartyId(SecureHash.sha256(ALICE.name.toString()))).isEqualTo(ALICE.name)
+        assertThat(partyInfoCache.getCordaX500NameByPartyId(SecureHash.sha256(BOB.name.toString()))).isEqualTo(BOB.name)
+        assertThat(partyInfoCache.getCordaX500NameByPartyId(SecureHash.sha256(CHARLIE.name.toString()))).isEqualTo(CHARLIE.name)
     }
 
     @Test(timeout=300_000)
@@ -78,9 +79,9 @@ class PersistentPartyInfoCacheTest {
         // clear network map cache & bootstrap another PersistentInfoCache
         charlieNetMapCache.clearNetworkMapCache()
         val partyInfoCache = PersistentPartyInfoCache(charlieNetMapCache, TestingNamedCacheFactory(), database)
-        assertThat(partyInfoCache.getCordaX500NameByPartyId(ALICE.name.hashCode().toLong())).isEqualTo(ALICE.name)
-        assertThat(partyInfoCache.getCordaX500NameByPartyId(BOB.name.hashCode().toLong())).isEqualTo(BOB.name)
-        assertThat(partyInfoCache.getCordaX500NameByPartyId(CHARLIE.name.hashCode().toLong())).isEqualTo(CHARLIE.name)
+        assertThat(partyInfoCache.getCordaX500NameByPartyId(SecureHash.sha256(ALICE.name.toString()))).isEqualTo(ALICE.name)
+        assertThat(partyInfoCache.getCordaX500NameByPartyId(SecureHash.sha256(BOB.name.toString()))).isEqualTo(BOB.name)
+        assertThat(partyInfoCache.getCordaX500NameByPartyId(SecureHash.sha256(CHARLIE.name.toString()))).isEqualTo(CHARLIE.name)
     }
 
     private fun createNodeInfo(identities: List<TestIdentity>,
