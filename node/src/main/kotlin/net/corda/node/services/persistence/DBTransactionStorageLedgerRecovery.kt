@@ -38,7 +38,9 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     @Embeddable
     @Immutable
     data class PersistentKey(
-            /** PartyId of flow peer **/
+            @Column(name = "transaction_id", length = 144, nullable = false)
+            var txId: String,
+
             @Column(name = "peer_party_id", length = 144, nullable = false)
             var peerPartyId: String,
 
@@ -49,7 +51,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             var timestampDiscriminator: Int
 
     ) : Serializable {
-        constructor(key: Key) : this(key.partyId.toString(), key.timestamp, key.timestampDiscriminator)
+        constructor(key: Key) : this(key.txId.toString(), key.partyId.toString(), key.timestamp, key.timestampDiscriminator)
     }
 
     @CordaSerializable
@@ -58,9 +60,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     data class DBSenderDistributionRecord(
             @EmbeddedId
             var compositeKey: PersistentKey,
-
-            @Column(name = "transaction_id", length = 144, nullable = false)
-            var txId: String,
 
             /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
             @Column(name = "sender_states_to_record", nullable = false)
@@ -72,7 +71,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
     ) {
         fun toSenderDistributionRecord() =
             SenderDistributionRecord(
-                    SecureHash.parse(this.txId),
+                    SecureHash.parse(this.compositeKey.txId),
                     SecureHash.parse(this.compositeKey.peerPartyId),
                     this.senderStatesToRecord,
                     this.receiverStatesToRecord,
@@ -87,9 +86,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @EmbeddedId
             var compositeKey: PersistentKey,
 
-            @Column(name = "transaction_id", length = 144, nullable = false)
-            var txId: String,
-
             /** Encrypted recovery information for sole use by Sender **/
             @Lob
             @Column(name = "distribution_list", nullable = false)
@@ -99,16 +95,15 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             @Column(name = "receiver_states_to_record", nullable = false)
             val receiverStatesToRecord: StatesToRecord
 ) {
-        constructor(key: Key, txId: SecureHash, encryptedDistributionList: ByteArray, receiverStatesToRecord: StatesToRecord) :
+        constructor(key: Key, encryptedDistributionList: ByteArray, receiverStatesToRecord: StatesToRecord) :
             this(PersistentKey(key),
-                 txId = txId.toString(),
                  distributionList = encryptedDistributionList,
                  receiverStatesToRecord = receiverStatesToRecord
             )
         @VisibleForTesting
         fun toReceiverDistributionRecord(): ReceiverDistributionRecord {
             return ReceiverDistributionRecord(
-                    SecureHash.parse(this.txId),
+                    SecureHash.parse(this.compositeKey.txId),
                     SecureHash.parse(this.compositeKey.peerPartyId),
                     OpaqueBytes(this.distributionList),
                     this.compositeKey.timestamp
@@ -129,14 +124,12 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val partyName: String
     )
 
-    data class TimestampKey(val timestamp: Instant, val timestampDiscriminator: Int)
-
     class Key(
+            val txId: SecureHash,
             val partyId: SecureHash,
             val timestamp: Instant,
             val timestampDiscriminator: Int = nextDiscriminatorNumber.andIncrement
     ) {
-        constructor(key: TimestampKey, partyId: SecureHash): this(partyId, key.timestamp, key.timestampDiscriminator)
         companion object {
             val nextDiscriminatorNumber = AtomicInteger()
         }
@@ -149,8 +142,9 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val distributionList = metadata.distributionList as? SenderDistributionList ?: throw IllegalStateException("Expecting SenderDistributionList")
             distributionList.peersToStatesToRecord.map { (peerCordaX500Name, peerStatesToRecord) ->
                 val senderDistributionRecord = DBSenderDistributionRecord(
-                        PersistentKey(Key(TimestampKey(senderRecordingTimestamp, timeDiscriminator), partyInfoCache.getPartyIdByCordaX500Name(peerCordaX500Name))),
-                        txId.toString(),
+                        PersistentKey(Key(txId,
+                                partyInfoCache.getPartyIdByCordaX500Name(peerCordaX500Name),
+                                senderRecordingTimestamp, timeDiscriminator)),
                         distributionList.senderStatesToRecord,
                         peerStatesToRecord)
                 session.save(senderDistributionRecord)
@@ -176,8 +170,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                 val publicHeader = HashedDistributionList.PublicHeader.unauthenticatedDeserialise(distributionList.opaqueData, encryptionService)
                 database.transaction {
                     val receiverDistributionRecord = DBReceiverDistributionRecord(
-                            Key(partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp, publicHeader.timeDiscriminator),
-                            txId,
+                            Key(txId, partyInfoCache.getPartyIdByCordaX500Name(sender), publicHeader.senderRecordedTimestamp, publicHeader.timeDiscriminator),
                             distributionList.opaqueData,
                             distributionList.receiverStatesToRecord
                     )
@@ -193,12 +186,14 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             super.removeUnnotarisedTransaction(id)
             val criteriaBuilder = session.criteriaBuilder
             val deleteSenderDistributionRecords = criteriaBuilder.createCriteriaDelete(DBSenderDistributionRecord::class.java)
-            val root = deleteSenderDistributionRecords.from(DBSenderDistributionRecord::class.java)
-            deleteSenderDistributionRecords.where(criteriaBuilder.equal(root.get<String>(DBSenderDistributionRecord::txId.name), id.toString()))
+            val rootSender = deleteSenderDistributionRecords.from(DBSenderDistributionRecord::class.java)
+            val compositeKeySender = rootSender.get<PersistentKey>("compositeKey")
+            deleteSenderDistributionRecords.where(criteriaBuilder.equal(compositeKeySender.get<String>(PersistentKey::txId.name), id.toString()))
             val deletedSenderDistributionRecords = session.createQuery(deleteSenderDistributionRecords).executeUpdate() != 0
             val deleteReceiverDistributionRecords = criteriaBuilder.createCriteriaDelete(DBReceiverDistributionRecord::class.java)
-            val rootReceiverDistributionRecord = deleteReceiverDistributionRecords.from(DBReceiverDistributionRecord::class.java)
-            deleteReceiverDistributionRecords.where(criteriaBuilder.equal(rootReceiverDistributionRecord.get<String>(DBReceiverDistributionRecord::txId.name), id.toString()))
+            val rootReceiver = deleteReceiverDistributionRecords.from(DBReceiverDistributionRecord::class.java)
+            val compositeKeyReceiver = rootReceiver.get<PersistentKey>("compositeKey")
+            deleteReceiverDistributionRecords.where(criteriaBuilder.equal(compositeKeyReceiver.get<String>(PersistentKey::txId.name), id.toString()))
             val deletedReceiverDistributionRecords = session.createQuery(deleteReceiverDistributionRecords).executeUpdate() != 0
             deletedSenderDistributionRecords || deletedReceiverDistributionRecords
         }
@@ -239,7 +234,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             predicates.add(criteriaBuilder.greaterThanOrEqualTo(compositeKey.get<Instant>(PersistentKey::timestamp.name), timeWindow.fromTime))
             predicates.add(criteriaBuilder.and(criteriaBuilder.lessThanOrEqualTo(compositeKey.get<Instant>(PersistentKey::timestamp.name), timeWindow.untilTime)))
             if (excludingTxnIds.isNotEmpty()) {
-                predicates.add(criteriaBuilder.and(criteriaBuilder.not(txnMetadata.get<String>(DBSenderDistributionRecord::txId.name).`in`(
+                predicates.add(criteriaBuilder.and(criteriaBuilder.not(compositeKey.get<String>(PersistentKey::txId.name).`in`(
                         excludingTxnIds.map { it.toString() }))))
             }
             if (peers.isNotEmpty()) {
@@ -277,7 +272,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             predicates.add(criteriaBuilder.greaterThanOrEqualTo(timestamp, timeWindow.fromTime))
             predicates.add(criteriaBuilder.and(criteriaBuilder.lessThanOrEqualTo(timestamp, timeWindow.untilTime)))
             if (excludingTxnIds.isNotEmpty()) {
-                val txId = txnMetadata.get<String>(DBSenderDistributionRecord::txId.name)
+                val txId = compositeKey.get<String>(PersistentKey::txId.name)
                 predicates.add(criteriaBuilder.and(criteriaBuilder.not(txId.`in`(excludingTxnIds.map { it.toString() }))))
             }
             if (initiators.isNotEmpty()) {
