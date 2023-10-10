@@ -244,8 +244,8 @@ pipeline {
                             steps {
                                 sh script: [
                                         './gradlew',
-                                        // COMMON_GRADLE_PARAMS,
-                                        'help'
+                                        COMMON_GRADLE_PARAMS,
+                                        'deployNode'
                                 ].join(' ')
                             }
                         }
