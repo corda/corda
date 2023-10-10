@@ -123,7 +123,6 @@ class FinalityFlowTests : WithFinality {
 	fun `allow use of the old API if the CorDapp target version is 3`() {
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)
-        @Suppress("DEPRECATION")
         aliceNode.startFlowAndRunNetwork(OldFinalityInvoker(stx)).resultFuture.getOrThrow()
         assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull
     }
@@ -239,7 +238,7 @@ class FinalityFlowTests : WithFinality {
     private fun assertTxnRemovedFromDatabase(node: TestStartedNode, stxId: SecureHash) {
         val fromDb = node.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where txId = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
             ).setParameter("transactionId", stxId.toString()).resultList
         }
@@ -354,7 +353,8 @@ class FinalityFlowTests : WithFinality {
 
         val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
-            assertEquals(StatesToRecord.ALL_VISIBLE, this[0].statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].senderStatesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, this[0].receiverStatesToRecord)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
@@ -387,9 +387,9 @@ class FinalityFlowTests : WithFinality {
 
         val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(2, this.size)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].senderStatesToRecord)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
-            assertEquals(StatesToRecord.ALL_VISIBLE, this[1].statesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, this[1].receiverStatesToRecord)
             assertEquals(SecureHash.sha256(CHARLIE_NAME.toString()), this[1].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
@@ -451,7 +451,7 @@ class FinalityFlowTests : WithFinality {
 
         val sdr = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].senderStatesToRecord)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
@@ -467,7 +467,7 @@ class FinalityFlowTests : WithFinality {
     private fun getSenderRecoveryData(id: SecureHash, database: CordaPersistence): List<SenderDistributionRecord> {
         val fromDb = database.transaction {
             session.createQuery(
-                    "from ${DBSenderDistributionRecord::class.java.name} where txId = :transactionId",
+                    "from ${DBSenderDistributionRecord::class.java.name} where transaction_id = :transactionId",
                     DBSenderDistributionRecord::class.java
             ).setParameter("transactionId", id.toString()).resultList
         }
@@ -477,7 +477,7 @@ class FinalityFlowTests : WithFinality {
     private fun getReceiverRecoveryData(txId: SecureHash, receiver: TestStartedNode): ReceiverDistributionRecord? {
         return receiver.database.transaction {
             session.createQuery(
-                    "from ${DBReceiverDistributionRecord::class.java.name} where txId = :transactionId",
+                    "from ${DBReceiverDistributionRecord::class.java.name} where transaction_id = :transactionId",
                     DBReceiverDistributionRecord::class.java
             ).setParameter("transactionId", txId.toString()).resultList
         }.singleOrNull()?.toReceiverDistributionRecord()
