@@ -63,14 +63,19 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             var txId: String,
 
             /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
-            @Column(name = "states_to_record", nullable = false)
-            var statesToRecord: StatesToRecord
+            @Column(name = "sender_states_to_record", nullable = false)
+            var senderStatesToRecord: StatesToRecord,
+
+            /** states to record: NONE, ALL_VISIBLE, ONLY_RELEVANT */
+            @Column(name = "receiver_states_to_record", nullable = false)
+            var receiverStatesToRecord: StatesToRecord
     ) {
         fun toSenderDistributionRecord() =
             SenderDistributionRecord(
                     SecureHash.parse(this.txId),
                     SecureHash.parse(this.compositeKey.peerPartyId),
-                    this.statesToRecord,
+                    this.senderStatesToRecord,
+                    this.receiverStatesToRecord,
                     this.compositeKey.timestamp
             )
     }
@@ -146,6 +151,7 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                 val senderDistributionRecord = DBSenderDistributionRecord(
                         PersistentKey(Key(TimestampKey(senderRecordingTimestamp, timeDiscriminator), partyInfoCache.getPartyIdByCordaX500Name(peerCordaX500Name))),
                         txId.toString(),
+                        distributionList.senderStatesToRecord,
                         peerStatesToRecord)
                 session.save(senderDistributionRecord)
             }
@@ -320,7 +326,8 @@ abstract class DistributionRecord {
 data class SenderDistributionRecord(
         override val txId: SecureHash,
         val peerPartyId: SecureHash,     // CordaX500Name hashCode()
-        val statesToRecord: StatesToRecord,
+        val senderStatesToRecord: StatesToRecord,
+        val receiverStatesToRecord: StatesToRecord,
         override val timestamp: Instant
 ) : DistributionRecord()
 

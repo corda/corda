@@ -148,7 +148,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.SENDER).let {
             assertEquals(2, it.size)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()).toString(), it.senderRecords[0].compositeKey.peerPartyId)
-            assertEquals(ALL_VISIBLE, it.senderRecords[0].statesToRecord)
+            assertEquals(ALL_VISIBLE, it.senderRecords[0].senderStatesToRecord)
         }
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.RECEIVER).let {
             assertEquals(1, it.size)
@@ -181,8 +181,8 @@ class DBTransactionStorageLedgerRecoveryTests {
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(BOB_NAME)).let {
             assertEquals(2, it.size)
-            assertEquals(it[0].statesToRecord, ALL_VISIBLE)
-            assertEquals(it[1].statesToRecord, ONLY_RELEVANT)
+            assertEquals(it[0].senderStatesToRecord, ALL_VISIBLE)
+            assertEquals(it[1].senderStatesToRecord, ONLY_RELEVANT)
         }
         assertEquals(1, transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(ALICE_NAME)).size)
         assertEquals(2, transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(CHARLIE_NAME)).size)
@@ -251,7 +251,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         assertEquals(IN_FLIGHT, readTransactionFromDB(senderTransaction.id).status)
         readSenderDistributionRecordFromDB(senderTransaction.id).let {
             assertEquals(1, it.size)
-            assertEquals(ALL_VISIBLE, it[0].statesToRecord)
+            assertEquals(ALL_VISIBLE, it[0].senderStatesToRecord)
             assertEquals(BOB_NAME, partyInfoCache.getCordaX500NameByPartyId(it[0].peerPartyId))
         }
 
@@ -280,7 +280,8 @@ class DBTransactionStorageLedgerRecoveryTests {
         assertEquals(VERIFIED, readTransactionFromDB(transaction.id).status)
         readSenderDistributionRecordFromDB(transaction.id).apply {
             assertEquals(1, this.size)
-            assertEquals(ALL_VISIBLE, this[0].statesToRecord)
+            assertEquals(ONLY_RELEVANT, this[0].senderStatesToRecord)
+            assertEquals(ALL_VISIBLE, this[0].receiverStatesToRecord)
         }
     }
 

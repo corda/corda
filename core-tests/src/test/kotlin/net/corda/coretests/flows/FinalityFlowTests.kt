@@ -354,7 +354,7 @@ class FinalityFlowTests : WithFinality {
 
         val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
-            assertEquals(StatesToRecord.ALL_VISIBLE, this[0].statesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, this[0].senderStatesToRecord)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
@@ -387,9 +387,9 @@ class FinalityFlowTests : WithFinality {
 
         val sdrs = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(2, this.size)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].senderStatesToRecord)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
-            assertEquals(StatesToRecord.ALL_VISIBLE, this[1].statesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, this[1].senderStatesToRecord)
             assertEquals(SecureHash.sha256(CHARLIE_NAME.toString()), this[1].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
@@ -451,7 +451,7 @@ class FinalityFlowTests : WithFinality {
 
         val sdr = getSenderRecoveryData(stx.id, aliceNode.database).apply {
             assertEquals(1, this.size)
-            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].statesToRecord)
+            assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].senderStatesToRecord)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {

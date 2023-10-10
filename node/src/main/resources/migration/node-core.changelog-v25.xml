@@ -24,7 +24,10 @@
             <column name="peer_party_id" type="NVARCHAR(144)">
                 <constraints nullable="false"/>
             </column>
-            <column name="states_to_record" type="INT">
+            <column name="sender_states_to_record" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="receiver_states_to_record" type="INT">
                 <constraints nullable="false"/>
             </column>
         </createTable>
