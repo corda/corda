@@ -238,7 +238,7 @@ class FinalityFlowTests : WithFinality {
     private fun assertTxnRemovedFromDatabase(node: TestStartedNode, stxId: SecureHash) {
         val fromDb = node.database.transaction {
             session.createQuery(
-                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where transaction_id = :transactionId",
+                    "from ${DBTransactionStorage.DBTransaction::class.java.name} where tx_id = :transactionId",
                     DBTransactionStorage.DBTransaction::class.java
             ).setParameter("transactionId", stxId.toString()).resultList
         }
@@ -389,7 +389,7 @@ class FinalityFlowTests : WithFinality {
             assertEquals(2, this.size)
             assertEquals(StatesToRecord.ONLY_RELEVANT, this[0].senderStatesToRecord)
             assertEquals(SecureHash.sha256(BOB_NAME.toString()), this[0].peerPartyId)
-            assertEquals(StatesToRecord.ALL_VISIBLE, this[1].senderStatesToRecord)
+            assertEquals(StatesToRecord.ALL_VISIBLE, this[1].receiverStatesToRecord)
             assertEquals(SecureHash.sha256(CHARLIE_NAME.toString()), this[1].peerPartyId)
         }
         val rdr = getReceiverRecoveryData(stx.id, bobNode).apply {
