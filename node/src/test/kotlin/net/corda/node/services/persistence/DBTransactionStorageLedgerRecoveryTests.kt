@@ -8,7 +8,10 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.sign
 import net.corda.core.flows.DistributionList.ReceiverDistributionList
 import net.corda.core.flows.DistributionList.SenderDistributionList
+import net.corda.core.flows.DistributionRecordType
+import net.corda.core.flows.ReceiverDistributionRecord
 import net.corda.core.flows.RecoveryTimeWindow
+import net.corda.core.flows.SenderDistributionRecord
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.StatesToRecord.ALL_VISIBLE
@@ -114,7 +117,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         val results = transactionRecovery.querySenderDistributionRecords(timeWindow, excludingTxnIds = setOf(transaction1.id))
         assertEquals(1, results.size)
-        assertEquals(transaction2.id.toString(), results[0].compositeKey.txId)
+        assertEquals(transaction2.id, results[0].txId)
     }
 
     @Test(timeout = 300_000)
@@ -128,7 +131,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         val results = transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(CHARLIE_NAME))
         assertEquals(1, results.size)
-        assertEquals(transaction2.id.toString(), results[0].compositeKey.txId)
+        assertEquals(transaction2.id, results[0].txId)
     }
 
     @Test(timeout = 300_000)
@@ -147,13 +150,13 @@ class DBTransactionStorageLedgerRecoveryTests {
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.SENDER).let {
             assertEquals(2, it.size)
-            assertEquals(SecureHash.sha256(BOB_NAME.toString()).toString(), it.senderRecords[0].compositeKey.peerPartyId)
+            assertEquals(SecureHash.sha256(BOB_NAME.toString()), it.senderRecords[0].peerPartyId)
             assertEquals(ALL_VISIBLE, it.senderRecords[0].senderStatesToRecord)
         }
         transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.RECEIVER).let {
             assertEquals(1, it.size)
-            assertEquals(SecureHash.sha256(BOB_NAME.toString()).toString(), it.receiverRecords[0].compositeKey.peerPartyId)
-            assertEquals(ALL_VISIBLE, (HashedDistributionList.decrypt(it.receiverRecords[0].distributionList, encryptionService)).peerHashToStatesToRecord.map { it.value }[0])
+            assertEquals(SecureHash.sha256(BOB_NAME.toString()), it.receiverRecords[0].peerPartyId)
+            assertEquals(ALL_VISIBLE, (HashedDistributionList.decrypt(it.receiverRecords[0].encryptedDistributionList.bytes, encryptionService)).peerHashToStatesToRecord.map { it.value }[0])
         }
         val resultsAll = transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.ALL)
         assertEquals(3, resultsAll.size)
@@ -224,9 +227,9 @@ class DBTransactionStorageLedgerRecoveryTests {
         val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
         transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(ALICE_NAME)).let {
             assertEquals(3, it.size)
-            assertEquals(HashedDistributionList.decrypt(it[0].distributionList, encryptionService).peerHashToStatesToRecord.map { it.value }[0], ALL_VISIBLE)
-            assertEquals(HashedDistributionList.decrypt(it[1].distributionList, encryptionService).peerHashToStatesToRecord.map { it.value }[0], ONLY_RELEVANT)
-            assertEquals(HashedDistributionList.decrypt(it[2].distributionList, encryptionService).peerHashToStatesToRecord.map { it.value }[0], NONE)
+            assertEquals(HashedDistributionList.decrypt(it[0].encryptedDistributionList.bytes, encryptionService).peerHashToStatesToRecord.map { it.value }[0], ALL_VISIBLE)
+            assertEquals(HashedDistributionList.decrypt(it[1].encryptedDistributionList.bytes, encryptionService).peerHashToStatesToRecord.map { it.value }[0], ONLY_RELEVANT)
+            assertEquals(HashedDistributionList.decrypt(it[2].encryptedDistributionList.bytes, encryptionService).peerHashToStatesToRecord.map { it.value }[0], NONE)
         }
         assertEquals(1, transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(BOB_NAME)).size)
         assertEquals(1, transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(CHARLIE_NAME)).size)
@@ -266,7 +269,7 @@ class DBTransactionStorageLedgerRecoveryTests {
             val distList = transactionRecovery.decryptHashedDistributionList(record.encryptedDistributionList.bytes)
             assertEquals(ONLY_RELEVANT, distList.senderStatesToRecord)
             assertEquals(ALL_VISIBLE, distList.peerHashToStatesToRecord.values.first())
-            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(record.initiatorPartyId))
+            assertEquals(ALICE_NAME, partyInfoCache.getCordaX500NameByPartyId(record.peerPartyId))
             assertEquals(setOf(BOB_NAME), distList.peerHashToStatesToRecord.map { (peer) -> partyInfoCache.getCordaX500NameByPartyId(peer) }.toSet() )
         }
     }
