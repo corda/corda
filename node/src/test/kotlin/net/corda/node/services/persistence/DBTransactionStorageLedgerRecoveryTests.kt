@@ -21,7 +21,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.CordaClock
-import net.corda.node.SimpleClock
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.network.PersistentPartyInfoCache
@@ -43,6 +42,7 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.MockEncryptionService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -51,7 +51,8 @@ import org.junit.Rule
 import org.junit.Test
 import java.security.KeyPair
 import java.time.Clock
-import java.time.Instant.now
+import java.time.Duration
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -87,9 +88,13 @@ class DBTransactionStorageLedgerRecoveryTests {
         database.close()
     }
 
+    fun now(): Instant {
+        return transactionRecovery.clock.instant()
+    }
+
     @Test(timeout = 300_000)
     fun `query local ledger for transactions with recovery peers within time window`() {
-        val beforeFirstTxn = now()
+        val beforeFirstTxn = now().truncatedTo(ChronoUnit.SECONDS)
         val txn = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn)
         transactionRecovery.addSenderTransactionRecoveryMetadata(txn.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
@@ -97,13 +102,14 @@ class DBTransactionStorageLedgerRecoveryTests {
                                             untilTime = beforeFirstTxn.plus(1, ChronoUnit.MINUTES))
         val results = transactionRecovery.querySenderDistributionRecords(timeWindow)
         assertEquals(1, results.size)
-
-        val afterFirstTxn = now()
+        (transactionRecovery.clock as TestClock).advanceBy(Duration.ofSeconds(1))
+        val afterFirstTxn = now().truncatedTo(ChronoUnit.SECONDS)
         val txn2 = newTransaction()
         transactionRecovery.addUnnotarisedTransaction(txn2)
         transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
         assertEquals(2, transactionRecovery.querySenderDistributionRecords(timeWindow).size)
-        assertEquals(1, transactionRecovery.querySenderDistributionRecords(RecoveryTimeWindow(fromTime = afterFirstTxn)).size)
+        assertEquals(1, transactionRecovery.querySenderDistributionRecords(RecoveryTimeWindow(fromTime = afterFirstTxn,
+                untilTime = afterFirstTxn.plus(1, ChronoUnit.MINUTES))).size)
     }
 
     @Test(timeout = 300_000)
@@ -367,7 +373,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         return fromDb[0].toReceiverDistributionRecord()
     }
 
-    private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
+    private fun newTransactionRecovery(cacheSizeBytesOverride: Long? = null, clock: CordaClock = TestClock(Clock.systemUTC())) {
         val networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
         val alice = createNodeInfo(listOf(ALICE))
         val bob = createNodeInfo(listOf(BOB))
