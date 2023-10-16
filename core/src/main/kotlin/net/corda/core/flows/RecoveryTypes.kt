@@ -7,9 +7,10 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
- * Flow data object representing key information required for recovery.
+ * Transaction recovery type information.
  */
 
 @CordaSerializable
@@ -44,6 +45,13 @@ sealed class DistributionList {
             val opaqueData: ByteArray,  // decipherable only by sender
             val receiverStatesToRecord: StatesToRecord  // inferred or actual
     ) : DistributionList()
+}
+
+@CordaSerializable
+enum class TransactionStatus {
+    UNVERIFIED,
+    VERIFIED,
+    IN_FLIGHT;
 }
 
 @CordaSerializable
@@ -100,13 +108,6 @@ data class DistributionRecordKey(
 )
 
 @CordaSerializable
-enum class TransactionStatus {
-    UNVERIFIED,
-    VERIFIED,
-    IN_FLIGHT;
-}
-
-@CordaSerializable
 data class RecoveryTimeWindow(val fromTime: Instant, val untilTime: Instant = Instant.now()) {
 
     init {
@@ -130,5 +131,20 @@ data class RecoveryTimeWindow(val fromTime: Instant, val untilTime: Instant = In
         fun untilOnly(untilTime: Instant): RecoveryTimeWindow {
             return RecoveryTimeWindow(fromTime = Instant.EPOCH, untilTime = untilTime)
         }
+    }
+}
+
+@CordaSerializable
+data class ComparableRecoveryTimeWindow(
+        val fromTime: Instant,
+        val fromTimestampDiscriminator: Int,
+        val untilTime: Instant,
+        val untilTimestampDiscriminator: Int
+) {
+    companion object {
+        fun from(timeWindow: RecoveryTimeWindow) =
+                ComparableRecoveryTimeWindow(
+                        timeWindow.fromTime.truncatedTo(ChronoUnit.SECONDS), 0,
+                        timeWindow.untilTime.truncatedTo(ChronoUnit.SECONDS), Int.MAX_VALUE)
     }
 }
