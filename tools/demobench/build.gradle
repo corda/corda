@@ -111,6 +111,7 @@ jar {
             'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' '),
         )
     }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 

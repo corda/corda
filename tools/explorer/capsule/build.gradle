@@ -32,11 +32,6 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').ta
         systemProperties['visualvm.display.name'] = 'Node Explorer'
         minJavaVersion = '17.0'
         caplets = ['ExplorerCaplet']
-
-        // JVM configuration:
-        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
-        //
-        jvmArgs = ['-XX:+UseG1GC']
     }
 }
 
