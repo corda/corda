@@ -1,13 +1,9 @@
-@file:DeleteForDJVM
 package net.corda.serialization.internal.carpenter
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes.*
 import java.util.*
 
-@KeepForDJVM
 enum class SchemaFlags {
     SimpleFieldAccess, CordaSerializable
 }
@@ -20,7 +16,6 @@ enum class SchemaFlags {
  *   - [InterfaceSchema]
  *   - [EnumSchema]
  */
-@KeepForDJVM
 abstract class Schema(
         val name: String,
         var fields: Map<String, Field>,
@@ -45,7 +40,6 @@ abstract class Schema(
     fun descriptorsIncludingSuperclasses(): Map<String, String?> =
             (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + fields.descriptors()
 
-    @DeleteForDJVM
     abstract fun generateFields(cw: ClassWriter)
 
     val jvmName: String
@@ -70,7 +64,6 @@ fun EnumMap<SchemaFlags, Boolean>.simpleFieldAccess(): Boolean {
 /**
  * Represents a concrete object.
  */
-@DeleteForDJVM
 class ClassSchema(
         name: String,
         fields: Map<String, Field>,
@@ -86,7 +79,6 @@ class ClassSchema(
  * Represents an interface. Carpented interfaces can be used within [ClassSchema]s
  * if that class should be implementing that interface.
  */
-@DeleteForDJVM
 class InterfaceSchema(
         name: String,
         fields: Map<String, Field>,
@@ -101,7 +93,6 @@ class InterfaceSchema(
 /**
  * Represents an enumerated type.
  */
-@DeleteForDJVM
 class EnumSchema(
         name: String,
         fields: Map<String, Field>
@@ -123,7 +114,6 @@ class EnumSchema(
  * Factory object used by the serializer when building [Schema]s based
  * on an AMQP schema.
  */
-@DeleteForDJVM
 object CarpenterSchemaFactory {
     fun newInstance(
             name: String,

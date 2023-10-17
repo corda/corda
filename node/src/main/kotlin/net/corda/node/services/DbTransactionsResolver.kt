@@ -3,6 +3,7 @@ package net.corda.node.services
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.TransactionStatus
 import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.TransactionsResolver
@@ -101,10 +102,10 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
         for (txId in sortedDependencies) {
             // Retrieve and delete the transaction from the unverified store.
-            val (tx, isVerified) = checkNotNull(transactionStorage.getTransactionInternal(txId)) {
+            val (tx, txStatus) = checkNotNull(transactionStorage.getTransactionInternal(txId)) {
                 "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
             }
-            if (!isVerified) {
+            if (txStatus != TransactionStatus.VERIFIED) {
                 tx.verify(flow.serviceHub)
                 flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
             } else {

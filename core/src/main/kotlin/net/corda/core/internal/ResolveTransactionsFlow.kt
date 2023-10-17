@@ -1,7 +1,6 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -16,16 +15,19 @@ import net.corda.core.utilities.trace
  * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
  * Each retrieved transaction is validated and inserted into the local transaction storage.
  */
-@DeleteForDJVM
 class ResolveTransactionsFlow private constructor(
         val initialTx: SignedTransaction?,
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
-        val statesToRecord: StatesToRecord
+        val statesToRecord: StatesToRecord,
+        val deferredAck: Boolean = false
 ) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(null, txHashes, otherSide, statesToRecord)
+
+    constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord, deferredAck: Boolean)
+            : this(null, txHashes, otherSide, statesToRecord, deferredAck)
 
     /**
      * Resolves and validates the dependencies of the specified [SignedTransaction]. Fetches the attachments, but does
@@ -35,6 +37,9 @@ class ResolveTransactionsFlow private constructor(
      */
     constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(transaction, transaction.dependencies, otherSide, statesToRecord)
+
+    constructor(transaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE, deferredAck: Boolean = false)
+            : this(transaction, transaction.dependencies, otherSide, statesToRecord, deferredAck)
 
     private var fetchNetParamsFromCounterpart = false
 
@@ -60,8 +65,10 @@ class ResolveTransactionsFlow private constructor(
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
         resolver.downloadDependencies(batchMode)
 
-        logger.trace { "ResolveTransactionsFlow: Sending END." }
-        otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
+        if (!deferredAck) {
+            logger.trace { "ResolveTransactionsFlow: Sending END." }
+            otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
+        }
 
         // If transaction resolution is performed for a transaction where some states are relevant, then those should be
         // recorded if this has not already occurred.

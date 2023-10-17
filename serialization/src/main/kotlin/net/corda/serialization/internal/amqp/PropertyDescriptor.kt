@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.reflect.TypeToken
-import net.corda.core.KeepForDJVM
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.amqp.MethodClassifier.*
@@ -19,7 +18,6 @@ import java.util.*
  * @property getter the method of a class that returns a fields value. Determined by
  * locating a function named getXyz for the property named in field as xyz.
  */
-@KeepForDJVM
 data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter: Method?) {
     override fun toString() = StringBuilder("").apply {
         appendln("Property - ${field?.name ?: "null field"}\n")

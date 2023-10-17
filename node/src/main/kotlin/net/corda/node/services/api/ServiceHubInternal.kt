@@ -3,10 +3,22 @@ package net.corda.node.services.api
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.*
+import net.corda.core.flows.TransactionStatus
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.internal.TransactionsResolver
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.dependencies
+import net.corda.core.internal.requireSupportedHashType
+import net.corda.core.internal.warnOnce
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
@@ -15,6 +27,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
@@ -26,8 +39,13 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import java.security.PublicKey
-import java.util.*
+import java.lang.IllegalStateException
+import java.security.SignatureException
+import java.util.ArrayList
+import java.util.Collections
+import java.util.HashMap
+import java.util.HashSet
+import java.util.LinkedHashSet
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     override val nodeReady: OpenFuture<Void?>
@@ -53,6 +71,7 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
 interface ServiceHubInternal : ServiceHubCoreInternal {
     companion object {
         private val log = contextLogger()
+        private val SIGNATURE_VERIFICATION_DISABLED = java.lang.Boolean.getBoolean("net.corda.recordtransaction.signature.verification.disabled")
 
         private fun topologicalSort(transactions: Collection<SignedTransaction>): Collection<SignedTransaction> {
             if (transactions.size == 1) return transactions
@@ -63,12 +82,15 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             return sort.complete()
         }
 
+        @Suppress("LongParameterList")
         fun recordTransactions(statesToRecord: StatesToRecord,
                                txs: Collection<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
-                               database: CordaPersistence) {
+                               database: CordaPersistence,
+                               updateFn: (SignedTransaction) -> Boolean = validatedTransactions::addTransaction
+        ) {
 
             database.transaction {
                 require(txs.isNotEmpty()) { "No transactions passed in for recording" }
@@ -79,9 +101,9 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 // for transactions being recorded at ONLY_RELEVANT, if this transaction has been seen before its outputs should already
                 // have been recorded at ONLY_RELEVANT, so there shouldn't be anything to re-record here.
                 val (recordedTransactions, previouslySeenTxs) = if (statesToRecord != StatesToRecord.ALL_VISIBLE) {
-                    orderedTxs.filter(validatedTransactions::addTransaction) to emptyList()
+                    orderedTxs.filter(updateFn) to emptyList()
                 } else {
-                    orderedTxs.partition(validatedTransactions::addTransaction)
+                    orderedTxs.partition(updateFn)
                 }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
                 if (stateMachineRunId != null) {
@@ -129,6 +151,21 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
             }
         }
+
+        @Suppress("LongParameterList")
+        fun finalizeTransactionWithExtraSignatures(statesToRecord: StatesToRecord,
+                                                   txn: SignedTransaction,
+                                                   sigs: Collection<TransactionSignature>,
+                                                   validatedTransactions: WritableTransactionStorage,
+                                                   stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
+                                                   vaultService: VaultServiceInternal,
+                                                   database: CordaPersistence) {
+            database.transaction {
+                recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
+                    validatedTransactions.finalizeTransactionWithExtraSignatures(it, sigs)
+                }
+            }
+        }
     }
 
     override val attachments: AttachmentStorageInternal
@@ -155,8 +192,35 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
 
-    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-        txs.forEach { requireSupportedHashType(it) }
+    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
+            recordTransactions(statesToRecord, txs, SIGNATURE_VERIFICATION_DISABLED)
+
+    override fun recordSenderTransactionRecoveryMetadata(txnId: SecureHash, txnMetadata: TransactionMetadata) =
+        validatedTransactions.addSenderTransactionRecoveryMetadata(txnId, txnMetadata)
+
+    override fun recordReceiverTransactionRecoveryMetadata(txnId: SecureHash, sender: CordaX500Name, txnMetadata: TransactionMetadata) =
+            validatedTransactions.addReceiverTransactionRecoveryMetadata(txnId, sender, txnMetadata)
+
+    @Suppress("NestedBlockDepth")
+    @VisibleForTesting
+    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean) {
+        txs.forEach {
+            requireSupportedHashType(it)
+            if (it.coreTransaction is WireTransaction) {
+                if (disableSignatureVerification) {
+                    log.warnOnce("The current usage of recordTransactions is unsafe." +
+                            "Recording transactions without signature verification may lead to severe problems with ledger consistency.")
+                }
+                else {
+                    try {
+                        it.verifyRequiredSignatures()
+                    }
+                    catch (e: SignatureException) {
+                        throw IllegalStateException("Signature verification failed", e)
+                    }
+                }
+            }
+        }
         recordTransactions(
                 statesToRecord,
                 txs as? Collection ?: txs.toList(), // We can't change txs to a Collection as it's now part of the public API
@@ -165,6 +229,50 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 vaultService,
                 database
         )
+    }
+
+    override fun finalizeTransactionWithExtraSignatures(txn: SignedTransaction, sigs: Collection<TransactionSignature>, statesToRecord: StatesToRecord) {
+        requireSupportedHashType(txn)
+        require(sigs.isNotEmpty()) { "No signatures passed in for recording" }
+        if (txn.coreTransaction is WireTransaction)
+            (txn + sigs).verifyRequiredSignatures()
+        finalizeTransactionWithExtraSignatures(
+                statesToRecord,
+                txn,
+                sigs,
+                validatedTransactions,
+                stateMachineRecordedTransactionMapping,
+                vaultService,
+                database
+        )
+    }
+
+    override fun finalizeTransaction(txn: SignedTransaction, statesToRecord: StatesToRecord) {
+        requireSupportedHashType(txn)
+        if (txn.coreTransaction is WireTransaction)
+            txn.verifyRequiredSignatures()
+        database.transaction {
+            recordTransactions(statesToRecord, listOf(txn), validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database) {
+                validatedTransactions.finalizeTransaction(txn)
+            }
+        }
+    }
+
+    override fun recordUnnotarisedTransaction(txn: SignedTransaction) {
+        if (txn.coreTransaction is WireTransaction) {
+            txn.notary?.let { notary ->
+                txn.verifySignaturesExcept(notary.owningKey)
+            } ?: txn.verifyRequiredSignatures()
+        }
+        database.transaction {
+            validatedTransactions.addUnnotarisedTransaction(txn)
+        }
+    }
+
+    override fun removeUnnotarisedTransaction(id: SecureHash) {
+        database.transaction {
+            validatedTransactions.removeUnnotarisedTransaction(id)
+        }
     }
 
     override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver = DbTransactionsResolver(flow)
@@ -254,15 +362,65 @@ interface WritableTransactionStorage : TransactionStorage {
     fun addTransaction(transaction: SignedTransaction): Boolean
 
     /**
+     * Add an un-notarised transaction to the store with a status of *MISSING_TRANSACTION_SIG* and inclusive of flow recovery metadata.
+     *
+     * @param transaction The transaction to be recorded.
+     * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
+     */
+    fun addUnnotarisedTransaction(transaction: SignedTransaction): Boolean
+
+    /**
+     * Records Sender [TransactionMetadata] for a given txnId.
+     *
+     * @param txId The SecureHash of a transaction.
+     * @param metadata The recovery metadata associated with a transaction.
+     * @return encrypted distribution list (hashed peers -> StatesToRecord values).
+     */
+    fun addSenderTransactionRecoveryMetadata(txId: SecureHash, metadata: TransactionMetadata): ByteArray?
+
+    /**
+     * Records Received [TransactionMetadata] for a given txnId.
+     *
+     * @param txId The SecureHash of a transaction.
+     * @param sender The sender of the transaction.
+     * @param metadata The recovery metadata associated with a transaction.
+     */
+    fun addReceiverTransactionRecoveryMetadata(txId: SecureHash,
+                                               sender: CordaX500Name,
+                                               metadata: TransactionMetadata)
+
+    /**
+     * Removes an un-notarised transaction (with a status of *MISSING_TRANSACTION_SIG*) from the data store.
+     * Returns null if no transaction with the ID exists.
+     */
+    fun removeUnnotarisedTransaction(id: SecureHash): Boolean
+
+    /**
+     * Add a finalised transaction to the store with flow recovery metadata.
+     *
+     * @param transaction The transaction to be recorded.
+     * @return true if the transaction was recorded as a *new* transaction, false if the transaction already exists.
+     */
+    fun finalizeTransaction(transaction: SignedTransaction): Boolean
+
+    /**
+     * Update a previously un-notarised transaction including associated notary signatures.
+     * @param transaction The notarised transaction to be finalized.
+     * @param signatures The notary signatures.
+     * @return true if the transaction is recorded as a *finalized* transaction, false if the transaction already exists.
+     */
+    fun finalizeTransactionWithExtraSignatures(transaction: SignedTransaction, signatures: Collection<TransactionSignature>) : Boolean
+
+    /**
      * Add a new *unverified* transaction to the store.
      */
     fun addUnverifiedTransaction(transaction: SignedTransaction)
 
     /**
-     * Return the transaction with the given ID from the store, and a flag of whether it's verified. Returns null if no transaction with the
-     * ID exists.
+     * Return the transaction with the given ID from the store, and its associated [TransactionStatus].
+     * Returns null if no transaction with the ID exists.
      */
-    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>?
+    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>?
 
     /**
      * Returns a future that completes with the transaction corresponding to [id] once it has been committed. Do not warn when run inside

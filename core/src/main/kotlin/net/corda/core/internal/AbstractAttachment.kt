@@ -1,9 +1,5 @@
-@file:KeepForDJVM
-
 package net.corda.core.internal
 
-import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
@@ -23,7 +19,7 @@ const val P2P_UPLOADER = "p2p"
 const val TESTDSL_UPLOADER = "TestDSL"
 const val UNKNOWN_UPLOADER = "unknown"
 
-// We whitelist sources of transaction JARs for now as a temporary state until the DJVM and other security sandboxes
+// We whitelist sources of transaction JARs for now as a temporary state until security sandboxes
 // have been integrated, at which point we'll be able to run untrusted code downloaded over the network and this mechanism
 // can be removed. Because we ARE downloading attachments over the P2P network in anticipation of this upgrade, we
 // track the source of each attachment in our store. TestDSL is used by LedgerDSLInterpreter when custom attachments
@@ -38,7 +34,6 @@ fun Attachment.isUploaderTrusted(): Boolean = when (this) {
     else -> false
 }
 
-@KeepForDJVM
 abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: String?) : Attachment {
     companion object {
         /**
@@ -46,7 +41,6 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: Str
          *
          * TODO - this code together with the rest of the Attachment handling (including [FetchedAttachment]) needs some refactoring as it is really hard to follow.
          */
-        @DeleteForDJVM
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {
                 val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
