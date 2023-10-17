@@ -2580,6 +2580,16 @@ public static final class net.corda.core.flows.DistributionList$SenderDistributi
   public int hashCode()
   @NotNull
   public String toString()
+@CordaSerializable
+public abstract class net.corda.core.flows.DistributionRecord extends java.lang.Object implements net.corda.core.contracts.NamedByHash
+  public <init>()
+  @NotNull
+  public abstract net.corda.core.crypto.SecureHash getPeerPartyId()
+  @NotNull
+  public abstract java.time.Instant getTimestamp()
+  public abstract int getTimestampDiscriminator()
+  @NotNull
+  public abstract net.corda.core.crypto.SecureHash getTxId()
 ##
 @InitiatingFlow
 public final class net.corda.core.flows.FinalityFlow extends net.corda.core.flows.FlowLogic
