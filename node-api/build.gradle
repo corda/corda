@@ -5,7 +5,7 @@ apply plugin: 'corda.common-publishing'
 description 'Corda node API'
 
 dependencies {
-    implementation project(":core")
+    api project(":core")
     implementation project(":serialization")  // TODO Remove this once the NetworkBootstrapper class is moved into the tools:bootstrapper module
     implementation project(':common-configuration-parsing') // TODO Remove this dependency once NetworkBootsrapper is moved into tools:bootstrapper
     implementation project(':common-logging')
