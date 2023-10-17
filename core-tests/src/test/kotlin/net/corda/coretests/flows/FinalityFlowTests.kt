@@ -21,7 +21,9 @@ import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotarySigCheck
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
+import net.corda.core.flows.ReceiverDistributionRecord
 import net.corda.core.flows.SendTransactionFlow
+import net.corda.core.flows.SenderDistributionRecord
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
@@ -53,8 +55,6 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBReceiverDistributionRecord
 import net.corda.node.services.persistence.DBTransactionStorageLedgerRecovery.DBSenderDistributionRecord
 import net.corda.node.services.persistence.HashedDistributionList
-import net.corda.node.services.persistence.ReceiverDistributionRecord
-import net.corda.node.services.persistence.SenderDistributionRecord
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -361,7 +361,7 @@ class FinalityFlowTests : WithFinality {
             assertNotNull(this)
             val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
             assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
-            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.initiatorPartyId)
+            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.peerPartyId)
             assertEquals(mapOf<SecureHash, StatesToRecord>(SecureHash.sha256(BOB_NAME.toString()) to StatesToRecord.ALL_VISIBLE), hashedDL.peerHashToStatesToRecord)
         }
         validateSenderAndReceiverTimestamps(sdrs, rdr!!)
@@ -396,7 +396,7 @@ class FinalityFlowTests : WithFinality {
             assertNotNull(this)
             val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
             assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
-            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.initiatorPartyId)
+            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.peerPartyId)
             // note: Charlie assertion here is using the hinted StatesToRecord value passed to it from Alice
             assertEquals(mapOf<SecureHash, StatesToRecord>(
                     SecureHash.sha256(BOB_NAME.toString()) to StatesToRecord.ONLY_RELEVANT,
@@ -458,7 +458,7 @@ class FinalityFlowTests : WithFinality {
             assertNotNull(this)
             val hashedDL = HashedDistributionList.decrypt(this!!.encryptedDistributionList.bytes, aliceNode.internals.encryptionService)
             assertEquals(StatesToRecord.ONLY_RELEVANT, hashedDL.senderStatesToRecord)
-            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.initiatorPartyId)
+            assertEquals(SecureHash.sha256(aliceNode.info.singleIdentity().name.toString()), this.peerPartyId)
             assertEquals(mapOf<SecureHash, StatesToRecord>(SecureHash.sha256(BOB_NAME.toString()) to StatesToRecord.ONLY_RELEVANT), hashedDL.peerHashToStatesToRecord)
         }
         validateSenderAndReceiverTimestamps(sdr, rdr!!)
