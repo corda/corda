@@ -2540,6 +2540,35 @@ public static final class net.corda.core.flows.CollectSignaturesFlow$Companion$V
   @NotNull
   public static final net.corda.core.flows.CollectSignaturesFlow$Companion$VERIFYING INSTANCE
 ##
+@CordaSerializable
+public final class net.corda.core.flows.ComparableRecoveryTimeWindow extends java.lang.Object
+  public <init>(java.time.Instant, int, java.time.Instant, int)
+  @NotNull
+  public final java.time.Instant component1()
+  public final int component2()
+  @NotNull
+  public final java.time.Instant component3()
+  public final int component4()
+  @NotNull
+  public final net.corda.core.flows.ComparableRecoveryTimeWindow copy(java.time.Instant, int, java.time.Instant, int)
+  public boolean equals(Object)
+  @NotNull
+  public final java.time.Instant getFromTime()
+  public final int getFromTimestampDiscriminator()
+  @NotNull
+  public final java.time.Instant getUntilTime()
+  public final int getUntilTimestampDiscriminator()
+  public int hashCode()
+  @NotNull
+  public String toString()
+  @NotNull
+  public static final net.corda.core.flows.ComparableRecoveryTimeWindow$Companion Companion
+##
+public static final class net.corda.core.flows.ComparableRecoveryTimeWindow$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final net.corda.core.flows.ComparableRecoveryTimeWindow from(net.corda.core.flows.RecoveryTimeWindow)
+##
 public final class net.corda.core.flows.ContractUpgradeFlow extends java.lang.Object
   @NotNull
   public static final net.corda.core.flows.ContractUpgradeFlow INSTANCE
@@ -2632,6 +2661,7 @@ public static final class net.corda.core.flows.DistributionList$SenderDistributi
   public int hashCode()
   @NotNull
   public String toString()
+##
 @CordaSerializable
 public abstract class net.corda.core.flows.DistributionRecord extends java.lang.Object implements net.corda.core.contracts.NamedByHash
   public <init>()
@@ -2642,6 +2672,42 @@ public abstract class net.corda.core.flows.DistributionRecord extends java.lang.
   public abstract int getTimestampDiscriminator()
   @NotNull
   public abstract net.corda.core.crypto.SecureHash getTxId()
+##
+@CordaSerializable
+public final class net.corda.core.flows.DistributionRecordKey extends java.lang.Object
+  public <init>(net.corda.core.crypto.SecureHash, java.time.Instant, int)
+  @NotNull
+  public final net.corda.core.crypto.SecureHash component1()
+  @NotNull
+  public final java.time.Instant component2()
+  public final int component3()
+  @NotNull
+  public final net.corda.core.flows.DistributionRecordKey copy(net.corda.core.crypto.SecureHash, java.time.Instant, int)
+  public boolean equals(Object)
+  @NotNull
+  public final java.time.Instant getTimestamp()
+  public final int getTimestampDiscriminator()
+  @NotNull
+  public final net.corda.core.crypto.SecureHash getTxnId()
+  public int hashCode()
+  @NotNull
+  public String toString()
+##
+@CordaSerializable
+public final class net.corda.core.flows.DistributionRecordType extends java.lang.Enum
+  public static net.corda.core.flows.DistributionRecordType valueOf(String)
+  public static net.corda.core.flows.DistributionRecordType[] values()
+##
+@CordaSerializable
+public final class net.corda.core.flows.DistributionRecords extends java.lang.Object
+  public <init>()
+  public <init>(java.util.List, java.util.List)
+  public <init>(java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final java.util.List getReceiverRecords()
+  @NotNull
+  public final java.util.List getSenderRecords()
+  public final int getSize()
 ##
 @InitiatingFlow
 public final class net.corda.core.flows.FinalityFlow extends net.corda.core.flows.FlowLogic
@@ -3178,22 +3244,60 @@ public final class net.corda.core.flows.KilledFlowException extends net.corda.co
 public final class net.corda.core.flows.LedgerRecoveryException extends net.corda.core.flows.FlowException
   public <init>(String)
 ##
-@InitiatingFlow
 @StartableByRPC
 public final class net.corda.core.flows.LedgerRecoveryFlow extends net.corda.core.flows.FlowLogic
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, net.corda.core.flows.TransactionRole, boolean, boolean, net.corda.core.utilities.ProgressTracker)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, net.corda.core.flows.TransactionRole, boolean, boolean, net.corda.core.utilities.ProgressTracker, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean)
-  public <init>(net.corda.core.flows.RecoveryTimeWindow, boolean)
-  public <init>(net.corda.core.flows.RecoveryTimeWindow, boolean, boolean)
-  public <init>(net.corda.core.identity.Party, net.corda.core.flows.RecoveryTimeWindow)
-  public <init>(net.corda.core.identity.Party, net.corda.core.flows.RecoveryTimeWindow, boolean)
+  public <init>(net.corda.core.flows.LedgerRecoveryParameters, net.corda.core.utilities.ProgressTracker)
+  public <init>(net.corda.core.flows.LedgerRecoveryParameters, net.corda.core.utilities.ProgressTracker, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Suspendable
   @NotNull
-  public java.util.Map call()
+  public net.corda.core.flows.LedgerRecoveryResult call()
   @NotNull
   public net.corda.core.utilities.ProgressTracker getProgressTracker()
+##
+@CordaSerializable
+public final class net.corda.core.flows.LedgerRecoveryParameters extends java.lang.Object
+  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int)
+  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  @NotNull
+  public final java.util.Collection component1()
+  @Nullable
+  public final net.corda.core.flows.RecoveryTimeWindow component2()
+  public final boolean component3()
+  public final boolean component4()
+  public final boolean component5()
+  public final boolean component6()
+  public final int component7()
+  @NotNull
+  public final net.corda.core.flows.LedgerRecoveryParameters copy(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int)
+  public boolean equals(Object)
+  public final boolean getDryRun()
+  public final int getRecoveryBatchSize()
+  @NotNull
+  public final java.util.Collection getRecoveryPeers()
+  @Nullable
+  public final net.corda.core.flows.RecoveryTimeWindow getTimeWindow()
+  public final boolean getUseAllNetworkNodes()
+  public final boolean getUseTimeWindowNarrowing()
+  public final boolean getVerboseLogging()
+  public int hashCode()
+  @NotNull
+  public String toString()
+##
+@CordaSerializable
+public final class net.corda.core.flows.LedgerRecoveryResult extends java.lang.Object
+  public <init>(long, long, long)
+  public final long component1()
+  public final long component2()
+  public final long component3()
+  @NotNull
+  public final net.corda.core.flows.LedgerRecoveryResult copy(long, long, long)
+  public boolean equals(Object)
+  public final long getTotalErrors()
+  public final long getTotalRecoveredRecords()
+  public final long getTotalRecoveredTransactions()
+  public int hashCode()
+  @NotNull
+  public String toString()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.MaybeSerializedSignedTransaction extends java.lang.Object implements net.corda.core.contracts.NamedByHash
@@ -3453,12 +3557,6 @@ public final class net.corda.core.flows.ReceiveFinalityFlow extends net.corda.co
   @NotNull
   public net.corda.core.transactions.SignedTransaction call()
 ##
-@InitiatedBy
-public final class net.corda.core.flows.ReceiveLedgerRecoveryFlow extends net.corda.core.flows.FlowLogic
-  public <init>(net.corda.core.flows.FlowSession)
-  @Suspendable
-  public void call()
-##
 public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
   @Suspendable
@@ -3481,32 +3579,35 @@ public class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.
   public net.corda.core.transactions.SignedTransaction resolvePayload(Object)
 ##
 @CordaSerializable
-public final class net.corda.core.flows.RecoveryResult extends java.lang.Object
-  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.identity.CordaX500Name, net.corda.core.flows.TransactionRole, boolean, boolean, String)
-  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.identity.CordaX500Name, net.corda.core.flows.TransactionRole, boolean, boolean, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
+public final class net.corda.core.flows.ReceiverDistributionRecord extends net.corda.core.flows.DistributionRecord
+  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, java.time.Instant, int, net.corda.core.utilities.OpaqueBytes, net.corda.core.node.StatesToRecord)
   @NotNull
   public final net.corda.core.crypto.SecureHash component1()
   @NotNull
-  public final net.corda.core.identity.CordaX500Name component2()
+  public final net.corda.core.crypto.SecureHash component2()
   @NotNull
-  public final net.corda.core.flows.TransactionRole component3()
-  public final boolean component4()
-  public final boolean component5()
-  @Nullable
-  public final String component6()
+  public final java.time.Instant component3()
+  public final int component4()
   @NotNull
-  public final net.corda.core.flows.RecoveryResult copy(net.corda.core.crypto.SecureHash, net.corda.core.identity.CordaX500Name, net.corda.core.flows.TransactionRole, boolean, boolean, String)
+  public final net.corda.core.utilities.OpaqueBytes component5()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord component6()
+  @NotNull
+  public final net.corda.core.flows.ReceiverDistributionRecord copy(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, java.time.Instant, int, net.corda.core.utilities.OpaqueBytes, net.corda.core.node.StatesToRecord)
   public boolean equals(Object)
-  @Nullable
-  public final String getFailureCause()
   @NotNull
-  public final net.corda.core.identity.CordaX500Name getRecoveryPeer()
-  public final boolean getSynchronised()
-  public final boolean getSynchronisedInitiated()
+  public final net.corda.core.utilities.OpaqueBytes getEncryptedDistributionList()
   @NotNull
-  public final net.corda.core.crypto.SecureHash getTransactionId()
+  public net.corda.core.crypto.SecureHash getId()
   @NotNull
-  public final net.corda.core.flows.TransactionRole getTransactionRole()
+  public net.corda.core.crypto.SecureHash getPeerPartyId()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord getReceiverStatesToRecord()
+  @NotNull
+  public java.time.Instant getTimestamp()
+  public int getTimestampDiscriminator()
+  @NotNull
+  public net.corda.core.crypto.SecureHash getTxId()
   public int hashCode()
   @NotNull
   public String toString()
@@ -3577,6 +3678,40 @@ public static final class net.corda.core.flows.SendTransactionFlow$Companion ext
   public final net.corda.core.identity.CordaX500Name getDUMMY_PARTICIPANT_NAME()
   @Nullable
   public final net.corda.core.flows.TransactionMetadata makeMetaData(net.corda.core.transactions.SignedTransaction, boolean, net.corda.core.node.StatesToRecord, java.util.Set, java.util.Set)
+##
+@CordaSerializable
+public final class net.corda.core.flows.SenderDistributionRecord extends net.corda.core.flows.DistributionRecord
+  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, java.time.Instant, int, net.corda.core.node.StatesToRecord, net.corda.core.node.StatesToRecord)
+  @NotNull
+  public final net.corda.core.crypto.SecureHash component1()
+  @NotNull
+  public final net.corda.core.crypto.SecureHash component2()
+  @NotNull
+  public final java.time.Instant component3()
+  public final int component4()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord component5()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord component6()
+  @NotNull
+  public final net.corda.core.flows.SenderDistributionRecord copy(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, java.time.Instant, int, net.corda.core.node.StatesToRecord, net.corda.core.node.StatesToRecord)
+  public boolean equals(Object)
+  @NotNull
+  public net.corda.core.crypto.SecureHash getId()
+  @NotNull
+  public net.corda.core.crypto.SecureHash getPeerPartyId()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord getReceiverStatesToRecord()
+  @NotNull
+  public final net.corda.core.node.StatesToRecord getSenderStatesToRecord()
+  @NotNull
+  public java.time.Instant getTimestamp()
+  public int getTimestampDiscriminator()
+  @NotNull
+  public net.corda.core.crypto.SecureHash getTxId()
+  public int hashCode()
+  @NotNull
+  public String toString()
 ##
 public abstract class net.corda.core.flows.SignTransactionFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
@@ -3725,11 +3860,6 @@ public final class net.corda.core.flows.TransactionMetadata extends java.lang.Ob
   public int hashCode()
   @NotNull
   public String toString()
-##
-@CordaSerializable
-public final class net.corda.core.flows.TransactionRole extends java.lang.Enum
-  public static net.corda.core.flows.TransactionRole valueOf(String)
-  public static net.corda.core.flows.TransactionRole[] values()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.TransactionStatus extends java.lang.Enum
@@ -9164,12 +9294,18 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort)
   public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map)
+  public <init>(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Nullable
   public final net.corda.core.identity.CordaX500Name component1()
   @Nullable
   public final net.corda.core.utilities.NetworkHostAndPort component10()
+  @NotNull
+  public final java.util.Map component11()
   @NotNull
   public final java.util.List component2()
   @NotNull
@@ -9191,7 +9327,11 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   @NotNull
   public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map)
   @NotNull
+  public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String)
+  @NotNull
   public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort)
+  @NotNull
+  public final net.corda.testing.driver.NodeParameters copy(net.corda.core.identity.CordaX500Name, java.util.List, net.corda.testing.driver.VerifierType, java.util.Map, Boolean, String, java.util.Collection, java.util.Map, String, net.corda.core.utilities.NetworkHostAndPort, java.util.Map)
   public boolean equals(Object)
   @NotNull
   public final java.util.Collection getAdditionalCordapps()
@@ -9211,6 +9351,8 @@ public final class net.corda.testing.driver.NodeParameters extends java.lang.Obj
   public final java.util.List getRpcUsers()
   @Nullable
   public final Boolean getStartInSameProcess()
+  @NotNull
+  public final java.util.Map getSystemProperties()
   @NotNull
   public final net.corda.testing.driver.VerifierType getVerifierType()
   public int hashCode()
