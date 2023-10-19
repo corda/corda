@@ -36,7 +36,7 @@ data class LedgerRecoveryParameters(
     val useAllNetworkNodes: Boolean = false,
     val dryRun: Boolean = false,
     val useTimeWindowNarrowing: Boolean = true,
-    val verboseLogging: Boolean = true,
+    val verboseLogging: Boolean = false,
     val recoveryBatchSize: Int = 1000
 )
 

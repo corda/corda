@@ -94,6 +94,10 @@ data class ReceiverDistributionRecord(
 ) : DistributionRecord() {
     override val id: SecureHash
         get() = this.txId
+
+    override fun toString(): String {
+        return "txId: $txId, peerPartyId: $peerPartyId, timestamp: $timestamp, timestampDiscriminator: $timestampDiscriminator, receiverStatesToRecord: $receiverStatesToRecord"
+    }
 }
 
 @CordaSerializable
