@@ -221,6 +221,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
                         numSent++
                         tx
                     }
+                    FetchDataFlow.DataType.TRANSACTION_RECOVERY -> NotImplementedError("Enterprise only feature")
                     // Loop on all items returned using dataRequest.hashes.map:
                     FetchDataFlow.DataType.BATCH_TRANSACTION -> dataRequest.hashes.map { txId ->
                         if (!authorisedTransactions.isAuthorised(txId)) {
