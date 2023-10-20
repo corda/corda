@@ -82,7 +82,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     )
     @CordaSerializable
     enum class DataType {
-        TRANSACTION, TRANSACTION_RECOVERY, ATTACHMENT, PARAMETERS, BATCH_TRANSACTION, UNKNOWN
+        TRANSACTION, ATTACHMENT, PARAMETERS, BATCH_TRANSACTION, UNKNOWN, TRANSACTION_RECOVERY
     }
 
     @Suspendable
@@ -267,7 +267,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
  * Authorisation is accorded only on valid ancestors of the root transaction.
  * Note that returned transactions are not inserted into the database, because it's up to the caller to actually verify the transactions are valid.
  */
-class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession, dataType: DataType = DataType.TRANSACTION) :
+class FetchTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>, otherSide: FlowSession, dataType: DataType = DataType.TRANSACTION) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, dataType) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)

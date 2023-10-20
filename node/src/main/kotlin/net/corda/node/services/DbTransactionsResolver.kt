@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.TransactionStatus
-import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.TransactionsResolver
@@ -23,6 +22,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
     @Suspendable
     override fun downloadDependencies(batchMode: Boolean, recoveryMode: Boolean) {
+        if (recoveryMode) throw NotImplementedError("Enterprise only Ledger Recovery feature")
         logger.debug { "Downloading dependencies for transactions ${flow.txHashes}" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
 
@@ -57,7 +57,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             }
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
-            val (existingTxIds, downloadedTxs) = fetchRequiredTransactions(Collections.singleton(nextRequests.first()), recoveryMode) // Fetch first item only
+            val (existingTxIds, downloadedTxs) = fetchRequiredTransactions(Collections.singleton(nextRequests.first())) // Fetch first item only
             for (tx in downloadedTxs) {
                 val dependencies = tx.dependencies
                 topologicalSort.add(tx.id, dependencies)
@@ -118,9 +118,8 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
     // The transactions already present in the database do not need to be checkpointed on every iteration of downloading
     // dependencies for other transactions, so strip these down to just the IDs here.
     @Suspendable
-    private fun fetchRequiredTransactions(requests: Set<SecureHash>, recoveryMode: Boolean): Pair<List<SecureHash>, List<SignedTransaction>> {
-        val dataType = if (recoveryMode) FetchDataFlow.DataType.TRANSACTION_RECOVERY else  FetchDataFlow.DataType.TRANSACTION
-        val requestedTxs = flow.subFlow(FetchTransactionsFlow(requests, flow.otherSide, dataType))
+    private fun fetchRequiredTransactions(requests: Set<SecureHash>): Pair<List<SecureHash>, List<SignedTransaction>> {
+        val requestedTxs = flow.subFlow(FetchTransactionsFlow(requests, flow.otherSide))
         return Pair(requestedTxs.fromDisk.map { it.id }, requestedTxs.downloaded)
     }
 
