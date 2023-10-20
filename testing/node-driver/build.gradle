@@ -127,11 +127,6 @@ test {
     jvmArgs test_add_exports
 }
 
-//tasks.named('javadocJar', Jar) {
-//    from 'README.md'
-//    include 'README.md'
-//}
-
 tasks.named('javadoc', Javadoc) {
     enabled = false
 }
