@@ -26,6 +26,15 @@ interface AttachmentStorage {
     fun openAttachment(id: AttachmentId): Attachment?
 
     /**
+     * Bulk form of [openAttachment].  Every input [AttachmentId] is present in the returned map.
+     *
+     * From 4.11 onwards.
+     */
+    fun openAttachments(ids: Iterable<AttachmentId>): Map<AttachmentId, Attachment?> {
+        return ids.map { it to openAttachment(it) }.toMap()
+    }
+
+    /**
      * Inserts the given attachment into the store, does *not* close the input stream. This can be an intensive
      * operation due to the need to copy the bytes to disk and hash them along the way.
      *

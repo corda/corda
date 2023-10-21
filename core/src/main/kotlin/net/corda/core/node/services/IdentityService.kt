@@ -117,6 +117,15 @@ interface IdentityService {
     }
 
     /**
+     * Bulk version of [wellKnownPartyFromAnonymous]. Every input [AbstractParty] is present in the returned map.
+     *
+     * From 4.11 onwards.
+     */
+    fun wellKnownPartiesFromAnonumous(parties: Iterable<AbstractParty>): Map<AbstractParty, Party?> {
+        return parties.map { it to wellKnownPartyFromAnonymous(it) }.toMap()
+    }
+
+    /**
      * Resolves a (optionally) confidential identity to the corresponding well known identity [Party].
      * Convenience method which unwraps the [Party] from the [PartyAndReference] and then resolves the
      * well known identity as normal.

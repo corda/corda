@@ -20,6 +20,15 @@ interface TransactionStorage {
     fun getTransaction(id: SecureHash): SignedTransaction?
 
     /**
+     * Bulk load as per [getTransaction]. All input [SecureHash] will be present in the returned map.
+     *
+     * From 4.11 onwards.
+     */
+    fun getTransactions(ids: Iterable<SecureHash>): Map<SecureHash, SignedTransaction?> {
+        return ids.map { id -> id to getTransaction(id) }.toMap()
+    }
+
+    /**
      * Return the transaction with its status for the given [id], or null if no such transaction exists.
      */
     fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus?

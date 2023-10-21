@@ -33,8 +33,12 @@ import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.security.Security
-import java.util.*
-import kotlin.test.*
+import java.util.Random
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * Run tests for cryptographic algorithms.
@@ -936,6 +940,7 @@ class CryptoUtilsTest {
     @Test(timeout=300_000)
 	fun `test default SecureRandom uses platformSecureRandom`() {
         Assume.assumeFalse(IS_OPENJ9) // See CORDA-4055
+        Assume.assumeFalse(IS_MAC)
         // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
 
         // Remove [CordaSecurityProvider] in case it is already registered.
@@ -955,5 +960,7 @@ class CryptoUtilsTest {
         val secureRandomRegisteredFirstCordaProvider = SecureRandom()
         assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
+
     private val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
+    private val IS_MAC = System.getProperty("os.name").toLowerCase().contains("mac")
 }

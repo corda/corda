@@ -224,13 +224,13 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
                 var batchFetchCountExceeded = false
                 var numSent = 0
                 payload = when (dataRequest.dataType) {
-                    FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                        logger.trace { "Sending: TRANSACTION (dataRequest.hashes.size=${dataRequest.hashes.size})" }
+                    FetchDataFlow.DataType.TRANSACTION -> serviceHub.validatedTransactions.getTransactions(dataRequest.hashes.map { txId ->
                         if (!authorisedTransactions.isAuthorised(txId)) {
                             throw FetchDataFlow.IllegalTransactionRequest(txId)
                         }
-                        val tx = serviceHub.validatedTransactions.getTransaction(txId)
-                                ?: throw FetchDataFlow.HashNotFound(txId)
+                        txId
+                    }).map { (txId, stx) ->
+                        val tx = stx ?: throw FetchDataFlow.HashNotFound(txId)
                         if (idx == otherSessions.size - 1)
                             authorisedTransactions.removeAuthorised(tx.id)
                         authorisedTransactions.addAuthorised(getInputTransactions(tx))
@@ -240,19 +240,18 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
                     }
                     FetchDataFlow.DataType.TRANSACTION_RECOVERY -> throw NotImplementedError("Enterprise only feature")
                     // Loop on all items returned using dataRequest.hashes.map:
-                    FetchDataFlow.DataType.BATCH_TRANSACTION -> dataRequest.hashes.map { txId ->
+                    FetchDataFlow.DataType.BATCH_TRANSACTION -> serviceHub.validatedTransactions.getTransactions(dataRequest.hashes.map { txId ->
                         if (!authorisedTransactions.isAuthorised(txId)) {
                             throw FetchDataFlow.IllegalTransactionRequest(txId)
                         }
+                        txId
+                    }).map { (txId, stx) ->
+                        logger.trace { "Transaction authorised OK: '$txId'" }
+                        val tx = stx ?: throw FetchDataFlow.HashNotFound(txId)
                         // Maybe we should not just throw here as it's not recoverable on the client side. Might be better to send a reason code or
                         // remove the restriction on sending once.
-                        logger.trace { "Transaction authorised OK: '$txId'" }
                         var serialized: SerializedBytes<SignedTransaction>? = null
                         if (!batchFetchCountExceeded) {
-                            // Only fetch and serialize if we have not already exceeded the maximum byte count. Once we have, no more fetching
-                            // is required, just reject all additional items.
-                            val tx = serviceHub.validatedTransactions.getTransaction(txId)
-                                    ?: throw FetchDataFlow.HashNotFound(txId)
                             logger.trace { "Transaction get OK: '$txId'" }
                             serialized = tx.serialize()
 
@@ -286,11 +285,11 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
                         firstItem = false
                         maybeserialized
                     } // Batch response loop end
-                    FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                        logger.trace { "Sending: Attachments for '$it'" }
-                        serviceHub.attachments.openAttachment(it)?.open()?.readFully()
-                                ?: throw FetchDataFlow.HashNotFound(it)
-                    }
+                    FetchDataFlow.DataType.ATTACHMENT -> serviceHub.attachments.openAttachments(dataRequest.hashes)
+                            .map { (id, attachment) ->
+                                logger.trace { "Sending: Attachments for '$id'" }
+                                attachment?.open()?.readFully() ?: throw FetchDataFlow.HashNotFound(id)
+                            }
                     FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
                         logger.trace { "Sending: Parameters for '$it'" }
                         (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(it)

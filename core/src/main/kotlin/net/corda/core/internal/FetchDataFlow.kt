@@ -12,6 +12,7 @@ import net.corda.core.flows.MaybeSerializedSignedTransaction
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.services.SignedTransactionWithStatus
 import net.corda.core.node.services.TransactionStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
@@ -142,8 +143,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     private fun loadWhatWeHave(): Pair<List<SecureHash>, Set<SecureHash>> {
         val fromDisk = ArrayList<SecureHash>()
         val toFetch = LinkedHashSet<SecureHash>()
-        for (txid in requests) {
-            val stx = load(txid)
+        loadAll(requests).forEach { (txid, stx) ->
             if (stx == null)
                 toFetch += txid
             else
@@ -155,7 +155,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 
     private fun loadExpected(ids: List<SecureHash>): List<T> {
-        val loaded = ids.mapNotNull { load(it) }
+        val loaded = loadAll(ids).values.filterNotNull()
         require(ids.size == loaded.size) {
             "Expected to find ${ids.size} items in database but only found ${loaded.size} items"
         }
@@ -163,6 +163,10 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 
     protected abstract fun load(txid: SecureHash): T?
+
+    protected open fun loadAll(ids: Iterable<SecureHash>): Map<SecureHash, T?> {
+        return ids.map { it to load(it) }.toMap()
+    }
 
     protected open fun convert(wire: W): T = uncheckedCast(wire)
 
@@ -228,6 +232,10 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun load(txid: SecureHash): Attachment? = serviceHub.attachments.openAttachment(txid)
 
+    override fun loadAll(ids: Iterable<SecureHash>): Map<SecureHash, Attachment?> {
+        return serviceHub.attachments.openAttachments(ids)
+    }
+
     override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire }, uploader)
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
@@ -273,6 +281,10 @@ class FetchTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>,
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, dataType) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
+
+    override fun loadAll(ids: Iterable<SecureHash>): Map<SecureHash, SignedTransaction?> {
+        return serviceHub.validatedTransactions.getTransactions(ids)
+    }
 }
 
 class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession, private val recoveryMode: Boolean = false) :
@@ -281,6 +293,16 @@ class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSessi
 
     override fun load(txid: SecureHash): MaybeSerializedSignedTransaction? {
         val tranAndStatus = serviceHub.validatedTransactions.getTransactionWithStatus(txid)
+        return maybeSerializedSignedTransaction(tranAndStatus, txid)
+    }
+
+    override fun loadAll(ids: Iterable<SecureHash>): Map<SecureHash, MaybeSerializedSignedTransaction?> {
+        return serviceHub.validatedTransactions.getTransactionsWithStatus(ids).mapValues { (txid, tranAndStatus) ->
+            maybeSerializedSignedTransaction(tranAndStatus, txid)
+        }
+    }
+
+    private fun maybeSerializedSignedTransaction(tranAndStatus: SignedTransactionWithStatus?, txid: SecureHash): MaybeSerializedSignedTransaction? {
         @Suppress("ComplexCondition")
         return if (tranAndStatus == null || tranAndStatus.status == TransactionStatus.UNVERIFIED || (!recoveryMode && tranAndStatus.status == TransactionStatus.IN_FLIGHT)) {
             null
