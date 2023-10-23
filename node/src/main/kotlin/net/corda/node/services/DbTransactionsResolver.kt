@@ -105,7 +105,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             val (tx, txStatus) = checkNotNull(flow.serviceHub.validatedTransactions.getTransactionWithStatus(txId)) {
                 "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
             }
-            if (txStatus != TransactionStatus.VERIFIED) {
+            if (txStatus == TransactionStatus.UNVERIFIED) {
                 tx.verify(flow.serviceHub)
                 flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
             } else {
