@@ -3,6 +3,7 @@ package net.corda.core.node.services
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.SignedTransactionWithStatus
 import net.corda.core.messaging.DataFeed
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
@@ -16,6 +17,11 @@ interface TransactionStorage {
      * Return the transaction with the given [id], or null if no such transaction exists.
      */
     fun getTransaction(id: SecureHash): SignedTransaction?
+
+    /**
+     * Return the transaction with its status for the given [id], or null if no such transaction exists.
+     */
+    fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus?
 
     /**
      * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already

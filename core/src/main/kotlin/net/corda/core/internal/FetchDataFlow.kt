@@ -9,6 +9,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.MaybeSerializedSignedTransaction
+import net.corda.core.flows.TransactionStatus
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
@@ -271,6 +272,22 @@ class FetchTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>,
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, dataType) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
+}
+
+// Used by Enterprise Ledger Recovery
+class FetchRecoverableTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>, otherSide: FlowSession, dataType: DataType = DataType.TRANSACTION_RECOVERY) :
+        FetchDataFlow<SignedTransactionWithStatus, SignedTransactionWithStatus>(requests, otherSide, dataType) {
+
+    override fun load(txid: SecureHash): SignedTransactionWithStatus? = serviceHub.validatedTransactions.getTransactionWithStatus(txid)
+}
+
+@CordaSerializable
+data class SignedTransactionWithStatus(
+        val stx: SignedTransaction,
+        val status: TransactionStatus
+) : NamedByHash {
+    override val id: SecureHash
+        get() = stx.id
 }
 
 class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :

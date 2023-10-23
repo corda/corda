@@ -12,6 +12,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.SignedTransactionWithStatus
 import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -87,6 +88,7 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
     }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]?.let { if (it.status == TransactionStatus.VERIFIED) it.stx else null }
+    override fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus? = txns[id]?.let { SignedTransactionWithStatus(it.stx, it.status) }
 
     override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>? = txns[id]?.let { Pair(it.stx, it.status) }
 

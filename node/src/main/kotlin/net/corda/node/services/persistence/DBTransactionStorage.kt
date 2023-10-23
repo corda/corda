@@ -6,6 +6,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.SignedTransactionWithStatus
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
@@ -313,6 +314,11 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             txStorage.content[id]?.let { if (it.status.isVerified()) it.toSignedTx() else null }
         }
     }
+
+    override fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus? =
+            getTransactionInternal(id)?.let { (stx, status) ->
+                SignedTransactionWithStatus(stx, status)
+            }
 
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
         if (transaction.coreTransaction is WireTransaction)

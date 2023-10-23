@@ -27,6 +27,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.SignedTransactionWithStatus
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.rootCause
 import net.corda.core.messaging.DataFeed
@@ -854,6 +855,13 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             return database.transaction {
                 records.add(TxRecord.Get(id))
                 delegate.getTransaction(id)
+            }
+        }
+
+        override fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus? {
+            return database.transaction {
+                records.add(TxRecord.Get(id))
+                delegate.getTransactionWithStatus(id)
             }
         }
 
