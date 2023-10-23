@@ -21,7 +21,6 @@ import java.util.*
 /**
  * A class which provides an implementation of [WritableTransactionStorage] which is used in [MockServices]
  */
-@Suppress("TooManyFunctions")
 open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
         return getTransaction(id)?.let { doneFuture(it) } ?: _updatesPublisher.filter { it.id == id }.toFuture()
@@ -88,11 +87,9 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.UNVERIFIED))
     }
 
-    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]?.let { if (it.status == TransactionStatus.VERIFIED) it.stx else null }
+    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]?.let { if (it.isVerified) it.stx else null }
 
     override fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus? = txns[id]?.let { SignedTransactionWithStatus(it.stx, it.status) }
-
-    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>? = txns[id]?.let { Pair(it.stx, it.status) }
 
     private class TxHolder(val stx: SignedTransaction, var status: TransactionStatus) {
         val isVerified = status == TransactionStatus.VERIFIED

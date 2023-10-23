@@ -316,8 +316,8 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
     }
 
     override fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus? =
-            getTransactionInternal(id)?.let { (stx, status) ->
-                SignedTransactionWithStatus(stx, status)
+            database.transaction {
+                txStorage.content[id]?.let { SignedTransactionWithStatus(it.toSignedTx(), it.status.toTransactionStatus()) }
             }
 
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
@@ -338,12 +338,6 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                     logger.info("Transaction ${transaction.id} already exists so no need to record.")
                 }
             }
-        }
-    }
-
-    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, net.corda.core.flows.TransactionStatus>? {
-        return database.transaction {
-            txStorage.content[id]?.let { it.toSignedTx() to it.status.toTransactionStatus() }
         }
     }
 

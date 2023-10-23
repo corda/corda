@@ -11,8 +11,8 @@ import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.trace
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.trace
 import net.corda.node.services.api.WritableTransactionStorage
 import java.util.*
 
@@ -100,10 +100,9 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
     override fun recordDependencies(usedStatesToRecord: StatesToRecord) {
         val sortedDependencies = checkNotNull(this.sortedDependencies)
         logger.trace { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
-        val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
         for (txId in sortedDependencies) {
             // Retrieve and delete the transaction from the unverified store.
-            val (tx, txStatus) = checkNotNull(transactionStorage.getTransactionInternal(txId)) {
+            val (tx, txStatus) = checkNotNull(flow.serviceHub.validatedTransactions.getTransactionWithStatus(txId)) {
                 "Somehow the unverified transaction ($txId) that we stored previously is no longer there."
             }
             if (txStatus != TransactionStatus.VERIFIED) {

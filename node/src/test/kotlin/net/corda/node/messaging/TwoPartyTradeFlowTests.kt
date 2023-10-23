@@ -17,11 +17,10 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.flows.TransactionStatus
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -45,12 +44,12 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
+import net.corda.finance.`issued by`
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -864,13 +863,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 delegate.getTransactionWithStatus(id)
             }
         }
-
-        override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>? {
-            return database.transaction {
-                delegate.getTransactionInternal(id)
-            }
-        }
-
     }
 
     interface TxRecord {
