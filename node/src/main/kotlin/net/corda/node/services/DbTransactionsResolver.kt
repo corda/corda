@@ -3,12 +3,12 @@ package net.corda.node.services
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.TransactionStatus
 import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.TransactionsResolver
 import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.TransactionStatus
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds

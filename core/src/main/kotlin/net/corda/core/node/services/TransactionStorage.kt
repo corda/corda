@@ -4,7 +4,6 @@ import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.TransactionStatus
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -49,4 +48,11 @@ data class SignedTransactionWithStatus(
 ) : NamedByHash {
     override val id: SecureHash
         get() = stx.id
+}
+
+@CordaSerializable
+enum class TransactionStatus {
+    UNVERIFIED,
+    VERIFIED,
+    IN_FLIGHT;
 }

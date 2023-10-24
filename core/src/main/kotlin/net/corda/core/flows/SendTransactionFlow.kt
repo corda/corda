@@ -122,6 +122,9 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
     constructor(otherSideSession: FlowSession, payload: Any, txnMetadata: TransactionMetadata? = null) : this(setOf(otherSideSession), payload, txnMetadata)
     constructor(otherSideSession: FlowSession, payload: Any) : this(otherSideSession, payload, null)
 
+    @Deprecated("Use otherSessions: Set<FlowSession>", replaceWith = ReplaceWith("otherSessions.single()"))
+    val otherSideSession: FlowSession get() = otherSessions.single()
+
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
 

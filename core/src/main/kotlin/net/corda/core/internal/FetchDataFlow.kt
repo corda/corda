@@ -13,6 +13,7 @@ import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.SignedTransactionWithStatus
+import net.corda.core.node.services.TransactionStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
@@ -278,7 +279,9 @@ class FetchTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>,
 class FetchRecoverableTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>, otherSide: FlowSession, dataType: DataType = DataType.TRANSACTION_RECOVERY) :
         FetchDataFlow<SignedTransactionWithStatus, SignedTransactionWithStatus>(requests, otherSide, dataType) {
 
-    override fun load(txid: SecureHash): SignedTransactionWithStatus? = serviceHub.validatedTransactions.getTransactionWithStatus(txid)
+    override fun load(txid: SecureHash): SignedTransactionWithStatus? = serviceHub.validatedTransactions.getTransactionWithStatus(txid)?.let {
+        if (it.status != TransactionStatus.UNVERIFIED) it else null
+    }
 }
 
 class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
