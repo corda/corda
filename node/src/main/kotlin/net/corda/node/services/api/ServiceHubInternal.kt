@@ -7,7 +7,6 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NamedCacheFactory
@@ -415,12 +414,6 @@ interface WritableTransactionStorage : TransactionStorage {
      * Add a new *unverified* transaction to the store.
      */
     fun addUnverifiedTransaction(transaction: SignedTransaction)
-
-    /**
-     * Return the transaction with the given ID from the store, and its associated [TransactionStatus].
-     * Returns null if no transaction with the ID exists.
-     */
-    fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>?
 
     /**
      * Returns a future that completes with the transaction corresponding to [id] once it has been committed. Do not warn when run inside

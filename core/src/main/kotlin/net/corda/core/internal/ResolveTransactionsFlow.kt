@@ -20,7 +20,8 @@ class ResolveTransactionsFlow private constructor(
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
         val statesToRecord: StatesToRecord,
-        val deferredAck: Boolean = false
+        val deferredAck: Boolean = false,
+        val recoveryMode: Boolean = false
 ) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
@@ -28,6 +29,9 @@ class ResolveTransactionsFlow private constructor(
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord, deferredAck: Boolean)
             : this(null, txHashes, otherSide, statesToRecord, deferredAck)
+
+    constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord, deferredAck: Boolean, recoveryMode: Boolean )
+            : this(null, txHashes, otherSide, statesToRecord, deferredAck, recoveryMode)
 
     /**
      * Resolves and validates the dependencies of the specified [SignedTransaction]. Fetches the attachments, but does
@@ -63,7 +67,7 @@ class ResolveTransactionsFlow private constructor(
         }
 
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
-        resolver.downloadDependencies(batchMode)
+        resolver.downloadDependencies(batchMode, recoveryMode)
 
         if (!deferredAck) {
             logger.trace { "ResolveTransactionsFlow: Sending END." }
