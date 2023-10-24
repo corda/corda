@@ -38,25 +38,25 @@ shadowJar {
 }
 
 enum ImageVariant {
-    UBUNTU_ZULU("Dockerfile", "1.8", "zulu-openjdk8"),
-    UBUNTU_ZULU_11("Dockerfile11", "11", "zulu-openjdk11"),
-    AL_CORRETTO("DockerfileAL", "1.8", "amazonlinux2"),
-    OFFICIAL(UBUNTU_ZULU)
+    ALPINE_ZULU("AlpineZulu", "17.0.8.1", "zulu-openjdk-alpine"),
+    UBUNTU_ZULU("UbuntuZulu", "17.0.8.1", "zulu-openjdk"),
+    AL_CORRETTO("AmazonLinuxCorretto", "17.0.9", "amazonlinux"),
+    OFFICIAL(AL_CORRETTO)
 
     String dockerFile
     String javaVersion
-    String baseImgaeFullName
+    String baseImageFullName
 
     ImageVariant(ImageVariant other) {
         this.dockerFile = other.dockerFile
         this.javaVersion = other.javaVersion
-        this.baseImgaeFullName = other.baseImgaeFullName
+        this.baseImageFullName = other.baseImageFullName
     }
 
-    ImageVariant(String dockerFile, String javaVersion, String baseImgaeFullName) {
+    ImageVariant(String dockerFile, String javaVersion, String baseImageFullName) {
         this.dockerFile = dockerFile
         this.javaVersion = javaVersion
-        this.baseImgaeFullName = baseImgaeFullName
+        this.baseImageFullName = baseImageFullName
     }
 
     static final String getRepository(Project project) {
@@ -64,7 +64,7 @@ enum ImageVariant {
     }
 
     Set<Identifier> buildTags(Project project) {
-        return ["${project.version.toString().toLowerCase()}-${baseImgaeFullName}"].stream().map {
+        return ["${project.version.toString().toLowerCase()}-${baseImageFullName}"].stream().map {
             toAppend -> "${getRepository(project)}:${toAppend}".toString()
         }.map(Identifier.&fromCompoundString).collect(Collectors.toSet())
     }
@@ -99,16 +99,14 @@ class BuildDockerFolderTask extends DefaultTask {
         return project.fileTree("${project.projectDir}/src/bash")
     }
 
-    @Lazy
-    private File cordaJar = project.findProject(":node:capsule").tasks.buildCordaJAR.outputs.files.singleFile
+    private File cordaJar = project.findProject(":node:capsule").tasks.buildCordaJAR.outputs.files.filter {
+        it.name.contains("corda")
+    }.singleFile
 
-    @Lazy
     private File configExporter = project.tasks.shadowJar.outputs.files.singleFile
 
-    @Lazy
     private File dbMigrator = project.findProject(":tools:dbmigration").tasks.shadowJar.outputs.files.singleFile
 
-    @InputFiles
     private FileCollection getRequiredArtifacts() {
         FileCollection res = project.tasks.shadowJar.outputs.files
         def capsuleProject = project.findProject(":node:capsule")
