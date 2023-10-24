@@ -4,6 +4,7 @@ import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.TransactionStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.time.Instant
@@ -45,13 +46,6 @@ sealed class DistributionList {
             val opaqueData: ByteArray,  // decipherable only by sender
             val receiverStatesToRecord: StatesToRecord  // inferred or actual
     ) : DistributionList()
-}
-
-@CordaSerializable
-enum class TransactionStatus {
-    UNVERIFIED,
-    VERIFIED,
-    IN_FLIGHT;
 }
 
 @CordaSerializable

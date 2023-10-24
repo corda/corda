@@ -98,11 +98,11 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             return this == VERIFIED
         }
 
-        fun toTransactionStatus(): net.corda.core.flows.TransactionStatus {
+        fun toTransactionStatus(): net.corda.core.node.services.TransactionStatus {
             return when(this) {
-                UNVERIFIED -> net.corda.core.flows.TransactionStatus.UNVERIFIED
-                VERIFIED -> net.corda.core.flows.TransactionStatus.VERIFIED
-                IN_FLIGHT -> net.corda.core.flows.TransactionStatus.IN_FLIGHT
+                UNVERIFIED -> net.corda.core.node.services.TransactionStatus.UNVERIFIED
+                VERIFIED -> net.corda.core.node.services.TransactionStatus.VERIFIED
+                IN_FLIGHT -> net.corda.core.node.services.TransactionStatus.IN_FLIGHT
             }
         }
 
