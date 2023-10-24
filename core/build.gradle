@@ -20,7 +20,7 @@ configurations {
 
 dependencies {
     implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
-    implementation project(':opentelemetry')
+    compileOnly project(':opentelemetry')
 
     testImplementation sourceSets.obfuscator.output
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
