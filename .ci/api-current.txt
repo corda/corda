@@ -2525,6 +2525,8 @@ public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.F
   @NotNull
   public final java.util.Set<net.corda.core.flows.FlowSession> getOtherSessions()
   @NotNull
+  public final net.corda.core.flows.FlowSession getOtherSideSession()
+  @NotNull
   public final Object getPayload()
   @Suspendable
   @NotNull
