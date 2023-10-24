@@ -96,7 +96,7 @@ open class SendTransactionFlow(val stx: SignedTransaction,
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
 
         fun makeMetaData(stx: SignedTransaction, recordMetaDataEvenIfNotFullySigned: Boolean, senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata? {
-            return if (recordMetaDataEvenIfNotFullySigned || isFullySigned(stx))
+            return if (recordMetaDataEvenIfNotFullySigned || isFullySignedAndStoredLocally(stx))
                 TransactionMetadata(DUMMY_PARTICIPANT_NAME,
                     DistributionList(senderStatesToRecord,
                             (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT}).toMap() +
@@ -110,6 +110,9 @@ open class SendTransactionFlow(val stx: SignedTransaction,
                 stx.resolveTransactionWithSignatures(serviceHub).getMissingSigners().isEmpty()
             else false
         }
+
+        private fun isFullySignedAndStoredLocally(stx: SignedTransaction) = isFullySigned(stx)
+                && (currentTopLevel?.serviceHub?.validatedTransactions?.getTransaction(stx.id) != null)
     }
 }
 
