@@ -85,7 +85,7 @@ interface ServiceHubCoreInternal : ServiceHub {
 
 interface TransactionsResolver {
     @Suspendable
-    fun downloadDependencies(batchMode: Boolean)
+    fun downloadDependencies(batchMode: Boolean, recoveryMode: Boolean)
 
     @Suspendable
     fun recordDependencies(usedStatesToRecord: StatesToRecord)
