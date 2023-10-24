@@ -1,5 +1,6 @@
 package net.corda.core.flows
 
+import net.corda.core.DoNotImplement
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -33,6 +34,7 @@ data class TransactionMetadata(
 )
 
 @CordaSerializable
+@DoNotImplement
 sealed class DistributionList {
 
     @CordaSerializable
@@ -57,6 +59,7 @@ class DistributionRecords(
 }
 
 @CordaSerializable
+@DoNotImplement
 abstract class DistributionRecord : NamedByHash {
     abstract val txId: SecureHash
     abstract val peerPartyId: SecureHash
