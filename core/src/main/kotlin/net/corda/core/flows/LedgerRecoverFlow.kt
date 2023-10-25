@@ -37,12 +37,14 @@ data class LedgerRecoveryParameters(
     val dryRun: Boolean = false,
     val useTimeWindowNarrowing: Boolean = true,
     val verboseLogging: Boolean = false,
-    val recoveryBatchSize: Int = 1000
+    val recoveryBatchSize: Int = 1000,
+    val alsoFinalize: Boolean = false
 )
 
 @CordaSerializable
 data class LedgerRecoveryResult(
     val totalRecoveredRecords: Long,
     val totalRecoveredTransactions: Long,
+    val totalRecoveredInFlightTransactions: Long,
     val totalErrors: Long
 )
