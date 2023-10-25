@@ -2,7 +2,7 @@ FROM amazonlinux:2
 
 ## Add packages, clean cache, create dirs, create corda user and change ownership
 RUN amazon-linux-extras enable corretto8 && \
-    yum -y install java-1.8.0-amazon-corretto-devel  && \
+    yum -y install java-17.0.9-amazon-corretto-devel  && \
     yum -y install bash && \
     yum -y install curl && \
     yum -y install unzip && \

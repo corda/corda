@@ -38,10 +38,9 @@ shadowJar {
 }
 
 enum ImageVariant {
-    ALPINE_ZULU("AlpineZulu", "17.0.8.1", "zulu-openjdk-alpine"),
-    UBUNTU_ZULU("UbuntuZulu", "17.0.8.1", "zulu-openjdk"),
-    AL_CORRETTO("AmazonLinuxCorretto", "17.0.9", "amazonlinux"),
-    OFFICIAL(AL_CORRETTO)
+    UBUNTU_ZULU("Dockerfile", "17", "zulu-openjdk"),
+    AL_CORRETTO("DockerfileAL", "17", "amazonlinux2"),
+    OFFICIAL(UBUNTU_ZULU)
 
     String dockerFile
     String javaVersion
@@ -80,12 +79,12 @@ class BuildDockerFolderTask extends DefaultTask {
     }
 
     @OptionValues("image")
-    Collection<ImageVariant> allVariants() {
+    Collection<ImageVariant> getAllVariants() {
         return EnumSet.allOf(ImageVariant.class)
     }
 
     @Input
-    Iterable<ImageVariant> variantsToBuild() {
+    Iterable<ImageVariant> getVariantsToBuild() {
         return ImageVariant.toBeBuilt
     }
 
@@ -104,8 +103,6 @@ class BuildDockerFolderTask extends DefaultTask {
     }.singleFile
 
     private File configExporter = project.tasks.shadowJar.outputs.files.singleFile
-
-    private File dbMigrator = project.findProject(":tools:dbmigration").tasks.shadowJar.outputs.files.singleFile
 
     private FileCollection getRequiredArtifacts() {
         FileCollection res = project.tasks.shadowJar.outputs.files
@@ -153,10 +150,11 @@ class BuildDockerImageTask extends DefaultTask {
     }
 
     @OptionValues("image")
-    Collection<ImageVariant> allVariants() {
+    Collection<ImageVariant> getAllVariants() {
         return EnumSet.allOf(ImageVariant.class)
     }
 
+    @OutputDirectory
     final File dockerBuildDir = project.file("${project.buildDir}/docker/build")
 
     @OutputDirectory
@@ -214,7 +212,7 @@ class PushDockerImage extends DefaultTask {
     }
 
     @OptionValues("image")
-    Collection<ImageVariant> allVariants() {
+    Collection<ImageVariant> getAllVariants() {
         return EnumSet.allOf(ImageVariant.class)
     }
 
@@ -250,7 +248,10 @@ class PushDockerImage extends DefaultTask {
     }
 }
 
-def buildDockerFolderTask = tasks.register("buildDockerFolder", BuildDockerFolderTask)
+def buildDockerFolderTask = tasks.register("buildDockerFolder", BuildDockerFolderTask) {
+    dependsOn = [ tasks.named('shadowJar') ]
+}
+
 def buildDockerImageTask = tasks.register("buildDockerImage", BuildDockerImageTask) {
     from(buildDockerFolderTask.get())
 }
