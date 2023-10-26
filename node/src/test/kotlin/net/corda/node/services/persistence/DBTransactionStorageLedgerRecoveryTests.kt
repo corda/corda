@@ -308,7 +308,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         assertEquals(true, transactionRecovery.removeUnnotarisedTransaction(senderTransaction.id))
         assertFailsWith<AssertionError> { readTransactionFromDB(senderTransaction.id).status }
         assertEquals(0, readSenderDistributionRecordFromDB(senderTransaction.id).size)
-        assertNull(transactionRecovery.getTransactionInternal(senderTransaction.id))
+        assertNull(transactionRecovery.getTransactionWithStatus(senderTransaction.id))
 
         val receiverTransaction = newTransaction(notarySig = false)
         transactionRecovery.addUnnotarisedTransaction(receiverTransaction)
@@ -322,7 +322,7 @@ class DBTransactionStorageLedgerRecoveryTests {
         assertEquals(true, transactionRecovery.removeUnnotarisedTransaction(receiverTransaction.id))
         assertFailsWith<AssertionError> { readTransactionFromDB(receiverTransaction.id).status }
         assertFailsWith<AssertionError> { readReceiverDistributionRecordFromDB(receiverTransaction.id) }
-        assertNull(transactionRecovery.getTransactionInternal(receiverTransaction.id))
+        assertNull(transactionRecovery.getTransactionWithStatus(receiverTransaction.id))
     }
 
     @Test(timeout = 300_000)

@@ -170,7 +170,7 @@ class DBTransactionStorageTests {
 
         assertEquals(true, transactionStorage.removeUnnotarisedTransaction(transaction.id))
         assertFailsWith<AssertionError> { readTransactionFromDB(transaction.id).status }
-        assertNull(transactionStorage.getTransactionInternal(transaction.id))
+        assertNull(transactionStorage.getTransactionWithStatus(transaction.id))
     }
 
     @Test(timeout = 300_000)

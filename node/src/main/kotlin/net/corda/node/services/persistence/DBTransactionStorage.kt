@@ -11,6 +11,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.services.SignedTransactionWithStatus
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -314,6 +315,11 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
         }
     }
 
+    override fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus? =
+            database.transaction {
+                txStorage.content[id]?.let { SignedTransactionWithStatus(it.toSignedTx(), it.status.toTransactionStatus()) }
+            }
+
     override fun addUnverifiedTransaction(transaction: SignedTransaction) {
         if (transaction.coreTransaction is WireTransaction)
             transaction.verifyRequiredSignatures()
@@ -332,12 +338,6 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
                     logger.info("Transaction ${transaction.id} already exists so no need to record.")
                 }
             }
-        }
-    }
-
-    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, net.corda.core.flows.TransactionStatus>? {
-        return database.transaction {
-            txStorage.content[id]?.let { it.toSignedTx() to it.status.toTransactionStatus() }
         }
     }
 

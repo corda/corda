@@ -12,6 +12,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.services.SignedTransactionWithStatus
 import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -86,9 +87,9 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         txns.putIfAbsent(transaction.id, TxHolder(transaction, status = TransactionStatus.UNVERIFIED))
     }
 
-    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]?.let { if (it.status == TransactionStatus.VERIFIED) it.stx else null }
+    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]?.let { if (it.isVerified) it.stx else null }
 
-    override fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, TransactionStatus>? = txns[id]?.let { Pair(it.stx, it.status) }
+    override fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus? = txns[id]?.let { SignedTransactionWithStatus(it.stx, it.status) }
 
     private class TxHolder(val stx: SignedTransaction, var status: TransactionStatus) {
         val isVerified = status == TransactionStatus.VERIFIED

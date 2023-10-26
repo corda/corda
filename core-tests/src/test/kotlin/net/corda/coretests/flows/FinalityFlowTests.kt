@@ -182,9 +182,9 @@ class FinalityFlowTests : WithFinality {
         val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
         val stx = aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
 
-        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
-        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
 
         try {
@@ -192,10 +192,10 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
-            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(aliceNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             // Note: double spend error not propagated to peers by default (corDapp PV = 3)
             // Un-notarised txn clean-up occurs in ReceiveFinalityFlow upon receipt of UnexpectedFlowEndException
-            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(aliceNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
         }
     }
@@ -207,9 +207,9 @@ class FinalityFlowTests : WithFinality {
         val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
         val stx = aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
 
-        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
-        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
 
         try {
@@ -217,9 +217,9 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
-            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(aliceNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
-            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(bobNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(bobNode, stxId)
         }
 
@@ -228,9 +228,9 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
-            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(aliceNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
-            val (_, txnStatus) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            val (_, txnStatus) = bobNode.services.validatedTransactions.getTransactionWithStatus(stxId) ?: fail()
             assertEquals(TransactionStatus.IN_FLIGHT, txnStatus)
         }
     }
@@ -252,9 +252,9 @@ class FinalityFlowTests : WithFinality {
         val ref = bobNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
         val stx = bobNode.startFlowAndRunNetwork(SpendFlow(ref, aliceNode.info.singleIdentity())).resultFuture.getOrThrow()
 
-        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
-        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
 
         try {
@@ -262,9 +262,9 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
-            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(bobNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(bobNode, stxId)
-            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(aliceNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
         }
     }
@@ -276,9 +276,9 @@ class FinalityFlowTests : WithFinality {
         val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
         val stx = aliceNode.startFlowAndRunNetwork(SpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
 
-        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
-        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stx.id) ?: fail()
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionWithStatus(stx.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusBob)
 
         try {
@@ -286,9 +286,9 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: NotaryException) {
             val stxId = (e.error as NotaryError.Conflict).txId
-            assertNull(aliceNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(aliceNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(aliceNode, stxId)
-            assertNull(bobNode.services.validatedTransactions.getTransactionInternal(stxId))
+            assertNull(bobNode.services.validatedTransactions.getTransactionWithStatus(stxId))
             assertTxnRemovedFromDatabase(bobNode, stxId)
         }
     }
@@ -300,9 +300,9 @@ class FinalityFlowTests : WithFinality {
         val ref = aliceNode.startFlowAndRunNetwork(IssueFlow(notary)).resultFuture.getOrThrow()
         val notarisedStxn1 = aliceNode.startFlowAndRunNetwork(SpeedySpendFlow(ref, bobNode.info.singleIdentity())).resultFuture.getOrThrow()
 
-        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionInternal(notarisedStxn1.id) ?: fail()
+        val (_, txnStatusAlice) = aliceNode.services.validatedTransactions.getTransactionWithStatus(notarisedStxn1.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice)
-        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(notarisedStxn1.id) ?: fail()
+        val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionWithStatus(notarisedStxn1.id) ?: fail()
         assertEquals(TransactionStatus.IN_FLIGHT, txnStatusBob)
 
         // now lets attempt a new spend with the new output of the previous transaction
@@ -311,17 +311,17 @@ class FinalityFlowTests : WithFinality {
 
         // the original transaction is now finalised at Bob (despite the original flow not completing) because Bob resolved the
         // original transaction from Alice in the second transaction (and Alice had already notarised and finalised the original transaction)
-        val (_, txnStatusBobAgain) = bobNode.services.validatedTransactions.getTransactionInternal(notarisedStxn1.id) ?: fail()
+        val (_, txnStatusBobAgain) = bobNode.services.validatedTransactions.getTransactionWithStatus(notarisedStxn1.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusBobAgain)
 
-        val (_, txnStatusAlice2) = aliceNode.services.validatedTransactions.getTransactionInternal(notarisedStxn2.id) ?: fail()
+        val (_, txnStatusAlice2) = aliceNode.services.validatedTransactions.getTransactionWithStatus(notarisedStxn2.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusAlice2)
-        val (_, txnStatusBob2) = bobNode.services.validatedTransactions.getTransactionInternal(notarisedStxn2.id) ?: fail()
+        val (_, txnStatusBob2) = bobNode.services.validatedTransactions.getTransactionWithStatus(notarisedStxn2.id) ?: fail()
         assertEquals(TransactionStatus.IN_FLIGHT, txnStatusBob2)
 
         // Validate attempt at flow finalisation by Bob has no effect on outcome.
         val finaliseStxn1 =  bobNode.startFlowAndRunNetwork(FinaliseSpeedySpendFlow(notarisedStxn1.id, notarisedStxn1.sigs)).resultFuture.getOrThrow()
-        val (_, txnStatusBobYetAgain) = bobNode.services.validatedTransactions.getTransactionInternal(finaliseStxn1.id) ?: fail()
+        val (_, txnStatusBobYetAgain) = bobNode.services.validatedTransactions.getTransactionWithStatus(finaliseStxn1.id) ?: fail()
         assertEquals(TransactionStatus.VERIFIED, txnStatusBobYetAgain)
     }
 
@@ -335,7 +335,7 @@ class FinalityFlowTests : WithFinality {
         }
         catch (e: UnexpectedFlowEndException) {
             val stxId = SecureHash.parse(e.message)
-            val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionInternal(stxId) ?: fail()
+            val (_, txnStatusBob) = bobNode.services.validatedTransactions.getTransactionWithStatus(stxId) ?: fail()
             assertEquals(TransactionStatus.IN_FLIGHT, txnStatusBob)
         }
     }
