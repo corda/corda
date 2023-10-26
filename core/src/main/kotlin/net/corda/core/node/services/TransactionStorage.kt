@@ -34,6 +34,15 @@ interface TransactionStorage {
     fun getTransactionWithStatus(id: SecureHash): SignedTransactionWithStatus?
 
     /**
+     * Bulk load as per [getTransactionWithStatus]. All input [SecureHash] will be present in the returned map.
+     *
+     * From 4.11 onwards.
+     */
+    fun getTransactionsWithStatus(ids: Iterable<SecureHash>): Map<SecureHash, SignedTransactionWithStatus?> {
+        return ids.map { id -> id to getTransactionWithStatus(id) }.toMap()
+    }
+
+    /**
      * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
      * incorporate the update.
      */
