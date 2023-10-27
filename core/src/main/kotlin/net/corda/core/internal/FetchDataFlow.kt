@@ -12,6 +12,8 @@ import net.corda.core.flows.MaybeSerializedSignedTransaction
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.services.SignedTransactionWithStatus
+import net.corda.core.node.services.TransactionStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
@@ -175,7 +177,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             logger.trace { "validateFetchResponse(): Response size = ${response.size}, Request size = ${requests.size}" }
             if (response.size != requests.size) {
                 logger.trace { "maybeItems.unwrap: RespType Response.size (${requests.size}) != requests.size (${response.size})" }
-                throw FetchDataFlow.DownloadedVsRequestedSizeMismatch(requests.size, response.size)
+                throw DownloadedVsRequestedSizeMismatch(requests.size, response.size)
             }
 
             if (logger.isTraceEnabled()) {
@@ -285,6 +287,7 @@ class FetchTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>,
     }
 }
 
+@Suppress("Unused")
 class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession, private val recoveryMode: Boolean = false) :
         FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide,
                 if (recoveryMode) DataType.TRANSACTION_RECOVERY else DataType.BATCH_TRANSACTION) {
