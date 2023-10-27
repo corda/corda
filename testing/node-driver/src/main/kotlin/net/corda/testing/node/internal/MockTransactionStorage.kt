@@ -10,9 +10,9 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.core.flows.TransactionMetadata
-import net.corda.core.flows.TransactionStatus
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.SignedTransactionWithStatus
+import net.corda.core.node.services.TransactionStatus
 import net.corda.testing.node.MockServices
 import rx.Observable
 import rx.subjects.PublishSubject

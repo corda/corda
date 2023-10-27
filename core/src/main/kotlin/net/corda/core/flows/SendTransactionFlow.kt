@@ -4,11 +4,18 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.DistributionList.SenderDistributionList
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.PlatformVersionSwitches
+import net.corda.core.internal.RetrieveAnyTransactionPayload
+import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.internal.readFully
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -16,7 +23,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import kotlin.collections.toSet
-import net.corda.core.flows.DistributionList.SenderDistributionList
 
 /**
  * In the words of Matt working code is more important then pretty code. This class that contains code that may
@@ -27,7 +33,12 @@ import net.corda.core.flows.DistributionList.SenderDistributionList
  */
 @CordaSerializable
 class MaybeSerializedSignedTransaction(override val id: SecureHash, val serialized: SerializedBytes<SignedTransaction>?,
-                                       val nonSerialised: SignedTransaction?) : NamedByHash {
+                                       val nonSerialised: SignedTransaction?,
+                                       val inFlight: Boolean) : NamedByHash {
+
+    @DeprecatedConstructorForDeserialization(version = 1)
+    constructor(id: SecureHash, serialized: SerializedBytes<SignedTransaction>?, nonSerialised: SignedTransaction?) : this(id, serialized, nonSerialised, false)
+
     init {
         check(serialized == null || nonSerialised == null) {
             "MaybeSerializedSignedTransaction: Serialized and non-serialized may not both be non-null."
@@ -90,7 +101,7 @@ open class SendTransactionFlow(val stx: SignedTransaction,
         val DUMMY_PARTICIPANT_NAME = CordaX500Name("Transaction Participant", "London", "GB")
 
         fun makeMetaData(stx: SignedTransaction, recordMetaDataEvenIfNotFullySigned: Boolean, senderStatesToRecord: StatesToRecord, participantSessions: Set<FlowSession>, observerSessions: Set<FlowSession>): TransactionMetadata? {
-            return if (recordMetaDataEvenIfNotFullySigned || isFullySigned(stx))
+            return if (recordMetaDataEvenIfNotFullySigned || isFullySignedAndStoredLocally(stx))
                 TransactionMetadata(DUMMY_PARTICIPANT_NAME,
                         SenderDistributionList(senderStatesToRecord,
                                 (participantSessions.map { it.counterparty.name to StatesToRecord.ONLY_RELEVANT }).toMap() +
@@ -104,6 +115,9 @@ open class SendTransactionFlow(val stx: SignedTransaction,
                 stx.resolveTransactionWithSignatures(serviceHub).getMissingSigners().isEmpty()
             else false
         }
+
+        private fun isFullySignedAndStoredLocally(stx: SignedTransaction) = isFullySigned(stx)
+                && (currentTopLevel?.serviceHub?.validatedTransactions?.getTransaction(stx.id) != null)
     }
 }
 
@@ -121,6 +135,9 @@ open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List
 open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any, private val txnMetadata: TransactionMetadata? = null) : FlowLogic<Void?>() {
     constructor(otherSideSession: FlowSession, payload: Any, txnMetadata: TransactionMetadata? = null) : this(setOf(otherSideSession), payload, txnMetadata)
     constructor(otherSideSession: FlowSession, payload: Any) : this(otherSideSession, payload, null)
+
+    @Deprecated("Use otherSessions: Set<FlowSession>", replaceWith = ReplaceWith("otherSessions.single()"))
+    val otherSideSession: FlowSession get() = otherSessions.single()
 
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
@@ -221,7 +238,7 @@ open class DataVendingFlow(val otherSessions: Set<FlowSession>, val payload: Any
                         numSent++
                         tx
                     }
-                    FetchDataFlow.DataType.TRANSACTION_RECOVERY -> NotImplementedError("Enterprise only feature")
+                    FetchDataFlow.DataType.TRANSACTION_RECOVERY -> throw NotImplementedError("Enterprise only feature")
                     // Loop on all items returned using dataRequest.hashes.map:
                     FetchDataFlow.DataType.BATCH_TRANSACTION -> dataRequest.hashes.map { txId ->
                         if (!authorisedTransactions.isAuthorised(txId)) {

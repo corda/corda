@@ -25,7 +25,6 @@ import net.corda.core.flows.ReceiverDistributionRecord
 import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.flows.SenderDistributionRecord
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.TransactionStatus
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -34,6 +33,7 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.TransactionStatus
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
