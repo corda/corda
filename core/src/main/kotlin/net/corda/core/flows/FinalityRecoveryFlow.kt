@@ -57,10 +57,9 @@ class FlowRecoveryException(message: String, cause: Throwable? = null) : FlowExc
 data class FlowRecoveryQuery(
         val timeframe: FlowTimeWindow? = null,
         val initiatedBy: CordaX500Name? = null,
-        val counterParties: List<CordaX500Name>?  = null,
-        val excludeFlowIds: List<StateMachineRunId>? = null) {
+        val counterParties: List<CordaX500Name>?  = null) {
     init {
-        require(timeframe != null || initiatedBy != null || counterParties != null || excludeFlowIds != null) {
+        require(timeframe != null || initiatedBy != null || counterParties != null) {
             "Must specify at least one recovery criteria"
         }
     }
