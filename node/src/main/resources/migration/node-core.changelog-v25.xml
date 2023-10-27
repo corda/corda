@@ -10,7 +10,7 @@
         <dropColumn tableName="node_transactions" columnName="states_to_record"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="create_sender_distribution_records_table">
+    <changeSet author="R3.Corda" id="create_sender_distr_recs_table">
         <createTable tableName="node_sender_distr_recs">
             <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
@@ -38,7 +38,19 @@
                        tableName="node_sender_distr_recs"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="create_receiver_distribution_records_table">
+    <changeSet author="R3.Corda" id="node_sender_distr_recs_add_indexes">
+        <createIndex indexName="node_sender_distr_recs_keyinfo_idx" tableName="node_sender_distr_recs">
+            <column name="transaction_id"/>
+            <column name="peer_party_id"/>
+            <column name="timestamp"/>
+            <column name="timestamp_discriminator"/>
+        </createIndex>
+        <createIndex indexName="node_sender_distr_recs_txnId_idx" tableName="node_sender_distr_recs">
+            <column name="transaction_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="create_receiver_distr_recs_table">
         <createTable tableName="node_receiver_distr_recs">
             <column name="timestamp" type="TIMESTAMP">
                 <constraints nullable="false"/>
@@ -66,6 +78,18 @@
                        tableName="node_receiver_distr_recs"/>
     </changeSet>
 
+    <changeSet author="R3.Corda" id="node_receiver_distr_recs_add_indexes">
+        <createIndex indexName="node_receiver_distr_recs_keyinfo_idx" tableName="node_receiver_distr_recs">
+            <column name="transaction_id"/>
+            <column name="peer_party_id"/>
+            <column name="timestamp"/>
+            <column name="timestamp_discriminator"/>
+        </createIndex>
+        <createIndex indexName="node_receiver_distr_recs_txnId_idx" tableName="node_receiver_distr_recs">
+            <column name="transaction_id"/>
+        </createIndex>
+    </changeSet>
+
     <changeSet author="R3.Corda" id="create_recovery_party_info_table">
         <createTable tableName="node_recovery_party_info">
             <column name="party_id" type="NVARCHAR(144)">
@@ -81,13 +105,13 @@
         <addPrimaryKey columnNames="party_id" constraintName="node_recovery_party_info_pkey" tableName="node_recovery_party_info"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="FK__sender_distribution_records__peer_party_id">
+    <changeSet author="R3.Corda" id="FK__sender_distr_recs__peer_party_id">
         <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_sender_distr_recs"
                                  constraintName="FK__send_distr__peer_party_id"
                                  referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="FK__receiver_distribution_records__peer_party_id">
+    <changeSet author="R3.Corda" id="FK__receiver_distr_recs__peer_party_id">
         <addForeignKeyConstraint baseColumnNames="peer_party_id" baseTableName="node_receiver_distr_recs"
                                  constraintName="FK__recv_distr__peer_party_id"
                                  referencedColumnNames="party_id" referencedTableName="node_recovery_party_info"/>
