@@ -12,8 +12,6 @@ import net.corda.core.flows.MaybeSerializedSignedTransaction
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.services.SignedTransactionWithStatus
-import net.corda.core.node.services.TransactionStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
