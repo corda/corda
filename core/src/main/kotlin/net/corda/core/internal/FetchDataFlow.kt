@@ -12,7 +12,6 @@ import net.corda.core.flows.MaybeSerializedSignedTransaction
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.services.SignedTransactionWithStatus
 import net.corda.core.node.services.TransactionStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
@@ -24,10 +23,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.unwrap
 import net.corda.core.utilities.trace
+import net.corda.core.utilities.unwrap
 import java.nio.file.FileAlreadyExistsException
-import java.util.*
+import java.util.ArrayList
+import java.util.LinkedHashSet
 
 /**
  * An abstract flow for fetching typed data from a remote peer.
@@ -275,24 +275,17 @@ class FetchTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>,
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
 }
 
-// Used by Enterprise Ledger Recovery
-class FetchRecoverableTransactionsFlow @JvmOverloads constructor(requests: Set<SecureHash>, otherSide: FlowSession, dataType: DataType = DataType.TRANSACTION_RECOVERY) :
-        FetchDataFlow<SignedTransactionWithStatus, SignedTransactionWithStatus>(requests, otherSide, dataType) {
-
-    override fun load(txid: SecureHash): SignedTransactionWithStatus? = serviceHub.validatedTransactions.getTransactionWithStatus(txid)?.let {
-        if (it.status != TransactionStatus.UNVERIFIED) it else null
-    }
-}
-
-class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
-        FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide, DataType.BATCH_TRANSACTION) {
+class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession, private val recoveryMode: Boolean = false) :
+        FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide,
+                if (recoveryMode) DataType.TRANSACTION_RECOVERY else DataType.BATCH_TRANSACTION) {
 
     override fun load(txid: SecureHash): MaybeSerializedSignedTransaction? {
-        val tran = serviceHub.validatedTransactions.getTransaction(txid)
-        return if (tran == null) {
+        val tranAndStatus = serviceHub.validatedTransactions.getTransactionWithStatus(txid)
+        @Suppress("ComplexCondition")
+        return if (tranAndStatus == null || tranAndStatus.status == TransactionStatus.UNVERIFIED || (!recoveryMode && tranAndStatus.status == TransactionStatus.IN_FLIGHT)) {
             null
         } else {
-            MaybeSerializedSignedTransaction(txid, null, tran)
+            MaybeSerializedSignedTransaction(txid, null, tranAndStatus.stx, tranAndStatus.status == TransactionStatus.IN_FLIGHT)
         }
     }
 }

@@ -4,6 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
+import net.corda.core.flows.MaybeSerializedSignedTransaction
 import net.corda.core.flows.NotarisationRequest
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -21,6 +22,7 @@ import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.amqp.testutils.testName
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertNotSame
@@ -920,5 +922,20 @@ class EvolvabilityTests {
         assertEquals(deserialized2.statesToConsume[2].txhash, deserialized2.statesToConsume[3].txhash)
         assertNotSame(deserialized2.statesToConsume[0].txhash, deserialized2.statesToConsume[1].txhash)
         assertNotSame(deserialized2.statesToConsume[2].txhash, deserialized2.statesToConsume[3].txhash)
+    }
+
+    @Test(timeout = 300_000)
+    fun maybeSerializedTransaction() {
+        val sf = testDefaultFactory()
+        val resource = "EvolvabilityTests.maybeSerializedTransaction"
+
+        //val A = MaybeSerializedSignedTransaction(SecureHash.randomSHA256(), null, null)
+        //File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(A).bytes)
+
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
+        val deserializedA = DeserializationInput(sf).deserialize(SerializedBytes<MaybeSerializedSignedTransaction>(sc2))
+
+        assertThat(deserializedA).isInstanceOf(MaybeSerializedSignedTransaction::class.java)
     }
 }
