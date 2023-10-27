@@ -281,6 +281,7 @@ class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSessi
 
     override fun load(txid: SecureHash): MaybeSerializedSignedTransaction? {
         val tranAndStatus = serviceHub.validatedTransactions.getTransactionWithStatus(txid)
+        @Suppress("ComplexCondition")
         return if (tranAndStatus == null || tranAndStatus.status == TransactionStatus.UNVERIFIED || (!recoveryMode && tranAndStatus.status == TransactionStatus.IN_FLIGHT)) {
             null
         } else {
