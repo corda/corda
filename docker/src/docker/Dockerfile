@@ -33,7 +33,7 @@ ENV CORDAPPS_FOLDER="/opt/corda/cordapps" \
     MY_RPC_PORT=10201 \
     MY_RPC_ADMIN_PORT=10202 \
     PATH=$PATH:/opt/corda/bin \
-    JVM_ARGS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap " \
+    JVM_ARGS="-XX:+UnlockExperimentalVMOptions " \
     CORDA_ARGS=""
 
 ##CORDAPPS FOLDER
