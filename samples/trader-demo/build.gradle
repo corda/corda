@@ -147,6 +147,20 @@ task deployNodes(type: net.corda.plugins.Cordform) {
     }
 }
 
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver ' +
+                'java.base/java.time java.base/java.io ' +
+                'java.base/java.util java.base/java.net ' +
+                'java.base/java.nio java.base/java.lang.invoke ' +
+                'java.base/java.security.cert java.base/java.security ' +
+                'java.base/javax.net.ssl java.base/java.util.concurrent ' +
+                'java.sql/java.sql'
+        )
+    }
+}
+
 idea {
     module {
         downloadJavadoc = true // defaults to false
