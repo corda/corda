@@ -33,10 +33,9 @@ data class SpanInfo(val name: String, val span: Span, val spanScope: Scope,
                     val spanEventContext: SpanEventContexts? = null,
                     val spanEventContextQueue: ConcurrentLinkedDeque<SpanEventContexts>? = null)
 
-@DontInstrument
 class TracerSetup(serviceName: String) {
     private var openTelemetryDriver: Any? = null
-    val openTelemetry: OpenTelemetry by lazy {
+    val openTelemetry: OpenTelemetry by lazy @DontInstrument {
         try {
             openTelemetryDriver = OpenTelemetryDriver(serviceName)
             (openTelemetryDriver as OpenTelemetryDriver).openTelemetry
