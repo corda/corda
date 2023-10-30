@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.ResolvedTransactions
 import net.corda.core.internal.TransactionsResolver
 import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
@@ -112,6 +113,10 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 logger.debug { "No need to record $txId as it's already been verified" }
             }
         }
+    }
+
+    override fun statistics(): ResolvedTransactions {
+        throw NotImplementedError("ENT only feature")
     }
 
     // The transactions already present in the database do not need to be checkpointed on every iteration of downloading

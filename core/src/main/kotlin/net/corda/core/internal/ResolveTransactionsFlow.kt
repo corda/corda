@@ -46,6 +46,8 @@ class ResolveTransactionsFlow private constructor(
             : this(transaction, transaction.dependencies, otherSide, statesToRecord, deferredAck)
 
     private var fetchNetParamsFromCounterpart = false
+    // used directly by ENT
+    lateinit var resolver: TransactionsResolver
 
     @Suppress("MagicNumber")
     @Suspendable
@@ -66,7 +68,7 @@ class ResolveTransactionsFlow private constructor(
             fetchMissingNetworkParameters(initialTx)
         }
 
-        val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
+        resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
         resolver.downloadDependencies(batchMode, recoveryMode)
 
         if (!deferredAck) {
