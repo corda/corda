@@ -90,10 +90,3 @@ interface TransactionsResolver {
     @Suspendable
     fun recordDependencies(usedStatesToRecord: StatesToRecord)
 }
-
-data class ResolvedTransactions(
-        val resolvableTransactionHashesCount: Long = 0,
-        val downloadedDependencyCount: Long = 0,
-        val recordedTransactionCount: Long = 0,
-        val skippedRecordingTransactionCount: Long = 0
-)

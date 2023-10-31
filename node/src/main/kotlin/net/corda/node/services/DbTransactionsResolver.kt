@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.internal.ResolveTransactionsFlow
-import net.corda.core.internal.ResolvedTransactions
 import net.corda.core.internal.TransactionsResolver
 import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
@@ -114,8 +113,6 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             }
         }
     }
-
-    var statistics: ResolvedTransactions = ResolvedTransactions()
 
     // The transactions already present in the database do not need to be checkpointed on every iteration of downloading
     // dependencies for other transactions, so strip these down to just the IDs here.
