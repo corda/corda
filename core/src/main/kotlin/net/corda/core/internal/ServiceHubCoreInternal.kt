@@ -89,9 +89,6 @@ interface TransactionsResolver {
 
     @Suspendable
     fun recordDependencies(usedStatesToRecord: StatesToRecord)
-
-    @Suspendable
-    fun statistics(): ResolvedTransactions
 }
 
 data class ResolvedTransactions(

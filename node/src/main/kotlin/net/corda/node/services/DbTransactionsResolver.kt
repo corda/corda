@@ -115,9 +115,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
         }
     }
 
-    override fun statistics(): ResolvedTransactions {
-        throw NotImplementedError("ENT only feature")
-    }
+    var statistics: ResolvedTransactions = ResolvedTransactions()
 
     // The transactions already present in the database do not need to be checkpointed on every iteration of downloading
     // dependencies for other transactions, so strip these down to just the IDs here.
