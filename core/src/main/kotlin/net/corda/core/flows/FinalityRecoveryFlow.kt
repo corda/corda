@@ -21,6 +21,7 @@ class FinalityRecoveryFlow(
         private val matchingCriteria: FlowRecoveryQuery? = null,
         private val forceRecover: Boolean = false,
         private val recoverAll: Boolean = false,
+        private val forceRecoverFlowIds: Collection<StateMachineRunId> = emptySet(),
         override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<Map<FlowTransactionInfo, Boolean>>() {
 
     @CordaInternal
@@ -28,16 +29,17 @@ class FinalityRecoveryFlow(
                                     val flowIds: Collection<StateMachineRunId>,
                                     val matchingCriteria: FlowRecoveryQuery?,
                                     val forceRecover: Boolean,
-                                    val recoverAll: Boolean)
+                                    val recoverAll: Boolean,
+                                    val forceRecoverFlowIds: Collection<StateMachineRunId>)
     @CordaInternal
-    fun getExtraConstructorArgs() = ExtraConstructorArgs(txIds, flowIds, matchingCriteria, forceRecover, recoverAll)
+    fun getExtraConstructorArgs() = ExtraConstructorArgs(txIds, flowIds, matchingCriteria, forceRecover, recoverAll, forceRecoverFlowIds)
 
     constructor(txId: SecureHash, forceRecover: Boolean = false) : this(setOf(txId), forceRecover)
-    constructor(txIds: Collection<SecureHash>, forceRecover: Boolean = false, recoverAll: Boolean = false) : this(txIds, emptySet(), null, forceRecover, recoverAll, tracker())
+    constructor(txIds: Collection<SecureHash>, forceRecover: Boolean = false, recoverAll: Boolean = false) : this(txIds, emptySet(), null, forceRecover, recoverAll,  emptySet(), tracker())
     constructor(flowId: StateMachineRunId, forceRecover: Boolean = false) : this(emptySet(), setOf(flowId), null, forceRecover)
-    constructor(flowIds: Collection<StateMachineRunId>, forceRecover: Boolean = false) : this(emptySet(), flowIds, null, forceRecover, false, tracker())
-    constructor(recoverAll: Boolean, forceRecover: Boolean = false) : this(emptySet(), emptySet(), null, forceRecover, recoverAll, tracker())
-    constructor(matchingCriteria: FlowRecoveryQuery, forceRecover: Boolean = false) : this(emptySet(), emptySet(), matchingCriteria, forceRecover, false, tracker())
+    constructor(flowIds: Collection<StateMachineRunId>, forceRecover: Boolean = false) : this(emptySet(), flowIds, null, forceRecover, false,  emptySet(), tracker())
+    constructor(recoverAll: Boolean, forceRecover: Boolean = false) : this(emptySet(), emptySet(), null, forceRecover, recoverAll,  emptySet(), tracker())
+    constructor(matchingCriteria: FlowRecoveryQuery, forceRecover: Boolean = false) : this(emptySet(), emptySet(), matchingCriteria, forceRecover, false,  emptySet(), tracker())
 
     @Suspendable
     @Throws(FlowRecoveryException::class)

@@ -124,6 +124,8 @@ buildscript {
     ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
     ext.commons_text_version = constants.getProperty("commonsTextVersion")
     ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
+    ext.javaassist_version = constants.getProperty("javaassistVersion")
+
     if (JavaVersion.current().isJava8()) {
         ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
         ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")

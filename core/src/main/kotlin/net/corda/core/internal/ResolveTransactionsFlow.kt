@@ -46,6 +46,8 @@ class ResolveTransactionsFlow private constructor(
             : this(transaction, transaction.dependencies, otherSide, statesToRecord, deferredAck)
 
     private var fetchNetParamsFromCounterpart = false
+    // statistics set in DbResolver (Enterprise only) after exiting recordDependencies()
+    var statistics: ResolveTransactionsFlowStats = ResolveTransactionsFlowStats()
 
     @Suppress("MagicNumber")
     @Suspendable
@@ -120,3 +122,10 @@ class ResolveTransactionsFlow private constructor(
         }
     }
 }
+
+data class ResolveTransactionsFlowStats(
+        val resolvableTransactionHashesCount: Long = 0,
+        val downloadedDependencyCount: Long = 0,
+        val recordedTransactionCount: Long = 0,
+        val skippedRecordingTransactionCount: Long = 0
+)
