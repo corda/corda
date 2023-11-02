@@ -1,5 +1,5 @@
 ext {
-    javaassist_version = "3.12.1.GA"
+    javaassist_version = "3.27.0-GA"
 }
 
 apply plugin: 'kotlin'
@@ -10,7 +10,7 @@ description 'A javaagent to allow hooking into the instrumentation by Quasar'
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "javassist:javassist:$javaassist_version"
+    compile "org.javassist:javassist:$javaassist_version"
 }
 
 jar {
