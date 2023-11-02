@@ -135,7 +135,7 @@
 
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
-                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfFileName glob="${diagnostic-log-name}*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
@@ -159,7 +159,7 @@
 
             <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
-                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfFileName glob="checkpoints_agent*.log.gz"/>
                     <IfLastModified age="60d">
                         <IfAny>
                             <IfAccumulatedFileSize exceeds="10 GB"/>
