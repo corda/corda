@@ -1,6 +1,6 @@
 package net.corda.core.internal.concurrent
 
-import com.nhaarman.mockito_kotlin.*
+import org.mockito.kotlin.*
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.join
 import net.corda.core.utilities.getOrThrow

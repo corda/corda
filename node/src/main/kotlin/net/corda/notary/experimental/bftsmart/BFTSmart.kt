@@ -215,7 +215,7 @@ object BFTSmart {
         }
 
         override fun appExecuteBatch(command: Array<ByteArray>, mcs: Array<MessageContext>): Array<ByteArray?> {
-            return Arrays.stream(command).map(this::executeCommand).toTypedArray()
+            return Arrays.stream(command).map(this::executeCommand).toTypedArray() as Array<ByteArray?>
         }
 
         /**

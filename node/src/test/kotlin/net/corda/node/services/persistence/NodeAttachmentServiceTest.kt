@@ -4,8 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigestService
@@ -59,7 +59,6 @@ import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
-import kotlin.streams.toList
 import kotlin.test.*
 
 class NodeAttachmentServiceTest {

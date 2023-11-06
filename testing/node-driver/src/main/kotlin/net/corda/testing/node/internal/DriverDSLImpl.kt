@@ -6,6 +6,7 @@ import co.paralleluniverse.fibers.instrument.JavaAgent
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import net.corda.core.internal.uncheckedCast
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
@@ -44,7 +45,6 @@ import net.corda.core.internal.packageName_
 import net.corda.core.internal.readObject
 import net.corda.core.internal.readText
 import net.corda.core.internal.toPath
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.writeText
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
@@ -118,8 +118,9 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.*
 import java.util.Collections.unmodifiableList
+import java.util.Random
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -414,7 +415,7 @@ class DriverDSLImpl(
 
         while (process.isAlive) try {
             val response = client.newCall(Request.Builder().url(url).build()).execute()
-            if (response.isSuccessful && (response.body()?.string() == "started")) {
+            if (response.isSuccessful && (response.body?.string() == "started")) {
                 return WebserverHandle(handle.webAddress, process)
             }
         } catch (e: ConnectException) {
@@ -975,9 +976,10 @@ class DriverDSLImpl(
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
-            val excludeClassloaderPattern = "l(net.corda.core.serialization.internal.**)"
+            val excludeClassloaderPattern = "l(net.corda.djvm.**;net.corda.core.serialization.internal.**)"
+            val quasarOptions = "m"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
-                    "-javaagent:$quasarJarPath=$excludePackagePattern$excludeClassloaderPattern"
+                    "-javaagent:$quasarJarPath=$quasarOptions$excludePackagePattern$excludeClassloaderPattern"
 
             val loggingLevel = when {
                 logLevelOverride != null -> logLevelOverride
@@ -1015,11 +1017,24 @@ class DriverDSLImpl(
                         && !cpPathEntry.isExcludedJar
             }
 
+            val moduleOpens = listOf(
+                    "--add-opens", "java.base/java.time=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.util=ALL-UNNAMED", "--add-opens", "java.base/java.net=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.nio=ALL-UNNAMED", "--add-opens", "java.base/java.lang.invoke=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.security.cert=ALL-UNNAMED", "--add-opens", "java.base/javax.net.ssl=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED", "--add-opens", "java.sql/java.sql=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+            )
+
+            val moduleExports = listOf(
+                    "--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED"
+            )
+
             return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + "-Dnet.corda.node.printErrorsToStdErr=true",
+                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + moduleOpens + moduleExports + "-Dnet.corda.node.printErrorsToStdErr=true",
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize,
                     classPath = cp,
@@ -1067,12 +1082,21 @@ class DriverDSLImpl(
 
         private fun startWebserver(handle: NodeHandleInternal, debugPort: Int?, maximumHeapSize: String): Process {
             val className = "net.corda.webserver.WebServer"
+            val moduleOpens = listOf(
+                    "--add-opens", "java.base/java.time=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.util=ALL-UNNAMED", "--add-opens", "java.base/java.net=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.nio=ALL-UNNAMED", "--add-opens", "java.base/java.lang.invoke=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.security.cert=ALL-UNNAMED", "--add-opens", "java.base/javax.net.ssl=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED", "--add-opens", "java.sql/java.sql=ALL-UNNAMED",
+                    "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+            )
+
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startJavaProcess(
                     className = className, // cannot directly get class for this, so just use string
                     arguments = listOf(BASE_DIR, handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
-                    extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
+                    extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") + moduleOpens +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },
                     maximumHeapSize = maximumHeapSize
             )

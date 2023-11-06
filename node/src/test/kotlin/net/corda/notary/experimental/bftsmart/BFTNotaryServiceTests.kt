@@ -1,7 +1,7 @@
 package net.corda.notary.experimental.bftsmart
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef

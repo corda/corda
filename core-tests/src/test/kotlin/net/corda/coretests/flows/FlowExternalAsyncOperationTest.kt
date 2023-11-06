@@ -6,6 +6,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.SerializableLambda2
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.services.statemachine.StateTransitionException
@@ -196,15 +197,15 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @StartableByRPC
     class FlowWithExternalAsyncOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
         FlowWithExternalProcess(party) {
-
         @Suspendable
         override fun testCode(): Any {
             val e = createException()
-            return await(ExternalAsyncOperation(serviceHub) { _, _ ->
+
+            return await(ExternalAsyncOperation(serviceHub, (SerializableLambda2 { _, _ ->
                 CompletableFuture<Any>().apply {
                     completeExceptionally(e)
                 }
-            })
+            })))
         }
 
         private fun createException() = when (exceptionType) {

@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
-import co.paralleluniverse.fibers.Fiber.parkAndSerialize
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand

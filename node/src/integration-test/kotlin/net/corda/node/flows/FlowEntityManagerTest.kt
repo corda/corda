@@ -31,9 +31,7 @@ import net.corda.testing.core.DummyCommandData
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import org.apache.commons.lang3.SystemUtils
 import org.hibernate.exception.ConstraintViolationException
-import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import java.lang.RuntimeException
@@ -318,8 +316,6 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation that is caught inside an entity manager should allow a flow to continue processing as normal`() {
-        // This test is generating JDK11 contract code on JDK11
-        Assume.assumeTrue(!SystemUtils.IS_JAVA_11)
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
         driver(DriverParameters(startNodesInProcess = true)) {
