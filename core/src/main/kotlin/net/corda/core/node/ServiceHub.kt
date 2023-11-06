@@ -10,7 +10,9 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.internal.PlatformVersionSwitches.TWO_PHASE_FINALITY
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.serialization.CordaSerializable
@@ -171,12 +173,6 @@ interface ServiceHub : ServicesForResolution {
     val telemetryService: TelemetryService
 
     /**
-     * INTERNAL. DO NOT USE.
-     * @suppress
-     */
-    val transactionVerifierService: TransactionVerifierService
-
-    /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the
      * clock so the current time can be controlled during unit testing.
      */
@@ -283,9 +279,11 @@ interface ServiceHub : ServicesForResolution {
      */
     @Throws(TransactionResolutionException::class)
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outRef(stateRef.index)
+        return StateAndRef(uncheckedCast(loadState(stateRef)), stateRef)
     }
+
+    @Throws(TransactionResolutionException::class)
+    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = stateRefs.mapToSet(::toStateAndRef)
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey
 
@@ -424,8 +422,8 @@ interface ServiceHub : ServicesForResolution {
      * When used within a flow, this session automatically forms part of the enclosing flow transaction boundary,
      * and thus queryable data will include everything committed as of the last checkpoint.
      *
-     * We want to make sure users have a restricted access to administrative functions, this function will return a [RestrictedConnection] instance.
-     * The following methods are blocked:
+     * We want to make sure users have a restricted access to administrative functions, this function will return a [Connection] instance
+     * with the following methods blocked:
      * - abort(executor: Executor?)
      * - clearWarnings()
      * - close()

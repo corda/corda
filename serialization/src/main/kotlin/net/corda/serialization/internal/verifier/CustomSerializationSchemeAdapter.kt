@@ -1,8 +1,10 @@
-package net.corda.nodeapi.internal.serialization
+package net.corda.serialization.internal.verifier
 
-import net.corda.core.serialization.SerializationSchemeContext
+import net.corda.core.CordaException
+import net.corda.core.internal.loadClassOfType
 import net.corda.core.serialization.CustomSerializationScheme
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getCustomSerializationMagicFromSchemeId
 import net.corda.core.utilities.ByteSequence
@@ -12,8 +14,7 @@ import java.io.ByteArrayOutputStream
 import java.io.NotSerializableException
 
 class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializationScheme): SerializationScheme {
-
-    val serializationSchemeMagic = getCustomSerializationMagicFromSchemeId(customScheme.getSchemeId())
+    private val serializationSchemeMagic = getCustomSerializationMagicFromSchemeId(customScheme.getSchemeId())
 
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
         return magic == serializationSchemeMagic
@@ -44,4 +45,21 @@ class CustomSerializationSchemeAdapter(private val customScheme: CustomSerializa
         override val whitelist = context.whitelist
         override val properties = context.properties
     }
+}
+
+@Suppress("ThrowsCount")
+fun loadCustomSerializationScheme(className: String, classLoader: ClassLoader): SerializationScheme {
+    val schemeClass = try {
+        loadClassOfType<CustomSerializationScheme>(className, false, classLoader)
+    } catch (e: ClassNotFoundException) {
+        throw CordaException("$className was declared as a custom serialization scheme but could not be found.")
+    } catch (e: ClassCastException) {
+        throw CordaException("$className was declared as a custom serialization scheme but does not implement CustomSerializationScheme")
+    }
+    val constructor = try {
+        schemeClass.getDeclaredConstructor()
+    } catch (e: NoSuchMethodException) {
+        throw CordaException("$className was declared as a custom serialization scheme but does not have a no argument constructor.")
+    }
+    return CustomSerializationSchemeAdapter(constructor.newInstance())
 }

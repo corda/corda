@@ -19,10 +19,12 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.tee
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.warnOnce
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.StatesNotAvailableException
@@ -50,7 +52,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.trace
-import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
@@ -80,8 +81,6 @@ import javax.persistence.criteria.CriteriaQuery
 import javax.persistence.criteria.CriteriaUpdate
 import javax.persistence.criteria.Predicate
 import javax.persistence.criteria.Root
-import kotlin.collections.ArrayList
-import kotlin.collections.LinkedHashSet
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -98,7 +97,7 @@ import kotlin.collections.component2
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
-        private val servicesForResolution: NodeServicesForResolution,
+        private val serviceHub: ServiceHub,
         private val database: CordaPersistence,
         schemaService: SchemaService,
         private val appClassloader: ClassLoader
@@ -354,7 +353,7 @@ class NodeVaultService(
                     val outputRefs = tx.outRefsOfType<ContractState>().map { it.ref }
                     val seenRefs = loadStates(outputRefs).map { it.ref }
                     val unseenRefs = outputRefs - seenRefs
-                    val unseenOutputIdxs = unseenRefs.map { it.index }.toSet()
+                    val unseenOutputIdxs = unseenRefs.mapToSet { it.index }
                     outputs.filter { it.key in unseenOutputIdxs }
                 } else {
                     outputs
@@ -383,7 +382,7 @@ class NodeVaultService(
                     StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
                         val notSeenReferences = tx.references - loadStates(tx.references).map { it.ref }
                         // TODO: This is expensive - is there another way?
-                        tx.toLedgerTransaction(servicesForResolution).deserializableRefStates()
+                        tx.toLedgerTransaction(serviceHub).deserializableRefStates()
                                 .filter { (_, stateAndRef) -> stateAndRef.ref in notSeenReferences }
                                 .values
                     }
@@ -398,8 +397,8 @@ class NodeVaultService(
             // We also can't do filtering beforehand, since for notary change transactions output encumbrance pointers
             // get recalculated based on input positions.
             val ltx: FullTransaction = when (tx) {
-                is NotaryChangeWireTransaction -> tx.resolve(servicesForResolution, emptyList())
-                is ContractUpgradeWireTransaction -> tx.resolve(servicesForResolution, emptyList())
+                is NotaryChangeWireTransaction -> tx.resolve(serviceHub, emptyList())
+                is ContractUpgradeWireTransaction -> tx.resolve(serviceHub, emptyList())
                 else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
             }
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
@@ -748,16 +747,13 @@ class NodeVaultService(
                 if (result0 is VaultSchemaV1.VaultStates) {
                     statesMetadata.add(result0.toStateMetadata())
                 } else {
-                    log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
+                    log.debug { "OtherResults: ${result.toArray().contentToString()}" }
                     otherResults.addAll(result.toArray().asList())
                 }
             }
         }
 
-        val states: List<StateAndRef<T>> = servicesForResolution.loadStates(
-                statesMetadata.mapTo(LinkedHashSet()) { it.ref },
-                ArrayList()
-        )
+        val states: List<StateAndRef<T>> = statesMetadata.mapToSet { it.ref }.map(serviceHub::toStateAndRef)
 
         val totalStatesAvailable = when {
             paging.isDefault -> -1L
@@ -844,9 +840,8 @@ class NodeVaultService(
                 log.warn("trackBy is called with an already existing, open DB transaction. As a result, there might be states missing from both the snapshot and observable, included in the returned data feed, because of race conditions.")
             }
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-            val snapshotStatesRefs = snapshotResults.statesMetadata.map { it.ref }.toSet()
-            val snapshotConsumedStatesRefs = snapshotResults.statesMetadata.filter { it.consumedTime != null }
-                    .map { it.ref }.toSet()
+            val snapshotStatesRefs = snapshotResults.statesMetadata.mapToSet { it.ref }
+            val snapshotConsumedStatesRefs = snapshotResults.statesMetadata.filter { it.consumedTime != null }.mapToSet { it.ref }
             val filteredUpdates = updates.filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
                     .map { filterContractStates(it, contractStateType) }
                     .filter { !hasBeenSeen(it, snapshotStatesRefs, snapshotConsumedStatesRefs) }
@@ -881,8 +876,8 @@ class NodeVaultService(
      *       the snapshot or in the observable).
      */
     private fun <T: ContractState> hasBeenSeen(update: Vault.Update<T>, snapshotStatesRefs: Set<StateRef>, snapshotConsumedStatesRefs: Set<StateRef>): Boolean {
-        val updateProducedStatesRefs = update.produced.map { it.ref }.toSet()
-        val updateConsumedStatesRefs = update.consumed.map { it.ref }.toSet()
+        val updateProducedStatesRefs = update.produced.mapToSet { it.ref }
+        val updateConsumedStatesRefs = update.consumed.mapToSet { it.ref }
 
         return snapshotStatesRefs.containsAll(updateProducedStatesRefs) && snapshotConsumedStatesRefs.containsAll(updateConsumedStatesRefs)
     }

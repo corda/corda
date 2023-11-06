@@ -28,7 +28,6 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
-import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.NodeSchemaService
@@ -126,7 +125,7 @@ class HibernateConfigurationTest {
                 override val vaultService = NodeVaultService(
                         Clock.systemUTC(),
                         keyManagementService,
-                        servicesForResolution as NodeServicesForResolution,
+                        this,
                         database,
                         schemaService,
                         cordappClassloader

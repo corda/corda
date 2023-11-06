@@ -352,7 +352,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         private val entropyCounter = AtomicReference(args.entropyRoot)
         override val log get() = staticLog
-        override val transactionVerifierWorkerCount: Int get() = 1
 
         private var _rxIoScheduler: Scheduler? = null
         override val rxIoScheduler: Scheduler

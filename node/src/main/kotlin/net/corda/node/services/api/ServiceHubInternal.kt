@@ -5,8 +5,8 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NamedCacheFactory
@@ -17,6 +17,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.dependencies
 import net.corda.core.internal.requireSupportedHashType
+import net.corda.core.internal.verification.Verifier
 import net.corda.core.internal.warnOnce
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -25,11 +26,13 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.defaultVerifier
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
@@ -37,14 +40,11 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.verification.NoDbAccessVerifier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import java.lang.IllegalStateException
+import java.security.PublicKey
 import java.security.SignatureException
-import java.util.ArrayList
 import java.util.Collections
-import java.util.HashMap
-import java.util.HashSet
-import java.util.LinkedHashSet
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     override val nodeReady: OpenFuture<Void?>
@@ -186,10 +186,13 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val configuration: NodeConfiguration
     val nodeProperties: NodePropertiesStore
     val networkMapUpdater: NetworkMapUpdater
-    override val cordappProvider: CordappProviderInternal
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
+
+    override fun createVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+        return NoDbAccessVerifier(defaultVerifier(ltx, serializationContext))
+    }
 
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) =
             recordTransactions(statesToRecord, txs, SIGNATURE_VERIFICATION_DISABLED)

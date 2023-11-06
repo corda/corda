@@ -8,7 +8,7 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
-import net.corda.core.internal.Verifier
+import net.corda.core.internal.verification.Verifier
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.LedgerTransaction
 

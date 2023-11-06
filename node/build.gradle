@@ -73,6 +73,10 @@ jib.container {
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
     from file("$rootDir/config/dev/jolokia-access.xml")
+    from(tasks.findByPath(":verifier:shadowJar")) {
+        into("net/corda/node/verification")
+        rename { "external-verifier.jar" }
+    }
 }
 
 processTestResources {

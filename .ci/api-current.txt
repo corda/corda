@@ -4739,13 +4739,13 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @NotNull
   public abstract net.corda.core.node.services.TelemetryService getTelemetryService()
   @NotNull
-  public abstract net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
-  @NotNull
   public abstract net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull
   public abstract net.corda.core.node.services.VaultService getVaultService()
   @NotNull
   public abstract java.sql.Connection jdbcSession()
+  @NotNull
+  public java.util.Set loadStates(java.util.Set)
   public void recordTransactions(Iterable)
   public abstract void recordTransactions(net.corda.core.node.StatesToRecord, Iterable)
   public void recordTransactions(net.corda.core.transactions.SignedTransaction, net.corda.core.transactions.SignedTransaction...)
@@ -5090,11 +5090,6 @@ public interface net.corda.core.node.services.TransactionStorage
   public abstract net.corda.core.messaging.DataFeed track()
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture trackTransaction(net.corda.core.crypto.SecureHash)
-##
-@DoNotImplement
-public interface net.corda.core.node.services.TransactionVerifierService
-  @NotNull
-  public abstract net.corda.core.concurrent.CordaFuture verify(net.corda.core.transactions.LedgerTransaction)
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.UnknownAnonymousPartyException extends net.corda.core.CordaException
@@ -7850,8 +7845,6 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   @NotNull
   public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServiceHub)
   @NotNull
-  public final net.corda.core.transactions.LedgerTransaction toLedgerTransactionWithContext(net.corda.core.node.ServicesForResolution, net.corda.core.serialization.SerializationContext)
-  @NotNull
   public final net.corda.core.transactions.SignedTransaction toSignedTransaction(net.corda.core.node.services.KeyManagementService, java.security.PublicKey, net.corda.core.crypto.SignatureMetadata, net.corda.core.node.ServicesForResolution)
   @NotNull
   public final net.corda.core.transactions.WireTransaction toWireTransaction(net.corda.core.node.ServicesForResolution)
@@ -9894,8 +9887,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.internal.telemetry.TelemetryServiceImpl getTelemetryService()
   @NotNull
-  public net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
-  @NotNull
   public net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull
   public net.corda.core.node.services.VaultService getVaultService()
@@ -9905,8 +9896,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   public net.corda.core.contracts.Attachment loadContractAttachment(net.corda.core.contracts.StateRef)
   @NotNull
   public net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
-  @NotNull
-  public java.util.Set loadStates(java.util.Set)
   @NotNull
   public static final java.util.Properties makeTestDataSourceProperties(String)
   @NotNull
