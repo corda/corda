@@ -2791,8 +2791,8 @@ public static final class net.corda.core.flows.FinalityFlow$Companion$RECORD_UNN
 @StartableByRPC
 public final class net.corda.core.flows.FinalityRecoveryFlow extends net.corda.core.flows.FlowLogic
   public <init>()
-  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, net.corda.core.utilities.ProgressTracker)
-  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, net.corda.core.utilities.ProgressTracker, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, java.util.Collection, net.corda.core.utilities.ProgressTracker)
+  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, java.util.Collection, net.corda.core.utilities.ProgressTracker, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(java.util.Collection, boolean)
   public <init>(java.util.Collection, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(java.util.Collection, boolean, boolean)
