@@ -1,14 +1,13 @@
-apply plugin: 'kotlin'
-apply plugin: 'kotlin-jpa'
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntimeOnly
 }
 
 sourceSets {
@@ -25,14 +24,33 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':test-utils')
+    implementation project(':core')
+    implementation project(':node')
+    implementation project(':node-api')
+    implementation project(':serialization')
+    implementation project(':client:rpc')
+    implementation project(':client:mock')
+    implementation project(':common-configuration-parsing')
+    implementation project(':common-validation')
+    implementation project(':core-test-utils')
+    implementation project(':test-common')
+    implementation project(':test-utils')
+    implementation project(':tools:cliutils')
 
-    compile group: 'org.apache.sshd', name: 'sshd-common', version: '2.9.2'
+    implementation group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
+    implementation "javax.persistence:javax.persistence-api:2.2"
 
     // Integration test helpers
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+
+    integrationTestImplementation project(":client:jackson")
     integrationTestImplementation "junit:junit:$junit_version"
     integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    integrationTestImplementation "info.picocli:picocli:$picocli_version"
+    integrationTestImplementation "com.google.guava:guava:$guava_version"
+    integrationTestImplementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    integrationTestImplementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    integrationTestImplementation 'org.hamcrest:hamcrest-library:2.1'
 
     integrationTestRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
@@ -40,30 +58,61 @@ dependencies {
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets
-    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
-    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
-    compile "javax.servlet:javax.servlet-api:${servlet_version}"
+    implementation "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    implementation "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    implementation "javax.servlet:javax.servlet-api:${servlet_version}"
 
-    compile "org.gradle:gradle-tooling-api:${gradle.gradleVersion}"
-    
+    implementation "org.gradle:gradle-tooling-api:7.1"
+
     // Jersey for JAX-RS implementation for use in Jetty
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+    implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    implementation "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    implementation "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
+
+    // Bouncy castle support needed for X509 certificate manipulation
+    implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastle_version}"
+
+    implementation "com.google.code.findbugs:jsr305:$jsr305_version"
+    implementation "com.google.jimfs:jimfs:1.1"
+    implementation group: "com.typesafe", name: "config", version: typesafe_config_version
+    implementation "io.github.classgraph:classgraph:$class_graph_version"
+    implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
+    implementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
+    implementation "com.esotericsoftware:kryo:$kryo_version"
+    implementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
+    implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
+    implementation "org.assertj:assertj-core:${assertj_version}"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
+    implementation "junit:junit:$junit_version"
+
+    implementation("org.apache.activemq:artemis-server:${artemis_version}") {
+        exclude group: 'org.apache.commons', module: 'commons-dbcp2'
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
+
+    implementation "co.paralleluniverse:quasar-core:$quasar_version"
 }
 
 compileJava {
     doFirst {
-        if (JavaVersion.current() == JavaVersion.VERSION_11)
-            options.compilerArgs = [
-                    '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
-            ]
+        options.compilerArgs = [
+            '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
+        ]
     }
 }
 
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 jar {
@@ -75,18 +124,8 @@ jar {
     }
 }
 
-
-tasks.named('javadocJar', Jar) {
-    from 'README.md'
-    include 'README.md'
-}
-
 tasks.named('javadoc', Javadoc) {
     enabled = false
-}
-
-publish {
-    name jar.baseName
 }
 
 scanApi {

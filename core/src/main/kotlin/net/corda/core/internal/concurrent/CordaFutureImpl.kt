@@ -164,10 +164,10 @@ interface OpenFuture<V> : ValueOrException<V>, CordaFuture<V>
 
 /** Unless you really want this particular implementation, use [openFuture] to make one. */
 @VisibleForTesting
-internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = CompletableFuture()) : Future<V> by impl, OpenFuture<V> {
+class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = CompletableFuture()) : Future<V> by impl, OpenFuture<V> {
     companion object {
         private val defaultLog = contextLogger()
-        internal const val listenerFailedMessage = "Future listener failed:"
+        const val listenerFailedMessage = "Future listener failed:"
     }
 
     override fun set(value: V) = impl.complete(value)
@@ -175,7 +175,7 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
     override fun <W> then(callback: (CordaFuture<V>) -> W) = thenImpl(defaultLog, callback)
     /** For testing only. */
     @Suppress("TooGenericExceptionCaught")
-    internal fun <W> thenImpl(log: Logger, callback: (CordaFuture<V>) -> W) {
+    fun <W> thenImpl(log: Logger, callback: (CordaFuture<V>) -> W) {
         impl.whenComplete { _, _ ->
             try {
                 callback(this)
@@ -198,4 +198,4 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
     }
 }
 
-internal fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)
+fun <V> Future<V>.get(timeout: Duration? = null): V = if (timeout == null) get() else get(timeout.toNanos(), TimeUnit.NANOSECONDS)

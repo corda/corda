@@ -17,7 +17,6 @@ import org.junit.Test
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.JarFile
-import kotlin.streams.toList
 
 class NodeVersioningTest {
     private companion object {

@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.lifecycle
 
-import com.nhaarman.mockito_kotlin.mock
+import org.mockito.kotlin.mock
 import net.corda.core.internal.stream
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger

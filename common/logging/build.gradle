@@ -1,28 +1,26 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 
-apply plugin: 'kotlin'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
-    compile group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
-    compile group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
+    implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
 
-    compile group: "com.typesafe", name: "config", version: typesafe_config_version
+    implementation group: "com.typesafe", name: "config", version: typesafe_config_version
 
     // Log4J: logging framework
-    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
 
-    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+    implementation "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     // Need to depend on one other Corda project in order to get hold of a valid manifest for the tests
-    testCompile project(":common-validation")
+    testImplementation project(":common-validation")
 
     // test dependencies
     testImplementation "junit:junit:$junit_version"
-    testCompile group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
-    testCompile "org.mockito:mockito-core:$mockito_version"
-    testCompile "com.natpryce:hamkrest:$hamkrest_version"
+    testImplementation group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
+    testImplementation "org.mockito:mockito-core:$mockito_version"
+    testImplementation "com.natpryce:hamkrest:$hamkrest_version"
 }
 
 
@@ -38,6 +36,3 @@ jar {
     baseName 'corda-common-logging'
 }
 
-publish {
-    name jar.baseName
-}
