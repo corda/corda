@@ -4,16 +4,12 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.DistributionList.ReceiverDistributionList
 import net.corda.core.flows.DistributionList.SenderDistributionList
 import net.corda.core.flows.DistributionRecordKey
-import net.corda.core.flows.DistributionRecordType
-import net.corda.core.flows.DistributionRecords
 import net.corda.core.flows.ReceiverDistributionRecord
-import net.corda.core.flows.RecoveryTimeWindow
 import net.corda.core.flows.SenderDistributionRecord
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.CordaClock
 import net.corda.node.services.EncryptionService
@@ -32,7 +28,6 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 import javax.persistence.Table
-import javax.persistence.criteria.Predicate
 
 class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
                                          cacheFactory: NamedCacheFactory,
@@ -212,100 +207,6 @@ class DBTransactionStorageLedgerRecovery(private val database: CordaPersistence,
             val deletedReceiverDistributionRecords = session.createQuery(deleteReceiverDistributionRecords).executeUpdate() != 0
             deletedSenderDistributionRecords || deletedReceiverDistributionRecords
         }
-    }
-
-    fun queryDistributionRecords(timeWindow: RecoveryTimeWindow,
-                                 recordType: DistributionRecordType = DistributionRecordType.ALL,
-                                 excludingTxnIds: Set<SecureHash> = emptySet(),
-                                 orderByTimestamp: Sort.Direction? = null
-    ): DistributionRecords {
-        return when(recordType) {
-            DistributionRecordType.SENDER ->
-                DistributionRecords(senderRecords =
-                    querySenderDistributionRecords(timeWindow, excludingTxnIds = excludingTxnIds, orderByTimestamp = orderByTimestamp))
-            DistributionRecordType.RECEIVER ->
-                DistributionRecords(receiverRecords =
-                    queryReceiverDistributionRecords(timeWindow, excludingTxnIds = excludingTxnIds, orderByTimestamp = orderByTimestamp))
-            DistributionRecordType.ALL ->
-                DistributionRecords(senderRecords =
-                    querySenderDistributionRecords(timeWindow, excludingTxnIds = excludingTxnIds, orderByTimestamp = orderByTimestamp),
-                                    receiverRecords =
-                    queryReceiverDistributionRecords(timeWindow, excludingTxnIds = excludingTxnIds, orderByTimestamp = orderByTimestamp))
-        }
-    }
-
-    @Suppress("SpreadOperator")
-    fun querySenderDistributionRecords(timeWindow: RecoveryTimeWindow,
-                                       peers: Set<CordaX500Name> = emptySet(),
-                                       excludingTxnIds: Set<SecureHash> = emptySet(),
-                                       orderByTimestamp: Sort.Direction? = null
-                             ): List<SenderDistributionRecord> {
-        return database.transaction {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(DBSenderDistributionRecord::class.java)
-            val txnMetadata = criteriaQuery.from(DBSenderDistributionRecord::class.java)
-            val predicates = mutableListOf<Predicate>()
-            val compositeKey = txnMetadata.get<PersistentKey>("compositeKey")
-            predicates.add(criteriaBuilder.greaterThanOrEqualTo(compositeKey.get<Instant>(PersistentKey::timestamp.name), timeWindow.fromTime))
-            predicates.add(criteriaBuilder.and(criteriaBuilder.lessThanOrEqualTo(compositeKey.get<Instant>(PersistentKey::timestamp.name), timeWindow.untilTime)))
-            if (excludingTxnIds.isNotEmpty()) {
-                predicates.add(criteriaBuilder.and(criteriaBuilder.not(compositeKey.get<String>(PersistentKey::txId.name).`in`(
-                        excludingTxnIds.map { it.toString() }))))
-            }
-            if (peers.isNotEmpty()) {
-                val peerPartyIds = peers.map { partyInfoCache.getPartyIdByCordaX500Name(it).toString() }
-                predicates.add(criteriaBuilder.and(compositeKey.get<Long>(PersistentKey::peerPartyId.name).`in`(peerPartyIds)))
-            }
-            criteriaQuery.where(*predicates.toTypedArray())
-            // optionally order by timestamp
-            orderByTimestamp?.let {
-                val orderCriteria =
-                        when (orderByTimestamp) {
-                            // when adding column position of 'group by' shift in case columns were removed
-                            Sort.Direction.ASC -> criteriaBuilder.asc(compositeKey.get<Instant>(PersistentKey::timestamp.name))
-                            Sort.Direction.DESC -> criteriaBuilder.desc(compositeKey.get<Instant>(PersistentKey::timestamp.name))
-                        }
-                criteriaQuery.orderBy(orderCriteria)
-            }
-            session.createQuery(criteriaQuery).resultList
-        }.map { it.toSenderDistributionRecord() }
-    }
-
-    @Suppress("SpreadOperator")
-    fun queryReceiverDistributionRecords(timeWindow: RecoveryTimeWindow,
-                                       initiators: Set<CordaX500Name> = emptySet(),
-                                       excludingTxnIds: Set<SecureHash> = emptySet(),
-                                       orderByTimestamp: Sort.Direction? = null
-    ): List<ReceiverDistributionRecord> {
-        return database.transaction {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(DBReceiverDistributionRecord::class.java)
-            val txnMetadata = criteriaQuery.from(DBReceiverDistributionRecord::class.java)
-            val predicates = mutableListOf<Predicate>()
-            val compositeKey = txnMetadata.get<PersistentKey>("compositeKey")
-            val timestamp = compositeKey.get<Instant>(PersistentKey::timestamp.name)
-            predicates.add(criteriaBuilder.greaterThanOrEqualTo(timestamp, timeWindow.fromTime))
-            predicates.add(criteriaBuilder.and(criteriaBuilder.lessThanOrEqualTo(timestamp, timeWindow.untilTime)))
-            if (excludingTxnIds.isNotEmpty()) {
-                val txId = compositeKey.get<String>(PersistentKey::txId.name)
-                predicates.add(criteriaBuilder.and(criteriaBuilder.not(txId.`in`(excludingTxnIds.map { it.toString() }))))
-            }
-            if (initiators.isNotEmpty()) {
-                val initiatorPartyIds = initiators.map { partyInfoCache.getPartyIdByCordaX500Name(it).toString() }
-                predicates.add(criteriaBuilder.and(compositeKey.get<String>(PersistentKey::peerPartyId.name).`in`(initiatorPartyIds)))
-            }
-            criteriaQuery.where(*predicates.toTypedArray())
-            // optionally order by timestamp
-            orderByTimestamp?.let {
-                val orderCriteria = when (orderByTimestamp) {
-                    // when adding column position of 'group by' shift in case columns were removed
-                    Sort.Direction.ASC -> criteriaBuilder.asc(timestamp)
-                    Sort.Direction.DESC -> criteriaBuilder.desc(timestamp)
-                }
-                criteriaQuery.orderBy(orderCriteria)
-            }
-            session.createQuery(criteriaQuery).resultList
-        }.map { it.toReceiverDistributionRecord() }
     }
 
     fun decryptHashedDistributionList(encryptedBytes: ByteArray): HashedDistributionList {
