@@ -23,3 +23,11 @@ jar {
     archiveBaseName = "corda-tools-cliutils"
 }
 
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}

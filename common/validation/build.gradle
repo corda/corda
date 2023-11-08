@@ -8,3 +8,12 @@ dependencies {
 jar {
     baseName 'corda-common-validation'
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}

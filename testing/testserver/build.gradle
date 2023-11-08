@@ -89,3 +89,12 @@ task integrationTest(type: Test) {
 jar {
     baseName 'corda-testserver-impl'
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}

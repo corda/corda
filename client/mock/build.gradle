@@ -37,3 +37,12 @@ jar {
         )
     }
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}

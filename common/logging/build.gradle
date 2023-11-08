@@ -36,3 +36,12 @@ jar {
     baseName 'corda-common-logging'
 }
 
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}
+

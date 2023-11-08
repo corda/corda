@@ -55,3 +55,12 @@ jar {
         attributes('Corda-Testing': true)
     }
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}
