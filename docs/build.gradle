@@ -1,7 +1,6 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 apply plugin: 'org.jetbrains.dokka'
-apply plugin: 'corda.common-publishing'
 
 dependencies {
     implementation rootProject
@@ -22,6 +21,10 @@ def internalPackagePrefixes(sourceDirs) {
 
 ext {
     archivedApiDocsBaseFilename = 'api-docs'
+}
+
+jar {
+    enabled = false
 }
 
 dokkaHtml {
@@ -94,6 +97,8 @@ task archiveApiDocs(type: Tar) {
 publishing {
     publications {
         if (System.getProperty('publishApiDocs') != null) {
+            apply plugin: 'corda.common-publishing'
+
             archivedApiDocs(MavenPublication) {
                 artifact archiveApiDocs {
                     artifactId archivedApiDocsBaseFilename

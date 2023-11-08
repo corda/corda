@@ -23,3 +23,12 @@ jar {
     baseName 'corda-common-configuration-parsing'
 }
 
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}
+

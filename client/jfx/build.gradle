@@ -90,3 +90,12 @@ jar {
         attributes 'Automatic-Module-Name': 'net.corda.client.jfx'
     }
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
+}
