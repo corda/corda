@@ -389,7 +389,9 @@ object CheckpointHook : ClassFileTransformer {
                     builder.append("\n")
                 }
             }
-            is StatsTree.Loop -> log.info("StatsTree.Loop ignored")
+            is StatsTree.Loop -> {
+                // TODO JDK17: Exhaustive checking, unhandled case
+            }
         }
     }
 }
