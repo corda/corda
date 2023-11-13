@@ -121,7 +121,7 @@ interface IdentityService {
      *
      * From 4.11 onwards.
      */
-    fun wellKnownPartiesFromAnonumous(parties: Iterable<AbstractParty>): Map<AbstractParty, Party?> {
+    fun wellKnownPartiesFromAnonymous(parties: Iterable<AbstractParty>): Map<AbstractParty, Party?> {
         return parties.map { it to wellKnownPartyFromAnonymous(it) }.toMap()
     }
 
