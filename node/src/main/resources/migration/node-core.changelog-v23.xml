@@ -4,9 +4,16 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="add_signatures_column">
+    <changeSet author="R3.Corda" id="add_signatures_column" dbms="postgresql">
         <addColumn tableName="node_transactions">
-            <column name="signatures" type="VARBINARY(33554432)"/>
+            <column name="signatures" type="varbinary(33554432)"/>
         </addColumn>
     </changeSet>
+
+    <changeSet author="R3.Corda" id="add_signatures_column" dbms="!postgresql">
+        <addColumn tableName="node_transactions">
+            <column name="signatures" type="blob"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>
