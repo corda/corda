@@ -73,7 +73,8 @@ pipeline {
                         './gradlew',
                         COMMON_GRADLE_PARAMS,
                         'clean',
-                        'jar'
+                        'jar',
+                        '--parallel'
                 ].join(' ')
             }
         }
@@ -169,7 +170,8 @@ pipeline {
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
-                                        'jar'
+                                        'jar',
+                                        '--parallel'
                                 ].join(' ')
                             }
                         }
