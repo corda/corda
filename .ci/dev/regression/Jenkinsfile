@@ -27,6 +27,7 @@ String COMMON_GRADLE_PARAMS = [
         '--info',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
+        '--build-cache'
 ].join(' ')
 
 pipeline {
@@ -52,6 +53,9 @@ pipeline {
     environment {
         ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish Release to Artifactory :: ${env.BRANCH_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
+        BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
+        BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_USE_CACHE = "corda-remotes"
@@ -324,6 +328,7 @@ pipeline {
     post {
         always {
             script {
+                findBuildScans()
                 if (gitUtils.isReleaseTag()) {
                     gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''))
                 }

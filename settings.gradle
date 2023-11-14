@@ -117,8 +117,6 @@ include 'common-logging'
 project(":common-logging").projectDir = new File("$settingsDir/common/logging")
 // Common libraries - end
 
-apply from: 'buildCacheSettings.gradle'
-
 include 'core-deterministic'
 include 'core-deterministic:testing'
 include 'core-deterministic:testing:data'
