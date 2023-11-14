@@ -140,8 +140,10 @@ pipeline {
             }
         }
     }
-
     post {
+        always {
+            findBuildScans()
+        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
