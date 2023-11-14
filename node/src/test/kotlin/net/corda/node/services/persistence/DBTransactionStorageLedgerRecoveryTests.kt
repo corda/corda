@@ -8,9 +8,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.sign
 import net.corda.core.flows.DistributionList.ReceiverDistributionList
 import net.corda.core.flows.DistributionList.SenderDistributionList
-import net.corda.core.flows.DistributionRecordType
 import net.corda.core.flows.ReceiverDistributionRecord
-import net.corda.core.flows.RecoveryTimeWindow
 import net.corda.core.flows.SenderDistributionRecord
 import net.corda.core.flows.TransactionMetadata
 import net.corda.core.node.NodeInfo
@@ -52,9 +50,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.security.KeyPair
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -91,156 +87,6 @@ class DBTransactionStorageLedgerRecoveryTests {
 
     fun now(): Instant {
         return transactionRecovery.clock.instant()
-    }
-
-    @Test(timeout = 300_000)
-    fun `query local ledger for transactions with recovery peers within time window`() {
-        val beforeFirstTxn = now().truncatedTo(ChronoUnit.SECONDS)
-        val txn = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
-        val timeWindow = RecoveryTimeWindow(fromTime = beforeFirstTxn,
-                                            untilTime = beforeFirstTxn.plus(1, ChronoUnit.MINUTES))
-        val results = transactionRecovery.querySenderDistributionRecords(timeWindow)
-        assertEquals(1, results.size)
-        (transactionRecovery.clock as TestClock).advanceBy(Duration.ofSeconds(1))
-        val afterFirstTxn = now().truncatedTo(ChronoUnit.SECONDS)
-        val txn2 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn2)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
-        assertEquals(2, transactionRecovery.querySenderDistributionRecords(timeWindow).size)
-        assertEquals(1, transactionRecovery.querySenderDistributionRecords(RecoveryTimeWindow(fromTime = afterFirstTxn,
-                untilTime = afterFirstTxn.plus(1, ChronoUnit.MINUTES))).size)
-    }
-
-    @Test(timeout = 300_000)
-    fun `query local ledger for transactions within timeWindow and excluding remoteTransactionIds`() {
-        val transaction1 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction1)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction1.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
-        val transaction2 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction2)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction2.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
-        val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
-        val results = transactionRecovery.querySenderDistributionRecords(timeWindow, excludingTxnIds = setOf(transaction1.id))
-        assertEquals(1, results.size)
-        assertEquals(transaction2.id, results[0].txId)
-    }
-
-    @Test(timeout = 300_000)
-    fun `query local ledger for transactions within timeWindow and for given peers`() {
-        val transaction1 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction1)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction1.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ONLY_RELEVANT))))
-        val transaction2 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(transaction2)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction2.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
-        val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
-        val results = transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(CHARLIE_NAME))
-        assertEquals(1, results.size)
-        assertEquals(transaction2.id, results[0].txId)
-    }
-
-    @Test(timeout = 300_000)
-    fun `query local ledger by distribution record type`() {
-        val transaction1 = newTransaction()
-        // sender txn
-        transactionRecovery.addUnnotarisedTransaction(transaction1)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(transaction1.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ALL_VISIBLE))))
-        val transaction2 = newTransaction()
-        // receiver txn
-        transactionRecovery.addUnnotarisedTransaction(transaction2)
-        val encryptedDL = transactionRecovery.addSenderTransactionRecoveryMetadata(transaction2.id,
-                TransactionMetadata(BOB_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(ALICE_NAME to ALL_VISIBLE))))
-        transactionRecovery.addReceiverTransactionRecoveryMetadata(transaction2.id, BOB_NAME,
-                TransactionMetadata(BOB_NAME, ReceiverDistributionList(encryptedDL, ALL_VISIBLE)))
-        val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
-        transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.SENDER).let {
-            assertEquals(2, it.size)
-            assertEquals(SecureHash.sha256(BOB_NAME.toString()), it.senderRecords[0].peerPartyId)
-            assertEquals(ALL_VISIBLE, it.senderRecords[0].senderStatesToRecord)
-        }
-        transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.RECEIVER).let {
-            assertEquals(1, it.size)
-            assertEquals(SecureHash.sha256(BOB_NAME.toString()), it.receiverRecords[0].peerPartyId)
-            assertEquals(ALL_VISIBLE, (HashedDistributionList.decrypt(it.receiverRecords[0].encryptedDistributionList.bytes, encryptionService)).peerHashToStatesToRecord.map { it.value }[0])
-        }
-        val resultsAll = transactionRecovery.queryDistributionRecords(timeWindow, recordType = DistributionRecordType.ALL)
-        assertEquals(3, resultsAll.size)
-    }
-
-    @Test(timeout = 300_000)
-    fun `query for sender distribution records by peers`() {
-        val txn1 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn1)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn1.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ALL_VISIBLE, mapOf(BOB_NAME to ALL_VISIBLE))))
-        val txn2 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn2)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to ONLY_RELEVANT))))
-        val txn3 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn3)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn3.id, TransactionMetadata(ALICE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ONLY_RELEVANT, CHARLIE_NAME to ALL_VISIBLE))))
-        val txn4 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn4)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn4.id, TransactionMetadata(BOB_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(ALICE_NAME to ONLY_RELEVANT))))
-        val txn5 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn5)
-        transactionRecovery.addSenderTransactionRecoveryMetadata(txn5.id, TransactionMetadata(CHARLIE_NAME, SenderDistributionList(ONLY_RELEVANT, emptyMap())))
-        assertEquals(5, readSenderDistributionRecordFromDB().size)
-
-        val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
-        transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(BOB_NAME)).let {
-            assertEquals(2, it.size)
-            assertEquals(it[0].senderStatesToRecord, ALL_VISIBLE)
-            assertEquals(it[1].senderStatesToRecord, ONLY_RELEVANT)
-        }
-        assertEquals(1, transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(ALICE_NAME)).size)
-        assertEquals(2, transactionRecovery.querySenderDistributionRecords(timeWindow, peers = setOf(CHARLIE_NAME)).size)
-    }
-
-    @Test(timeout = 300_000)
-    fun `query for receiver distribution records by initiator`() {
-        val txn1 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn1)
-        val encryptedDL1 = transactionRecovery.addSenderTransactionRecoveryMetadata(txn1.id,
-                TransactionMetadata(ALICE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ALL_VISIBLE, CHARLIE_NAME to ALL_VISIBLE))))
-        transactionRecovery.addReceiverTransactionRecoveryMetadata(txn1.id, ALICE_NAME,
-                TransactionMetadata(ALICE_NAME, ReceiverDistributionList(encryptedDL1, ALL_VISIBLE)))
-        val txn2 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn2)
-        val encryptedDL2 = transactionRecovery.addSenderTransactionRecoveryMetadata(txn2.id,
-                TransactionMetadata(ALICE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ONLY_RELEVANT))))
-        transactionRecovery.addReceiverTransactionRecoveryMetadata(txn2.id, ALICE_NAME,
-                TransactionMetadata(ALICE_NAME, ReceiverDistributionList(encryptedDL2, ONLY_RELEVANT)))
-        val txn3 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn3)
-        val encryptedDL3 = transactionRecovery.addSenderTransactionRecoveryMetadata(txn3.id,
-                TransactionMetadata(ALICE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(CHARLIE_NAME to NONE))))
-        transactionRecovery.addReceiverTransactionRecoveryMetadata(txn3.id, ALICE_NAME,
-                TransactionMetadata(ALICE_NAME, ReceiverDistributionList(encryptedDL3, NONE)))
-        val txn4 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn4)
-        val encryptedDL4 = transactionRecovery.addSenderTransactionRecoveryMetadata(txn4.id,
-                TransactionMetadata(BOB_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(ALICE_NAME to ALL_VISIBLE))))
-        transactionRecovery.addReceiverTransactionRecoveryMetadata(txn4.id, BOB_NAME,
-                TransactionMetadata(BOB_NAME, ReceiverDistributionList(encryptedDL4, ALL_VISIBLE)))
-        val txn5 = newTransaction()
-        transactionRecovery.addUnnotarisedTransaction(txn5)
-        val encryptedDL5 = transactionRecovery.addSenderTransactionRecoveryMetadata(txn5.id,
-                TransactionMetadata(CHARLIE_NAME, SenderDistributionList(ONLY_RELEVANT, mapOf(BOB_NAME to ONLY_RELEVANT))))
-        transactionRecovery.addReceiverTransactionRecoveryMetadata(txn5.id, CHARLIE_NAME,
-                TransactionMetadata(CHARLIE_NAME, ReceiverDistributionList(encryptedDL5, ONLY_RELEVANT)))
-
-        val timeWindow = RecoveryTimeWindow(fromTime = now().minus(1, ChronoUnit.DAYS))
-        transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(ALICE_NAME)).let {
-            assertEquals(3, it.size)
-            assertEquals(HashedDistributionList.decrypt(it[0].encryptedDistributionList.bytes, encryptionService).peerHashToStatesToRecord.map { it.value }[0], ALL_VISIBLE)
-            assertEquals(HashedDistributionList.decrypt(it[1].encryptedDistributionList.bytes, encryptionService).peerHashToStatesToRecord.map { it.value }[0], ONLY_RELEVANT)
-            assertEquals(HashedDistributionList.decrypt(it[2].encryptedDistributionList.bytes, encryptionService).peerHashToStatesToRecord.map { it.value }[0], NONE)
-        }
-        assertEquals(1, transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(BOB_NAME)).size)
-        assertEquals(1, transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(CHARLIE_NAME)).size)
-        assertEquals(2, transactionRecovery.queryReceiverDistributionRecords(timeWindow, initiators = setOf(BOB_NAME, CHARLIE_NAME)).size)
     }
 
     @Test(timeout = 300_000)
