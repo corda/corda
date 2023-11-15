@@ -2,18 +2,24 @@ name: Sync assigned jira issues
 
 on:
   schedule:
-    - cron: '15 * * * *'
+    - cron: '15 * * * *'  
 
 jobs:
   sync_assigned:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate a token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.AUTH_APP_ID }}
+          private-key: ${{ secrets.AUTH_APP_PK }}
       - name: Assign
         uses: corda/jira-sync-assigned-action@master
         with:
           jiraBaseUrl: ${{ secrets.JIRA_BASE_URL }}
           jiraEmail: ${{ secrets.JIRA_USER_EMAIL }}
           jiraToken: ${{ secrets.JIRA_API_TOKEN }}
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ steps.generate_token.outputs.token }}
           owner: corda
           repository: corda
