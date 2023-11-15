@@ -11,8 +11,42 @@ import net.corda.core.utilities.ProgressTracker
  */
 @StartableByRPC
 class LedgerRecoveryFlow(
-        private val parameters: LedgerRecoveryParameters,
-        override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<LedgerRecoveryResult>() {
+    private val parameters: LedgerRecoveryParameters,
+    override val progressTracker: ProgressTracker = ProgressTracker()) : FlowLogic<LedgerRecoveryResult>() {
+
+    // constructors added to aid Corda Node Shell flow command invocation
+    constructor(recoveryPeer: Party) : this(LedgerRecoveryParameters(setOf(recoveryPeer)))
+    constructor(recoveryPeers: Collection<Party>) : this(LedgerRecoveryParameters(recoveryPeers))
+    constructor(useAllNetworkNodes: Boolean) : this(LedgerRecoveryParameters(emptySet(), useAllNetworkNodes = useAllNetworkNodes))
+    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow) :
+            this(LedgerRecoveryParameters(setOf(recoveryPeer), timeWindow))
+    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow, dryRun: Boolean) :
+            this(LedgerRecoveryParameters(setOf(recoveryPeer), timeWindow, dryRun = dryRun))
+    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow, dryRun: Boolean, verboseLogging: Boolean) :
+            this(LedgerRecoveryParameters(setOf(recoveryPeer), timeWindow, dryRun = dryRun, verboseLogging = verboseLogging))
+    constructor(recoveryPeer: Party, timeWindow: RecoveryTimeWindow, dryRun: Boolean, verboseLogging: Boolean, alsoFinalize: Boolean) :
+            this(LedgerRecoveryParameters(setOf(recoveryPeer), timeWindow, dryRun = dryRun, verboseLogging = verboseLogging, alsoFinalize = alsoFinalize))
+    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow) :
+            this(LedgerRecoveryParameters(recoveryPeers, timeWindow))
+    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, dryRun: Boolean) :
+            this(LedgerRecoveryParameters(recoveryPeers, timeWindow, dryRun = dryRun))
+    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, dryRun: Boolean, verboseLogging: Boolean) :
+            this(LedgerRecoveryParameters(recoveryPeers, timeWindow, dryRun = dryRun, verboseLogging = verboseLogging))
+    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, dryRun: Boolean, verboseLogging: Boolean, alsoFinalize: Boolean) :
+            this(LedgerRecoveryParameters(recoveryPeers, timeWindow, dryRun = dryRun, verboseLogging = verboseLogging, alsoFinalize = alsoFinalize))
+    constructor(useAllNetworkNodes: Boolean, timeWindow: RecoveryTimeWindow) :
+            this(LedgerRecoveryParameters(emptySet(), timeWindow, useAllNetworkNodes = useAllNetworkNodes))
+    constructor(useAllNetworkNodes: Boolean, timeWindow: RecoveryTimeWindow, dryRun: Boolean) :
+            this(LedgerRecoveryParameters(emptySet(), timeWindow, useAllNetworkNodes = useAllNetworkNodes, dryRun = dryRun))
+    constructor(useAllNetworkNodes: Boolean, timeWindow: RecoveryTimeWindow, dryRun: Boolean, verboseLogging: Boolean) :
+            this(LedgerRecoveryParameters(emptySet(), timeWindow, useAllNetworkNodes = useAllNetworkNodes, dryRun = dryRun, verboseLogging = verboseLogging))
+    constructor(useAllNetworkNodes: Boolean, timeWindow: RecoveryTimeWindow, dryRun: Boolean, verboseLogging: Boolean, recoveryBatchSize: Int, alsoFinalize: Boolean) :
+            this(LedgerRecoveryParameters(emptySet(), timeWindow, useAllNetworkNodes = useAllNetworkNodes, dryRun = dryRun, verboseLogging = verboseLogging, recoveryBatchSize = recoveryBatchSize, alsoFinalize = alsoFinalize))
+    constructor(useAllNetworkNodes: Boolean, timeWindow: RecoveryTimeWindow, dryRun: Boolean, verboseLogging: Boolean, recoveryBatchSize: Int) :
+            this(LedgerRecoveryParameters(emptySet(), timeWindow, useAllNetworkNodes = useAllNetworkNodes, dryRun = dryRun, verboseLogging = verboseLogging, recoveryBatchSize = recoveryBatchSize))
+    constructor(recoveryPeers: Collection<Party>, timeWindow: RecoveryTimeWindow, useAllNetworkNodes: Boolean, dryRun: Boolean, useTimeWindowNarrowing: Boolean, verboseLogging: Boolean, recoveryBatchSize: Int) :
+            this(LedgerRecoveryParameters(recoveryPeers, timeWindow, useAllNetworkNodes,
+                    dryRun = dryRun, useTimeWindowNarrowing = useTimeWindowNarrowing, verboseLogging = verboseLogging, recoveryBatchSize = recoveryBatchSize))
 
     @CordaInternal
     data class ExtraConstructorArgs(val parameters: LedgerRecoveryParameters)
