@@ -235,6 +235,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'com.r3.testing.distributed-testing'
 apply plugin: "com.gradle.build-scan"
+apply plugin: "com.gradle.common-custom-user-data-gradle-plugin"
 
 buildScan {
     server = gradleEnterpriseUrl
