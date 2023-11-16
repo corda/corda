@@ -2,7 +2,7 @@ name: Sync assigned jira issues
 
 on:
   schedule:
-    - cron: '15 * * * *' 
+    - cron: '15 * * * *'
 
 jobs:
   sync_assigned:
