@@ -294,6 +294,18 @@ allprojects {
         )
     }
 
+    // we do this to allow for Gradle task caching.
+    // below block tells Gradle to ignore specifically the dymaically generated files in the manifest when checking if a file is up to date
+    // this has no impact on publishing or production of jar, This only reates to Grades mechamish for verifying the Cache key
+    normalization {
+        runtimeClasspath {
+            ignore("**/*.EC")  //signing related
+            ignore("**/*.SF")  //signing related
+            ignore("**/*.MF")
+            ignore("**/*.kotlin_module")
+        }
+    }
+
     dependencyCheck {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
