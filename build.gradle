@@ -303,6 +303,7 @@ allprojects {
             ignore("**/*.SF")  //signing related
             ignore("**/*.MF")
             ignore("**/*.kotlin_module")
+            ignore("**/Cordapp-Dependencies")
         }
     }
 
