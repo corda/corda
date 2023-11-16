@@ -135,8 +135,8 @@ pipeline {
                     }
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
                             /*
                              * Copy all JUnit results files into a single top level directory.
                              * This is necessary to stop the allure plugin from hitting out
@@ -208,8 +208,8 @@ pipeline {
                 stage('Same agent') {
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
                             /*
                              * Copy all JUnit results files into a single top level directory.
                              * This is necessary to stop the allure plugin from hitting out

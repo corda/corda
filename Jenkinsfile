@@ -85,8 +85,8 @@ pipeline {
                     }
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: true
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true,allowEmptyResults: true
                         }
                         cleanup {
                             deleteDir() /* clean up our workspace */
@@ -122,8 +122,8 @@ pipeline {
                 stage('Same agent') {
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: true
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
                         }
                     }
                     stages {
