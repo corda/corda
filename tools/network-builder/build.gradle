@@ -1,6 +1,6 @@
 // JDK 11 JavaFX
 plugins {
-    id 'org.openjfx.javafxplugin' version '0.0.7' apply false
+    id 'org.openjfx.javafxplugin' version '0.1.0' apply false
 }
 
 if (JavaVersion.current().isJava9Compatible()) {
