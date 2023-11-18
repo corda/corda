@@ -14,12 +14,15 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.init
-import net.corda.nodeapi.internal.protonwrapper.netty.initialiseTrustStoreAndEnableCrlChecking
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfigImpl
+import net.corda.nodeapi.internal.protonwrapper.netty.keyManagerFactory
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.trustManagerFactoryWithRevocation
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.internal.fixedCrlSource
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Rule
@@ -27,6 +30,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.time.Duration
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import kotlin.test.assertFalse
@@ -95,11 +99,13 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
             override val maxMessageSize: Int = MAX_MESSAGE_SIZE
         }
 
-        serverKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        serverTrustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        serverKeyManagerFactory = keyManagerFactory(keyStore)
 
-        serverKeyManagerFactory.init(keyStore)
-        serverTrustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(serverAmqpConfig.trustStore, serverAmqpConfig.revocationConfig))
+        serverTrustManagerFactory = trustManagerFactoryWithRevocation(
+                serverAmqpConfig.trustStore,
+                RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL),
+                fixedCrlSource(emptySet())
+        )
     }
 
     private fun setupClientCertificates() {
@@ -123,14 +129,16 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val maxMessageSize: Int = MAX_MESSAGE_SIZE
-            override val sslHandshakeTimeout: Long = 3000
+            override val sslHandshakeTimeout: Duration = 3.seconds
         }
 
-        clientKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        clientTrustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        clientKeyManagerFactory = keyManagerFactory(keyStore)
 
-        clientKeyManagerFactory.init(keyStore)
-        clientTrustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(clientAmqpConfig.trustStore, clientAmqpConfig.revocationConfig))
+        clientTrustManagerFactory = trustManagerFactoryWithRevocation(
+                clientAmqpConfig.trustStore,
+                RevocationConfigImpl(RevocationConfig.Mode.SOFT_FAIL),
+                fixedCrlSource(emptySet())
+        )
     }
 
     @Test(timeout = 300_000)

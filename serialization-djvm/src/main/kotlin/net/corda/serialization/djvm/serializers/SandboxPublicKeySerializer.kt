@@ -1,5 +1,6 @@
 package net.corda.serialization.djvm.serializers
 
+import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.serialization.djvm.deserializers.PublicKeyDecoder
@@ -27,7 +28,11 @@ class SandboxPublicKeySerializer(
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
-        return decoder.apply(bits)!!
+        @Suppress("unchecked_cast")
+        return (context.properties[DESERIALIZATION_CACHE_PROPERTY] as? MutableMap<CacheKey, Any?>)
+            ?.computeIfAbsent(CacheKey(bits)) { key ->
+                decoder.apply(key.bytes)
+            } ?: decoder.apply(bits)!!
     }
 
     override fun writeDescribedObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext) {

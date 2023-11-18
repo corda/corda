@@ -73,6 +73,7 @@ import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
+import net.corda.node.internal.classloading.scanForCustomSerializationScheme
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
@@ -414,12 +415,13 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun makeBridgeControlListener(serverAddress: NetworkHostAndPort, networkParameters: NetworkParameters): BridgeControlListener {
-        val artemisMessagingClientFactory = {
+        val artemisMessagingClientFactory = { threadPoolName: String ->
             ArtemisMessagingClient(
                     configuration.p2pSslOptions,
                     serverAddress,
                     networkParameters.maxMessageSize,
-                    failoverCallback = { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) }
+                    failoverCallback = { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) },
+                    threadPoolName = threadPoolName
             )
         }
         return BridgeControlListener(
@@ -430,7 +432,8 @@ open class Node(configuration: NodeConfiguration,
                 networkParameters.maxMessageSize,
                 configuration.crlCheckSoftFail.toRevocationConfig(),
                 false,
-                artemisMessagingClientFactory)
+                artemisMessagingClientFactory
+        )
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {
@@ -647,10 +650,14 @@ open class Node(configuration: NodeConfiguration,
     private fun initialiseSerialization() {
         if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
+        val customScheme = System.getProperty("experimental.corda.customSerializationScheme")?.let {
+            scanForCustomSerializationScheme(it, classloader)
+        }
         nodeSerializationEnv = SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()))
                     registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()))
+                    customScheme?.let{ registerScheme(it) }
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),

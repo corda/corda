@@ -3,12 +3,17 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.EncodingWhitelist
+import net.corda.core.serialization.AMQP_ENVELOPE_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.serialization.internal.*
+import net.corda.serialization.internal.ByteBufferInputStream
+import net.corda.serialization.internal.CordaSerializationEncoding
+import net.corda.serialization.internal.NullEncodingWhitelist
+import net.corda.serialization.internal.SectionId
+import net.corda.serialization.internal.encodingNotPermittedFormat
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
@@ -118,7 +123,19 @@ class DeserializationInput constructor(
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext): T =
             des {
-                val envelope = getEnvelope(bytes, context.encodingWhitelist)
+                /**
+                 * The cache uses object identity rather than [ByteSequence.equals] and
+                 * [ByteSequence.hashCode]. This is for speed: each [ByteSequence] object
+                 * can potentially be large, and we are optimizing for the case when we
+                 * know we will be deserializing the exact same objects multiple times.
+                 * This also means that the cache MUST be short-lived, as otherwise it
+                 * becomes a memory leak.
+                 */
+                @Suppress("unchecked_cast")
+                val envelope = (context.properties[AMQP_ENVELOPE_CACHE_PROPERTY] as? MutableMap<IdentityKey, Envelope>)
+                    ?.computeIfAbsent(IdentityKey(bytes)) { key ->
+                        getEnvelope(key.bytes, context.encodingWhitelist)
+                    } ?: getEnvelope(bytes, context.encodingWhitelist)
 
                 logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
 
@@ -218,4 +235,17 @@ class DeserializationInput constructor(
                 is WildcardType -> isSubClassOf(that.upperBounds.first())
                 else -> false
             }
+}
+
+/**
+ * We cannot use [ByteSequence.equals] and [ByteSequence.hashCode] because
+ * these consider the contents of the underlying [ByteArray] object. We
+ * only need the [ByteSequence]'s object identity for our use-case.
+ */
+private class IdentityKey(val bytes: ByteSequence) {
+    override fun hashCode() = System.identityHashCode(bytes)
+
+    override fun equals(other: Any?): Boolean {
+        return (this === other) || (other is IdentityKey && bytes === other.bytes)
+    }
 }

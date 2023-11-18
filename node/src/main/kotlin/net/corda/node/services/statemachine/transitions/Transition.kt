@@ -24,6 +24,37 @@ interface Transition {
         val continuation = build(builder)
         return TransitionResult(builder.currentState, builder.actions, continuation)
     }
+
+    /**
+     * Add [element] to the [ArrayList] and return the list.
+     *
+     * Copy of [List.plus] that returns an [ArrayList] instead.
+     */
+    operator fun <T> ArrayList<T>.plus(element: T) : ArrayList<T> {
+        val result = ArrayList<T>(size + 1)
+        result.addAll(this)
+        result.add(element)
+        return result
+    }
+
+    /**
+     * Add [elements] to the [ArrayList] and return the list.
+     *
+     * Copy of [List.plus] that returns an [ArrayList] instead.
+     */
+    operator fun <T> ArrayList<T>.plus(elements: Collection<T>) : ArrayList<T> {
+        val result = ArrayList<T>(this.size + elements.size)
+        result.addAll(this)
+        result.addAll(elements)
+        return result
+    }
+
+    /**
+     * Convert the [List] into an [ArrayList].
+     */
+    fun <T> List<T>.toArrayList() : ArrayList<T> {
+        return ArrayList(this)
+    }
 }
 
 class TransitionContext(

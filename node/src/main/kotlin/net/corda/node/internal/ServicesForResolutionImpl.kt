@@ -1,16 +1,26 @@
 package net.corda.node.internal
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentResolutionException
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.CordappProvider
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.transactions.BaseTransaction
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.transactions.WireTransaction.Companion.resolveStateRefBinaryComponent
 
@@ -20,31 +30,28 @@ data class ServicesForResolutionImpl(
         override val cordappProvider: CordappProvider,
         override val networkParametersService: NetworkParametersService,
         private val validatedTransactions: TransactionStorage
-) : ServicesForResolution {
+) : NodeServicesForResolution {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")
 
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return stx.resolveBaseTransaction(this).outputs[stateRef.index]
+        return toBaseTransaction(stateRef.txhash).outputs[stateRef.index]
     }
 
-    @Throws(TransactionResolutionException::class)
-    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
-        return stateRefs.groupBy { it.txhash }.flatMap {
-            val stx = validatedTransactions.getTransaction(it.key) ?: throw TransactionResolutionException(it.key)
-            val baseTx = stx.resolveBaseTransaction(this)
-            it.value.map { ref -> StateAndRef(baseTx.outputs[ref.index], ref) }
-        }.toSet()
+    override fun <T : ContractState, C : MutableCollection<StateAndRef<T>>> loadStates(input: Iterable<StateRef>, output: C): C {
+        val baseTxs = HashMap<SecureHash, BaseTransaction>()
+        return input.mapTo(output) { stateRef ->
+            val baseTx = baseTxs.computeIfAbsent(stateRef.txhash, ::toBaseTransaction)
+            StateAndRef(uncheckedCast(baseTx.outputs[stateRef.index]), stateRef)
+        }
     }
 
     @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
     override fun loadContractAttachment(stateRef: StateRef): Attachment {
         // We may need to recursively chase transactions if there are notary changes.
         fun inner(stateRef: StateRef, forContractClassName: String?): Attachment {
-            val ctx = validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
-                    ?: throw TransactionResolutionException(stateRef.txhash)
+            val ctx = getSignedTransaction(stateRef.txhash).coreTransaction
             when (ctx) {
                 is WireTransaction -> {
                     val transactionState = ctx.outRef<ContractState>(stateRef.index).state
@@ -68,5 +75,11 @@ data class ServicesForResolutionImpl(
             }
         }
         return inner(stateRef, null)
+    }
+
+    private fun toBaseTransaction(txhash: SecureHash): BaseTransaction = getSignedTransaction(txhash).resolveBaseTransaction(this)
+
+    private fun getSignedTransaction(txhash: SecureHash): SignedTransaction {
+        return validatedTransactions.getTransaction(txhash) ?: throw TransactionResolutionException(txhash)
     }
 }

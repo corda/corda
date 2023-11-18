@@ -87,7 +87,7 @@ class DeliverSessionMessageTransition(
                 val initiatedSession = SessionState.Initiated(
                         peerParty = event.sender,
                         peerFlowInfo = message.initiatedFlowInfo,
-                        receivedMessages = emptyList(),
+                        receivedMessages = arrayListOf(),
                         peerSinkSessionId = message.initiatedSessionId,
                         deduplicationSeed = sessionState.deduplicationSeed,
                         otherSideErrored = false

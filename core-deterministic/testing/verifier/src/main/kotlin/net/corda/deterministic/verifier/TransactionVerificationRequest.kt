@@ -13,7 +13,7 @@ import net.corda.core.transactions.WireTransaction
 
 @Suppress("MemberVisibilityCanBePrivate")
 //TODO the use of deprecated toLedgerTransaction need to be revisited as resolveContractAttachment requires attachments of the transactions which created input states...
-//TODO ...to check contract version non downgrade rule, curretly dummy Attachment if not fund is used which sets contract version to '1'
+//TODO ...to check contract version non downgrade rule, currently dummy Attachment if not fund is used which sets contract version to '1'
 @CordaSerializable
 class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransaction>,
                                      val dependencies: Array<SerializedBytes<WireTransaction>>,

@@ -26,6 +26,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.internal.ServicesForResolutionImpl
+import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.diagnostics.NodeDiagnosticsService
@@ -251,11 +252,15 @@ open class MockServices private constructor(
                 override fun jdbcSession(): Connection = persistence.createSession()
 
                 override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-                    return block(contextTransaction.entityManager)
+                    return contextTransaction.entityManager.run {
+                        block(this).also { flush () }
+                    }
                 }
 
                 override fun withEntityManager(block: Consumer<EntityManager>) {
-                    return block.accept(contextTransaction.entityManager)
+                    return contextTransaction.entityManager.run {
+                        block.accept(this).also { flush () }
+                    }
                 }
             }
         }
@@ -456,7 +461,14 @@ open class MockServices private constructor(
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
-        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }
+        return NodeVaultService(
+                clock,
+                keyManagementService,
+                servicesForResolution as NodeServicesForResolution,
+                database,
+                schemaService,
+                cordappLoader.appClassLoader
+        ).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API

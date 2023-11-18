@@ -115,11 +115,10 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             val transport = connection.transport as ProtonJTransport
             transport.protocolTracer = object : ProtocolTracer {
                 override fun sentFrame(transportFrame: TransportFrame) {
-                    logInfoWithMDC { "${transportFrame.body}" }
+                    logInfoWithMDC { "sentFrame: ${transportFrame.body}" }
                 }
-
                 override fun receivedFrame(transportFrame: TransportFrame) {
-                    logInfoWithMDC { "${transportFrame.body}" }
+                    logInfoWithMDC { "receivedFrame: ${transportFrame.body}" }
                 }
             }
         }
@@ -186,7 +185,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         }
     }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Deprecated("Deprecated in Java")
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         logWarnWithMDC("Closing channel due to nonrecoverable exception ${cause.message}")
         if (log.isTraceEnabled) {
@@ -298,16 +297,15 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             cause is ClosedChannelException -> logWarnWithMDC("SSL Handshake closed early.")
             cause is SslHandshakeTimeoutException -> logWarnWithMDC("SSL Handshake timed out")
             // Sadly the exception thrown by Netty wrapper requires that we check the message.
-            cause is SSLException && (cause.message?.contains("close_notify") == true)
-                                                                           -> logWarnWithMDC("Received close_notify during handshake")
+            cause is SSLException && (cause.message?.contains("close_notify") == true) -> logWarnWithMDC("Received close_notify during handshake")
             // io.netty.handler.ssl.SslHandler.setHandshakeFailureTransportFailure()
             cause is SSLException && (cause.message?.contains("writing TLS control frames") == true) -> logWarnWithMDC(cause.message!!)
-
             else -> badCert = true
         }
-        logWarnWithMDC("Handshake failure: ${evt.cause().message}")
         if (log.isTraceEnabled) {
-            withMDC { log.trace("Handshake failure", evt.cause()) }
+            withMDC { log.trace("Handshake failure", cause) }
+        } else {
+            logWarnWithMDC("Handshake failure: ${cause.message}")
         }
         ctx.close()
     }

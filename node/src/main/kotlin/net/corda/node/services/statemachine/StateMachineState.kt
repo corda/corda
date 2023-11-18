@@ -47,6 +47,8 @@ import java.util.concurrent.Semaphore
  *   work.
  * @param isKilled true if the flow has been marked as killed. This is used to cause a flow to move to a killed flow transition no matter
  * what event it is set to process next.
+ * @param isDead true if the flow has been marked as dead. This happens when a flow experiences an unexpected error and escapes its event loop
+ * which prevents it from processing events.
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
  * @param reloadCheckpointAfterSuspendCount The number of times a flow has been reloaded (not retried). This is [null] when
  * [NodeConfiguration.reloadCheckpointAfterSuspendCount] is not enabled.
@@ -68,6 +70,7 @@ data class StateMachineState(
     val isStartIdempotent: Boolean,
     val isRemoved: Boolean,
     val isKilled: Boolean,
+    val isDead: Boolean,
     val senderUUID: String?,
     val reloadCheckpointAfterSuspendCount: Int?,
     var numberOfCommits: Int,
@@ -212,17 +215,28 @@ data class Checkpoint(
         /**
          * Deserializes the serialized fields contained in [Checkpoint.Serialized].
          *
-         * @return A [Checkpoint] with all its fields filled in from [Checkpoint.Serialized]
+         * Depending on the [FlowStatus] of the [Checkpoint.Serialized], the deserialized [Checkpoint] may or may not have its [flowState]
+         * properly deserialized. This is to optimise the process's memory footprint by not holding the checkpoints of flows that are not
+         * running in-memory.
+         *
+         * The [flowState] will not be deserialized when the [FlowStatus] is:
+         *
+         * - [FlowStatus.PAUSED]
+         * - [FlowStatus.COMPLETED]
+         * - [FlowStatus.FAILED]
+         *
+         * Any other status returns a [FlowState.Unstarted] or [FlowState.Started] depending on the content of [serializedFlowState].
+         *
+         * @param checkpointSerializationContext The [CheckpointSerializationContext] to deserialize the checkpoint's serialized content with.
+         * @param alwaysDeserializeFlowState A flag to specify if [flowState] should be deserialized, disregarding the [FlowStatus] of the
+         * checkpoint and ignoring the memory optimisation.
+         *
+         * @return A [Checkpoint] with all its fields filled in from [Checkpoint.Serialized].
          */
-        fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
-            val flowState = when(status) {
-                FlowStatus.PAUSED -> FlowState.Paused
-                FlowStatus.COMPLETED, FlowStatus.FAILED -> FlowState.Finished
-                else -> serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
-            }
+        fun deserialize(checkpointSerializationContext: CheckpointSerializationContext, alwaysDeserializeFlowState: Boolean = false): Checkpoint {
             return Checkpoint(
                 checkpointState = serializedCheckpointState.checkpointDeserialize(checkpointSerializationContext),
-                flowState = flowState,
+                flowState = getFlowState(checkpointSerializationContext, alwaysDeserializeFlowState),
                 errorState = errorState,
                 result = result?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
                 status = status,
@@ -230,6 +244,23 @@ data class Checkpoint(
                 flowIoRequest = flowIoRequest,
                 compatible = compatible
             )
+        }
+
+        private fun getFlowState(
+            checkpointSerializationContext: CheckpointSerializationContext,
+            alwaysDeserializeFlowState: Boolean
+        ): FlowState {
+            return when {
+                alwaysDeserializeFlowState -> deserializeFlowState(checkpointSerializationContext)
+                status == FlowStatus.PAUSED -> FlowState.Paused
+                status == FlowStatus.COMPLETED -> FlowState.Finished
+                status == FlowStatus.FAILED -> FlowState.Finished
+                else -> deserializeFlowState(checkpointSerializationContext)
+            }
+        }
+
+        private fun deserializeFlowState(checkpointSerializationContext: CheckpointSerializationContext): FlowState {
+            return serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
         }
     }
 }
@@ -278,7 +309,7 @@ sealed class SessionState {
      * @property rejectionError if non-null the initiation failed.
      */
     data class Initiating(
-            val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
+            val bufferedMessages: ArrayList<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
             override val deduplicationSeed: String
     ) : SessionState()
@@ -295,7 +326,7 @@ sealed class SessionState {
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: List<ExistingSessionMessagePayload>,
+            val receivedMessages: ArrayList<ExistingSessionMessagePayload>,
             val otherSideErrored: Boolean,
             val peerSinkSessionId: SessionId,
             override val deduplicationSeed: String

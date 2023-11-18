@@ -3,7 +3,16 @@ package net.corda.coretests.transactions
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.HashAttachmentConstraint
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.SignatureAttachmentConstraint
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigestService
@@ -20,11 +29,16 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.core.*
-import net.corda.coretesting.internal.rigorousMock
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DummyCommandData
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertFalse
@@ -35,6 +49,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Instant
+import kotlin.test.assertFailsWith
 
 class TransactionBuilderTest {
     @Rule
@@ -298,5 +313,23 @@ class TransactionBuilderTest {
         } finally {
             HashAgility.init()
         }
+    }
+
+    @Test(timeout=300_000)
+    fun `toWireTransaction fails if no scheme is registered with schemeId`() {
+        val outputState = TransactionState(
+                data = DummyState(),
+                contract = DummyContract.PROGRAM_ID,
+                notary = notary,
+                constraint = HashAttachmentConstraint(contractAttachmentId)
+        )
+        val builder = TransactionBuilder()
+                .addOutputState(outputState)
+                .addCommand(DummyCommandData, notary.owningKey)
+
+        val schemeId = 7
+        assertFailsWith<UnsupportedOperationException>("Could not find custom serialization scheme with SchemeId = $schemeId.") {
+            builder.toWireTransaction(services, schemeId)
+       }
     }
 }

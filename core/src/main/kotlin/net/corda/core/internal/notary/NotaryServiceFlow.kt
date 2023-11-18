@@ -28,7 +28,11 @@ import java.time.Duration
  * @param etaThreshold If the ETA for processing the request, according to the service, is greater than this, notify the client.
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService, private val etaThreshold: Duration) : FlowLogic<Void?>() {
+abstract class NotaryServiceFlow(
+        val otherSideSession: FlowSession,
+        val service: SinglePartyNotaryService,
+        private val etaThreshold: Duration
+) : FlowLogic<Void?>() {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
         private const val maxAllowedInputsAndReferences = 10_000

@@ -697,6 +697,58 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
         }
     }
 
+    /**
+     * Throws an exception when calling [FlowStateMachineImpl.logFlowError] to cause an unexpected error after the flow has properly
+     * initialised, placing the flow into a dead state.
+     *
+     * On shutdown this flow will still terminate correctly and not prevent the node from shutting down.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    @Test(timeout = 300_000)
+    fun `a dead flow can be shutdown`() {
+        startDriver {
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val rules = """
+                RULE Throw exception
+                CLASS ${FlowStateMachineImpl::class.java.name}
+                METHOD logFlowError
+                AT ENTRY
+                IF readCounter("counter") < 1
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
+                ENDRULE
+                
+                RULE Log that state machine has ended
+                CLASS $stateMachineManagerClassName
+                METHOD stop
+                AT EXIT
+                IF true
+                DO traceln("State machine shutdown")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            assertFailsWith<TimeoutException> {
+                alice.rpc.startFlow(::ThrowAnErrorFlow).returnValue.getOrThrow(50.seconds)
+            }
+
+            val (discharge, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.get()
+            assertEquals(0, discharge)
+            assertEquals(1, observation)
+            assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
+            alice.rpc.assertNumberOfCheckpoints(hospitalized = 1)
+
+            try {
+                // This actually shuts down the node
+                alice.rpc.shutdown()
+            } catch(e: Exception) {
+                // Exception gets thrown due to shutdown
+            }
+            Thread.sleep(30.seconds.toMillis())
+            alice.assertBytemanOutput("State machine shutdown", 1)
+        }
+    }
+
     @StartableByRPC
     class SleepCatchAndRethrowFlow : FlowLogic<String>() {
         @Suspendable

@@ -16,6 +16,7 @@ jobs:
         with:
           jiraBaseUrl: https://r3-cev.atlassian.net
           project: CORDA
+          squad: Corda
           issuetype: Bug
           summary: ${{ github.event.issue.title }}
           labels: community

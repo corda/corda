@@ -59,6 +59,12 @@ data class CustomCordapp(
         }
 
         classGraph.enableClassInfo().pooledScan().use { scanResult ->
+            if (scanResult.allResources.isEmpty()) {
+                throw ClassNotFoundException(
+                    "Could not create jar file as the given classes(${classes.joinToString()}) / packages(${packages.joinToString()}) were not found on the classpath"
+                )
+            }
+
             val whitelistService = SerializationWhitelist::class.java.name
             val whitelists = scanResult.getClassesImplementing(whitelistService)
 
@@ -73,13 +79,9 @@ data class CustomCordapp(
                     }
                 }
 
-                if (scanResult.allResources.isEmpty()){
-                    throw ClassNotFoundException("Could not create jar file as the given package is not found on the classpath: ${packages.toList()[0]}")
-                }
-
                 // The same resource may be found in different locations (this will happen when running from gradle) so just
                 // pick the first one found.
-                scanResult.allResources.asMap().forEach { path, resourceList ->
+                scanResult.allResourcesAsMap.forEach { (path, resourceList) ->
                     jos.addEntry(testEntry(path), resourceList[0].open())
                 }
             }

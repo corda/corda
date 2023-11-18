@@ -28,6 +28,7 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.enclosedCordapp
+import org.junit.Ignore
 import org.junit.Assume
 import org.junit.Test
 import java.time.Instant
@@ -100,6 +101,7 @@ class ScheduledFlowIntegrationTests {
         }
     }
 
+    @Ignore("ENT-5891: Unstable test we're not addressing in Corda 4.x")
     @Test(timeout=300_000)
 	fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
         Assume.assumeFalse(IS_S390X)

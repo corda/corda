@@ -153,13 +153,15 @@ abstract class StateMachineErrorHandlingTest {
         runnable: Int = 0,
         failed: Int = 0,
         completed: Int = 0,
-        hospitalized: Int = 0
+        hospitalized: Int = 0,
+        killed: Int = 0
     ) {
         val counts = startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
         assertEquals(runnable, counts.runnable, "There should be $runnable runnable checkpoints")
         assertEquals(failed, counts.failed, "There should be $failed failed checkpoints")
         assertEquals(completed, counts.completed, "There should be $completed completed checkpoints")
         assertEquals(hospitalized, counts.hospitalized, "There should be $hospitalized hospitalized checkpoints")
+        assertEquals(killed, counts.killed, "There should be $killed killed checkpoints")
     }
 
     internal fun CordaRPCOps.assertNumberOfCheckpointsAllZero() = assertNumberOfCheckpoints()
@@ -189,6 +191,7 @@ abstract class StateMachineErrorHandlingTest {
     class ThrowAnErrorFlow : FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
+            sleep(1.seconds)
             throwException()
             return "cant get here"
         }
@@ -219,7 +222,8 @@ abstract class StateMachineErrorHandlingTest {
             runnable = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.RUNNABLE),
             failed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.FAILED),
             completed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.COMPLETED),
-            hospitalized = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.HOSPITALIZED)
+            hospitalized = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.HOSPITALIZED),
+            killed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.KILLED)
         )
 
         private fun getNumberOfCheckpointsWithStatus(status: Checkpoint.FlowStatus): Int {
@@ -243,7 +247,8 @@ abstract class StateMachineErrorHandlingTest {
         val runnable: Int = 0,
         val failed: Int = 0,
         val completed: Int = 0,
-        val hospitalized: Int = 0
+        val hospitalized: Int = 0,
+        val killed: Int = 0
     )
 
     // Internal use for testing only!!

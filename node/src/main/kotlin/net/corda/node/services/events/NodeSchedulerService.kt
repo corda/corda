@@ -2,6 +2,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import io.netty.util.concurrent.DefaultThreadFactory
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
@@ -32,7 +33,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.apache.mina.util.ConcurrentHashSet
 import org.slf4j.Logger
 import java.time.Duration
 import java.time.Instant
@@ -147,9 +147,9 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
     // from the database
-    private val startingStateRefs = ConcurrentHashSet<ScheduledStateRef>()
+    private val startingStateRefs: MutableSet<ScheduledStateRef> = ConcurrentHashMap.newKeySet<ScheduledStateRef>()
     private val mutex = ThreadBox(InnerState())
-    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
+    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor(DefaultThreadFactory("SchedulerService"))
 
     // if there's nothing to do, check every minute if something fell through the cracks.
     // any new state should trigger a reschedule immediately if nothing is scheduled, so I would not expect

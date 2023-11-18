@@ -75,23 +75,20 @@ data class DigestService(val hashAlgorithm: String) {
     val zeroHash: SecureHash
         get() = SecureHash.zeroHashFor(hashAlgorithm)
 
-//    val privacySalt: PrivacySalt
-//        get() = PrivacySalt.createFor(hashAlgorithm)
-
     /**
      * Compute the hash of each serialised component so as to be used as Merkle tree leaf. The resultant output (leaf) is
      * calculated using the service's hash algorithm, thus HASH(HASH(nonce || serializedComponent)) for SHA2-256 and other
-     * algorithms loaded via JCA [MessageDigest], or DigestAlgorithm.preImageResistantDigest(nonce || serializedComponent)
+     * algorithms loaded via JCA [MessageDigest], or DigestAlgorithm.componentDigest(nonce || serializedComponent)
      * otherwise, where nonce is computed from [computeNonce].
      */
     fun componentHash(opaqueBytes: OpaqueBytes, privacySalt: PrivacySalt, componentGroupIndex: Int, internalIndex: Int): SecureHash =
             componentHash(computeNonce(privacySalt, componentGroupIndex, internalIndex), opaqueBytes)
 
     /** Return the HASH(HASH(nonce || serializedComponent)) for SHA2-256 and other algorithms loaded via JCA [MessageDigest],
-     *  otherwise it's defined by DigestAlgorithm.preImageResistantDigest(nonce || serializedComponent). */
+     *  otherwise it's defined by DigestAlgorithm.componentDigest(nonce || serializedComponent). */
     fun componentHash(nonce: SecureHash, opaqueBytes: OpaqueBytes): SecureHash {
         val data = nonce.bytes + opaqueBytes.bytes
-        return SecureHash.preImageResistantHashAs(hashAlgorithm, data)
+        return SecureHash.componentHashAs(hashAlgorithm, data)
     }
 
     /**
@@ -109,11 +106,11 @@ data class DigestService(val hashAlgorithm: String) {
      * @param groupIndex the fixed index (ordinal) of this component group.
      * @param internalIndex the internal index of this object in its corresponding components list.
      * @return HASH(HASH(privacySalt || groupIndex || internalIndex)) for SHA2-256 and other algorithms loaded via JCA [MessageDigest],
-     *         otherwise it's defined by DigestAlgorithm.preImageResistantDigest(privacySalt || groupIndex || internalIndex).
+     *         otherwise it's defined by DigestAlgorithm.nonceDigest(privacySalt || groupIndex || internalIndex).
      */
     fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) : SecureHash {
         val data = (privacySalt.bytes + ByteBuffer.allocate(NONCE_SIZE).putInt(groupIndex).putInt(internalIndex).array())
-        return SecureHash.preImageResistantHashAs(hashAlgorithm, data)
+        return SecureHash.nonceHashAs(hashAlgorithm, data)
     }
 }
 

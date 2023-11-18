@@ -30,6 +30,7 @@ pipeline {
     stages {
         stage('Detekt check') {
             steps {
+                authenticateGradleWrapper()
                 sh "./gradlew --no-daemon --parallel --build-cache clean detekt"
             }
         }
@@ -54,6 +55,7 @@ pipeline {
                 GRADLE_USER_HOME = "/host_tmp/gradle"
             }
             steps {
+                authenticateGradleWrapper()
                 sh 'mkdir -p ${GRADLE_USER_HOME}'
                 snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }

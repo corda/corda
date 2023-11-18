@@ -1162,6 +1162,7 @@
     <ID>MatchingDeclarationName:NamedCache.kt$net.corda.core.internal.NamedCache.kt</ID>
     <ID>MatchingDeclarationName:NetParams.kt$net.corda.netparams.NetParams.kt</ID>
     <ID>MatchingDeclarationName:NetworkParametersServiceInternal.kt$net.corda.core.internal.NetworkParametersServiceInternal.kt</ID>
+    <ID>MatchingDeclarationName:NotaryQueries.kt$net.corda.nodeapi.notary.NotaryQueries.kt</ID>
     <ID>MatchingDeclarationName:OGSwapPricingCcpExample.kt$net.corda.vega.analytics.example.OGSwapPricingCcpExample.kt</ID>
     <ID>MatchingDeclarationName:OGSwapPricingExample.kt$net.corda.vega.analytics.example.OGSwapPricingExample.kt</ID>
     <ID>MatchingDeclarationName:PlatformSecureRandom.kt$net.corda.core.crypto.internal.PlatformSecureRandom.kt</ID>

@@ -56,6 +56,7 @@ pipeline {
                 stage('Unit Tests') {
                     agent { label 'mswin' }
                     steps {
+                        authenticateGradleWrapper()
                         bat "./gradlew --no-daemon " +
                                 "--stacktrace " +
                                 "-Pcompilation.warningsAsErrors=false " +

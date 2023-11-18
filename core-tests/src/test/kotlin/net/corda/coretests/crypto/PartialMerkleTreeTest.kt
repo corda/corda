@@ -5,8 +5,11 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.BLAKE2s256DigestAlgorithm
+import net.corda.core.internal.SHA256BLAKE2s256DigestAlgorithm
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.deserialize
@@ -49,12 +52,19 @@ class PartialMerkleTreeTest(private var digestService: DigestService) {
         val MINI_CORP get() = miniCorp.party
         val MINI_CORP_PUBKEY get() = miniCorp.publicKey
 
+        init {
+            DigestAlgorithmFactory.registerClass(BLAKE2s256DigestAlgorithm::class.java.name)
+            DigestAlgorithmFactory.registerClass(SHA256BLAKE2s256DigestAlgorithm::class.java.name)
+        }
+
         @JvmStatic
         @Parameterized.Parameters
         fun data(): Collection<DigestService> = listOf(
                 DigestService.sha2_256,
                 DigestService.sha2_384,
-                DigestService.sha2_512
+                DigestService.sha2_512,
+                DigestService("BLAKE_TEST"),
+                DigestService("SHA256-BLAKE2S256-TEST")
         )
     }
 

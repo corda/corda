@@ -1,16 +1,41 @@
+@file:Suppress("MagicNumber", "TooGenericExceptionCaught")
+
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.internal.reader
+import net.corda.core.internal.signWithCert
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.validate
+import net.corda.core.internal.writer
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
-import org.bouncycastle.asn1.*
+import net.corda.core.utilities.toHex
+import net.corda.nodeapi.internal.protonwrapper.netty.distributionPointsToString
+import org.bouncycastle.asn1.ASN1EncodableVector
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.ASN1Sequence
+import org.bouncycastle.asn1.DERSequence
+import org.bouncycastle.asn1.DERUTF8String
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
-import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
+import org.bouncycastle.asn1.x509.BasicConstraints
+import org.bouncycastle.asn1.x509.CRLDistPoint
+import org.bouncycastle.asn1.x509.DistributionPoint
+import org.bouncycastle.asn1.x509.DistributionPointName
 import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralNames
+import org.bouncycastle.asn1.x509.KeyPurposeId
+import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
@@ -28,8 +53,13 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
-import java.security.cert.*
+import java.security.cert.CertPath
 import java.security.cert.Certificate
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
+import java.security.cert.TrustAnchor
+import java.security.cert.X509CRL
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -355,7 +385,7 @@ object X509Utilities {
 
     private fun addCrlInfo(builder: X509v3CertificateBuilder, crlDistPoint: String?, crlIssuer: X500Name?) {
         if (crlDistPoint != null) {
-            val distPointName = DistributionPointName(GeneralNames(GeneralName(GeneralName.uniformResourceIdentifier, crlDistPoint)))
+            val distPointName = DistributionPointName(toGeneralNames(crlDistPoint, GeneralName.uniformResourceIdentifier))
             val crlIssuerGeneralNames = crlIssuer?.let {
                 GeneralNames(GeneralName(crlIssuer))
             }
@@ -368,7 +398,6 @@ object X509Utilities {
         }
     }
 
-    @Suppress("MagicNumber")
     private fun generateCertificateSerialNumber(): BigInteger {
         val bytes = ByteArray(CERTIFICATE_SERIAL_NUMBER_LENGTH)
         newSecureRandom().nextBytes(bytes)
@@ -376,6 +405,8 @@ object X509Utilities {
         bytes[0] = bytes[0].and(0x3F).or(0x40)
         return BigInteger(bytes)
     }
+
+    fun toGeneralNames(string: String, tag: Int = GeneralName.directoryName): GeneralNames = GeneralNames(GeneralName(tag, string))
 }
 
 // Assuming cert type to role is 1:1
@@ -408,6 +439,29 @@ fun PKCS10CertificationRequest.isSignatureValid(): Boolean {
     return this.isSignatureValid(JcaContentVerifierProviderBuilder().build(this.subjectPublicKeyInfo))
 }
 
+fun X509Certificate.toSimpleString(): String {
+    val bcCert = toBc()
+    val keyIdentifier = try {
+        SubjectKeyIdentifier.getInstance(bcCert.getExtension(Extension.subjectKeyIdentifier).parsedValue).keyIdentifier.toHex()
+    } catch (e: Exception) {
+        "null"
+    }
+    val authorityKeyIdentifier = try {
+        AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
+    } catch (e: Exception) {
+        "null"
+    }
+    val subject = bcCert.subject
+    val issuer = bcCert.issuer
+    val role = CertRole.extract(this)
+    return "$subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] $role $serialNumber [${distributionPointsToString()}]"
+}
+
+fun X509CRL.toSimpleString(): String {
+    val revokedSerialNumbers = revokedCertificates?.map { it.serialNumber }
+    return "$issuerX500Principal ${thisUpdate.toInstant()} ${nextUpdate.toInstant()} ${revokedSerialNumbers ?: "[]"}"
+}
+
 /**
  * Check certificate validity or print warning if expiry is within 30 days
  */
@@ -438,6 +492,8 @@ class X509CertificateFactory {
     fun generateCertPath(vararg certificates: X509Certificate): CertPath = generateCertPath(certificates.asList())
 
     fun generateCertPath(certificates: List<X509Certificate>): CertPath = delegate.generateCertPath(certificates)
+
+    fun generateCRL(input: InputStream): X509CRL = delegate.generateCRL(input) as X509CRL
 }
 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean, val role: CertRole?) {

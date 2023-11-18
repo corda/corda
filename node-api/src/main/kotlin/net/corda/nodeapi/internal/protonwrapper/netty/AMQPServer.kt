@@ -11,6 +11,7 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import io.netty.util.concurrent.DefaultThreadFactory
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.utilities.NetworkHostAndPort
@@ -20,15 +21,15 @@ import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.requireMessageSize
+import net.corda.nodeapi.internal.revocation.CertDistPointCrlSource
 import org.apache.qpid.proton.engine.Delivery
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.BindException
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.locks.ReentrantLock
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.withLock
 
 /**
@@ -36,36 +37,34 @@ import kotlin.concurrent.withLock
  */
 class AMQPServer(val hostName: String,
                  val port: Int,
-                 private val configuration: AMQPConfiguration) : AutoCloseable {
-
+                 private val configuration: AMQPConfiguration,
+                 private val threadPoolName: String = "AMQPServer",
+                 private val distPointCrlSource: CertDistPointCrlSource = CertDistPointCrlSource.SINGLETON,
+                 private val remotingThreads: Int? = null) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
         }
 
-        private const val CORDA_AMQP_NUM_SERVER_THREAD_PROP_NAME = "net.corda.nodeapi.amqpserver.NumServerThreads"
-
         private val log = contextLogger()
-        private val NUM_SERVER_THREADS = Integer.getInteger(CORDA_AMQP_NUM_SERVER_THREAD_PROP_NAME, 4)
+        private val DEFAULT_REMOTING_THREADS = Integer.getInteger("net.corda.nodeapi.amqpserver.NumServerThreads", 4)
     }
 
     private val lock = ReentrantLock()
-    @Volatile
-    private var stopping: Boolean = false
     private var bossGroup: EventLoopGroup? = null
     private var workerGroup: EventLoopGroup? = null
     private var serverChannel: Channel? = null
+    private var sslDelegatedTaskExecutor: ExecutorService? = null
     private val clientChannels = ConcurrentHashMap<InetSocketAddress, SocketChannel>()
 
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
-        private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        private val keyManagerFactory = keyManagerFactory(parent.configuration.keyStore)
+        private val trustManagerFactory = trustManagerFactoryWithRevocation(
+                parent.configuration.trustStore,
+                parent.configuration.revocationConfig,
+                parent.distPointCrlSource
+        )
         private val conf = parent.configuration
-
-        init {
-            keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.entryPassword.toCharArray())
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
-        }
 
         override fun initChannel(ch: SocketChannel) {
             val amqpConfiguration = parent.configuration
@@ -75,7 +74,8 @@ class AMQPServer(val hostName: String,
             pipeline.addLast("sslHandler", sslHandler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             val suppressLogs = ch.remoteAddress()?.hostString in amqpConfiguration.silencedIPs
-            pipeline.addLast(AMQPChannelHandler(true,
+            pipeline.addLast(AMQPChannelHandler(
+                    true,
                     null,
                     // Passing a mapping of legal names to key managers to be able to pick the correct one after
                     // SNI completion event is fired up.
@@ -84,36 +84,42 @@ class AMQPServer(val hostName: String,
                     conf.password,
                     conf.trace,
                     suppressLogs,
-                    onOpen = { channel, change ->
-                        parent.run {
-                            clientChannels[channel.remoteAddress()] = channel
-                            _onConnection.onNext(change)
-                        }
-                    },
-                    onClose = { channel, change ->
-                        parent.run {
-                            val remoteAddress = channel.remoteAddress()
-                            clientChannels.remove(remoteAddress)
-                            _onConnection.onNext(change)
-                        }
-                    },
-                    onReceive = { rcv -> parent._onReceive.onNext(rcv) }))
+                    onOpen = ::onChannelOpen,
+                    onClose = ::onChannelClose,
+                    onReceive = parent._onReceive::onNext
+            ))
+        }
+
+        private fun onChannelOpen(channel: SocketChannel, change: ConnectionChange) {
+            parent.run {
+                clientChannels[channel.remoteAddress()] = channel
+                _onConnection.onNext(change)
+            }
+        }
+
+        private fun onChannelClose(channel: SocketChannel, change: ConnectionChange) {
+            parent.run {
+                val remoteAddress = channel.remoteAddress()
+                clientChannels.remove(remoteAddress)
+                _onConnection.onNext(change)
+            }
         }
 
         private fun createSSLHandler(amqpConfig: AMQPConfiguration, ch: SocketChannel): Pair<ChannelHandler, Map<String, CertHoldingKeyManagerFactoryWrapper>> {
             return if (amqpConfig.useOpenSsl && amqpConfig.enableSNI && amqpConfig.keyStore.aliases().size > 1) {
                 val keyManagerFactoriesMap = splitKeystore(amqpConfig)
                 // SNI matching needed only when multiple nodes exist behind the server.
-                Pair(createServerSNIOpenSslHandler(keyManagerFactoriesMap, trustManagerFactory), keyManagerFactoriesMap)
+                Pair(createServerSNIOpenSniHandler(keyManagerFactoriesMap, trustManagerFactory), keyManagerFactoriesMap)
             } else {
                 val keyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, amqpConfig)
+                val delegatedTaskExecutor = checkNotNull(parent.sslDelegatedTaskExecutor)
                 val handler = if (amqpConfig.useOpenSsl) {
-                    createServerOpenSslHandler(keyManagerFactory, trustManagerFactory, ch.alloc())
+                    createServerOpenSslHandler(keyManagerFactory, trustManagerFactory, ch.alloc(), delegatedTaskExecutor)
                 } else {
                     // For javaSSL, SNI matching is handled at key manager level.
-                    createServerSslHandler(amqpConfig.keyStore, keyManagerFactory, trustManagerFactory)
+                    createServerSslHandler(amqpConfig.keyStore, keyManagerFactory, trustManagerFactory, delegatedTaskExecutor)
                 }
-                handler.handshakeTimeoutMillis = amqpConfig.sslHandshakeTimeout
+                handler.handshakeTimeoutMillis = amqpConfig.sslHandshakeTimeout.toMillis()
                 Pair(handler, mapOf(DEFAULT to keyManagerFactory))
             }
         }
@@ -123,8 +129,13 @@ class AMQPServer(val hostName: String,
         lock.withLock {
             stop()
 
-            bossGroup = NioEventLoopGroup(1)
-            workerGroup = NioEventLoopGroup(NUM_SERVER_THREADS)
+            sslDelegatedTaskExecutor = sslDelegatedTaskExecutor(threadPoolName)
+
+            bossGroup = NioEventLoopGroup(1, DefaultThreadFactory("$threadPoolName-boss", Thread.MAX_PRIORITY))
+            workerGroup = NioEventLoopGroup(
+                    remotingThreads ?: DEFAULT_REMOTING_THREADS,
+                    DefaultThreadFactory("$threadPoolName-worker", Thread.MAX_PRIORITY)
+            )
 
             val server = ServerBootstrap()
             // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
@@ -145,22 +156,19 @@ class AMQPServer(val hostName: String,
 
     fun stop() {
         lock.withLock {
-            try {
-                stopping = true
-                serverChannel?.apply { close() }
-                serverChannel = null
+            serverChannel?.close()
+            serverChannel = null
 
-                workerGroup?.shutdownGracefully()
-                workerGroup?.terminationFuture()?.sync()
+            workerGroup?.shutdownGracefully()
+            workerGroup?.terminationFuture()?.sync()
+            workerGroup = null
 
-                bossGroup?.shutdownGracefully()
-                bossGroup?.terminationFuture()?.sync()
+            bossGroup?.shutdownGracefully()
+            bossGroup?.terminationFuture()?.sync()
+            bossGroup = null
 
-                workerGroup = null
-                bossGroup = null
-            } finally {
-                stopping = false
-            }
+            sslDelegatedTaskExecutor?.shutdown()
+            sslDelegatedTaskExecutor = null
         }
     }
 

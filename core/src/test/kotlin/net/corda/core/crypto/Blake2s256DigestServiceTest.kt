@@ -1,33 +1,19 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.internal.DigestAlgorithmFactory
-import org.bouncycastle.crypto.digests.Blake2sDigest
+import net.corda.core.internal.BLAKE2s256DigestAlgorithm
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class Blake2s256DigestServiceTest {
-    class BLAKE2s256DigestService : DigestAlgorithm {
-        override val algorithm = "BLAKE_TEST"
-
-        override val digestLength = 32
-
-        override fun digest(bytes: ByteArray): ByteArray {
-            val blake2s256 = Blake2sDigest(null, digestLength, null, "12345678".toByteArray())
-            blake2s256.reset()
-            blake2s256.update(bytes, 0, bytes.size)
-            val hash = ByteArray(digestLength)
-            blake2s256.doFinal(hash, 0)
-            return hash
-        }
-    }
 
     private val service = DigestService("BLAKE_TEST")
 
     @Before
     fun before() {
-        DigestAlgorithmFactory.registerClass(BLAKE2s256DigestService::class.java.name)
+        DigestAlgorithmFactory.registerClass(BLAKE2s256DigestAlgorithm::class.java.name)
     }
 
     @Test(timeout = 300_000)

@@ -5,7 +5,6 @@ import net.corda.contracts.djvm.attachment.SandboxAttachmentContract.ExtractFile
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.djvm.code.asResourcePath
 import net.corda.flows.djvm.attachment.SandboxAttachmentFlow
 import net.corda.node.DeterministicSourcesRule
 import net.corda.node.internal.djvm.DeterministicVerificationException
@@ -32,11 +31,11 @@ class SandboxAttachmentsTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
+        fun parametersFor(djvmSources: DeterministicSourcesRule, runInProcess: Boolean = false): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                startNodesInProcess = runInProcess,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = runInProcess, validating = true)),
                 cordappsForAllNodes = listOf(
                     cordappWithPackages("net.corda.flows.djvm.attachment"),
                     CustomCordapp(
@@ -52,7 +51,7 @@ class SandboxAttachmentsTest {
 
     @Test(timeout=300_000)
 	fun `test attachment accessible within sandbox`() {
-        val extractFile = ExtractFile(SandboxAttachmentContract::class.java.name.asResourcePath + ".class")
+        val extractFile = ExtractFile(SandboxAttachmentContract::class.java.name.replace('.', '/') + ".class")
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {

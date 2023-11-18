@@ -92,6 +92,7 @@ class FlowCreator(
         lock: Semaphore = Semaphore(1),
         resultFuture: OpenFuture<Any?> = openFuture(),
         firstRestore: Boolean = true,
+        isKilled: Boolean = false,
         progressTracker: ProgressTracker? = null
     ): Flow<*>? {
         val fiber = oldCheckpoint.getFiberFromCheckpoint(runId, firstRestore)
@@ -116,7 +117,8 @@ class FlowCreator(
             reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
                 ?: if (reloadCheckpointAfterSuspend) checkpoint.checkpointState.numberOfSuspends else null,
             numberOfCommits = checkpoint.checkpointState.numberOfCommits,
-            lock = lock
+            lock = lock,
+            isKilled = isKilled
         )
         injectOldProgressTracker(progressTracker, fiber.logic)
         return Flow(fiber, resultFuture)
@@ -248,7 +250,8 @@ class FlowCreator(
         numberOfCommits: Int,
         lock: Semaphore,
         deduplicationHandler: DeduplicationHandler? = null,
-        senderUUID: String? = null
+        senderUUID: String? = null,
+        isKilled: Boolean = false
     ): StateMachineState {
         return StateMachineState(
             checkpoint = checkpoint,
@@ -259,7 +262,8 @@ class FlowCreator(
             isAnyCheckpointPersisted = anyCheckpointPersisted,
             isStartIdempotent = false,
             isRemoved = false,
-            isKilled = false,
+            isKilled = isKilled,
+            isDead = false,
             flowLogic = fiber.logic,
             senderUUID = senderUUID,
             reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount,

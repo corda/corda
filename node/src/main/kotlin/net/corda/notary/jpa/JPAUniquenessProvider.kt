@@ -24,6 +24,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.vault.toStateRef
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.notary.common.InternalResult
@@ -142,10 +143,6 @@ class JPAUniquenessProvider(
         fun encodeStateRef(s: StateRef): PersistentStateRef {
             return PersistentStateRef(s.txhash.toString(), s.index)
         }
-
-        fun decodeStateRef(s: PersistentStateRef): StateRef {
-            return StateRef(txhash = SecureHash.create(s.txId), index = s.index)
-        }
     }
 
     /**
@@ -215,15 +212,15 @@ class JPAUniquenessProvider(
             committedStates.addAll(existing)
         }
 
-        return committedStates.map {
-            val stateRef = StateRef(txhash = SecureHash.create(it.id.txId), index = it.id.index)
+        return committedStates.associate {
+            val stateRef = it.id.toStateRef()
             val consumingTxId = SecureHash.create(it.consumingTxHash)
             if (stateRef in references) {
                 stateRef to StateConsumptionDetails(consumingTxId.reHash(), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
             } else {
                 stateRef to StateConsumptionDetails(consumingTxId.reHash())
             }
-        }.toMap()
+        }
     }
 
     private fun<T> withRetry(block: () -> T): T {

@@ -88,11 +88,11 @@ class CorDappCustomSerializer(
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
     ) = uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?, Any?>>(
-            serializer).fromProxy(uncheckedCast(proxySerializer.readObject(obj, schemas, input, context)))!!
+            serializer).fromProxy(proxySerializer.readObject(obj, schemas, input, context))!!
 
     /**
      * For 3rd party plugin serializers we are going to exist on exact type matching. i.e. we will
-     * not support base class serializers for derivedtypes
+     * not support base class serializers for derived types
      */
     override fun isSerializerFor(clazz: Class<*>) =
         TypeToken.of(type.asClass()) == TypeToken.of(clazz)

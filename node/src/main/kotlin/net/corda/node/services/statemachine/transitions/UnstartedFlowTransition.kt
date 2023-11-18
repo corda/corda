@@ -6,6 +6,7 @@ import net.corda.node.services.statemachine.ConfirmSessionMessage
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.ExistingSessionMessagePayload
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SenderDeduplicationId
@@ -50,9 +51,9 @@ class UnstartedFlowTransition(
                         appName = initiatingMessage.appName
                 ),
                 receivedMessages = if (initiatingMessage.firstPayload == null) {
-                    emptyList()
+                    arrayListOf()
                 } else {
-                    listOf(DataSessionMessage(initiatingMessage.firstPayload))
+                    arrayListOf<ExistingSessionMessagePayload>(DataSessionMessage(initiatingMessage.firstPayload))
                 },
                 deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}",
                 otherSideErrored = false

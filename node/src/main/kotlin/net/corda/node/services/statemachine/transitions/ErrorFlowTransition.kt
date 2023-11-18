@@ -63,7 +63,12 @@ class ErrorFlowTransition(
                     status = Checkpoint.FlowStatus.FAILED,
                     flowState = FlowState.Finished,
                     checkpointState = startingState.checkpoint.checkpointState.copy(
-                        numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1
+                        numberOfCommits = startingState.checkpoint.checkpointState.numberOfCommits + 1,
+                        invocationContext = if (startingState.checkpoint.checkpointState.invocationContext.arguments!!.isNotEmpty()) {
+                            startingState.checkpoint.checkpointState.invocationContext.copy(arguments = emptyList())
+                        } else {
+                            startingState.checkpoint.checkpointState.invocationContext
+                        }
                     )
                 )
                 currentState = currentState.copy(
@@ -121,9 +126,9 @@ class ErrorFlowTransition(
             if (sessionState is SessionState.Initiating && sessionState.rejectionError == null) {
                 // *prepend* the error messages in order to error the other sessions ASAP. The other messages will
                 // be delivered all the same, they just won't trigger flow resumption because of dirtiness.
-                val errorMessagesWithDeduplication = errorMessages.map {
+                val errorMessagesWithDeduplication: ArrayList<Pair<DeduplicationId, ExistingSessionMessagePayload>> = errorMessages.map {
                     DeduplicationId.createForError(it.errorId, sourceSessionId) to it
-                }
+                }.toArrayList()
                 sessionState.copy(bufferedMessages = errorMessagesWithDeduplication + sessionState.bufferedMessages)
             } else {
                 sessionState

@@ -250,7 +250,7 @@ class StartedFlowTransition(
                     if (messages.isEmpty()) {
                         someNotFound = true
                     } else {
-                        newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages.subList(1, messages.size).toList())
+                        newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages.subList(1, messages.size).toArrayList())
                         // at this point, we've already checked for errors and session ends, so it's guaranteed that the first message will be a data message.
                         resultMessages[sessionId] = if (messages[0] is EndSessionMessage) {
                             throw UnexpectedFlowEndException("Received session end message instead of a data session message. Mismatched send and receive?")
@@ -285,7 +285,7 @@ class StartedFlowTransition(
             }
             val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, sessionState.additionalEntropy, null)
             val newSessionState = SessionState.Initiating(
-                    bufferedMessages = emptyList(),
+                    bufferedMessages = arrayListOf(),
                     rejectionError = null,
                     deduplicationSeed = sessionState.deduplicationSeed
             )
@@ -324,7 +324,7 @@ class StartedFlowTransition(
             val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, sessionState)
             val initialMessage = createInitialSessionMessage(uninitiatedSessionState.initiatingSubFlow, sourceSessionId, uninitiatedSessionState.additionalEntropy, message)
             newSessions[sourceSessionId] = SessionState.Initiating(
-                    bufferedMessages = emptyList(),
+                    bufferedMessages = arrayListOf(),
                     rejectionError = null,
                     deduplicationSeed = uninitiatedSessionState.deduplicationSeed
             )
@@ -375,7 +375,10 @@ class StartedFlowTransition(
                             if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is ErrorSessionMessage) {
                                 val errorMessage = sessionState.receivedMessages.first() as ErrorSessionMessage
                                 val exception = convertErrorMessageToException(errorMessage, sessionState.peerParty)
-                                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages.subList(1, sessionState.receivedMessages.size), otherSideErrored = true)
+                                val newSessionState = sessionState.copy(
+                                    receivedMessages = sessionState.receivedMessages.subList(1, sessionState.receivedMessages.size).toArrayList(),
+                                    otherSideErrored = true
+                                )
                                 val newCheckpoint = startingState.checkpoint.addSession(sessionId to newSessionState)
                                 newState = startingState.copy(checkpoint = newCheckpoint)
                                 listOf(exception)

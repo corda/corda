@@ -5,10 +5,12 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.transactions.ComponentGroup
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
+import java.util.function.Supplier
 
 /**
  * A set of functions in core:test that allows testing of core internal classes in the core-tests project.
@@ -18,6 +20,7 @@ fun WireTransaction.accessGroupHashes() = this.groupHashes
 
 fun WireTransaction.accessGroupMerkleRoots() = this.groupsMerkleRoots
 fun WireTransaction.accessAvailableComponentHashes() = this.availableComponentHashes
+fun WireTransaction.accessAvailableComponentNonces() = this.availableComponentNonces
 
 @Suppress("LongParameterList")
 fun createLedgerTransaction(
@@ -37,7 +40,17 @@ fun createLedgerTransaction(
         isAttachmentTrusted: (Attachment) -> Boolean,
         attachmentsClassLoaderCache: AttachmentsClassLoaderCache,
         digestService: DigestService = DigestService.default
-): LedgerTransaction = LedgerTransaction.create(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, componentGroups, serializedInputs, serializedReferences, isAttachmentTrusted, attachmentsClassLoaderCache, digestService)
+): LedgerTransaction = LedgerTransaction.create(
+    inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, componentGroups, serializedInputs, serializedReferences, isAttachmentTrusted, attachmentsClassLoaderCache, digestService
+).specialise(::PassthroughVerifier)
 
 fun createContractCreationError(txId: SecureHash, contractClass: String, cause: Throwable) = TransactionVerificationException.ContractCreationError(txId, contractClass, cause)
 fun createContractRejection(txId: SecureHash, contract: Contract, cause: Throwable) = TransactionVerificationException.ContractRejection(txId, contract, cause)
+
+/**
+ * Verify the [LedgerTransaction] we already have.
+ */
+private class PassthroughVerifier(ltx: LedgerTransaction, context: SerializationContext) : AbstractVerifier(ltx, context.deserializationClassLoader) {
+    override val transaction: Supplier<LedgerTransaction>
+        get() = Supplier { ltx }
+}

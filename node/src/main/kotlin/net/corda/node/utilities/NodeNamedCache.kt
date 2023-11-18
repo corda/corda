@@ -33,7 +33,8 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
     override fun bindWithMetrics(metricRegistry: MetricRegistry): BindableNamedCacheFactory = DefaultNamedCacheFactory(metricRegistry, this.nodeConfiguration)
     override fun bindWithConfig(nodeConfiguration: NodeConfiguration): BindableNamedCacheFactory = DefaultNamedCacheFactory(this.metricRegistry, nodeConfiguration)
 
-    open protected fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
+    @Suppress("ComplexMethod")
+    protected open fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
         return with(nodeConfiguration!!) {
             when {
                 name.startsWith("RPCSecurityManagerShiroCache_") -> with(security?.authService?.options?.cache!!) { caffeine.maximumSize(maxEntries).expireAfterWrite(expireAfterSecs, TimeUnit.SECONDS) }
@@ -43,7 +44,6 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "HibernateConfiguration_sessionFactories" -> caffeine.maximumSize(database.mappedSchemaCacheSize)
                 name == "DBTransactionStorage_transactions" -> caffeine.maximumWeight(transactionCacheSizeBytes)
                 name == "NodeAttachmentService_attachmentContent" -> caffeine.maximumWeight(attachmentContentCacheSizeBytes)
-                name == "NodeAttachmentService_attachmentPresence" -> caffeine.maximumSize(attachmentCacheBound)
                 name == "NodeAttachmentService_contractAttachmentVersions" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_keyToPartyAndCert" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PersistentIdentityService_nameToParty" -> caffeine.maximumSize(defaultCacheSize)
@@ -85,7 +85,7 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
         return configuredForNamed(caffeine, name).build<K, V>(loader)
     }
 
-    open protected val defaultCacheSize = 1024L
+    protected open val defaultCacheSize = 1024L
     private val defaultAttachmentsClassLoaderCacheSize = defaultCacheSize / CACHE_SIZE_DENOMINATOR
 }
 private const val CACHE_SIZE_DENOMINATOR = 4L

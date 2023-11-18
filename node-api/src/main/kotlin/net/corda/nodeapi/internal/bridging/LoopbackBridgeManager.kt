@@ -23,6 +23,7 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.slf4j.MDC
+import java.time.Duration
 
 /**
  *  The LoopbackBridgeManager holds the list of independent LoopbackBridge objects that actively loopback messages to local Artemis
@@ -36,11 +37,11 @@ class LoopbackBridgeManager(keyStore: CertificateStore,
                             maxMessageSize: Int,
                             revocationConfig: RevocationConfig,
                             enableSNI: Boolean,
-                            private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                            private val artemisMessageClientFactory: (String) -> ArtemisSessionProvider,
                             private val bridgeMetricsService: BridgeMetricsService? = null,
                             private val isLocalInbox: (String) -> Boolean,
                             trace: Boolean,
-                            sslHandshakeTimeout: Long? = null,
+                            sslHandshakeTimeout: Duration? = null,
                             bridgeConnectionTTLSeconds: Int = 0) : AMQPBridgeManager(keyStore, trustStore, useOpenSSL, proxyConfig,
                                                                                      maxMessageSize, revocationConfig, enableSNI,
                                                                                      artemisMessageClientFactory, bridgeMetricsService,
@@ -203,7 +204,7 @@ class LoopbackBridgeManager(keyStore: CertificateStore,
 
     override fun start() {
         super.start()
-        val artemis = artemisMessageClientFactory()
+        val artemis = artemisMessageClientFactory("LoopbackBridge")
         this.artemis = artemis
         artemis.start()
     }

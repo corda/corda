@@ -10,7 +10,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingCondition
@@ -29,6 +28,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.flows.registerCoreFlowFactory
 import net.corda.coretesting.internal.rigorousMock
+import net.corda.node.internal.NodeServicesForResolution
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
@@ -86,7 +86,7 @@ class VaultSoftLockManagerTest {
     private val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(enclosedCordapp()), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService,
-                                          services: ServicesForResolution,
+                                          services: NodeServicesForResolution,
                                           database: CordaPersistence,
                                           cordappLoader: CordappLoader): VaultServiceInternal {
                 val node = this

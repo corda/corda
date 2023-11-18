@@ -1851,12 +1851,14 @@ public final class net.corda.core.crypto.CryptoUtils extends java.lang.Object
 ##
 public interface net.corda.core.crypto.DigestAlgorithm
   @NotNull
+  public abstract byte[] componentDigest(byte[])
+  @NotNull
   public abstract byte[] digest(byte[])
   @NotNull
   public abstract String getAlgorithm()
   public abstract int getDigestLength()
   @NotNull
-  public abstract byte[] preImageResistantDigest(byte[])
+  public abstract byte[] nonceDigest(byte[])
 ##
 @CordaSerializable
 public class net.corda.core.crypto.DigitalSignature extends net.corda.core.utilities.OpaqueBytes
@@ -5935,6 +5937,13 @@ public @interface net.corda.core.serialization.CordaSerializationTransformRename
 public @interface net.corda.core.serialization.CordaSerializationTransformRenames
   public abstract net.corda.core.serialization.CordaSerializationTransformRename[] value()
 ##
+public interface net.corda.core.serialization.CustomSerializationScheme
+  @NotNull
+  public abstract T deserialize(net.corda.core.utilities.ByteSequence, Class<T>, net.corda.core.serialization.SerializationSchemeContext)
+  public abstract int getSchemeId()
+  @NotNull
+  public abstract net.corda.core.utilities.ByteSequence serialize(T, net.corda.core.serialization.SerializationSchemeContext)
+##
 public @interface net.corda.core.serialization.DeprecatedConstructorForDeserialization
   public abstract int version()
 ##
@@ -6075,6 +6084,13 @@ public static final class net.corda.core.serialization.SerializationFactory$Comp
   public final net.corda.core.serialization.SerializationFactory getCurrentFactory()
   @NotNull
   public final net.corda.core.serialization.SerializationFactory getDefaultFactory()
+##
+@DoNotImplement
+public interface net.corda.core.serialization.SerializationSchemeContext
+  @NotNull
+  public abstract ClassLoader getDeserializationClassLoader()
+  @NotNull
+  public abstract net.corda.core.serialization.ClassWhitelist getWhitelist()
 ##
 public interface net.corda.core.serialization.SerializationToken
   @NotNull

@@ -5,7 +5,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
-import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransportFromList
 import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.*
@@ -25,7 +24,9 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val confirmationWindowSize: Int = -1,
                              private val messagingServerConnectionConfig: MessagingServerConnectionConfiguration? = null,
                              private val backupServerAddressPool: List<NetworkHostAndPort> = emptyList(),
-                             private val failoverCallback: ((FailoverEventType) -> Unit)? = null
+                             private val failoverCallback: ((FailoverEventType) -> Unit)? = null,
+                             private val threadPoolName: String = "ArtemisClient",
+                             private val trace: Boolean = false
 )  : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
@@ -40,8 +41,10 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
 
     override fun start(): Started = synchronized(this) {
         check(started == null) { "start can't be called twice" }
-        val tcpTransport = p2pConnectorTcpTransport(serverAddress, config)
-        val backupTransports = p2pConnectorTcpTransportFromList(backupServerAddressPool, config)
+        val tcpTransport = p2pConnectorTcpTransport(serverAddress, config, threadPoolName = threadPoolName, trace = trace)
+        val backupTransports = backupServerAddressPool.mapIndexed { index, address ->
+            p2pConnectorTcpTransport(address, config, threadPoolName = "$threadPoolName-backup${index+1}", trace = trace)
+        }
 
         log.info("Connecting to message broker: $serverAddress")
         if (backupTransports.isNotEmpty()) {
@@ -50,8 +53,6 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
         // If back-up artemis addresses are configured, the locator will be created using HA mode.
         @Suppress("SpreadOperator")
         val locator = ActiveMQClient.createServerLocator(backupTransports.isNotEmpty(), *(listOf(tcpTransport) + backupTransports).toTypedArray()).apply {
-            // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
-            // would be the default and the two lines below can be deleted.
             connectionTTL = 60000
             clientFailureCheckPeriod = 30000
             callFailoverTimeout = java.lang.Long.getLong(CORDA_ARTEMIS_CALL_TIMEOUT_PROP_NAME, CORDA_ARTEMIS_CALL_TIMEOUT_DEFAULT)

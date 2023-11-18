@@ -65,7 +65,6 @@ data class NodeConfigurationImpl(
         override val database: DatabaseConfig = Defaults.database(devMode),
         private val transactionCacheSizeMegaBytes: Int? = Defaults.transactionCacheSizeMegaBytes,
         private val attachmentContentCacheSizeMegaBytes: Int? = Defaults.attachmentContentCacheSizeMegaBytes,
-        override val attachmentCacheBound: Long = Defaults.attachmentCacheBound,
         override val extraNetworkMapKeys: List<UUID> = Defaults.extraNetworkMapKeys,
         // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
         private val h2port: Int? = Defaults.h2port,
@@ -112,7 +111,6 @@ data class NodeConfigurationImpl(
         const val localShellUnsafe: Boolean = false
         val transactionCacheSizeMegaBytes: Int? = null
         val attachmentContentCacheSizeMegaBytes: Int? = null
-        const val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
         val extraNetworkMapKeys: List<UUID> = emptyList()
         val h2port: Int? = null
         val h2Settings: NodeH2Settings? = null
