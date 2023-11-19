@@ -24,6 +24,10 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     private val beingProcessedMessages = ConcurrentHashMap<DeduplicationId, MessageMeta>()
     private val processedMessages = createProcessedMessages(cacheFactory)
 
+    enum class Outcome {
+        NEW, DUPLICATE, IN_FLIGHT
+    }
+
     private fun createProcessedMessages(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(
                 cacheFactory = cacheFactory,
@@ -48,14 +52,16 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     private fun senderHash(senderKey: SenderKey) = SecureHash.sha256(senderKey.peer.toString() + senderKey.isSessionInit.toString() + senderKey.senderUUID).toString()
 
     /**
-     * @return true if we have seen this message before.
+     * @return IN_FLIGHT if this message is currently being processed by the state machine, otherwise indicate if DUPLICATE or NEW.
      */
-    fun isDuplicate(msg: ReceivedMessage): Boolean {
+    fun checkDuplicate(msg: ReceivedMessage): Outcome {
         if (beingProcessedMessages.containsKey(msg.uniqueMessageId)) {
-            return true
+            return Outcome.IN_FLIGHT
         }
-        return isDuplicateInDatabase(msg)
+        return booleanToEnum(isDuplicateInDatabase(msg))
     }
+
+    private fun booleanToEnum(isDuplicate: Boolean): Outcome = if (isDuplicate) Outcome.DUPLICATE else Outcome.NEW
 
     /**
      * Called the first time we encounter [deduplicationId].

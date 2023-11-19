@@ -8,38 +8,56 @@ import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
 import net.corda.common.logging.errorReporting.CordaErrorContextProvider
 import net.corda.common.logging.errorReporting.ErrorCode
+import net.corda.common.logging.errorReporting.ErrorReporting
+import net.corda.common.logging.errorReporting.report
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
+import net.corda.core.internal.HashAgility
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.core.internal.exists
+import net.corda.core.internal.isDirectory
+import net.corda.core.internal.location
+import net.corda.core.internal.randomOrNull
+import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
-import net.corda.node.*
-import net.corda.common.logging.errorReporting.ErrorReporting
-import net.corda.common.logging.errorReporting.report
+import net.corda.node.NodeCmdLineOptions
+import net.corda.node.SerialFilter
+import net.corda.node.SharedNodeCmdLineOptions
+import net.corda.node.VersionInfo
+import net.corda.node.defaultSerialFilter
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
-import net.corda.node.internal.subcommands.*
+import net.corda.node.internal.shell.InteractiveShell
+import net.corda.node.internal.subcommands.ClearNetworkCacheCli
+import net.corda.node.internal.subcommands.GenerateNodeInfoCli
+import net.corda.node.internal.subcommands.GenerateRpcSslCertsCli
+import net.corda.node.internal.subcommands.InitialRegistration
+import net.corda.node.internal.subcommands.InitialRegistrationCli
+import net.corda.node.internal.subcommands.RunMigrationScriptsCli
+import net.corda.node.internal.subcommands.SynchroniseSchemasCli
+import net.corda.node.internal.subcommands.ValidateConfigurationCli
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
-import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
-import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.lang.NullPointerException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
@@ -236,29 +254,21 @@ open class NodeStartup : NodeStartupLogging {
         val loadedCodapps = node.services.cordappProvider.cordapps.filter { it.isLoaded }
         logLoadedCorDapps(loadedCodapps)
 
-        node.nodeReadyFuture.thenMatch({
-            // Elapsed time in seconds. We used 10 / 100.0 and not directly / 1000.0 to only keep two decimal digits.
-            val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
-            Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
+        node.nodeReadyFuture.thenMatch(
+            {
+                // Elapsed time in seconds. We used 10 / 100.0 and not directly / 1000.0 to only keep two decimal digits.
+                val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
+                val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
+                Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
-            // Don't start the shell if there's no console attached.
-            if (node.configuration.shouldStartLocalShell()) {
-                node.startupComplete.then {
-                    try {
-                        InteractiveShell.runLocalShell(node::stop)
-                    } catch (e: Exception) {
-                        logger.error("Shell failed to start", e)
-                    }
+                // Don't start the shell if there's no console attached.
+                if (node.configuration.shouldStartLocalShell()) {
+                    InteractiveShell.runLocalShellIfInstalled(node::stop)
                 }
-            }
-            if (node.configuration.shouldStartSSHDaemon()) {
-                Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
-            }
-        },
-                { th ->
-                    logger.error("Unexpected exception during registration", th)
-                })
+            },
+            { th ->
+                logger.error("Unexpected exception during registration", th)
+            })
         node.run()
     }
 

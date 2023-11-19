@@ -272,7 +272,7 @@ class HibernateAttachmentQueryCriteriaParser<T,R>(override val criteriaBuilder: 
 class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractState>,
                                    val contractStateTypeMappings: Map<String, Set<String>>,
                                    override val criteriaBuilder: CriteriaBuilder,
-                                   val criteriaQuery: CriteriaQuery<Tuple>,
+                                   val criteriaQuery: CriteriaQuery<*>,
                                    val vaultStates: Root<VaultSchemaV1.VaultStates>) : AbstractQueryCriteriaParser<QueryCriteria, IQueryCriteriaParser, Sort>(), IQueryCriteriaParser {
     private companion object {
         private val log = contextLogger()

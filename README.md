@@ -39,7 +39,7 @@ Corda is an open source blockchain project, designed for business from the start
 
 Corda is an open-source project and contributions are welcome!
 
-To find out how to contribute, please see our [contributing docs](https://docs.corda.net/head/contributing-index.html).
+To find out how to contribute, please see our [contributing docs](https://docs.r3.com/en/platform/corda/4.8/open-source/contributing.html).
 
 ## License
 

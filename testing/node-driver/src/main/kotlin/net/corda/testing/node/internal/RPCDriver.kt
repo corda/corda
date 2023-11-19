@@ -35,6 +35,7 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -42,7 +43,6 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BA
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.Configuration
-import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
@@ -201,30 +201,18 @@ data class RPCDriverDSL(
             journalBufferSize_NIO = maxFileSize
             journalBufferSize_AIO = maxFileSize
             journalFileSize = maxFileSize
-            queueConfigurations = listOf(
-                    CoreQueueConfiguration().apply {
-                        name = RPCApi.RPC_SERVER_QUEUE_NAME
-                        address = RPCApi.RPC_SERVER_QUEUE_NAME
-                        isDurable = false
-                    },
-                    CoreQueueConfiguration().apply {
-                        name = RPCApi.RPC_CLIENT_BINDING_REMOVALS
-                        address = notificationAddress
-                        filterString = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION
-                        isDurable = false
-                    },
-                    CoreQueueConfiguration().apply {
-                        name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS
-                        address = notificationAddress
-                        filterString = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION
-                        isDurable = false
-                    }
+            queueConfigs = listOf(
+                    QueueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME).setAddress(RPCApi.RPC_SERVER_QUEUE_NAME).setDurable(false),
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_REMOVALS).setAddress(notificationAddress)
+                            .setFilterString(RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION).setDurable(false),
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).setAddress(notificationAddress)
+                            .setFilterString(RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION).setDurable(false)
             )
             addressesSettings = mapOf(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                         maxSizeBytes = maxBufferedBytesPerClient
                         addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
-                        pageSizeBytes = maxSizeBytes / 10
+                        pageSizeBytes = maxSizeBytes.toInt() / 10
                     }
             )
         }
@@ -259,7 +247,7 @@ data class RPCDriverDSL(
      * Starts an In-VM RPC server. Note that only a single one may be started.
      *
      * @param rpcUser The single user who can access the server through RPC, and their permissions.
-     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
+     * @param nodeLegalName The legal name of the node to check against to authenticate a superuser.
      * @param configuration The RPC server configuration.
      * @param ops The server-side implementation of the RPC interface.
      */
@@ -338,7 +326,7 @@ data class RPCDriverDSL(
      *
      * @param serverName The name of the server, to be used for the folder created for Artemis files.
      * @param rpcUser The single user who can access the server through RPC, and their permissions.
-     * @param nodeLegalName The legal name of the node to check against to authenticate a super user.
+     * @param nodeLegalName The legal name of the node to check against to authenticate a superuser.
      * @param configuration The RPC server configuration.
      * @param listOps The server-side implementation of the RPC interfaces.
      */

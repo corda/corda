@@ -6,6 +6,9 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
+    if (System.getProperty('excludeShell') == null) {
+        cordaDriver "net.corda:corda-shell:$corda_release_version"
+    }
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The bank of corda CorDapp depends upon Cash CorDapp features

@@ -37,6 +37,7 @@ import net.corda.testing.node.internal.network.CrlServer
 import net.corda.testing.node.internal.network.CrlServer.Companion.EMPTY_CRL
 import net.corda.testing.node.internal.network.CrlServer.Companion.NODE_CRL
 import net.corda.testing.node.internal.network.CrlServer.Companion.withCrlDistPoint
+import org.apache.activemq.artemis.api.core.QueueConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -496,7 +497,9 @@ class ArtemisServerRevocationTest : AbstractServerRevocationTest() {
         }
 
         val queueName = "${P2P_PREFIX}Test"
-        artemisNode.client.started!!.session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+        artemisNode.client.started!!.session.createQueue(
+                QueueConfiguration(queueName).setRoutingType(RoutingType.ANYCAST).setAddress(queueName).setDurable(true)
+        )
 
         val clientConnectionChangeStatus = client.waitForInitialConnectionAndCaptureChanges(expectedConnectedStatus)
 

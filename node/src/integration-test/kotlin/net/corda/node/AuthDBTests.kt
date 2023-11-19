@@ -3,6 +3,7 @@ package net.corda.node
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
@@ -151,7 +152,7 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
             proxy.stateMachinesFeed()
             assertFailsWith(
                     PermissionException::class,
-                    "This user should not be authorized to call 'nodeInfo'") {
+                    "This user should not be authorized to call 'stateMachinesFeed'") {
                 proxy.nodeInfo()
             }
         }
@@ -185,7 +186,7 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
             val proxy = it.proxy
             assertFailsWith(
                     PermissionException::class,
-                    "This user should not be authorized to call 'nodeInfo'") {
+                    "This user should not be authorized to call 'stateMachinesFeed'") {
                 proxy.stateMachinesFeed()
             }
             db.addRoleToUser("user3", "default")
@@ -207,8 +208,8 @@ class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
             db.deleteUser("user4")
             Thread.sleep(1500)
             assertFailsWith(
-                    PermissionException::class,
-                    "This user should not be authorized to call 'nodeInfo'") {
+                    RPCException::class,
+                    "This user should not be authorized to call 'stateMachinesFeed'") {
                 proxy.stateMachinesFeed()
             }
         }
