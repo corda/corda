@@ -24,6 +24,7 @@ String COMMON_GRADLE_PARAMS = [
         '-Ptests.failFast=true',
         '-Ddependx.branch.origin="${GIT_COMMIT}"',    // DON'T change quotation - GIT_COMMIT variable is substituted by SHELL!!!!
         '-Ddependx.branch.target="${CHANGE_TARGET}"', // DON'T change quotation - CHANGE_TARGET variable is substituted by SHELL!!!!
+        '--build-cache',
 ].join(' ')
 
 pipeline {
@@ -45,8 +46,12 @@ pipeline {
      */
     environment {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
+        BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
+        BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
         CORDA_USE_CACHE = "corda-remotes"
     }
 
@@ -58,7 +63,8 @@ pipeline {
                         './gradlew',
                         COMMON_GRADLE_PARAMS,
                         'clean',
-                        'jar'
+                        'jar',
+                        '--parallel'
                 ].join(' ')
             }
         }
@@ -80,8 +86,8 @@ pipeline {
                     }
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: true
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true,allowEmptyResults: true
                         }
                         cleanup {
                             deleteDir() /* clean up our workspace */
@@ -99,7 +105,8 @@ pipeline {
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
-                                        'jar'
+                                        'jar',
+                                        '--parallel'
                                 ].join(' ')
                             }
                         }
@@ -117,8 +124,8 @@ pipeline {
                 stage('Same agent') {
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: true
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
                         }
                     }
                     stages {
@@ -136,8 +143,10 @@ pipeline {
             }
         }
     }
-
     post {
+        always {
+            findBuildScans()
+        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
