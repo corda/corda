@@ -180,6 +180,7 @@ buildscript {
                     includeGroupByRegex 'com\\.r3(\\..*)?'
                 }
             }
+            gradlePluginPortal()
             mavenCentral()
             jcenter()
         }
@@ -205,6 +206,8 @@ buildscript {
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: '1.3.0'
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
+        classpath "com.gradle:gradle-enterprise-gradle-plugin:$gradleEnterprisePlugin"
+        classpath "com.gradle:common-custom-user-data-gradle-plugin:$customUserDataGradlePlugin"
     }
 
     configurations.classpath {
@@ -216,7 +219,6 @@ buildscript {
 plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
-    id "com.gradle.build-scan" version "2.2.1"
     id "org.ajoberstar.grgit" version "4.0.0"
 }
 
@@ -225,7 +227,22 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'com.r3.testing.distributed-testing'
+apply plugin: "com.gradle.build-scan"
+apply plugin: "com.gradle.common-custom-user-data-gradle-plugin"
 
+buildScan {
+    server = gradleEnterpriseUrl
+    allowUntrustedServer = false
+    def apiKey = project.findProperty('CORDA_GRADLE_SCAN_KEY') ?: System.getenv('CORDA_GRADLE_SCAN_KEY')
+    if (apiKey?.trim()) {
+        publishAlways()
+        capture {
+            taskInputFiles = true
+        }
+        uploadInBackground = false
+        accessKey = apiKey
+    }
+}
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
 // the latest git commit hash and timestamp and create a version postfix from that
@@ -268,6 +285,19 @@ allprojects {
                 "javax.persistence.Embeddable",
                 "javax.persistence.MappedSuperclass"
         )
+    }
+
+    // we do this to allow for Gradle task caching.
+    // below block tells Gradle to ignore specifically the dymaically generated files in the manifest when checking if a file is up to date
+    // this has no impact on publishing or production of jar, This only reates to Grades mechamish for verifying the Cache key
+    normalization {
+        runtimeClasspath {
+            ignore("**/*.EC")  //signing related
+            ignore("**/*.SF")  //signing related
+            ignore("**/*.MF")
+            ignore("**/*.kotlin_module")
+            ignore("**/Cordapp-Dependencies")
+        }
     }
 
     dependencyCheck {
@@ -738,11 +768,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 wrapper {
     gradleVersion = '5.6.4'
     distributionType = Wrapper.DistributionType.ALL
-}
-
-buildScan {
-    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-    termsOfServiceAgree = 'yes'
 }
 
 distributedTesting {
