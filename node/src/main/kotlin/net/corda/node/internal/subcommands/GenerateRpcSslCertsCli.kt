@@ -1,7 +1,5 @@
 package net.corda.node.internal.subcommands
 
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeCliCommand
 import net.corda.node.internal.NodeStartup
@@ -11,6 +9,8 @@ import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import java.io.Console
+import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.system.exitProcess
 
 class GenerateRpcSslCertsCli(startup: NodeStartup): NodeCliCommand("generate-rpc-ssl-settings", "Generate the SSL key and trust stores for a secure RPC connection.", startup) {

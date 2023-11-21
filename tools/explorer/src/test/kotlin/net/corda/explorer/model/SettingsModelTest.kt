@@ -1,10 +1,10 @@
 package net.corda.explorer.model
 
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

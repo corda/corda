@@ -3,7 +3,6 @@ package net.corda.coretests.crypto
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.internal.declaredField
-import net.corda.core.internal.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
@@ -19,6 +18,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.PublicKey
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse

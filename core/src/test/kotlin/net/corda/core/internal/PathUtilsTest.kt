@@ -7,6 +7,9 @@ import org.junit.rules.TemporaryFolder
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createFile
+import kotlin.io.path.div
 
 class PathUtilsTest {
     @Rule

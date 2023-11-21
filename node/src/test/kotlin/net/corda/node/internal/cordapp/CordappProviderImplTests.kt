@@ -10,12 +10,13 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.io.FileOutputStream
-import java.lang.IllegalStateException
 import java.net.URL
 import java.nio.file.Files
 import java.util.Arrays.asList
@@ -198,7 +199,7 @@ class CordappProviderImplTests {
         SelfCleaningDir().use { file ->
             val jarAndSigner = ContractJarTestUtils.makeTestSignedContractJar(file.path, "com.example.MyContract")
             val signedJarPath = jarAndSigner.first
-            val duplicateJarPath = signedJarPath.parent.resolve("duplicate-" + signedJarPath.fileName)
+            val duplicateJarPath = signedJarPath.parent.resolve("duplicate-${signedJarPath.fileName}")
 
             Files.copy(signedJarPath, duplicateJarPath)
             val urls = asList(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())

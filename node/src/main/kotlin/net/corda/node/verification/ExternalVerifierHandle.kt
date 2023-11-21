@@ -3,7 +3,6 @@ package net.corda.node.verification
 import net.corda.core.contracts.Attachment
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.copyTo
-import net.corda.core.internal.div
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
 import net.corda.core.serialization.serialize
@@ -42,7 +41,9 @@ import java.net.Socket
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.div
 
 /**
  * Handle to the node's external verifier. The verifier process is started lazily on the first verification request.
@@ -180,7 +181,7 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
         init {
             val logsDirectory = (serviceHub.configuration.baseDirectory / "logs").createDirectories()
             val command = listOf(
-                    "${System.getProperty("java.home") / "bin" / "java"}",
+                    "${Path(System.getProperty("java.home"), "bin", "java")}",
                     "-jar",
                     "$verifierJar",
                     "${server.localPort}",

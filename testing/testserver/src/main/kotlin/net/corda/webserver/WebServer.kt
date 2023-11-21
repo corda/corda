@@ -3,7 +3,6 @@
 package net.corda.webserver
 
 import com.typesafe.config.ConfigException
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.location
 import net.corda.core.internal.rootCause
@@ -11,6 +10,7 @@ import net.corda.webserver.internal.NodeWebServer
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
+import kotlin.io.path.div
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
         System.setProperty("consoleLogLevel", "info")
     }
 
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs/web").toString())
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs" / "web").toString())
     val log = LoggerFactory.getLogger("Main")
     println("This Corda-specific web server is deprecated and will be removed in future.")
     println("Please switch to a regular web framework like Spring, J2EE or Play Framework.")

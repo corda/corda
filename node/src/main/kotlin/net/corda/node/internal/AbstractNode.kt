@@ -39,7 +39,6 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.cordapp.CordappProviderInternal
-import net.corda.core.internal.div
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
@@ -187,6 +186,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
 import javax.sql.DataSource
+import kotlin.io.path.div
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -338,7 +338,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database.
      */
-    val nodeReadyFuture: CordaFuture<Unit> get() = networkMapCache.nodeReady.map { Unit }
+    val nodeReadyFuture: CordaFuture<*> get() = networkMapCache.nodeReady
 
     open val serializationWhitelists: List<SerializationWhitelist> by lazy {
         cordappLoader.cordapps.flatMap { it.serializationWhitelists }

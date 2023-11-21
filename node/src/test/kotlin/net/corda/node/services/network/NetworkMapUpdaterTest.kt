@@ -2,12 +2,6 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
-import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeast
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -19,10 +13,6 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.createDirectory
-import net.corda.core.internal.delete
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
 import net.corda.core.internal.sign
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -62,6 +52,12 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
@@ -70,9 +66,13 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.createDirectory
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -300,7 +300,7 @@ class NetworkMapUpdaterTest {
         // Not subscribed yet
         verify(networkMapCache, times(0)).addOrUpdateNode(any())
 
-        nodeInfoDir.delete()
+        nodeInfoDir.deleteExisting()
         assertFalse(nodeInfoDir.exists())
 
         // Observable will get a NoSuchFileException and log it
@@ -516,7 +516,7 @@ class NetworkMapUpdaterTest {
         assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(fileNodeInfoAndSigned1.signed.raw.hash, fileNodeInfoAndSigned2.signed.raw.hash)
         //Remove one of the nodes
         val fileName1 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${fileNodeInfoAndSigned1.nodeInfo.legalIdentities[0].name.serialize().hash}"
-        (nodeInfoDir / fileName1).delete()
+        (nodeInfoDir / fileName1).deleteExisting()
         advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache, times(1)).removeNode(fileNodeInfoAndSigned1.nodeInfo)
@@ -545,7 +545,7 @@ class NetworkMapUpdaterTest {
         //Node from file has higher serial than the one from NetworkMapServer
         assertThat(networkMapCache.allNodeHashes).containsOnly(localSignedNodeInfo.signed.raw.hash)
         val fileName = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${localNodeInfo.legalIdentities[0].name.serialize().hash}"
-        (nodeInfoDir / fileName).delete()
+        (nodeInfoDir / fileName).deleteExisting()
         advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache).removeNode(localNodeInfo)

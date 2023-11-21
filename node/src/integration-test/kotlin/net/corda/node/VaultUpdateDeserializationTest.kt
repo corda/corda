@@ -7,7 +7,6 @@ import junit.framework.TestCase.assertTrue
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.getOrThrow
@@ -29,6 +28,7 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.cordappWithPackages
 import org.junit.Test
 import java.util.concurrent.TimeoutException
+import kotlin.io.path.div
 import net.corda.contracts.incompatible.version1.AttachmentContract as AttachmentContractV1
 import net.corda.flows.incompatible.version1.AttachmentFlow as AttachmentFlowV1
 

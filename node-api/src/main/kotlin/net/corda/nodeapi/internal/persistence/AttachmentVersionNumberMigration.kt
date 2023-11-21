@@ -5,7 +5,6 @@ import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
-import net.corda.core.internal.div
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.deserialize
@@ -15,6 +14,7 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_BASE_DIR_KEY
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.div
 
 class AttachmentVersionNumberMigration : CustomTaskChange {
     companion object {
@@ -27,8 +27,8 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
 
         try {
             logger.info("Start executing...")
-            var networkParameters: NetworkParameters?
-            val baseDir = System.getProperty(SchemaMigration.NODE_BASE_DIR_KEY)
+            val networkParameters: NetworkParameters?
+            val baseDir = System.getProperty(NODE_BASE_DIR_KEY)
             val availableAttachments = getAttachmentsWithDefaultVersion(connection)
             if (baseDir != null) {
                 val path = Paths.get(baseDir) / NETWORK_PARAMS_FILE_NAME

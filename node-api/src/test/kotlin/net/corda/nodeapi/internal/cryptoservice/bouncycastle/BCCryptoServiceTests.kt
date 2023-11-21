@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.cryptoservice.bouncycastle
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
-import net.corda.core.internal.div
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -31,6 +30,7 @@ import java.time.Duration
 import java.util.*
 import javax.crypto.Cipher
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -49,8 +49,8 @@ class BCCryptoServiceTests {
     @JvmField
     val temporaryKeystoreFolder = TemporaryFolder()
 
-    lateinit var certificatesDirectory: Path
-    lateinit var wrappingKeyStorePath: Path
+    private lateinit var certificatesDirectory: Path
+    private lateinit var wrappingKeyStorePath: Path
 
     @Before
     fun setUp() {

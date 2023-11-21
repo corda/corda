@@ -3,7 +3,6 @@ package net.corda.node.services.config
 import com.typesafe.config.ConfigException
 import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
@@ -22,6 +21,7 @@ import java.time.Duration
 import java.util.Properties
 import java.util.UUID
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
@@ -34,6 +34,7 @@ data class NodeConfigurationImpl(
         override val crlCheckSoftFail: Boolean,
         override val crlCheckArtemisServer: Boolean = Defaults.crlCheckArtemisServer,
         override val dataSourceProperties: Properties,
+        @Deprecated("Use of single compatibility zone URL is deprecated", replaceWith = ReplaceWith("networkServices.networkMapURL"))
         override val compatibilityZoneURL: URL? = Defaults.compatibilityZoneURL,
         override var networkServices: NetworkServicesConfig? = Defaults.networkServices,
         override val tlsCertCrlDistPoint: URL? = Defaults.tlsCertCrlDistPoint,
@@ -229,11 +230,11 @@ data class NodeConfigurationImpl(
     private fun validateTlsCertCrlConfig(): List<String> {
         val errors = mutableListOf<String>()
         if (tlsCertCrlIssuer != null) {
-            if (tlsCertCrlDistPoint == null) {
+            if (tlsCertCrlDistPoint === null) {
                 errors += "'tlsCertCrlDistPoint' is mandatory when 'tlsCertCrlIssuer' is specified"
             }
         }
-        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
+        if (!crlCheckSoftFail && tlsCertCrlDistPoint === null) {
             errors += "'tlsCertCrlDistPoint' is mandatory when 'crlCheckSoftFail' is false"
         }
         return errors
