@@ -83,11 +83,7 @@ public final class net.corda.core.Utils extends java.lang.Object
 public final class net.corda.core.concurrent.ConcurrencyUtils extends java.lang.Object
   @NotNull
   public static final net.corda.core.concurrent.CordaFuture firstOf(net.corda.core.concurrent.CordaFuture<? extends V>[], kotlin.jvm.functions.Function1)
-  @NotNull
-  public static final net.corda.core.concurrent.CordaFuture firstOf(net.corda.core.concurrent.CordaFuture<? extends V>[], org.slf4j.Logger, kotlin.jvm.functions.Function1)
   public static final W match(java.util.concurrent.Future, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1)
-  @NotNull
-  public static final String shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 ##
 public interface net.corda.core.concurrent.CordaFuture extends java.util.concurrent.Future
   public abstract void then(kotlin.jvm.functions.Function1)
