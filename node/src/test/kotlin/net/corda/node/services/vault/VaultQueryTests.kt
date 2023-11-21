@@ -1681,6 +1681,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // DOCEND VaultQueryExample7
             assertThat(results.states).hasSize(10)
             assertThat(results.totalStatesAvailable).isEqualTo(100)
+            assertThat(results.previousPageAnchor).isNull()
         }
     }
 
@@ -1689,14 +1690,19 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 	fun `all states with paging specification - last`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(95.DOLLARS, notaryServices, 95, DUMMY_CASH_ISSUER)
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
             // Last page implies we need to perform a row count for the Query first,
             // and then re-query for a given offset defined by (count - pageSize)
-            val pagingSpec = PageSpecification(10, 10)
+            val lastPage = PageSpecification(10, 10)
+            val lastPageResults = vaultService.queryBy<ContractState>(criteria, paging = lastPage)
+            assertThat(lastPageResults.states).hasSize(5) // should retrieve states 90..94
+            assertThat(lastPageResults.totalStatesAvailable).isEqualTo(95)
 
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
-            assertThat(results.states).hasSize(5) // should retrieve states 90..94
-            assertThat(results.totalStatesAvailable).isEqualTo(95)
+            // Make sure the previousPageAnchor points to the previous page's last result
+            val penultimatePage = lastPage.copy(pageNumber = lastPage.pageNumber - 1)
+            val penultimatePageResults = vaultService.queryBy<ContractState>(criteria, paging = penultimatePage)
+            assertThat(lastPageResults.previousPageAnchor).isEqualTo(penultimatePageResults.statesMetadata.last().ref)
         }
     }
 
@@ -1747,16 +1753,23 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     // example of querying states with paging using totalStatesAvailable
     private fun queryStatesWithPaging(vaultService: VaultService, pageSize: Int): List<StateAndRef<ContractState>> {
         // DOCSTART VaultQueryExample24
-        var pageNumber = DEFAULT_PAGE_NUM
-        val states = mutableListOf<StateAndRef<ContractState>>()
-        do {
-            val pageSpec = PageSpecification(pageNumber = pageNumber, pageSize = pageSize)
-            val results = vaultService.queryBy<ContractState>(VaultQueryCriteria(), pageSpec)
-            states.addAll(results.states)
-            pageNumber++
-        } while ((pageSpec.pageSize * (pageNumber - 1)) <= results.totalStatesAvailable)
+        retry@
+        while (true) {
+            var pageNumber = DEFAULT_PAGE_NUM
+            val states = mutableListOf<StateAndRef<ContractState>>()
+            do {
+                val pageSpec = PageSpecification(pageNumber = pageNumber, pageSize = pageSize)
+                val results = vaultService.queryBy<ContractState>(VaultQueryCriteria(), pageSpec)
+                if (results.previousPageAnchor != states.lastOrNull()?.ref) {
+                    // Start querying from the 1st page again if we find the vault has changed from underneath us.
+                    continue@retry
+                }
+                states.addAll(results.states)
+                pageNumber++
+            } while ((pageSpec.pageSize * (pageNumber - 1)) <= results.totalStatesAvailable)
+            return states
+        }
         // DOCEND VaultQueryExample24
-        return states.toList()
     }
 
     // test paging query example works
@@ -1769,6 +1782,51 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(queryStatesWithPaging(vaultService, 5).count()).isEqualTo(5)
             vaultFiller.fillWithSomeTestCash(25.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             assertThat(queryStatesWithPaging(vaultService, 5).count()).isEqualTo(6)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `detecting changes to the database whilst pages are loaded`() {
+        val criteria = VaultQueryCriteria()
+        val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.EXTERNAL_ID))))
+
+        fun loadPagesAndCheckAnchors(): List<Vault.Page<DealState>> {
+            val pages = (1..3).map {  vaultService.queryBy<DealState>(criteria, PageSpecification(it, 10), sorting) }
+            assertThat(pages[0].previousPageAnchor).isNull()
+            assertThat(pages[1].previousPageAnchor).isEqualTo(pages[0].states.last().ref)
+            assertThat(pages[2].previousPageAnchor).isEqualTo(pages[1].states.last().ref)
+            return pages
+        }
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestDeals(dealIds = (10..30).map(Int::toString))
+            val pagesV1 = loadPagesAndCheckAnchors()
+
+            vaultFiller.fillWithSomeTestDeals(dealIds = listOf("25.5"))  // Insert a state into the middle of the second page
+            val pagesV2 = loadPagesAndCheckAnchors()
+
+            assertThat(pagesV2[2].previousPageAnchor)
+                    .isNotEqualTo(pagesV1[2].previousPageAnchor)  // The previously loaded page is no longer in-sync
+                    .isEqualTo(pagesV1[1].states.let { it[it.lastIndex - 1].ref })  // The anchor now points to the second to last entry
+            assertThat(pagesV2[1].previousPageAnchor).isEqualTo(pagesV1[1].previousPageAnchor)  // The first page is unaffected
+
+            vaultFiller.consumeDeals(pagesV1[0].states.take(1))  // Consume the first state
+            val pagesV3 = loadPagesAndCheckAnchors()
+
+            assertThat(pagesV3[1].previousPageAnchor)
+                    .isNotEqualTo(pagesV1[1].previousPageAnchor)  // Now the first page is no longer in-sync
+                    .isEqualTo(pagesV1[1].states[0].ref)  // The top of the second page has now moved into the first page
+
+            vaultFiller.consumeDeals(pagesV3[2].states)  // Consume the entire third page
+            val pagesV4 = loadPagesAndCheckAnchors()
+            // There are now no states for the third page, but it will still have an anchor
+            assertThat(pagesV4[2].states).isEmpty()
+
+            vaultFiller.consumeDeals(pagesV3[1].states.takeLast(1))  // Consume the third page anchor
+
+            val thirdPageV5 = vaultService.queryBy<DealState>(criteria, PageSpecification(3, 10), sorting)
+            assertThat(thirdPageV5.states).isEmpty()
+            assertThat(thirdPageV5.previousPageAnchor).isNull()
         }
     }
 

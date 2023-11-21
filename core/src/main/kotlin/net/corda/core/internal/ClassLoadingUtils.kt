@@ -2,7 +2,6 @@ package net.corda.core.internal
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ClassInfo
-import net.corda.core.StubOutForDJVM
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.attachmentScheme
 
 /**
@@ -19,7 +18,6 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
  * - be non-abstract
  * - either be a Kotlin object or have a constructor with no parameters (or only optional ones)
  */
-@StubOutForDJVM
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
                                                   classVersionRange: IntRange? = null): Set<T> {
     return getNamesOfClassesImplementing(classloader, clazz, classVersionRange)
@@ -36,7 +34,6 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
  * @return names of the identified classes.
  * @throws UnsupportedClassVersionError if the class version is not within range.
  */
-@StubOutForDJVM
 fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
                                            classVersionRange: IntRange? = null): Set<String> {
     return ClassGraph().overrideClassLoaders(classloader)

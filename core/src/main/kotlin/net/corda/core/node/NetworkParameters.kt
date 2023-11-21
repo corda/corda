@@ -1,7 +1,6 @@
 package net.corda.core.node
 
 import net.corda.core.CordaRuntimeException
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.noPackageOverlap
@@ -34,10 +33,18 @@ import java.util.Collections.unmodifiableMap
  * @property packageOwnership ([AutoAcceptable]) List of the network-wide java packages that were successfully claimed by their owners.
  * Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
- * during this period
+ * during this period.
+ * @property recoveryMaximumBackupInterval A default value, that will be used by the Ledger Recovery flows to set how far back in time to
+ * consider for recovery. The expectation is that a node will restore to a database backup that is no older than this, by default, when
+ * attempting a recovery. This value can be overridden by specifying an override to the flow. It can also be overridden if the same parameter
+ * is specified, per-node in the node configuration. An override to the flow takes priority in terms of overrides. It is optional in both
+ * the network parameters and the node configuration however if no values are set then it needs to be specified in the flow.
+ * @property confidentialIdentityMinimumBackupInterval A default value for the  minimum age of a generated confidential identity key before
+ * it can be used. This can be overridden in the node configuration or if a more recent database backup is indicated via RPC / shell. It is
+ * optional in both the network parameters and the node configuration and if no value is set for either then it is assumed to be zero.
  */
-@KeepForDJVM
 @CordaSerializable
+@Suppress("LongParameterList")
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
@@ -47,10 +54,12 @@ data class NetworkParameters(
         @AutoAcceptable val epoch: Int,
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
-        @AutoAcceptable val packageOwnership: Map<String, PublicKey>
+        @AutoAcceptable val packageOwnership: Map<String, PublicKey>,
+        val recoveryMaximumBackupInterval: Duration? = null,
+        val confidentialIdentityMinimumBackupInterval: Duration? = null
 ) {
     // DOCEND 1
-    @DeprecatedConstructorForDeserialization(1)
+    @DeprecatedConstructorForDeserialization(version = 1)
     constructor(minimumPlatformVersion: Int,
                 notaries: List<NotaryInfo>,
                 maxMessageSize: Int,
@@ -69,7 +78,7 @@ data class NetworkParameters(
             emptyMap()
     )
 
-    @DeprecatedConstructorForDeserialization(2)
+    @DeprecatedConstructorForDeserialization(version = 2)
     constructor(minimumPlatformVersion: Int,
                 notaries: List<NotaryInfo>,
                 maxMessageSize: Int,
@@ -89,6 +98,29 @@ data class NetworkParameters(
             emptyMap()
     )
 
+    @DeprecatedConstructorForDeserialization(version = 3)
+    constructor(minimumPlatformVersion: Int,
+                notaries: List<NotaryInfo>,
+                maxMessageSize: Int,
+                maxTransactionSize: Int,
+                modifiedTime: Instant,
+                epoch: Int,
+                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                eventHorizon: Duration,
+                packageOwnership: Map<String, PublicKey>
+    ) : this(minimumPlatformVersion,
+            notaries,
+            maxMessageSize,
+            maxTransactionSize,
+            modifiedTime,
+            epoch,
+            whitelistedContractImplementations,
+            eventHorizon,
+            packageOwnership,
+            recoveryMaximumBackupInterval = null,
+            confidentialIdentityMinimumBackupInterval = null
+    )
+
     init {
         require(minimumPlatformVersion > 0) { "Minimum platform level must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }
@@ -98,6 +130,41 @@ data class NetworkParameters(
         require(!eventHorizon.isNegative) { "Event Horizon must be a positive value" }
         packageOwnership.keys.forEach(::requirePackageValid)
         require(noPackageOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
+        require(recoveryMaximumBackupInterval == null || !recoveryMaximumBackupInterval.isNegative) {
+            "Recovery maximum backup interval must be a positive value"
+        }
+        require(confidentialIdentityMinimumBackupInterval == null || !confidentialIdentityMinimumBackupInterval.isNegative) {
+            "Confidential Identities maximum backup interval must be a positive value"
+        }
+    }
+
+    /**
+     * This is to address backwards compatibility of the API, invariant to package ownership
+     * addresses bug CORDA-2769
+     */
+    fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
+             notaries: List<NotaryInfo> = this.notaries,
+             maxMessageSize: Int = this.maxMessageSize,
+             maxTransactionSize: Int = this.maxTransactionSize,
+             modifiedTime: Instant = this.modifiedTime,
+             epoch: Int = this.epoch,
+             whitelistedContractImplementations: Map<String, List<AttachmentId>> = this.whitelistedContractImplementations,
+             eventHorizon: Duration = this.eventHorizon,
+             packageOwnership: Map<String, PublicKey> = this.packageOwnership
+    ): NetworkParameters {
+        return NetworkParameters(
+                minimumPlatformVersion = minimumPlatformVersion,
+                notaries = notaries,
+                maxMessageSize = maxMessageSize,
+                maxTransactionSize = maxTransactionSize,
+                modifiedTime = modifiedTime,
+                epoch = epoch,
+                whitelistedContractImplementations = whitelistedContractImplementations,
+                eventHorizon = eventHorizon,
+                packageOwnership = packageOwnership,
+                recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+                confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
+        )
     }
 
     /**
@@ -122,7 +189,9 @@ data class NetworkParameters(
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
-                packageOwnership = packageOwnership
+                packageOwnership = packageOwnership,
+                recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+                confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
     }
 
@@ -147,7 +216,9 @@ data class NetworkParameters(
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon,
-                packageOwnership = packageOwnership
+                packageOwnership = packageOwnership,
+                recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+                confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
     }
 
@@ -166,6 +237,8 @@ data class NetworkParameters(
       }
       modifiedTime=$modifiedTime
       epoch=$epoch
+      transactionRecoveryPeriod=$recoveryMaximumBackupInterval
+      confidentialIdentityPreGenerationPeriod=$confidentialIdentityMinimumBackupInterval
   }"""
     }
 
@@ -181,7 +254,9 @@ data class NetworkParameters(
                 unmodifiableList(entry.value)
             },
             eventHorizon = eventHorizon,
-            packageOwnership = unmodifiable(packageOwnership)
+            packageOwnership = unmodifiable(packageOwnership),
+            recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
+            confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
     }
 }
@@ -207,7 +282,6 @@ private inline fun <K, V> unmodifiable(map: Map<K, V>, transform: (Map.Entry<K, 
  * @property identity Identity of the notary (note that it can be an identity of the distributed node).
  * @property validating Indicates if the notary is validating.
  */
-@KeepForDJVM
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)
 

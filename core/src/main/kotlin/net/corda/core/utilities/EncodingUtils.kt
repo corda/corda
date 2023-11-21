@@ -1,15 +1,13 @@
 @file:JvmName("EncodingUtils")
-@file:KeepForDJVM
 
 package net.corda.core.utilities
 
-import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.Base58
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.hash
 import java.nio.charset.Charset
 import java.security.PublicKey
-import java.util.*
+import java.util.Base64
 
 // This file includes useful encoding methods and extension functions for the most common encoding/decoding operations.
 
@@ -81,7 +79,7 @@ fun String.hexToBase64(): String = hexToByteArray().toBase64()
 fun parsePublicKeyBase58(base58String: String): PublicKey = Crypto.decodePublicKey(base58String.base58ToByteArray())
 
 /** Return the Base58 representation of the serialised public key. */
-fun PublicKey.toBase58String(): String = this.encoded.toBase58()
+fun PublicKey.toBase58String(): String = Crypto.encodePublicKey(this).toBase58()
 
 /** Return the bytes of the SHA-256 output for this public key. */
 fun PublicKey.toSHA256Bytes(): ByteArray = this.hash.bytes

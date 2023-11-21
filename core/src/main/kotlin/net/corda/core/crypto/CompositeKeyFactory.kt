@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.KeepForDJVM
 import java.security.*
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.KeySpec
@@ -9,7 +8,6 @@ import java.security.spec.X509EncodedKeySpec
 /**
  * Factory for generating composite keys from ASN.1 format key specifications. This is used by [CordaSecurityProvider].
  */
-@KeepForDJVM
 class CompositeKeyFactory : KeyFactorySpi() {
 
     @Throws(InvalidKeySpecException::class)
