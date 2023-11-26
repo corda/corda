@@ -54,7 +54,8 @@ class VaultUpdateDeserializationTest {
 
     /*
      * Transaction sent from A -> B with Notarisation
-     * Test that a deserialization error is raised where the receiver node of a transaction has an incompatible contract jar.
+     * Test that a deserialization error is raised (by setting a new configurable java system property),
+     * where the receiver node of a transaction has an incompatible contract jar.
      * In the case of a notarised transaction, a deserialisation error is thrown in the receiver SignTransactionFlow (before finality)
      * upon receiving the transaction to be signed and attempting to record its dependencies.
      * The ledger will not record any transactions, and the flow must be retried by the sender upon installing the correct contract jar
@@ -66,7 +67,8 @@ class VaultUpdateDeserializationTest {
             val alice = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1)),
                     providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1),
-                    systemProperties = mapOf("net.corda.contracts.incompatible.AttachmentContract.fail.state" to "true")),
+                    systemProperties = mapOf("net.corda.contracts.incompatible.AttachmentContract.fail.state" to "true",
+                                             "net.corda.vaultupdate.raise.transaction.deserialization.errors" to "true")),
                     providedName = BOB_NAME).getOrThrow()
 
             val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(1024, 0)
@@ -110,7 +112,7 @@ class VaultUpdateDeserializationTest {
     /*
      * Transaction sent from A -> B with Notarisation
      *
-     * Test original deserialization failure behaviour by setting a new configurable java system property.
+     * Test original deserialization failure behaviour.
      * The ledger will enter an inconsistent state from which is cannot auto-recover.
      */
     @Test(timeout=300_000)
@@ -120,7 +122,6 @@ class VaultUpdateDeserializationTest {
                     providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1),
                     systemProperties = mapOf("net.corda.contracts.incompatible.AttachmentContract.fail.state" to "true",
-                    "net.corda.vaultupdate.ignore.transaction.deserialization.errors" to "true",
                     "net.corda.recordtransaction.signature.verification.disabled" to "true")),
                     providedName = BOB_NAME).getOrThrow()
 
@@ -147,7 +148,8 @@ class VaultUpdateDeserializationTest {
 
     /*
      * Transaction sent from A -> B without Notarisation
-     * Test that a deserialization error is raised where the receiver node of a finality flow has an incompatible contract jar.
+     * Test that a deserialization error is raised (by setting a new configurable java system property),
+     * where the receiver node of a finality flow has an incompatible contract jar.
      * The ledger will be temporarily inconsistent until the correct contract jar version is installed and the receiver node is re-started.
      */
     @Test(timeout=300_000)
@@ -156,7 +158,8 @@ class VaultUpdateDeserializationTest {
             val alice = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1)),
                     providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1),
-                    systemProperties = mapOf("net.corda.contracts.incompatible.AttachmentContract.fail.state" to "true")),
+                    systemProperties = mapOf("net.corda.contracts.incompatible.AttachmentContract.fail.state" to "true",
+                     "net.corda.vaultupdate.raise.transaction.deserialization.errors" to "true")),
                     providedName = BOB_NAME).getOrThrow()
 
             val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(1024, 0)
@@ -192,7 +195,7 @@ class VaultUpdateDeserializationTest {
 
     /*
      * Transaction sent from A -> B without Notarisation
-     * Test original deserialization failure behaviour by setting a new configurable java system property.
+     * Test original deserialization failure behaviour.
      * The ledger will enter an inconsistent state from which is cannot auto-recover.
      */
     @Test(timeout = 300_000)
@@ -203,7 +206,6 @@ class VaultUpdateDeserializationTest {
             val bob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1),
                     systemProperties = mapOf(
                             "net.corda.contracts.incompatible.AttachmentContract.fail.state" to "true",
-                            "net.corda.vaultupdate.ignore.transaction.deserialization.errors" to "true",
                             "net.corda.recordtransaction.signature.verification.disabled" to "true")),
                     providedName = BOB_NAME).getOrThrow()
 
