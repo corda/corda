@@ -108,7 +108,7 @@ class NodeVaultService(
 
         const val DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE = 16
 
-        private val IGNORE_TRANSACTION_DESERIALIZATION_ERRORS = java.lang.Boolean.getBoolean("net.corda.vaultupdate.ignore.transaction.deserialization.errors")
+        private val RAISE_TRANSACTION_DESERIALIZATION_ERRORS = java.lang.Boolean.getBoolean("net.corda.vaultupdate.raise.transaction.deserialization.errors")
 
         /**
          * Establish whether a given state is relevant to a node, given the node's public keys.
@@ -320,7 +320,7 @@ class NodeVaultService(
                     // This will cause a failure as we can't deserialize such states in the context of the `appClassloader`.
                     // For now we ignore these states.
                     // In the future we will use the AttachmentsClassloader to correctly deserialize and asses the relevancy.
-                    if (IGNORE_TRANSACTION_DESERIALIZATION_ERRORS) {
+                    if (!RAISE_TRANSACTION_DESERIALIZATION_ERRORS) {
                         log.warnOnce("The current usage of transaction deserialization for the vault is unsafe." +
                                 "Ignoring vault updates due to failed deserialized states may lead to severe problems with ledger consistency. ")
                         log.warn("Could not deserialize state $idx from transaction $txId. Cause: $e")
