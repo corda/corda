@@ -308,6 +308,7 @@ class NodeVaultService(
         processTransactions(txns, false)
     }
 
+    @Suppress("ComplexMethod", "ThrowsCount")
     private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean, disableSoftLocking: Boolean): List<Vault.Update<ContractState>> {
 
         fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> {
