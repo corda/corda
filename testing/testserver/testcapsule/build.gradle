@@ -24,20 +24,20 @@ capsule {
 }
 
 configurations.runtimeOnly.canBeResolved = true
-task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
+tasks.register('buildWebserverJar', FatCapsule) {
+    dependsOn project(':node').tasks.jar
     applicationClass 'net.corda.webserver.WebServer'
     archiveBaseName = 'corda-testserver'
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
-        project(':testing:testserver').configurations.runtimeClasspath,
-        project(':testing:testserver').tasks.jar,
-        project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
-        project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
-        project(':node').buildDir.toString() + '/resources/main/corda-reference.conf',
-        "$rootDir/config/dev/log4j2.xml",
-        project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
+            project(':testing:testserver').configurations.runtimeClasspath,
+            project(':testing:testserver').tasks.jar,
+            project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
+            project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
+            project(':node').buildDir.toString() + '/resources/main/corda-reference.conf',
+            "$rootDir/config/dev/log4j2.xml",
+            project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
 
