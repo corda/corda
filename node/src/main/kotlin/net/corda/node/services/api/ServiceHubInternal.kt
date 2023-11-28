@@ -5,8 +5,8 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.TransactionMetadata
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.TransactionMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NamedCacheFactory
@@ -38,7 +38,6 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import java.lang.IllegalStateException
 import java.security.SignatureException
 import java.util.ArrayList
 import java.util.Collections
@@ -88,6 +87,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
                                database: CordaPersistence,
+                               disableSoftLocking: Boolean = false,
                                updateFn: (SignedTransaction) -> Boolean = validatedTransactions::addTransaction
         ) {
 
@@ -147,7 +147,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 //
                 // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
                 // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
-                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
+                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction }, disableSoftLocking)
             }
         }
 
@@ -202,15 +202,14 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
 
     @Suppress("NestedBlockDepth")
     @VisibleForTesting
-    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean) {
+    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean, disableSoftLocking: Boolean = false) {
         txs.forEach {
             requireSupportedHashType(it)
             if (it.coreTransaction is WireTransaction) {
                 if (disableSignatureVerification) {
                     log.warnOnce("The current usage of recordTransactions is unsafe." +
                             "Recording transactions without signature verification may lead to severe problems with ledger consistency.")
-                }
-                else {
+                } else {
                     try {
                         it.verifyRequiredSignatures()
                     }
@@ -226,7 +225,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 validatedTransactions,
                 stateMachineRecordedTransactionMapping,
                 vaultService,
-                database
+                database,
+                disableSoftLocking
         )
     }
 
