@@ -80,7 +80,8 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     // against not having unknown by using the platform version as a guard.
     @CordaSerializationTransformEnumDefaults(
             CordaSerializationTransformEnumDefault("BATCH_TRANSACTION", "TRANSACTION"),
-            CordaSerializationTransformEnumDefault("UNKNOWN", "TRANSACTION")
+            CordaSerializationTransformEnumDefault("UNKNOWN", "TRANSACTION"),
+            CordaSerializationTransformEnumDefault("TRANSACTION_RECOVERY", "TRANSACTION")
     )
     @CordaSerializable
     enum class DataType {
