@@ -22,9 +22,9 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.tee
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.verification.VerifyingServiceHub
 import net.corda.core.internal.warnOnce
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.StatesNotAvailableException
@@ -97,7 +97,7 @@ import kotlin.collections.component2
 class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
-        private val serviceHub: ServiceHub,
+        private val serviceHub: VerifyingServiceHub,
         private val database: CordaPersistence,
         schemaService: SchemaService,
         private val appClassloader: ClassLoader
@@ -230,7 +230,7 @@ class NodeVaultService(
 
             // Persist the consumed inputs.
             consumedStateRefs.forEach { stateRef ->
-                val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
+                val state = session.get(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
                     // Only update the state if it has not previously been consumed (this could have happened if the transaction is being
                     // re-recorded.
@@ -311,7 +311,7 @@ class NodeVaultService(
 
         fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> {
             var error: TransactionDeserialisationException? = null
-            val map = (0 until list.size).mapNotNull { idx ->
+            val map = list.indices.mapNotNull { idx ->
                 try {
                     idx to list[idx]
                 } catch (e: TransactionDeserialisationException) {
@@ -541,8 +541,8 @@ class NodeVaultService(
                 val stateStatusPredication = criteriaBuilder.equal(get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
                 val lockIdPredicate = criteriaBuilder.or(get<String>(VaultSchemaV1.VaultStates::lockId.name).isNull,
                         criteriaBuilder.equal(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString()))
-                update.set(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
-                update.set(get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
+                update.set(get(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
+                update.set(get(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
                 update.where(stateStatusPredication, lockIdPredicate, *commonPredicates)
             }
             if (updatedRows > 0 && updatedRows == stateRefs.size) {
@@ -595,8 +595,8 @@ class NodeVaultService(
             criteriaBuilder.executeUpdate(session, stateRefs) { update, persistentStateRefs ->
             val stateStatusPredication = criteriaBuilder.equal(get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.UNCONSUMED)
             val lockIdPredicate = criteriaBuilder.equal(get<String>(VaultSchemaV1.VaultStates::lockId.name), lockId.toString())
-            update.set<String>(get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-            update.set(get<Instant>(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
+            update.set(get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
+            update.set(get(VaultSchemaV1.VaultStates::lockUpdateTime.name), softLockTimestamp)
             configure(update, arrayOf(stateStatusPredication, lockIdPredicate), persistentStateRefs)
         }
 
@@ -753,7 +753,7 @@ class NodeVaultService(
             }
         }
 
-        val states: List<StateAndRef<T>> = statesMetadata.mapToSet { it.ref }.map(serviceHub::toStateAndRef)
+        val states: List<StateAndRef<T>> = serviceHub.loadStatesInternal(statesMetadata.mapToSet { it.ref }, ArrayList())
 
         val totalStatesAvailable = when {
             paging.isDefault -> -1L

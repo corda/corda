@@ -16,6 +16,7 @@ import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
@@ -137,12 +138,12 @@ class ExternalVerifier(
         val result = try {
             request.stx.verifyInternal(verificationContext, request.checkSufficientSignatures)
             log.info("${request.stx} verified")
-            VerificationResult.Success
+            Try.Success(Unit)
         } catch (t: Throwable) {
             log.info("${request.stx} failed to verify", t)
-            VerificationResult.Failure(t)
+            Try.Failure(t)
         }
-        toNode.writeCordaSerializable(result)
+        toNode.writeCordaSerializable(VerificationResult(result))
     }
 
     fun getParties(keys: Collection<PublicKey>): List<Party?> {

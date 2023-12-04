@@ -148,7 +148,7 @@ inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> {
     if (this is Collection) {
         when (size) {
             0 -> return emptySet()
-            1 -> return setOf(transform(if (this is List) get(0) else iterator().next()))
+            1 -> return setOf(transform(first()))
         }
     }
     return mapTo(LinkedHashSet(), transform)

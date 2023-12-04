@@ -12,6 +12,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.Try
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.EOFException
@@ -66,10 +67,7 @@ sealed interface ExternalVerifierOutbound {
         data class GetTrustedClassAttachment(val className: String) : VerifierRequest
     }
 
-    sealed interface VerificationResult : ExternalVerifierOutbound {
-        object Success : VerificationResult
-        data class Failure(val throwable: Throwable) : VerificationResult
-    }
+    data class VerificationResult(val result: Try<Unit>) : ExternalVerifierOutbound
 }
 
 fun DataOutputStream.writeCordaSerializable(payload: Any) {

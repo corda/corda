@@ -5,6 +5,7 @@ import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionState
@@ -78,6 +79,10 @@ interface VerifyingServiceHub : ServiceHub, VerificationSupport {
     }
 
     override fun loadState(stateRef: StateRef): TransactionState<*> = getSerializedState(stateRef).deserialize()
+
+    fun <T : ContractState, C : MutableCollection<StateAndRef<T>>> loadStatesInternal(input: Iterable<StateRef>, output: C): C {
+        return input.mapTo(output, ::toStateAndRef)
+    }
 
     // TODO Bulk party lookup?
     override fun getParties(keys: Collection<PublicKey>): List<Party?> = keys.map(identityService::partyFromKey)

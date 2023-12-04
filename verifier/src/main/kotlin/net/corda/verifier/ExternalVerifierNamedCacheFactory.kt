@@ -24,7 +24,7 @@ class ExternalVerifierNamedCacheFactory : NamedCacheFactory {
 
     private fun<K, V> configure(caffeine: Caffeine<in K, in V>, name: String): Caffeine<in K, in V> {
         return when (name) {
-            "AttachmentsClassLoader_cache" -> caffeine.maximumSize(DEFAULT_CACHE_SIZE / 4)
+            "AttachmentsClassLoader_cache" -> caffeine.maximumSize(32)
             "ExternalVerifier_parties" -> caffeine.maximumSize(DEFAULT_CACHE_SIZE)
             "ExternalVerifier_attachments" -> caffeine.maximumSize(DEFAULT_CACHE_SIZE)
             "ExternalVerifier_networkParameters" -> caffeine.maximumSize(DEFAULT_CACHE_SIZE)

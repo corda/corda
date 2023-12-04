@@ -8,6 +8,7 @@ import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.ServiceHubInternal
@@ -88,8 +89,8 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
                     continue
                 }
                 when (result) {
-                    is VerificationResult.Success -> return
-                    is VerificationResult.Failure -> throw result.throwable
+                    is Try.Success -> return
+                    is Try.Failure -> throw result.exception
                 }
             }
         }
@@ -116,7 +117,7 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
         connection = null
     }
 
-    private fun tryVerification(request: VerificationRequest): VerificationResult {
+    private fun tryVerification(request: VerificationRequest): Try<Unit> {
         val connection = getConnection()
         connection.toVerifier.writeCordaSerializable(request)
         // Send the verification request and then wait for any requests from verifier for more information. The last message will either
@@ -127,7 +128,7 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
             when (message) {
                 // Process the information the verifier needs and then loop back and wait for more messages
                 is VerifierRequest -> processVerifierRequest(message, connection)
-                is VerificationResult -> return message
+                is VerificationResult -> return message.result
             }
         }
     }
