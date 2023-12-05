@@ -36,8 +36,6 @@ dependencies {
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
     implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
-    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
-    implementation "net.i2p.crypto:eddsa:$eddsa_version"
     // Bouncy castle support needed for X509 certificate manipulation
     implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
     // required to use @Type annotation
