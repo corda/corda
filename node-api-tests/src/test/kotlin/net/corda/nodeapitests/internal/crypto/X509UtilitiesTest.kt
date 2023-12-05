@@ -1,3 +1,5 @@
+@file:Suppress("Since15")
+
 package net.corda.nodeapitests.internal.crypto
 
 
@@ -53,7 +55,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.BasicConstraints
@@ -78,6 +79,7 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
+import java.security.interfaces.EdECPrivateKey
 import java.util.*
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLParameters
@@ -124,7 +126,7 @@ class X509UtilitiesTest {
                 // By default, JKS returns SUN EC key.
                 Triple(ECDSA_SECP256R1_SHA256,java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
                 Triple(ECDSA_SECP256K1_SHA256,java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
-                Triple(EDDSA_ED25519_SHA512, EdDSAPrivateKey::class.java, EdDSAPrivateKey::class.java),
+                Triple(EDDSA_ED25519_SHA512, EdECPrivateKey::class.java, EdECPrivateKey::class.java),
                 // By default, JKS returns SUN RSA key.
                 Triple(SPHINCS256_SHA256, BCSphincs256PrivateKey::class.java, BCSphincs256PrivateKey::class.java)
         )
@@ -454,7 +456,7 @@ class X509UtilitiesTest {
     private fun <U, C> getCorrectKeyFromKeystore(signatureScheme: SignatureScheme, uncastedClass: Class<U>, castedClass: Class<C>) {
         val keyPair = generateKeyPair(signatureScheme)
         val (keyFromKeystore, keyFromKeystoreCasted) = storeAndGetKeysFromKeystore(keyPair)
-        if (uncastedClass == EdDSAPrivateKey::class.java && keyFromKeystore !is BCEdDSAPrivateKey) {
+        if (uncastedClass == EdECPrivateKey::class.java && keyFromKeystore !is BCEdDSAPrivateKey) {
             assertThat(keyFromKeystore).isInstanceOf(uncastedClass)
         }
         assertThat(keyFromKeystoreCasted).isInstanceOf(castedClass)

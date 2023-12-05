@@ -90,7 +90,6 @@ buildscript {
     ext.h2_version = constants.getProperty("h2Version")
     ext.rxjava_version = constants.getProperty("rxjavaVersion")
     ext.dokka_version = constants.getProperty("dokkaVersion")
-    ext.eddsa_version = constants.getProperty("eddsaVersion")
     ext.dependency_checker_version = constants.getProperty("dependencyCheckerVersion")
     ext.commons_collections_version = constants.getProperty("commonsCollectionsVersion")
     ext.beanutils_version = constants.getProperty("beanutilsVersion")
@@ -195,7 +194,6 @@ buildscript {
         classpath "com.guardsquare:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.dokka:dokka-base:$dokka_version"
-        classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:$dependency_checker_version"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x

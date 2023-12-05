@@ -1,3 +1,5 @@
+@file:Suppress("Since15")
+
 package net.corda.core.crypto
 
 import net.corda.core.CordaOID
@@ -12,14 +14,6 @@ import net.corda.core.crypto.internal.providerMap
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.math.GroupElement
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERNull
@@ -61,8 +55,14 @@ import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.Provider
 import java.security.PublicKey
+import java.security.Signature
 import java.security.SignatureException
+import java.security.interfaces.EdECPublicKey
+import java.security.spec.EdECPoint
+import java.security.spec.EdECPrivateKeySpec
+import java.security.spec.EdECPublicKeySpec
 import java.security.spec.InvalidKeySpecException
+import java.security.spec.NamedParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Mac
@@ -145,8 +145,8 @@ object Crypto {
             // We added EdDSA to bouncy castle for certificate signing.
             cordaBouncyCastleProvider.name,
             "1.3.101.112",
-            EdDSAEngine.SIGNATURE_ALGORITHM,
-            EdDSANamedCurveTable.getByName("ED25519"),
+            Signature.getInstance("Ed25519").algorithm,
+            NamedParameterSpec("Ed25519"),
             256,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
@@ -847,11 +847,12 @@ object Crypto {
         val macBytes = deriveHMAC(privateKey, seed)
 
         // Calculate key pair.
-        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-        val bytes = macBytes.copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
-        val privateKeyD = EdDSAPrivateKeySpec(bytes, params)
-        val publicKeyD = EdDSAPublicKeySpec(privateKeyD.a, params)
-        return KeyPair(internPublicKey(EdDSAPublicKey(publicKeyD)), EdDSAPrivateKey(privateKeyD))
+        val keyFactory = KeyFactory.getInstance("EdDSA");
+        val edECPrivateKeySpec = EdECPrivateKeySpec(NamedParameterSpec("Ed25519"), macBytes)
+        val privateKey = keyFactory.generatePrivate(edECPrivateKeySpec)
+        val publicKey = KeyPairGenerator.getInstance("Ed25519").generateKeyPair().public
+
+        return KeyPair(internPublicKey(publicKey), privateKey)
     }
 
     /**
@@ -882,15 +883,17 @@ object Crypto {
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // Custom key pair generator from entropy.
-    // The BigIntenger.toByteArray() uses the two's-complement representation.
-    // The entropy is transformed to a byte array in big-endian byte-order and
-    // only the first ed25519.field.getb() / 8 bytes are used.
     private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
-        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-        val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
-        val priv = EdDSAPrivateKeySpec(bytes, params)
-        val pub = EdDSAPublicKeySpec(priv.a, params)
-        return KeyPair(internPublicKey(EdDSAPublicKey(pub)), EdDSAPrivateKey(priv))
+        val kpg = KeyPairGenerator.getInstance("Ed25519")
+        val kp = kpg.generateKeyPair()
+
+        val kf = KeyFactory.getInstance("EdDSA")
+        val paramSpec = NamedParameterSpec("Ed25519")
+        val pubSpec = EdECPublicKeySpec(paramSpec, EdECPoint(true, entropy))
+        val pubKey = kf.generatePublic(pubSpec)
+        val privKey = kf.generatePrivate(PKCS8EncodedKeySpec(kp.private.encoded))
+
+        return KeyPair(internPublicKey(pubKey), privKey)
     }
 
     // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
@@ -925,7 +928,6 @@ object Crypto {
         val mac = Mac.getInstance("HmacSHA512", cordaBouncyCastleProvider)
         val keyData = when (privateKey) {
             is BCECPrivateKey -> privateKey.d.toByteArray()
-            is EdDSAPrivateKey -> privateKey.geta()
             else -> throw InvalidKeyException("Key type ${privateKey.algorithm} is not supported for deterministic key derivation")
         }
         val key = SecretKeySpec(keyData, "HmacSHA512")
@@ -954,15 +956,8 @@ object Crypto {
         }
         return when (publicKey) {
             is BCECPublicKey -> publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid
-            is EdDSAPublicKey -> publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve
             else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
         }
-    }
-
-    // Return true if EdDSA publicKey is point at infinity.
-    // For EdDSA a custom function is required as it is not supported by the I2P implementation.
-    private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey): Boolean {
-        return publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
     }
 
     /** Check if the requested [SignatureScheme] is supported by the system. */
@@ -981,7 +976,7 @@ object Crypto {
     // Check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
         return when (key) {
-            is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
+            is BCECPublicKey, is EdECPublicKey -> publicKeyOnCurve(signatureScheme, key)
             is BCRSAPublicKey -> key.modulus.bitLength() >= 2048 // Although the recommended RSA key size is 3072, we accept any key >= 2048bits.
             is BCSphincs256PublicKey -> true
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
@@ -994,14 +989,14 @@ object Crypto {
 
     private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
         return internPublicKey(when (key) {
-            is BCEdDSAPublicKey -> EdDSAPublicKey(X509EncodedKeySpec(key.encoded))
+            is BCEdDSAPublicKey ->  KeyPairGenerator.getInstance("Ed25519").generateKeyPair().public
             else -> key
         })
     }
 
     private fun convertIfBCEdDSAPrivateKey(key: PrivateKey): PrivateKey {
         return when (key) {
-            is BCEdDSAPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
+            is BCEdDSAPrivateKey -> KeyPairGenerator.getInstance("Ed25519").generateKeyPair().private
             else -> key
         }
     }
@@ -1031,7 +1026,7 @@ object Crypto {
             is BCECPublicKey -> internPublicKey(key)
             is BCRSAPublicKey -> internPublicKey(key)
             is BCSphincs256PublicKey -> internPublicKey(key)
-            is EdDSAPublicKey -> internPublicKey(key)
+            is EdECPublicKey -> internPublicKey(key)
             is CompositeKey -> internPublicKey(key)
             is BCEdDSAPublicKey -> convertIfBCEdDSAPublicKey(key)
             else -> decodePublicKey(key.encoded)
@@ -1052,7 +1047,7 @@ object Crypto {
             is BCECPrivateKey -> key
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
-            is EdDSAPrivateKey -> key
+            is EdECPublicKey -> key
             is BCEdDSAPrivateKey -> convertIfBCEdDSAPrivateKey(key)
             else -> decodePrivateKey(key.encoded)
         }

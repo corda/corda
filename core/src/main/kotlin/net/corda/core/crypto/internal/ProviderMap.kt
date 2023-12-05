@@ -4,9 +4,6 @@ import net.corda.core.crypto.CordaSecurityProvider
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.decodePrivateKey
 import net.corda.core.crypto.Crypto.decodePublicKey
-import net.corda.core.internal.X509EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
@@ -32,10 +29,6 @@ val cordaSecurityProvider = CordaSecurityProvider().also {
 // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
 val `id-Curve25519ph` = ASN1ObjectIdentifier("1.3.101.112")
 val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
-    putAll(EdDSASecurityProvider())
-    // Override the normal EdDSA engine with one which can handle X509 keys.
-    put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.java.name)
-    put("Signature.Ed25519", X509EdDSAEngine::class.java.name)
     addKeyInfoConverter(`id-Curve25519ph`, object : AsymmetricKeyInfoConverter {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo) = decodePublicKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
         override fun generatePrivate(keyInfo: PrivateKeyInfo) = decodePrivateKey(EDDSA_ED25519_SHA512, keyInfo.encoded)

@@ -54,7 +54,6 @@ dependencies {
     implementation "io.reactivex:rxjava:$rxjava_version"
     implementation "javax.persistence:javax.persistence-api:2.2"
     implementation "org.hibernate:hibernate-core:$hibernate_version"
-    implementation "net.i2p.crypto:eddsa:$eddsa_version"
     implementation "co.paralleluniverse:quasar-osgi-annotations:$quasar_version"
 
     runtimeOnly 'com.mattbertolini:liquibase-slf4j:2.0.0'
