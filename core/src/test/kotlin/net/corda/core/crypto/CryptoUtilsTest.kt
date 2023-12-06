@@ -500,9 +500,9 @@ class CryptoUtilsTest {
         val (privEd, pubEd) = keyPairEd
 
         assertEquals(privEd.algorithm, "EdDSA")
-        assertEquals((privEd as EdECKey).params, NamedParameterSpec.ED25519)
+        assertEquals((privEd as EdECKey).params.name, NamedParameterSpec.ED25519.name)
         assertEquals(pubEd.algorithm, "EdDSA")
-        assertEquals((pubEd as EdECKey).params, NamedParameterSpec.ED25519)
+        assertEquals((pubEd as EdECKey).params.name, NamedParameterSpec.ED25519.name)
     }
 
     @Test(timeout=300_000)
@@ -777,8 +777,8 @@ class CryptoUtilsTest {
         assertEquals(pub.algorithm, dpub.algorithm)
         assertTrue(dpriv is EdECPrivateKey)
         assertTrue(dpub is EdECPublicKey)
-        assertEquals((dpriv as EdECKey).params, NamedParameterSpec.ED25519)
-        assertEquals((dpub as EdECKey).params, NamedParameterSpec.ED25519)
+        assertEquals((dpriv as EdECKey).params.name, NamedParameterSpec.ED25519.name)
+        assertEquals((dpub as EdECKey).params.name, NamedParameterSpec.ED25519.name)
         assertEquals(Crypto.findSignatureScheme(dpriv), EDDSA_ED25519_SHA512)
         assertEquals(Crypto.findSignatureScheme(dpub), EDDSA_ED25519_SHA512)
 

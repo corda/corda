@@ -846,13 +846,23 @@ object Crypto {
         // Compute HMAC(privateKey, seed).
         val macBytes = deriveHMAC(privateKey, seed)
 
-        // Calculate key pair.
-        val keyFactory = KeyFactory.getInstance("Ed25519")
-        val edECPrivateKeySpec = EdECPrivateKeySpec(NamedParameterSpec.ED25519, macBytes)
-        val privateKey = keyFactory.generatePrivate(edECPrivateKeySpec)
-        val publicKey = KeyPairGenerator.getInstance("Ed25519").generateKeyPair().public
+        val keyPairGenerator = KeyPairGenerator.getInstance(EDDSA_ED25519_SHA512.algorithmName, EDDSA_ED25519_SHA512.providerName)
+        val keyPair = keyPairGenerator.generateKeyPair()
+        val privateKey = keyPair.private as EdECPrivateKey
+        val publicKey = keyPair.public as EdECPublicKey
+        val privateKeyBytes = privateKey.bytes.orElseThrow()
+        val edecPoint = publicKey.point
+        val y = edecPoint.y
+        val xOdd = edecPoint.isXOdd
 
-        return KeyPair(internPublicKey(publicKey), privateKey)
+        // reconstruct the keys using (privateKeyBytes), (y) and (xOdd)
+        val keyFactory = KeyFactory.getInstance(EDDSA_ED25519_SHA512.algorithmName, EDDSA_ED25519_SHA512.providerName)
+        val edECPrivateKeySpec = EdECPrivateKeySpec(NamedParameterSpec.ED25519, privateKeyBytes)
+        val privateKey2 = keyFactory.generatePrivate(edECPrivateKeySpec)
+        val edECPublicKeySpec = EdECPublicKeySpec(NamedParameterSpec.ED25519, EdECPoint(xOdd, y))
+        val publicKey2 = keyFactory.generatePublic(edECPublicKeySpec)
+
+        return KeyPair(internPublicKey(publicKey2), privateKey2)
     }
 
     /**
@@ -887,7 +897,7 @@ object Crypto {
         val kpg = KeyPairGenerator.getInstance("Ed25519")
         val kp = kpg.generateKeyPair()
 
-        val kf = KeyFactory.getInstance("EdDSA")
+        val kf = KeyFactory.getInstance("Ed25519")
         val pubSpec = EdECPublicKeySpec(NamedParameterSpec.ED25519, EdECPoint(true, entropy))
         val pubKey = kf.generatePublic(pubSpec)
         val privKey = kf.generatePrivate(PKCS8EncodedKeySpec(kp.private.encoded))
@@ -956,7 +966,7 @@ object Crypto {
         }
         return when (publicKey) {
             is BCECPublicKey -> publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid
-            is EdECPublicKey -> true
+            is EdECPublicKey -> publicKey.params.name == (signatureScheme.algSpec as? NamedParameterSpec)?.name && publicKey.point.y > BigInteger.ZERO
             else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
         }
     }
