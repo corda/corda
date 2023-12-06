@@ -9891,6 +9891,8 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.contracts.TransactionState loadState(net.corda.core.contracts.StateRef)
   @NotNull
+  public java.util.Set loadStates(java.util.Set)
+  @NotNull
   public static final java.util.Properties makeTestDataSourceProperties(String)
   @NotNull
   public static final kotlin.Pair makeTestDatabaseAndMockServices(java.util.List, net.corda.core.node.services.IdentityService, net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters, java.security.KeyPair...)

@@ -9,8 +9,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException.UnsupportedHashTypeException
-import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.HashAgility
@@ -38,10 +36,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
-import java.security.PublicKey
 import java.time.Instant
 import kotlin.test.assertFailsWith
 
