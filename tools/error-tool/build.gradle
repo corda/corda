@@ -8,15 +8,16 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 
     testImplementation "junit:junit:$junit_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {
     enabled = false
-    classifier = 'ignore'
+    archiveClassifier = 'ignore'
 }
 
 shadowJar {
-    baseName = "corda-tools-error-utils"
+    archiveBaseName = "corda-tools-error-utils"
     manifest {
         attributes(
                 'Main-Class': "net.corda.errorUtilities.ErrorToolKt"

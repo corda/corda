@@ -1,17 +1,14 @@
 package net.corda.coretests.crypto
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.PartialMerkleTree
-import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.SHA2_384
 import net.corda.core.crypto.SecureHash.Companion.hashAs
@@ -26,9 +23,10 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.finance.DOLLARS
-import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.`issued by`
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -36,10 +34,10 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
-import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -49,6 +47,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.security.PublicKey
 import java.util.function.Predicate
 import java.util.stream.IntStream
@@ -209,7 +210,7 @@ class PartialMerkleTreeWithNamedHashTest {
 
     @Test(timeout=300_000)
     fun `nothing filtered`() {
-        val ftxNothing = testTx.buildFilteredTransaction(Predicate { false })
+        val ftxNothing = testTx.buildFilteredTransaction { false }
         assertTrue(ftxNothing.componentGroups.isEmpty())
         assertTrue(ftxNothing.attachments.isEmpty())
         assertTrue(ftxNothing.commands.isEmpty())
@@ -296,10 +297,12 @@ class PartialMerkleTreeWithNamedHashTest {
         assertFalse(pmt.verify(wrongRoot, inclHashes))
     }
 
-    @Test(expected = Exception::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
-        hm1.serialize()
+        assertThatIllegalArgumentException().isThrownBy {
+            hm1.serialize()
+        }
     }
 
     private fun makeSimpleCashWtx(
