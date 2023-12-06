@@ -34,7 +34,7 @@ class ConcurrencyUtilsTest {
         val throwable = EOFException("log me")
         f2.setException(throwable)
         assertEquals(1, invocations) // Least astonishing to skip handler side-effects.
-        verify(log).error(eq(shortCircuitedTaskFailedMessage), same(throwable))
+        verify(log).error(eq("Short-circuited task failed:"), same(throwable))
         verifyNoMoreInteractions(log)
     }
 
@@ -68,7 +68,7 @@ class ConcurrencyUtilsTest {
         f1.set(100)
         assertEquals(100, g.getOrThrow())
         assertEquals(1, invocations) // Handler didn't run as g was already done.
-        verify(log).error(eq(shortCircuitedTaskFailedMessage), same(nonCancel))
+        verify(log).error(eq("Short-circuited task failed:"), same(nonCancel))
         verifyNoMoreInteractions(log)
         assertThatThrownBy { f2.getOrThrow() }.isSameAs(nonCancel)
     }
@@ -98,7 +98,7 @@ class ConcurrencyUtilsTest {
             }, failures::add)
         }.isSameAs(x)
         assertEquals(listOf<Any?>(100), successes)
-        assertEquals(emptyList<Any?>(), failures)
+        assertEquals(emptyList(), failures)
     }
 
     @Test(timeout=300_000)
@@ -109,12 +109,12 @@ class ConcurrencyUtilsTest {
         val failures = mutableListOf<Any?>()
         val x = Throwable()
         assertThatThrownBy {
-            f.match(successes::add, {
+            f.match(successes::add) {
                 failures.add(it)
                 throw x
-            })
+            }
         }.isSameAs(x)
-        assertEquals(emptyList<Any?>(), successes)
+        assertEquals(emptyList(), successes)
         assertEquals(listOf<Any?>(e), failures)
     }
 }

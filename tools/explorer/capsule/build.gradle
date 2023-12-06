@@ -15,16 +15,16 @@ capsule {
 }
 
 configurations.runtimeOnly.canBeResolved = true
-task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').tasks.jar) {
+tasks.register('buildExplorerJAR', FatCapsule) {
+    dependsOn project(':tools:explorer').tasks.jar
     applicationClass 'net.corda.explorer.Main'
     archiveBaseName = 'node-explorer'
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
-        project(':tools:explorer').configurations.runtimeClasspath,
-        project(':tools:explorer').tasks.jar,
-        project(':tools:explorer').sourceSets.main.java.outputDir.toString() + '/ExplorerCaplet.class'
+            project(':tools:explorer').configurations.runtimeClasspath,
+            project(':tools:explorer').tasks.jar,
+            project(':tools:explorer').sourceSets.main.java.outputDir.toString() + '/ExplorerCaplet.class'
     )
 
     capsuleManifest {
