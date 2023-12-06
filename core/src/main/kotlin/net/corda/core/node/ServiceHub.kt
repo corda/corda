@@ -10,7 +10,6 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.internal.PlatformVersionSwitches.TWO_PHASE_FINALITY
-import net.corda.core.internal.mapToSet
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.*
@@ -281,9 +280,6 @@ interface ServiceHub : ServicesForResolution {
     fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
         return StateAndRef(uncheckedCast(loadState(stateRef)), stateRef)
     }
-
-    @Throws(TransactionResolutionException::class)
-    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = stateRefs.mapToSet(::toStateAndRef)
 
     private val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentitiesAndCerts.first().owningKey
 

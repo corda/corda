@@ -4740,8 +4740,6 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   public abstract net.corda.core.node.services.VaultService getVaultService()
   @NotNull
   public abstract java.sql.Connection jdbcSession()
-  @NotNull
-  public java.util.Set loadStates(java.util.Set)
   public void recordTransactions(Iterable)
   public abstract void recordTransactions(net.corda.core.node.StatesToRecord, Iterable)
   public void recordTransactions(net.corda.core.transactions.SignedTransaction, net.corda.core.transactions.SignedTransaction...)

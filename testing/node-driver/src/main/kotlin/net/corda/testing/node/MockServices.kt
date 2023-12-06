@@ -5,6 +5,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.CordappProvider
@@ -18,6 +19,7 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.getRequiredTransaction
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
@@ -121,7 +123,6 @@ open class MockServices private constructor(
                 *arrayOf(initialIdentity.keyPair) + moreKeys
         )
 ) : ServiceHub {
-
     companion object {
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
             return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).map { it.jarFile.toUri().toURL() }, versionInfo)
@@ -548,6 +549,8 @@ open class MockServices private constructor(
         return getRequiredTransaction(stateRef.txhash).resolveBaseTransaction(this).outputs[stateRef.index]
     }
 
+    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = stateRefs.mapToSet(::toStateAndRef)
+
     /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
     override fun loadContractAttachment(stateRef: StateRef) = dummyAttachment
 
@@ -570,6 +573,8 @@ open class MockServices private constructor(
         override fun loadContractAttachment(stateRef: StateRef): Attachment = mockServices.loadContractAttachment(stateRef)
 
         override fun loadState(stateRef: StateRef): TransactionState<*> = mockServices.loadState(stateRef)
+
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = mockServices.loadStates(stateRefs)
     }
 
 

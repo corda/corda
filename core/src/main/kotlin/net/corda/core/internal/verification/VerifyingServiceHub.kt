@@ -80,6 +80,8 @@ interface VerifyingServiceHub : ServiceHub, VerificationSupport {
 
     override fun loadState(stateRef: StateRef): TransactionState<*> = getSerializedState(stateRef).deserialize()
 
+    override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = loadStatesInternal(stateRefs, LinkedHashSet())
+
     fun <T : ContractState, C : MutableCollection<StateAndRef<T>>> loadStatesInternal(input: Iterable<StateRef>, output: C): C {
         return input.mapTo(output, ::toStateAndRef)
     }

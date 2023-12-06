@@ -14,8 +14,8 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.SchedulableFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StartableByService
-import net.corda.core.internal.JDK11_CLASS_FILE_FORMAT_MAJOR_VERSION
-import net.corda.core.internal.JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.CordappImpl
