@@ -13,7 +13,6 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
