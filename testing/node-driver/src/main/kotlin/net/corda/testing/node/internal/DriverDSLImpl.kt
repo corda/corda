@@ -1002,7 +1002,7 @@ class DriverDSLImpl(
                         && !isTestArtifact(cpPathEntry.name)
                         && !cpPathEntry.isExcludedJar
             }
-
+            
             return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
