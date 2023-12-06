@@ -13,11 +13,9 @@ javafx {
     ]
 }
 
-apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
-sourceCompatibility = 1.8
 mainClassName = 'net.corda.explorer.Main'
 
 dependencies {
