@@ -63,12 +63,18 @@ val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
 }.also {
     Security.addProvider(it)
 }
+
+val sunECProvider =Security.getProvider("SunEC").apply {
+    require(name == "SunEC") { "Invalid SunProvider name" }
+}.also {
+    Security.addProvider(it)
+}
 // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
 // that could cause unexpected and suspicious behaviour.
 // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
 // The val is immutable to avoid any harmful state changes.
 internal val providerMap: Map<String, Provider> = unmodifiableMap(
-    listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider)
+    listOf(sunECProvider, cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider)
         .associateByTo(LinkedHashMap(), Provider::getName)
 )
 

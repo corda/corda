@@ -1,3 +1,5 @@
+@file:Suppress("Since15")
+
 package net.corda.core.crypto
 
 import com.google.common.collect.Sets
@@ -8,13 +10,6 @@ import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.internal.PlatformSecureRandomService
 import net.corda.core.utilities.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAKey
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.math.GroupElement
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
@@ -30,6 +25,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Ignore
 import org.junit.Test
 import java.math.BigInteger
+import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.security.Security
@@ -39,6 +35,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import java.security.interfaces.EdECKey
+import java.security.interfaces.EdECPrivateKey
+import java.security.interfaces.EdECPublicKey
+import java.security.spec.EdECPoint
+import java.security.spec.EdECPublicKeySpec
+import java.security.spec.NamedParameterSpec
 
 /**
  * Run tests for cryptographic algorithms.
@@ -498,9 +500,9 @@ class CryptoUtilsTest {
         val (privEd, pubEd) = keyPairEd
 
         assertEquals(privEd.algorithm, "EdDSA")
-        assertEquals((privEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals((privEd as EdECKey).params, NamedParameterSpec("Ed25519"))
         assertEquals(pubEd.algorithm, "EdDSA")
-        assertEquals((pubEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals((pubEd as EdECKey).params, NamedParameterSpec("Ed25519"))
     }
 
     @Test(timeout=300_000)
@@ -665,8 +667,9 @@ class CryptoUtilsTest {
         // Use R1 curve for check.
         assertFalse(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubEdDSA))
         // Check for point at infinity.
-        val pubKeySpec = EdDSAPublicKeySpec((EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3), EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec)
-        assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
+        val keyFactory = KeyFactory.getInstance("Ed25519");
+        val pubKeySpec = EdECPublicKeySpec(NamedParameterSpec("Ed25519"), EdECPoint(false, BigInteger.ZERO))
+        assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, keyFactory.generatePublic(pubKeySpec)))
     }
 
     @Test(timeout = 300_000)
@@ -772,10 +775,10 @@ class CryptoUtilsTest {
         // Check scheme.
         assertEquals(priv.algorithm, dpriv.algorithm)
         assertEquals(pub.algorithm, dpub.algorithm)
-        assertTrue(dpriv is EdDSAPrivateKey)
-        assertTrue(dpub is EdDSAPublicKey)
-        assertEquals((dpriv as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
-        assertEquals((dpub as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertTrue(dpriv is EdECPrivateKey)
+        assertTrue(dpub is EdECPublicKey)
+        assertEquals((dpriv as EdECKey).params, NamedParameterSpec("Ed25519"))
+        assertEquals((dpub as EdECKey).params, NamedParameterSpec("Ed25519"))
         assertEquals(Crypto.findSignatureScheme(dpriv), EDDSA_ED25519_SHA512)
         assertEquals(Crypto.findSignatureScheme(dpub), EDDSA_ED25519_SHA512)
 
