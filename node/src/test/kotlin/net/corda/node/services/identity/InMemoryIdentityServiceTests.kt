@@ -23,7 +23,6 @@ import kotlin.test.assertNull
 /**
  * Tests for the in memory identity service.
  */
-@Ignore("TODO JDK17: Fixme")
 class InMemoryIdentityServiceTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)

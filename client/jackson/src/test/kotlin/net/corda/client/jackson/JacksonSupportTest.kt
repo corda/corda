@@ -701,7 +701,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
 	fun `X509Certificate serialization when extendedKeyUsage is null`() {
         val cert: X509Certificate = spy(MINI_CORP.identity.certificate)
         whenever(cert.extendedKeyUsage).thenReturn(null)
