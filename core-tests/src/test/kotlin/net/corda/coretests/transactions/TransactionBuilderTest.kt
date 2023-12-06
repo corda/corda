@@ -8,7 +8,9 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.UnsupportedHashTypeException
+import net.corda.core.cordapp.CordappProvider
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.HashAgility
@@ -30,11 +32,16 @@ import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import java.security.PublicKey
 import java.time.Instant
 import kotlin.test.assertFailsWith
 
@@ -233,7 +240,7 @@ class TransactionBuilderTest {
     }
 
     @Ignore
-    @Test(timeout=300_000, expected = TransactionVerificationException.UnsupportedHashTypeException::class)
+    @Test(timeout=300_000)
     fun `throws with non-default hash algorithm`() {
         HashAgility.init()
         try {
@@ -249,13 +256,15 @@ class TransactionBuilderTest {
                     .addOutputState(outputState)
                     .addCommand(DummyCommandData, notary.owningKey)
 
-            builder.toWireTransaction(services)
+            assertThatExceptionOfType(UnsupportedHashTypeException::class.java).isThrownBy {
+                builder.toWireTransaction(services)
+            }
         } finally {
             HashAgility.init()
         }
     }
 
-    @Test(timeout=300_000, expected = Test.None::class)
+    @Test(timeout=300_000)
     fun `allows non-default hash algorithm`() {
         HashAgility.init(txHashAlgoName = DigestService.sha2_384.hashAlgorithm)
         assertThat(services.digestService).isEqualTo(DigestService.sha2_384)
