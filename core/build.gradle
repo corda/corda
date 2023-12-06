@@ -83,20 +83,20 @@ dependencies {
 
     // JDK11: required by Quasar at run-time
     testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
+    testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "org.mockito:mockito-core:$mockito_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"
     testImplementation 'org.hamcrest:hamcrest-library:2.1'
-
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
-task copyQuasarJar(type: Copy) {
+tasks.register('copyQuasarJar', Copy) {
     from configurations.quasar
     into "$project.rootProject.projectDir/lib"
-    rename { filename -> "quasar.jar"}
+    rename { filename -> "quasar.jar" }
 }
 
 jar {
@@ -122,11 +122,23 @@ processTestResources {
     }
 }
 
+compileTestJava {
+    options.compilerArgs += [
+            '--add-exports', 'java.base/sun.security.util=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.security.x509=ALL-UNNAMED'
+    ]
+}
+
 test {
+    jvmArgs += [
+            '--add-exports', 'java.base/sun.security.util=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.security.x509=ALL-UNNAMED'
+    ]
     maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
 }
 
-task testJar(type: Jar, dependsOn: testClasses) {
+tasks.register('testJar', Jar) {
+    dependsOn testClasses
     classifier "tests"
     from sourceSets.test.output
 }
