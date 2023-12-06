@@ -57,6 +57,7 @@ import java.security.Provider
 import java.security.PublicKey
 import java.security.Signature
 import java.security.SignatureException
+import java.security.interfaces.EdECPrivateKey
 import java.security.interfaces.EdECPublicKey
 import java.security.spec.EdECPoint
 import java.security.spec.EdECPrivateKeySpec
@@ -142,8 +143,7 @@ object Crypto {
             "EDDSA_ED25519_SHA512",
             AlgorithmIdentifier(`id-Curve25519ph`, null),
             emptyList(), // Both keys and the signature scheme use the same OID in i2p library.
-            // We added EdDSA to bouncy castle for certificate signing.
-            cordaBouncyCastleProvider.name,
+            "SunEC",
             "1.3.101.112",
             Signature.getInstance("Ed25519").algorithm,
             NamedParameterSpec("Ed25519"),
@@ -847,8 +847,8 @@ object Crypto {
         val macBytes = deriveHMAC(privateKey, seed)
 
         // Calculate key pair.
-        val keyFactory = KeyFactory.getInstance("EdDSA");
-        val edECPrivateKeySpec = EdECPrivateKeySpec(NamedParameterSpec("Ed25519"), macBytes)
+        val keyFactory = KeyFactory.getInstance("Ed25519");
+        val edECPrivateKeySpec = EdECPrivateKeySpec(NamedParameterSpec.ED25519, macBytes)
         val privateKey = keyFactory.generatePrivate(edECPrivateKeySpec)
         val publicKey = KeyPairGenerator.getInstance("Ed25519").generateKeyPair().public
 
@@ -928,6 +928,7 @@ object Crypto {
         val mac = Mac.getInstance("HmacSHA512", cordaBouncyCastleProvider)
         val keyData = when (privateKey) {
             is BCECPrivateKey -> privateKey.d.toByteArray()
+            is EdECPrivateKey -> privateKey.encoded
             else -> throw InvalidKeyException("Key type ${privateKey.algorithm} is not supported for deterministic key derivation")
         }
         val key = SecretKeySpec(keyData, "HmacSHA512")
@@ -956,6 +957,7 @@ object Crypto {
         }
         return when (publicKey) {
             is BCECPublicKey -> publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid
+            is EdECPublicKey -> true
             else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
         }
     }

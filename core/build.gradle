@@ -119,7 +119,22 @@ processTestResources {
     }
 }
 
+compileTestJava {
+    options.compilerArgs += [
+            '--add-exports', 'java.base/sun.security.util=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.security.x509=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.security.jca=ALL-UNNAMED',
+            '--add-exports', 'jdk.crypto.ec/sun.security.ec.ed=ALL-UNNAMED'
+    ]
+}
+
 test {
+    jvmArgs += [
+            '--add-exports', 'java.base/sun.security.util=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.security.x509=ALL-UNNAMED',
+            '--add-exports', 'java.base/sun.security.jca=ALL-UNNAMED',
+            '--add-exports', 'jdk.crypto.ec/sun.security.ec.ed=ALL-UNNAMED'
+    ]
     maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
 }
 

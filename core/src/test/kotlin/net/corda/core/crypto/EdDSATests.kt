@@ -1,14 +1,15 @@
+@file:Suppress("Since15")
+
 package net.corda.core.crypto
 
 import net.corda.core.utilities.hexToByteArray
 import net.corda.core.utilities.toHex
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import org.junit.Test
+import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.Signature
+import java.security.spec.EdECPrivateKeySpec
+import java.security.spec.NamedParameterSpec
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
@@ -18,7 +19,7 @@ import kotlin.test.assertNotEquals
 class EdDSATests {
     @Test(timeout=300_000)
 	fun `PureEdDSA Ed25519 test vectors`() {
-        val edParams = Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
+        val edParams = Crypto.EDDSA_ED25519_SHA512.algSpec
 
         // MESSAGE (length 0 bytes).
         val testVector1 = SignatureTestVector(
@@ -153,7 +154,9 @@ class EdDSATests {
 
         val testVectors = listOf(testVector1, testVector2, testVector3, testVector1024, testVectorSHAabc)
         testVectors.forEach {
-            val privateKey = EdDSAPrivateKey(EdDSAPrivateKeySpec(it.privateKeyHex.hexToByteArray(), edParams))
+            val keyFactory = KeyFactory.getInstance("Ed25519")
+            val privKeySpec = EdECPrivateKeySpec(NamedParameterSpec("Ed25519"), it.privateKeyHex.hexToByteArray())
+            val privateKey =  keyFactory.generatePrivate(privKeySpec)
             assertEquals(it.signatureOutputHex, doSign(privateKey, it.messageToSignHex.hexToByteArray()).toHex().toLowerCase())
         }
 
@@ -170,7 +173,9 @@ class EdDSATests {
                         "5a5ca2df6668346291c2043d4eb3e90d"
         )
 
-        val privateKey = EdDSAPrivateKey(EdDSAPrivateKeySpec(testVectorEd25519ctx.privateKeyHex.hexToByteArray(), edParams))
+        val keyFactory = KeyFactory.getInstance("Ed25519")
+        val privKeySpec = EdECPrivateKeySpec(NamedParameterSpec("Ed25519"), testVectorEd25519ctx.privateKeyHex.hexToByteArray())
+        val privateKey =  keyFactory.generatePrivate(privKeySpec)
         assertNotEquals(testVectorEd25519ctx.signatureOutputHex, doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex().toLowerCase())
     }
 
@@ -182,7 +187,7 @@ class EdDSATests {
 
     // Required to implement a custom doSign function, because Corda's Crypto.doSign does not allow empty messages (testVector1).
     private fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        val signature = Signature.getInstance(Crypto.EDDSA_ED25519_SHA512.signatureName, EdDSASecurityProvider())
+        val signature = Signature.getInstance(Crypto.EDDSA_ED25519_SHA512.signatureName, "SunEC") // SunEC())
         signature.initSign(privateKey)
         signature.update(clearData)
         return signature.sign()
