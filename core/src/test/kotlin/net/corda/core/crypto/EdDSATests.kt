@@ -156,7 +156,7 @@ class EdDSATests {
         val testVectors = listOf(testVector1, testVector2, testVector3, testVector1024, testVectorSHAabc)
         testVectors.forEach {
             val keyFactory = KeyFactory.getInstance("Ed25519")
-            val privKeySpec = EdECPrivateKeySpec(NamedParameterSpec("Ed25519"), it.privateKeyHex.hexToByteArray())
+            val privKeySpec = EdECPrivateKeySpec(NamedParameterSpec.ED25519, it.privateKeyHex.hexToByteArray())
             val privateKey =  keyFactory.generatePrivate(privKeySpec)
             assertEquals(it.signatureOutputHex, doSign(privateKey, it.messageToSignHex.hexToByteArray()).toHex().toLowerCase())
         }
@@ -174,7 +174,7 @@ class EdDSATests {
                         "5a5ca2df6668346291c2043d4eb3e90d"
         )
         val keyFactory = KeyFactory.getInstance("Ed25519")
-        val privKeySpec = EdECPrivateKeySpec(NamedParameterSpec("Ed25519"), testVectorEd25519ctx.privateKeyHex.hexToByteArray())
+        val privKeySpec = EdECPrivateKeySpec(NamedParameterSpec.ED25519, testVectorEd25519ctx.privateKeyHex.hexToByteArray())
         val privateKey =  keyFactory.generatePrivate(privKeySpec)
         assertNotEquals(testVectorEd25519ctx.signatureOutputHex, doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex().toLowerCase())
     }
@@ -187,7 +187,7 @@ class EdDSATests {
 
     // Required to implement a custom doSign function, because Corda's Crypto.doSign does not allow empty messages (testVector1).
     private fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        val signature = Signature.getInstance(Crypto.EDDSA_ED25519_SHA512.signatureName, "SunEC") // SunEC())
+        val signature = Signature.getInstance(Crypto.EDDSA_ED25519_SHA512.signatureName, "SunEC")
         signature.initSign(privateKey)
         signature.update(clearData)
         return signature.sign()

@@ -316,7 +316,6 @@ quasar {
             "io.github.classgraph**",
             "io.netty*",
             "liquibase**",
-            "net.i2p.crypto.**",
             "nonapi.io.github.classgraph.**",
             "org.apiguardian.**",
             "org.bouncycastle**",

@@ -7,9 +7,9 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.enclosedCordapp
-import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.assertj.core.api.Assertions
 import java.security.PublicKey
+import java.security.interfaces.EdECPublicKey
 import java.time.Duration
 
 /**
@@ -201,12 +201,12 @@ class TestCorDapp {
 
     @Suppress("unused")
     class BrokenEdDSAPublicKeySerializer :
-            CheckpointCustomSerializer<EdDSAPublicKey, String> {
-        override fun toProxy(obj: EdDSAPublicKey): String {
+            CheckpointCustomSerializer<EdECPublicKey, String> {
+        override fun toProxy(obj: EdECPublicKey): String {
             throw FlowException("Broken on purpose")
         }
 
-        override fun fromProxy(proxy: String): EdDSAPublicKey {
+        override fun fromProxy(proxy: String): EdECPublicKey {
             throw FlowException("Broken on purpose")
         }
     }

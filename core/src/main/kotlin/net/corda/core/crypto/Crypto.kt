@@ -142,11 +142,11 @@ object Crypto {
             4,
             "EDDSA_ED25519_SHA512",
             AlgorithmIdentifier(`id-Curve25519ph`, null),
-            emptyList(), // Both keys and the signature scheme use the same OID in i2p library.
+            emptyList(),
             "SunEC",
             "1.3.101.112",
             Signature.getInstance("Ed25519").algorithm,
-            NamedParameterSpec("Ed25519"),
+            NamedParameterSpec.ED25519,
             256,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
@@ -847,7 +847,7 @@ object Crypto {
         val macBytes = deriveHMAC(privateKey, seed)
 
         // Calculate key pair.
-        val keyFactory = KeyFactory.getInstance("Ed25519");
+        val keyFactory = KeyFactory.getInstance("Ed25519")
         val edECPrivateKeySpec = EdECPrivateKeySpec(NamedParameterSpec.ED25519, macBytes)
         val privateKey = keyFactory.generatePrivate(edECPrivateKeySpec)
         val publicKey = KeyPairGenerator.getInstance("Ed25519").generateKeyPair().public
@@ -888,8 +888,7 @@ object Crypto {
         val kp = kpg.generateKeyPair()
 
         val kf = KeyFactory.getInstance("EdDSA")
-        val paramSpec = NamedParameterSpec("Ed25519")
-        val pubSpec = EdECPublicKeySpec(paramSpec, EdECPoint(true, entropy))
+        val pubSpec = EdECPublicKeySpec(NamedParameterSpec.ED25519, EdECPoint(true, entropy))
         val pubKey = kf.generatePublic(pubSpec)
         val privKey = kf.generatePrivate(PKCS8EncodedKeySpec(kp.private.encoded))
 
