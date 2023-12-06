@@ -811,28 +811,28 @@ class CryptoUtilsTest {
     @Test(timeout=300_000)
 	fun `EdDSA ed25519 keyPair from entropy`() {
         val keyPairPositive = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("10"))
-        assertEquals("DLBL3iHCp9uRReWhhCGfCsrxZZpfAm9h9GLbfN8ijqXTq", keyPairPositive.public.toStringShort())
+        assertEquals("DL2PT6TKjZoy52Z7reVeLcU2xrDfFAp2otH599i2TZw2bR", keyPairPositive.public.toStringShort())
 
         val keyPairNegative = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("-10"))
-        assertEquals("DLC5HXnYsJAFqmM9hgPj5G8whQ4TpyE9WMBssqCayLBwA2", keyPairNegative.public.toStringShort())
+        assertEquals("DLG3DGc8YyjEWH2ZvbWm2QD5qLQ9gZ3P4DbixrHZi9gS4Z", keyPairNegative.public.toStringShort())
 
         val keyPairZero = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("0"))
-        assertEquals("DL4UVhGh4tqu1G86UVoGNaDDNCMsBtNHzE6BSZuNNJN7W2", keyPairZero.public.toStringShort())
+        assertEquals("DLGjcbpuxAsGLoSF1KD3ZSaoRfMhktLJ8BaEr4ejsy3meC", keyPairZero.public.toStringShort())
 
         val keyPairOne = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("1"))
-        assertEquals("DL8EZUdHixovcCynKMQzrMWBnXQAcbVDHi6ArPphqwJVzq", keyPairOne.public.toStringShort())
+        assertEquals("DL2LuCD6MdF8bJBtKQhoCdLgYgEZWeKKT2FBQ2m3b4RdfE", keyPairOne.public.toStringShort())
 
         val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger.TEN))
-        assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan256bits.public.toStringShort())
+        assertEquals("DLEoKfAwMEV9F5zjDRRnS2Bq2of7Wg7K6RDfoYBEdGtggi", keyPairBiggerThan256bits.public.toStringShort())
         // The underlying implementation uses the first 256 bytes of the entropy. Thus, 2^258-10 and 2^258-50 and 2^514-10 have the same impact.
         val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger("50")))
-        assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan256bitsV2.public.toStringShort())
+        assertEquals("DL29LmAM9ZLR18rNBRDTrfYkScj26CYrwGQX9qHf5M3Nj8", keyPairBiggerThan256bitsV2.public.toStringShort())
         val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(514).minus(BigInteger.TEN))
-        assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan512bits.public.toStringShort())
+        assertEquals("DLEoKfAwMEV9F5zjDRRnS2Bq2of7Wg7K6RDfoYBEdGtggi", keyPairBiggerThan512bits.public.toStringShort())
 
         // Try another big number.
         val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(259).plus(BigInteger.ONE))
-        assertEquals("DL5tEFVMXMGrzwjfCAW34JjkhsRkPfFyJ38iEnmpB6L2Z9", keyPairBiggerThan258bits.public.toStringShort())
+        assertEquals("DL2LuCD6MdF8bJBtKQhoCdLgYgEZWeKKT2FBQ2m3b4RdfE", keyPairBiggerThan258bits.public.toStringShort())
     }
 
     @Test(timeout=300_000)
