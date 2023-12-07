@@ -9,7 +9,6 @@ import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.system.exitProcess
 
-@Suppress("TooGenericExceptionCaught")
 object Main {
     private val log = loggerFor<Main>()
 

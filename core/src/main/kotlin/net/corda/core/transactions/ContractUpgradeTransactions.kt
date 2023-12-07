@@ -290,7 +290,6 @@ private constructor(
         //  upgraded attachments
         @CordaInternal
         @JvmSynthetic
-        @Suppress("TooGenericExceptionCaught")
         internal fun loadUpgradedContract(className: ContractClassName, id: SecureHash, classLoader: ClassLoader): UpgradedContract<ContractState, *> {
             return try {
                 loadClassOfType<UpgradedContract<ContractState, *>>(className, false, classLoader)

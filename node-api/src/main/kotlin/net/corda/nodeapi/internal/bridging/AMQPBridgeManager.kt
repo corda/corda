@@ -1,4 +1,3 @@
-@file:Suppress("TooGenericExceptionCaught") // needs to catch and handle/rethrow *all* exceptions in many places
 package net.corda.nodeapi.internal.bridging
 
 import co.paralleluniverse.fibers.instrument.DontInstrument

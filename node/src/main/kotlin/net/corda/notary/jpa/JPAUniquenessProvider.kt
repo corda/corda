@@ -229,8 +229,7 @@ class JPAUniquenessProvider(
         var exceptionCaught: SQLException? = null
         while (retryCount <= config.maxDBTransactionRetryCount) {
             try {
-                val res = block()
-                return res
+                return block()
             } catch (e: SQLException) {
                 retryCount++
                 Thread.sleep(backOff)
@@ -242,7 +241,7 @@ class JPAUniquenessProvider(
     }
 
     private fun findAllConflicts(session: Session, requests: List<CommitRequest>): MutableMap<StateRef, StateConsumptionDetails> {
-        log.info("Processing notarization requests with ${requests.sumBy { it.states.size }} input states and ${requests.sumBy { it.references.size }} references")
+        log.info("Processing notarization requests with ${requests.sumOf { it.states.size }} input states and ${requests.sumOf { it.references.size }} references")
 
         val allStates = requests.flatMap { it.states }
         val allReferences = requests.flatMap { it.references }
@@ -338,7 +337,6 @@ class JPAUniquenessProvider(
         return session.find(CommittedTransaction::class.java, txId.toString()) != null
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun processRequests(requests: List<CommitRequest>) {
         try {
             // Note that there is an additional retry mechanism within the transaction itself.

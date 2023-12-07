@@ -440,7 +440,6 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
  * Verify the given [LedgerTransaction]. This includes validating
  * its contents, as well as executing all of its smart contracts.
  */
-@Suppress("TooGenericExceptionCaught")
 class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Function<Supplier<LedgerTransaction>, Unit> {
     // Loads the contract class from the transactionClassLoader.
     private fun createContractClass(id: SecureHash, contractClassName: ContractClassName): Class<out Contract> {
