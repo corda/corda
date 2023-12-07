@@ -13,7 +13,6 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -23,7 +22,6 @@ import kotlin.test.assertNull
 /**
  * Tests for the in memory identity service.
  */
-@Ignore("TODO JDK17: Fixme")
 class InMemoryIdentityServiceTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
