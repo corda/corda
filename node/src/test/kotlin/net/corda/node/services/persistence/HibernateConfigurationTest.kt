@@ -1,6 +1,5 @@
 package net.corda.node.services.persistence
 
-import org.mockito.kotlin.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -10,6 +9,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
@@ -28,7 +28,6 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
-import net.corda.node.internal.NodeServicesForResolution
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
 import net.corda.node.services.schema.NodeSchemaService
@@ -41,7 +40,14 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.persistence.HibernateSchemaChangeException
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.vault.DummyDealStateSchemaV1
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
@@ -49,15 +55,25 @@ import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.SessionFactory
-import org.junit.*
+import org.junit.After
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
-import java.util.*
+import java.util.Currency
+import java.util.Random
+import java.util.UUID
 import javax.persistence.EntityManager
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
@@ -85,7 +101,7 @@ class HibernateConfigurationTest {
     val vault: VaultService get() = services.vaultService
 
     // Hibernate configuration objects
-    lateinit var hibernateConfig: HibernateConfiguration
+    private lateinit var hibernateConfig: HibernateConfiguration
     private lateinit var hibernatePersister: PersistentStateService
     private lateinit var sessionFactory: SessionFactory
     private lateinit var entityManager: EntityManager
@@ -126,7 +142,7 @@ class HibernateConfigurationTest {
                 override val vaultService = NodeVaultService(
                         Clock.systemUTC(),
                         keyManagementService,
-                        servicesForResolution as NodeServicesForResolution,
+                        toVerifyingServiceHub(),
                         database,
                         schemaService,
                         cordappClassloader
@@ -236,7 +252,7 @@ class HibernateConfigurationTest {
 
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
-        Assertions.assertThat(queryResults.size).isEqualTo(3)
+        assertThat(queryResults.size).isEqualTo(3)
     }
 
     @Test(timeout=300_000)
@@ -327,7 +343,7 @@ class HibernateConfigurationTest {
 
         // execute query
         val queryResults = query.resultList
-        Assertions.assertThat(queryResults.size).isEqualTo(15)
+        assertThat(queryResults.size).isEqualTo(15)
 
         // try towards end
         query.firstResult = 100
@@ -335,7 +351,7 @@ class HibernateConfigurationTest {
 
         val lastQueryResults = query.resultList
 
-        Assertions.assertThat(lastQueryResults.size).isEqualTo(10)
+        assertThat(lastQueryResults.size).isEqualTo(10)
     }
 
     /**

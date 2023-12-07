@@ -1,0 +1,35 @@
+plugins {
+    id "org.jetbrains.kotlin.jvm"
+    id "application"
+    id "com.github.johnrengelman.shadow"
+}
+
+application {
+    mainClass.set("net.corda.verifier.Main")
+}
+
+dependencies {
+    implementation project(":core")
+    implementation project(":serialization")
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+
+    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+}
+
+jar {
+    manifest {
+        attributes("Add-Opens":
+                "java.base/java.lang " +
+                        "java.base/java.lang.reflect " +
+                        "java.base/java.lang.invoke " +
+                        "java.base/java.util " +
+                        "java.base/java.time " +
+                        "java.base/java.io " +
+                        "java.base/java.net " +
+                        "java.base/javax.net.ssl " +
+                        "java.base/java.security.cert " +
+                        "java.base/java.nio"
+        )
+    }
+}

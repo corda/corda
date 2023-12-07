@@ -28,7 +28,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.flows.registerCoreFlowFactory
 import net.corda.coretesting.internal.rigorousMock
-import net.corda.node.internal.NodeServicesForResolution
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
@@ -86,11 +85,10 @@ class VaultSoftLockManagerTest {
     private val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(enclosedCordapp()), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService,
-                                          services: NodeServicesForResolution,
                                           database: CordaPersistence,
                                           cordappLoader: CordappLoader): VaultServiceInternal {
                 val node = this
-                val realVault = super.makeVaultService(keyManagementService, services, database, cordappLoader)
+                val realVault = super.makeVaultService(keyManagementService, database, cordappLoader)
                 return object : SingletonSerializeAsToken(), VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
                         // Should be called before flow is removed
