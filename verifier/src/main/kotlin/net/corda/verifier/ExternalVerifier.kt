@@ -53,7 +53,7 @@ import java.util.Optional
 import kotlin.io.path.div
 import kotlin.io.path.listDirectoryEntries
 
-@Suppress("TooGenericExceptionCaught", "MagicNumber")
+@Suppress("MagicNumber")
 class ExternalVerifier(
         private val baseDirectory: Path,
         private val fromNode: DataInputStream,

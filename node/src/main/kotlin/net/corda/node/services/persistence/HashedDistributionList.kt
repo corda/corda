@@ -10,7 +10,6 @@ import java.io.DataOutputStream
 import java.nio.ByteBuffer
 import java.time.Instant
 
-@Suppress("TooGenericExceptionCaught")
 @CordaSerializable
 data class HashedDistributionList(
         val senderStatesToRecord: StatesToRecord,
@@ -60,7 +59,7 @@ data class HashedDistributionList(
             fun unauthenticatedDeserialise(encryptedBytes: ByteArray, encryptionService: EncryptionService): PublicHeader {
                 val additionalData = encryptionService.extractUnauthenticatedAdditionalData(encryptedBytes)
                 requireNotNull(additionalData) { "Missing additional data field" }
-                return deserialise(additionalData!!)
+                return deserialise(additionalData)
             }
 
             fun deserialise(bytes: ByteArray): PublicHeader {
@@ -91,7 +90,7 @@ data class HashedDistributionList(
         fun decrypt(encryptedBytes: ByteArray, encryptionService: EncryptionService): HashedDistributionList {
             val (plaintext, authenticatedAdditionalData) = encryptionService.decrypt(encryptedBytes)
             requireNotNull(authenticatedAdditionalData) { "Missing authenticated header" }
-            val publicHeader = PublicHeader.deserialise(authenticatedAdditionalData!!)
+            val publicHeader = PublicHeader.deserialise(authenticatedAdditionalData)
             val input = DataInputStream(plaintext.inputStream())
             try {
                 val senderStatesToRecord = statesToRecordValues[input.readByte().toInt()]

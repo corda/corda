@@ -293,7 +293,6 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
     @StartableByRPC
     class FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
 
-        @Suppress("TooGenericExceptionCaught")
         @Suspendable
         override fun testCode(): Any {
             try {

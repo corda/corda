@@ -943,17 +943,17 @@ class CryptoUtilsTest {
         Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
         // Try after removing CordaSecurityProvider.
         val secureRandomNotRegisteredCordaProvider = SecureRandom()
-        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomNotRegisteredCordaProvider.algorithm)
+        assertNotEquals(PlatformSecureRandomService.ALGORITHM, secureRandomNotRegisteredCordaProvider.algorithm)
 
         // Now register CordaSecurityProvider as last Provider.
         Security.addProvider(CordaSecurityProvider())
         val secureRandomRegisteredLastCordaProvider = SecureRandom()
-        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredLastCordaProvider.algorithm)
+        assertNotEquals(PlatformSecureRandomService.ALGORITHM, secureRandomRegisteredLastCordaProvider.algorithm)
 
         // Remove Corda Provider again and add it as the first Provider entry.
         Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
         Security.insertProviderAt(CordaSecurityProvider(), 1) // This is base-1.
         val secureRandomRegisteredFirstCordaProvider = SecureRandom()
-        assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
+        assertEquals(PlatformSecureRandomService.ALGORITHM, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
 }

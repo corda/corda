@@ -182,7 +182,7 @@ internal class SingleThreadedStateMachineManager(
         )
 
         val (flows, pausedFlows) = restoreFlowsFromCheckpoints()
-        metrics.register("Flows.InFlight", Gauge<Int> { innerState.flows.size })
+        metrics.register("Flows.InFlight", Gauge { innerState.flows.size })
 
         setFlowDefaultUncaughtExceptionHandler()
 
@@ -633,7 +633,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
+    @Suppress("ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
     override fun retryFlowFromSafePoint(currentState: StateMachineState) {
         currentState.cancelFutureIfRunning()
         // Get set of external events
@@ -973,7 +973,7 @@ internal class SingleThreadedStateMachineManager(
         }
         totalStartedFlows.inc()
         addAndStartFlow(flowId, flow)
-        return startedFuture.map { flow.fiber as FlowStateMachine<A> }
+        return startedFuture.map { flow.fiber }
     }
 
     override fun scheduleFlowTimeout(flowId: StateMachineRunId) {
@@ -1228,7 +1228,7 @@ internal class SingleThreadedStateMachineManager(
             override val logic: Nothing? = null
             override val id: StateMachineRunId = id
             override val resultFuture: CordaFuture<Any?> = resultFuture
-            override val clientId: String? = clientId
+            override val clientId: String = clientId
         }
         )
 

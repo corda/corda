@@ -47,7 +47,6 @@ import kotlin.io.path.createDirectories
 /**
  * Handle to the node's external verifier. The verifier process is started lazily on the first verification request.
  */
-@Suppress("TooGenericExceptionCaught")
 class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoCloseable {
     companion object {
         private val log = contextLogger()

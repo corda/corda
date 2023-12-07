@@ -107,7 +107,6 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                    context: CheckpointSerializationContext,
                                    runId: StateMachineRunId,
                                    flowState: FlowState.Started) {
-            @Suppress("TooGenericExceptionCaught")
             try {
                 flowState.frozenFiber.checkpointDeserialize(context)
             } catch (e: Exception) {

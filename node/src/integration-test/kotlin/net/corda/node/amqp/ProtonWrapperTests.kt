@@ -213,7 +213,6 @@ class ProtonWrapperTests {
         assertTrue(done)
     }
 
-    @Suppress("TooGenericExceptionCaught") // Too generic exception thrown!
     @Test(timeout=300_000)
     fun `AMPQClient that fails to handshake with a server will retry the server`() {
         /*

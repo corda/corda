@@ -42,7 +42,7 @@ import java.util.concurrent.Semaphore
 import javax.persistence.PersistenceException
 import kotlin.test.assertEquals
 
-@Suppress("TooGenericExceptionCaught", "TooGenericExceptionThrown")
+@Suppress("TooGenericExceptionThrown")
 class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Before
