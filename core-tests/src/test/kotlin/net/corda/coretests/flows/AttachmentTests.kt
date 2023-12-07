@@ -27,10 +27,8 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import org.junit.AfterClass
-import org.junit.Ignore
 import org.junit.Test
 
-@Ignore("TODO JDK17: class cast exception")
 class AttachmentTests : WithMockNet {
     companion object {
         val classMockNet = InternalMockNetwork()

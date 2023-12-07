@@ -45,7 +45,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 // DOCSTART 3
-@Ignore("TODO JDK17: class cast exception")
 class ResolveTransactionsFlowTest {
     private lateinit var mockNet: MockNetwork
     private lateinit var notaryNode: StartedMockNode
@@ -259,7 +258,7 @@ class ResolveTransactionsFlowTest {
 
     // Used for checking larger chains resolve correctly. Note that this takes a long time to run, and so is not suitable for a CI gate.
     @Test(timeout=300_000)
-@Ignore
+    @Ignore
     fun `Can resolve large chain of transactions`() {
         val txToResolve = makeLargeTransactionChain(2500)
         val p = TestFlow(txToResolve, megaCorp)

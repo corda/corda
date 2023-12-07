@@ -24,11 +24,9 @@ import net.corda.coretesting.internal.matchers.flow.willReturn
 import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.*
 import org.junit.AfterClass
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 
-@Ignore("TODO JDK17: class cast exception")
 class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
     companion object {

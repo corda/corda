@@ -10,7 +10,6 @@ import net.corda.testing.node.MockNetworkParameters;
 import net.corda.testing.node.StartedMockNode;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -22,7 +21,6 @@ import static net.corda.testing.node.internal.InternalTestUtilsKt.enclosedCordap
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 
-@Ignore("TODO JDK17: class cast exception")
 public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork(
             new MockNetworkParameters().withCordappsForAllNodes(singletonList(enclosedCordapp(this)))

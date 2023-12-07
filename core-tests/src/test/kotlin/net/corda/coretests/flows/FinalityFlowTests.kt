@@ -76,7 +76,6 @@ import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assert.assertNotNull
-import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLException
 import java.util.Random
@@ -84,7 +83,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.fail
 
-@Ignore("TODO JDK17: class cast exception")
 class FinalityFlowTests : WithFinality {
     companion object {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
