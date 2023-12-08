@@ -47,11 +47,9 @@ import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
-import org.junit.Ignore
 import org.junit.Test
 import java.util.Currency
 
-@Ignore("TODO JDK17: class cast exception")
 class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
     companion object {

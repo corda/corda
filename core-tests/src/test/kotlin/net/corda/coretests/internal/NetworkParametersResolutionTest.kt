@@ -30,11 +30,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
-@Ignore("TODO JDK17: class cast exception")
 class NetworkParametersResolutionTest {
     private lateinit var defaultParams: NetworkParameters
     private lateinit var params2: NetworkParameters

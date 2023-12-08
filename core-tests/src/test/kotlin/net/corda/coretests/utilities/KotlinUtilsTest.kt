@@ -20,7 +20,6 @@ object EmptyWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = false
 }
 
-@Ignore("TODO JDK17: class cast exception")
 class KotlinUtilsTest {
     @Rule
     @JvmField
@@ -63,6 +62,7 @@ class KotlinUtilsTest {
     }
 
     @Test(timeout=300_000)
+    @Ignore("TODO JDK17:Fixme serializable lambda issue")
 	fun `checkpointing a transient property with capturing lambda`() {
         val original = CapturingTransientProperty("Hello")
         val originalVal = original.transientVal
