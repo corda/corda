@@ -135,7 +135,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
                 it.toView(ownParty,
                         latestPortfolioStateData?.portfolio?.toStateAndRef<IRSState>(rpc)?.toPortfolio(),
                         PVs?.get(it.id.second) ?: MultiCurrencyAmount.empty(),
-                        IMs?.get(it.id.second) ?: InitialMarginTriple.zero()
+                        IMs?.get(it.id.second) ?: InitialMarginTriple(0.0, 0.0, 0.0)
                 )
             }).build()
         }
