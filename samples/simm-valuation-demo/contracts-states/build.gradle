@@ -1,4 +1,5 @@
 apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'corda.common-publishing'
 
 def javaHome = System.getProperty('java.home')
 def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
@@ -78,6 +79,8 @@ jar {
     classifier = 'fat'
 }
 
+configurations.runtimeOnly.canBeResolved = true
+
 import proguard.gradle.ProGuardTask
 task shrink(type: ProGuardTask) {
     injars jar
@@ -123,4 +126,15 @@ shrink.finalizedBy sign
 
 artifacts {
     shrinkArtifacts shrinkJar
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'contracts-states'
+            artifact(shrinkJar) {
+                classifier 'tiny'
+            }
+        }
+    }
 }
