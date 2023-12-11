@@ -134,6 +134,3 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
 } catch (e: ExecutionException) {
     throw e.cause!!
 }
-
-/** Functional interfaces for Serializeable Lambdas */
-fun interface SerializableLambda2<S, T, R> : (S, T) -> R, Serializable

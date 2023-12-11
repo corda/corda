@@ -93,7 +93,10 @@ class CordaClassResolver(serializationContext: CheckpointSerializationContext) :
             val serializer = when {
                 objectInstance != null -> KotlinObjectSerializer(objectInstance)
                 kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(targetType) -> // Kotlin lambdas extend this class and any captured variables are stored in synthetic fields
-                    FieldSerializer<Any>(kryo, targetType).apply { fieldSerializerConfig.ignoreSyntheticFields = false }
+                    FieldSerializer<Any>(kryo, targetType).apply {
+                        fieldSerializerConfig.ignoreSyntheticFields = false
+                        updateFields()
+                    }
                 Throwable::class.java.isAssignableFrom(targetType) -> ThrowableSerializer(kryo, targetType)
                 else -> maybeWrapForInterning(kryo.getDefaultSerializer(targetType), targetType)
             }

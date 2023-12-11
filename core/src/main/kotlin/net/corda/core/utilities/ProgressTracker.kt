@@ -39,8 +39,6 @@ class ProgressTracker(vararg inputSteps: Step) {
         private val log = contextLogger()
     }
 
-    internal fun interface SerializableAction<T>: Action1<T>, Serializable
-
     @CordaSerializable
     sealed class Change(val progressTracker: ProgressTracker) {
         data class Position(val tracker: ProgressTracker, val newStep: Step) : Change(tracker) {
@@ -149,10 +147,10 @@ class ProgressTracker(vararg inputSteps: Step) {
             stepIndex = index
             _changes.onNext(Change.Position(this, steps[index]))
             recalculateStepsTreeIndex()
-            curChangeSubscription = currentStep.changes.subscribe((SerializableAction<Change> {
+            curChangeSubscription = currentStep.changes.subscribe({
                 _changes.onNext(it)
                 if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-            }), (SerializableAction { _changes.onError(it) }))
+            }, { _changes.onError(it) })
 
             if (currentStep == DONE) {
                 _changes.onCompleted()
@@ -207,10 +205,10 @@ class ProgressTracker(vararg inputSteps: Step) {
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
     fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
-        val subscription = childProgressTracker.changes.subscribe((SerializableAction<Change>{
+        val subscription = childProgressTracker.changes.subscribe({
             _changes.onNext(it)
             if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-        }), (SerializableAction { _changes.onError(it) }))
+        }, { _changes.onError(it) })
         childProgressTrackers[step] = Child(childProgressTracker, subscription)
         childProgressTracker.parent = this
         _changes.onNext(Change.Structural(this, step))

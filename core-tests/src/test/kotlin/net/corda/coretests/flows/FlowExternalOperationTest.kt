@@ -10,7 +10,6 @@ import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.SerializableLambda2
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.testing.contracts.DummyContract
@@ -255,7 +254,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         @Suspendable
         override fun testCode() {
             val e = createException()
-            await(ExternalOperation(serviceHub, (SerializableLambda2 { _, _ -> throw e })))
+            await(ExternalOperation(serviceHub, { _, _ -> throw e }))
         }
 
         private fun createException() = when (exceptionType) {
