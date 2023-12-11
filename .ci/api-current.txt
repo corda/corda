@@ -7539,6 +7539,8 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   @NotNull
   public String toString()
 ##
+public final class net.corda.core.transactions.LedgerTransactionKt extends java.lang.Object
+##
 @CordaSerializable
 public final class net.corda.core.transactions.MissingContractAttachments extends net.corda.core.flows.FlowException
   public <init>(java.util.List)
@@ -8272,8 +8274,6 @@ public static final class net.corda.core.utilities.ProgressTracker$STARTING exte
   @NotNull
   public static final net.corda.core.utilities.ProgressTracker$STARTING INSTANCE
 ##
-public static interface net.corda.core.utilities.ProgressTracker$SerializableAction extends java.io.Serializable, rx.functions.Action1
-##
 @CordaSerializable
 public static class net.corda.core.utilities.ProgressTracker$Step extends java.lang.Object
   public <init>(String)
@@ -8296,8 +8296,6 @@ public static final class net.corda.core.utilities.ProgressTracker$UNSTARTED ext
 ##
 public interface net.corda.core.utilities.PropertyDelegate
   public abstract T getValue(Object, kotlin.reflect.KProperty)
-##
-public interface net.corda.core.utilities.SerializableLambda2 extends java.io.Serializable, kotlin.jvm.functions.Function2
 ##
 public final class net.corda.core.utilities.SgxSupport extends java.lang.Object
   public static final boolean isInsideEnclave()

@@ -5,9 +5,7 @@ import net.corda.core.internal.warnOnce
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
-import rx.functions.Action1
 import rx.subjects.ReplaySubject
-import java.io.Serializable
 import java.util.*
 
 /**
