@@ -7539,8 +7539,6 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   @NotNull
   public String toString()
 ##
-public final class net.corda.core.transactions.LedgerTransactionKt extends java.lang.Object
-##
 @CordaSerializable
 public final class net.corda.core.transactions.MissingContractAttachments extends net.corda.core.flows.FlowException
   public <init>(java.util.List)
