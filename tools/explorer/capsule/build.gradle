@@ -47,6 +47,7 @@ publishing {
             artifact(buildExplorerJAR) {
                 classifier ''
             }
+            from components.java
         }
     }
 }

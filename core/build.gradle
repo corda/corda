@@ -189,8 +189,8 @@ publishing {
     publications {
         maven(MavenPublication) {
             artifactId 'corda-core'
-            artifact(testJar)
-            artifact(jar)
+            artifact testJar
+            from components.java
         }
     }
 }
