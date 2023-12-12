@@ -5,6 +5,7 @@ import net.corda.core.internal.warnOnce
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
+import rx.functions.Action1
 import rx.subjects.ReplaySubject
 import java.util.*
 
@@ -145,10 +146,10 @@ class ProgressTracker(vararg inputSteps: Step) {
             stepIndex = index
             _changes.onNext(Change.Position(this, steps[index]))
             recalculateStepsTreeIndex()
-            curChangeSubscription = currentStep.changes.subscribe({
+            curChangeSubscription = currentStep.changes.subscribe( @JvmSerializableLambda {
                 _changes.onNext(it)
                 if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-            }, { _changes.onError(it) })
+            }, @JvmSerializableLambda { _changes.onError(it) })
 
             if (currentStep == DONE) {
                 _changes.onCompleted()
@@ -203,10 +204,10 @@ class ProgressTracker(vararg inputSteps: Step) {
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
     fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
-        val subscription = childProgressTracker.changes.subscribe({
+        val subscription = childProgressTracker.changes.subscribe(@JvmSerializableLambda {
             _changes.onNext(it)
             if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-        }, { _changes.onError(it) })
+        }, @JvmSerializableLambda { _changes.onError(it) })
         childProgressTrackers[step] = Child(childProgressTracker, subscription)
         childProgressTracker.parent = this
         _changes.onNext(Change.Structural(this, step))
