@@ -1,14 +1,13 @@
 package net.corda.core.contracts
 
+import net.corda.core.identity.Party
+import org.junit.Test
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
-import net.corda.core.identity.Party
-import org.junit.Ignore
-import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.util.*
+import java.util.UUID
 import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
