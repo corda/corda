@@ -146,7 +146,7 @@ class ProgressTracker(vararg inputSteps: Step) {
             stepIndex = index
             _changes.onNext(Change.Position(this, steps[index]))
             recalculateStepsTreeIndex()
-            curChangeSubscription = subscribe( @JvmSerializableLambda {
+            curChangeSubscription = subscribe(currentStep.changes,  @JvmSerializableLambda {
                 _changes.onNext(it)
                 if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
             }, @JvmSerializableLambda { _changes.onError(it) })
@@ -166,10 +166,6 @@ class ProgressTracker(vararg inputSteps: Step) {
         // tracker.
         _stepsTreeChanges.onNext(allStepsLabels)
         this.currentStep = UNSTARTED
-    }
-
-    private fun subscribe(onNext: Action1<Change>, onError: Action1<Throwable>): Subscription {
-        return currentStep.changes.subscribe(onNext, onError)
     }
 
     private fun configureChildTrackerForStep(it: Step) {
@@ -208,7 +204,7 @@ class ProgressTracker(vararg inputSteps: Step) {
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
     fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
-        val subscription = subscribe(childProgressTracker,
+        val subscription = subscribe(childProgressTracker._changes,
             @JvmSerializableLambda {
                 _changes.onNext(it)
                 if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
@@ -220,8 +216,8 @@ class ProgressTracker(vararg inputSteps: Step) {
         rebuildStepsTree()
     }
 
-    private fun subscribe(childProgressTracker: ProgressTracker, onNext: Action1<Change>, onError: Action1<Throwable>): Subscription {
-        return childProgressTracker.changes.subscribe(onNext, onError)
+    private fun subscribe(change: Observable<Change>, onNext: Action1<Change>, onError: Action1<Throwable>): Subscription {
+        return changes.subscribe(onNext, onError)
     }
 
     private fun removeChildProgressTracker(step: ProgressTracker.Step) {
