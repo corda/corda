@@ -110,7 +110,6 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
 	fun `BCCryptoService generate key pair and sign with passed signing algorithm`() {
 
         assertTrue{signAndVerify(signAlgo = "NONEwithRSA", alias = "myKeyAlias", keyTypeAlgo = "RSA")}
