@@ -160,7 +160,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     @CordaInternal
     @JvmSynthetic
-    internal fun toLedgerTransactionInternal(verificationSupport: VerificationSupport): LedgerTransaction {
+    fun toLedgerTransactionInternal(verificationSupport: VerificationSupport): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = if (verificationSupport.isResolutionLazy) {
             commands.lazyMapped { cmd, _ ->

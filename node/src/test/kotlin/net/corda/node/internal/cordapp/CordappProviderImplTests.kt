@@ -10,15 +10,15 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.io.FileOutputStream
-import java.lang.IllegalStateException
 import java.net.URL
 import java.nio.file.Files
-import java.util.Arrays.asList
 import java.util.jar.JarOutputStream
 import java.util.zip.Deflater.NO_COMPRESSION
 import java.util.zip.ZipEntry
@@ -28,10 +28,10 @@ import kotlin.test.assertFailsWith
 
 class CordappProviderImplTests {
     private companion object {
-        val isolatedJAR: URL = this::class.java.getResource("/isolated.jar")
+        val isolatedJAR: URL = this::class.java.getResource("/isolated.jar")!!
         // TODO: Cordapp name should differ from the JAR name
         const val isolatedCordappName = "isolated"
-        val emptyJAR: URL = this::class.java.getResource("empty.jar")
+        val emptyJAR: URL = this::class.java.getResource("empty.jar")!!
         val validConfig: Config = ConfigFactory.parseString("key=value")
 
         @JvmField
@@ -122,7 +122,7 @@ class CordappProviderImplTests {
             .writeFixupRules("$ID1 => $ID2, $ID3")
         val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
             start()
-            fixupAttachmentIds(listOf(ID1))
+            attachmentFixups.fixupAttachmentIds(listOf(ID1))
         }
         assertThat(fixedIDs).containsExactly(ID2, ID3)
     }
@@ -133,7 +133,7 @@ class CordappProviderImplTests {
             .writeFixupRules("$ID1 =>")
         val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
             start()
-            fixupAttachmentIds(listOf(ID1))
+            attachmentFixups.fixupAttachmentIds(listOf(ID1))
         }
         assertThat(fixedIDs).isEmpty()
     }
@@ -187,21 +187,20 @@ class CordappProviderImplTests {
         )
         val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
             start()
-            fixupAttachmentIds(listOf(ID2, ID1))
+            attachmentFixups.fixupAttachmentIds(listOf(ID2, ID1))
         }
         assertThat(fixedIDs).containsExactlyInAnyOrder(ID2, ID4)
     }
 
     @Test(timeout=300_000)
     fun `test an exception is raised when we have two jars with the same hash`() {
-
         SelfCleaningDir().use { file ->
             val jarAndSigner = ContractJarTestUtils.makeTestSignedContractJar(file.path, "com.example.MyContract")
             val signedJarPath = jarAndSigner.first
             val duplicateJarPath = signedJarPath.parent.resolve("duplicate-" + signedJarPath.fileName)
 
             Files.copy(signedJarPath, duplicateJarPath)
-            val urls = asList(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
+            val urls = listOf(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
             JarScanningCordappLoader.fromJarUrls(urls, VersionInfo.UNKNOWN).use {
                 assertFailsWith<DuplicateCordappsInstalledException> {
                     CordappProviderImpl(it, stubConfigProvider, attachmentStore).apply { start() }
@@ -212,11 +211,10 @@ class CordappProviderImplTests {
 
     @Test(timeout=300_000)
     fun `test an exception is raised when two jars share a contract`() {
-
         SelfCleaningDir().use { file ->
             val jarA = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForA"), generateManifest = false, jarFileName = "sampleA.jar")
             val jarB = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForB"), generateManifest = false, jarFileName = "sampleB.jar")
-            val urls = asList(jarA.toUri().toURL(), jarB.toUri().toURL())
+            val urls = listOf(jarA.toUri().toURL(), jarB.toUri().toURL())
             JarScanningCordappLoader.fromJarUrls(urls, VersionInfo.UNKNOWN).use {
                 assertFailsWith<IllegalStateException> {
                     CordappProviderImpl(it, stubConfigProvider, attachmentStore).apply { start() }
@@ -233,8 +231,8 @@ class CordappProviderImplTests {
             jar.putNextEntry(fileEntry("META-INF/Corda-Fixups"))
             for (line in lines) {
                 jar.write(line.toByteArray())
-                jar.write('\r'.toInt())
-                jar.write('\n'.toInt())
+                jar.write('\r'.code)
+                jar.write('\n'.code)
             }
         }
         return this

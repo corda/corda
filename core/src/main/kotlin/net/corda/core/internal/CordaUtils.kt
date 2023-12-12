@@ -10,6 +10,7 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.SignedTransaction
@@ -113,6 +114,8 @@ fun noPackageOverlap(packages: Collection<String>): Boolean {
     return packages.all { outer -> packages.none { inner -> inner != outer && inner.startsWith("$outer.") } }
 }
 
-fun ServiceHub.getRequiredTransaction(txhash: SecureHash): SignedTransaction {
-    return validatedTransactions.getTransaction(txhash) ?: throw TransactionResolutionException(txhash)
+fun TransactionStorage.getRequiredTransaction(txhash: SecureHash): SignedTransaction {
+    return getTransaction(txhash) ?: throw TransactionResolutionException(txhash)
 }
+
+fun ServiceHub.getRequiredTransaction(txhash: SecureHash): SignedTransaction = validatedTransactions.getRequiredTransaction(txhash)
