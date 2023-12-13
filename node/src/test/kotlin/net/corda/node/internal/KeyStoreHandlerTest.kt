@@ -29,7 +29,6 @@ import net.corda.testing.core.BOB_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -37,7 +36,6 @@ import java.security.KeyPair
 import java.security.PublicKey
 import kotlin.io.path.div
 
-@Ignore("TODO JDK17: Fixme")
 class KeyStoreHandlerTest {
     @Rule
     @JvmField
