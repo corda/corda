@@ -61,7 +61,7 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
+    @Ignore("Caused by: org.bouncycastle.operator.RuntimeOperatorException: exception obtaining signature: Curve not supported: org.bouncycastle.jce.spec.ECNamedCurveSpec@2a3aa9a0")
 	fun `BCCryptoService generate key pair and sign both data and cert`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
@@ -95,7 +95,7 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
+    @Ignore("Caused by: org.bouncycastle.operator.RuntimeOperatorException: exception obtaining signature: Curve not supported: org.bouncycastle.jce.spec.ECNamedCurveSpec@3a0d4286")
 	fun `BCCryptoService generate key pair and sign with existing schemes`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
@@ -110,7 +110,6 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
 	fun `BCCryptoService generate key pair and sign with passed signing algorithm`() {
 
         assertTrue{signAndVerify(signAlgo = "NONEwithRSA", alias = "myKeyAlias", keyTypeAlgo = "RSA")}
