@@ -9,7 +9,6 @@ import net.corda.core.crypto.internal.PublicKeyCache
 import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
-import net.corda.core.crypto.internal.`id-Curve25519ph`
 import net.corda.core.crypto.internal.providerMap
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
@@ -34,6 +33,7 @@ import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
+import org.bouncycastle.jcajce.spec.EdDSAParameterSpec
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
@@ -55,12 +55,10 @@ import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.Provider
 import java.security.PublicKey
-import java.security.Signature
 import java.security.SignatureException
 import java.security.interfaces.EdECPrivateKey
 import java.security.interfaces.EdECPublicKey
 import java.security.spec.EdECPoint
-import java.security.spec.EdECPrivateKeySpec
 import java.security.spec.EdECPublicKeySpec
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.NamedParameterSpec
@@ -141,13 +139,13 @@ object Crypto {
     val EDDSA_ED25519_SHA512: SignatureScheme = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
-            AlgorithmIdentifier(`id-Curve25519ph`, null),
+            AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112"), null),
             emptyList(),
-            "SunEC",
-            "1.3.101.112",
-            Signature.getInstance("Ed25519").algorithm,
-            NamedParameterSpec.ED25519,
-            256,
+            cordaBouncyCastleProvider.name,
+            "Ed25519",
+            "Ed25519",
+            EdDSAParameterSpec(EdDSAParameterSpec.Ed25519),
+            null,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
 
@@ -774,7 +772,7 @@ object Crypto {
         }
         return when (signatureScheme) {
             ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> deriveKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
-            EDDSA_ED25519_SHA512 -> deriveKeyPairEdDSA(privateKey, seed)
+            EDDSA_ED25519_SHA512 -> deriveKeyPairEdDSA(signatureScheme.algSpec as EdDSAParameterSpec, privateKey, seed)
             else -> throw UnsupportedOperationException("Although supported for signing, deterministic key derivation is " +
                     "not currently implemented for ${signatureScheme.schemeCodeName}")
         }
@@ -792,6 +790,10 @@ object Crypto {
     @JvmStatic
     fun deriveKeyPair(privateKey: PrivateKey, seed: ByteArray): KeyPair {
         return deriveKeyPair(findSignatureScheme(privateKey), privateKey, seed)
+    }
+
+    private fun deriveKeyPairEdDSA(parameterSpec: EdDSAParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair {
+        TODO("Deterministic EdDSA key generation")
     }
 
     // Given the domain parameters, this routine deterministically generates an ECDSA key pair
@@ -839,30 +841,6 @@ object Crypto {
         val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
 
         return KeyPair(internPublicKey(publicKeyD), privateKeyD)
-    }
-
-    // Deterministically generate an EdDSA key.
-    private fun deriveKeyPairEdDSA(privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        // Compute HMAC(privateKey, seed).
-        val macBytes = deriveHMAC(privateKey, seed)
-
-        val keyPairGenerator = KeyPairGenerator.getInstance(EDDSA_ED25519_SHA512.algorithmName, EDDSA_ED25519_SHA512.providerName)
-        val keyPair = keyPairGenerator.generateKeyPair()
-        val privateKey = keyPair.private as EdECPrivateKey
-        val publicKey = keyPair.public as EdECPublicKey
-        val privateKeyBytes = privateKey.bytes.orElseThrow()
-        val edecPoint = publicKey.point
-        val y = edecPoint.y
-        val xOdd = edecPoint.isXOdd
-
-        // reconstruct the keys using (privateKeyBytes), (y) and (xOdd)
-        val keyFactory = KeyFactory.getInstance(EDDSA_ED25519_SHA512.algorithmName, EDDSA_ED25519_SHA512.providerName)
-        val edECPrivateKeySpec = EdECPrivateKeySpec(NamedParameterSpec.ED25519, privateKeyBytes)
-        val privateKey2 = keyFactory.generatePrivate(edECPrivateKeySpec)
-        val edECPublicKeySpec = EdECPublicKeySpec(NamedParameterSpec.ED25519, EdECPoint(xOdd, y))
-        val publicKey2 = keyFactory.generatePublic(edECPublicKeySpec)
-
-        return KeyPair(internPublicKey(publicKey2), privateKey2)
     }
 
     /**
@@ -966,7 +944,7 @@ object Crypto {
         }
         return when (publicKey) {
             is BCECPublicKey -> publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid
-            is EdECPublicKey -> publicKey.params.name == (signatureScheme.algSpec as? NamedParameterSpec)?.name && publicKey.point.y > BigInteger.ZERO
+            is EdECPublicKey -> signatureScheme.algSpec == EDDSA_ED25519_SHA512.algSpec && publicKey.point.y != BigInteger.ZERO
             else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
         }
     }

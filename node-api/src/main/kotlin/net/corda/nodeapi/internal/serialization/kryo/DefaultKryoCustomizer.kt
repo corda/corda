@@ -42,6 +42,8 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.MutableClassWhitelist
+import org.bouncycastle.jcajce.interfaces.EdDSAPrivateKey
+import org.bouncycastle.jcajce.interfaces.EdDSAPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
@@ -61,8 +63,6 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
-import java.security.interfaces.EdECPrivateKey
-import java.security.interfaces.EdECPublicKey
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -130,8 +130,8 @@ object DefaultKryoCustomizer {
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
             register(PublicKey::class.java, publicKeySerializer)
             register(PrivateKey::class.java, PrivateKeySerializer)
-            register(EdECPublicKey::class.java, publicKeySerializer)
-            register(EdECPrivateKey::class.java, PrivateKeySerializer)
+            register(EdDSAPublicKey::class.java, publicKeySerializer)
+            register(EdDSAPrivateKey::class.java, PrivateKeySerializer)
             register(CompositeKey::class.java, publicKeySerializer)  // Using a custom serializer for compactness
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
             register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
