@@ -143,7 +143,7 @@ object Crypto {
             emptyList(),
             cordaBouncyCastleProvider.name,
             "Ed25519",
-            "Ed25519",
+            "EdDSA",
             EdDSAParameterSpec(EdDSAParameterSpec.Ed25519),
             null,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
@@ -306,11 +306,11 @@ object Crypto {
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
         if (keyInfo.privateKeyAlgorithm.algorithm == ASN1ObjectIdentifier(CordaOID.ALIAS_PRIVATE_KEY)) {
-            return convertIfBCEdDSAPrivateKey(decodeAliasPrivateKey(keyInfo))
+            return decodeAliasPrivateKey(keyInfo)
         }
         val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
         val keyFactory = keyFactory(signatureScheme)
-        return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
+        return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
     }
 
     private fun decodeAliasPrivateKey(keyInfo: PrivateKeyInfo): PrivateKey {
@@ -350,7 +350,7 @@ object Crypto {
         }
         try {
             val keyFactory = keyFactory(signatureScheme)
-            return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
+            return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that " +
                     "it corresponds to the input scheme's code name.", ikse)
@@ -370,7 +370,7 @@ object Crypto {
             val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
             val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
             val keyFactory = keyFactory(signatureScheme)
-            convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+            keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
         }()
     }
 
@@ -411,7 +411,7 @@ object Crypto {
         }
         try {
             val keyFactory = keyFactory(signatureScheme)
-            return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+            return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and " +
                     "that it corresponds to the input scheme's code name.", ikse)
@@ -975,21 +975,6 @@ object Crypto {
     private val interner = PrivateInterner<PublicKey>()
     private fun internPublicKey(key: PublicKey): PublicKey = PublicKeyCache.cachePublicKey(interner.intern(key))
 
-
-    private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
-        return internPublicKey(when (key) {
-            is BCEdDSAPublicKey ->  KeyPairGenerator.getInstance("Ed25519").generateKeyPair().public
-            else -> key
-        })
-    }
-
-    private fun convertIfBCEdDSAPrivateKey(key: PrivateKey): PrivateKey {
-        return when (key) {
-            is BCEdDSAPrivateKey -> KeyPairGenerator.getInstance("Ed25519").generateKeyPair().private
-            else -> key
-        }
-    }
-
     /**
      * Convert a public key to a supported implementation.
      * @param key a public key.
@@ -1017,7 +1002,7 @@ object Crypto {
             is BCSphincs256PublicKey -> internPublicKey(key)
             is EdECPublicKey -> internPublicKey(key)
             is CompositeKey -> internPublicKey(key)
-            is BCEdDSAPublicKey -> convertIfBCEdDSAPublicKey(key)
+            is BCEdDSAPublicKey -> internPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }
     }
@@ -1037,7 +1022,7 @@ object Crypto {
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
             is EdECPublicKey -> key
-            is BCEdDSAPrivateKey -> convertIfBCEdDSAPrivateKey(key)
+            is BCEdDSAPrivateKey -> key
             else -> decodePrivateKey(key.encoded)
         }
     }
