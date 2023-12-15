@@ -93,6 +93,7 @@ publishing {
             artifact(buildCordaJAR) {
                 classifier ''
             }
+            from components.java
         }
     }
 }

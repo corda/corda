@@ -25,7 +25,8 @@ publishing {
     publications {
         shadow(MavenPublication) { publication ->
             artifactId 'corda-opentelemetry-driver'
-            project.shadow.component(publication)
+            artifact shadowJar
+            from components.java
         }
     }
 }

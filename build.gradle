@@ -287,6 +287,11 @@ allprojects {
         jvmArgs test_add_exports
     }
 
+    java {
+        withSourcesJar()
+        withJavadocJar()
+    }
+
     tasks.withType(JavaCompile).configureEach {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         options.compilerArgs << '-XDenableSunApiLintControl'
