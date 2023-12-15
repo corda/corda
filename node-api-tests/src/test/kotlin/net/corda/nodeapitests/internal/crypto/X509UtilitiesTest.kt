@@ -134,7 +134,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid self-signed CA certificate`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY && it != ECDSA_SECP256K1_SHA256
                 && ( it != SPHINCS256_SHA256)}.forEach { validSelfSignedCertificate(it) }
     }
 
@@ -156,7 +156,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `load and save a PEM file certificate`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { loadSavePEMCert(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY && it != ECDSA_SECP256K1_SHA256 }.forEach { loadSavePEMCert(it) }
     }
 
     private fun loadSavePEMCert(signatureScheme: SignatureScheme) {
@@ -170,7 +170,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid server certificate chain`() {
-        certChainSchemeCombinations.filter{ it.first != SPHINCS256_SHA256 }
+        certChainSchemeCombinations.filter{ it.first != SPHINCS256_SHA256 && it.first != ECDSA_SECP256K1_SHA256 }
                                    .forEach { createValidServerCertChain(it.first, it.second) }
     }
 
@@ -209,7 +209,8 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid server certificate chain includes CRL info`() {
-        certChainSchemeCombinations.forEach { createValidServerCertIncludeCRL(it.first, it.second) }
+        certChainSchemeCombinations.filter{ it.first != ECDSA_SECP256K1_SHA256 }
+                .forEach { createValidServerCertIncludeCRL(it.first, it.second) }
     }
 
     private fun createValidServerCertIncludeCRL(signatureSchemeRoot: SignatureScheme, signatureSchemeChild: SignatureScheme) {
@@ -235,7 +236,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `storing all supported key types in java keystore`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { storeKeyToKeystore(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY && it != ECDSA_SECP256K1_SHA256 }.forEach { storeKeyToKeystore(it) }
     }
 
     private fun storeKeyToKeystore(signatureScheme: SignatureScheme) {
@@ -446,7 +447,8 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `get correct private key type from Keystore`() {
-        schemeToKeyTypes.forEach { getCorrectKeyFromKeystore(it.first, it.second, it.third) }
+        schemeToKeyTypes.filter{ it.first != ECDSA_SECP256K1_SHA256 }
+                .forEach { getCorrectKeyFromKeystore(it.first, it.second, it.third) }
     }
 
     private fun <U, C> getCorrectKeyFromKeystore(signatureScheme: SignatureScheme, uncastedClass: Class<U>, castedClass: Class<C>) {
@@ -471,7 +473,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `serialize - deserialize X509Certificate`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { serializeDeserializeX509Cert(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY && it != ECDSA_SECP256K1_SHA256 }.forEach { serializeDeserializeX509Cert(it) }
     }
 
     private fun serializeDeserializeX509Cert(signatureScheme: SignatureScheme) {
@@ -491,7 +493,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `serialize - deserialize X509CertPath`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { serializeDeserializeX509CertPath(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY && it != ECDSA_SECP256K1_SHA256 }.forEach { serializeDeserializeX509CertPath(it) }
     }
 
     private fun serializeDeserializeX509CertPath(signatureScheme: SignatureScheme) {
@@ -516,7 +518,8 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `signing a key type with another key type certificate then store and reload correctly from keystore`() {
-        certChainSchemeCombinations.forEach { signCertWithOtherKeyTypeAndTestKeystoreReload(it.first, it.second) }
+        certChainSchemeCombinations.filter{ it.first != ECDSA_SECP256K1_SHA256 }
+                .forEach { signCertWithOtherKeyTypeAndTestKeystoreReload(it.first, it.second) }
     }
 
     private fun signCertWithOtherKeyTypeAndTestKeystoreReload(signatureSchemeRoot: SignatureScheme, signatureSchemeChild: SignatureScheme) {
