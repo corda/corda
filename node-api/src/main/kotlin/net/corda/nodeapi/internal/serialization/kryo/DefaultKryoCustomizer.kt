@@ -1,5 +1,3 @@
-@file:Suppress("Since15")
-
 package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
