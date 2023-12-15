@@ -58,7 +58,7 @@ class AbstractPartyDescriptor(private val wellKnownPartyFromX500Name: (CordaX500
                 return uncheckedCast(value)
             }
             if (String::class.java.isAssignableFrom(type)) {
-                return uncheckedCast(toString(value))
+                return uncheckedCast(toString(value)) as X?
             }
             throw unknownUnwrap(type)
         } else {

@@ -9,6 +9,8 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.verification.VerifyingServiceHub
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -28,7 +30,6 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.regex.Pattern
-import kotlin.collections.ArrayList
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.reflect.KClass
@@ -77,9 +78,6 @@ open class TransactionBuilder(
         private const val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
         private val FQCP: Pattern = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
         private fun isValidJavaClass(identifier: String) = FQCP.matcher(identifier).matches()
-        private fun Collection<*>.deepEquals(other: Collection<*>): Boolean {
-            return (size == other.size) && containsAll(other) && other.containsAll(this)
-        }
         private fun Collection<AttachmentId>.toPrettyString(): String = sorted().joinToString(
             separator = System.lineSeparator(),
             prefix = System.lineSeparator()
@@ -178,24 +176,25 @@ open class TransactionBuilder(
     }
 
     @CordaInternal
+    @JvmSynthetic
     internal fun toWireTransactionWithContext(
         services: ServicesForResolution,
         serializationContext: SerializationContext?
-    ) : WireTransaction = toWireTransactionWithContext(services, serializationContext, 0)
+    ) : WireTransaction = toWireTransactionWithContext(services.toVerifyingServiceHub(), serializationContext, 0)
 
     private tailrec fun toWireTransactionWithContext(
-        services: ServicesForResolution,
-        serializationContext: SerializationContext?,
-        tryCount: Int
+            serviceHub: VerifyingServiceHub,
+            serializationContext: SerializationContext?,
+            tryCount: Int
     ): WireTransaction {
         val referenceStates = referenceStates()
         if (referenceStates.isNotEmpty()) {
-            services.ensureMinimumPlatformVersion(4, "Reference states")
+            serviceHub.ensureMinimumPlatformVersion(4, "Reference states")
         }
-        resolveNotary(services)
+        resolveNotary(serviceHub)
 
         val (allContractAttachments: Collection<AttachmentId>, resolvedOutputs: List<TransactionState<ContractState>>)
-                = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
+                = selectContractAttachmentsAndOutputStateConstraints(serviceHub, serializationContext)
 
         // Final sanity check that all states have the correct constraints.
         for (state in (inputsWithTransactionState.map { it.state } + resolvedOutputs)) {
@@ -213,9 +212,9 @@ open class TransactionBuilder(
                             notary,
                             window,
                             referenceStates,
-                            services.networkParametersService.currentHash),
+                            serviceHub.networkParametersService.currentHash),
                     privacySalt,
-                    services.digestService
+                    serviceHub.digestService
             )
         }
 
@@ -223,10 +222,10 @@ open class TransactionBuilder(
         // This is a workaround as the current version of Corda does not support cordapp dependencies.
         // It works by running transaction validation and then scan the attachment storage for missing classes.
         // TODO - remove once proper support for cordapp dependencies is added.
-        val addedDependency = addMissingDependency(services, wireTx, tryCount)
+        val addedDependency = addMissingDependency(serviceHub, wireTx, tryCount)
 
         return if (addedDependency)
-            toWireTransactionWithContext(services, serializationContext, tryCount + 1)
+            toWireTransactionWithContext(serviceHub, serializationContext, tryCount + 1)
         else
             wireTx
     }
@@ -241,9 +240,9 @@ open class TransactionBuilder(
     /**
      * @return true if a new dependency was successfully added.
      */
-    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction, tryCount: Int): Boolean {
+    private fun addMissingDependency(serviceHub: VerifyingServiceHub, wireTx: WireTransaction, tryCount: Int): Boolean {
         return try {
-            wireTx.toLedgerTransaction(services).verify()
+            wireTx.toLedgerTransactionInternal(serviceHub).verify()
             // The transaction verified successfully without adding any extra dependency.
             false
         } catch (e: Throwable) {
@@ -253,12 +252,12 @@ open class TransactionBuilder(
                 // Handle various exceptions that can be thrown during verification and drill down the wrappings.
                 // Note: this is a best effort to preserve backwards compatibility.
                 rootError is ClassNotFoundException -> {
-                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, services, e))
-                        || addMissingAttachment((rootError.message ?: throw e).replace('.', '/'), services, e)
+                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, serviceHub, e))
+                        || addMissingAttachment((rootError.message ?: throw e).replace('.', '/'), serviceHub, e)
                 }
                 rootError is NoClassDefFoundError -> {
-                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, services, e))
-                        || addMissingAttachment(rootError.message ?: throw e, services, e)
+                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, serviceHub, e))
+                        || addMissingAttachment(rootError.message ?: throw e, serviceHub, e)
                 }
 
                 // Ignore these exceptions as they will break unit tests.
@@ -281,18 +280,18 @@ open class TransactionBuilder(
     }
 
     private fun fixupAttachments(
-        txAttachments: List<AttachmentId>,
-        services: ServicesForResolution,
-        originalException: Throwable
+            txAttachments: List<AttachmentId>,
+            serviceHub: VerifyingServiceHub,
+            originalException: Throwable
     ): Boolean {
-        val replacementAttachments = services.cordappProvider.internalFixupAttachmentIds(txAttachments)
-        if (replacementAttachments.deepEquals(txAttachments)) {
+        val replacementAttachments = serviceHub.fixupAttachmentIds(txAttachments)
+        if (replacementAttachments.equivalent(txAttachments)) {
             return false
         }
 
         val extraAttachments = replacementAttachments - txAttachments
         extraAttachments.forEach { id ->
-            val attachment = services.attachments.openAttachment(id)
+            val attachment = serviceHub.attachments.openAttachment(id)
             if (attachment == null || !attachment.isUploaderTrusted()) {
                 log.warn("""The node's fix-up rules suggest including attachment {}, which cannot be found either.
                     |Please contact the developer of the CorDapp for further instructions.
@@ -315,7 +314,7 @@ open class TransactionBuilder(
         return true
     }
 
-    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution, originalException: Throwable): Boolean {
+    private fun addMissingAttachment(missingClass: String, serviceHub: VerifyingServiceHub, originalException: Throwable): Boolean {
         if (!isValidJavaClass(missingClass)) {
             log.warn("Could not autodetect a valid attachment for the transaction being built.")
             throw originalException
@@ -324,7 +323,7 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass)
+        val attachment = serviceHub.getTrustedClassAttachment(missingClass)
 
         if (attachment == null) {
             log.error("""The transaction currently built is missing an attachment for class: $missingClass.
@@ -475,14 +474,14 @@ open class TransactionBuilder(
         // Determine if there are any HashConstraints that pin the version of a contract. If there are, check if we trust them.
         val hashAttachments = inputsAndOutputs
                 .filter { it.constraint is HashAttachmentConstraint }
-                .map { state ->
+                .mapToSet { state ->
                     val attachment = services.attachments.openAttachment((state.constraint as HashAttachmentConstraint).attachmentId)
                     if (attachment == null || attachment !is ContractAttachment || !isUploaderTrusted(attachment.uploader)) {
                         // This should never happen because these are input states that should have been validated already.
                         throw MissingContractAttachments(listOf(state))
                     }
                     attachment
-                }.toSet()
+                }
 
         // Check that states with the HashConstraint don't conflict between themselves or with an explicitly set attachment.
         require(hashAttachments.size <= 1) {
@@ -490,7 +489,7 @@ open class TransactionBuilder(
         }
 
         if (explicitContractAttachment != null && hashAttachments.singleOrNull() != null) {
-            require(explicitContractAttachment == (hashAttachments.single() as ContractAttachment).attachment.id) {
+            require(explicitContractAttachment == hashAttachments.single().attachment.id) {
                 "An attachment has been explicitly set for contract $contractClassName in the transaction builder which conflicts with the HashConstraint of a state."
             }
         }
@@ -665,10 +664,6 @@ open class TransactionBuilder(
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
 
-    internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
-        return toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
-    }
-
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
         toLedgerTransaction(services).verify()
@@ -692,7 +687,7 @@ open class TransactionBuilder(
     }
 
     // Transaction can combine different identities of the same notary after key rotation.
-    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary.name }.toSet().size == 1
+    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.mapToSet { it.notary.name }.size == 1
 
     // Automatically correct notary after its key rotation
     private fun resolveNotary(services: ServicesForResolution) {
@@ -718,8 +713,6 @@ open class TransactionBuilder(
      *
      * If this method is called outside the context of a flow, a [ServiceHub] instance must be passed to this method
      * for it to be able to resolve [StatePointer]s. Usually for a unit test, this will be an instance of mock services.
-     *
-     * @param serviceHub a [ServiceHub] instance needed for performing vault queries.
      *
      * @throws IllegalStateException if no [ServiceHub] is provided and no flow context is available.
      */

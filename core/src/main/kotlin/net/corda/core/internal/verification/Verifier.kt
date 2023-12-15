@@ -1,7 +1,5 @@
-package net.corda.core.internal
+package net.corda.core.internal.verification
 
-import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
@@ -30,20 +28,25 @@ import net.corda.core.contracts.TransactionVerificationException.TransactionNota
 import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.AttachmentWithContext
+import net.corda.core.internal.MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT
+import net.corda.core.internal.PlatformVersionSwitches
+import net.corda.core.internal.canBeTransitionedFrom
+import net.corda.core.internal.checkConstraintValidity
+import net.corda.core.internal.checkMinimumPlatformVersion
+import net.corda.core.internal.checkNotaryWhitelisted
+import net.corda.core.internal.checkSupportedHashType
+import net.corda.core.internal.contractHasAutomaticConstraintPropagation
+import net.corda.core.internal.loadClassOfType
+import net.corda.core.internal.mapToSet
+import net.corda.core.internal.requiredContractClassName
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
+import net.corda.core.internal.warnContractWithoutConstraintPropagation
+import net.corda.core.internal.warnOnce
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
 import java.util.function.Function
 import java.util.function.Supplier
-
-interface TransactionVerifierServiceInternal {
-    fun reverifyWithFixups(transaction: LedgerTransaction, missingClass: String?): CordaFuture<*>
-}
-
-/**
- * Defined here for visibility reasons.
- */
-fun LedgerTransaction.prepareVerify(attachments: List<Attachment>) = internalPrepareVerify(attachments)
 
 interface Verifier {
 
@@ -142,10 +145,12 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
      */
     @Suppress("ThrowsCount")
     private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
-        val contractClasses = allStates.mapTo(LinkedHashSet(), TransactionState<*>::contract)
+        val contractClasses = allStates.mapToSet { it.contract }
 
         // Check that there are no duplicate attachments added.
-        if (ltx.attachments.size != ltx.attachments.toSet().size) throw DuplicateAttachmentsRejection(ltx.id, ltx.attachments.groupBy { it }.filterValues { it.size > 1 }.keys.first())
+        if (ltx.attachments.size != ltx.attachments.toSet().size) {
+            throw DuplicateAttachmentsRejection(ltx.id, ltx.attachments.groupBy { it }.filterValues { it.size > 1 }.keys.first())
+        }
 
         // For each attachment this finds all the relevant state contracts that it provides.
         // And then maps them to the attachment.
@@ -393,7 +398,7 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
     @Suppress("NestedBlockDepth", "MagicNumber")
     private fun verifyConstraints(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         // For each contract/constraint pair check that the relevant attachment is valid.
-        allStates.mapTo(LinkedHashSet()) { it.contract to it.constraint }.forEach { (contract, constraint) ->
+        allStates.mapToSet { it.contract to it.constraint }.forEach { (contract, constraint) ->
             if (constraint is SignatureAttachmentConstraint) {
                 /**
                  * Support for signature constraints has been added on
@@ -435,12 +440,11 @@ private class Validator(private val ltx: LedgerTransaction, private val transact
  * Verify the given [LedgerTransaction]. This includes validating
  * its contents, as well as executing all of its smart contracts.
  */
-@Suppress("TooGenericExceptionCaught")
 class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Function<Supplier<LedgerTransaction>, Unit> {
     // Loads the contract class from the transactionClassLoader.
     private fun createContractClass(id: SecureHash, contractClassName: ContractClassName): Class<out Contract> {
         return try {
-            Class.forName(contractClassName, false, transactionClassLoader).asSubclass(Contract::class.java)
+            loadClassOfType<Contract>(contractClassName, false, transactionClassLoader)
         } catch (e: Exception) {
             throw ContractCreationError(id, contractClassName, e)
         }
@@ -448,7 +452,7 @@ class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Fun
 
     private fun generateContracts(ltx: LedgerTransaction): List<Contract> {
         return (ltx.inputs.map(StateAndRef<ContractState>::state) + ltx.outputs)
-            .mapTo(LinkedHashSet(), TransactionState<*>::contract)
+            .mapToSet { it.contract }
             .map { contractClassName ->
                 createContractClass(ltx.id, contractClassName)
             }.map { contractClass ->

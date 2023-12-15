@@ -31,7 +31,6 @@ interface TransactionWithSignatures : NamedByHash {
      * @throws SignatureException if any signatures are invalid or unrecognised.
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
-    @JvmDefault
     @Throws(SignatureException::class)
     fun verifyRequiredSignatures() = verifySignaturesExcept(emptySet())
 
@@ -47,7 +46,6 @@ interface TransactionWithSignatures : NamedByHash {
      * @throws SignatureException if any signatures are invalid or unrecognised.
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
-    @JvmDefault
     @Throws(SignatureException::class)
     fun verifySignaturesExcept(vararg allowedToBeMissing: PublicKey) {
         verifySignaturesExcept(Arrays.asList(*allowedToBeMissing))
@@ -65,7 +63,6 @@ interface TransactionWithSignatures : NamedByHash {
      * @throws SignatureException if any signatures are invalid or unrecognised.
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
-    @JvmDefault
     @Throws(SignatureException::class)
     fun verifySignaturesExcept(allowedToBeMissing: Collection<PublicKey>) {
         val needed = getMissingSigners() - allowedToBeMissing
@@ -83,7 +80,6 @@ interface TransactionWithSignatures : NamedByHash {
      * @throws InvalidKeyException if the key on a signature is invalid.
      * @throws SignatureException if a signature fails to verify.
      */
-    @JvmDefault
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun checkSignaturesAreValid() {
         for (sig in sigs) {
@@ -102,7 +98,6 @@ interface TransactionWithSignatures : NamedByHash {
     /**
      * Return the [PublicKey]s for which we still need signatures.
      */
-    @JvmDefault
     fun getMissingSigners(): Set<PublicKey> {
         val sigKeys = sigs.map { it.by }.toSet()
         // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign

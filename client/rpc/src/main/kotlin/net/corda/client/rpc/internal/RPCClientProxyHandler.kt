@@ -150,7 +150,6 @@ internal class RPCClientProxyHandler(
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private fun closeObservable(observable: UnicastSubject<Notification<*>>) {
             // Notify listeners of the observables that the connection is being terminated.
             try {
@@ -300,7 +299,7 @@ internal class RPCClientProxyHandler(
     class FailoverHandler(private val detected: () -> Unit = {},
                           private val completed: () -> Unit = {},
                           private val failed: () -> Unit = {}): FailoverEventListener {
-        override fun failoverEvent(eventType: FailoverEventType?) {
+        override fun failoverEvent(eventType: FailoverEventType) {
             when (eventType) {
                 FailoverEventType.FAILURE_DETECTED -> { detected() }
                 FailoverEventType.FAILOVER_COMPLETED -> { completed() }
@@ -589,7 +588,6 @@ internal class RPCClientProxyHandler(
         }
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
-            @Suppress("TooGenericExceptionCaught")
             try {
                 sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
             } catch(ex: Exception) {

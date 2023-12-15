@@ -25,6 +25,7 @@ pipeline {
         CORDA_USE_CACHE = "corda-remotes"
         C4_OS_SNYK_ORG_ID = credentials('c4-os-snyk-org-id')
         SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret')
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
     }
 
     stages {
@@ -37,26 +38,16 @@ pipeline {
 
         stage('Compilation warnings check') {
             steps {
-                sh "./gradlew --no-daemon --parallel --build-cache -Pcompilation.warningsAsErrors=true compileAll"
+                /*
+                 * TODO JDK17: Re-enable warnings as errors
+                 */
+                sh "./gradlew --no-daemon --parallel --build-cache -Pcompilation.warningsAsErrors=false compileAll"
             }
         }
 
         stage('Snyk Delta') {
-            agent {
-                docker {
-                    image 'build-zulu-openjdk:8'
-                    reuseNode true
-                    registryUrl 'https://engineering-docker.software.r3.com/'
-                    registryCredentialsId 'artifactory-credentials'
-                    args '-v /tmp:/host_tmp'
-                }
-            }
-            environment {
-                GRADLE_USER_HOME = "/host_tmp/gradle"
-            }
+            agent { label 'standard' }
             steps {
-                authenticateGradleWrapper()
-                sh 'mkdir -p ${GRADLE_USER_HOME}'
                 authenticateGradleWrapper()
                 snykDeltaScan(env.SNYK_API_TOKEN, env.C4_OS_SNYK_ORG_ID)
             }

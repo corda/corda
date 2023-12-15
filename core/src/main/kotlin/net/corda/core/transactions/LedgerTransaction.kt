@@ -16,21 +16,21 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.AbstractVerifier
 import net.corda.core.internal.SerializedStateAndRef
-import net.corda.core.internal.Verifier
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.eagerDeserialise
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.verification.AbstractVerifier
+import net.corda.core.internal.verification.Verifier
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.utilities.contextLogger
 import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
@@ -153,34 +153,35 @@ private constructor(
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 isAttachmentTrusted: (Attachment) -> Boolean,
+                verifierFactory: (LedgerTransaction, SerializationContext) -> Verifier,
                 attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
                 digestService: DigestService
         ): LedgerTransaction {
             return LedgerTransaction(
-                inputs = inputs,
-                outputs = outputs,
-                commands = commands,
-                attachments = attachments,
-                id = id,
-                notary = notary,
-                timeWindow = timeWindow,
-                privacySalt = privacySalt,
-                networkParameters = networkParameters,
-                references = references,
-                componentGroups = protectOrNull(componentGroups),
-                serializedInputs = protectOrNull(serializedInputs),
-                serializedReferences = protectOrNull(serializedReferences),
-                isAttachmentTrusted = isAttachmentTrusted,
-                verifierFactory = ::BasicVerifier,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache,
-                digestService = digestService
+                    inputs = inputs,
+                    outputs = outputs,
+                    commands = commands,
+                    attachments = attachments,
+                    id = id,
+                    notary = notary,
+                    timeWindow = timeWindow,
+                    privacySalt = privacySalt,
+                    networkParameters = networkParameters,
+                    references = references,
+                    componentGroups = protectOrNull(componentGroups),
+                    serializedInputs = protectOrNull(serializedInputs),
+                    serializedReferences = protectOrNull(serializedReferences),
+                    isAttachmentTrusted = isAttachmentTrusted,
+                    verifierFactory = verifierFactory,
+                    attachmentsClassLoaderCache = attachmentsClassLoaderCache,
+                    digestService = digestService
             )
         }
 
         /**
          * This factory function will create an instance of [LedgerTransaction]
          * that will be used for contract verification.
-         * @see BasicVerifier
+         * @see DefaultVerifier
          */
         @CordaInternal
         fun createForContractVerify(
@@ -243,26 +244,26 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        internalPrepareVerify(attachments).verify()
+        verifyInternal()
     }
 
     /**
      * This method has to be called in a context where it has access to the database.
      */
     @CordaInternal
-    internal fun internalPrepareVerify(txAttachments: List<Attachment>): Verifier {
+    @JvmSynthetic
+    internal fun verifyInternal(txAttachments: List<Attachment> = this.attachments) {
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
-        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+        val verifier = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
                 txAttachments,
                 getParamsWithGoo(),
                 id,
-                isAttachmentTrusted = isAttachmentTrusted,
-                attachmentsClassLoaderCache = attachmentsClassLoaderCache) { serializationContext ->
-
+                isAttachmentTrusted,
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache
+        ) { serializationContext ->
             // Legacy check - warns if the LedgerTransaction was created incorrectly.
             checkLtxForVerification()
-
             // Create a copy of the outer LedgerTransaction which deserializes all fields using
             // the serialization context (or its deserializationClassloader).
             // Only the copy will be used for verification, and the outer shell will be discarded.
@@ -270,6 +271,7 @@ private constructor(
             // NOTE: The Verifier creates the copies of the LedgerTransaction object now.
             verifierFactory(this, serializationContext)
         }
+        verifier.verify()
     }
 
     /**
@@ -463,7 +465,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterInputs(crossinline predicate: (T) -> Boolean): List<T> {
-        return filterInputs(T::class.java, Predicate { predicate(it) })
+        return filterInputs(T::class.java) { predicate(it) }
     }
 
     /**
@@ -479,7 +481,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterReferenceInputs(crossinline predicate: (T) -> Boolean): List<T> {
-        return filterReferenceInputs(T::class.java, Predicate { predicate(it) })
+        return filterReferenceInputs(T::class.java) { predicate(it) }
     }
 
     /**
@@ -495,7 +497,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterInRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
-        return filterInRefs(T::class.java, Predicate { predicate(it) })
+        return filterInRefs(T::class.java) { predicate(it) }
     }
 
     /**
@@ -511,7 +513,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterReferenceInputRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
-        return filterReferenceInputRefs(T::class.java, Predicate { predicate(it) })
+        return filterReferenceInputRefs(T::class.java) { predicate(it) }
     }
 
     /**
@@ -528,7 +530,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> findInput(crossinline predicate: (T) -> Boolean): T {
-        return findInput(T::class.java, Predicate { predicate(it) })
+        return findInput(T::class.java) { predicate(it) }
     }
 
     /**
@@ -541,11 +543,11 @@ private constructor(
      * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
      */
     fun <T : ContractState> findReference(clazz: Class<T>, predicate: Predicate<T>): T {
-        return referenceInputsOfType(clazz).single { predicate.test(it) }
+        return referenceInputsOfType(clazz).single(predicate::test)
     }
 
     inline fun <reified T : ContractState> findReference(crossinline predicate: (T) -> Boolean): T {
-        return findReference(T::class.java, Predicate { predicate(it) })
+        return findReference(T::class.java) { predicate(it) }
     }
 
     /**
@@ -562,7 +564,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> findInRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
-        return findInRef(T::class.java, Predicate { predicate(it) })
+        return findInRef(T::class.java) { predicate(it) }
     }
 
     /**
@@ -579,7 +581,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> findReferenceInputRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
-        return findReferenceInputRef(T::class.java, Predicate { predicate(it) })
+        return findReferenceInputRef(T::class.java) { predicate(it) }
     }
 
     /**
@@ -614,7 +616,7 @@ private constructor(
     }
 
     inline fun <reified T : CommandData> filterCommands(crossinline predicate: (T) -> Boolean): List<Command<T>> {
-        return filterCommands(T::class.java, Predicate { predicate(it) })
+        return filterCommands(T::class.java) { predicate(it) }
     }
 
     /**
@@ -631,7 +633,7 @@ private constructor(
     }
 
     inline fun <reified T : CommandData> findCommand(crossinline predicate: (T) -> Boolean): Command<T> {
-        return findCommand(T::class.java, Predicate { predicate(it) })
+        return findCommand(T::class.java) { predicate(it) }
     }
 
     /**
@@ -706,7 +708,7 @@ private constructor(
             serializedInputs = null,
             serializedReferences = null,
             isAttachmentTrusted = Attachment::isUploaderTrusted,
-            verifierFactory = ::BasicVerifier,
+            verifierFactory = ::DefaultVerifier,
             attachmentsClassLoaderCache = null
     )
 
@@ -736,7 +738,7 @@ private constructor(
             serializedInputs = null,
             serializedReferences = null,
             isAttachmentTrusted = Attachment::isUploaderTrusted,
-            verifierFactory = ::BasicVerifier,
+            verifierFactory = ::DefaultVerifier,
             attachmentsClassLoaderCache = null
     )
 
@@ -804,14 +806,19 @@ private constructor(
     }
 }
 
+@CordaInternal
+@JvmSynthetic
+fun defaultVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext): Verifier {
+    return DefaultVerifier(ltx, serializationContext)
+}
+
 /**
  * This is the default [Verifier] that configures Corda
  * to execute [Contract.verify(LedgerTransaction)].
  *
  * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
  */
-@CordaInternal
-private class BasicVerifier(
+private class DefaultVerifier(
     ltx: LedgerTransaction,
     private val serializationContext: SerializationContext
 ) : AbstractVerifier(ltx, serializationContext.deserializationClassLoader) {
@@ -874,7 +881,6 @@ private class BasicVerifier(
  * THIS CLASS IS NOT PUBLIC API, AND IS DELIBERATELY PRIVATE!
  */
 @Suppress("unused_parameter")
-@CordaInternal
 private class NoOpVerifier(ltx: LedgerTransaction, serializationContext: SerializationContext) : Verifier {
     // Invoking LedgerTransaction.verify() from Contract.verify(LedgerTransaction)
     // will execute this function. But why would anyone do that?!

@@ -56,7 +56,7 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
 
             availableAttachments.forEach { attachmentId ->
                 val versions = networkParameters.whitelistedContractImplementations.values.map { it.indexOfFirst { aid -> aid.toString() == attachmentId } }.filter { it >= 0 }
-                val maxPosition = versions.max() ?: 0
+                val maxPosition = versions.maxOrNull() ?: 0
                 if (maxPosition > 0) {
                     val version = maxPosition + 1
                     val updateVersionMsg = "Updating version of attachment $attachmentId to '$version'."

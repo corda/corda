@@ -44,7 +44,6 @@ object ProcessUtilities {
             add(javaPath)
             (jdwpPort != null) && add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
             if (maximumHeapSize != null) add("-Xmx$maximumHeapSize")
-            add("-XX:+UseG1GC")
             addAll(extraJvmArguments)
             add(className)
             addAll(arguments)

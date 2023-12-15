@@ -174,7 +174,6 @@ class FlowCreator(
         return  Flow(flowStateMachineImpl, resultFuture)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun Checkpoint.getFiberFromCheckpoint(runId: StateMachineRunId, firstRestore: Boolean): FlowStateMachineImpl<*>? {
         try {
             return when(flowState) {

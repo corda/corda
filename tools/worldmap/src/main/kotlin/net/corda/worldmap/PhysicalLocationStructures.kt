@@ -9,8 +9,11 @@ data class ScreenCoordinate(val screenX: Double, val screenY: Double)
 @CordaSerializable
 data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     init {
-        require(latitude in -90..90){"Latitude must be between -90 and +90"}
-        require(longitude in -180..180){"Longitude must be between -180 and +180"}
+        @Suppress("MagicNumber")
+        require(latitude in -90.0..90.0){"Latitude must be between -90 and +90"}
+
+        @Suppress("MagicNumber")
+        require(longitude in -180.0..180.0){"Longitude must be between -180 and +180"}
     }
 
     /**

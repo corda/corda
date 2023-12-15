@@ -1,8 +1,6 @@
 package net.corda.node.internal.security
 
-
 import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Ints
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.uncheckedCast
@@ -241,7 +239,7 @@ private class CaffeineCacheManager(val maxSize: Long,
 
     private fun <K : Any, V> buildCache(name: String): ShiroCache<K, V> {
         logger.info("Constructing cache '$name' with maximumSize=$maxSize, TTL=${timeToLiveSeconds}s")
-        return cacheFactory.buildNamed<K, V>(Caffeine.newBuilder(), "RPCSecurityManagerShiroCache_$name").toShiroCache()
+        return cacheFactory.buildNamed<K, V>("RPCSecurityManagerShiroCache_$name").toShiroCache()
     }
 
     companion object {

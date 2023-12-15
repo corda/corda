@@ -1,7 +1,6 @@
 package net.corda.core.identity
 
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
@@ -52,7 +51,7 @@ class PartyAndCertificate(val certPath: CertPath) {
         // Apply Corda-specific validity rules to the chain. This only applies to chains with any roles present, so
         // an all-null chain is in theory valid.
         var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)
-        val certChain: List<X509Certificate> = uncheckedCast(certPath.certificates)
+        val certChain = certPath.certificates as List<X509Certificate>
         for (certIdx in (0 until certChain.size).reversed()) {
             val certificate = certChain[certIdx]
             val role = CertRole.extract(certificate)

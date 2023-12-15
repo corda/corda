@@ -172,11 +172,13 @@ fun createComponentGroups(inputs: List<StateRef>,
     return componentGroupMap
 }
 
+typealias SerializedTransactionState = SerializedBytes<TransactionState<ContractState>>
+
 /**
  * A SerializedStateAndRef is a pair (BinaryStateRepresentation, StateRef).
  * The [serializedState] is the actual component from the original wire transaction.
  */
-data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef) {
+data class SerializedStateAndRef(val serializedState: SerializedTransactionState, val ref: StateRef) {
     fun toStateAndRef(factory: SerializationFactory, context: SerializationContext) = StateAndRef(serializedState.deserialize(factory, context), ref)
     fun toStateAndRef(): StateAndRef<ContractState> {
         val factory = SerializationFactory.defaultFactory

@@ -15,8 +15,7 @@ class NonInvalidatingCache<K, V> private constructor(
 
     private companion object {
         private fun <K, V> buildCache(cacheFactory: NamedCacheFactory, name: String, loadFunction: (K) -> V): LoadingCache<K, V> {
-            val builder = Caffeine.newBuilder()
-            return cacheFactory.buildNamed(builder, name, NonInvalidatingCacheLoader(loadFunction))
+            return cacheFactory.buildNamed(name, NonInvalidatingCacheLoader(loadFunction))
         }
     }
 

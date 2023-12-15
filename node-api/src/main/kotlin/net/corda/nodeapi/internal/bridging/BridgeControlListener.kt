@@ -1,4 +1,3 @@
-@file:Suppress("TooGenericExceptionCaught") // needs to catch and handle/rethrow *all* exceptions
 package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.identity.CordaX500Name
@@ -27,6 +26,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Duration
 import java.util.*
+import kotlin.system.exitProcess
 
 class BridgeControlListener(private val keyStore: CertificateStore,
                             trustStore: CertificateStore,
@@ -142,7 +142,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
                 val notifyMessage = data.deserialize<BridgeControl.BridgeToNodeSnapshotRequest>(context = SerializationDefaults.P2P_CONTEXT)
                 if (notifyMessage.bridgeIdentity != bridgeId) {
                     log.error("Fatal Error! Two bridges have been configured simultaneously! Check the enterpriseConfiguration.externalBridge status")
-                    System.exit(1)
+                    exitProcess(1)
                 }
             } catch (ex: Exception) {
                 log.error("Unable to process bridge notification message", ex)
@@ -204,7 +204,7 @@ class BridgeControlListener(private val keyStore: CertificateStore,
             is BridgeControl.NodeToBridgeSnapshot -> {
                 if (!isConfigured(controlMessage.nodeIdentity)) {
                     log.error("Fatal error! Bridge not configured with keystore for node with legal name ${controlMessage.nodeIdentity}.")
-                    System.exit(1)
+                    exitProcess(1)
                 }
                 if (!controlMessage.inboxQueues.all { validateInboxQueueName(it) }) {
                     log.error("Invalid queue names in control message $controlMessage")

@@ -113,7 +113,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         try {
             activeMQServer.startSynchronously()
         } catch (e: Throwable) {

@@ -1,5 +1,5 @@
 apply plugin: 'java'
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
@@ -7,9 +7,12 @@ apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
     if (System.getProperty('excludeShell') == null) {
-        cordaDriver "net.corda:corda-shell:$corda_release_version"
+        cordaDriver "net.corda:corda-shell:$corda_shell_version"
     }
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    implementation project(":core-test-utils")
+    implementation project(":test-utils")
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     // The bank of corda CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
@@ -18,23 +21,29 @@ dependencies {
     // Cordformation needs a SLF4J implementation when executing the Network
     // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
     // Use a much simpler SLF4J implementation here instead.
-    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     // Corda integration dependencies
-    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
-    cordaCompile project(':core')
-    cordaCompile project(':client:jfx')
-    cordaCompile project(':client:rpc')
-    cordaCompile(project(':testing:testserver')) {
+    corda project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    corda project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+
+    cordaProvided project(':core')
+    cordaProvided project(':client:jfx')
+    cordaProvided project(':client:rpc')
+    cordaProvided(project(':testing:testserver')) {
         exclude group: "org.apache.logging.log4j"
     }
-    cordaCompile (project(':node-driver')) {
+    cordaProvided (project(':node-driver')) {
         exclude group: "org.apache.logging.log4j"
     }
 
+    cordaBootstrapper "org.slf4j:slf4j-simple:$slf4j_version"
+    cordaBootstrapper project(":node-api")
+
     // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     // Test dependencies
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
@@ -47,6 +56,7 @@ dependencies {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
+configurations.cordaCordapp.canBeResolved = true
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     nodeDefaults {
         cordapp project(':finance:workflows')
@@ -106,35 +116,37 @@ idea {
 task runRPCCashIssue(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.IssueCash'
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'ISSUE_CASH_RPC'
     args '--quantity'
     args 20000
     args '--currency'
     args 'USD'
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.time=ALL-UNNAMED'
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.io=ALL-UNNAMED'
-    }
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 task runWebCashIssue(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.IssueCash'
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
+
     args '--role'
     args 'ISSUE_CASH_WEB'
     args '--quantity'
     args 30000
     args '--currency'
     args 'GBP'
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.time=ALL-UNNAMED'
-        jvmArgs '--add-opens'
-        jvmArgs 'java.base/java.io=ALL-UNNAMED'
-    }
+
+    jvmArgs test_add_opens
+    jvmArgs test_add_exports
 }
 
 jar {
@@ -147,10 +159,4 @@ jar {
 
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
-    minimumPlatformVersion 1
-    info {
-        name "Bank of Corda Demo"
-        version "1"
-        vendor "R3"
-    }
 }

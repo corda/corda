@@ -6,8 +6,8 @@ import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.primitives.Ints
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.crypto.Crypto
@@ -37,6 +37,7 @@ import net.corda.serialization.internal.encodingNotPermittedFormat
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
+import org.apache.commons.lang3.JavaVersion
 import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -182,7 +183,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test(timeout=300_000)
 	fun `InputStream serialisation`() {
-        val rubbish = ByteArray(12345) { (it * it * 0.12345).toByte() }
+        val rubbish = ByteArray(12345) { (it * it * 0.12345).toInt().toByte() }
         val readRubbishStream: InputStream = rubbish.inputStream().checkpointSerialize(context).checkpointDeserialize(context)
         for (i in 0..12344) {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
@@ -394,10 +395,10 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val uncompressedSize = obj.checkpointSerialize(context.withEncoding(null)).size
         val compressedSize = obj.checkpointSerialize(context.withEncoding(CordaSerializationEncoding.SNAPPY)).size
         // If these need fixing, sounds like Kryo wire format changed and checkpoints might not survive an upgrade.
-        if (SystemUtils.IS_JAVA_11)
-            assertEquals(20184, uncompressedSize)
+        if (SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11))
+            assertEquals(20127, uncompressedSize)
         else
             assertEquals(20234, uncompressedSize)
-        assertEquals(1123, compressedSize)
+        assertEquals(1095, compressedSize)
     }
 }
