@@ -40,7 +40,7 @@ class CordaServiceIssueOnceAtStartupTests {
         private val armedPropName = this::class.java.enclosingClass.name + "-armed"
         private val logger = contextLogger()
         private val tempFilePropertyName = this::class.java.enclosingClass.name + "-tmpFile"
-        private val tmpFile = createTempFile(prefix = tempFilePropertyName)
+        private val tmpFile = File.createTempFile(tempFilePropertyName, null)
         private const val vaultQueryExecutedMarker = "VaultQueryExecuted"
         private const val sentFlowMarker = "SentFlow"
     }

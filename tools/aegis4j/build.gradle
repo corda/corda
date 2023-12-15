@@ -1,0 +1,90 @@
+plugins {
+    id 'java'
+    id 'kotlin'
+    id 'jacoco'
+    id 'eclipse'
+    id 'signing'
+    id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' //version '7.1.0'
+}
+
+group = 'net.gredler'
+archivesBaseName = 'aegis4j'
+version = '1.2'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.javassist:javassist:3.28.0-GA'
+    testImplementation 'org.springframework:spring-core:5.3.14'
+    testImplementation 'com.unboundid:unboundid-ldapsdk:3.1.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    // vulnerable to CVE-2021-44228
+    testImplementation 'org.apache.logging.log4j:log4j-core:2.14.1'
+    // vulnerable to CVE-2015-7501
+    testImplementation 'org.apache.commons:commons-collections4:4.0'
+    // vulnerable to CVE-2019-17531
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.9.10'
+    testImplementation('log4j:apache-log4j-extras:1.2.17') {
+        exclude group: 'log4j', module: 'log4j'
+    }
+    testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation "org.yaml:snakeyaml:1.33"
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    testImplementation "io.netty:netty:3.10.5.Final"
+    testImplementation "com.h2database:h2:$h2_version"
+    testImplementation "javax.servlet:javax.servlet-api:${servlet_version}" // Needed to load H2 Web Console
+    testImplementation "org.liquibase:liquibase-core:$liquibase_version"
+}
+
+sourceCompatibility = 8
+targetCompatibility = 8
+
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+javadoc.options.encoding = 'UTF-8'
+
+java {
+}
+
+test {
+    jvmArgs "-javaagent:${shadowJar.archiveFile.get()}=dynamic"
+    useJUnitPlatform()
+    systemProperty 'jdk.attach.allowAttachSelf', 'true' // tests attach agent to local VM
+    systemProperty 'aegis4j.projectDir', "${project.projectDir.toString()}"
+    systemProperty 'aegis4j.log', "true"
+    forkEvery 1 // tests cannot undo class modifications to clean up after themselves
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showExceptions true
+        showStackTraces true
+        showStandardStreams false
+        exceptionFormat 'full'
+    }
+}
+
+jar {
+    archiveClassifier.set('no-deps')
+    manifest.attributes(
+        'Implementation-Title': 'aegis4j',
+        'Implementation-Version': archiveVersion,
+        'Main-Class': 'net.gredler.aegis4j.AegisAgent',
+        'Agent-Class': 'net.gredler.aegis4j.AegisAgent',
+        'Premain-Class': 'net.gredler.aegis4j.AegisAgent',
+        'Can-Redefine-Classes': true,
+        'Can-Retransform-Classes': true,
+        'Can-Set-Native-Method-Prefix': false
+    )
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    relocate 'javassist', 'net.gredler.aegis4j.javassist'
+}
+
+tasks.build.dependsOn tasks.shadowJar
+tasks.test.dependsOn tasks.shadowJar
+

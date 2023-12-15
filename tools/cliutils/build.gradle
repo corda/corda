@@ -8,7 +8,7 @@ description 'CLI Utilities'
 dependencies {
     compile project(":core")
     compile project(":common-logging")
-    
+
     compile "info.picocli:picocli:$picocli_version"
     compile "commons-io:commons-io:$commons_io_version"
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
@@ -17,6 +17,9 @@ dependencies {
     compile "org.fusesource.jansi:jansi:$jansi_version"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    // Aegis4J
+    compile project(':tools:aegis4j')
 }
 
 jar {

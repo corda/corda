@@ -34,7 +34,7 @@ class CordaServiceLifecycleFatalTests {
 
         // Temporaty file used as a latch between two processes
         private val tempFilePropertyName = this::class.java.enclosingClass.name + "-tmpFile"
-        private val tmpFile = createTempFile(prefix = tempFilePropertyName)
+        private val tmpFile = File.createTempFile(tempFilePropertyName, null)
         private const val readyToThrowMarker = "ReadyToThrow"
         private const val goodToThrowMarker = "GoodToThrow"
 

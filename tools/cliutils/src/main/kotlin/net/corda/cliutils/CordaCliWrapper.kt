@@ -5,7 +5,16 @@ import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.event.Level
 import picocli.CommandLine
-import picocli.CommandLine.*
+import picocli.CommandLine.Command
+import picocli.CommandLine.DefaultExceptionHandler
+import picocli.CommandLine.ExecutionException
+import picocli.CommandLine.Help
+import picocli.CommandLine.ITypeConverter
+import picocli.CommandLine.Option
+import picocli.CommandLine.ParameterException
+import picocli.CommandLine.ParseResult
+import picocli.CommandLine.RunLast
+import picocli.CommandLine.TypeConversionException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -114,6 +123,10 @@ fun CordaCliWrapper.start(args: Array<String>) {
         optionListHeading = "%n@|bold,underline Options|@:%n%n",
         commandListHeading = "%n@|bold,underline Commands|@:%n%n")
 abstract class CliWrapperBase(val alias: String, val description: String) : Callable<Int> {
+    init {
+        AttachAegis4j
+    }
+
     companion object {
         private val logger by lazy { contextLogger() }
     }
