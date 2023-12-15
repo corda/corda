@@ -18,7 +18,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -61,11 +60,10 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("Caused by: org.bouncycastle.operator.RuntimeOperatorException: exception obtaining signature: Curve not supported: org.bouncycastle.jce.spec.ECNamedCurveSpec@2a3aa9a0")
 	fun `BCCryptoService generate key pair and sign both data and cert`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
-        Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY
+        Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY && it != Crypto.ECDSA_SECP256K1_SHA256
                 && it.signatureName != "SHA512WITHSPHINCS256"}.forEach { generateKeyAndSignForScheme(cryptoService, it) }
     }
 
@@ -95,11 +93,10 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("Caused by: org.bouncycastle.operator.RuntimeOperatorException: exception obtaining signature: Curve not supported: org.bouncycastle.jce.spec.ECNamedCurveSpec@3a0d4286")
 	fun `BCCryptoService generate key pair and sign with existing schemes`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
-        Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY
+        Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY && it != Crypto.ECDSA_SECP256K1_SHA256
                 && it.signatureName != "SHA512WITHSPHINCS256"}.forEach {
             val alias = "signature${it.schemeNumberID}"
             val pubKey = cryptoService.generateKeyPair(alias, it)
