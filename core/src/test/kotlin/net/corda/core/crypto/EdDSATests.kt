@@ -2,6 +2,7 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.utilities.hexToByteArray
 import net.corda.core.utilities.toHex
 import org.junit.Test
@@ -187,7 +188,7 @@ class EdDSATests {
 
     // Required to implement a custom doSign function, because Corda's Crypto.doSign does not allow empty messages (testVector1).
     private fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        val signature = Signature.getInstance(Crypto.EDDSA_ED25519_SHA512.signatureName, "SunEC")
+        val signature = Signature.getInstance(Crypto.EDDSA_ED25519_SHA512.signatureName, cordaBouncyCastleProvider.name)
         signature.initSign(privateKey)
         signature.update(clearData)
         return signature.sign()
