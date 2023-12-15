@@ -1,5 +1,3 @@
-@file:Suppress("Since15")
-
 package net.corda.core.crypto
 
 import com.google.common.collect.Sets
