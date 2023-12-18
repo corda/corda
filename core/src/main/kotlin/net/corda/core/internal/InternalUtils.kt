@@ -1,4 +1,3 @@
-@file:JvmName("InternalUtils")
 package net.corda.core.internal
 
 import net.corda.core.crypto.Crypto
@@ -26,18 +25,15 @@ import java.io.InputStream
 import java.lang.reflect.Field
 import java.lang.reflect.Member
 import java.lang.reflect.Modifier
-import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_MOVED_PERM
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.Proxy
-import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.PrivateKey
@@ -72,6 +68,7 @@ import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.io.path.toPath
 import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
@@ -94,8 +91,8 @@ infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(th
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
 operator fun Duration.times(multiplicand: Double): Duration = Duration.ofNanos((toNanos() * multiplicand).roundToLong())
-fun min(d1: Duration, d2: Duration): Duration = if (d1 <= d2) d1 else d2
 
+fun min(d1: Duration, d2: Duration): Duration = if (d1 <= d2) d1 else d2
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception
@@ -122,15 +119,6 @@ fun <T> List<T>.noneOrSingle(): T? {
         0 -> null
         1 -> this[0]
         else -> throw IllegalArgumentException("List has more than one element.")
-    }
-}
-
-/** Returns a random element in the list, or `null` if empty */
-fun <T> List<T>.randomOrNull(): T? {
-    return when (size) {
-        0 -> null
-        1 -> this[0]
-        else -> this[(Math.random() * size).toInt()]
     }
 }
 
@@ -188,10 +176,7 @@ fun InputStream.hash(): SecureHash {
 
 inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
 
-fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
-
-/** Return the sum of an Iterable of [BigDecimal]s. */
-fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
+fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else "${take(maxWidth - 1)}…"
 
 /**
  * Returns an Observable that buffers events until subscribed.
@@ -450,8 +435,6 @@ inline val Member.isPublic: Boolean get() = Modifier.isPublic(modifiers)
 inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
 inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
-
-fun URI.toPath(): Path = Paths.get(this)
 
 fun URL.toPath(): Path = toURI().toPath()
 

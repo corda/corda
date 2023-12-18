@@ -1,9 +1,9 @@
 package net.corda.testing.node
 
-import net.corda.core.internal.div
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.node.internal.ProcessUtilities.startJavaProcess
 import org.junit.Test
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 
 class MockNetworkIntegrationTests {

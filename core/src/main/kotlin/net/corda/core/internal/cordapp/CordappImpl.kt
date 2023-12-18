@@ -15,6 +15,7 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import java.net.URL
 import java.nio.file.Paths
+import kotlin.io.path.name
 
 data class CordappImpl(
         override val contractClassNames: List<String>,
@@ -49,7 +50,7 @@ data class CordappImpl(
     }
 
     companion object {
-        fun jarName(url: URL): String = (url.toPath().fileName ?: "").toString().removeSuffix(".jar")
+        fun jarName(url: URL): String = url.toPath().name.removeSuffix(".jar")
 
         /** CorDapp manifest entries */
         const val CORDAPP_CONTRACT_NAME = "Cordapp-Contract-Name"

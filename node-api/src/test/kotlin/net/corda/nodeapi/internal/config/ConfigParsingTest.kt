@@ -6,17 +6,20 @@ import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
-import java.util.*
+import java.util.Properties
+import java.util.UUID
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 import kotlin.reflect.full.primaryConstructor
 
 class ConfigParsingTest {
@@ -86,7 +89,7 @@ class ConfigParsingTest {
 
     @Test(timeout=300_000)
 	fun Path() {
-        val path = "tmp" / "test"
+        val path = Path.of("tmp", "test")
         testPropertyType<PathData, PathListData, Path>(path, path / "file", valuesToString = true)
     }
 

@@ -21,10 +21,8 @@ import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
 import net.corda.core.internal.cordapp.get
-import net.corda.core.internal.exists
 import net.corda.core.internal.hash
 import net.corda.core.internal.isAbstractClass
-import net.corda.core.internal.list
 import net.corda.core.internal.loadClassOfType
 import net.corda.core.internal.location
 import net.corda.core.internal.notary.NotaryService
@@ -57,6 +55,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipInputStream
+import kotlin.io.path.exists
+import kotlin.io.path.useDirectoryEntries
 import kotlin.reflect.KClass
 
 /**
@@ -116,10 +116,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             return if (!directory.exists()) {
                 emptyList()
             } else {
-                directory.list { paths ->
-                    // `toFile()` can't be used here...
-                    paths.filter { it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
-                }
+                directory.useDirectoryEntries("*.jar") { jars -> jars.map { it.toUri().toURL() }.toList() }
             }
         }
     }

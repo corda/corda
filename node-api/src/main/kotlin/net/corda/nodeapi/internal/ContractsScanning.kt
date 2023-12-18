@@ -13,6 +13,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.Collections.singleton
+import kotlin.io.path.deleteIfExists
 
 // When scanning of the CorDapp Jar is performed without "corda-core.jar" being in the classpath, there is no way to appreciate
 // relationships between those interfaces, therefore they have to be listed explicitly.

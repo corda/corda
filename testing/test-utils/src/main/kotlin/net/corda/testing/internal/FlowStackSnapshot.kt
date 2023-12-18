@@ -11,7 +11,6 @@ import net.corda.core.flows.FlowStackSnapshot.Frame
 import net.corda.core.flows.StackFrameDataToken
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.div
 import net.corda.core.internal.write
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.client.jackson.JacksonSupport
@@ -20,6 +19,7 @@ import net.corda.node.services.statemachine.FlowStackSnapshotFactory
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
+import kotlin.io.path.div
 
 class FlowStackSnapshotFactoryImpl : FlowStackSnapshotFactory {
     private companion object {

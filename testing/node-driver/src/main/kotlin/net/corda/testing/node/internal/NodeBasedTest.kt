@@ -5,8 +5,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.getOrThrow
@@ -34,6 +32,8 @@ import rx.internal.schedulers.CachedThreadScheduler
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
 import kotlin.test.assertFalse
 
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
@@ -60,7 +60,7 @@ abstract class NodeBasedTest @JvmOverloads constructor(
     private val portAllocation = incrementalPortAllocation()
 
     init {
-        System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
+        System.setProperty("consoleLogLevel", Level.DEBUG.name().lowercase())
     }
 
     @Before

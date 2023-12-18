@@ -27,10 +27,12 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
 
 class AttachmentLoadingTests {
     private companion object {
-        val isolatedJar: URL = AttachmentLoadingTests::class.java.getResource("/isolated.jar")
+        val isolatedJar: URL = AttachmentLoadingTests::class.java.getResource("/isolated.jar")!!
         val isolatedClassLoader = URLClassLoader(arrayOf(isolatedJar))
         val issuanceFlowClass: Class<FlowLogic<StateRef>> = uncheckedCast(loadFromIsolated("net.corda.isolated.workflows.IsolatedIssuanceFlow"))
 

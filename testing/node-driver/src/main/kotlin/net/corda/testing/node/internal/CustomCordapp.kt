@@ -1,27 +1,32 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
-import net.corda.core.internal.*
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.set
+import net.corda.core.internal.pooledScan
 import net.corda.core.node.services.AttachmentFixup
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.containsKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.Attributes
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipEntry
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.outputStream
 
 /**
  * Represents a completely custom CorDapp comprising of resources taken from packages on the existing classpath, even including individual
@@ -179,8 +184,8 @@ data class CustomCordapp(
                 val jarFile = cordappsDirectory.createDirectories() / filename
                 if (it.fixups.isNotEmpty()) {
                     it.createFixupJar(jarFile)
-                } else if(it.packages.isNotEmpty() || it.classes.isNotEmpty() || it.fixups.isNotEmpty()) {
-                        it.packageAsJar(jarFile)
+                } else if (it.packages.isNotEmpty() || it.classes.isNotEmpty()) {
+                    it.packageAsJar(jarFile)
                 }
                 it.signJar(jarFile)
                 logger.debug { "$it packaged into $jarFile" }
