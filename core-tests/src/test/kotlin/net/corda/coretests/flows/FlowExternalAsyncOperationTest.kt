@@ -6,7 +6,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.SerializableLambda2
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.services.statemachine.StateTransitionException
@@ -16,12 +15,15 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.junit.Test
+import java.io.Serializable
 import java.sql.SQLTransientConnectionException
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
+
+    private fun interface SerializableLambda2<S, T, R> : (S, T) -> R, Serializable
 
     @Test(timeout = 300_000)
     fun `external async operation`() {

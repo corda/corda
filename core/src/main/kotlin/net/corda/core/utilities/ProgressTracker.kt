@@ -39,7 +39,7 @@ class ProgressTracker(vararg inputSteps: Step) {
         private val log = contextLogger()
     }
 
-    internal fun interface SerializableAction<T>: Action1<T>, Serializable
+    private fun interface SerializableAction<T>: Action1<T>, Serializable
 
     @CordaSerializable
     sealed class Change(val progressTracker: ProgressTracker) {
