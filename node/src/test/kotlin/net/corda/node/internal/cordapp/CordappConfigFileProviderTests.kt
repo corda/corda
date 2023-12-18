@@ -4,12 +4,12 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.core.internal.div
-import net.corda.core.internal.writeText
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.nio.file.Paths
+import kotlin.io.path.div
+import kotlin.io.path.writeText
 
 class CordappConfigFileProviderTests {
     private companion object {

@@ -2,8 +2,6 @@ package net.corda.node.services.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.core.internal.delete
-import net.corda.core.internal.div
 import net.corda.node.internal.Node
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -19,6 +17,8 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
 import kotlin.test.assertFalse
 
 class ConfigHelperTests {
@@ -31,7 +31,7 @@ class ConfigHelperTests {
 
     @After
     fun cleanup() {
-        baseDir?.delete()
+        baseDir?.deleteExisting()
     }
 
     @Test(timeout = 300_000)

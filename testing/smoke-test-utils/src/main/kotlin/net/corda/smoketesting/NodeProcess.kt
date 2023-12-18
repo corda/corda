@@ -3,11 +3,8 @@ package net.corda.smoketesting
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.identity.Party
-import net.corda.core.internal.createDirectories
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
 import net.corda.core.internal.toPath
-import net.corda.core.internal.writeText
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -25,6 +22,9 @@ import java.time.ZoneId.systemDefault
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.writeText
 
 class NodeProcess(
         private val config: NodeConfig,

@@ -160,7 +160,9 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         return toLedgerTransactionInternal(services.toVerifyingServiceHub(), checkSufficientSignatures)
     }
 
-    private fun toLedgerTransactionInternal(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean): LedgerTransaction {
+    @JvmSynthetic
+    @CordaInternal
+    fun toLedgerTransactionInternal(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean): LedgerTransaction {
         // TODO: We could probably optimise the below by
         // a) not throwing if threshold is eventually satisfied, but some of the rest of the signatures are failing.
         // b) omit verifying signatures when threshold requirement is met.

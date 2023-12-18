@@ -1,7 +1,9 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.*
+import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -16,6 +18,11 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.FileTime
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.getLastModifiedTime
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.useDirectoryEntries
 
 sealed class NodeInfoUpdate {
     data class Add(val nodeInfo: NodeInfo) : NodeInfoUpdate()
@@ -81,7 +88,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     private fun pollDirectory(): List<NodeInfoUpdate> {
         logger.debug { "pollDirectory $nodeInfosDir" }
         val processedPaths = HashSet<Path>()
-        val result = nodeInfosDir.list { paths ->
+        val result = nodeInfosDir.useDirectoryEntries { paths ->
             paths
                     .filter {
                         logger.debug { "Examining $it" }
@@ -90,7 +97,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                     .filter { !it.toString().endsWith(".tmp") }
                     .filter { it.isRegularFile() }
                     .filter { file ->
-                        val lastModifiedTime = file.lastModifiedTime()
+                        val lastModifiedTime = file.getLastModifiedTime()
                         val previousLastModifiedTime = nodeInfoFilesMap[file]?.lastModified
                         val newOrChangedFile = previousLastModifiedTime == null || lastModifiedTime > previousLastModifiedTime
                         processedPaths.add(file)
@@ -100,7 +107,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                         logger.debug { "Reading SignedNodeInfo from $file" }
                         try {
                             val nodeInfoSigned = NodeInfoAndSigned(file.readObject())
-                            nodeInfoFilesMap[file] = NodeInfoFromFile(nodeInfoSigned.signed.raw.hash, file.lastModifiedTime())
+                            nodeInfoFilesMap[file] = NodeInfoFromFile(nodeInfoSigned.signed.raw.hash, file.getLastModifiedTime())
                             nodeInfoSigned
                         } catch (e: Exception) {
                             logger.warn("Unable to read SignedNodeInfo from $file", e)

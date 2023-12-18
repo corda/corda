@@ -12,7 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.notary.common.BatchSigningFunction
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.isConsumedByTheSameTx
@@ -27,13 +27,15 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.vault.toStateRef
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.notary.common.BatchSigningFunction
 import net.corda.notary.common.InternalResult
 import net.corda.serialization.internal.CordaSerializationEncoding
 import org.hibernate.Session
 import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
-import java.util.*
+import java.util.LinkedList
+import java.util.UUID
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
@@ -200,7 +202,7 @@ class JPAUniquenessProvider(
     }
 
     private fun findAlreadyCommitted(session: Session, states: List<StateRef>, references: List<StateRef>): Map<StateRef, StateConsumptionDetails> {
-        val persistentStateRefs = (states + references).map { encodeStateRef(it) }.toSet()
+        val persistentStateRefs = (states + references).mapToSet(::encodeStateRef)
         val committedStates = mutableListOf<CommittedState>()
 
         for (idsBatch in persistentStateRefs.chunked(config.maxInputStates)) {

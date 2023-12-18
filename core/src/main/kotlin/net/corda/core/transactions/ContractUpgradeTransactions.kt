@@ -261,9 +261,9 @@ private constructor(
         @CordaInternal
         @JvmSynthetic
         @Suppress("ThrowsCount")
-        internal fun resolve(verificationSupport: VerificationSupport,
-                             wtx: ContractUpgradeWireTransaction,
-                             sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
+        fun resolve(verificationSupport: VerificationSupport,
+                    wtx: ContractUpgradeWireTransaction,
+                    sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
             val inputs = wtx.inputs.map(verificationSupport::getStateAndRef)
             val (legacyContractAttachment, upgradedContractAttachment) = verificationSupport.getAttachments(listOf(
                     wtx.legacyContractAttachmentId,

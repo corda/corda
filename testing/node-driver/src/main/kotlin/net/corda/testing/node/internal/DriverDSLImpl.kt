@@ -6,9 +6,7 @@ import co.paralleluniverse.fibers.instrument.JavaAgent
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.core.internal.uncheckedCast
 import com.typesafe.config.ConfigRenderOptions
-import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
@@ -36,22 +34,16 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VE
 import net.corda.core.internal.cordapp.CordappImpl.Companion.MIN_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.get
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.deleteIfExists
-import net.corda.core.internal.div
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.readObject
-import net.corda.core.internal.readText
 import net.corda.core.internal.toPath
-import net.corda.core.internal.writeText
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.toHexString
@@ -128,10 +120,15 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 import kotlin.concurrent.thread
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
+import kotlin.io.path.readText
+import kotlin.io.path.useDirectoryEntries
+import kotlin.io.path.writeText
 import net.corda.nodeapi.internal.config.User as InternalUser
 
 class DriverDSLImpl(
@@ -267,7 +264,7 @@ class DriverDSLImpl(
     override fun startNode(parameters: NodeParameters, bytemanPort: Int?): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = parameters.providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        val name = parameters.providedName ?: CordaX500Name("${names.random().organisation}-${p2pAddress.port}", "London", "GB")
 
         val config = createConfig(name, parameters, p2pAddress)
         if (isH2Database(config) && !inMemoryDB) {
@@ -419,7 +416,7 @@ class DriverDSLImpl(
                 return WebserverHandle(handle.webAddress, process)
             }
         } catch (e: ConnectException) {
-            log.debug("Retrying webserver info at ${handle.webAddress}")
+            log.debug { "Retrying webserver info at ${handle.webAddress}" }
         }
 
         throw IllegalStateException("Webserver at ${handle.webAddress} has died")
@@ -578,9 +575,8 @@ class DriverDSLImpl(
                 // This causes two node info files to be generated.
                 startOutOfProcessMiniNode(config, arrayOf("generate-node-info")).map {
                     // Once done we have to read the signed node info file that's been generated
-                    val nodeInfoFile = config.corda.baseDirectory.list { paths ->
-                        paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst()
-                                .get()
+                    val nodeInfoFile = config.corda.baseDirectory.useDirectoryEntries { paths ->
+                        paths.single { it.name.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
                     }
                     val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                     Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
@@ -891,18 +887,6 @@ class DriverDSLImpl(
                 CORDAPP_WORKFLOW_VERSION
         ))
 
-        private inline fun <T> Config.withOptionalValue(key: String, obj: T?, body: (T) -> ConfigValue): Config {
-            return if (obj == null) {
-                this
-            } else {
-                withValue(key, body(obj))
-            }
-        }
-
-        private fun <T> valueFor(any: T): ConfigValue = ConfigValueFactory.fromAnyRef(any)
-
-        private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
-
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig,
@@ -994,26 +978,27 @@ class DriverDSLImpl(
                 it.addAll(extraCmdLineFlag)
             }.toList()
 
-            val bytemanJvmArgs = {
-                val bytemanAgent = bytemanJarPath?.let {
-                    bytemanPort?.let {
-                        "-javaagent:$bytemanJarPath=port:$bytemanPort,listener:true"
-                    }
+            val bytemanAgent = bytemanJarPath?.let {
+                bytemanPort?.let {
+                    "-javaagent:$bytemanJarPath=port:$bytemanPort,listener:true"
                 }
-                listOfNotNull(bytemanAgent) +
-                        if (bytemanAgent != null && debugPort != null) listOf(
+            }
+            val bytemanJvmArgs = listOfNotNull(bytemanAgent) +
+                    if (bytemanAgent != null && debugPort != null) {
+                        listOf(
                                 "-Dorg.jboss.byteman.verbose=true",
                                 "-Dorg.jboss.byteman.debug=true"
                         )
-                        else emptyList()
-            }.invoke()
+                    } else {
+                        emptyList()
+                    }
 
             // The following dependencies are excluded from the classpath of the created JVM,
             // so that the environment resembles a real one as close as possible.
             val cp = ProcessUtilities.defaultClassPath.filter { cpEntry ->
                 val cpPathEntry = Paths.get(cpEntry)
                 cpPathEntry.isRegularFile()
-                        && !isTestArtifact(cpPathEntry.fileName.toString())
+                        && !isTestArtifact(cpPathEntry.name)
                         && !cpPathEntry.isExcludedJar
             }
 
@@ -1135,7 +1120,7 @@ class DriverDSLImpl(
         }
 
         private fun createCordappsClassLoader(cordapps: Collection<TestCordappInternal>?): URLClassLoader? {
-            if (cordapps == null || cordapps.isEmpty()) {
+            if (cordapps.isNullOrEmpty()) {
                 return null
             }
             return URLClassLoader(cordapps.map { it.jarFile.toUri().toURL() }.toTypedArray())
@@ -1301,64 +1286,12 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 }
 
 /**
- * This is a helper method to allow extending of the DSL, along the lines of
- *   interface SomeOtherExposedDSLInterface : DriverDSL
- *   interface SomeOtherInternalDSLInterface : InternalDriverDSL, SomeOtherExposedDSLInterface
- *   class SomeOtherDSL(val driverDSL : DriverDSLImpl) : InternalDriverDSL by driverDSL, SomeOtherInternalDSLInterface
- *
- * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause.
- */
-fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
-        defaultParameters: DriverParameters = DriverParameters(),
-        driverDslWrapper: (DriverDSLImpl) -> D,
-        coerce: (D) -> DI, dsl: DI.() -> A
-): A {
-    setDriverSerialization().use { _ ->
-        val driverDsl = driverDslWrapper(
-                DriverDSLImpl(
-                        portAllocation = defaultParameters.portAllocation,
-                        debugPortAllocation = defaultParameters.debugPortAllocation,
-                        systemProperties = defaultParameters.systemProperties,
-                        driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
-                        useTestClock = defaultParameters.useTestClock,
-                        isDebug = defaultParameters.isDebug,
-                        startNodesInProcess = defaultParameters.startNodesInProcess,
-                        waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
-                        extraCordappPackagesToScan = @Suppress("DEPRECATION") defaultParameters.extraCordappPackagesToScan,
-                        jmxPolicy = defaultParameters.jmxPolicy,
-                        notarySpecs = defaultParameters.notarySpecs,
-                        compatibilityZone = null,
-                        networkParameters = defaultParameters.networkParameters,
-                        notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
-                        inMemoryDB = defaultParameters.inMemoryDB,
-                        cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
-                        environmentVariables = defaultParameters.environmentVariables,
-                        allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema,
-                        premigrateH2Database = defaultParameters.premigrateH2Database,
-                        notaryHandleTimeout = defaultParameters.notaryHandleTimeout
-                )
-        )
-        val shutdownHook = addShutdownHook(driverDsl::shutdown)
-        try {
-            driverDsl.start()
-            return dsl(coerce(driverDsl))
-        } catch (exception: Throwable) {
-            DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-            throw exception
-        } finally {
-            driverDsl.shutdown()
-            shutdownHook.cancel()
-        }
-    }
-}
-
-/**
  * Internal API to enable testing of the network map service and node registration process using the internal driver.
  *
  * @property publishNotaries Hook for a network map server to capture the generated [NotaryInfo] objects needed for
  * creating the network parameters. This is needed as the network map server is expected to distribute it. The callback
  * will occur on a different thread to the driver-calling thread.
- * @property rootCert If specified then the nodes will register themselves with the doorman service using [url] and expect
+ * @property rootCert If specified then the nodes will register themselves with the doorman service using [SharedCompatibilityZoneParams.url] and expect
  * the registration response to be rooted at this cert. If not specified then no registration is performed and the dev
  * root cert is used as normal.
  *

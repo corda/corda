@@ -4,8 +4,6 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.SslConfiguration
@@ -21,6 +19,8 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
 
 /**
  * Contains utility methods for generating identities for a node.

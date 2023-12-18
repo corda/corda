@@ -16,7 +16,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.getJavaUpdateVersion
 import net.corda.core.internal.notary.NotaryService
@@ -99,6 +98,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
+import kotlin.io.path.div
 import kotlin.system.exitProcess
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {

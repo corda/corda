@@ -75,7 +75,7 @@ publishing {
         maven(MavenPublication) {
             artifactId 'corda-serialization'
             artifact(testJar)
-            artifact(jar)
+            from components.java
         }
     }
 }

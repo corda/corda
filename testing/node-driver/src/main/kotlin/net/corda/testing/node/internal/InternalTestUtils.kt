@@ -10,8 +10,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.div
-import net.corda.core.internal.readText
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.AttachmentFixup
@@ -22,14 +20,14 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.inVMExecutors
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
-import net.corda.coretesting.internal.createTestSerializationEnv
-import net.corda.coretesting.internal.inVMExecutors
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
@@ -50,6 +48,8 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
+import kotlin.io.path.div
+import kotlin.io.path.readText
 import kotlin.reflect.KClass
 
 private val log = LoggerFactory.getLogger("net.corda.testing.internal.InternalTestUtils")
@@ -169,8 +169,7 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
         }
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
-            Unit
-        } catch (_exception: SocketException) {
+        } catch (_: SocketException) {
             null
         }
     }
@@ -188,7 +187,7 @@ fun nodeMustBeStartedFuture(
             throw exception()
         }
         when {
-            logFile.readText().contains("Running P2PMessaging loop") -> {
+            "Running P2PMessaging loop" in logFile.readText() -> {
                 Unit
             }
             Instant.now().isAfter(stopPolling) -> {
@@ -217,9 +216,7 @@ fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostA
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
             null
-        } catch (_exception: SocketException) {
-            Unit
-        }
+        } catch (_: SocketException) { }
     }
 }
 

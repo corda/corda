@@ -1,8 +1,9 @@
 package net.corda.testing.node.internal
 
-import net.corda.core.internal.div
 import java.io.File
 import java.nio.file.Path
+import kotlin.io.path.Path
+import kotlin.io.path.div
 
 object ProcessUtilities {
     @Suppress("LongParameterList")
@@ -62,7 +63,7 @@ object ProcessUtilities {
         }.start()
     }
 
-    private val javaPath = (System.getProperty("java.home") / "bin" / "java").toString()
+    private val javaPath = Path(System.getProperty("java.home"), "bin", "java").toString()
 
     val defaultClassPath: List<String> = System.getProperty("java.class.path").split(File.pathSeparator)
 }

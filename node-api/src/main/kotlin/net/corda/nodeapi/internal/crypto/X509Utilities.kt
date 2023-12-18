@@ -7,10 +7,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.reader
 import net.corda.core.internal.signWithCert
 import net.corda.core.internal.validate
-import net.corda.core.internal.writer
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.toHex
@@ -62,11 +60,12 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.ArrayList
 import java.util.Date
 import javax.security.auth.x500.X500Principal
 import kotlin.experimental.and
 import kotlin.experimental.or
+import kotlin.io.path.reader
+import kotlin.io.path.writer
 
 object X509Utilities {
     // Note that this default value only applies to BCCryptoService. Other implementations of CryptoService may have to use different

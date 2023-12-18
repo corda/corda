@@ -27,7 +27,8 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
                                private val attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
     private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
     private val cordappAttachments = HashBiMap.create<SecureHash, URL>()
-    private val attachmentFixups = AttachmentFixups()
+
+    override val attachmentFixups = AttachmentFixups()
 
     override val appClassLoader: ClassLoader get() = cordappLoader.appClassLoader
 
@@ -97,10 +98,6 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
                 }
             } to cordapp.jarPath
         }
-    }
-
-    override fun fixupAttachmentIds(attachmentIds: Collection<AttachmentId>): Set<AttachmentId> {
-        return attachmentFixups.fixupAttachmentIds(attachmentIds)
     }
 
     /**
