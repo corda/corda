@@ -20,6 +20,8 @@ sourceSets {
     }
 }
 
+compileKotlin.dependsOn(":samples:simm-valuation-demo:contracts-states:shrink")
+
 configurations {
     integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
