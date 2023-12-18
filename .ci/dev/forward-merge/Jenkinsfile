@@ -28,5 +28,4 @@ forwardMerger(
     targetBranch: targetBranch,
     originBranch: originBranch,
     slackChannel: '#c4-forward-merge-bot-notifications',
-    cloneTickets: true,
 )

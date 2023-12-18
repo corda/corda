@@ -182,7 +182,6 @@ buildscript {
                     includeGroupByRegex 'com\\.r3(\\..*)?'
                 }
             }
-            gradlePluginPortal()
             mavenCentral()
             jcenter()
         }
@@ -204,8 +203,6 @@ buildscript {
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.5_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: '1.3.0'
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
-        classpath "com.gradle:gradle-enterprise-gradle-plugin:$gradleEnterprisePlugin"
-        classpath "com.gradle:common-custom-user-data-gradle-plugin:$customUserDataGradlePlugin"
     }
 
     configurations.classpath {
@@ -228,7 +225,7 @@ apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'com.r3.testing.distributed-testing'
 
-// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
+// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve
 // the latest git commit hash and timestamp and create a version postfix from that
 if (project.hasProperty("versionFromGit")){
     ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
@@ -260,19 +257,6 @@ allprojects {
                 "javax.persistence.Embeddable",
                 "javax.persistence.MappedSuperclass"
         )
-    }
-
-    // we do this to allow for Gradle task caching.
-    // below block tells Gradle to ignore specifically the dymaically generated files in the manifest when checking if a file is up to date
-    // this has no impact on publishing or production of jar, This only reates to Grades mechamish for verifying the Cache key
-    normalization {
-        runtimeClasspath {
-            ignore("**/*.EC")  //signing related
-            ignore("**/*.SF")  //signing related
-            ignore("**/*.MF")
-            ignore("**/*.kotlin_module")
-            ignore("**/Cordapp-Dependencies")
-        }
     }
 
     dependencyCheck {
