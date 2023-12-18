@@ -122,8 +122,6 @@ include 'common-logging'
 project(":common-logging").projectDir = new File("$settingsDir/common/logging")
 // Common libraries - end
 
-apply from: 'buildCacheSettings.gradle'
-
 include 'detekt-plugins'
 include 'tools:error-tool'
 
