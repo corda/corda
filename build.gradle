@@ -227,22 +227,6 @@ plugins {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'com.r3.testing.distributed-testing'
-apply plugin: "com.gradle.build-scan"
-apply plugin: "com.gradle.common-custom-user-data-gradle-plugin"
-
-buildScan {
-    server = gradleEnterpriseUrl
-    allowUntrustedServer = false
-    def apiKey = project.findProperty('CORDA_GRADLE_SCAN_KEY') ?: System.getenv('CORDA_GRADLE_SCAN_KEY')
-    if (apiKey?.trim()) {
-        publishAlways()
-        capture {
-            taskInputFiles = true
-        }
-        uploadInBackground = false
-        accessKey = apiKey
-    }
-}
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
 // the latest git commit hash and timestamp and create a version postfix from that

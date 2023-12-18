@@ -21,7 +21,6 @@ pipeline {
         BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
-        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
         CORDA_USE_CACHE = "corda-remotes"
         JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
         C4_OS_SNYK_ORG_ID = credentials('c4-os-snyk-org-id')
@@ -64,9 +63,6 @@ pipeline {
         }
     }
     post {
-        always {
-            findBuildScans()
-        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
