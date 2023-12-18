@@ -29,7 +29,8 @@ String COMMON_GRADLE_PARAMS = [
         '--info',
         '-Pcompilation.warningsAsErrors=false',
         '-Ptests.failFast=true',
-        '-DexcludeShell',
+        '--build-cache',
+        '-DexcludeShell'
 ].join(' ')
 
 pipeline {
@@ -55,8 +56,12 @@ pipeline {
     environment {
         ARTIFACTORY_BUILD_NAME = "Corda :: Publish :: Publish Release to Artifactory :: ${env.BRANCH_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
+        BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
+        BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
         CORDA_BUILD_EDITION = "${buildEdition}"
         CORDA_USE_CACHE = "corda-remotes"
         DOCKER_URL = "https://index.docker.io/v1/"
@@ -76,7 +81,8 @@ pipeline {
                         './gradlew',
                         COMMON_GRADLE_PARAMS,
                         'clean',
-                        'jar'
+                        'jar',
+                        '--parallel'
                 ].join(' ')
             }
         }
@@ -136,8 +142,8 @@ pipeline {
                     }
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
                             /*
                              * Copy all JUnit results files into a single top level directory.
                              * This is necessary to stop the allure plugin from hitting out
@@ -173,7 +179,8 @@ pipeline {
                                 sh script: [
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
-                                        'jar'
+                                        'jar',
+                                        '--parallel'
                                 ].join(' ')
                             }
                         }
@@ -209,8 +216,8 @@ pipeline {
                 stage('Same agent') {
                     post {
                         always {
-                            archiveArtifacts artifacts: '**/*.log', fingerprint: false
-                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+                            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true, fingerprint: false
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
                             /*
                              * Copy all JUnit results files into a single top level directory.
                              * This is necessary to stop the allure plugin from hitting out
@@ -332,6 +339,7 @@ pipeline {
     post {
         always {
             script {
+                findBuildScans()
                 if (gitUtils.isReleaseTag()) {
                     gitUtils.getGitLog(env.TAG_NAME, env.GIT_URL.replace('https://github.com/corda/', ''))
                 }
