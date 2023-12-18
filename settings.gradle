@@ -122,8 +122,24 @@ include 'common-logging'
 project(":common-logging").projectDir = new File("$settingsDir/common/logging")
 // Common libraries - end
 
-apply from: 'buildCacheSettings.gradle'
 
 include 'detekt-plugins'
 include 'tools:error-tool'
 
+buildCache {
+    local { enabled = false }
+    remote(HttpBuildCache) {
+        url = "${gradleEnterpriseUrl}/cache/"
+        credentials {
+            username = settings.ext.find('BUILD_CACHE_CREDENTIALS_USR') ?: System.getenv('BUILD_CACHE_CREDENTIALS_USR')
+            password = settings.ext.find('BUILD_CACHE_CREDENTIALS_PSW') ?: System.getenv('BUILD_CACHE_CREDENTIALS_PSW')
+        }
+        if (System.getenv().containsKey("JENKINS_URL")) {
+            push = true
+            enabled = true
+        } else {
+            push = false
+            enabled = false
+        }
+    }
+}

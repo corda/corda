@@ -15,29 +15,30 @@ pipeline {
      * List environment variables in alphabetical order
      */
     environment {
-        SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret')
-        C4_OS_SNYK_ORG_ID = credentials('c4-os-snyk-org-id')
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
+        BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
+        BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
         CORDA_USE_CACHE = "corda-remotes"
         JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
+        C4_OS_SNYK_ORG_ID = credentials('c4-os-snyk-org-id')
+        SNYK_API_TOKEN = credentials('c4-os-snyk-api-token-secret')
     }
 
     stages {
         stage('Detekt check') {
             steps {
                 authenticateGradleWrapper()
-                sh "./gradlew --no-daemon clean detekt"
+                sh "./gradlew --no-daemon --parallel --build-cache clean detekt"
             }
         }
 
         stage('Compilation warnings check') {
             steps {
-                /*
-                 * TODO JDK17: Re-enable warnings as errors
-                 */
-                sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=false compileAll"
+                sh "./gradlew --no-daemon --parallel --build-cache -Pcompilation.warningsAsErrors=true compileAll"
             }
         }
 
@@ -51,19 +52,21 @@ pipeline {
 
         stage('No API change check') {
             steps {
-                sh "./gradlew --no-daemon generateApi"
+                sh "./gradlew --no-daemon --parallel --build-cache generateApi"
                 sh ".ci/check-api-changes.sh"
             }
         }
 
         stage('Deploy Nodes') {
             steps {
-                sh "./gradlew --no-daemon jar deployNodes"
+                sh "./gradlew --no-daemon --build-cache jar deployNodes"
             }
         }
     }
-
     post {
+        always {
+            findBuildScans()
+        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
