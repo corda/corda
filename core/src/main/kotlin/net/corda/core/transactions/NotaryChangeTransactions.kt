@@ -132,9 +132,9 @@ private constructor(
     companion object {
         @CordaInternal
         @JvmSynthetic
-        internal fun resolve(verificationSupport: VerificationSupport,
-                             wireTx: NotaryChangeWireTransaction,
-                             sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
+        fun resolve(verificationSupport: VerificationSupport,
+                    wireTx: NotaryChangeWireTransaction,
+                    sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
             val inputs = wireTx.inputs.map(verificationSupport::getStateAndRef)
             val networkParameters = verificationSupport.getNetworkParameters(wireTx.networkParametersHash)
                     ?: throw TransactionResolutionException(wireTx.id)
