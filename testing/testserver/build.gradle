@@ -1,5 +1,4 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
-apply plugin: 'java'
 apply plugin: 'corda.common-publishing'
 
 description 'Corda node web server'
@@ -78,7 +77,7 @@ dependencies {
     integrationTestImplementation project(':node-driver')
 }
 
-task integrationTest(type: Test) {
+tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 

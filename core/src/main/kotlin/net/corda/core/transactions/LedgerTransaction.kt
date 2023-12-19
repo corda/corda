@@ -58,7 +58,7 @@ import java.util.function.Supplier
  *
  * [LedgerTransaction]s should never be instantiated directly from client code, but rather via WireTransaction.toLedgerTransaction
  */
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "RedundantSamConstructor")  // Because the external verifier uses Kotlin 1.2
 class LedgerTransaction
 private constructor(
         // DOCSTART 1
@@ -465,7 +465,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterInputs(crossinline predicate: (T) -> Boolean): List<T> {
-        return filterInputs(T::class.java) { predicate(it) }
+        return filterInputs(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -481,7 +481,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterReferenceInputs(crossinline predicate: (T) -> Boolean): List<T> {
-        return filterReferenceInputs(T::class.java) { predicate(it) }
+        return filterReferenceInputs(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -497,7 +497,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterInRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
-        return filterInRefs(T::class.java) { predicate(it) }
+        return filterInRefs(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -513,7 +513,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> filterReferenceInputRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
-        return filterReferenceInputRefs(T::class.java) { predicate(it) }
+        return filterReferenceInputRefs(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -530,7 +530,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> findInput(crossinline predicate: (T) -> Boolean): T {
-        return findInput(T::class.java) { predicate(it) }
+        return findInput(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -543,11 +543,11 @@ private constructor(
      * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
      */
     fun <T : ContractState> findReference(clazz: Class<T>, predicate: Predicate<T>): T {
-        return referenceInputsOfType(clazz).single(predicate::test)
+        return referenceInputsOfType(clazz).single { predicate.test(it) }
     }
 
     inline fun <reified T : ContractState> findReference(crossinline predicate: (T) -> Boolean): T {
-        return findReference(T::class.java) { predicate(it) }
+        return findReference(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -564,7 +564,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> findInRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
-        return findInRef(T::class.java) { predicate(it) }
+        return findInRef(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -581,7 +581,7 @@ private constructor(
     }
 
     inline fun <reified T : ContractState> findReferenceInputRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
-        return findReferenceInputRef(T::class.java) { predicate(it) }
+        return findReferenceInputRef(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -616,7 +616,7 @@ private constructor(
     }
 
     inline fun <reified T : CommandData> filterCommands(crossinline predicate: (T) -> Boolean): List<Command<T>> {
-        return filterCommands(T::class.java) { predicate(it) }
+        return filterCommands(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -633,7 +633,7 @@ private constructor(
     }
 
     inline fun <reified T : CommandData> findCommand(crossinline predicate: (T) -> Boolean): Command<T> {
-        return findCommand(T::class.java) { predicate(it) }
+        return findCommand(T::class.java, Predicate { predicate(it) })
     }
 
     /**

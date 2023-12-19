@@ -1,4 +1,3 @@
-apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
 
 dependencies {

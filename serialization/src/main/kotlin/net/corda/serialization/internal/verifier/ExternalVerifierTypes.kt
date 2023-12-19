@@ -21,14 +21,14 @@ import java.security.PublicKey
 typealias SerializedNetworkParameters = SerializedBytes<NetworkParameters>
 
 @CordaSerializable
-sealed interface ExternalVerifierInbound {
+sealed class ExternalVerifierInbound {
     data class Initialisation(
             val customSerializerClassNames: Set<String>,
             val serializationWhitelistClassNames: Set<String>,
             val customSerializationSchemeClassName: String?,
             val serializedCurrentNetworkParameters: SerializedNetworkParameters
-    ) : ExternalVerifierInbound {
-        val currentNetworkParameters: NetworkParameters by lazy(serializedCurrentNetworkParameters::deserialize)
+    ) : ExternalVerifierInbound() {
+        val currentNetworkParameters: NetworkParameters by lazy { serializedCurrentNetworkParameters.deserialize() }
 
         override fun toString(): String {
             return "Initialisation(" +
@@ -43,31 +43,31 @@ sealed interface ExternalVerifierInbound {
             val stx: SignedTransaction,
             val stxInputsAndReferences: Map<StateRef, SerializedTransactionState>,
             val checkSufficientSignatures: Boolean
-    ) : ExternalVerifierInbound
+    ) : ExternalVerifierInbound()
 
-    data class PartiesResult(val parties: List<Party?>) : ExternalVerifierInbound
-    data class AttachmentResult(val attachment: AttachmentWithTrust?) : ExternalVerifierInbound
-    data class AttachmentsResult(val attachments: List<AttachmentWithTrust?>) : ExternalVerifierInbound
-    data class NetworkParametersResult(val networkParameters: NetworkParameters?) : ExternalVerifierInbound
-    data class TrustedClassAttachmentResult(val id: SecureHash?) : ExternalVerifierInbound
+    data class PartiesResult(val parties: List<Party?>) : ExternalVerifierInbound()
+    data class AttachmentResult(val attachment: AttachmentWithTrust?) : ExternalVerifierInbound()
+    data class AttachmentsResult(val attachments: List<AttachmentWithTrust?>) : ExternalVerifierInbound()
+    data class NetworkParametersResult(val networkParameters: NetworkParameters?) : ExternalVerifierInbound()
+    data class TrustedClassAttachmentResult(val id: SecureHash?) : ExternalVerifierInbound()
 }
 
 @CordaSerializable
 data class AttachmentWithTrust(val attachment: Attachment, val isTrusted: Boolean)
 
 @CordaSerializable
-sealed interface ExternalVerifierOutbound {
-    sealed interface VerifierRequest : ExternalVerifierOutbound {
-        data class GetParties(val keys: Set<PublicKey>) : VerifierRequest {
+sealed class ExternalVerifierOutbound {
+    sealed class VerifierRequest : ExternalVerifierOutbound() {
+        data class GetParties(val keys: Set<PublicKey>) : VerifierRequest() {
             override fun toString(): String = "GetParty(keys=${keys.map { it.toStringShort() }}})"
         }
-        data class GetAttachment(val id: SecureHash) : VerifierRequest
-        data class GetAttachments(val ids: Set<SecureHash>) : VerifierRequest
-        data class GetNetworkParameters(val id: SecureHash) : VerifierRequest
-        data class GetTrustedClassAttachment(val className: String) : VerifierRequest
+        data class GetAttachment(val id: SecureHash) : VerifierRequest()
+        data class GetAttachments(val ids: Set<SecureHash>) : VerifierRequest()
+        data class GetNetworkParameters(val id: SecureHash) : VerifierRequest()
+        data class GetTrustedClassAttachment(val className: String) : VerifierRequest()
     }
 
-    data class VerificationResult(val result: Try<Unit>) : ExternalVerifierOutbound
+    data class VerificationResult(val result: Try<Unit>) : ExternalVerifierOutbound()
 }
 
 fun DataOutputStream.writeCordaSerializable(payload: Any) {

@@ -1,5 +1,5 @@
 plugins {
-    id "org.jetbrains.kotlin.jvm"
+    id "corda.kotlin-1.2"
     id "application"
     id "com.github.johnrengelman.shadow"
 }
@@ -9,12 +9,12 @@ application {
 }
 
 dependencies {
-    implementation project(":core")
-    implementation project(":serialization")
+    implementation project(":core-1.2")
+    implementation project(":serialization-1.2")
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
     implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
 
-    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }
 
 jar {
