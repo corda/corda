@@ -3052,21 +3052,21 @@ public final class net.corda.core.flows.FlowRecoveryException extends net.corda.
 @CordaSerializable
 public final class net.corda.core.flows.FlowRecoveryQuery extends java.lang.Object
   public <init>()
-  public <init>(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List)
-  public <init>(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List)
+  public <init>(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Nullable
   public final net.corda.core.flows.FlowTimeWindow component1()
   @Nullable
-  public final net.corda.core.identity.CordaX500Name component2()
+  public final java.util.List component2()
   @Nullable
   public final java.util.List component3()
   @NotNull
-  public final net.corda.core.flows.FlowRecoveryQuery copy(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List)
+  public final net.corda.core.flows.FlowRecoveryQuery copy(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List)
   public boolean equals(Object)
   @Nullable
   public final java.util.List getCounterParties()
   @Nullable
-  public final net.corda.core.identity.CordaX500Name getInitiatedBy()
+  public final java.util.List getInitiatedBy()
   @Nullable
   public final net.corda.core.flows.FlowTimeWindow getTimeframe()
   public int hashCode()
