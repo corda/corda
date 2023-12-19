@@ -88,6 +88,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
                                database: CordaPersistence,
+                               disableSoftLocking: Boolean = false,
                                updateFn: (SignedTransaction) -> Boolean = validatedTransactions::addTransaction
         ) {
 
@@ -147,7 +148,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 //
                 // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
                 // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
-                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })
+                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction }, disableSoftLocking)
             }
         }
 
@@ -205,15 +206,14 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
 
     @Suppress("NestedBlockDepth")
     @VisibleForTesting
-    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean) {
+    fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>, disableSignatureVerification: Boolean, disableSoftLocking: Boolean = false) {
         txs.forEach {
             requireSupportedHashType(it)
             if (it.coreTransaction is WireTransaction) {
                 if (disableSignatureVerification) {
                     log.warnOnce("The current usage of recordTransactions is unsafe." +
                             "Recording transactions without signature verification may lead to severe problems with ledger consistency.")
-                }
-                else {
+                } else {
                     try {
                         it.verifyRequiredSignatures()
                     }
@@ -229,7 +229,8 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                 validatedTransactions,
                 stateMachineRecordedTransactionMapping,
                 vaultService,
-                database
+                database,
+                disableSoftLocking
         )
     }
 

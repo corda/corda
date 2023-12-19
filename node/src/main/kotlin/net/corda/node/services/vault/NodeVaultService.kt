@@ -70,7 +70,7 @@ import java.security.PublicKey
 import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.stream.Stream
@@ -283,12 +283,13 @@ class NodeVaultService(
     internal val publishUpdates get() = mutex.locked { updatesPublisher }
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
-    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>) {
+    override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>, previouslySeenTxns: Iterable<CoreTransaction>,
+                           disableSoftLocking: Boolean) {
         if (statesToRecord == StatesToRecord.NONE || (!txns.any() && !previouslySeenTxns.any())) return
         val batch = mutableListOf<CoreTransaction>()
 
         fun flushBatch(previouslySeen: Boolean) {
-            val updates = makeUpdates(batch, statesToRecord, previouslySeen)
+            val updates = makeUpdates(batch, statesToRecord, previouslySeen, disableSoftLocking)
             processAndNotify(updates)
             batch.clear()
         }
@@ -307,7 +308,8 @@ class NodeVaultService(
         processTransactions(txns, false)
     }
 
-    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean): List<Vault.Update<ContractState>> {
+    @Suppress("ComplexMethod", "ThrowsCount")
+    private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord, previouslySeen: Boolean, disableSoftLocking: Boolean): List<Vault.Update<ContractState>> {
 
         fun <T> withValidDeserialization(list: List<T>, txId: SecureHash): Map<Int, T> {
             var error: TransactionDeserialisationException? = null
@@ -319,13 +321,15 @@ class NodeVaultService(
                     // This will cause a failure as we can't deserialize such states in the context of the `appClassloader`.
                     // For now we ignore these states.
                     // In the future we will use the AttachmentsClassloader to correctly deserialize and asses the relevancy.
-                    if (IGNORE_TRANSACTION_DESERIALIZATION_ERRORS) {
+                    // Disabled if soft locking disabled, as assumes you are in the back chain and that maybe it is less important than top
+                    // level transaction.
+                    if (IGNORE_TRANSACTION_DESERIALIZATION_ERRORS || disableSoftLocking) {
                         log.warnOnce("The current usage of transaction deserialization for the vault is unsafe." +
                                 "Ignoring vault updates due to failed deserialized states may lead to severe problems with ledger consistency. ")
                         log.warn("Could not deserialize state $idx from transaction $txId. Cause: $e")
                     } else {
                         log.error("Could not deserialize state $idx from transaction $txId. Cause: $e")
-                        if(error == null) error = e
+                        if (error == null) error = e
                     }
                     null
                 }
