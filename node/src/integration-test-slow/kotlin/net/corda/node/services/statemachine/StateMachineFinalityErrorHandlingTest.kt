@@ -22,7 +22,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
-@Ignore("TODO JDK17: Fixme")
 class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
 
     /**
@@ -33,8 +32,13 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      *
      * Only the responding node keeps a checkpoint. The initiating flow has completed successfully as it has complete its
      * send to the responding node and the responding node successfully received it.
+     *
+     * Note : This test case is failing because of byteman instrumentation issue where byteman is not able to instrument method
+     * with default method implementation in interface ServiceHubInternal its probably
+     * because of changes in bytecode of kotlin 1.2 to 1.9
+     *
      */
-    @Test(timeout = 300_000)
+    @Ignore("JDK 17 Failure because of byteman instrumentation issue") @Test(timeout = 300_000)
     fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
             val (alice, charlie, port) = createNodeAndBytemanNode(ALICE_NAME, CHARLIE_NAME, FINANCE_CORDAPPS)
@@ -95,7 +99,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      * Only the responding node keeps a checkpoint. The initiating flow has completed successfully as it has complete its
      * send to the responding node and the responding node successfully received it.
      */
-    @Test(timeout = 300_000)
+    @Ignore("JDK 17 Failure because of byteman instrumentation issue") @Test(timeout = 300_000)
     fun `error resolving a transaction's dependencies inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
             val (alice, charlie, port) = createNodeAndBytemanNode(ALICE_NAME, CHARLIE_NAME, FINANCE_CORDAPPS)
