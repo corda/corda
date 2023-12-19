@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber", "TooGenericExceptionCaught")
+@file:Suppress("MagicNumber")
 
 package net.corda.nodeapi.internal.crypto
 
@@ -7,11 +7,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.reader
 import net.corda.core.internal.signWithCert
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
-import net.corda.core.internal.writer
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.toHex
@@ -63,11 +60,12 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.ArrayList
 import java.util.Date
 import javax.security.auth.x500.X500Principal
 import kotlin.experimental.and
 import kotlin.experimental.or
+import kotlin.io.path.reader
+import kotlin.io.path.writer
 
 object X509Utilities {
     // Note that this default value only applies to BCCryptoService. Other implementations of CryptoService may have to use different
@@ -426,7 +424,7 @@ val CertPath.x509Certificates: List<X509Certificate>
     get() {
         require(type == "X.509") { "Not an X.509 cert path: $this" }
         // We're not mapping the list to avoid creating a new one.
-        return uncheckedCast(certificates)
+        return certificates as List<X509Certificate>
     }
 
 val Certificate.x509: X509Certificate get() = requireNotNull(this as? X509Certificate) { "Not an X.509 certificate: $this" }

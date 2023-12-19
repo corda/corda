@@ -1,19 +1,18 @@
 package net.corda.notary.experimental.bftsmart
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.deleteIfExists
-import net.corda.core.internal.div
 import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -29,19 +28,26 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
-import net.corda.testing.node.internal.*
-import org.hamcrest.Matchers.instanceOf
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.startFlow
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.AfterClass
-import org.junit.Assert.assertThat
 import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ExecutionException
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -70,7 +76,7 @@ class BFTNotaryServiceTests {
             mockNet.stopNodes()
         }
 
-        fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, TestStartedNode> {
+        private fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, TestStartedNode> {
             (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
             val replicaIds = (0 until clusterSize)
             val serviceLegalName = CordaX500Name("BFT", "Zurich", "CH")
@@ -162,9 +168,9 @@ class BFTNotaryServiceTests {
             val resultFuture = services.startFlow(flow).resultFuture
             mockNet.runNetwork()
             val exception = assertFailsWith<ExecutionException> { resultFuture.get() }
-            assertThat(exception.cause, instanceOf(NotaryException::class.java))
+            assertThat(exception.cause).isInstanceOf(NotaryException::class.java)
             val error = (exception.cause as NotaryException).error
-            assertThat(error, instanceOf(NotaryError.TimeWindowInvalid::class.java))
+            assertThat(error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
         }
     }
 

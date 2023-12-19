@@ -9,15 +9,31 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.flows.*
-import net.corda.core.internal.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StartableByService
+import net.corda.core.internal.JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
 import net.corda.core.internal.cordapp.get
+import net.corda.core.internal.hash
+import net.corda.core.internal.isAbstractClass
+import net.corda.core.internal.loadClassOfType
+import net.corda.core.internal.location
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
-import net.corda.core.node.services.CordaService
+import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.pooledScan
+import net.corda.core.internal.readFully
 import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.toTypedArray
+import net.corda.core.internal.warnContractWithoutConstraintPropagation
+import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -33,14 +49,15 @@ import java.math.BigInteger
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.util.*
+import java.util.Random
+import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipInputStream
-import kotlin.collections.LinkedHashSet
+import kotlin.io.path.exists
+import kotlin.io.path.useDirectoryEntries
 import kotlin.reflect.KClass
-import kotlin.streams.toList
 
 /**
  * Handles CorDapp loading and classpath scanning of CorDapp JARs
@@ -99,10 +116,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             return if (!directory.exists()) {
                 emptyList()
             } else {
-                directory.list { paths ->
-                    // `toFile()` can't be used here...
-                    paths.filter { it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
-                }
+                directory.useDirectoryEntries("*.jar") { jars -> jars.map { it.toUri().toURL() }.toList() }
             }
         }
     }
@@ -364,7 +378,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
-            Class.forName(className, false, appClassLoader).asSubclass(type.java)
+            loadClassOfType(type.java, className, false, appClassLoader)
         } catch (e: ClassCastException) {
             logger.warn("As $className must be a sub-type of ${type.java.name}")
             null
@@ -462,8 +476,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         }
 
         private fun validateClassFileVersion(classInfo: ClassInfo) {
-            if (classInfo.classfileMajorVersion < JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION ||
-                classInfo.classfileMajorVersion > JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
+            if (classInfo.classfileMajorVersion < JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION ||
+                classInfo.classfileMajorVersion > JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION)
                     throw IllegalStateException("Class ${classInfo.name} from jar file ${cordappJarPath.url} has an invalid version of " +
                             "${classInfo.classfileMajorVersion}")
         }

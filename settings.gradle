@@ -23,7 +23,14 @@ pluginManagement {
             mavenLocal()
             gradlePluginPortal()
             maven { url "${publicArtifactURL}/corda-dependencies" }
+            maven { url "${publicArtifactURL}/corda-dependencies-dev" }
         }
+    }
+
+    plugins {
+        id 'org.jetbrains.kotlin.jvm' version kotlin_version
+        id 'org.jetbrains.kotlin.plugin.allopen' version kotlin_version
+        id 'org.jetbrains.kotlin.plugin.jpa' version kotlin_version
     }
 }
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
@@ -41,11 +48,13 @@ include 'node-api'
 include 'node-api-tests'
 include 'node'
 include 'node:capsule'
+include 'verifier'
 include 'client:jackson'
 include 'client:jfx'
 include 'client:mock'
 include 'client:rpc'
 include 'docker'
+include 'testing:client-rpc'
 include 'testing:testserver'
 include 'testing:testserver:testcapsule:'
 include 'experimental'
@@ -68,7 +77,7 @@ include 'core-test-utils'
 }
 include 'tools:explorer'
 include 'tools:explorer:capsule'
-include 'tools:demobench'
+//include 'tools:demobench'
 include 'tools:loadtest'
 include 'tools:graphs'
 include 'tools:bootstrapper'

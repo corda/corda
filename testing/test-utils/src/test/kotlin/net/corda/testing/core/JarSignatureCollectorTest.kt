@@ -1,14 +1,13 @@
 package net.corda.testing.core
 
+import net.corda.core.internal.InvalidJarSignersException
+import net.corda.core.internal.deleteRecursively
+import net.corda.testing.core.internal.JarSignatureTestUtils.addIndexList
 import net.corda.testing.core.internal.JarSignatureTestUtils.createJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.getJarSigners
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.updateJar
-import net.corda.testing.core.internal.JarSignatureTestUtils.addIndexList
-import net.corda.core.identity.Party
-import net.corda.core.internal.*
-import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.AfterClass
@@ -17,6 +16,12 @@ import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PublicKey
+import kotlin.io.path.createDirectory
+import kotlin.io.path.div
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
+import kotlin.io.path.useDirectoryEntries
+import kotlin.io.path.writeLines
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -51,14 +56,12 @@ class JarSignatureCollectorTest {
         }
     }
 
-    private val List<Party>.keys get() = map { it.owningKey }
-
     @After
     fun tearDown() {
-        dir.list {
-            it.filter { !it.fileName.toString().startsWith("_") }.forEach(Path::deleteRecursively)
+        dir.useDirectoryEntries { paths ->
+            paths.filter { !it.name.startsWith("_") }.forEach(Path::deleteRecursively)
         }
-        assertThat(dir.list()).hasSize(5)
+        assertThat(dir.listDirectoryEntries()).hasSize(5)
     }
 
     @Test(timeout=300_000)
@@ -154,9 +157,6 @@ class JarSignatureCollectorTest {
     // JDK11: Warning:  Different store and key passwords not supported for PKCS12 KeyStores. Ignoring user-specified -keypass value.
     // TODO: use programmatic API support to implement signing (see https://docs.oracle.com/javase/9/docs/api/jdk/security/jarsigner/JarSigner.html)
     private fun signAs(alias: String, keyPassword: String = alias) : PublicKey {
-        return if (SystemUtils.IS_JAVA_11)
-            dir.signJar(FILENAME, alias, "storepass", "storepass")
-        else
-            dir.signJar(FILENAME, alias, "storepass", keyPassword)
+        return dir.signJar(FILENAME, alias, "storepass", "storepass")
     }
 }

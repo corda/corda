@@ -3,11 +3,16 @@ package net.corda.coretests.cordapp
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.sign
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowInfo
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.copyToDirectory
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
@@ -29,12 +34,16 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.streams.toList
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.name
+import kotlin.io.path.useDirectoryEntries
+import kotlin.io.path.writeBytes
 
 class CordappSmokeTest {
     private companion object {
@@ -79,9 +88,7 @@ class CordappSmokeTest {
         val baseDir = factory.baseDirectory(aliceConfig)
         val cordappsDir = (baseDir / CORDAPPS_DIR_NAME).createDirectories()
         // Find the jar file for the smoke tests of this module
-        val selfCordapp = Paths.get("build", "libs").list {
-            it.filter { "-smokeTests" in it.toString() }.toList().single()
-        }
+        val selfCordapp = Path("build", "libs").useDirectoryEntries { it.single { "-smokeTests" in it.toString() } }
         selfCordapp.copyToDirectory(cordappsDir)
 
         // The `nodeReadyFuture` in the persistent network map cache will not complete unless there is at least one other
@@ -96,7 +103,7 @@ class CordappSmokeTest {
                 val aliceIdentity = connectionToAlice.proxy.nodeInfo().legalIdentitiesAndCerts.first().party
                 val future = connectionToAlice.proxy.startFlow(CordappSmokeTest::GatherContextsFlow, aliceIdentity).returnValue
                 val (sessionInitContext, sessionConfirmContext) = future.getOrThrow()
-                val selfCordappName = selfCordapp.fileName.toString().removeSuffix(".jar")
+                val selfCordappName = selfCordapp.name.removeSuffix(".jar")
                 assertThat(sessionInitContext.appName).isEqualTo(selfCordappName)
                 assertThat(sessionConfirmContext.appName).isEqualTo(selfCordappName)
             }
@@ -139,7 +146,7 @@ class CordappSmokeTest {
         val dummyKeyPair = generateKeyPair()
         val nodeInfo = createNodeInfoWithSingleIdentity(CordaX500Name(organisation = "Bob Corp", locality = "Madrid", country = "ES"), dummyKeyPair, dummyKeyPair.public)
         val signedNodeInfo = signWith(nodeInfo, listOf(dummyKeyPair.private))
-        (additionalNodeInfoDir / "nodeInfo-41408E093F95EAD51F6892C34DEB65AE1A3569A4B0E5744769A1B485AF8E04B5").write(signedNodeInfo.serialize().bytes)
+        (additionalNodeInfoDir / "nodeInfo-41408E093F95EAD51F6892C34DEB65AE1A3569A4B0E5744769A1B485AF8E04B5").writeBytes(signedNodeInfo.serialize().bytes)
     }
 
     private fun createNodeInfoWithSingleIdentity(name: CordaX500Name, nodeKeyPair: KeyPair, identityCertPublicKey: PublicKey): NodeInfo {

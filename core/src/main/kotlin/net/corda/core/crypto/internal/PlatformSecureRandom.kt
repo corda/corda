@@ -14,12 +14,13 @@ import java.io.InputStream
 import java.security.Provider
 import java.security.SecureRandom
 import java.security.SecureRandomSpi
+import kotlin.system.exitProcess
 
 /**
  * This has been migrated into a separate class so that it
  * is easier to delete from the core-deterministic module.
  */
-internal val platformSecureRandom: () -> SecureRandom = when {
+val platformSecureRandom: () -> SecureRandom = when {
     SgxSupport.isInsideEnclave -> {
         { DummySecureRandom }
     }
@@ -29,23 +30,22 @@ internal val platformSecureRandom: () -> SecureRandom = when {
 }
 
 class PlatformSecureRandomService(provider: Provider)
-    : Provider.Service(provider, "SecureRandom", algorithm, PlatformSecureRandomSpi::javaClass.name, null, null) {
+    : Provider.Service(provider, "SecureRandom", ALGORITHM, PlatformSecureRandomSpi::javaClass.name, null, null) {
 
     companion object {
-        const val algorithm = "CordaPRNG"
+        const val ALGORITHM = "CordaPRNG"
+
         private val logger = loggerFor<PlatformSecureRandomService>()
     }
 
     private val instance: SecureRandomSpi = if (SystemUtils.IS_OS_LINUX) tryAndUseLinuxSecureRandomSpi() else PlatformSecureRandomSpi()
 
-    @Suppress("TooGenericExceptionCaught", "TooGenericExceptionThrown")
     private fun tryAndUseLinuxSecureRandomSpi(): SecureRandomSpi = try {
         LinuxSecureRandomSpi()
     } catch (e: Exception) {
         logger.error("Unable to initialise LinuxSecureRandomSpi. The exception logged with this message might assist with diagnosis." +
                 "  The process will now exit.", e)
-        System.exit(1)
-        throw RuntimeException("Never reached, but calms the compiler.")
+        exitProcess(1)
     }
 
     override fun newInstance(constructorParameter: Any?) = instance
@@ -63,7 +63,7 @@ private class PlatformSecureRandomSpi : SecureRandomSpi() {
     override fun engineGenerateSeed(numBytes: Int): ByteArray = secureRandom.generateSeed(numBytes)
 }
 
-@Suppress("TooGenericExceptionCaught", "TooGenericExceptionThrown")
+@Suppress("TooGenericExceptionThrown")
 private class LinuxSecureRandomSpi : SecureRandomSpi() {
     private fun openURandom(): InputStream {
         try {
@@ -91,5 +91,5 @@ private class LinuxSecureRandomSpi : SecureRandomSpi() {
 
 // This is safe to share because of the underlying implementation of SecureRandomSpi
 private val sharedSecureRandom: SecureRandom by lazy(LazyThreadSafetyMode.PUBLICATION) {
-    SecureRandom.getInstance(PlatformSecureRandomService.algorithm)
+    SecureRandom.getInstance(PlatformSecureRandomService.ALGORITHM)
 }

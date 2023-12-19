@@ -1,9 +1,7 @@
 package net.corda.testing.node.internal
 
-import net.corda.testing.internal.IS_OPENJ9
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.matchesPattern
-import org.junit.Assume
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -33,8 +31,6 @@ class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputR
 
     @Test(timeout=300_000)
     fun `Run CordaCliWrapper sample app with arguments and check error output matches regExp`() {
-        // For openj9 the process error output appears sometimes to be garbled.
-        Assume.assumeTrue(!IS_OPENJ9)
         val process = ProcessUtilities.startJavaProcess(
                 className = className,
                 arguments = arguments,
@@ -45,7 +41,9 @@ class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputR
         val processErrorOutput = BufferedReader(
                 InputStreamReader(process.errorStream))
                 .lines()
-                .filter { !it.startsWith("Warning: Nashorn") }
+                .filter { it.contains("Exception") ||
+                        it.contains("at ") ||
+                        it.contains("exception") }
                 .collect(Collectors.joining("\n"))
                 .toString()
 

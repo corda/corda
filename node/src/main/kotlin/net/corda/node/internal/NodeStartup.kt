@@ -17,13 +17,8 @@ import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.exists
-import net.corda.core.internal.isDirectory
 import net.corda.core.internal.location
-import net.corda.core.internal.randomOrNull
 import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -51,7 +46,6 @@ import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -65,6 +59,10 @@ import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import java.util.function.Consumer
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 
 /** An interface that can be implemented to tell the node what to do once it's intitiated. */
 interface RunAfterNodeInitialisation {
@@ -217,7 +215,7 @@ open class NodeStartup : NodeStartupLogging {
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
 
         // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
-        if (attempt { banJavaSerialisation(configuration) }.doOnFailure(Consumer { error -> error.logAsUnexpected("Exception while configuring serialisation") }) !is Try.Success) return ExitCodes.FAILURE
+        if (attempt { banJavaSerialisation(configuration) }.doOnFailure { error -> error.logAsUnexpected("Exception while configuring serialisation") } !is Try.Success) return ExitCodes.FAILURE
 
         // Step 8. Any actions required before starting up the Corda network layer.
         if (attempt { preNetworkRegistration(configuration) }.doOnFailure(Consumer(::handleRegistrationError)) !is Try.Success) return ExitCodes.FAILURE
@@ -472,7 +470,6 @@ interface NodeStartupLogging {
     companion object {
         val logger by lazy { contextLogger() }
         val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
-        @Suppress("TooGenericExceptionCaught")
         val PRINT_ERRORS_TO_STD_ERR = try {
             System.getProperty("net.corda.node.printErrorsToStdErr") == "true"
         } catch (e: NullPointerException) {
@@ -515,7 +512,6 @@ interface NodeStartupLogging {
         when {
             error is ErrorCode<*> -> logger.report(error)
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
-            error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
             error is Errors.NativeIoException && error.message?.contains("Can't assign requested address") == true -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
             error is UnresolvedAddressException -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
@@ -541,14 +537,14 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     try {
         logPath.safeSymbolicRead().createDirectories()
     } catch (e: IOException) {
-        printError("Unable to create logging directory ${logPath.toString()}. Node will now shutdown.")
+        printError("Unable to create logging directory $logPath. Node will now shutdown.")
         return false
     } catch (e: SecurityException) {
-        printError("Current user is unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        printError("Current user is unable to access logging directory $logPath. Node will now shutdown.")
         return false
     }
     if (!logPath.isDirectory()) {
-        printError("Unable to access logging directory ${logPath.toString()}. Node will now shutdown.")
+        printError("Unable to access logging directory $logPath. Node will now shutdown.")
         return false
     }
 

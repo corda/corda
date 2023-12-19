@@ -1,23 +1,25 @@
 package net.corda.core.contracts
 
-import com.nhaarman.mockito_kotlin.doAnswer
-import com.nhaarman.mockito_kotlin.spy
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.Party
 import org.junit.Test
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.whenever
 import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.util.*
+import java.util.UUID
 import java.util.jar.JarFile.MANIFEST_NAME
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class AttachmentTest {
 
     @Test(timeout=300_000)
+    @Suppress("ThrowsCount")
 	fun `openAsJAR does not leak file handle if attachment has corrupted manifest`() {
         var closeCalls = 0
         val inputStream = spy(ByteArrayOutputStream().apply {
@@ -39,7 +41,7 @@ class AttachmentTest {
             attachment.openAsJAR()
             fail("Expected line too long.")
         } catch (e: IOException) {
-            assertEquals("line too long", e.message)
+            assertTrue { e.message!!.contains("line too long") }
         }
         assertEquals(1, closeCalls)
     }

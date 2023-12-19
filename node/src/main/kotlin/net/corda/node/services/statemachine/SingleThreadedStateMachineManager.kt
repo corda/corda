@@ -61,7 +61,6 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
-import kotlin.streams.toList
 
 /**
  * The StateMachineManagerImpl will always invoke the flow fibers on the given [AffinityExecutor], regardless of which
@@ -183,7 +182,7 @@ internal class SingleThreadedStateMachineManager(
         )
 
         val (flows, pausedFlows) = restoreFlowsFromCheckpoints()
-        metrics.register("Flows.InFlight", Gauge<Int> { innerState.flows.size })
+        metrics.register("Flows.InFlight", Gauge { innerState.flows.size })
 
         setFlowDefaultUncaughtExceptionHandler()
 
@@ -634,7 +633,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
+    @Suppress("ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
     override fun retryFlowFromSafePoint(currentState: StateMachineState) {
         currentState.cancelFutureIfRunning()
         // Get set of external events
@@ -974,7 +973,7 @@ internal class SingleThreadedStateMachineManager(
         }
         totalStartedFlows.inc()
         addAndStartFlow(flowId, flow)
-        return startedFuture.map { flow.fiber as FlowStateMachine<A> }
+        return startedFuture.map { flow.fiber }
     }
 
     override fun scheduleFlowTimeout(flowId: StateMachineRunId) {
@@ -1062,6 +1061,7 @@ internal class SingleThreadedStateMachineManager(
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
             is FlowState.Finished -> throw IllegalStateException("Cannot start (or resume) a finished flow.")
+            is FlowState.Paused -> { /* TODO JDK17: Fixme */ }
         }
     }
 
@@ -1228,7 +1228,7 @@ internal class SingleThreadedStateMachineManager(
             override val logic: Nothing? = null
             override val id: StateMachineRunId = id
             override val resultFuture: CordaFuture<Any?> = resultFuture
-            override val clientId: String? = clientId
+            override val clientId: String = clientId
         }
         )
 
@@ -1239,7 +1239,7 @@ internal class SingleThreadedStateMachineManager(
                     null
                 } else {
                     val existingFuture = activeOrRemovedClientIdFutureForReattach(it, clientId)
-                    uncheckedCast(existingFuture?.let {existingFuture.get() })
+                    existingFuture?.let {existingFuture.get() } as FlowStateMachineHandle<T>
                 }
             }
         }

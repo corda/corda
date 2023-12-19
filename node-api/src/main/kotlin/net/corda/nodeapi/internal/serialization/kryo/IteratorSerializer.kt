@@ -20,7 +20,7 @@ class IteratorSerializer(type: Class<*>, private val serializer: Serializer<Iter
         serializer.write(kryo, output, obj)
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<Iterator<*>>): Iterator<*> {
+    override fun read(kryo: Kryo, input: Input, type: Class<out Iterator<*>>): Iterator<*> {
         val iterator = serializer.read(kryo, input, type)
         return fixIterator(iterator)
     }

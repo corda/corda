@@ -1,24 +1,24 @@
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
-    compile project(':core')
-    compile project(':node-api')
+    implementation project(':core')
+    implementation project(':node-api')
 
     // Unit testing helpers.
-    compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
-    compile "junit:junit:$junit_version"
+    implementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    implementation "junit:junit:$junit_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
 
     runtimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
     runtimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
     runtimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
-    compile 'org.hamcrest:hamcrest-library:2.1'
-    compile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
-    compile "org.mockito:mockito-core:$mockito_version"
-    compile "org.assertj:assertj-core:$assertj_version"
-    compile "com.natpryce:hamkrest:$hamkrest_version"
+    implementation 'org.hamcrest:hamcrest-library:2.1'
+    implementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
+    implementation "org.mockito:mockito-core:$mockito_version"
+    implementation "org.assertj:assertj-core:$assertj_version"
+    implementation "com.natpryce:hamkrest:$hamkrest_version"
 }
 
 jar {
@@ -30,6 +30,11 @@ jar {
     }
 }
 
-publish {
-    name jar.baseName
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
 }

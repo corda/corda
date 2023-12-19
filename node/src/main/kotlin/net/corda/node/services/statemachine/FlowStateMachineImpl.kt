@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
-import co.paralleluniverse.fibers.Fiber.parkAndSerialize
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
@@ -32,7 +31,6 @@ import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.isIdempotentFlow
-import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
 import net.corda.core.internal.uncheckedCast
@@ -66,6 +64,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.isRegularFile
 
 class FlowPermissionException(message: String) : FlowException(message)
 

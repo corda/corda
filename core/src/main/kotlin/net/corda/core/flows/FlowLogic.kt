@@ -573,7 +573,7 @@ abstract class FlowLogic<out T> {
     }
 
     private fun <R> associateSessionsToReceiveType(receiveType: Class<R>, sessions: List<FlowSession>): Map<FlowSession, Class<R>> {
-        return sessions.associateByTo(LinkedHashMap(), { it }, { receiveType })
+        return sessions.associateWithTo(LinkedHashMap()) { receiveType }
     }
 
     private fun <R> castMapValuesToKnownType(map: Map<FlowSession, UntrustworthyData<Any>>): List<UntrustworthyData<R>> {

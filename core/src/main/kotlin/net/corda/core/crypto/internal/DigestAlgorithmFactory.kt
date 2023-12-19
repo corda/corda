@@ -1,10 +1,10 @@
 package net.corda.core.crypto.internal
 
 import net.corda.core.crypto.DigestAlgorithm
-import java.lang.reflect.Constructor
+import net.corda.core.internal.loadClassOfType
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
-import java.util.*
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 sealed class DigestAlgorithmFactory {
@@ -28,9 +28,8 @@ sealed class DigestAlgorithmFactory {
     }
 
     private class CustomAlgorithmFactory(className: String) : DigestAlgorithmFactory() {
-        val constructor: Constructor<out DigestAlgorithm> = Class.forName(className, false, javaClass.classLoader)
-                .asSubclass(DigestAlgorithm::class.java)
-                .getConstructor()
+        private val constructor = loadClassOfType<DigestAlgorithm>(className, false, javaClass.classLoader).getConstructor()
+
         override val algorithm: String = constructor.newInstance().algorithm
 
         override fun create(): DigestAlgorithm {

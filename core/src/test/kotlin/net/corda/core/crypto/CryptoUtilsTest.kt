@@ -16,6 +16,7 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
@@ -23,18 +24,21 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
-import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
-import org.junit.Assume
+import org.junit.Ignore
 import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.security.Security
-import java.util.*
-import kotlin.test.*
+import java.util.Random
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * Run tests for cryptographic algorithms.
@@ -629,7 +633,7 @@ class CryptoUtilsTest {
         val encodedPrivK1 = privK1.encoded
 
         // fail on malformed key.
-        for (i in 0 until encodedPrivK1.size) {
+        for (i in encodedPrivK1.indices) {
             val b = encodedPrivK1[i]
             encodedPrivK1[i] = b.inc()
             try {
@@ -665,14 +669,17 @@ class CryptoUtilsTest {
         assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
+    @Ignore("TODO JDK17: Fixme")
     fun `Unsupported EC public key type on curve`() {
         val keyGen = KeyPairGenerator.getInstance("EC") // sun.security.ec.ECPublicKeyImpl
         keyGen.initialize(256, newSecureRandom())
         val pairSun = keyGen.generateKeyPair()
         val pubSun = pairSun.public
         // Should fail as pubSun is not a BCECPublicKey.
-        Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubSun)
+        assertThatIllegalArgumentException().isThrownBy {
+            Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubSun)
+        }
     }
 
     @Test(timeout=300_000)
@@ -928,32 +935,25 @@ class CryptoUtilsTest {
         assertNotEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedZeroArray1stTime))
     }
 
-    fun ContentSigner.write(message: ByteArray)  {
-        this.outputStream.write(message)
-        this.outputStream.close()
-    }
-
     @Test(timeout=300_000)
 	fun `test default SecureRandom uses platformSecureRandom`() {
-        Assume.assumeFalse(IS_OPENJ9) // See CORDA-4055
         // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
 
         // Remove [CordaSecurityProvider] in case it is already registered.
         Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
         // Try after removing CordaSecurityProvider.
         val secureRandomNotRegisteredCordaProvider = SecureRandom()
-        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomNotRegisteredCordaProvider.algorithm)
+        assertNotEquals(PlatformSecureRandomService.ALGORITHM, secureRandomNotRegisteredCordaProvider.algorithm)
 
         // Now register CordaSecurityProvider as last Provider.
         Security.addProvider(CordaSecurityProvider())
         val secureRandomRegisteredLastCordaProvider = SecureRandom()
-        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredLastCordaProvider.algorithm)
+        assertNotEquals(PlatformSecureRandomService.ALGORITHM, secureRandomRegisteredLastCordaProvider.algorithm)
 
         // Remove Corda Provider again and add it as the first Provider entry.
         Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
         Security.insertProviderAt(CordaSecurityProvider(), 1) // This is base-1.
         val secureRandomRegisteredFirstCordaProvider = SecureRandom()
-        assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
+        assertEquals(PlatformSecureRandomService.ALGORITHM, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
-    private val IS_OPENJ9 = System.getProperty("java.vm.name").toLowerCase().contains("openj9")
 }

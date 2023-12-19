@@ -1,5 +1,6 @@
 package net.corda.core.internal.telemetry
 
+import co.paralleluniverse.fibers.instrument.DontInstrument
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.baggage.Baggage
@@ -34,7 +35,7 @@ data class SpanInfo(val name: String, val span: Span, val spanScope: Scope,
 
 class TracerSetup(serviceName: String) {
     private var openTelemetryDriver: Any? = null
-    val openTelemetry: OpenTelemetry by lazy {
+    val openTelemetry: OpenTelemetry by lazy @DontInstrument {
         try {
             openTelemetryDriver = OpenTelemetryDriver(serviceName)
             (openTelemetryDriver as OpenTelemetryDriver).openTelemetry

@@ -1,7 +1,8 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
-import net.corda.core.internal.*
+import net.corda.core.internal.attributes
+import net.corda.core.internal.pooledScan
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.node.TestCordapp
 import org.gradle.tooling.GradleConnector
@@ -9,9 +10,10 @@ import org.gradle.tooling.ProgressEvent
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.file.Path
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.streams.toList
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.useDirectoryEntries
 
 /**
  * Implementation of the public [TestCordapp] API.
@@ -87,11 +89,8 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
                         runGradleBuild(projectRoot)
 
                         val libs = projectRoot / "build" / "libs"
-                        val jars = libs.list {
-                            it.filter { it.toString().endsWith(".jar") }
-                                    .filter { !it.toString().endsWith("sources.jar") }
-                                    .filter { !it.toString().endsWith("javadoc.jar") }
-                                    .toList()
+                        val jars = libs.useDirectoryEntries("*.jar") { jars ->
+                            jars.filter { !it.toString().endsWith("sources.jar") && !it.toString().endsWith("javadoc.jar") }.toList()
                         }.sortedBy { it.attributes().creationTime() }
                         checkNotNull(jars.lastOrNull()) { "No jars were built in $libs" }
                     }

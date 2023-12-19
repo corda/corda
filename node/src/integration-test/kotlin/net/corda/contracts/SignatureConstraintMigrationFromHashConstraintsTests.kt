@@ -5,7 +5,6 @@ import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.common.internal.testNetworkParameters
@@ -15,6 +14,7 @@ import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
 import org.junit.Ignore
 import org.junit.Test
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -23,14 +23,14 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
 
     @Test(timeout=300_000)
 	fun `can evolve from lower contract class version to higher one`() {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
+        assumeFalse(System.getProperty("os.name").lowercase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(
                 inMemoryDB = false,
                 networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4),
                 systemProperties = mapOf("net.corda.recordtransaction.signature.verification.disabled" to true.toString())
         ) {
-            val nodeName = {
+            val nodeName = run {
                 val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp))).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
@@ -38,39 +38,36 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
                 }
                 nodeHandle.stop()
                 nodeName
-            }()
-            val result = {
-                (baseDirectory(nodeName) / "cordapps").deleteRecursively()
-                val nodeHandle = startNode(
-                        NodeParameters(
-                                providedName = nodeName,
-                                rpcUsers = listOf(user),
-                                additionalCordapps = listOf(newCordapp)
-                        )
-                ).getOrThrow()
-                var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity, false, false).returnValue.getOrThrow()
-                }
-                result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
-                nodeHandle.stop()
-                result
-            }()
+            }
+            (baseDirectory(nodeName) / "cordapps").deleteRecursively()
+            val nodeHandle = startNode(
+                    NodeParameters(
+                            providedName = nodeName,
+                            rpcUsers = listOf(user),
+                            additionalCordapps = listOf(newCordapp)
+                    )
+            ).getOrThrow()
+            var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                val page = it.proxy.vaultQuery(MessageState::class.java)
+                page.states.singleOrNull()
+            }
+            CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity, false, false).returnValue.getOrThrow()
+            }
+            result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                val page = it.proxy.vaultQuery(MessageState::class.java)
+                page.states.singleOrNull()
+            }
+            nodeHandle.stop()
             result
         }
         assertNotNull(stateAndRef)
-        assertEquals(transformedMessage, stateAndRef!!.state.data.message)
+        assertEquals(transformedMessage, stateAndRef.state.data.message)
     }
 
     @Test(timeout=300_000)
 	fun `auto migration from HashConstraint to SignatureConstraint`() {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
+        assumeFalse(System.getProperty("os.name").lowercase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
                 newCordapp = newCordapp,
@@ -86,7 +83,7 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
 
     @Test(timeout=300_000)
 	fun `HashConstraint cannot be migrated if 'disableHashConstraints' system property is not set to true`() {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
+        assumeFalse(System.getProperty("os.name").lowercase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
                 newCordapp = newCordapp,
@@ -102,7 +99,7 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
 
     @Test(timeout=300_000)
 	fun `HashConstraint cannot be migrated to SignatureConstraint if new jar is not signed`() {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
+        assumeFalse(System.getProperty("os.name").lowercase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
                 newCordapp = newUnsignedCordapp,
@@ -118,7 +115,7 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
 
     @Test(timeout=300_000)
 	fun `HashConstraint cannot be migrated to SignatureConstraint if platform version is not 4 or greater`() {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
+        assumeFalse(System.getProperty("os.name").lowercase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
                 newCordapp = newCordapp,
@@ -136,7 +133,7 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
     @Ignore("ENT-5676: Disabling to isolate Gradle process death cause")
     @Test(timeout=300_000)
 	fun `HashConstraint cannot be migrated to SignatureConstraint if a HashConstraint is specified for one state and another uses an AutomaticPlaceholderConstraint`() {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
+        assumeFalse(System.getProperty("os.name").lowercase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
                 newCordapp = newCordapp,

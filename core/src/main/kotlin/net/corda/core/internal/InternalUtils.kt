@@ -1,4 +1,3 @@
-@file:JvmName("InternalUtils")
 package net.corda.core.internal
 
 import net.corda.core.crypto.Crypto
@@ -23,22 +22,18 @@ import rx.subjects.UnicastSubject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
-import java.io.OutputStream
 import java.lang.reflect.Field
 import java.lang.reflect.Member
 import java.lang.reflect.Modifier
-import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_MOVED_PERM
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.Proxy
-import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.PrivateKey
@@ -73,6 +68,7 @@ import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.io.path.toPath
 import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
@@ -95,8 +91,8 @@ infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(th
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
 operator fun Duration.times(multiplicand: Double): Duration = Duration.ofNanos((toNanos() * multiplicand).roundToLong())
-fun min(d1: Duration, d2: Duration): Duration = if (d1 <= d2) d1 else d2
 
+fun min(d1: Duration, d2: Duration): Duration = if (d1 <= d2) d1 else d2
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception
@@ -126,20 +122,35 @@ fun <T> List<T>.noneOrSingle(): T? {
     }
 }
 
-/** Returns a random element in the list, or `null` if empty */
-fun <T> List<T>.randomOrNull(): T? {
-    return when (size) {
-        0 -> null
-        1 -> this[0]
-        else -> this[(Math.random() * size).toInt()]
-    }
-}
-
 /** Returns the index of the given item or throws [IllegalArgumentException] if not found. */
 fun <T> List<T>.indexOfOrThrow(item: T): Int {
     val i = indexOf(item)
-    require(i != -1){"No such element"}
+    require(i != -1) { "No such element" }
     return i
+}
+
+/**
+ * Similar to [Iterable.map] except it maps to a [Set] which preserves the iteration order.
+ */
+inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> {
+    if (this is Collection) {
+        when (size) {
+            0 -> return emptySet()
+            1 -> return setOf(transform(first()))
+        }
+    }
+    return mapTo(LinkedHashSet(), transform)
+}
+
+/**
+ * Similar to [Iterable.flatMap] except it maps to a [Set] which preserves the iteration order.
+ */
+inline fun <T, R> Iterable<T>.flatMapToSet(transform: (T) -> Iterable<R>): Set<R> {
+    return if (this is Collection && isEmpty()) {
+        emptySet()
+    } else {
+        flatMapTo(LinkedHashSet(), transform)
+    }
 }
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
@@ -165,16 +176,7 @@ fun InputStream.hash(): SecureHash {
 
 inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
 
-object NullOutputStream : OutputStream() {
-    override fun write(b: Int) = Unit
-    override fun write(b: ByteArray) = Unit
-    override fun write(b: ByteArray, off: Int, len: Int) = Unit
-}
-
-fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
-
-/** Return the sum of an Iterable of [BigDecimal]s. */
-fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a + b }
+fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else "${take(maxWidth - 1)}…"
 
 /**
  * Returns an Observable that buffers events until subscribed.
@@ -286,7 +288,7 @@ private fun IntProgression.toSpliterator(): Spliterator.OfInt {
 fun IntProgression.stream(parallel: Boolean = false): IntStream = StreamSupport.intStream(toSpliterator(), parallel)
 
 // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable):
-inline fun <reified T> Stream<out T>.toTypedArray(): Array<T> = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
+inline fun <reified T> Stream<out T>.toTypedArray(): Array<out T?>? = uncheckedCast(toArray { size -> arrayOfNulls<T>(size) })
 
 inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): Stream<R> {
     return flatMap {
@@ -335,7 +337,10 @@ val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
         field?.let {
             if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
                 it.isAccessible = true
-                uncheckedCast(it.get(null))
+
+                // TODO JDK17: Why does uncheckedCast(...) cause class cast exception?
+                // uncheckedCast(it.get(null))
+                it.get(null) as T
             } else {
                 null
             }
@@ -430,8 +435,6 @@ inline val Member.isPublic: Boolean get() = Modifier.isPublic(modifiers)
 inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
 inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
-
-fun URI.toPath(): Path = Paths.get(this)
 
 fun URL.toPath(): Path = toURI().toPath()
 
@@ -529,11 +532,6 @@ fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }
 
 val PublicKey.hash: SecureHash get() = Crypto.encodePublicKey(this).sha256()
 
-/**
- * Extension method for providing a sumBy method that processes and returns a Long
- */
-fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()
-
 fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
     val payloadData: T = try {
         val serializer = SerializationDefaults.SERIALIZATION_FACTORY
@@ -559,6 +557,10 @@ fun <K, V> createSimpleCache(maxSize: Int, onEject: (MutableMap.MutableEntry<K, 
 fun <K, V> MutableMap<K, V>.toSynchronised(): MutableMap<K, V> = Collections.synchronizedMap(this)
 /** @see Collections.synchronizedSet */
 fun <E> MutableSet<E>.toSynchronised(): MutableSet<E> = Collections.synchronizedSet(this)
+
+fun Collection<*>.equivalent(other: Collection<*>): Boolean {
+    return this.size == other.size && this.containsAll(other) && other.containsAll(this)
+}
 
 /**
  * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
@@ -613,5 +615,5 @@ fun Logger.warnOnce(warning: String) {
     }
 }
 
-const val JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
-const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52
+const val JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
+const val JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION = 61

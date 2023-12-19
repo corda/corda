@@ -1,17 +1,20 @@
 package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
-import net.corda.core.internal.JavaVersion
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.packageName_
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.nio.file.Paths
-import net.corda.core.internal.packageName_
-import org.junit.Assume
-import java.lang.IllegalStateException
 
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
@@ -52,7 +55,7 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
 	fun `isolated JAR contains a CorDapp with a contract and plugin`() {
-        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
 
         assertThat(loader.cordapps).hasSize(1)
@@ -70,7 +73,7 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
 	fun `constructed CordappImpl contains the right cordapp classes`() {
-        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
 
         val actualCordapp = loader.cordapps.single()
@@ -88,7 +91,7 @@ class JarScanningCordappLoaderTest {
         // One cordapp from this source tree. In gradle it will also pick up the node jar.
         assertThat(loader.cordapps).isNotEmpty
 
-        val actualCordapp = loader.cordapps.single { !it.initiatedFlows.isEmpty() }
+        val actualCordapp = loader.cordapps.single { it.initiatedFlows.isNotEmpty() }
         assertThat(actualCordapp.initiatedFlows.first()).hasSameClassAs(DummyFlow::class.java)
         assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
@@ -98,7 +101,7 @@ class JarScanningCordappLoaderTest {
     // being used internally. Later iterations will use a classloader per cordapp and this test can be retired.
     @Test(timeout=300_000)
 	fun `cordapp classloader can load cordapp classes`() {
-        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN)
 
         loader.appClassLoader.loadClass(isolatedContractId)
@@ -137,10 +140,13 @@ class JarScanningCordappLoaderTest {
         assertThat(cordapp.minimumPlatformVersion).isEqualTo(2)
     }
 
-    @Test(expected = InvalidCordappException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
 	fun `cordapp classloader does not load apps when their min platform version is greater than the node platform version`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
-        JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1)).cordapps
+        val cordappLoader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1))
+        assertThatExceptionOfType(InvalidCordappException::class.java).isThrownBy {
+            cordappLoader.cordapps
+        }
     }
 
     @Test(timeout=300_000)
@@ -164,10 +170,13 @@ class JarScanningCordappLoaderTest {
         assertThat(loader.cordapps).hasSize(1)
     }
 
-    @Test(expected = InvalidCordappException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
 	fun `cordapp classloader does not load app signed by blacklisted certificate`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
-        JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES).cordapps
+        val cordappLoader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
+        assertThatExceptionOfType(InvalidCordappException::class.java).isThrownBy {
+            cordappLoader.cordapps
+        }
     }
 
     @Test(timeout=300_000)
@@ -175,20 +184,5 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-two-keys.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
         assertThat(loader.cordapps).hasSize(1)
-    }
-
-    @Test(timeout=300_000)
-    fun `cordapp classloader successfully loads app containing only flow classes at java class version 55`() {
-        Assume.assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("/workflowClassAtVersion55.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar))
-        assertThat(loader.cordapps).hasSize(1)
-    }
-
-    @Test(expected = IllegalStateException::class, timeout=300_000)
-    fun `cordapp classloader raises exception when loading contract class at class version 55`() {
-        Assume.assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("/contractClassAtVersion55.jar")!!
-        JarScanningCordappLoader.fromJarUrls(listOf(jar)).cordapps
     }
 }

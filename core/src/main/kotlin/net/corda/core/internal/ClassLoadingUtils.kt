@@ -21,8 +21,7 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
                                                   classVersionRange: IntRange? = null): Set<T> {
     return getNamesOfClassesImplementing(classloader, clazz, classVersionRange)
-        .map { Class.forName(it, false, classloader).asSubclass(clazz) }
-        .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
+        .mapToSet { loadClassOfType(clazz, it, false, classloader).kotlin.objectOrNewInstance() }
 }
 
 /**
@@ -36,7 +35,13 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
  */
 fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
                                            classVersionRange: IntRange? = null): Set<String> {
-    return ClassGraph().overrideClassLoaders(classloader)
+    val isJava11 = JavaVersion.isVersionAtLeast(JavaVersion.Java_11)
+
+    return ClassGraph().apply {
+            if (!isJava11 || classloader !== ClassLoader.getSystemClassLoader()) {
+                overrideClassLoaders(classloader)
+            }
+        }
         .enableURLScheme(attachmentScheme)
         .ignoreParentClassLoaders()
         .enableClassInfo()
@@ -50,8 +55,21 @@ fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Clas
             }
             result.getClassesImplementing(clazz.name)
                 .filterNot(ClassInfo::isAbstract)
-                .mapTo(LinkedHashSet(), ClassInfo::getName)
+                .mapToSet(ClassInfo::getName)
         }
+}
+
+/**
+ * @throws ClassNotFoundException
+ * @throws ClassCastException
+ * @see Class.forName
+ */
+inline fun <reified T> loadClassOfType(className: String, initialize: Boolean = true, classLoader: ClassLoader? = null): Class<out T> {
+    return loadClassOfType(T::class.java, className, initialize, classLoader)
+}
+
+fun <T> loadClassOfType(type: Class<T>, className: String, initialize: Boolean = true, classLoader: ClassLoader? = null): Class<out T> {
+    return Class.forName(className, initialize, classLoader).asSubclass(type)
 }
 
 fun <T: Any?> executeWithThreadContextClassLoader(classloader: ClassLoader, fn: () -> T): T {
@@ -62,5 +80,4 @@ fun <T: Any?> executeWithThreadContextClassLoader(classloader: ClassLoader, fn: 
     } finally {
         Thread.currentThread().contextClassLoader = threadClassLoader
     }
-
 }

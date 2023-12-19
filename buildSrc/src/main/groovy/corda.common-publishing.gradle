@@ -1,0 +1,60 @@
+import groovy.transform.CompileStatic
+
+// plugin to cater for R3 vs Non R3 users building code base. R3 employees will leverage internal plugins non
+// R3 users will use standard Maven publishing conventions as provided by the Maven-publish gradle plugin
+if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('cordaArtifactoryUsername')) {
+    logger.info("Internal R3 user - resolving publication build dependencies from internal plugins")
+    pluginManager.apply('com.r3.internal.gradle.plugins.r3Publish')
+} else {
+    logger.info("External user - using standard maven publishing")
+    pluginManager.apply('maven-publish')
+    pluginManager.withPlugin('java') {
+        afterEvaluate {
+            publishing {
+                if (publications.isEmpty()) {
+                    // If we haven't already created a MavenPublication then create one now.
+                    publications {
+                        maven(MavenPublication) {
+                            artifactId = tasks.named('jar', Jar).flatMap { it.archiveBaseName }.get()
+                            groupId group.toString()
+                            from findSoftwareComponent(components).get()
+
+                            if (artifacts.matching { it.classifier == 'sources' }.isEmpty()) {
+                                try {
+                                    artifact tasks.named('sourcesJar', Jar)
+                                } catch (UnknownTaskException ignored) {
+                                }
+                            }
+
+                            try {
+                                artifact tasks.named('javadocJar', Jar)
+                            } catch (UnknownTaskException ignored) {
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    tasks.withType(GenerateModuleMetadata).configureEach {
+        enabled = false
+    }
+
+    tasks.register('install') {
+        dependsOn 'publishToMavenLocal'
+    }
+}
+
+@CompileStatic
+private static Provider<SoftwareComponent> findSoftwareComponent(SoftwareComponentContainer components) {
+    try {
+        return components.named('cordapp')
+    } catch (UnknownDomainObjectException ignored) {
+        try {
+            return components.named('kotlin')
+        } catch (UnknownDomainObjectException ignored2) {
+            return components.named('java')
+        }
+    }
+}

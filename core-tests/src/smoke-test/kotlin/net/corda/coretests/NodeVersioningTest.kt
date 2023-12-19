@@ -4,7 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.copyToDirectory
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.config.User
@@ -14,10 +15,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.JarFile
-import kotlin.streams.toList
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.listDirectoryEntries
 
 class NodeVersioningTest {
     private companion object {
@@ -67,9 +70,7 @@ class NodeVersioningTest {
 	fun `platform version from RPC`() {
         val cordappsDir = (factory.baseDirectory(aliceConfig) / NodeProcess.CORDAPPS_DIR_NAME).createDirectories()
         // Find the jar file for the smoke tests of this module
-        val selfCordapp = Paths.get("build", "libs").list {
-            it.filter { "-smokeTests" in it.toString() }.toList().single()
-        }
+        val selfCordapp = Path("build", "libs").listDirectoryEntries("*-smokeTests*").single()
         selfCordapp.copyToDirectory(cordappsDir)
 
         factory.create(aliceConfig).use { alice ->

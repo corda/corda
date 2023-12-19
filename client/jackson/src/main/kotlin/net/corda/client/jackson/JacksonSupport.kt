@@ -315,7 +315,8 @@ object JacksonSupport {
 
     private class CertPathSerializer : JsonSerializer<CertPath>() {
         override fun serialize(value: CertPath, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeObject(CertPathWrapper(value.type, uncheckedCast(value.certificates)))
+            val certificates = value.certificates as List<X509Certificate>
+            gen.writeObject(CertPathWrapper(value.type, certificates))
         }
     }
 

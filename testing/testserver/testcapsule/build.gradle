@@ -2,9 +2,8 @@
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
  * webserver project because the bintray plugin cannot publish two modules from one project.
  */
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 description 'Corda node web server capsule'
 
@@ -24,29 +23,29 @@ capsule {
     version capsule_version
 }
 
-task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
+configurations.runtimeOnly.canBeResolved = true
+tasks.register('buildWebserverJar', FatCapsule) {
+    dependsOn project(':node').tasks.jar
     applicationClass 'net.corda.webserver.WebServer'
     archiveBaseName = 'corda-testserver'
     archiveVersion = corda_release_version
-    archiveClassifier = jdkClassifier
     archiveName = archiveFileName.get()
     applicationSource = files(
-        project(':testing:testserver').configurations.runtimeClasspath,
-        project(':testing:testserver').tasks.jar,
-        project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
-        project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
-        project(':node').buildDir.toString() + '/resources/main/corda-reference.conf',
-        "$rootDir/config/dev/log4j2.xml",
-        project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
+            project(':testing:testserver').configurations.runtimeClasspath,
+            project(':testing:testserver').tasks.jar,
+            project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
+            project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
+            project(':node').buildDir.toString() + '/resources/main/corda-reference.conf',
+            "$rootDir/config/dev/log4j2.xml",
+            project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
 
     capsuleManifest {
         applicationVersion = corda_release_version
-        javaAgents = quasar_classifier ? ["quasar-core-${quasar_version}-${quasar_classifier}.jar"] : ["quasar-core-${quasar_version}.jar"]
+        javaAgents = quasar_classifier ? ["quasar-core-${quasar_version}-${quasar_classifier}.jar=m"] : ["quasar-core-${quasar_version}.jar=m"]
         systemProperties['visualvm.display.name'] = 'Corda Webserver'
-        minJavaVersion = '1.8.0'
-        minUpdateVersion['1.8'] = java8_minUpdateVersion
+        minJavaVersion = '17.0'
         caplets = ['CordaWebserverCaplet']
 
         // JVM configuration:
@@ -54,25 +53,26 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
         // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
         //
         // If you change these flags, please also update Driver.kt
-        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+        jvmArgs = ['-Xmx200m']
     }
 
     manifest {
-        if (JavaVersion.current() == JavaVersion.VERSION_11) {
-            attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
-        }
+        attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
     }
 }
 
 artifacts {
-    archives buildWebserverJar
     runtimeArtifacts buildWebserverJar
-    publish buildWebserverJar {
-        classifier ''
-    }
 }
 
-publish {
-    disableDefaultJar = true
-    name 'corda-testserver'
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-testserver'
+            artifact(buildWebserverJar) {
+                classifier ''
+            }
+            from components.java
+        }
+    }
 }

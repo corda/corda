@@ -1,17 +1,39 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'net.corda.plugins.publish-utils'
     id 'net.corda.plugins.api-scanner'
-    id 'com.jfrog.artifactory'
     id 'java-library'
+    id 'corda.common-publishing'
 }
 
 description 'Core test types and helpers for testing Corda'
 
 dependencies {
     implementation project(':core')
+    implementation project(':node-api')
+    implementation project(':serialization')
     api project(':test-common')
+    implementation "io.netty:netty-handler-proxy:$netty_version"
+
     api "org.jetbrains.kotlin:kotlin-test"
+
+    // Bouncy castle support needed for X509 certificate manipulation
+    implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastle_version}"
+
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
+    implementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
+    implementation "org.mockito:mockito-core:$mockito_version"
+    implementation "com.natpryce:hamkrest:$hamkrest_version"
+    implementation "com.google.guava:guava-testlib:$guava_version"
+    implementation "io.reactivex:rxjava:$rxjava_version"
+    implementation "junit:junit:$junit_version"
+    implementation("org.apache.activemq:artemis-server:${artemis_version}") {
+        exclude group: 'org.apache.commons', module: 'commons-dbcp2'
+        exclude group: 'org.jgroups', module: 'jgroups'
+    }
+
+    testImplementation "org.assertj:assertj-core:${assertj_version}"
+    testImplementation 'org.hamcrest:hamcrest-library:2.1'
 }
 
 jar {
@@ -23,6 +45,11 @@ jar {
     }
 }
 
-publish {
-    name jar.baseName
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
 }
