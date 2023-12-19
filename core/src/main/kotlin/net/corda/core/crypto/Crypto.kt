@@ -58,10 +58,7 @@ import java.security.PublicKey
 import java.security.SignatureException
 import java.security.interfaces.EdECPrivateKey
 import java.security.interfaces.EdECPublicKey
-import java.security.spec.EdECPoint
-import java.security.spec.EdECPublicKeySpec
 import java.security.spec.InvalidKeySpecException
-import java.security.spec.NamedParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Mac
@@ -855,7 +852,8 @@ object Crypto {
     @JvmStatic
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         return when (signatureScheme) {
-            EDDSA_ED25519_SHA512 -> deriveEdDSAKeyPairFromEntropy(entropy)
+            // errors with ECNamedCurveTable.getParameterSpec("curve25519")
+            EDDSA_ED25519_SHA512 -> deriveECDSAKeyPairFromEntropy(signatureScheme.copy(algSpec = ECNamedCurveTable.getParameterSpec("secp256r1")), entropy)
             ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> deriveECDSAKeyPairFromEntropy(signatureScheme, entropy)
             else -> throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair " +
                     "generation: ${signatureScheme.schemeCodeName}")
@@ -869,19 +867,6 @@ object Crypto {
      */
     @JvmStatic
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
-
-    // Custom key pair generator from entropy.
-    private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
-        val kpg = KeyPairGenerator.getInstance("Ed25519")
-        val kp = kpg.generateKeyPair()
-
-        val kf = KeyFactory.getInstance("Ed25519")
-        val pubSpec = EdECPublicKeySpec(NamedParameterSpec.ED25519, EdECPoint(true, entropy))
-        val pubKey = kf.generatePublic(pubSpec)
-        val privKey = kf.generatePrivate(PKCS8EncodedKeySpec(kp.private.encoded))
-
-        return KeyPair(internPublicKey(pubKey), privKey)
-    }
 
     // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
     // but the accepted range of the input entropy is more relaxed:
