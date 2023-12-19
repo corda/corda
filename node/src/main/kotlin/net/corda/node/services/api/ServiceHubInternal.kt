@@ -38,12 +38,9 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import java.security.PublicKey
 import java.security.SignatureException
-import java.util.ArrayList
 import java.util.Collections
-import java.util.HashMap
-import java.util.HashSet
-import java.util.LinkedHashSet
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     override val nodeReady: OpenFuture<Void?>
