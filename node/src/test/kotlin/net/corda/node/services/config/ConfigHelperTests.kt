@@ -7,7 +7,6 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.ArgumentMatchers.contains
 import org.mockito.kotlin.spy
@@ -71,7 +70,6 @@ class ConfigHelperTests {
     }
 
     @Test(timeout = 300_000)
-    @Ignore("TODO JDK17: Modifiers no longer supported")
     fun `bad keys are ignored and warned for`() {
         val loggerField = Node::class.java.getDeclaredField("staticLog")
         loggerField.isAccessible = true

@@ -21,7 +21,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.json.simple.JSONObject
-import org.junit.Ignore
 import org.junit.Test
 import java.util.LinkedList
 import java.util.concurrent.CountDownLatch
@@ -79,7 +78,6 @@ class DriverTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme - intermittent on jenkins")
 	fun `default notary is visible when the startNode future completes`() {
         // Based on local testing, running this 3 times gives us a high confidence that we'll spot if the feature is not working
         repeat(3) {
@@ -91,8 +89,7 @@ class DriverTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme - Stage 2")
-	fun `debug mode enables debug logging level`() {
+    fun `debug mode enables debug logging level`() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()

@@ -18,7 +18,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -61,7 +60,6 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
 	fun `BCCryptoService generate key pair and sign both data and cert`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
@@ -95,8 +93,7 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
-	fun `BCCryptoService generate key pair and sign with existing schemes`() {
+    fun `BCCryptoService generate key pair and sign with existing schemes`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
         Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY
@@ -110,7 +107,6 @@ class BCCryptoServiceTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
 	fun `BCCryptoService generate key pair and sign with passed signing algorithm`() {
 
         assertTrue{signAndVerify(signAlgo = "NONEwithRSA", alias = "myKeyAlias", keyTypeAlgo = "RSA")}

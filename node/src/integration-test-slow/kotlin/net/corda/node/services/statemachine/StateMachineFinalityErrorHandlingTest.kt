@@ -15,7 +15,6 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals

@@ -38,7 +38,6 @@ import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.time.Duration
@@ -55,7 +54,6 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@Ignore("TODO JDK17: Fixme")
 class FlowWithClientIdTest {
 
     @Before

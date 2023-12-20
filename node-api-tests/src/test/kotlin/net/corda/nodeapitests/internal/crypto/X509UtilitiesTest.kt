@@ -62,7 +62,6 @@ import org.bouncycastle.asn1.x509.KeyUsage
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -93,7 +92,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-@Ignore("TODO JDK17: Fixme")
 class X509UtilitiesTest {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70).party

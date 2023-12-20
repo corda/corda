@@ -37,7 +37,6 @@ import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.rpcDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.IllegalStateException
 import java.lang.RuntimeException
@@ -54,7 +53,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@Ignore("TODO JDK17: Fixme")
 class CordaRPCClientReconnectionTest {
 
     private val portAllocator = incrementalPortAllocation()

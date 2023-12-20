@@ -9,11 +9,9 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.internal.rpcDriver
 import net.corda.testing.node.internal.startRpcClient
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
-@Ignore("TODO JDK17: Fixme")
 class RPCFailureTests {
     @Rule
     @JvmField

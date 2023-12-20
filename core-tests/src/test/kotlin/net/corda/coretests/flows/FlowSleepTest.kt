@@ -20,13 +20,11 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IS_S390X
 import org.junit.Assume
-import org.junit.Ignore
 import org.junit.Test
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertTrue
 
-@Ignore("TODO JDK17: Fixme - flaky test")
 class FlowSleepTest {
 
     @Test(timeout = 300_000)
