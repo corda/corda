@@ -15,7 +15,6 @@ import net.corda.coretesting.internal.TestNodeInfoBuilder
 import net.corda.coretesting.internal.signWith
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.security.KeyPair
