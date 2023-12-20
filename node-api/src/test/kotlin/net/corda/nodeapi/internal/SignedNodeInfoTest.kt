@@ -56,7 +56,6 @@ class SignedNodeInfoTest {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
 	fun `verifying composite keys only`() {
         val aliceKeyPair = generateKeyPair()
         val bobKeyPair = generateKeyPair()

@@ -93,7 +93,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-@Ignore("TODO JDK17: Fixme")
 class X509UtilitiesTest {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70).party
