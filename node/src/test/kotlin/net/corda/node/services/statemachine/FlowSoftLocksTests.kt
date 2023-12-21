@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.mapToSet
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -34,7 +35,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
 import java.util.UUID
 import kotlin.test.assertFailsWith
@@ -75,7 +75,7 @@ class FlowSoftLocksTests {
 
     @Test(timeout=300_000)
     fun `flow reserves fungible states with its own flow id and then manually releases them`() {
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toSet()
+        val vaultStates = fillVault(aliceNode, 10).states.mapToSet { it.ref }
         val softLockActions = arrayOf(
             SoftLockAction(SoftLockingAction.LOCK, null, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = vaultStates),
             SoftLockAction(SoftLockingAction.UNLOCK, null, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.UNLOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET)
@@ -87,7 +87,7 @@ class FlowSoftLocksTests {
 
     @Test(timeout=300_000)
     fun `flow reserves fungible states with its own flow id and by default releases them when completing`() {
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toSet()
+        val vaultStates = fillVault(aliceNode, 10).states.mapToSet { it.ref }
         val softLockActions = arrayOf(
             SoftLockAction(SoftLockingAction.LOCK, null, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = vaultStates)
         )
@@ -98,7 +98,7 @@ class FlowSoftLocksTests {
 
     @Test(timeout=300_000)
     fun `flow reserves fungible states with its own flow id and by default releases them when errors`() {
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toSet()
+        val vaultStates = fillVault(aliceNode, 10).states.mapToSet { it.ref }
         val softLockActions = arrayOf(
             SoftLockAction(
                 SoftLockingAction.LOCK,
@@ -106,7 +106,7 @@ class FlowSoftLocksTests {
                 vaultStates,
                 ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY),
                 expectedSoftLockedStates = vaultStates,
-                exception = IllegalStateException("Throwing error after flow has soft locked states")
+                throwException = { throw IllegalStateException("Throwing error after flow has soft locked states") }
             )
         )
         assertFailsWith<IllegalStateException> {
@@ -119,7 +119,7 @@ class FlowSoftLocksTests {
     @Test(timeout=300_000)
     fun `flow reserves fungible states with random id and then manually releases them`() {
         val randomId = UUID.randomUUID()
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toSet()
+        val vaultStates = fillVault(aliceNode, 10).states.mapToSet { it.ref }
         val softLockActions = arrayOf(
             SoftLockAction(SoftLockingAction.LOCK, randomId, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET),
             SoftLockAction(SoftLockingAction.UNLOCK, randomId, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.UNLOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET)
@@ -132,7 +132,7 @@ class FlowSoftLocksTests {
     @Test(timeout=300_000)
     fun `flow reserves fungible states with random id and does not release them upon completing`() {
         val randomId = UUID.randomUUID()
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toSet()
+        val vaultStates = fillVault(aliceNode, 10).states.mapToSet { it.ref }
         val softLockActions = arrayOf(
             SoftLockAction(SoftLockingAction.LOCK, randomId, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET)
         )
@@ -145,7 +145,7 @@ class FlowSoftLocksTests {
     fun `flow only releases by default reserved states with flow id upon completing`() {
         // lock with flow id and random id, dont manually release any. At the end, check that only flow id ones got unlocked.
         val randomId = UUID.randomUUID()
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toList()
+        val vaultStates = fillVault(aliceNode, 10).states.map { it.ref }
         val flowIdStates = vaultStates.subList(0, vaultStates.size / 2).toSet()
         val randomIdStates = vaultStates.subList(vaultStates.size / 2, vaultStates.size).toSet()
         val softLockActions = arrayOf(
@@ -161,7 +161,7 @@ class FlowSoftLocksTests {
     @Test(timeout=300_000)
     fun `flow reserves fungible states with flow id and random id, then releases the flow id ones - assert the random id ones are still locked`() {
         val randomId = UUID.randomUUID()
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toList()
+        val vaultStates = fillVault(aliceNode, 10).states.map { it.ref }
         val flowIdStates = vaultStates.subList(0, vaultStates.size / 2).toSet()
         val randomIdStates = vaultStates.subList(vaultStates.size / 2, vaultStates.size).toSet()
         val softLockActions = arrayOf(
@@ -178,7 +178,7 @@ class FlowSoftLocksTests {
     @Test(timeout=300_000)
     fun `flow reserves fungible states with flow id and random id, then releases the random id ones - assert the flow id ones are still locked inside the flow`() {
         val randomId = UUID.randomUUID()
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toList()
+        val vaultStates = fillVault(aliceNode, 10).states.map { it.ref }
         val flowIdStates = vaultStates.subList(0, vaultStates.size / 2).toSet()
         val randomIdStates = vaultStates.subList(vaultStates.size / 2, vaultStates.size).toSet()
         val softLockActions = arrayOf(
@@ -206,7 +206,7 @@ class FlowSoftLocksTests {
     @Test(timeout=300_000)
     fun `when flow soft locks, then errors and retries from previous checkpoint, softLockedStates are reverted back correctly`() {
         val randomId = UUID.randomUUID()
-        val vaultStates = fillVault(aliceNode, 10)!!.states.map { it.ref }.toList()
+        val vaultStates = fillVault(aliceNode, 10).states.map { it.ref }
         val flowIdStates = vaultStates.subList(0, vaultStates.size / 2).toSet()
         val randomIdStates = vaultStates.subList(vaultStates.size / 2, vaultStates.size).toSet()
         val softLockActions = arrayOf(
@@ -226,7 +226,7 @@ class FlowSoftLocksTests {
                 randomIdStates,
                 ExpectedSoftLocks(EMPTY_SET, QueryCriteria.SoftLockingType.LOCKED_ONLY),
                 expectedSoftLockedStates = EMPTY_SET,
-                exception = SQLTransientConnectionException("connection is not available")
+                throwException = { throw SQLTransientConnectionException("connection is not available") }
             )
         )
         val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
@@ -235,7 +235,7 @@ class FlowSoftLocksTests {
         LockingUnlockingFlow.throwOnlyOnce = true
     }
 
-    private fun fillVault(node: TestStartedNode, thisManyStates: Int): Vault<Cash.State>? {
+    private fun fillVault(node: TestStartedNode, thisManyStates: Int): Vault<Cash.State> {
         val bankNode = mockNet.createPartyNode(BOC_NAME)
         val bank = bankNode.info.singleIdentity()
         val cashIssuer = bank.ref(1)
@@ -265,7 +265,7 @@ data class SoftLockAction(val action: SoftLockingAction,
                           val states: Set<StateRef>,
                           val expectedSoftLocks: ExpectedSoftLocks,
                           val expectedSoftLockedStates: Set<StateRef>,
-                          val exception: Exception? = null,
+                          val throwException: (() -> Nothing)? = null,
                           val doCheckpoint: Boolean = false)
 
 internal class LockingUnlockingFlow(private val softLockActions: Array<SoftLockAction>): FlowLogic<Boolean>() {
@@ -296,10 +296,10 @@ internal class LockingUnlockingFlow(private val softLockActions: Array<SoftLockA
                 }
             }
 
-            softLockAction.exception?.let {
+            if (softLockAction.throwException != null) {
                 if (throwOnlyOnce) {
                     throwOnlyOnce = false
-                    throw it
+                    softLockAction.throwException
                 }
             }
         }

@@ -159,7 +159,7 @@ fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.c
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 
 /** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
-fun InputStream.hash(): SecureHash {
+fun InputStream.hash(): SecureHash.SHA256 {
     return use {
         val md = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)

@@ -54,7 +54,7 @@ import org.junit.Test
 import rx.subjects.PublishSubject
 import java.net.URLClassLoader
 import java.nio.file.Paths
-import java.util.*
+import java.util.Currency
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -255,21 +255,12 @@ class CordaRPCClientTest : NodeBasedTest(FINANCE_CORDAPPS, notaries = listOf(DUM
 	fun `additional class loader used by WireTransaction when it deserialises its components`() {
         val financeLocation = Cash::class.java.location.toPath().toString()
         val classPathWithoutFinance = ProcessUtilities.defaultClassPath.filter { financeLocation !in it }
-        val moduleOpens = listOf(
-                "--add-opens", "java.base/java.time=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED",
-                "--add-opens", "java.base/java.util=ALL-UNNAMED", "--add-opens", "java.base/java.net=ALL-UNNAMED",
-                "--add-opens", "java.base/java.nio=ALL-UNNAMED", "--add-opens", "java.base/java.lang.invoke=ALL-UNNAMED",
-                "--add-opens", "java.base/java.security.cert=ALL-UNNAMED", "--add-opens", "java.base/javax.net.ssl=ALL-UNNAMED",
-                "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED", "--add-opens", "java.sql/java.sql=ALL-UNNAMED",
-                "--add-opens", "java.base/java.lang=ALL-UNNAMED"
-        )
 
         // Create a Cash.State object for the StandaloneCashRpcClient to get
         node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         val outOfProcessRpc = ProcessUtilities.startJavaProcess<StandaloneCashRpcClient>(
                 classPath = classPathWithoutFinance,
-                arguments = listOf(node.node.configuration.rpcOptions.address.toString(), financeLocation),
-                extraJvmArguments = moduleOpens
+                arguments = listOf(node.node.configuration.rpcOptions.address.toString(), financeLocation)
         )
         assertThat(outOfProcessRpc.waitFor()).isZero()  // i.e. no exceptions were thrown
     }

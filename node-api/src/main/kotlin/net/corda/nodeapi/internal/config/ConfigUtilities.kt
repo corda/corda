@@ -17,9 +17,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.ParameterizedType
 import java.net.Proxy
 import java.net.URL
 import java.nio.file.Path
@@ -28,6 +26,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.Temporal
+import java.time.temporal.TemporalAmount
 import java.util.Properties
 import java.util.UUID
 import javax.security.auth.x500.X500Principal
@@ -55,19 +54,6 @@ interface ConfigParser<T> {
 }
 
 const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
-
-// TODO Move other config parsing to use parseAs and remove this
-// This is to enable constructs like:
-// `val keyStorePassword: String by config`
-operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
-    return getValueInternal(
-            metadata.name,
-            metadata.returnType,
-            UnknownConfigKeysPolicy.IGNORE::handle,
-            nestedPath = null,
-            baseDirectory = null
-    )
-}
 
 // Problems:
 // - Forces you to have a primary constructor with all fields of name and type matching the configuration file structure.
@@ -298,104 +284,44 @@ private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
  */
 fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig()
 
-fun Any?.toConfigValue(): ConfigValue = if (this is ConfigValue) {
-    this
-} else if (this != null) {
-    ConfigValueFactory.fromAnyRef(convertValue(this))
-} else {
-    ConfigValueFactory.fromAnyRef(null)
-}
+fun Any?.toConfigValue(): ConfigValue = ConfigValueFactory.fromAnyRef(sanitiseForFromAnyRef(this))
 
-@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 // Reflect over the fields of the receiver and generate a value Map that can use to create Config object.
-private fun Any.toConfigMap(): Map<String, Any> {
-    val values = HashMap<String, Any>()
+private fun Any.toConfigMap(): Map<String, Any?> {
+    val values = LinkedHashMap<String, Any?>()
     for (field in javaClass.declaredFields) {
         if (field.isStatic || field.isSynthetic) continue
         field.isAccessible = true
-        val value = field.get(this) ?: continue
-        val configValue = if (value is String || value is Boolean || value is Number) {
-            // These types are supported by Config as use as is
-            value
-        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name ||
-                value is Path || value is URL || value is UUID || value is X500Principal) {
-            // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
-            value.toString()
-        } else if (value is Enum<*>) {
-            // Expicitly use the Enum's name in case the toString is overridden, which would make parsing problematic.
-            value.name
-        } else if (value is Properties) {
-            // For Properties we treat keys with . as nested configs
-            ConfigFactory.parseMap(uncheckedCast(value)).root()
-        } else if (value is Iterable<*>) {
-            value.toConfigIterable(field)
-        } else {
-            // Else this is a custom object recursed over
-            value.toConfigMap()
-        }
-        values[field.name] = configValue
+        values[field.name] = sanitiseForFromAnyRef(field.get(this))
     }
     return values
 }
 
-private fun convertValue(value: Any): Any {
-
-    return if (value is String || value is Boolean || value is Number) {
+/**
+ * @see ConfigValueFactory.fromAnyRef
+ */
+private fun sanitiseForFromAnyRef(value: Any?): Any? {
+    return when (value) {
         // These types are supported by Config as use as is
-        value
-    } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name ||
-            value is Path || value is URL || value is UUID || value is X500Principal) {
-        // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
-        value.toString()
-    } else if (value is Enum<*>) {
-        // Expicitly use the Enum's name in case the toString is overridden, which would make parsing problematic.
-        value.name
-    } else if (value is Properties) {
+        is String, is Boolean, is Number, is ConfigValue, is Duration, null -> value
+        is Enum<*> -> value.name
+        // These types make sense to be represented as Strings
+        is Temporal, is TemporalAmount, is NetworkHostAndPort, is CordaX500Name, is Path, is URL, is UUID, is X500Principal -> value.toString()
         // For Properties we treat keys with . as nested configs
-        ConfigFactory.parseMap(uncheckedCast(value)).root()
-    } else if (value is Iterable<*>) {
-        value.toConfigIterable()
-    } else {
+        is Properties -> ConfigFactory.parseMap(uncheckedCast(value)).root()
+        is Map<*, *> -> ConfigFactory.parseMap(value.map { it.key.toString() to sanitiseForFromAnyRef(it.value) }.toMap()).root()
+        is Iterable<*> -> value.map(::sanitiseForFromAnyRef)
         // Else this is a custom object recursed over
-        value.toConfigMap()
+        else -> value.toConfigMap()
     }
 }
-
-// For Iterables figure out the type parameter and apply the same logic as above on the individual elements.
-private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
-    val elementType = (field.genericType as ParameterizedType).actualTypeArguments[0] as Class<*>
-    return when (elementType) {
-    // For the types already supported by Config we can use the Iterable as is
-        String::class.java -> this
-        Integer::class.java -> this
-        java.lang.Long::class.java -> this
-        java.lang.Double::class.java -> this
-        java.lang.Boolean::class.java -> this
-        LocalDate::class.java -> map(Any?::toString)
-        Instant::class.java -> map(Any?::toString)
-        NetworkHostAndPort::class.java -> map(Any?::toString)
-        Path::class.java -> map(Any?::toString)
-        URL::class.java -> map(Any?::toString)
-        X500Principal::class.java -> map(Any?::toString)
-        UUID::class.java -> map(Any?::toString)
-        CordaX500Name::class.java -> map(Any?::toString)
-        Properties::class.java -> map { ConfigFactory.parseMap(uncheckedCast(it)).root() }
-        else -> if (elementType.isEnum) {
-            map { (it as Enum<*>).name }
-        } else {
-            map { it?.toConfigMap() }
-        }
-    }
-}
-
-private fun Iterable<*>.toConfigIterable(): Iterable<Any?> = map { element -> element?.let(::convertValue) }
 
 // The typesafe .getBoolean function is case sensitive, this is a case insensitive version
 fun Config.getBooleanCaseInsensitive(path: String): Boolean {
     try {
         return getBoolean(path)
-    } catch(e:Exception) {
-        val stringVal = getString(path).toLowerCase()
+    } catch (e: Exception) {
+        val stringVal = getString(path).lowercase()
         if (stringVal == "true" || stringVal == "false") {
             return stringVal.toBoolean()
         }

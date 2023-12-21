@@ -117,26 +117,17 @@ task runRPCCashIssue(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.IssueCash'
 
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
-
     args '--role'
     args 'ISSUE_CASH_RPC'
     args '--quantity'
     args 20000
     args '--currency'
     args 'USD'
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }
 
 task runWebCashIssue(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.IssueCash'
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 
     args '--role'
     args 'ISSUE_CASH_WEB'
@@ -144,9 +135,6 @@ task runWebCashIssue(type: JavaExec) {
     args 30000
     args '--currency'
     args 'GBP'
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }
 
 jar {

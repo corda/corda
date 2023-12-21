@@ -1,8 +1,10 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import java.time.Instant
 import java.util.LinkedList
 import kotlin.test.assertEquals
 
@@ -167,5 +169,13 @@ class KryoCheckpointTest {
             it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
         }
         assertEquals(testSize, result)
+    }
+
+    @Test(timeout=300_000)
+    fun `Instant can checkpoint without error`() {
+        val original = Instant.now()
+        val bytes = KryoCheckpointSerializer.serialize(original, KRYO_CHECKPOINT_CONTEXT)
+        val roundtrip = KryoCheckpointSerializer.deserialize(bytes, Instant::class.java, KRYO_CHECKPOINT_CONTEXT)
+        assertThat(roundtrip).isEqualTo(original)
     }
 }

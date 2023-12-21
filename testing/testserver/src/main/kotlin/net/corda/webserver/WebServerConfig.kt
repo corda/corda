@@ -3,7 +3,7 @@ package net.corda.webserver
 import com.typesafe.config.Config
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.getValue
+import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.config.parseAs
 import java.nio.file.Path
 
@@ -11,14 +11,13 @@ import java.nio.file.Path
  * [baseDirectory] is not retrieved from the config file but rather from a command line argument.
  */
 class WebServerConfig(val baseDirectory: Path, val config: Config) {
+    val keyStorePath: String = config.getString("keyStorePath")
+    val keyStorePassword: String = config.getString("keyStorePassword")
+    val trustStorePath: String = config.getString("trustStorePath")
+    val trustStorePassword: String = config.getString("trustStorePassword")
 
-    val keyStorePath: String by config
-    val keyStorePassword: String by config
-    val trustStorePath: String by config
-    val trustStorePassword: String by config
-
-    val useHTTPS: Boolean by config
-    val myLegalName: String by config
+    val useHTTPS: Boolean = config.getBooleanCaseInsensitive("useHTTPS")
+    val myLegalName: String = config.getString("myLegalName")
     val rpcAddress: NetworkHostAndPort by lazy {
         if (config.hasPath("rpcSettings.address")) {
             return@lazy NetworkHostAndPort.parse(config.getConfig("rpcSettings").getString("address"))
@@ -28,7 +27,7 @@ class WebServerConfig(val baseDirectory: Path, val config: Config) {
         }
         throw Exception("Missing rpc address property. Either 'rpcSettings' or 'rpcAddress' must be specified.")
     }
-    val webAddress: NetworkHostAndPort by config
+    val webAddress: NetworkHostAndPort = NetworkHostAndPort.parse(config.getString("webAddress"))
     val runAs: User
 
     init {

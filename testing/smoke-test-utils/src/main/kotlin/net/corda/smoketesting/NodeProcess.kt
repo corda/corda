@@ -148,24 +148,25 @@ class NodeProcess(
 
 
         private fun createSchema(nodeDir: Path){
-            val process = startNode(nodeDir, arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas"))
+            val process = startNode(nodeDir, "run-migration-scripts", "--core-schemas", "--app-schemas")
             if (!process.waitFor(schemaCreationTimeOutSeconds, SECONDS)) {
                 process.destroy()
                 throw SchemaCreationTimedOutError(nodeDir)
             }
-            if (process.exitValue() != 0){
+            if (process.exitValue() != 0) {
                 throw SchemaCreationFailedError(nodeDir)
             }
         }
 
-        @Suppress("SpreadOperator")
-        private fun startNode(nodeDir: Path, extraArgs: Array<String> = emptyArray()): Process {
+        private fun startNode(nodeDir: Path, vararg extraArgs: String): Process {
+            val command = arrayListOf(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString())
+            command += extraArgs
+            val now = formatter.format(Instant.now())
             val builder = ProcessBuilder()
-                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString(), *extraArgs)
+                    .command(command)
                     .directory(nodeDir.toFile())
-                    .redirectError(ProcessBuilder.Redirect.INHERIT)
-                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-
+                    .redirectError((nodeDir / "$now-stderr.log").toFile())
+                    .redirectOutput((nodeDir / "$now-stdout.log").toFile())
             builder.environment().putAll(mapOf(
                     "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()
             ))

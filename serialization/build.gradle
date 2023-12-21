@@ -64,10 +64,6 @@ artifacts {
 jar {
     archiveBaseName = 'corda-serialization'
     archiveClassifier = ''
-
-    manifest {
-        attributes('Add-Opens': 'java.base/java.time java.base/java.io')
-    }
 }
 
 publishing {

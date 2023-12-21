@@ -34,6 +34,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
+import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
@@ -514,4 +515,18 @@ object LazyMappedListSerializer : Serializer<List<*>>() {
     // Using a MutableList so that Kryo will always write an instance of java.util.ArrayList.
     override fun write(kryo: Kryo, output: Output, obj: List<*>) = kryo.writeClassAndObject(output, obj.toMutableList())
     override fun read(kryo: Kryo, input: Input, type: Class<out List<*>>) = kryo.readClassAndObject(input) as? List<*>
+}
+
+object KeyPairSerializer : Serializer<KeyPair>() {
+    override fun write(kryo: Kryo, output: Output, obj: KeyPair) {
+        kryo.writeObject(output, obj.public)
+        kryo.writeObject(output, obj.private)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<out KeyPair>): KeyPair {
+        return KeyPair(
+                kryo.readObject(input, PublicKey::class.java),
+                kryo.readObject(input, PrivateKey::class.java)
+        )
+    }
 }

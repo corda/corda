@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.io.serialization.ByteArraySerializer
+import co.paralleluniverse.io.serialization.kryo.KryoSerializer
+import co.paralleluniverse.io.serialization.kryo.ReplaceableObjectKryo
 import co.paralleluniverse.strands.SuspendableCallable
 import io.netty.util.concurrent.FastThreadLocal
 import io.netty.util.concurrent.FastThreadLocalThread
@@ -106,6 +108,7 @@ class FastThreadLocalTest {
     private fun contentIsNotSerialized(threadLocalGet: () -> UnserializableObj) = scheduled(1, ::FastThreadLocalThread) {
         // Use false like AbstractKryoSerializationScheme, the default of true doesn't work at all:
         val serializer = Fiber.getFiberSerializer(false)
+        ((serializer as KryoSerializer).kryo as ReplaceableObjectKryo).ignoreInaccessibleClasses()
         val returnValue = UUID.randomUUID()
         val deserializedFiber = serializer.read(openFuture<ByteArray>().let {
             Fiber(scheduler, FiberTask2(threadLocalGet, false, serializer, it, returnValue)).start()

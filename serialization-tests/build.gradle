@@ -35,3 +35,7 @@ dependencies {
 configurations {
     testArtifacts.extendsFrom testRuntimeOnlyClasspath
 }
+
+test {
+    jvmArgs += node_jvm_args  // Needed because of Kryo
+}

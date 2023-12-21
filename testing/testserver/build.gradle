@@ -81,9 +81,6 @@ dependencies {
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }
 
 jar {

@@ -93,26 +93,16 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
          * or use a decorator and reflection to bypass the single-call-per-JVM restriction otherwise.
          */
         private fun setOrDecorateURLStreamHandlerFactory() {
-            // Retrieve the `URL.factory` field
-            val factoryField = URL::class.java.getDeclaredField("factory")
-            // Make it accessible
-            factoryField.isAccessible = true
-
-            // Check for preset factory, set directly if missing
-            val existingFactory: URLStreamHandlerFactory? = factoryField.get(null) as URLStreamHandlerFactory?
-            if (existingFactory == null) {
+            try {
                 URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
-            }
-            // Otherwise, decorate the existing and replace via reflection
-            // as calling `URL.setURLStreamHandlerFactory` again will throw an error
-            else {
+            } catch (e: Error) {
                 log.warn("The URLStreamHandlerFactory was already set in the JVM. Please be aware that this is not recommended.")
+                val factoryField = URL::class.java.getDeclaredField("factory").apply { isAccessible = true }
                 // Retrieve the field "streamHandlerLock" of the class URL that
                 // is the lock used to synchronize access to the protocol handlers
-                val lockField = URL::class.java.getDeclaredField("streamHandlerLock")
+                val lockField = URL::class.java.getDeclaredField("streamHandlerLock").apply { isAccessible = true }
                 // It is a private field so we need to make it accessible
-                // Note: this will only work as-is in JDK8.
-                lockField.isAccessible = true
+                val existingFactory = factoryField.get(null) as URLStreamHandlerFactory?
                 // Use the same lock to reset the factory
                 synchronized(lockField.get(null)) {
                     // Reset the value to prevent Error due to a factory already defined
@@ -121,7 +111,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     URL.setURLStreamHandlerFactory { protocol ->
                         // route between our own and the pre-existing factory
                         AttachmentURLStreamHandlerFactory.createURLStreamHandler(protocol)
-                                ?: existingFactory.createURLStreamHandler(protocol)
+                                ?: existingFactory?.createURLStreamHandler(protocol)
                     }
                 }
             }
@@ -398,21 +388,21 @@ object AttachmentsClassLoaderBuilder {
  * This will not be exposed as an API.
  */
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
-    internal const val attachmentScheme = "attachment"
+    internal const val ATTACHMENT_SCHEME = "attachment"
 
     private val uniqueness = AtomicLong(0)
 
     private val loadedAttachments: AttachmentsHolder = AttachmentsHolderImpl()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
-        return if (attachmentScheme == protocol) {
+        return if (ATTACHMENT_SCHEME == protocol) {
             AttachmentURLStreamHandler
         } else null
     }
 
     @Synchronized
     fun toUrl(attachment: Attachment): URL {
-        val uniqueURL = URL(attachmentScheme, "", -1, attachment.id.toString()+ "?" + uniqueness.getAndIncrement(), AttachmentURLStreamHandler)
+        val uniqueURL = URL(ATTACHMENT_SCHEME, "", -1, attachment.id.toString()+ "?" + uniqueness.getAndIncrement(), AttachmentURLStreamHandler)
         loadedAttachments[uniqueURL] = attachment
         return uniqueURL
     }
@@ -422,19 +412,19 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
 
     private object AttachmentURLStreamHandler : URLStreamHandler() {
         override fun openConnection(url: URL): URLConnection {
-            if (url.protocol != attachmentScheme) throw IOException("Cannot handle protocol: ${url.protocol}")
+            if (url.protocol != ATTACHMENT_SCHEME) throw IOException("Cannot handle protocol: ${url.protocol}")
             val attachment = loadedAttachments[url] ?: throw IOException("Could not load url: $url .")
             return AttachmentURLConnection(url, attachment)
         }
 
         override fun equals(attachmentUrl: URL, otherURL: URL?): Boolean {
             if (attachmentUrl.protocol != otherURL?.protocol) return false
-            if (attachmentUrl.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${attachmentUrl.protocol}")
+            if (attachmentUrl.protocol != ATTACHMENT_SCHEME) throw IllegalArgumentException("Cannot handle protocol: ${attachmentUrl.protocol}")
             return attachmentUrl.file == otherURL?.file
         }
 
         override fun hashCode(url: URL): Int {
-            if (url.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${url.protocol}")
+            if (url.protocol != ATTACHMENT_SCHEME) throw IllegalArgumentException("Cannot handle protocol: ${url.protocol}")
             return url.file.hashCode()
         }
     }

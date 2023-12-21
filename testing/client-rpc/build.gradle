@@ -67,7 +67,4 @@ dependencies {
 task smokeTest(type: Test) {
     testClassesDirs = sourceSets.smokeTest.output.classesDirs
     classpath = sourceSets.smokeTest.runtimeClasspath
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }

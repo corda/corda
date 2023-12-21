@@ -88,7 +88,7 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
 inline fun <reified T : Any> Path.readObject(): T = readBytes().deserialize()
 
 /** Calculate the hash of the contents of this file. */
-inline val Path.hash: SecureHash get() = read { it.hash() }
+inline val Path.hash: SecureHash.SHA256 get() = read { it.hash() }
 
 /* Check if the Path is symbolic link */
 fun Path.safeSymbolicRead(): Path = if (isSymbolicLink()) readSymbolicLink() else this

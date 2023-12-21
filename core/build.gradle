@@ -97,10 +97,6 @@ jar {
     finalizedBy(copyQuasarJar)
     archiveBaseName = 'corda-core'
     archiveClassifier = ''
-
-    manifest {
-        attributes('Add-Opens': 'java.base/java.net java.base/java.nio')
-    }
 }
 
 configurations {

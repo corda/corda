@@ -101,10 +101,6 @@ artifacts {
 
 jar {
     baseName 'corda-node-api'
-
-    manifest {
-        attributes('Add-Opens': 'java.base/java.io java.base/java.time java.base/java.util java.base/java.lang.invoke java.base/java.security')
-    }
 }
 
 publishing {

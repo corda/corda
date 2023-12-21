@@ -55,10 +55,6 @@ tasks.register('buildWebserverJar', FatCapsule) {
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m']
     }
-
-    manifest {
-        attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
-    }
 }
 
 artifacts {

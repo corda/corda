@@ -6,14 +6,19 @@ import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.serialization.internal.NotSerializableDetailedException
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.PropertyDescriptor
+import net.corda.serialization.internal.amqp.TransformsAnnotationProcessor
+import net.corda.serialization.internal.amqp.asClass
+import net.corda.serialization.internal.amqp.calculatedPropertyDescriptors
+import net.corda.serialization.internal.amqp.componentType
+import net.corda.serialization.internal.amqp.propertyDescriptors
+import net.corda.serialization.internal.model.LocalTypeInformation.ACollection
+import net.corda.serialization.internal.model.LocalTypeInformation.AMap
 import net.corda.serialization.internal.model.LocalTypeInformation.Abstract
 import net.corda.serialization.internal.model.LocalTypeInformation.AnArray
 import net.corda.serialization.internal.model.LocalTypeInformation.AnEnum
 import net.corda.serialization.internal.model.LocalTypeInformation.AnInterface
 import net.corda.serialization.internal.model.LocalTypeInformation.Atomic
-import net.corda.serialization.internal.model.LocalTypeInformation.ACollection
-import net.corda.serialization.internal.model.LocalTypeInformation.AMap
 import net.corda.serialization.internal.model.LocalTypeInformation.Composable
 import net.corda.serialization.internal.model.LocalTypeInformation.Cycle
 import net.corda.serialization.internal.model.LocalTypeInformation.NonComposable
@@ -22,11 +27,12 @@ import net.corda.serialization.internal.model.LocalTypeInformation.Singleton
 import net.corda.serialization.internal.model.LocalTypeInformation.Top
 import net.corda.serialization.internal.model.LocalTypeInformation.Unknown
 import java.io.NotSerializableException
+import java.lang.reflect.InaccessibleObjectException
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import kotlin.collections.LinkedHashMap
 import kotlin.reflect.KFunction
+import kotlin.reflect.KVisibility
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
@@ -298,7 +304,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     private fun propertiesSatisfyConstructor(constructorInformation: LocalConstructorInformation, properties: Map<PropertyName, LocalPropertyInformation>): Boolean {
         if (!constructorInformation.hasParameters) return true
 
-        val indicesAddressedByProperties = properties.values.asSequence().mapNotNullTo(LinkedHashSet()) {
+        val indicesAddressedByProperties = properties.values.mapNotNullTo(LinkedHashSet()) {
             when (it) {
                 is LocalPropertyInformation.ConstructorPairedProperty -> it.constructorSlot.parameterIndex
                 is LocalPropertyInformation.PrivateConstructorPairedProperty -> it.constructorSlot.parameterIndex
@@ -317,7 +323,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     ): List<LocalConstructorParameterInformation> {
         if (!constructorInformation.hasParameters) return emptyList()
 
-        val indicesAddressedByProperties = properties.values.asSequence().mapNotNullTo(LinkedHashSet()) {
+        val indicesAddressedByProperties = properties.values.mapNotNullTo(LinkedHashSet()) {
             when (it) {
                 is LocalPropertyInformation.ConstructorPairedProperty -> it.constructorSlot.parameterIndex
                 is LocalPropertyInformation.PrivateConstructorPairedProperty -> it.constructorSlot.parameterIndex
@@ -520,8 +526,7 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     val defaultCtor = kotlinCtors.firstOrNull { it.parameters.isEmpty() }
     val nonDefaultCtors = kotlinCtors.filter { it != defaultCtor }
 
-    val preferredCandidate = clazz.kotlin.primaryConstructor ?:
-    when(nonDefaultCtors.size) {
+    val preferredCandidate = clazz.kotlin.primaryConstructor ?: when (nonDefaultCtors.size) {
         1 -> nonDefaultCtors.first()
         0 -> defaultCtor
         else -> null
@@ -531,8 +536,18 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
         preferredCandidate.apply { isAccessible = true }
     } catch (e: SecurityException) {
         null
+    } catch (e: InaccessibleObjectException) {
+        if (!clazz.isJdkClass || preferredCandidate.visibility == KVisibility.PUBLIC) {
+            // We shouldn't be using private JDK constructors. For non-JDK classes, then re-throw as the client may need to open up that
+            // module to us. Also throw if we can't get access to a public JDK constructor, which can probably happen if the class is not
+            // exported (i.e. internal API).
+            throw e
+        }
+        null
     }
 }
+
+private val Class<*>.isJdkClass: Boolean get() = module.name?.startsWith("java.") == true
 
 /**
  * Obtain evolution constructors in ascending version order.

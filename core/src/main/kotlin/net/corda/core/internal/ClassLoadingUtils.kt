@@ -2,7 +2,7 @@ package net.corda.core.internal
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ClassInfo
-import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.attachmentScheme
+import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.ATTACHMENT_SCHEME
 
 /**
  * Creates instances of all the classes in the classpath of the provided classloader, which implement the interface of the provided class.
@@ -42,7 +42,7 @@ fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Clas
                 overrideClassLoaders(classloader)
             }
         }
-        .enableURLScheme(attachmentScheme)
+        .enableURLScheme(ATTACHMENT_SCHEME)
         .ignoreParentClassLoaders()
         .enableClassInfo()
         .pooledScan()

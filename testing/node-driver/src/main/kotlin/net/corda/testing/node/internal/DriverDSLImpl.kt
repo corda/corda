@@ -45,6 +45,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.toHexString
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
@@ -354,7 +355,7 @@ class DriverDSLImpl(
     }
 
     private fun createSchema(config: NodeConfig, hibernateForAppSchema: Boolean): CordaFuture<NodeConfig> {
-        if (startNodesInProcess || inMemoryDB) return doneFuture(config)
+        if (/*startNodesInProcess || */inMemoryDB) return doneFuture(config)
         return startOutOfProcessMiniNode(config,
                 listOfNotNull(
                         "run-migration-scripts",
@@ -845,7 +846,7 @@ class DriverDSLImpl(
 
     companion object {
         private val RPC_CONNECT_POLL_INTERVAL: Duration = 100.millis
-        internal val log = contextLogger()
+        private val log = contextLogger()
 
         // While starting with inProcess mode, we need to have different names to avoid clashes
         private val inMemoryCounter = AtomicInteger()
@@ -960,7 +961,7 @@ class DriverDSLImpl(
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
-            val excludeClassloaderPattern = "l(net.corda.djvm.**;net.corda.core.serialization.internal.**)"
+            val excludeClassloaderPattern = "l(net.corda.core.serialization.internal.**)"
             val quasarOptions = "m"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$quasarOptions$excludePackagePattern$excludeClassloaderPattern"
@@ -1002,24 +1003,11 @@ class DriverDSLImpl(
                         && !cpPathEntry.isExcludedJar
             }
 
-            val moduleOpens = listOf(
-                    "--add-opens", "java.base/java.time=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.util=ALL-UNNAMED", "--add-opens", "java.base/java.net=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.nio=ALL-UNNAMED", "--add-opens", "java.base/java.lang.invoke=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.security.cert=ALL-UNNAMED", "--add-opens", "java.base/javax.net.ssl=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED", "--add-opens", "java.sql/java.sql=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.lang=ALL-UNNAMED"
-            )
-
-            val moduleExports = listOf(
-                    "--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED"
-            )
-
             return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + moduleOpens + moduleExports + "-Dnet.corda.node.printErrorsToStdErr=true",
+                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + nodeJvmArgs + "-Dnet.corda.node.printErrorsToStdErr=true",
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize,
                     classPath = cp,
@@ -1066,22 +1054,13 @@ class DriverDSLImpl(
             }
 
         private fun startWebserver(handle: NodeHandleInternal, debugPort: Int?, maximumHeapSize: String): Process {
-            val className = "net.corda.webserver.WebServer"
-            val moduleOpens = listOf(
-                    "--add-opens", "java.base/java.time=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.util=ALL-UNNAMED", "--add-opens", "java.base/java.net=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.nio=ALL-UNNAMED", "--add-opens", "java.base/java.lang.invoke=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.security.cert=ALL-UNNAMED", "--add-opens", "java.base/javax.net.ssl=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.util.concurrent=ALL-UNNAMED", "--add-opens", "java.sql/java.sql=ALL-UNNAMED",
-                    "--add-opens", "java.base/java.lang=ALL-UNNAMED"
-            )
-
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startJavaProcess(
-                    className = className, // cannot directly get class for this, so just use string
+                    className = "net.corda.webserver.WebServer", // cannot directly get class for this, so just use string
+                    workingDirectory = handle.baseDirectory,
                     arguments = listOf(BASE_DIR, handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
-                    extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") + moduleOpens +
+                    extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },
                     maximumHeapSize = maximumHeapSize
             )
@@ -1101,12 +1080,11 @@ class DriverDSLImpl(
         }
 
         private fun NodeHandleInternal.toWebServerConfig(): Config {
-
             var config = ConfigFactory.empty()
             config += "webAddress" to webAddress.toString()
             config += "myLegalName" to configuration.myLegalName.toString()
             config += "rpcAddress" to configuration.rpcOptions.address.toString()
-            config += "rpcUsers" to configuration.toConfig().getValue("rpcUsers")
+            config += "rpcUsers" to configuration.rpcUsers.map { it.toConfig().root().unwrapped() }
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
 
@@ -1276,7 +1254,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
             driverDsl.start()
             return dsl(coerce(driverDsl))
         } catch (exception: Throwable) {
-            DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+            loggerFor<DriverDSL>().error("Driver shutting down because of exception", exception)
             throw exception
         } finally {
             driverDsl.shutdown()

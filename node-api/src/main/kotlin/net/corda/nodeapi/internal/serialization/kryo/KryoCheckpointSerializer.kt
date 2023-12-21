@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.kryo
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
+import co.paralleluniverse.io.serialization.kryo.ReplaceableObjectKryo
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
@@ -26,6 +27,7 @@ import net.corda.serialization.internal.QuasarWhitelist
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.encodingNotPermittedFormat
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Future
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
 
@@ -40,6 +42,17 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
     override fun read(kryo: Kryo, input: Input, type: Class<out AutoCloseable>) = throw IllegalStateException("Should not reach here!")
 }
 
+private object FutureSerialisationDetector : Serializer<Future<*>>() {
+    override fun write(kryo: Kryo, output: Output, future: Future<*>) {
+        val message = "${future.javaClass.name}, which is a Future, has been detected during flow checkpointing. " +
+                "Restoring Futures across node restarts is not supported. Make sure code accessing it is " +
+                "confined to a private method or the reference is nulled out."
+        throw UnsupportedOperationException(message)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<out Future<*>>) = throw IllegalStateException("Should not reach here!")
+}
+
 object KryoCheckpointSerializer : CheckpointSerializer {
     private val kryoPoolsForContexts = ConcurrentHashMap<Triple<ClassWhitelist, ClassLoader, Iterable<CheckpointCustomSerializer<*,*>>>, KryoPool>()
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
@@ -51,9 +64,11 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                 serializer.kryo.apply {
                     field.set(this, classResolver)
+                    (this as ReplaceableObjectKryo).ignoreInaccessibleClasses()
                     // don't allow overriding the public key serializer for checkpointing
                     DefaultKryoCustomizer.customize(this)
                     addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+                    addDefaultSerializer(Future::class.java, FutureSerialisationDetector)
                     register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
                     classLoader = it.second
 
