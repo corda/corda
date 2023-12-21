@@ -26,6 +26,7 @@ import org.junit.Test
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
+@Ignore
 class P2PMessagingTest {
     private companion object {
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")

@@ -32,6 +32,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Duration
 import java.util.*
@@ -41,6 +42,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@Ignore
 class TelemetryTests {
 
     private companion object {

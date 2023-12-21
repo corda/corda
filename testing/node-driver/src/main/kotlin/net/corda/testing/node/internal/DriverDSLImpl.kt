@@ -354,7 +354,7 @@ class DriverDSLImpl(
     }
 
     private fun createSchema(config: NodeConfig, hibernateForAppSchema: Boolean): CordaFuture<NodeConfig> {
-        if (startNodesInProcess || inMemoryDB) return doneFuture(config)
+        if (/*startNodesInProcess || */inMemoryDB) return doneFuture(config)
         return startOutOfProcessMiniNode(config,
                 listOfNotNull(
                         "run-migration-scripts",
@@ -380,20 +380,20 @@ class DriverDSLImpl(
             setCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
         }
 
-        return if (startNodesInProcess) {
-            executorService.fork {
-                NodeRegistrationHelper(
-                        NodeRegistrationConfiguration(config.corda),
-                        HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
-                        NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
-                ).apply {
-                    generateKeysAndRegister()
-                    generateNodeIdentity()
-                }
-                config
-            }
-        } else {
-            startOutOfProcessMiniNode(
+        /* return if (startNodesInProcess) {
+             executorService.fork {
+                 NodeRegistrationHelper(
+                         NodeRegistrationConfiguration(config.corda),
+                         HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
+                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
+                 ).apply {
+                     generateKeysAndRegister()
+                     generateNodeIdentity()
+                 }
+                 config
+             }
+         } else {*/
+            return startOutOfProcessMiniNode(
                     config,
                     arrayOf(
                             "initial-registration",
@@ -401,7 +401,7 @@ class DriverDSLImpl(
                             "--network-root-truststore-password=$rootTruststorePassword"
                     )
             ).map { config }
-        }
+//        }
     }
 
     @Suppress("DEPRECATION")
@@ -432,9 +432,9 @@ class DriverDSLImpl(
     }
 
     override fun start() {
-        if (startNodesInProcess) {
-            Schedulers.reset()
-        }
+//        if (startNodesInProcess) {
+//            Schedulers.reset()
+//        }
         require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
@@ -565,12 +565,12 @@ class DriverDSLImpl(
         }.flatMap { config ->
             // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
             // startup or when the node is told to just generate its node info file. We do that here.
-            if (startNodesInProcess) {
+            /*if (startNodesInProcess) {
                 executorService.fork {
                     val nodeInfo = Node(config.corda, MOCK_VERSION_INFO, initialiseSerialization = false).generateAndSaveNodeInfo()
                     Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
                 }
-            } else {
+            } else {*/
                 // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
                 // This causes two node info files to be generated.
                 startOutOfProcessMiniNode(config, arrayOf("generate-node-info")).map {
@@ -581,7 +581,7 @@ class DriverDSLImpl(
                     val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                     Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
                 }
-            }
+//            }
         }
     }
 
@@ -715,7 +715,7 @@ class DriverDSLImpl(
                 extraCustomCordapps + (cordappsForAllNodes ?: emptySet())
         )
 
-        val nodeFuture = if (parameters.startInSameProcess ?: startNodesInProcess) {
+        /*val nodeFuture = if (parameters.startInSameProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config, allowHibernateToManageAppSchema)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
@@ -741,7 +741,7 @@ class DriverDSLImpl(
                 }
             }
             nodeFuture
-        } else {
+        } else {*/
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             log.info("StartNodeInternal for ${config.corda.myLegalName.organisation} - calling create schema")
             createSchema(config, allowHibernateToManageAppSchema).getOrThrow()
@@ -789,7 +789,7 @@ class DriverDSLImpl(
                 )
             }
 
-            p2pReadyFuture.flatMap {
+            val nodeFuture = p2pReadyFuture.flatMap {
                 val processDeathFuture = poll(executorService, "process death while waiting for RPC (${config.corda.myLegalName})") {
                     if (process.isAlive) null else process
                 }
@@ -808,7 +808,7 @@ class DriverDSLImpl(
                     }
                 }
             }
-        }
+//        }
 
         return nodeFuture.doOnError { onNodeExit() }
     }

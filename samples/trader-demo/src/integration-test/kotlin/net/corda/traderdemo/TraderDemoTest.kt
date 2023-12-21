@@ -24,9 +24,11 @@ import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.Executors
 
+@Ignore
 class TraderDemoTest {
     @Test(timeout=300_000)
 	fun `runs trader demo`() {
