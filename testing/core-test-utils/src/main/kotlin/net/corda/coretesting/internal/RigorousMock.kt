@@ -39,7 +39,7 @@ fun <T> spectator(clazz: Class<out T>) = Mockito.mock(clazz, SpectatorDefaultAns
  * In particular this is convenient for mocking a Kotlin interface via a trivial abstract class.
  * As in the other profiles, the exception is [toString] which has a simple reliable implementation for ease of debugging.
  */
-fun <T> rigorousMock(clazz: Class<out T>) = Mockito.mock(clazz, RigorousMockDefaultAnswer)!!
+fun <T> rigorousMock(clazz: Class<out T>) = Mockito.mock(clazz, RigorousMockDefaultAnswer(clazz))!!
 
 /**
  * Create a Mockito mock where all methods throw [UndefinedMockBehaviorException].
@@ -101,9 +101,10 @@ private class SpectatorDefaultAnswer : DefaultAnswer() {
     }
 }
 
-private object RigorousMockDefaultAnswer : DefaultAnswer() {
+private class RigorousMockDefaultAnswer<T>(private val classToMock: Class<T>) : DefaultAnswer() {
+
     override fun answerImpl(invocation: InvocationOnMock): Any? {
-        return if (Modifier.isAbstract(invocation.method.modifiers)) ParticipantDefaultAnswer.answerImpl(invocation) else invocation.callRealMethod()
+        return if (Modifier.isAbstract(invocation.method.modifiers) || classToMock.isInterface) ParticipantDefaultAnswer.answerImpl(invocation) else invocation.callRealMethod()
     }
 }
 
