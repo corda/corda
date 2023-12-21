@@ -21,7 +21,6 @@ import net.corda.testing.flows.waitForAllFlowsToComplete
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -33,7 +32,6 @@ class FinalityFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
      *
      */
     @Test(timeout = 300_000)
-    @Ignore("TODO JDK17: Fixme")
     fun `error after recording an issuance transaction inside of FinalityFlow generates recovery metadata`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false),
                     extraCordappPackagesToScan = listOf("net.corda.node.flows", "net.corda.finance.test.flows")) {

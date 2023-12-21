@@ -12,7 +12,6 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.internal.OutOfProcessImpl
-import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -22,7 +21,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
-@Ignore("TODO JDK17: Fixme")
 class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
     private companion object {

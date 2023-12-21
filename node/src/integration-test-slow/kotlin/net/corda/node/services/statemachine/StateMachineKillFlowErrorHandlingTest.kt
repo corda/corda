@@ -13,7 +13,6 @@ import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
-import org.junit.Ignore
 import org.junit.Test
 import java.time.Duration
 import java.time.temporal.ChronoUnit
@@ -23,7 +22,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
-@Ignore("TODO JDK17: Fixme")
 class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
     /**
