@@ -66,39 +66,40 @@ class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: Ser
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * when serializing to enable/disable tokenization.
  */
-class CheckpointSerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializer: CheckpointSerializer, context: CheckpointSerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
-        serializer.serialize(toBeTokenized, context.withTokenContext(this))
-    })
-
-    private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
-    private var readOnly = false
-
-    init {
-        /**
-         * Go ahead and eagerly serialize the object to register all of the tokens in the context.
-         *
-         * This results in the toToken() method getting called for any [SingletonSerializeAsToken] instances which
-         * are encountered in the object graph as they are serialized and will therefore register the token to
-         * object mapping for those instances.  We then immediately set the readOnly flag to stop further adhoc or
-         * accidental registrations from occuring as these could not be deserialized in a deserialization-first
-         * scenario if they are not part of this iniital context construction serialization.
-         */
-        init(this)
-        readOnly = true
-    }
+class CheckpointSerializeAsTokenContextImpl(private val toBeTokenized: Any,
+                                            private val serializer: CheckpointSerializer,
+                                            private val context: CheckpointSerializationContext,
+                                            override val serviceHub: ServiceHub) : SerializeAsTokenContext {
+    private lateinit var classNameToSingleton: MutableMap<String, SerializeAsToken>
 
     override fun putSingleton(toBeTokenized: SerializeAsToken) {
         val className = toBeTokenized.javaClass.name
-        if (className !in classNameToSingleton) {
-            // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
-            if (readOnly) {
-                throw UnsupportedOperationException("Attempt to write token for lazy registered $className. All tokens should be registered during context construction.")
-            }
-            classNameToSingleton[className] = toBeTokenized
-        }
+        throw UnsupportedOperationException("Attempt to write token for lazy registered $className. All tokens should be registered " +
+                "during context construction.")
     }
 
-    override fun getSingleton(className: String) = classNameToSingleton[className]
-            ?: throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
+    override fun getSingleton(className: String): SerializeAsToken {
+        if (!::classNameToSingleton.isInitialized) {
+            /**
+             * Go ahead and eagerly serialize the object to register all of the tokens in the context.
+             *
+             * This results in the toToken() method getting called for any [SingletonSerializeAsToken] instances which
+             * are encountered in the object graph as they are serialized and will therefore register the token to
+             * object mapping for those instances.  We then immediately set the readOnly flag to stop further adhoc or
+             * accidental registrations from occuring as these could not be deserialized in a deserialization-first
+             * scenario if they are not part of this iniital context construction serialization.
+             */
+            classNameToSingleton = LinkedHashMap()
+            serializer.serialize(toBeTokenized, context.withTokenContext(BuildClassMap()))
+        }
+        return classNameToSingleton[className]
+                ?: throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
+    }
+
+
+    private inner class BuildClassMap : SerializeAsTokenContext by this {
+        override fun putSingleton(toBeTokenized: SerializeAsToken) {
+            classNameToSingleton[toBeTokenized.javaClass.name] = toBeTokenized
+        }
+    }
 }
