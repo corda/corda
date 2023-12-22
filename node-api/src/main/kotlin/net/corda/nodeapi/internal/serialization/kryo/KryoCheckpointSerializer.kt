@@ -82,6 +82,8 @@ private object FutureSerialisationDetector : Serializer<Future<*>>() {
 }
 
 object KryoCheckpointSerializer : CheckpointSerializer {
+    private val logger = loggerFor<KryoCheckpointSerializer>()
+
     private val poisonedClasses = Collections.newSetFromMap<String>(ConcurrentHashMap())
 
     private val kryoPoolsForContexts = ConcurrentHashMap<Triple<ClassWhitelist, ClassLoader, Iterable<CheckpointCustomSerializer<*,*>>>, KryoPool>()
@@ -90,44 +92,28 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         return kryoPoolsForContexts.computeIfAbsent(Triple(context.whitelist, context.deserializationClassLoader, context.checkpointCustomSerializers)) {
             KryoPool {
                 val classResolver = CordaClassResolver(context)
-                try {
-                    val serializer = Fiber.getFiberSerializer(classResolver, false) as KryoSerializer
-                    // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
-                    val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
-                    serializer.kryo.apply {
-                        field.set(this, classResolver)
+                val kryo = Kryo(classResolver, MapReferenceResolver())
+                val serializer = Fiber.getFiberSerializer(kryo, false) as KryoSerializer
+//                    val serializer = Fiber.getFiberSerializer(classResolver, false) as KryoSerializer
+                // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
+                val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
+                serializer.kryo.apply {
+                    field.set(this, classResolver)
 //                    (this as ReplaceableObjectKryo).isIgnoreInaccessibleClasses = true
-                        // don't allow overriding the public key serializer for checkpointing
-                        DefaultKryoCustomizer.customize(this)
-                        addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
-                        addDefaultSerializer(Future::class.java, FutureSerialisationDetector)
-                        register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
-                        classLoader = it.second
+                    // don't allow overriding the public key serializer for checkpointing
+                    DefaultKryoCustomizer.customize(this)
+                    addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+                    addDefaultSerializer(Future::class.java, FutureSerialisationDetector)
+                    register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
+                    classLoader = it.second
 
-                        // Add custom serializers
-                        val customSerializers = buildCustomSerializerAdaptors(context)
-                        warnAboutDuplicateSerializers(customSerializers)
-                        val classToSerializer = mapInputClassToCustomSerializer(context.deserializationClassLoader, customSerializers)
-                        addDefaultCustomSerializers(this, classToSerializer)
-                    }
-                } catch (e: NoClassDefFoundError) {
-                    val className = e.message?.substringAfter("Could not initialize class ")
-                    if (className in poisonedClasses) {
-                        loggerFor<KryoCheckpointSerializer>().info("Encountered poisoned class $className")
-                        CheckpointsNotSupported(classResolver)
-                    } else {
-                        throw e
-                    }
-                } catch (t: Throwable) {
-                    val rootCause = t.rootCause
-                    if (rootCause is InaccessibleObjectException) {
-                        poisonedClasses += rootCause.stackTrace.mapNotNull { it.takeIf { it.methodName == "<clinit>" }?.className }
-                        CheckpointsNotSupported(classResolver)
-                    } else {
-                        throw t
-                    }
+                    // Add custom serializers
+                    val customSerializers = buildCustomSerializerAdaptors(context)
+                    warnAboutDuplicateSerializers(customSerializers)
+                    val classToSerializer = mapInputClassToCustomSerializer(context.deserializationClassLoader, customSerializers)
+                    addDefaultCustomSerializers(this, classToSerializer)
+                    registerCommonClasses(kryo)
                 }
-
             }
         }
     }
@@ -157,11 +143,10 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.register(TreeSet::class.java)
         kryo.register(EnumSet::class.java)
 
-        kryo.register(Collections.newSetFromMap(emptyMap<Any, Boolean>()).javaClass, CollectionsSetFromMapSerializer())
-        kryo.register(GregorianCalendar::class.java, GregorianCalendarSerializer())
+        kryo.registerAccessible(Collections.newSetFromMap(emptyMap<Any, Boolean>()).javaClass, ::CollectionsSetFromMapSerializer)
+        kryo.registerAccessible(GregorianCalendar::class.java, ::GregorianCalendarSerializer)
         kryo.register(InvocationHandler::class.java, JdkProxySerializer())
-        UnmodifiableCollectionsSerializer.registerSerializers(kryo)
-        SynchronizedCollectionsSerializer.registerSerializers(kryo)
+        tryIfAccessible { SynchronizedCollectionsSerializer.registerSerializers(kryo) }
         kryo.addDefaultSerializer(Externalizable::class.java, ExternalizableKryoSerializer<Externalizable>())
         kryo.addDefaultSerializer(Reference::class.java, ReferenceSerializer())
         kryo.addDefaultSerializer(URI::class.java, DefaultSerializers.URISerializer::class.java)
@@ -172,32 +157,88 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.addDefaultSerializer(Pattern::class.java, DefaultSerializers.PatternSerializer::class.java)
     }
 
-    private val inaccessibleLogged = AtomicBoolean(false)
-
-    private inline fun Kryo.registerAccessible(type: Class<*>, createSerializer: () -> Serializer<*>) {
-        val serializer = try {
-            createSerializer()
+    fun <T> tryIfAccessible(block: () -> T): T? {
+        return try {
+            block()
+        } catch (e: NoClassDefFoundError) {
+            val className = e.message?.substringAfter("Could not initialize class ")
+            if (className in poisonedClasses) {
+                null
+            } else {
+                throw e
+            }
         } catch (t: Throwable) {
-            if (t.rootCause is InaccessibleObjectException) {
-//                if (inaccessibleLogged.compareAndSet(false, true)) {
-                    loggerFor<KryoCheckpointSerializer>().info("Objects of type ${type.name} cannot be serialised in checkpoints in the " +
-                            "current test environment. Use out-of-process node driver if you wish to deserialise checkpoints.", t)
-//                }
-                CheckpointDeserialisationNotSupported
+            val rootCause = t.rootCause
+            if (rootCause is InaccessibleObjectException) {
+                poisonedClasses += rootCause.stackTrace.mapNotNull { it.takeIf { it.methodName == "<clinit>" }?.className }
+                null
             } else {
                 throw t
             }
         }
+    }
+
+    fun Kryo.registerAccessible(type: Class<*>, createSerializer: () -> Serializer<*>) {
+        val serializer = tryIfAccessible(createSerializer)
+                ?: tryIfAccessible {
+                    val delegate = getSerializer(type)
+                    logger.info("Registering fallback serializer ${delegate.javaClass.name} for ${type.name}")
+                    InvalidCheckpointSerializer(delegate)
+                }
+                ?: run {
+                    logger.info("Registering final option serializer for ${type.name}")
+                    EvenWorseCheckpointSerializer
+                }
         register(type, serializer)
     }
 
-    private object CheckpointDeserialisationNotSupported : Serializer<Any>() {
-        override fun write(kryo: Kryo, output: Output, obj: Any) {
-            // Nothing to write
+    fun Kryo.addDefaultAccessibleSerializer(type: Class<*>, createSerializer: () -> Serializer<*>) {
+        val serializer = tryIfAccessible(createSerializer)
+                ?:
+                tryIfAccessible {
+                    val delegate = getDefaultSerializer(type)
+                    logger.info("Using fallback serializer ${delegate.javaClass.name} for ${type.name}")
+                    InvalidCheckpointSerializer(delegate) }
+                ?: run {
+                    logger.info("Using final option serializer for ${type.name}")
+                    EvenWorseCheckpointSerializer
+                }
+        addDefaultSerializer(type, serializer)
+    }
+    
+    
+    private class InvalidCheckpointSerializer<T>(private val delegate: Serializer<T>) : Serializer<T>() {
+        companion object {
+            private val deserialisationEnabled = java.lang.Boolean.getBoolean("net.corda.serialization.invalid-checkpoints.enable")
+            init {
+                if (deserialisationEnabled) {
+                    logger.warn("")
+                }
+            }
         }
+        
+        override fun write(kryo: Kryo, output: Output, obj: T) {
+            delegate.write(kryo, output, obj)
+        }
+
+        override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
+            if (!deserialisationEnabled) {
+                throw UnsupportedOperationException("Materialising checkpoints is not supported in this test environment. If you wish to " +
+                        "test checkpoints use the out-of-process node driver. You can also set the system property " +
+                        "'net.corda.serialization.invalid-checkpoints.enable' to 'true' to force deserialisation, though the checkpoints " +
+                        "may not be valid.")
+            }
+            return delegate.read(kryo, input, type)
+        }
+    }
+
+    private object EvenWorseCheckpointSerializer : Serializer<Any>() {
+        override fun write(kryo: Kryo, output: Output, obj: Any) {
+        }
+
         override fun read(kryo: Kryo, input: Input, type: Class<out Any>): Any {
-            throw UnsupportedOperationException("Restoring checkpoints is not supported in the current test environment. Use " +
-                    "out-of-process node driver if you wish to deserialise checkpoints.")
+            throw UnsupportedOperationException("Materialising checkpoints is not supported in this test environment. If you wish to " +
+                    "test checkpoints use the out-of-process node driver.")
         }
     }
 

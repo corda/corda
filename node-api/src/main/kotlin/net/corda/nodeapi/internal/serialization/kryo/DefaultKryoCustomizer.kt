@@ -35,6 +35,9 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.addDefaultAccessibleSerializer
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAccessible
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.tryIfAccessible
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.MutableClassWhitelist
@@ -92,19 +95,19 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(CertPath::class.java, CertPathSerializer)
             addDefaultSerializer(PrivateKey::class.java, PrivateKeySerializer)
             addDefaultSerializer(PublicKey::class.java, publicKeySerializer)
-            addDefaultSerializer(LinkedHashMapIteratorSerializer.getIterator()::class.java.superclass, LinkedHashMapIteratorSerializer)
+            addDefaultAccessibleSerializer(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass) { LinkedHashMapIteratorSerializer }
 
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
 
-            register(LinkedHashMapEntrySerializer.getEntry()::class.java, LinkedHashMapEntrySerializer)
-            register(LinkedListItrSerializer.getListItr()::class.java, LinkedListItrSerializer)
+            registerAccessible(linkedMapOf(1 to 1).entries.first()::class.java) { LinkedHashMapEntrySerializer }
+            registerAccessible(LinkedList<Any>().listIterator()::class.java) { LinkedListItrSerializer }
             register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
-            UnmodifiableCollectionsSerializer.registerSerializers(this)
+            tryIfAccessible { UnmodifiableCollectionsSerializer.registerSerializers(this) }
             ImmutableListSerializer.registerSerializers(this)
             ImmutableSetSerializer.registerSerializers(this)
             ImmutableSortedSetSerializer.registerSerializers(this)
@@ -125,8 +128,8 @@ object DefaultKryoCustomizer {
             // Used by the remote verifier, and will possibly be removed in future.
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
-            register(SerializedLambda::class.java)
-            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
+            tryIfAccessible { register(SerializedLambda::class.java) }
+            registerAccessible(ClosureSerializer.Closure::class.java) { CordaClosureSerializer }
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)
 
