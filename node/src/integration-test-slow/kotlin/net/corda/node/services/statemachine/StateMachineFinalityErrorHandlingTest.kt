@@ -15,6 +15,7 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
@@ -37,6 +38,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      * because of changes in bytecode of kotlin 1.2 to 1.9
      *
      */
+    @Ignore("JDK 17 Failure because of byteman instrumentation issue")
     @Test(timeout = 300_000)
     fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
@@ -98,6 +100,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      * Only the responding node keeps a checkpoint. The initiating flow has completed successfully as it has complete its
      * send to the responding node and the responding node successfully received it.
      */
+    @Ignore("JDK 17 Failure because of byteman instrumentation issue")
     @Test(timeout = 300_000)
     fun `error resolving a transaction's dependencies inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
