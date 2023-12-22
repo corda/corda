@@ -30,7 +30,6 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
 import javax.jms.JMSSecurityException
@@ -53,8 +52,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17:Fixme - permission denied")
-	fun `send message to RPC requests address`() {
+    fun `send message to RPC requests address`() {
         assertProducerQueueCreationAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
     }
 
@@ -180,8 +178,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     }
 
     override fun `send message to notifications address`() {
-        // TODO JDK17:Fixme - permission denied
-        // assertProducerQueueCreationAttackFails(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
+         assertProducerQueueCreationAttackFails(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
     }
 
     @Test(timeout=300_000)
@@ -220,7 +217,6 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     }
 
     @Test(timeout = 300_000)
-    @Ignore("TODO JDK17: Fixme - intermittent")
     fun `send AMQP message without header`() {
         val attacker = amqpClientTo(alice.node.configuration.p2pAddress)
         val session = attacker.start(PEER_USER, PEER_USER)
