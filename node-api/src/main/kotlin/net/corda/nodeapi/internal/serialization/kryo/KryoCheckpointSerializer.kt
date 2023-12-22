@@ -82,13 +82,16 @@ private object FutureSerialisationDetector : Serializer<Future<*>>() {
 }
 
 object KryoCheckpointSerializer : CheckpointSerializer {
+    private val poisonedClasses = Collections.newSetFromMap<String>(ConcurrentHashMap())
+
     private val kryoPoolsForContexts = ConcurrentHashMap<Triple<ClassWhitelist, ClassLoader, Iterable<CheckpointCustomSerializer<*,*>>>, KryoPool>()
+
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Triple(context.whitelist, context.deserializationClassLoader, context.checkpointCustomSerializers)) {
             KryoPool {
                 val classResolver = CordaClassResolver(context)
                 try {
-                    val serializer = Fiber.getFiberSerializer(classResolver,false) as KryoSerializer
+                    val serializer = Fiber.getFiberSerializer(classResolver, false) as KryoSerializer
                     // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
                     val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                     serializer.kryo.apply {
@@ -107,8 +110,18 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                         val classToSerializer = mapInputClassToCustomSerializer(context.deserializationClassLoader, customSerializers)
                         addDefaultCustomSerializers(this, classToSerializer)
                     }
+                } catch (e: NoClassDefFoundError) {
+                    val className = e.message?.substringAfter("Could not initialize class ")
+                    if (className in poisonedClasses) {
+                        loggerFor<KryoCheckpointSerializer>().info("Encountered poisoned class $className")
+                        CheckpointsNotSupported(classResolver)
+                    } else {
+                        throw e
+                    }
                 } catch (t: Throwable) {
-                    if (t.rootCause is InaccessibleObjectException) {
+                    val rootCause = t.rootCause
+                    if (rootCause is InaccessibleObjectException) {
+                        poisonedClasses += rootCause.stackTrace.mapNotNull { it.takeIf { it.methodName == "<clinit>" }?.className }
                         CheckpointsNotSupported(classResolver)
                     } else {
                         throw t
