@@ -34,10 +34,11 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.EvenWorseCheckpointSerializer
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.addDefaultAccessibleSerializer
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.ifJavaUtilOpen
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isJavaUtilOpen
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAccessible
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.tryIfAccessible
 import net.corda.serialization.internal.DefaultWhitelist
@@ -87,10 +88,9 @@ object DefaultKryoCustomizer {
                         ignoreSyntheticFields = false
                         extendedFieldNames = true
                     }
-                    return tryIfAccessible {
+                    return if (isJavaUtilOpen()) {
                         IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
-                    } ?: run {
-                        loggerFor<DefaultKryoCustomizer>().info("Using final option serializer for ${type.name}")
+                    } else {
                         EvenWorseCheckpointSerializer
                     }
                 }
@@ -114,7 +114,7 @@ object DefaultKryoCustomizer {
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
-            tryIfAccessible { UnmodifiableCollectionsSerializer.registerSerializers(this) }
+            ifJavaUtilOpen { UnmodifiableCollectionsSerializer.registerSerializers(this) }
             ImmutableListSerializer.registerSerializers(this)
             ImmutableSetSerializer.registerSerializers(this)
             ImmutableSortedSetSerializer.registerSerializers(this)

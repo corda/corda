@@ -18,7 +18,6 @@ import com.esotericsoftware.kryo.serializers.DefaultSerializers
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.GregorianCalendarSerializer
 import de.javakaffee.kryoserializers.SynchronizedCollectionsSerializer
-import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import net.corda.core.internal.rootCause
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
@@ -146,7 +145,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.registerAccessible(Collections.newSetFromMap(emptyMap<Any, Boolean>()).javaClass, ::CollectionsSetFromMapSerializer)
         kryo.registerAccessible(GregorianCalendar::class.java, ::GregorianCalendarSerializer)
         kryo.register(InvocationHandler::class.java, JdkProxySerializer())
-        tryIfAccessible { SynchronizedCollectionsSerializer.registerSerializers(kryo) }
+        ifJavaUtilOpen { SynchronizedCollectionsSerializer.registerSerializers(kryo) }
         kryo.addDefaultSerializer(Externalizable::class.java, ExternalizableKryoSerializer<Externalizable>())
         kryo.addDefaultSerializer(Reference::class.java, ReferenceSerializer())
         kryo.addDefaultSerializer(URI::class.java, DefaultSerializers.URISerializer::class.java)
@@ -156,6 +155,14 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.addDefaultSerializer(AtomicLong::class.java, DefaultSerializers.AtomicLongSerializer::class.java)
         kryo.addDefaultSerializer(Pattern::class.java, DefaultSerializers.PatternSerializer::class.java)
     }
+
+    inline fun ifJavaUtilOpen(block: () -> Unit) {
+        if (isJavaUtilOpen()) {
+            block()
+        }
+    }
+
+    fun isJavaUtilOpen(): Boolean = Collection::class.java.module.isOpen("java.util", javaClass.module)
 
     fun <T> tryIfAccessible(block: () -> T): T? {
         return try {
