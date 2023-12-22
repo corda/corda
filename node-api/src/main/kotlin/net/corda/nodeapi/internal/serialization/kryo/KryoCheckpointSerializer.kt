@@ -232,7 +232,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         }
     }
 
-    private object EvenWorseCheckpointSerializer : Serializer<Any>() {
+    object EvenWorseCheckpointSerializer : Serializer<Any>() {
         override fun write(kryo: Kryo, output: Output, obj: Any) {
         }
 

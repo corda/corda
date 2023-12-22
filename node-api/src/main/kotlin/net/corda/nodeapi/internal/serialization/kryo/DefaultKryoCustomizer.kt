@@ -34,7 +34,9 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toNonEmptySet
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.EvenWorseCheckpointSerializer
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.addDefaultAccessibleSerializer
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAccessible
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.tryIfAccessible
@@ -79,13 +81,18 @@ object DefaultKryoCustomizer {
 
             instantiatorStrategy = CustomInstantiatorStrategy()
 
-            addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<IteratorSerializer>() {
-                override fun newSerializer(kryo: Kryo, type: Class<*>): IteratorSerializer {
+            addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<Serializer<out Any>>() {
+                override fun newSerializer(kryo: Kryo, type: Class<*>): Serializer<out Any> {
                     val config = CompatibleFieldSerializer.CompatibleFieldSerializerConfig().apply {
                         ignoreSyntheticFields = false
                         extendedFieldNames = true
                     }
-                    return IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
+                    return tryIfAccessible {
+                        IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
+                    } ?: run {
+                        loggerFor<DefaultKryoCustomizer>().info("Using final option serializer for ${type.name}")
+                        EvenWorseCheckpointSerializer
+                    }
                 }
             })
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
