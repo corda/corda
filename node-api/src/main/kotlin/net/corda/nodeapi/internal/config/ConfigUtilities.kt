@@ -188,7 +188,7 @@ private fun Config.getSingleValue(
             X500Principal::class -> X500Principal(getString(path))
             CordaX500Name::class -> {
                 when (getValue(path).valueType()) {
-                    ConfigValueType.OBJECT -> getConfig(path).parseAs(onUnknownKeys)
+                    ConfigValueType.OBJECT -> getConfig(path).parseAs(onUnknownKeys) as CordaX500Name
                     else -> CordaX500Name.parse(getString(path))
                 }
             }
