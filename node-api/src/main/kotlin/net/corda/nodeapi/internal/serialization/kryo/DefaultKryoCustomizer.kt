@@ -35,11 +35,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.NoFallbackCheckpointSerializer
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.addDefaultSerializerIfPackageOpen
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isJavaUtilOpen
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isPackageOpen
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerFallback
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerNoFallbackIfNotOpen
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAsUnsupported
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerIfPackageOpen
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.serializerIfPackageOpen
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.MutableClassWhitelist
@@ -87,13 +87,12 @@ object DefaultKryoCustomizer {
                         ignoreSyntheticFields = false
                         extendedFieldNames = true
                     }
-                    return if (isJavaUtilOpen()) {
-                        IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
-                    } else {
-                        NoFallbackCheckpointSerializer
-                    }
+                    return kryo.serializerIfPackageOpen(type, { IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config)) }, testWriting = false)
                 }
             })
+            with(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass) {
+                addDefaultSerializerIfPackageOpen(this, { LinkedHashMapIteratorSerializer }, testWriting = false)
+            }
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
@@ -101,17 +100,13 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(CertPath::class.java, CertPathSerializer)
             addDefaultSerializer(PrivateKey::class.java, PrivateKeySerializer)
             addDefaultSerializer(PublicKey::class.java, publicKeySerializer)
-            with(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass) {
-                val serializer = if (isPackageOpen) LinkedHashMapIteratorSerializer else NoFallbackCheckpointSerializer
-                addDefaultSerializer(this, serializer)
-            }
 
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
 
-            registerNoFallbackIfNotOpen(linkedMapOf(1 to 1).entries.first()::class.java) { LinkedHashMapEntrySerializer }
-            registerNoFallbackIfNotOpen(LinkedList<Any>().listIterator()::class.java) { LinkedListItrSerializer }
+            registerIfPackageOpen(linkedMapOf(1 to 1).entries.first()::class.java, { LinkedHashMapEntrySerializer }, testWriting = false)
+            registerIfPackageOpen(LinkedList<Any>().listIterator()::class.java, { LinkedListItrSerializer }, testWriting = false)
             register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
@@ -119,13 +114,13 @@ object DefaultKryoCustomizer {
             if (isJavaUtilOpen()) {
                 UnmodifiableCollectionsSerializer.registerSerializers(this)
             } else {
-                registerFallback(Collections.unmodifiableCollection(listOf("")).javaClass)
-                registerFallback(Collections.unmodifiableList(ArrayList<Any>()).javaClass)
-                registerFallback(Collections.unmodifiableList(LinkedList<Any>()).javaClass)
-                registerFallback(Collections.unmodifiableSet(HashSet<Any>()).javaClass)
-                registerFallback(Collections.unmodifiableSortedSet(TreeSet<Any>()).javaClass)
-                registerFallback(Collections.unmodifiableMap(HashMap<Any, Any>()).javaClass)
-                registerFallback(Collections.unmodifiableSortedMap(TreeMap<Any, Any>()).javaClass)
+                registerAsUnsupported(Collections.unmodifiableCollection(listOf("")).javaClass)
+                registerAsUnsupported(Collections.unmodifiableList(ArrayList<Any>()).javaClass)
+                registerAsUnsupported(Collections.unmodifiableList(LinkedList<Any>()).javaClass)
+                registerAsUnsupported(Collections.unmodifiableSet(HashSet<Any>()).javaClass)
+                registerAsUnsupported(Collections.unmodifiableSortedSet(TreeSet<Any>()).javaClass)
+                registerAsUnsupported(Collections.unmodifiableMap(HashMap<Any, Any>()).javaClass)
+                registerAsUnsupported(Collections.unmodifiableSortedMap(TreeMap<Any, Any>()).javaClass)
             }
             ImmutableListSerializer.registerSerializers(this)
             ImmutableSetSerializer.registerSerializers(this)
@@ -147,7 +142,7 @@ object DefaultKryoCustomizer {
             // Used by the remote verifier, and will possibly be removed in future.
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
-            registerNoFallbackIfNotOpen(SerializedLambda::class.java)
+            registerIfPackageOpen(SerializedLambda::class.java, testWriting = false)
             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)

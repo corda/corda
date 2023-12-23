@@ -133,18 +133,18 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.register(TreeSet::class.java)
         kryo.register(EnumSet::class.java)
 
-        kryo.registerFallbackIfNotOpen(Collections.newSetFromMap(emptyMap<Any, Boolean>()).javaClass, ::CollectionsSetFromMapSerializer)
+        kryo.registerIfPackageOpen(Collections.newSetFromMap(emptyMap<Any, Boolean>()).javaClass, ::CollectionsSetFromMapSerializer)
         kryo.register(InvocationHandler::class.java, JdkProxySerializer())
         if (isJavaUtilOpen()) {
             SynchronizedCollectionsSerializer.registerSerializers(kryo)
         } else {
-            kryo.registerFallback(Collections.synchronizedCollection(listOf(1)).javaClass)
-            kryo.registerFallback(Collections.synchronizedList(ArrayList<Any>()).javaClass)
-            kryo.registerFallback(Collections.synchronizedList(LinkedList<Any>()).javaClass)
-            kryo.registerFallback(Collections.synchronizedSet(HashSet<Any>()).javaClass)
-            kryo.registerFallback(Collections.synchronizedSortedSet(TreeSet<Any>()).javaClass)
-            kryo.registerFallback(Collections.synchronizedMap(HashMap<Any, Any>()).javaClass)
-            kryo.registerFallback(Collections.synchronizedSortedMap(TreeMap<Any, Any>()).javaClass)
+            kryo.registerAsUnsupported(Collections.synchronizedCollection(listOf(1)).javaClass)
+            kryo.registerAsUnsupported(Collections.synchronizedList(ArrayList<Any>()).javaClass)
+            kryo.registerAsUnsupported(Collections.synchronizedList(LinkedList<Any>()).javaClass)
+            kryo.registerAsUnsupported(Collections.synchronizedSet(HashSet<Any>()).javaClass)
+            kryo.registerAsUnsupported(Collections.synchronizedSortedSet(TreeSet<Any>()).javaClass)
+            kryo.registerAsUnsupported(Collections.synchronizedMap(HashMap<Any, Any>()).javaClass)
+            kryo.registerAsUnsupported(Collections.synchronizedSortedMap(TreeMap<Any, Any>()).javaClass)
         }
         kryo.addDefaultSerializer(Externalizable::class.java, ExternalizableKryoSerializer<Externalizable>())
         kryo.addDefaultSerializer(Reference::class.java, ReferenceSerializer())
@@ -156,81 +156,74 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.addDefaultSerializer(Pattern::class.java, DefaultSerializers.PatternSerializer::class.java)
     }
 
-    val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
+    private val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
+
+    val Class<*>.fullyQualifiedPackageName: String get() = "${module.name}/$packageName"
 
     fun isJavaUtilOpen(): Boolean = Collection::class.java.isPackageOpen
 
     /**
      *
      */
-    fun Kryo.registerFallbackIfNotOpen(type: Class<*>, createSerializer: () -> Serializer<*>) {
-        if (type.isPackageOpen) {
-            register(type, createSerializer())
-        } else {
-            registerFallback(type)
-        }
+    fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, testWriting: Boolean = true) {
+        register(type, serializerIfPackageOpen(type, createSerializer, testWriting))
     }
 
     /**
      *
      */
-    fun Kryo.registerFallback(type: Class<*>) {
-        val fallback = getSerializer(type)  // Find the most specific serializer already registered
-        logger.info("Registering fallback serializer with ${fallback.javaClass.name} for ${type.name}")
-        register(type, FallbackCheckpointSerializer(fallback))
-    }
-
-    /**
-     *
-     */
-    fun Kryo.registerNoFallbackIfNotOpen(type: Class<*>, createSerializer: () -> Serializer<*>) {
-        val serializer = if (type.isPackageOpen) createSerializer() else NoFallbackCheckpointSerializer
-        register(type, serializer)
-    }
-
-    fun Kryo.registerNoFallbackIfNotOpen(type: Class<*>) {
+    fun Kryo.registerIfPackageOpen(type: Class<*>, testWriting: Boolean = true) {
         if (type.isPackageOpen) {
             register(type)
         } else {
-            register(type, NoFallbackCheckpointSerializer)
+            registerAsUnsupported(type, testWriting)
         }
+    }
+
+    /**
+     *
+     */
+    fun Kryo.registerAsUnsupported(type: Class<*>, testWriting: Boolean = true) {
+        register(type, serializerForInaccesible(type, testWriting))
+    }
+
+    /**
+     *
+     */
+    fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, testWriting: Boolean = true) {
+        addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, testWriting))
+    }
+
+    fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, testWriting: Boolean = true): Serializer<*> {
+        return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, testWriting)
+    }
+
+    fun Kryo.serializerForInaccesible(type: Class<*>, testWriting: Boolean = true): Serializer<*> {
+        val testWritingSerializer = if (testWriting) {
+            val testWritingSerializer = getSerializer(type)  // Find the most specific serializer already registered to test writing
+            logger.info("${type.fullyQualifiedPackageName} is not open and so ${type.name} is not supported in checkpoints. However, " +
+                    "${testWritingSerializer.javaClass.name} is being used to test writing into checkpoints.")
+            testWritingSerializer
+        } else {
+            logger.info("${type.fullyQualifiedPackageName} is not open and so ${type.name} is not supported in checkpoints")
+            null
+        }
+        return UnsupportedSerializer<Any>(testWritingSerializer)
     }
     
     
-    private class FallbackCheckpointSerializer<T>(private val fallback: Serializer<T>) : Serializer<T>() {
-        companion object {
-            private val deserialisationEnabled = java.lang.Boolean.getBoolean("net.corda.serialization.invalid-checkpoints.enable")
-            init {
-                if (deserialisationEnabled) {
-                    logger.warn("")
-                }
-            }
-        }
-        
+    class UnsupportedSerializer<T>(private val testWritingSerializer: Serializer<T>? = null) : Serializer<T>() {
         override fun write(kryo: Kryo, output: Output, obj: T) {
-            fallback.write(kryo, output, obj)
+            testWritingSerializer?.write(kryo, output, obj)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
-            if (!deserialisationEnabled) {
-                throw UnsupportedOperationException("Materialising checkpoints is not supported in this test environment. If you wish to " +
-                        "test checkpoints use the out-of-process node driver. You can also set the system property " +
-                        "'net.corda.serialization.invalid-checkpoints.enable' to 'true' to force deserialisation, though the checkpoints " +
-                        "may not be valid.")
-            }
-            return fallback.read(kryo, input, type)
-        }
-    }
-
-    object NoFallbackCheckpointSerializer : Serializer<Any>() {
-        override fun write(kryo: Kryo, output: Output, obj: Any) {
-        }
-
-        override fun read(kryo: Kryo, input: Input, type: Class<out Any>): Any {
             throw UnsupportedOperationException("Materialising checkpoints is not supported in this test environment. If you wish to " +
-                    "test checkpoints use the out-of-process node driver.")
+                    "test checkpoints use the out-of-process node driver, or add " +
+                    "--add-opens=${type.fullyQualifiedPackageName}=ALL-UNNAMED to the test JVM args.")
         }
     }
+
 
     /**
      * Returns a sorted list of CustomSerializerCheckpointAdaptor based on the custom serializers inside context.
