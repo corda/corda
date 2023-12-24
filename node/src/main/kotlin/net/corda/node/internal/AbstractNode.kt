@@ -3,6 +3,7 @@ package net.corda.node.internal
 import co.paralleluniverse.fibers.instrument.Retransform
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
+import com.google.common.collect.ImmutableList
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.zaxxer.hikari.pool.HikariPool
@@ -178,7 +179,6 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.Collections
 import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -622,7 +622,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
 
-            frozenTokenizableServices = Collections.unmodifiableList(ArrayList(tokenizableServices!!))
+            frozenTokenizableServices = ImmutableList.copyOf(tokenizableServices!!)
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices!!)

@@ -37,7 +37,7 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.addDefaultSerializerIfPackageOpen
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isJavaUtilOpen
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAsUnsupported
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAsInaccessible
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerIfPackageOpen
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.serializerIfPackageOpen
 import net.corda.serialization.internal.DefaultWhitelist
@@ -87,12 +87,10 @@ object DefaultKryoCustomizer {
                         ignoreSyntheticFields = false
                         extendedFieldNames = true
                     }
-                    return kryo.serializerIfPackageOpen(type, { IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config)) }, testWriting = false)
+                    return kryo.serializerIfPackageOpen(type, { IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config)) }, write = false)
                 }
             })
-            with(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass) {
-                addDefaultSerializerIfPackageOpen(this, { LinkedHashMapIteratorSerializer }, testWriting = false)
-            }
+            addDefaultSerializerIfPackageOpen(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass, { LinkedHashMapIteratorSerializer }, write = false)
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
@@ -105,8 +103,8 @@ object DefaultKryoCustomizer {
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
 
-            registerIfPackageOpen(linkedMapOf(1 to 1).entries.first()::class.java, { LinkedHashMapEntrySerializer }, testWriting = false)
-            registerIfPackageOpen(LinkedList<Any>().listIterator()::class.java, { LinkedListItrSerializer }, testWriting = false)
+            registerIfPackageOpen(linkedMapOf(1 to 1).entries.first()::class.java, { LinkedHashMapEntrySerializer }, write = false)
+            registerIfPackageOpen(LinkedList<Any>().listIterator()::class.java, { LinkedListItrSerializer }, write = false)
             register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
@@ -114,13 +112,13 @@ object DefaultKryoCustomizer {
             if (isJavaUtilOpen()) {
                 UnmodifiableCollectionsSerializer.registerSerializers(this)
             } else {
-                registerAsUnsupported(Collections.unmodifiableCollection(listOf("")).javaClass)
-                registerAsUnsupported(Collections.unmodifiableList(ArrayList<Any>()).javaClass)
-                registerAsUnsupported(Collections.unmodifiableList(LinkedList<Any>()).javaClass)
-                registerAsUnsupported(Collections.unmodifiableSet(HashSet<Any>()).javaClass)
-                registerAsUnsupported(Collections.unmodifiableSortedSet(TreeSet<Any>()).javaClass)
-                registerAsUnsupported(Collections.unmodifiableMap(HashMap<Any, Any>()).javaClass)
-                registerAsUnsupported(Collections.unmodifiableSortedMap(TreeMap<Any, Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableCollection(listOf("")).javaClass)
+                registerAsInaccessible(Collections.unmodifiableList(ArrayList<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableList(LinkedList<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableSet(HashSet<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableSortedSet(TreeSet<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableMap(HashMap<Any, Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableSortedMap(TreeMap<Any, Any>()).javaClass)
             }
             ImmutableListSerializer.registerSerializers(this)
             ImmutableSetSerializer.registerSerializers(this)
@@ -142,7 +140,7 @@ object DefaultKryoCustomizer {
             // Used by the remote verifier, and will possibly be removed in future.
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
-            registerIfPackageOpen(SerializedLambda::class.java, testWriting = false)
+            registerIfPackageOpen(SerializedLambda::class.java, write = false)
             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)

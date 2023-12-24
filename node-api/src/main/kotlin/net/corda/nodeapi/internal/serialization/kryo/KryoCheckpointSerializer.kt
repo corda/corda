@@ -14,6 +14,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import com.esotericsoftware.kryo.serializers.DefaultSerializers
 import com.esotericsoftware.kryo.util.MapReferenceResolver
+import de.javakaffee.kryoserializers.GregorianCalendarSerializer
 import de.javakaffee.kryoserializers.SynchronizedCollectionsSerializer
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
@@ -23,7 +24,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.AlwaysAcceptEncodingWhitelist
 import net.corda.serialization.internal.ByteBufferInputStream
@@ -40,6 +40,7 @@ import java.net.URI
 import java.util.Collections
 import java.util.EnumMap
 import java.util.EnumSet
+import java.util.GregorianCalendar
 import java.util.LinkedList
 import java.util.TreeMap
 import java.util.TreeSet
@@ -135,17 +136,21 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.register(EnumSet::class.java)
 
         kryo.registerIfPackageOpen(Collections.newSetFromMap(emptyMap<Any, Boolean>()).javaClass, ::CollectionsSetFromMapSerializer)
+        if (GregorianCalendar::class.java.isPackageOpen) {
+            // If possible register a more efficient serializer for GregorianCalendar, otherwise a default serializer is already registered.
+            kryo.register(GregorianCalendar::class.java, GregorianCalendarSerializer())
+        }
         kryo.register(InvocationHandler::class.java, JdkProxySerializer())
         if (isJavaUtilOpen()) {
             SynchronizedCollectionsSerializer.registerSerializers(kryo)
         } else {
-            kryo.registerAsUnsupported(Collections.synchronizedCollection(listOf(1)).javaClass)
-            kryo.registerAsUnsupported(Collections.synchronizedList(ArrayList<Any>()).javaClass)
-            kryo.registerAsUnsupported(Collections.synchronizedList(LinkedList<Any>()).javaClass)
-            kryo.registerAsUnsupported(Collections.synchronizedSet(HashSet<Any>()).javaClass)
-            kryo.registerAsUnsupported(Collections.synchronizedSortedSet(TreeSet<Any>()).javaClass)
-            kryo.registerAsUnsupported(Collections.synchronizedMap(HashMap<Any, Any>()).javaClass)
-            kryo.registerAsUnsupported(Collections.synchronizedSortedMap(TreeMap<Any, Any>()).javaClass)
+            kryo.registerAsInaccessible(Collections.synchronizedCollection(listOf(1)).javaClass)
+            kryo.registerAsInaccessible(Collections.synchronizedList(ArrayList<Any>()).javaClass)
+            kryo.registerAsInaccessible(Collections.synchronizedList(LinkedList<Any>()).javaClass)
+            kryo.registerAsInaccessible(Collections.synchronizedSet(HashSet<Any>()).javaClass)
+            kryo.registerAsInaccessible(Collections.synchronizedSortedSet(TreeSet<Any>()).javaClass)
+            kryo.registerAsInaccessible(Collections.synchronizedMap(HashMap<Any, Any>()).javaClass)
+            kryo.registerAsInaccessible(Collections.synchronizedSortedMap(TreeMap<Any, Any>()).javaClass)
         }
         kryo.addDefaultSerializer(Externalizable::class.java, ExternalizableKryoSerializer<Externalizable>())
         kryo.addDefaultSerializer(Reference::class.java, ReferenceSerializer())
@@ -164,46 +169,47 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     /**
      *
      */
-    fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, testWriting: Boolean = true) {
-        register(type, serializerIfPackageOpen(type, createSerializer, testWriting))
+    fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, write: Boolean = true) {
+        register(type, serializerIfPackageOpen(type, createSerializer, write))
     }
 
     /**
      *
      */
-    fun Kryo.registerIfPackageOpen(type: Class<*>, testWriting: Boolean = true) {
+    fun Kryo.registerIfPackageOpen(type: Class<*>, write: Boolean = true) {
         if (type.isPackageOpen) {
             register(type)
         } else {
-            registerAsUnsupported(type, testWriting)
+            registerAsInaccessible(type, write)
         }
     }
 
     /**
      *
      */
-    fun Kryo.registerAsUnsupported(type: Class<*>, testWriting: Boolean = true) {
-        register(type, serializerForInaccesible(type, testWriting))
+    fun Kryo.registerAsInaccessible(type: Class<*>, write: Boolean = true) {
+        register(type, serializerForInaccesible(type, write))
     }
 
     /**
      *
      */
-    fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, testWriting: Boolean = true) {
-        addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, testWriting))
+    fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, write: Boolean = true) {
+        addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, write))
     }
 
-    fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, testWriting: Boolean = true): Serializer<*> {
-        return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, testWriting)
+    fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, write: Boolean = true): Serializer<*> {
+        return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, write)
     }
 
-    fun Kryo.serializerForInaccesible(type: Class<*>, testWriting: Boolean = true): Serializer<*> {
-        // Find the most specific serializer already registered to test writing
-        return UnsupportedSerializer<Any>(if (testWriting) getSerializer(type) else null)
+    private fun Kryo.serializerForInaccesible(type: Class<*>, write: Boolean = true): Serializer<*> {
+        // Find the most specific serializer already registered to use for writing. This will be useful to make sure as much of the object
+        // graph is serialised and covered in the writing phase.
+        return InaccessibleSerializer<Any>(if (write) getSerializer(type) else null)
     }
-    
-    
-    private class UnsupportedSerializer<T : Any>(private val testWritingSerializer: Serializer<T>? = null) : Serializer<T>() {
+
+
+    private class InaccessibleSerializer<T : Any>(private val writeFallback: Serializer<T>? = null) : Serializer<T>() {
         companion object {
             private val typesLogged = Collections.newSetFromMap<Class<*>>(ConcurrentHashMap())
         }
@@ -213,17 +219,13 @@ object KryoCheckpointSerializer : CheckpointSerializer {
             if (typesLogged.add(type)) {
                 logger.warn("${type.fqPackage} is not open to this test environment and so ${type.name} objects are not supported in " +
                         "checkpoints. This will most likely not be an issue unless checkpoints are restored.")
-                if (testWritingSerializer != null) {
-                    logger.debug { "However, ${testWritingSerializer.javaClass.name} is being as a replacement serializer to try and " +
-                            "mimic checkpointing with these objects as best as possible." }
-                }
             }
-            testWritingSerializer?.write(kryo, output, obj)
+            writeFallback?.write(kryo, output, obj)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
             throw UnsupportedOperationException("Restoring checkpoints containing ${type.name} objects is not supported in this test " +
-                    "environment. If you wish to test these checkpoints use the out-of-process node driver, or add " +
+                    "environment. If you wish to restore these checkpoints in your tests then use the out-of-process node driver, or add " +
                     "--add-opens=${type.fqPackage}=ALL-UNNAMED to the test JVM args.")
         }
 
