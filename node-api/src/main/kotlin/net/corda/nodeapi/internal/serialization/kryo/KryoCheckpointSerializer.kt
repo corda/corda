@@ -23,6 +23,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.AlwaysAcceptEncodingWhitelist
 import net.corda.serialization.internal.ByteBufferInputStream
@@ -158,8 +159,6 @@ object KryoCheckpointSerializer : CheckpointSerializer {
 
     private val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
 
-    val Class<*>.fullyQualifiedPackageName: String get() = "${module.name}/$packageName"
-
     fun isJavaUtilOpen(): Boolean = Collection::class.java.isPackageOpen
 
     /**
@@ -199,29 +198,36 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     }
 
     fun Kryo.serializerForInaccesible(type: Class<*>, testWriting: Boolean = true): Serializer<*> {
-        val testWritingSerializer = if (testWriting) {
-            val testWritingSerializer = getSerializer(type)  // Find the most specific serializer already registered to test writing
-            logger.info("${type.fullyQualifiedPackageName} is not open and so ${type.name} is not supported in checkpoints. However, " +
-                    "${testWritingSerializer.javaClass.name} is being used to test writing into checkpoints.")
-            testWritingSerializer
-        } else {
-            logger.info("${type.fullyQualifiedPackageName} is not open and so ${type.name} is not supported in checkpoints")
-            null
-        }
-        return UnsupportedSerializer<Any>(testWritingSerializer)
+        // Find the most specific serializer already registered to test writing
+        return UnsupportedSerializer<Any>(if (testWriting) getSerializer(type) else null)
     }
     
     
-    class UnsupportedSerializer<T>(private val testWritingSerializer: Serializer<T>? = null) : Serializer<T>() {
+    private class UnsupportedSerializer<T : Any>(private val testWritingSerializer: Serializer<T>? = null) : Serializer<T>() {
+        companion object {
+            private val typesLogged = Collections.newSetFromMap<Class<*>>(ConcurrentHashMap())
+        }
+
         override fun write(kryo: Kryo, output: Output, obj: T) {
+            val type = obj.javaClass
+            if (typesLogged.add(type)) {
+                logger.warn("${type.fqPackage} is not open to this test environment and so ${type.name} objects are not supported in " +
+                        "checkpoints. This will most likely not be an issue unless checkpoints are restored.")
+                if (testWritingSerializer != null) {
+                    logger.debug { "However, ${testWritingSerializer.javaClass.name} is being as a replacement serializer to try and " +
+                            "mimic checkpointing with these objects as best as possible." }
+                }
+            }
             testWritingSerializer?.write(kryo, output, obj)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
-            throw UnsupportedOperationException("Materialising checkpoints is not supported in this test environment. If you wish to " +
-                    "test checkpoints use the out-of-process node driver, or add " +
-                    "--add-opens=${type.fullyQualifiedPackageName}=ALL-UNNAMED to the test JVM args.")
+            throw UnsupportedOperationException("Restoring checkpoints containing ${type.name} objects is not supported in this test " +
+                    "environment. If you wish to test these checkpoints use the out-of-process node driver, or add " +
+                    "--add-opens=${type.fqPackage}=ALL-UNNAMED to the test JVM args.")
         }
+
+        private val Class<*>.fqPackage: String get() = "${module.name}/$packageName"
     }
 
 
