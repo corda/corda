@@ -1,9 +1,11 @@
 import com.r3.testing.DistributeTestsBy
 import com.r3.testing.PodLogLevel
+import net.corda.plugins.apiscanner.GenerateApi
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-import static org.gradle.api.JavaVersion.VERSION_11
+import static org.gradle.api.JavaVersion.VERSION_17
+import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
 import static org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8
-import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
 
 buildscript {
     // For sharing constants between builds
@@ -28,8 +30,6 @@ buildscript {
     // Set version of Quasar according to version of Java used:
     ext.quasar_version = constants.getProperty("quasarVersion")
     ext.quasar_classifier = constants.getProperty("quasarClassifier")
-    ext.jdkClassifier = constants.getProperty("jdkClassifier")
-    ext.cordaScanApiClassifier = jdkClassifier
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -215,7 +215,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' apply false
     id 'org.jetbrains.kotlin.plugin.allopen' apply false
     id 'org.jetbrains.kotlin.plugin.jpa' apply false
-    id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
+    id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
     id "org.ajoberstar.grgit" version "4.0.0"
     id 'corda.root-publish'
     id "org.jetbrains.dokka" version "1.8.20"
@@ -238,21 +238,11 @@ if (ext.versionSuffix != ""){
     ext.corda_release_version = "${ext.baseVersion}".toString()
 }
 
-// We need the following three lines even though they're inside an allprojects {} block below because otherwise
-// IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
-// with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
-// the resulting import. This fixes it.
-apply plugin: 'java'
-
-logger.lifecycle("Java version: {}", JavaVersion.current())
-sourceCompatibility = VERSION_11
-targetCompatibility = VERSION_11
-logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
-logger.lifecycle("Java target compatibility: {}", targetCompatibility)
+logger.lifecycle("JDK: {}", System.getProperty("java.home"))
 logger.lifecycle("Quasar version: {}", quasar_version)
 logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
 logger.lifecycle("Building Corda version: {}", corda_release_version)
-logger.lifecycle("User Home: |{}|", System.getProperty('user.home'))
+logger.lifecycle("User home: {}", System.getProperty('user.home'))
 
 allprojects {
     apply plugin: 'org.jetbrains.kotlin.jvm'
@@ -283,8 +273,9 @@ allprojects {
             nugetconfEnabled = false
         }
     }
-    sourceCompatibility = VERSION_11
-    targetCompatibility = VERSION_11
+
+    sourceCompatibility = VERSION_17
+    targetCompatibility = VERSION_17
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
@@ -294,6 +285,11 @@ allprojects {
     test {
         jvmArgs test_add_opens
         jvmArgs test_add_exports
+    }
+
+    java {
+        withSourcesJar()
+        withJavadocJar()
     }
 
     tasks.withType(JavaCompile).configureEach {
@@ -308,11 +304,11 @@ allprojects {
         options.encoding = 'UTF-8'
     }
 
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    tasks.withType(KotlinCompile).configureEach {
         compilerOptions {
             languageVersion = KOTLIN_1_8
             apiVersion = KOTLIN_1_8
-            jvmTarget = JVM_11
+            jvmTarget = JVM_17
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=all-compatibility']
             allWarningsAsErrors = warnings_as_errors
@@ -363,13 +359,6 @@ allprojects {
     tasks.withType(Test).configureEach {
         if (name.contains("integrationTest")) {
             maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
-        }
-    }
-
-    if (jdkClassifier) {
-        jar {
-            // JDK11 built and published artifacts to include classifier
-            archiveClassifier = jdkClassifier
         }
     }
 
@@ -561,7 +550,7 @@ jar {
     enabled = false
 }
 
-task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
+tasks.register('jacocoRootReport', JacocoReport) {
     dependsOn = subprojects.test
 //    additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
 //    sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
@@ -590,13 +579,13 @@ tasks.register('detekt', JavaExec) {
     def plugins = detektPluginsJar.outputs.files.singleFile
     def params = ['-i', input, '-c', config, '-b', baseline, '--plugins', plugins]
     inputs.files(detektPluginsJar, config, baseline)
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    mainClass = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     args(params)
 }
 
 tasks.register('detektBaseline', JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    mainClass = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     def input = "$projectDir"
     def config = "$projectDir/detekt-config.yml, $projectDir/detekt-baseline-config.yml"
@@ -609,7 +598,7 @@ tasks.withType(Test).configureEach {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
-task testReport(type: TestReport) {
+tasks.register('testReport', TestReport) {
     destinationDir = file("$buildDir/reports/allTests")
     // Include the results from the `test` task in all subprojects
     reportOn subprojects*.test
@@ -617,7 +606,7 @@ task testReport(type: TestReport) {
 
 // Note: corda.jar is used at runtime so no runtime ZIP is necessary.
 // Resulting ZIP can be found in "build/distributions"
-task buildCordappDependenciesZip(type: Zip) {
+tasks.register('buildCordappDependenciesZip', Zip) {
     baseName 'corda-deps'
     from configurations.runtimeOnly
     from configurations.implementation
@@ -627,7 +616,7 @@ task buildCordappDependenciesZip(type: Zip) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-tasks.register('generateApi', net.corda.plugins.apiscanner.GenerateApi) {
+tasks.register('generateApi', GenerateApi) {
     baseName = "api-corda"
 }
 

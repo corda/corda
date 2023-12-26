@@ -83,11 +83,7 @@ public final class net.corda.core.Utils extends java.lang.Object
 public final class net.corda.core.concurrent.ConcurrencyUtils extends java.lang.Object
   @NotNull
   public static final net.corda.core.concurrent.CordaFuture firstOf(net.corda.core.concurrent.CordaFuture<? extends V>[], kotlin.jvm.functions.Function1)
-  @NotNull
-  public static final net.corda.core.concurrent.CordaFuture firstOf(net.corda.core.concurrent.CordaFuture<? extends V>[], org.slf4j.Logger, kotlin.jvm.functions.Function1)
   public static final W match(java.util.concurrent.Future, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1)
-  @NotNull
-  public static final String shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 ##
 public interface net.corda.core.concurrent.CordaFuture extends java.util.concurrent.Future
   public abstract void then(kotlin.jvm.functions.Function1)
@@ -3056,21 +3052,21 @@ public final class net.corda.core.flows.FlowRecoveryException extends net.corda.
 @CordaSerializable
 public final class net.corda.core.flows.FlowRecoveryQuery extends java.lang.Object
   public <init>()
-  public <init>(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List)
-  public <init>(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List)
+  public <init>(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Nullable
   public final net.corda.core.flows.FlowTimeWindow component1()
   @Nullable
-  public final net.corda.core.identity.CordaX500Name component2()
+  public final java.util.List component2()
   @Nullable
   public final java.util.List component3()
   @NotNull
-  public final net.corda.core.flows.FlowRecoveryQuery copy(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List)
+  public final net.corda.core.flows.FlowRecoveryQuery copy(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List)
   public boolean equals(Object)
   @Nullable
   public final java.util.List getCounterParties()
   @Nullable
-  public final net.corda.core.identity.CordaX500Name getInitiatedBy()
+  public final java.util.List getInitiatedBy()
   @Nullable
   public final net.corda.core.flows.FlowTimeWindow getTimeframe()
   public int hashCode()
@@ -4739,8 +4735,6 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @NotNull
   public abstract net.corda.core.node.services.TelemetryService getTelemetryService()
   @NotNull
-  public abstract net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
-  @NotNull
   public abstract net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull
   public abstract net.corda.core.node.services.VaultService getVaultService()
@@ -5090,11 +5084,6 @@ public interface net.corda.core.node.services.TransactionStorage
   public abstract net.corda.core.messaging.DataFeed track()
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture trackTransaction(net.corda.core.crypto.SecureHash)
-##
-@DoNotImplement
-public interface net.corda.core.node.services.TransactionVerifierService
-  @NotNull
-  public abstract net.corda.core.concurrent.CordaFuture verify(net.corda.core.transactions.LedgerTransaction)
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.UnknownAnonymousPartyException extends net.corda.core.CordaException
@@ -7850,8 +7839,6 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   @NotNull
   public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServiceHub)
   @NotNull
-  public final net.corda.core.transactions.LedgerTransaction toLedgerTransactionWithContext(net.corda.core.node.ServicesForResolution, net.corda.core.serialization.SerializationContext)
-  @NotNull
   public final net.corda.core.transactions.SignedTransaction toSignedTransaction(net.corda.core.node.services.KeyManagementService, java.security.PublicKey, net.corda.core.crypto.SignatureMetadata, net.corda.core.node.ServicesForResolution)
   @NotNull
   public final net.corda.core.transactions.WireTransaction toWireTransaction(net.corda.core.node.ServicesForResolution)
@@ -8285,8 +8272,6 @@ public static final class net.corda.core.utilities.ProgressTracker$STARTING exte
   @NotNull
   public static final net.corda.core.utilities.ProgressTracker$STARTING INSTANCE
 ##
-public static interface net.corda.core.utilities.ProgressTracker$SerializableAction extends java.io.Serializable, rx.functions.Action1
-##
 @CordaSerializable
 public static class net.corda.core.utilities.ProgressTracker$Step extends java.lang.Object
   public <init>(String)
@@ -8309,8 +8294,6 @@ public static final class net.corda.core.utilities.ProgressTracker$UNSTARTED ext
 ##
 public interface net.corda.core.utilities.PropertyDelegate
   public abstract T getValue(Object, kotlin.reflect.KProperty)
-##
-public interface net.corda.core.utilities.SerializableLambda2 extends java.io.Serializable, kotlin.jvm.functions.Function2
 ##
 public final class net.corda.core.utilities.SgxSupport extends java.lang.Object
   public static final boolean isInsideEnclave()
@@ -9893,8 +9876,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @NotNull
   public net.corda.core.internal.telemetry.TelemetryServiceImpl getTelemetryService()
-  @NotNull
-  public net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
   @NotNull
   public net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull

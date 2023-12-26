@@ -4,10 +4,8 @@ import co.paralleluniverse.strands.Strand
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
-import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.getOrThrow
@@ -29,6 +27,7 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.cordappWithPackages
 import org.junit.Test
 import java.util.concurrent.TimeoutException
+import kotlin.io.path.div
 import net.corda.contracts.incompatible.version1.AttachmentContract as AttachmentContractV1
 import net.corda.flows.incompatible.version1.AttachmentFlow as AttachmentFlowV1
 
@@ -55,13 +54,15 @@ class VaultUpdateDeserializationTest {
     /*
      * Transaction sent from A -> B with Notarisation
      * Test that a deserialization error is raised where the receiver node of a transaction has an incompatible contract jar.
-     * In the case of a notarised transaction, a deserialisation error is thrown in the receiver SignTransactionFlow (before finality)
-     * upon receiving the transaction to be signed and attempting to record its dependencies.
-     * The ledger will not record any transactions, and the flow must be retried by the sender upon installing the correct contract jar
+     * But only on new transactions, and not in the back chain.
+     * In the case of a notarised transaction, a deserialisation error is thrown in the receiver in the second phase of finality
+     * when updating the vault.  The sender will not block, and the back chain is successfully recorded
+     * on the receiver even though those states have deserialization errors too.  The flow on the receiver is hospitalised.
+     * The flow will be retried by the receiver upon installing the correct contract jar
      * version at the receiver and re-starting the node.
      */
-    @Test(timeout=300_000)
-    fun `Notarised transaction fails completely upon receiver deserialization failure collecting signatures when using incompatible contract jar`() {
+    @Test(timeout = 300_000)
+    fun `Notarised transaction fails but back chain succeeds upon receiver deserialization failure when using incompatible contract jar`() {
         driver(driverParameters(listOf(flowVersion1, contractVersion1))) {
             val alice = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1)),
                     providedName = ALICE_NAME).getOrThrow()
@@ -75,20 +76,15 @@ class VaultUpdateDeserializationTest {
             val stx = alice.rpc.startFlow(::AttachmentIssueFlow, hash, defaultNotaryIdentity).returnValue.getOrThrow(30.seconds)
             val spendableState = stx.coreTransaction.outRef<AttachmentContractV1.State>(0)
 
-            // NOTE: exception is propagated from Receiver
-            try {
-                alice.rpc.startFlow(::AttachmentFlowV1, bob.nodeInfo.singleIdentity(), defaultNotaryIdentity, hash, spendableState).returnValue.getOrThrow(30.seconds)
-            }
-            catch(e: UnexpectedFlowEndException) {
-                println("Bob fails to deserialise transaction upon receipt of transaction for signing.")
-            }
+            alice.rpc.startFlow(::AttachmentFlowV1, bob.nodeInfo.singleIdentity(), defaultNotaryIdentity, hash, spendableState).returnValue.getOrThrow(30.seconds)
+
             assertEquals(0, bob.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
             assertEquals(1, alice.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
             // check transaction records
             @Suppress("DEPRECATION")
-            assertEquals(1, alice.rpc.internalVerifiedTransactionsSnapshot().size)  // issuance only
+            assertEquals(2, alice.rpc.internalVerifiedTransactionsSnapshot().size)  // both
             @Suppress("DEPRECATION")
-            assertTrue(bob.rpc.internalVerifiedTransactionsSnapshot().isEmpty())
+            assertEquals(1, bob.rpc.internalVerifiedTransactionsSnapshot().size)  // issuance only
 
             // restart Bob with correct contract jar version
             (bob as OutOfProcess).process.destroyForcibly()
@@ -97,13 +93,12 @@ class VaultUpdateDeserializationTest {
 
             val restartedBob = startNode(NodeParameters(additionalCordapps = listOf(flowVersion1, contractVersion1)),
                     providedName = BOB_NAME).getOrThrow()
-            // re-run failed flow
-            alice.rpc.startFlow(::AttachmentFlowV1, restartedBob.nodeInfo.singleIdentity(), defaultNotaryIdentity, hash, spendableState).returnValue.getOrThrow(30.seconds)
-
+            // original hospitalized transaction should now have been re-processed with correct contract jar
             assertEquals(1, waitForVaultUpdate(restartedBob))
             assertEquals(1, alice.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
             @Suppress("DEPRECATION")
-            assertTrue(restartedBob.rpc.internalVerifiedTransactionsSnapshot().isNotEmpty())
+            assertEquals(2, restartedBob.rpc.internalVerifiedTransactionsSnapshot().size)  // both
+            assertEquals(1, restartedBob.rpc.vaultQueryBy<AttachmentContractV1.State>().states.size)
         }
     }
 

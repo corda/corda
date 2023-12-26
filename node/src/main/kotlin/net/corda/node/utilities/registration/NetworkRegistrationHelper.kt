@@ -3,7 +3,10 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
+import net.corda.core.internal.isEquivalentTo
+import net.corda.core.internal.safeSymbolicRead
+import net.corda.core.internal.toX500Name
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
@@ -26,7 +29,6 @@ import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
-import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.net.URL
 import java.nio.file.Path
@@ -35,6 +37,12 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import javax.naming.ServiceUnavailableException
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.useLines
+import kotlin.io.path.writeLines
 
 /**
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
@@ -330,7 +338,7 @@ open class NetworkRegistrationHelper(
                 logProgress("Successfully submitted request to Corda certificate signing server, request ID: $requestId.")
                 requestId
             } else {
-                val requestId = requestIdStore.readLines { it.findFirst().get() }
+                val requestId = requestIdStore.useLines { it.first() }
                 logProgress("Resuming from previous certificate signing request, request ID: $requestId.")
                 requestId
             }
@@ -380,7 +388,7 @@ class NodeRegistrationConfiguration(
                 require(it.serviceLegalName != config.myLegalName) {
                     "The notary service legal name must be different from the node legal name"
                 }
-                NotaryServiceConfig(X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS, it.serviceLegalName!!)
+                NotaryServiceConfig(X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS, it.serviceLegalName)
             }
     )
 }
@@ -511,7 +519,7 @@ private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: 
 
     private var counter = times
 
-    override fun invoke(@Suppress("UNUSED_PARAMETER") previousPeriod: Duration?): Duration? {
+    override fun invoke(previousPeriod: Duration?): Duration? {
         synchronized(this) {
             return if (counter-- > 0) period else null
         }

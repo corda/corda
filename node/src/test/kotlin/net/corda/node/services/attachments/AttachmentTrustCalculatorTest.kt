@@ -1,12 +1,13 @@
 package net.corda.node.services.attachments
 
 import com.codahale.metrics.MetricRegistry
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.whenever
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
-import net.corda.core.internal.*
+import net.corda.core.internal.AttachmentTrustCalculator
+import net.corda.core.internal.AttachmentTrustInfo
+import net.corda.core.internal.hash
+import net.corda.core.internal.read
 import net.corda.core.node.ServicesForResolution
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -17,7 +18,6 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -25,9 +25,14 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.div
+import kotlin.io.path.outputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -271,8 +276,8 @@ class AttachmentTrustCalculatorTest {
             val jarV1 = ContractJarTestUtils.makeTestContractJar(path, "foo.bar.DummyContract")
             path.generateKey(alias, password)
             val key1 = path.signJar(jarV1.toAbsolutePath().toString(), alias, password)
-            (path / "_shredder").delete()
-            (path / "_teststore").delete()
+            (path / "_shredder").deleteExisting()
+            (path / "_teststore").deleteExisting()
             path.generateKey(alias, password)
             val jarV2 = ContractJarTestUtils.makeTestContractJar(
                 path,
@@ -624,6 +629,6 @@ class AttachmentTrustCalculatorTest {
         counter++
         val file = Paths.get((tempFolder.root.toPath() / "$counter.jar").toString())
         ContractJarTestUtils.makeTestJar(Files.newOutputStream(file), entries)
-        return Pair(file, file.readAll().sha256())
+        return Pair(file, file.hash)
     }
 }

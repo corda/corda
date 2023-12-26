@@ -4,7 +4,6 @@ import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
@@ -34,6 +33,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 
 class ArtemisRpcTests {
     private val ports: PortAllocation = incrementalPortAllocation()

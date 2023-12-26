@@ -2,7 +2,6 @@ package net.corda.node.services.rpc
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
-import net.corda.core.internal.div
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
@@ -23,6 +22,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 
 class RpcSslTest {
 

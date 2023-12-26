@@ -10,7 +10,6 @@ import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.SerializableLambda2
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.testing.contracts.DummyContract
@@ -22,11 +21,14 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.Test
+import java.io.Serializable
 import java.sql.SQLTransientConnectionException
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
+
+    private fun interface SerializableLambda2<S, T, R> : (S, T) -> R, Serializable
 
     @Test(timeout = 300_000)
     fun `external operation`() {
@@ -293,7 +295,6 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
     @StartableByRPC
     class FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
 
-        @Suppress("TooGenericExceptionCaught")
         @Suspendable
         override fun testCode(): Any {
             try {

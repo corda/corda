@@ -56,7 +56,7 @@ class FlowRecoveryException(message: String, cause: Throwable? = null) : FlowExc
 @CordaSerializable
 data class FlowRecoveryQuery(
         val timeframe: FlowTimeWindow? = null,
-        val initiatedBy: CordaX500Name? = null,
+        val initiatedBy: List<CordaX500Name>? = null,
         val counterParties: List<CordaX500Name>?  = null) {
     init {
         require(timeframe != null || initiatedBy != null || counterParties != null) {

@@ -2,8 +2,6 @@
 
 package net.corda.serialization.internal.amqp
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.whenever
 import net.corda.client.rpc.RPCException
 import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
@@ -56,19 +54,24 @@ import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.catchThrowable
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509v2CRLBuilder
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.junit.Assert.*
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.io.NotSerializableException
 import java.math.BigDecimal
@@ -89,14 +92,11 @@ import java.time.Year
 import java.time.YearMonth
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import java.util.ArrayList
-import java.util.Arrays
 import java.util.BitSet
 import java.util.Currency
 import java.util.Date
 import java.util.EnumMap
 import java.util.EnumSet
-import java.util.HashMap
 import java.util.NavigableMap
 import java.util.Objects
 import java.util.Random
@@ -294,14 +294,14 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         }
         val des = DeserializationInput(freshDeserializationFactory)
         val desObj = des.deserialize(bytes, testSerializationContext.withEncodingWhitelist(encodingWhitelist))
-        assertTrue(deepEquals(obj, desObj) == expectedEqual)
+        assertEquals(deepEquals(obj, desObj), expectedEqual)
 
         // Now repeat with a re-used factory
         val ser2 = SerializationOutput(factory)
         val des2 = DeserializationInput(factory)
         val desObj2 = des2.deserialize(ser2.serialize(obj, compression), testSerializationContext.withEncodingWhitelist(encodingWhitelist))
-        assertTrue(deepEquals(obj, desObj2) == expectedEqual)
-        assertTrue(deepEquals(desObj, desObj2) == expectDeserializedEqual)
+        assertEquals(deepEquals(obj, desObj2), expectedEqual)
+        assertEquals(deepEquals(desObj, desObj2), expectDeserializedEqual)
 
         // TODO: add some schema assertions to check correctly formed.
         return desObj
@@ -374,10 +374,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `test dislike of HashMap`() {
         val obj = WrapHashMap(HashMap())
-        serdes(obj)
+        assertThatIllegalArgumentException().isThrownBy {
+            serdes(obj)
+        }
     }
 
     @Test(timeout=300_000)
@@ -416,12 +418,14 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `test whitelist`() {
         val obj = Woo2(4)
-        serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
-                ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
-        ))
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
+                    ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
+            ))
+        }
     }
 
     @Test(timeout=300_000)
@@ -432,10 +436,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         ))
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `test generic list subclass is not supported`() {
         val obj = FooList()
-        serdes(obj)
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            serdes(obj)
+        }
     }
 
     @Test(timeout=300_000)
@@ -498,28 +504,32 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test(timeout=300_000)
 	fun `test NavigableMap property`() {
-        val obj = NavigableMapWrapper(TreeMap<Int, Foo>())
+        val obj = NavigableMapWrapper(TreeMap())
         obj.tree[456] = Foo("Fred", 123)
         serdes(obj)
     }
 
     @Test(timeout=300_000)
 	fun `test SortedSet property`() {
-        val obj = SortedSetWrapper(TreeSet<Int>())
+        val obj = SortedSetWrapper(TreeSet())
         obj.set += 456
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `test mismatched property and constructor naming`() {
         val obj = Mismatch(456)
-        serdes(obj)
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            serdes(obj)
+        }
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `test mismatched property and constructor type`() {
         val obj = MismatchType(456)
-        serdes(obj)
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            serdes(obj)
+        }
     }
 
     @Test(timeout=300_000)
@@ -575,7 +585,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test(timeout=300_000)
 	fun `generics from java are supported`() {
-        val obj = DummyOptional<String>("YES")
+        val obj = DummyOptional("YES")
         serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
                 ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
         ))
@@ -630,12 +640,10 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     private fun assertSerializedThrowableEquivalent(t: Throwable, desThrowable: Throwable) {
         assertTrue(desThrowable is CordaRuntimeException) // Since we don't handle the other case(s) yet
-        if (desThrowable is CordaRuntimeException) {
-            assertEquals("${t.javaClass.name}: ${t.message}", desThrowable.message)
-            assertTrue(Objects.deepEquals(t.stackTrace.toStackTraceBasic, desThrowable.stackTrace.toStackTraceBasic))
-            assertEquals(t.suppressed.size, desThrowable.suppressed.size)
-            t.suppressed.zip(desThrowable.suppressed).forEach { (before, after) -> assertSerializedThrowableEquivalent(before, after) }
-        }
+        assertEquals("${t.javaClass.name}: ${t.message}", desThrowable.message)
+        assertTrue(Objects.deepEquals(t.stackTrace.toStackTraceBasic, desThrowable.stackTrace.toStackTraceBasic))
+        assertEquals(t.suppressed.size, desThrowable.suppressed.size)
+        t.suppressed.zip(desThrowable.suppressed).forEach { (before, after) -> assertSerializedThrowableEquivalent(before, after) }
     }
 
     @Test(timeout=300_000)
@@ -762,8 +770,8 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertTrue((desState as TransactionState<*>).data is FooState)
-        assertTrue(desState.notary == state.notary)
-        assertTrue(desState.encumbrance == state.encumbrance)
+        assertEquals(desState.notary, state.notary)
+        assertEquals(desState.encumbrance, state.encumbrance)
     }
 
     @Test(timeout=300_000)
@@ -1091,7 +1099,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 @Ignore("Ignored due to cyclic graphs not currently supported by AMQP serialization")
     fun `test serialization of cyclic graph`() {
         val nodeA = TestNode("A")
-        val nodeB = TestNode("B", ArrayList(Arrays.asList(nodeA)))
+        val nodeB = TestNode("B", ArrayList(listOf(nodeA)))
         nodeA.children.add(nodeB)
 
         // Also blows with StackOverflow error
@@ -1330,7 +1338,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(factory2))
 
-        val obj = BitSet.valueOf(kotlin.ByteArray(16) { it.toByte() }).get(0, 123)
+        val obj = BitSet.valueOf(ByteArray(16) { it.toByte() }).get(0, 123)
         serdes(obj, factory, factory2)
     }
 

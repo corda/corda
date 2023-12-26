@@ -1,12 +1,15 @@
 package net.corda.nodeapi.internal.network
 
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.internal.*
+import net.corda.core.internal.toMultiMap
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.nodeapi.internal.ContractsJar
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import kotlin.io.path.div
+import kotlin.io.path.exists
+import kotlin.io.path.readLines
 
 private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
 private const val INCLUDE_WHITELIST_FILE_NAME = "include_whitelist.txt"
@@ -37,7 +40,7 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
             .flatMap { jar -> (jar.scan()).filter { includeContracts.contains(it) }.map { it to jar.hash } }
             .toMultiMap()
 
-    return (newWhiteList.keys + existingWhitelist.keys + newSignedJarsWhiteList.keys).associateBy({ it }) {
+    return (newWhiteList.keys + existingWhitelist.keys + newSignedJarsWhiteList.keys).associateWith {
         val existingHashes = existingWhitelist[it] ?: emptyList()
         val newHashes = newWhiteList[it] ?: emptyList()
         val newHashesFormSignedJar = newSignedJarsWhiteList[it] ?: emptyList()
@@ -49,4 +52,4 @@ fun readExcludeWhitelist(directory: Path): List<String> = readAllLines(directory
 
 fun readIncludeWhitelist(directory: Path): List<String> = readAllLines(directory / INCLUDE_WHITELIST_FILE_NAME)
 
-private fun readAllLines(path: Path) : List<String> = if (path.exists()) path.readAllLines().map(String::trim) else emptyList()
+private fun readAllLines(path: Path): List<String> = if (path.exists()) path.readLines().map(String::trim) else emptyList()

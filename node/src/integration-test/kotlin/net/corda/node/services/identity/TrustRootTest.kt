@@ -4,7 +4,6 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.div
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.finance.DOLLARS
@@ -36,6 +35,7 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
 import javax.security.auth.x500.X500Principal
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 
 class TrustRootTest {

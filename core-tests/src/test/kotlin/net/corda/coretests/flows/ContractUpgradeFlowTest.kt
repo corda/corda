@@ -1,34 +1,55 @@
 package net.corda.coretests.flows
 
-import com.natpryce.hamkrest.*
+import com.natpryce.hamkrest.Matcher
+import com.natpryce.hamkrest.and
+import com.natpryce.hamkrest.anything
 import com.natpryce.hamkrest.assertion.assertThat
-import net.corda.core.contracts.*
+import com.natpryce.hamkrest.equalTo
+import com.natpryce.hamkrest.has
+import com.natpryce.hamkrest.isA
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.CommandAndState
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.UpgradedContractWithLegacyConstraint
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.getRequiredTransaction
+import net.corda.core.internal.mapToSet
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.finance.USD
-import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.`issued by`
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.contracts.DummyContractV3
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.coretesting.internal.matchers.flow.willReturn
-import net.corda.coretesting.internal.matchers.flow.willThrow
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
-import org.junit.Ignore
 import org.junit.Test
-import java.util.*
+import java.util.Currency
 
-@Ignore("TODO JDK17: class cast exception")
 class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
     companion object {
@@ -161,7 +182,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         @BelongsToContract(CashV2::class)
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()
-            override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()
+            override val exitKeys = (owners + amount.token.issuer.party).mapToSet { it.owningKey }
             override val participants = owners
 
             override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
@@ -182,8 +203,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
                     isUpgrade<FROM, TO>())
 
     private fun TestStartedNode.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
-            services.validatedTransactions.getTransaction(state.ref.txhash)!!
-                    .resolveContractUpgradeTransaction(services)
+            services.getRequiredTransaction(state.ref.txhash).resolveContractUpgradeTransaction(services)
 
     private inline fun <reified FROM : Any, reified TO : Any> isUpgrade() =
             isUpgradeFrom<FROM>() and isUpgradeTo<TO>()

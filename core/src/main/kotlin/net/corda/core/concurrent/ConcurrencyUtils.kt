@@ -1,7 +1,7 @@
 @file:JvmName("ConcurrencyUtils")
 package net.corda.core.concurrent
 
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.CordaInternal
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger
@@ -27,10 +27,9 @@ fun <V, W> Future<V>.match(success: (V) -> W, failure: (Throwable) -> W): W {
 fun <V, W> firstOf(vararg futures: CordaFuture<out V>, handler: (CordaFuture<out V>) -> W) = firstOf(futures, defaultLog, handler)
 
 private val defaultLog = LoggerFactory.getLogger("net.corda.core.concurrent")
-@VisibleForTesting
-const val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 
-fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
+@CordaInternal
+internal fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler: (CordaFuture<out V>) -> W): CordaFuture<W> {
     val resultFuture = openFuture<W>()
     val winnerChosen = AtomicBoolean()
     futures.forEach {
@@ -40,7 +39,7 @@ fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger, handler:
                 it.isCancelled -> {
                     // Do nothing.
                 }
-                else -> it.match({}, { log.error(shortCircuitedTaskFailedMessage, it) })
+                else -> it.match({}, { log.error("Short-circuited task failed:", it) })
             }
         }
     }

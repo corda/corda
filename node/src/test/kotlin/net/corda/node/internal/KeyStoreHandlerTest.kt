@@ -5,7 +5,6 @@ import org.mockito.kotlin.whenever
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
@@ -36,6 +35,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.KeyPair
 import java.security.PublicKey
+import kotlin.io.path.div
 
 @Ignore("TODO JDK17: Fixme")
 class KeyStoreHandlerTest {

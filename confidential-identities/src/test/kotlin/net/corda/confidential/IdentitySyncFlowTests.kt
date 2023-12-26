@@ -23,7 +23,6 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -48,7 +47,6 @@ class IdentitySyncFlowTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: class cast exception")
 	fun `sync confidential identities`() {
         // Set up values we'll need
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -77,7 +75,6 @@ class IdentitySyncFlowTests {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: class cast exception")
 	fun `don't offer other's identities confidential identities`() {
         // Set up values we'll need
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)

@@ -1,10 +1,7 @@
 package net.corda.bootstrapper
 
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import net.corda.core.internal.copyTo
+import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.network.CopyCordapps
 import net.corda.nodeapi.internal.network.NetworkBootstrapperWithOverridableParameters
@@ -13,7 +10,13 @@ import net.corda.nodeapi.internal.network.PackageOwner
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.getPublicKey
-import org.junit.*
+import org.junit.After
+import org.junit.AfterClass
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
 import java.io.PrintStream
@@ -21,6 +24,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
+import kotlin.io.path.Path
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -58,11 +63,7 @@ class NetworkBootstrapperRunnerTests {
         private lateinit var alicePublicKeyEC: PublicKey
         private lateinit var alicePublicKeyDSA: PublicKey
 
-        private val resourceDirectory = Paths.get(".") / "src" / "test" / "resources"
-
-        private fun String.copyToTestDir(dir: Path = dirAlice): Path {
-            return (resourceDirectory / this).copyTo(dir / this)
-        }
+        private fun String.copyToTestDir(dir: Path = dirAlice): Path = Path("src", "test", "resources", this).copyToDirectory(dir)
 
         @BeforeClass
         @JvmStatic

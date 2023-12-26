@@ -4,7 +4,8 @@ apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
 
 dependencies {
-    implementation project(':core')
+    api project(':core')
+
     implementation project(':serialization')
 
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
@@ -27,6 +28,7 @@ dependencies {
     testImplementation project(':test-common')
     testImplementation project(':core-test-utils')
     testImplementation project(':test-utils')
+    testImplementation project(":node-driver")
     testImplementation project(path: ':core', configuration: 'testArtifacts')
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

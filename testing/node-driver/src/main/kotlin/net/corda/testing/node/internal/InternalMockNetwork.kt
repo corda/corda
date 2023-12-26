@@ -1,7 +1,5 @@
 package net.corda.testing.node.internal
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.whenever
 import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
@@ -15,10 +13,8 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.deleteIfExists
-import net.corda.core.internal.div
 import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
@@ -27,7 +23,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -74,6 +69,8 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.TestClock
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import rx.Observable
 import rx.Scheduler
 import rx.internal.schedulers.CachedThreadScheduler
@@ -85,6 +82,9 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
 
 val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -116,9 +116,6 @@ data class InternalMockNodeParameters(
     )
 }
 
-/**
- * A [StartedNode] which exposes its internal [InternalMockNetwork.MockNode] for testing.
- */
 interface TestStartedNode {
     val internals: InternalMockNetwork.MockNode
     val info: NodeInfo
@@ -170,7 +167,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
     companion object {
         fun createCordappClassLoader(cordapps: Collection<TestCordappInternal>?): URLClassLoader? {
-            if (cordapps == null || cordapps.isEmpty()) {
+            if (cordapps.isNullOrEmpty()) {
                 return null
             }
             return URLClassLoader(cordapps.map { it.jarFile.toUri().toURL() }.toTypedArray())
@@ -352,7 +349,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         private val entropyCounter = AtomicReference(args.entropyRoot)
         override val log get() = staticLog
-        override val transactionVerifierWorkerCount: Int get() = 1
 
         private var _rxIoScheduler: Scheduler? = null
         override val rxIoScheduler: Scheduler
@@ -455,18 +451,15 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             return if (track) {
                 smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             } else {
-                Observable.empty<T>()
+                Observable.empty()
             }
         }
 
         override fun makeNetworkParametersStorage(): NetworkParametersStorage = MockNetworkParametersStorage()
     }
 
-    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
-        return createUnstartedNode(parameters, defaultFactory)
-    }
-
-    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> MockNode): MockNode {
+    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(),
+                            nodeFactory: (MockNodeArgs) -> MockNode = defaultFactory): MockNode {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
@@ -669,16 +662,17 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
 }
 
 class MockNodeFlowManager : NodeFlowManager() {
-    val testingRegistrations = HashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
+    private val testingRegistrations = HashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
+
     override fun getFlowFactoryForInitiatingFlow(initiatedFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
         if (initiatedFlowClass in testingRegistrations) {
-            return testingRegistrations.get(initiatedFlowClass)
+            return testingRegistrations[initiatedFlowClass]
         }
         return super.getFlowFactoryForInitiatingFlow(initiatedFlowClass)
     }
 
     fun registerTestingFactory(initiator: Class<out FlowLogic<*>>, factory: InitiatedFlowFactory<*>) {
-        testingRegistrations.put(initiator, factory)
+        testingRegistrations[initiator] = factory
     }
 }
 

@@ -1,16 +1,24 @@
 package net.corda.nodeapi.internal.persistence
 
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.node.ServiceHub
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.sql.Connection
 import java.sql.Savepoint
 
 class RestrictedConnectionTest {
+    companion object {
+        private const val TEST_STRING: String = "test"
+        private const val TEST_INT: Int = 1
+    }
 
     private val connection: Connection = mock()
     private val savePoint: Savepoint = mock()
@@ -21,212 +29,227 @@ class RestrictedConnectionTest {
     }
     private val restrictedConnection: RestrictedConnection = RestrictedConnection(connection, serviceHub)
 
-    companion object {
-        private const val TEST_STRING: String = "test"
-        private const val TEST_INT: Int = 1
+    @Rule
+    @JvmField
+    val assertUnsupportedExceptionBasedOnTestName = TestRule { base, description ->
+        object : Statement() {
+            override fun evaluate() {
+                val exception = try {
+                    base.evaluate()
+                    null
+                } catch (e: UnsupportedOperationException) {
+                    e
+                }
+                if (description.methodName.endsWith(" throws unsupported exception")) {
+                    assertThat(exception).isNotNull()
+                } else {
+                    assertThat(exception).isNull()
+                }
+            }
+        }
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `abort with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.abort { println("I'm just an executor for this test...") }
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `clearWarnings with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.clearWarnings()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `close with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.close()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `commit with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.commit()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setSavepoint with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.setSavepoint()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setSavepoint with name with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.setSavepoint(TEST_STRING)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `releaseSavepoint with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.releaseSavepoint(savePoint)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `rollback with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.rollback()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `rollbackWithSavepoint with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.rollback(savePoint)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setCatalog with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.catalog = TEST_STRING
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setTransactionIsolation with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.transactionIsolation = TEST_INT
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setTypeMap with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         val map: MutableMap<String, Class<*>> = mutableMapOf()
         restrictedConnection.typeMap = map
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setHoldability with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.holdability = TEST_INT
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setSchema with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.schema = TEST_STRING
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setNetworkTimeout with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.setNetworkTimeout({ println("I'm just an executor for this test...") }, TEST_INT)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setAutoCommit with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.autoCommit = true
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setReadOnly with target platform version of current corda version throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(PLATFORM_VERSION)
         restrictedConnection.isReadOnly = true
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `abort with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.abort { println("I'm just an executor for this test...") }
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `clearWarnings with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.clearWarnings()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `close with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.close()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `commit with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.commit()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setSavepoint with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.setSavepoint()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setSavepoint with name with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.setSavepoint(TEST_STRING)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `releaseSavepoint with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.releaseSavepoint(savePoint)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `rollback with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.rollback()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `rollbackWithSavepoint with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.rollback(savePoint)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setCatalog with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.catalog = TEST_STRING
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setTransactionIsolation with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.transactionIsolation = TEST_INT
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setTypeMap with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         val map: MutableMap<String, Class<*>> = mutableMapOf()
         restrictedConnection.typeMap = map
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setHoldability with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.holdability = TEST_INT
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
-    fun `setSchema with target platform version of current 7 unsupported exception`() {
+    @Test(timeout = 300_000)
+    fun `setSchema with target platform version of current 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.schema = TEST_STRING
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setNetworkTimeout with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.setNetworkTimeout({ println("I'm just an executor for this test...") }, TEST_INT)
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setAutoCommit with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.autoCommit = true
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `setReadOnly with target platform version of 7 throws unsupported exception`() {
         whenever(cordapp.targetPlatformVersion).thenReturn(7)
         restrictedConnection.isReadOnly = true

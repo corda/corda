@@ -23,22 +23,22 @@ import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.singleIdentity
-import net.corda.coretesting.internal.matchers.flow.willReturn
-import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
-import org.hamcrest.CoreMatchers.`is`
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.AfterClass
-import org.junit.Assert
 import org.junit.Test
 import java.security.PublicKey
 
@@ -92,7 +92,7 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        Assert.assertThat(missingSigners, `is`(emptySet()))
+        assertThat(missingSigners).isEmpty()
     }
 
     @Test(timeout=300_000)
@@ -122,10 +122,10 @@ class CollectSignaturesFlowTests : WithContracts {
         mockNet.runNetwork()
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
-        Assert.assertThat(missingSigners, `is`(emptySet()))
+        assertThat(missingSigners).isEmpty()
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `throws exception when extra sessions are initiated`() {
         bobNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
         charlieNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
@@ -137,7 +137,9 @@ class CollectSignaturesFlowTests : WithContracts {
                 listOf(bobNode.info.singleIdentity(), alice)))
                 .resultFuture
         mockNet.runNetwork()
-        future.getOrThrow()
+        assertThatIllegalArgumentException().isThrownBy {
+            future.getOrThrow()
+        }
     }
 
     @Test(timeout=300_000)
@@ -152,7 +154,7 @@ class CollectSignaturesFlowTests : WithContracts {
                 listOf(bobNode.info.singleIdentity(), alice))).resultFuture
         mockNet.runNetwork()
         val signedTx = future.getOrThrow()
-        Assert.assertThat(signedTx.getMissingSigners(), `is`(emptySet()))
+        assertThat(signedTx.getMissingSigners()).isEmpty()
     }
 
     @Test(timeout=300_000)
@@ -216,7 +218,7 @@ class CollectSignaturesFlowTests : WithContracts {
             }
         }
 
-        @InitiatedBy(TestFlow.Initiator::class)
+        @InitiatedBy(Initiator::class)
         class Responder(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
@@ -251,7 +253,7 @@ class AnonymousSessionTestFlow(private val cis: List<PartyAndCertificate>) : Flo
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
-        val create = net.corda.testing.contracts.DummyContract.Commands.Create()
+        val create = DummyContract.Commands.Create()
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
                 .addCommand(create, cis.map { it.owningKey })
@@ -289,7 +291,7 @@ class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertific
             }
         }
         val state = DummyContract.MultiOwnerState(owners = cis.map { AnonymousParty(it.owningKey) })
-        val create = net.corda.testing.contracts.DummyContract.Commands.Create()
+        val create = DummyContract.Commands.Create()
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
                 .addCommand(create, cis.map { it.owningKey })
@@ -324,7 +326,7 @@ class ExtraSessionsFlow(private val openFor: List<Party>, private val involve: L
 
         val sessions = openFor.map { initiateFlow(it) }
         val state = DummyContract.MultiOwnerState(owners = involve.map { AnonymousParty(it.owningKey) })
-        val create = net.corda.testing.contracts.DummyContract.Commands.Create()
+        val create = DummyContract.Commands.Create()
         val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(state)
                 .addCommand(create, involve.map { it.owningKey })

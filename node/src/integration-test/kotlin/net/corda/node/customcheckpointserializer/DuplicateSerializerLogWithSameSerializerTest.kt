@@ -12,11 +12,9 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.logFile
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions
-import org.junit.Ignore
 import org.junit.Test
 import java.time.Duration
 
-@Ignore("TODO JDK17: Fixme")
 class DuplicateSerializerLogWithSameSerializerTest {
     @Test(timeout=300_000)
     fun `check duplicate serialisers are logged not logged for the same class`() {

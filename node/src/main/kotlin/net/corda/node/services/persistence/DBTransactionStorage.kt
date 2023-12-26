@@ -37,6 +37,7 @@ import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
+import org.hibernate.annotations.Type
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Instant
@@ -77,6 +78,7 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
             val timestamp: Instant,
 
             @Column(name = "signatures")
+            @Type(type = "corda-blob")
             val signatures: ByteArray?
     )
 

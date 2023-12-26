@@ -3,7 +3,13 @@
 
 package net.corda.nodeapi.internal.config
 
-import com.typesafe.config.*
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigUtil
+import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.ConfigValueType
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.isStatic
 import net.corda.core.internal.noneOrSingle
@@ -22,7 +28,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.Temporal
-import java.util.*
+import java.util.Properties
+import java.util.UUID
 import javax.security.auth.x500.X500Principal
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -99,7 +106,7 @@ fun <T : Any> Config.parseAs(
             .toSortedSet()
     onUnknownKeys.invoke(unknownConfigurationKeys, logger)
 
-    val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateBy({ it }) { param ->
+    val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateWith { param ->
         // Get the matching property for this parameter
         val property = clazz.memberProperties.first { it.name == param.name }
         val path = defaultToOldPath(property)
@@ -181,7 +188,7 @@ private fun Config.getSingleValue(
             X500Principal::class -> X500Principal(getString(path))
             CordaX500Name::class -> {
                 when (getValue(path).valueType()) {
-                    ConfigValueType.OBJECT -> getConfig(path).parseAs(onUnknownKeys)
+                    ConfigValueType.OBJECT -> getConfig(path).parseAs(onUnknownKeys) as CordaX500Name
                     else -> CordaX500Name.parse(getString(path))
                 }
             }

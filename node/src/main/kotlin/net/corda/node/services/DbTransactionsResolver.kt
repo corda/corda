@@ -13,6 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import java.util.*
 
@@ -107,7 +108,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
             }
             if (txStatus == TransactionStatus.UNVERIFIED) {
                 tx.verify(flow.serviceHub)
-                flow.serviceHub.recordTransactions(usedStatesToRecord, listOf(tx))
+                (flow.serviceHub as ServiceHubInternal).recordTransactions(usedStatesToRecord, listOf(tx), false, disableSoftLocking = true)
             } else {
                 logger.debug { "No need to record $txId as it's already been verified" }
             }

@@ -8,8 +8,8 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.contracts.TransactionVerificationException.PackageOwnershipException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
-import net.corda.core.internal.JDK11_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION
+import net.corda.core.internal.JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.PlatformVersionSwitches
@@ -118,16 +118,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     // Reset the value to prevent Error due to a factory already defined
                     factoryField.set(null, null)
                     // Set our custom factory and wrap the current one into it
-                    URL.setURLStreamHandlerFactory(
-                            // Set the factory to a decorator
-                            object : URLStreamHandlerFactory {
-                                // route between our own and the pre-existing factory
-                                override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
-                                    return AttachmentURLStreamHandlerFactory.createURLStreamHandler(protocol)
-                                            ?: existingFactory.createURLStreamHandler(protocol)
-                                }
-                            }
-                    )
+                    URL.setURLStreamHandlerFactory { protocol ->
+                        // route between our own and the pre-existing factory
+                        AttachmentURLStreamHandlerFactory.createURLStreamHandler(protocol)
+                                ?: existingFactory.createURLStreamHandler(protocol)
+                    }
                 }
             }
         }
@@ -158,9 +153,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         checkAttachments(attachments)
     }
 
-    private class AttachmentHashContext(
-            val txId: SecureHash,
-            val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE))
+    private class AttachmentHashContext(val buffer: ByteArray = ByteArray(DEFAULT_BUFFER_SIZE))
 
     private fun hash(inputStream : InputStream, ctx : AttachmentHashContext) : SecureHash.SHA256 {
         val md = MessageDigest.getInstance(SecureHash.SHA2_256)
@@ -189,7 +182,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     // This function attempts to strike a balance between security and usability when it comes to the no-overlap rule.
     // TODO - investigate potential exploits.
     private fun shouldCheckForNoOverlap(path: String, targetPlatformVersion: Int): Boolean {
-        require(path.toLowerCase() == path)
+        require(path.lowercase() == path)
         require(!path.contains('\\'))
 
         return when {
@@ -234,7 +227,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // claim their parts of the Java package namespace via registration with the zone operator.
 
         val classLoaderEntries = mutableMapOf<String, SecureHash>()
-        val ctx = AttachmentHashContext(sampleTxId)
+        val ctx = AttachmentHashContext()
         for (attachment in attachments) {
             // We may have been given an attachment loaded from the database in which case, important info like
             // signers is already calculated.
@@ -270,7 +263,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
                     //
                     // Also convert to Unix path separators as all resource/class lookups will expect this.
-                    val path = entry.name.toLowerCase(Locale.US).replace('\\', '/')
+                    val path = entry.name.lowercase(Locale.US).replace('\\', '/')
 
                     // Namespace ownership. We only check class files: resources are loaded relative to a JAR anyway.
                     if (path.endsWith(".class")) {
@@ -285,7 +278,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                         for ((namespace, pubkey) in params.packageOwnership) {
                             // Note that due to the toLowerCase() call above, we'll be comparing against a lowercased
                             // version of the ownership claim.
-                            val ns = namespace.toLowerCase(Locale.US)
+                            val ns = namespace.lowercase(Locale.US)
                             // We need an additional . to avoid matching com.foo.Widget against com.foobar.Zap
                             if (pkgName == ns || pkgName.startsWith("$ns.")) {
                                 if (pubkey !in signers)
@@ -358,12 +351,12 @@ object AttachmentsClassLoaderBuilder {
         val attachmentIds = attachments.mapTo(LinkedHashSet(), Attachment::id)
 
         val cache = attachmentsClassLoaderCache ?: fallBackCache
-        val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function { key ->
+        val cachedSerializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params)) { key ->
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, key.params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
-                        JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK11_CLASS_FILE_FORMAT_MAJOR_VERSION)
+                        JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION)
             } catch (ex: UnsupportedClassVersionError) {
                 throw TransactionVerificationException.UnsupportedClassVersionError(txId, ex.message!!, ex)
             }
@@ -380,9 +373,9 @@ object AttachmentsClassLoaderBuilder {
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        })
+        }
 
-        val serializationContext = cachedSerializationContext.withProperties(mapOf<Any, Any>(
+        val serializationContext = cachedSerializationContext.withProperties(mapOf(
                 // Duplicate the SerializationContext from the cache and give
                 // it these extra properties, just for this transaction.
                 // However, keep a strong reference to the cached SerializationContext so we can
@@ -489,7 +482,6 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
     private val toBeClosed = ConcurrentHashMap.newKeySet<ToBeClosed>()
     private val expiryQueue = ReferenceQueue<SerializationContext>()
 
-    @Suppress("TooGenericExceptionCaught")
     private fun purgeExpiryQueue() {
         // Close the AttachmentsClassLoader for every SerializationContext
         // that has already been garbage-collected.

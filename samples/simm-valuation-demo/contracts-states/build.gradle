@@ -122,5 +122,5 @@ jar.finalizedBy shrink
 shrink.finalizedBy sign
 
 artifacts {
-//    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
+    shrinkArtifacts shrinkJar
 }

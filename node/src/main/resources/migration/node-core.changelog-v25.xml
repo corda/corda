@@ -39,7 +39,7 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_sender_distr_recs_add_indexes">
-        <createIndex indexName="node_sender_distr_recs_keyinfo_idx" tableName="node_sender_distr_recs">
+        <createIndex indexName="node_sender_distr_recs_idx1" tableName="node_sender_distr_recs">
             <column name="transaction_id"/>
             <column name="timestamp"/>
             <column name="timestamp_discriminator"/>
@@ -75,7 +75,7 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="node_receiver_distr_recs_add_indexes">
-        <createIndex indexName="node_receiver_distr_recs_keyinfo_idx" tableName="node_receiver_distr_recs">
+        <createIndex indexName="node_receiver_distr_recs_idx1" tableName="node_receiver_distr_recs">
             <column name="transaction_id"/>
             <column name="timestamp"/>
             <column name="timestamp_discriminator"/>
