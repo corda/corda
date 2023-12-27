@@ -292,7 +292,8 @@ private fun Any.toConfigMap(): Map<String, Any?> {
     for (field in javaClass.declaredFields) {
         if (field.isStatic || field.isSynthetic) continue
         field.isAccessible = true
-        values[field.name] = sanitiseForFromAnyRef(field.get(this))
+        val value = field.get(this) ?: continue
+        values[field.name] = sanitiseForFromAnyRef(value)
     }
     return values
 }

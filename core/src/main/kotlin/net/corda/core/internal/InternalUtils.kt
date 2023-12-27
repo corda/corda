@@ -1,5 +1,10 @@
 package net.corda.core.internal
 
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.ImmutableSortedMap
+import com.google.common.collect.ImmutableSortedSet
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
@@ -49,6 +54,8 @@ import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.Collections
 import java.util.PrimitiveIterator
+import java.util.SortedMap
+import java.util.SortedSet
 import java.util.Spliterator
 import java.util.Spliterator.DISTINCT
 import java.util.Spliterator.IMMUTABLE
@@ -150,6 +157,70 @@ inline fun <T, R> Iterable<T>.flatMapToSet(transform: (T) -> Iterable<R>): Set<R
         emptySet()
     } else {
         flatMapTo(LinkedHashSet(), transform)
+    }
+}
+
+/**
+ * Returns an immutable [List] which cannot be modified, nor its contents changed indirectly via the receiver.
+ */
+fun <T> Collection<T>.toImmutableList(): List<T> {
+    return when (size) {
+        0 -> emptyList()
+        1 -> listOf(first())
+        else -> ImmutableList.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable [Set] which cannot be modified, nor its contents changed indirectly via the receiver.
+ */
+fun <T> Collection<T>.toImmutableSet(): Set<T> {
+    return when (size) {
+        0 -> emptySet()
+        1 -> setOf(first())
+        else -> ImmutableSet.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable [SortedSet] which cannot be modified, nor its contents changed indirectly via the receiver.
+ */
+fun <T> Collection<T>.toImmutableSortedSet(): SortedSet<T> {
+    return when (size) {
+        0 -> Collections.emptySortedSet()
+        else -> ImmutableSortedSet.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable [Map] which cannot be modified, nor its contents changed indirectly via the receiver.
+ */
+fun <K, V> Map<K, V>.toImmutableMap(): Map<K, V> {
+    return when (size) {
+        0 -> emptyMap()
+        else -> ImmutableMap.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable [Map] which cannot be modified, nor its contents changed indirectly via the receiver.
+ */
+inline fun <K1, K2, V1, V2> Map<K1, V1>.toImmutableMap(transform: (Map.Entry<K1, V1>) -> Map.Entry<K2, V2>): Map<K2, V2> {
+    @Suppress("UnstableApiUsage")
+    return when (size) {
+        0 -> emptyMap()
+        else -> ImmutableMap.copyOf(entries.map(transform))
+    }
+}
+
+
+/**
+ * Returns an immutable [SortedMap] which cannot be modified, nor its contents changed indirectly via the receiver.
+ */
+fun <K, V> Map<K, V>.toImmutableSortedMap(): SortedMap<K, V> {
+    return when (size) {
+        0 -> Collections.emptySortedMap()
+        else -> ImmutableSortedMap.copyOf(this)
     }
 }
 

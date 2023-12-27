@@ -1,5 +1,7 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.internal.toImmutableMap
+import net.corda.core.internal.toImmutableSortedMap
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -9,8 +11,13 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
-import kotlin.collections.LinkedHashMap
+import java.util.Collections
+import java.util.Dictionary
+import java.util.EnumMap
+import java.util.NavigableMap
+import java.util.SortedMap
+import java.util.TreeMap
+import java.util.WeakHashMap
 
 private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 
@@ -26,8 +33,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
         // NB: Order matters in this map, the most specific classes should be listed at the end
         private val supportedTypes: Map<Class<out Map<*, *>>, MapCreationFunction> = Collections.unmodifiableMap(linkedMapOf(
                 // Interfaces
-                Map::class.java to { map -> Collections.unmodifiableMap(map) },
-                SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
+                Map::class.java to { map -> map.toImmutableMap() },
+                SortedMap::class.java to { map -> map.toImmutableSortedMap() },
                 NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) },
                 // concrete classes for user convenience
                 LinkedHashMap::class.java to { map -> LinkedHashMap(map) },

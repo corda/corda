@@ -22,6 +22,7 @@ import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.eagerDeserialise
 import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.toImmutableList
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.verification.AbstractVerifier
 import net.corda.core.internal.verification.Verifier
@@ -32,7 +33,6 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.utilities.contextLogger
-import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
 import java.util.function.Supplier
 
@@ -125,18 +125,6 @@ private constructor(
     companion object {
         private val logger = contextLogger()
 
-        private fun <T> protect(list: List<T>): List<T> {
-            return list.run {
-                if (isEmpty()) {
-                    emptyList()
-                } else {
-                    unmodifiableList(this)
-                }
-            }
-        }
-
-        private fun <T> protectOrNull(list: List<T>?): List<T>? = list?.let(::protect)
-
         @CordaInternal
         internal fun create(
                 inputs: List<StateAndRef<ContractState>>,
@@ -168,9 +156,9 @@ private constructor(
                     privacySalt = privacySalt,
                     networkParameters = networkParameters,
                     references = references,
-                    componentGroups = protectOrNull(componentGroups),
-                    serializedInputs = protectOrNull(serializedInputs),
-                    serializedReferences = protectOrNull(serializedReferences),
+                    componentGroups = componentGroups?.toImmutableList(),
+                    serializedInputs = serializedInputs?.toImmutableList(),
+                    serializedReferences = serializedReferences?.toImmutableList(),
                     isAttachmentTrusted = isAttachmentTrusted,
                     verifierFactory = verifierFactory,
                     attachmentsClassLoaderCache = attachmentsClassLoaderCache,
@@ -197,16 +185,16 @@ private constructor(
                 references: List<StateAndRef<ContractState>>,
                 digestService: DigestService): LedgerTransaction {
             return LedgerTransaction(
-                inputs = protect(inputs),
-                outputs = protect(outputs),
-                commands = protect(commands),
-                attachments = protect(attachments),
+                inputs = inputs.toImmutableList(),
+                outputs = outputs.toImmutableList(),
+                commands = commands.toImmutableList(),
+                attachments = attachments.toImmutableList(),
                 id = id,
                 notary = notary,
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = protect(references),
+                references = references.toImmutableList(),
                 componentGroups = null,
                 serializedInputs = null,
                 serializedReferences = null,

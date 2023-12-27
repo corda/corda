@@ -19,6 +19,8 @@ configurations {
 }
 
 dependencies {
+    api "io.reactivex:rxjava:$rxjava_version"
+
     implementation "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
     compileOnly project(':opentelemetry')
 
@@ -52,9 +54,6 @@ dependencies {
 
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
-
-    // RxJava: observable streams of events.
-    implementation "io.reactivex:rxjava:$rxjava_version"
     
     implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
 

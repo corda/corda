@@ -5,6 +5,8 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.noPackageOverlap
 import net.corda.core.internal.requirePackageValid
+import net.corda.core.internal.toImmutableList
+import net.corda.core.internal.toImmutableMap
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
@@ -12,8 +14,7 @@ import net.corda.core.utilities.days
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.Collections.unmodifiableList
-import java.util.Collections.unmodifiableMap
+import java.util.Map.entry
 
 // DOCSTART 1
 /**
@@ -245,35 +246,17 @@ data class NetworkParameters(
     fun toImmutable(): NetworkParameters {
         return NetworkParameters(
             minimumPlatformVersion = minimumPlatformVersion,
-            notaries = unmodifiable(notaries),
+            notaries = notaries.toImmutableList(),
             maxMessageSize = maxMessageSize,
             maxTransactionSize = maxTransactionSize,
             modifiedTime = modifiedTime,
             epoch = epoch,
-            whitelistedContractImplementations = unmodifiable(whitelistedContractImplementations) { entry ->
-                unmodifiableList(entry.value)
-            },
+            whitelistedContractImplementations = whitelistedContractImplementations.toImmutableMap { entry(it.key, it.value.toImmutableList()) },
             eventHorizon = eventHorizon,
-            packageOwnership = unmodifiable(packageOwnership),
+            packageOwnership = packageOwnership.toImmutableMap(),
             recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,
             confidentialIdentityMinimumBackupInterval = confidentialIdentityMinimumBackupInterval
         )
-    }
-}
-
-private fun <T> unmodifiable(list: List<T>): List<T> {
-    return if (list.isEmpty()) {
-        emptyList()
-    } else {
-        unmodifiableList(list)
-    }
-}
-
-private inline fun <K, V> unmodifiable(map: Map<K, V>, transform: (Map.Entry<K, V>) -> V = Map.Entry<K, V>::value): Map<K, V> {
-    return if (map.isEmpty()) {
-        emptyMap()
-    } else {
-        unmodifiableMap(map.mapValues(transform))
     }
 }
 

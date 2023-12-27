@@ -26,7 +26,7 @@ import kotlin.collections.LinkedHashMap
 import kotlin.collections.LinkedHashSet
 
 @RunWith(Parameterized::class)
-class ArrayListItrConcurrentModificationException(private val compression: CordaSerializationEncoding?) {
+class ArrayListItrConcurrentModificationExceptionTest(private val compression: CordaSerializationEncoding?) {
     companion object {
         @Parameters(name = "{0}")
         @JvmStatic

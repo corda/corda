@@ -1,5 +1,8 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.internal.toImmutableList
+import net.corda.core.internal.toImmutableSet
+import net.corda.core.internal.toImmutableSortedSet
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -9,8 +12,10 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.*
-import kotlin.collections.LinkedHashSet
+import java.util.Collections
+import java.util.NavigableSet
+import java.util.SortedSet
+import java.util.TreeSet
 
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
@@ -26,9 +31,9 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
         // NB: Order matters in this map, the most specific classes should be listed at the end
         private val supportedTypes: Map<Class<out Collection<*>>, (List<*>) -> Collection<*>> = Collections.unmodifiableMap(linkedMapOf(
                 Collection::class.java to { list -> Collections.unmodifiableCollection(list) },
-                List::class.java to { list -> Collections.unmodifiableList(list) },
-                Set::class.java to { list -> Collections.unmodifiableSet(LinkedHashSet(list)) },
-                SortedSet::class.java to { list -> Collections.unmodifiableSortedSet(TreeSet(list)) },
+                List::class.java to { list -> list.toImmutableList() },
+                Set::class.java to { list -> list.toImmutableSet() },
+                SortedSet::class.java to { list -> list.toImmutableSortedSet() },
                 NavigableSet::class.java to { list -> Collections.unmodifiableNavigableSet(TreeSet(list)) },
                 NonEmptySet::class.java to { list -> NonEmptySet.copyOf(list) }
         ))

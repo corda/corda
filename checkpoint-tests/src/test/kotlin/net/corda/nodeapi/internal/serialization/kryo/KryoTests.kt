@@ -37,8 +37,6 @@ import net.corda.serialization.internal.encodingNotPermittedFormat
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
-import org.apache.commons.lang3.JavaVersion
-import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.catchThrowable
@@ -394,11 +392,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val obj = Holder(ByteArray(20000))
         val uncompressedSize = obj.checkpointSerialize(context.withEncoding(null)).size
         val compressedSize = obj.checkpointSerialize(context.withEncoding(CordaSerializationEncoding.SNAPPY)).size
-        // If these need fixing, sounds like Kryo wire format changed and checkpoints might not survive an upgrade.
-        if (SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11))
-            assertEquals(20127, uncompressedSize)
-        else
-            assertEquals(20234, uncompressedSize)
+        assertEquals(20127, uncompressedSize)
         assertEquals(1095, compressedSize)
     }
 }
