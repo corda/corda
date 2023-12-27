@@ -388,21 +388,21 @@ object AttachmentsClassLoaderBuilder {
  * This will not be exposed as an API.
  */
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
-    internal const val ATTACHMENT_SCHEME = "attachment"
+    internal const val attachmentScheme = "attachment"
 
     private val uniqueness = AtomicLong(0)
 
     private val loadedAttachments: AttachmentsHolder = AttachmentsHolderImpl()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
-        return if (ATTACHMENT_SCHEME == protocol) {
+        return if (attachmentScheme == protocol) {
             AttachmentURLStreamHandler
         } else null
     }
 
     @Synchronized
     fun toUrl(attachment: Attachment): URL {
-        val uniqueURL = URL(ATTACHMENT_SCHEME, "", -1, attachment.id.toString()+ "?" + uniqueness.getAndIncrement(), AttachmentURLStreamHandler)
+        val uniqueURL = URL(attachmentScheme, "", -1, attachment.id.toString()+ "?" + uniqueness.getAndIncrement(), AttachmentURLStreamHandler)
         loadedAttachments[uniqueURL] = attachment
         return uniqueURL
     }
@@ -412,19 +412,19 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
 
     private object AttachmentURLStreamHandler : URLStreamHandler() {
         override fun openConnection(url: URL): URLConnection {
-            if (url.protocol != ATTACHMENT_SCHEME) throw IOException("Cannot handle protocol: ${url.protocol}")
+            if (url.protocol != attachmentScheme) throw IOException("Cannot handle protocol: ${url.protocol}")
             val attachment = loadedAttachments[url] ?: throw IOException("Could not load url: $url .")
             return AttachmentURLConnection(url, attachment)
         }
 
         override fun equals(attachmentUrl: URL, otherURL: URL?): Boolean {
             if (attachmentUrl.protocol != otherURL?.protocol) return false
-            if (attachmentUrl.protocol != ATTACHMENT_SCHEME) throw IllegalArgumentException("Cannot handle protocol: ${attachmentUrl.protocol}")
+            if (attachmentUrl.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${attachmentUrl.protocol}")
             return attachmentUrl.file == otherURL?.file
         }
 
         override fun hashCode(url: URL): Int {
-            if (url.protocol != ATTACHMENT_SCHEME) throw IllegalArgumentException("Cannot handle protocol: ${url.protocol}")
+            if (url.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${url.protocol}")
             return url.file.hashCode()
         }
     }

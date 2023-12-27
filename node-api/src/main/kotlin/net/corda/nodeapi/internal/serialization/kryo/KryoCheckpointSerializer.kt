@@ -87,10 +87,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 val kryo = Kryo(classResolver, MapReferenceResolver())
                 val serializer = Fiber.getFiberSerializer(kryo, false) as KryoSerializer
 //                    val serializer = Fiber.getFiberSerializer(classResolver, false) as KryoSerializer
-                // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
-                val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                 serializer.kryo.apply {
-                    field.set(this, classResolver)
 //                    (this as ReplaceableObjectKryo).isIgnoreInaccessibleClasses = true
                     // don't allow overriding the public key serializer for checkpointing
                     DefaultKryoCustomizer.customize(this)
@@ -224,9 +221,10 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
-            throw UnsupportedOperationException("Restoring checkpoints containing ${type.name} objects is not supported in this test " +
-                    "environment. If you wish to restore these checkpoints in your tests then use the out-of-process node driver, or add " +
-                    "--add-opens=${type.fqPackage}=ALL-UNNAMED to the test JVM args.")
+            val isIterator = Iterator::class.java.isAssignableFrom(type)
+            throw UnsupportedOperationException("Restoring checkpoints containing ${if (isIterator) "iterators" else "${type.name} objects"} " +
+                    "is not supported in this test environment. If you wish to restore these checkpoints in your tests then use the " +
+                    "out-of-process node driver, or add --add-opens=${type.fqPackage}=ALL-UNNAMED to the test JVM args.")
         }
 
         private val Class<*>.fqPackage: String get() = "${module.name}/$packageName"
