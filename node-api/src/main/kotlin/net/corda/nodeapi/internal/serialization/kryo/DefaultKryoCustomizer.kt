@@ -6,7 +6,6 @@ import com.esotericsoftware.kryo.SerializerFactory
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
-import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy
 import de.javakaffee.kryoserializers.BitSetSerializer
@@ -39,7 +38,6 @@ import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.ad
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isJavaUtilOpen
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAsInaccessible
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerIfPackageOpen
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.serializerIfPackageOpen
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.MutableClassWhitelist
@@ -82,15 +80,9 @@ object DefaultKryoCustomizer {
             instantiatorStrategy = CustomInstantiatorStrategy()
 
             addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<Serializer<out Any>>() {
-                override fun newSerializer(kryo: Kryo, type: Class<*>): Serializer<out Any> {
-                    val config = CompatibleFieldSerializer.CompatibleFieldSerializerConfig().apply {
-                        ignoreSyntheticFields = false
-                        extendedFieldNames = true
-                    }
-                    return kryo.serializerIfPackageOpen(type, { IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config)) }, write = false)
-                }
+                override fun newSerializer(kryo: Kryo, type: Class<*>) = IteratorSerializer(type, kryo)
             })
-            addDefaultSerializerIfPackageOpen(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass, { LinkedHashMapIteratorSerializer }, write = false)
+            addDefaultSerializerIfPackageOpen(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass, { LinkedHashMapIteratorSerializer }, fallbackWrite = false)
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
@@ -103,8 +95,8 @@ object DefaultKryoCustomizer {
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
 
-            registerIfPackageOpen(linkedMapOf(1 to 1).entries.first()::class.java, { LinkedHashMapEntrySerializer }, write = false)
-            registerIfPackageOpen(LinkedList<Any>().listIterator()::class.java, { LinkedListItrSerializer }, write = false)
+            registerIfPackageOpen(linkedMapOf(1 to 1).entries.first()::class.java, { LinkedHashMapEntrySerializer }, fallbackWrite = false)
+            registerIfPackageOpen(LinkedList<Any>().listIterator()::class.java, { LinkedListItrSerializer }, fallbackWrite = false)
             register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
@@ -140,7 +132,7 @@ object DefaultKryoCustomizer {
             // Used by the remote verifier, and will possibly be removed in future.
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
-            registerIfPackageOpen(SerializedLambda::class.java, write = false)
+            registerIfPackageOpen(SerializedLambda::class.java, fallbackWrite = false)
             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)

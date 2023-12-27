@@ -159,54 +159,56 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.addDefaultSerializer(Pattern::class.java, DefaultSerializers.PatternSerializer::class.java)
     }
 
-    private val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
+    val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
+
+    val Class<*>.fullyQualifiedPackage: String get() = "${module.name}/$packageName"
 
     fun isJavaUtilOpen(): Boolean = Collection::class.java.isPackageOpen
 
     /**
      *
      */
-    fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, write: Boolean = true) {
-        register(type, serializerIfPackageOpen(type, createSerializer, write))
+    fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
+        register(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
     }
 
     /**
      *
      */
-    fun Kryo.registerIfPackageOpen(type: Class<*>, write: Boolean = true) {
+    fun Kryo.registerIfPackageOpen(type: Class<*>, fallbackWrite: Boolean = true) {
         if (type.isPackageOpen) {
             register(type)
         } else {
-            registerAsInaccessible(type, write)
+            registerAsInaccessible(type, fallbackWrite)
         }
     }
 
     /**
      *
      */
-    fun Kryo.registerAsInaccessible(type: Class<*>, write: Boolean = true) {
-        register(type, serializerForInaccesible(type, write))
+    fun Kryo.registerAsInaccessible(type: Class<*>, fallbackWrite: Boolean = true) {
+        register(type, serializerForInaccesible(type, fallbackWrite))
     }
 
     /**
      *
      */
-    fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, write: Boolean = true) {
-        addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, write))
+    fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
+        addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
     }
 
-    fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, write: Boolean = true): Serializer<*> {
-        return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, write)
+    private fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true): Serializer<*> {
+        return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, fallbackWrite)
     }
 
-    private fun Kryo.serializerForInaccesible(type: Class<*>, write: Boolean = true): Serializer<*> {
+    private fun Kryo.serializerForInaccesible(type: Class<*>, fallbackWrite: Boolean = true): Serializer<*> {
         // Find the most specific serializer already registered to use for writing. This will be useful to make sure as much of the object
         // graph is serialised and covered in the writing phase.
-        return InaccessibleSerializer<Any>(if (write) getSerializer(type) else null)
+        return InaccessibleSerializer<Any>(if (fallbackWrite) getSerializer(type) else null)
     }
 
 
-    private class InaccessibleSerializer<T : Any>(private val writeFallback: Serializer<T>? = null) : Serializer<T>() {
+    private class InaccessibleSerializer<T : Any>(private val fallbackWrite: Serializer<T>? = null) : Serializer<T>() {
         companion object {
             private val typesLogged = Collections.newSetFromMap<Class<*>>(ConcurrentHashMap())
         }
@@ -214,20 +216,18 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         override fun write(kryo: Kryo, output: Output, obj: T) {
             val type = obj.javaClass
             if (typesLogged.add(type)) {
-                logger.warn("${type.fqPackage} is not open to this test environment and so ${type.name} objects are not supported in " +
-                        "checkpoints. This will most likely not be an issue unless checkpoints are restored.")
+                logger.warn("${type.fullyQualifiedPackage} is not open to this test environment and so ${type.name} objects are not " +
+                        "supported in checkpoints. This will most likely not be an issue unless checkpoints are restored.")
             }
-            writeFallback?.write(kryo, output, obj)
+            fallbackWrite?.write(kryo, output, obj)
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
             val isIterator = Iterator::class.java.isAssignableFrom(type)
             throw UnsupportedOperationException("Restoring checkpoints containing ${if (isIterator) "iterators" else "${type.name} objects"} " +
                     "is not supported in this test environment. If you wish to restore these checkpoints in your tests then use the " +
-                    "out-of-process node driver, or add --add-opens=${type.fqPackage}=ALL-UNNAMED to the test JVM args.")
+                    "out-of-process node driver, or add --add-opens=${type.fullyQualifiedPackage}=ALL-UNNAMED to the test JVM args.")
         }
-
-        private val Class<*>.fqPackage: String get() = "${module.name}/$packageName"
     }
 
 
