@@ -1,11 +1,9 @@
-package net.corda.coretests.flows
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.io.serialization.ByteArraySerializer
-import co.paralleluniverse.io.serialization.kryo.KryoSerializer
-import co.paralleluniverse.io.serialization.kryo.ReplaceableObjectKryo
 import co.paralleluniverse.strands.SuspendableCallable
 import io.netty.util.concurrent.FastThreadLocal
 import io.netty.util.concurrent.FastThreadLocalThread
@@ -13,11 +11,10 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.rootCause
 import net.corda.core.utilities.getOrThrow
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.catchThrowable
-import org.hamcrest.Matchers.lessThanOrEqualTo
-import org.junit.Assert.assertThat
 import org.junit.Test
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -67,7 +64,7 @@ class FastThreadLocalTest {
                     override fun initialValue() = ExpensiveObj()
                 }
                 runFibers(100, threadLocal::get) // Return value could be anything.
-                assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
+                assertThat(expensiveObjCount.get()).isLessThanOrEqualTo(3)
             }
 
     /** @return the number of times a different expensive object was obtained post-suspend. */
@@ -106,9 +103,7 @@ class FastThreadLocalTest {
     }
 
     private fun contentIsNotSerialized(threadLocalGet: () -> UnserializableObj) = scheduled(1, ::FastThreadLocalThread) {
-        // Use false like AbstractKryoSerializationScheme, the default of true doesn't work at all:
         val serializer = Fiber.getFiberSerializer(false)
-        ((serializer as KryoSerializer).kryo as ReplaceableObjectKryo).isIgnoreInaccessibleClasses = true
         val returnValue = UUID.randomUUID()
         val deserializedFiber = serializer.read(openFuture<ByteArray>().let {
             Fiber(scheduler, FiberTask2(threadLocalGet, false, serializer, it, returnValue)).start()
@@ -136,7 +131,7 @@ class FastThreadLocalTest {
                 obj = null
             }
             // In retainObj false case, check this doesn't attempt to serialize fields of currentThread:
-            Fiber.parkAndSerialize { fiber, _ -> bytesFuture.capture { serializer.write(fiber) } }
+            Fiber.parkAndCustomSerialize { fiber -> bytesFuture.capture { serializer.write(fiber) } }
             return returnValue
         }
     }

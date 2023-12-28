@@ -1,8 +1,10 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'net.corda.plugins.quasar-utils'
 
 description 'Checkpoint tests'
 
 dependencies {
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
     testImplementation project(":serialization")
     testImplementation project(":node-api")
     testImplementation project(':core-test-utils')
@@ -14,6 +16,7 @@ dependencies {
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
     testImplementation "com.esotericsoftware:kryo:$kryo_version"
     testImplementation "com.google.guava:guava:$guava_version"
+    testImplementation "io.netty:netty-common:$netty_version"
     testImplementation "org.slf4j:slf4j-api:$slf4j_version"
 }
 

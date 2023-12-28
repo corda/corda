@@ -16,6 +16,7 @@ import com.esotericsoftware.kryo.serializers.DefaultSerializers
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.GregorianCalendarSerializer
 import de.javakaffee.kryoserializers.SynchronizedCollectionsSerializer
+import net.corda.core.internal.fullyQualifiedPackage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
@@ -83,14 +84,8 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Triple(context.whitelist, context.deserializationClassLoader, context.checkpointCustomSerializers)) {
             KryoPool {
-                val classResolver = CordaClassResolver(context)
-                val kryo = Kryo(classResolver, MapReferenceResolver())
-                val serializer = Fiber.getFiberSerializer(kryo, false) as KryoSerializer
-//                    val serializer = Fiber.getFiberSerializer(classResolver, false) as KryoSerializer
+                val serializer = createFiberSerializer(context)
                 serializer.kryo.apply {
-//                    (this as ReplaceableObjectKryo).isIgnoreInaccessibleClasses = true
-                    // don't allow overriding the public key serializer for checkpointing
-                    DefaultKryoCustomizer.customize(this)
                     addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
                     addDefaultSerializer(Future::class.java, FutureSerialisationDetector)
                     register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
@@ -101,16 +96,27 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                     warnAboutDuplicateSerializers(customSerializers)
                     val classToSerializer = mapInputClassToCustomSerializer(context.deserializationClassLoader, customSerializers)
                     addDefaultCustomSerializers(this, classToSerializer)
-                    registerCommonClasses(kryo)
+                    registerCommonClasses(this)
                 }
             }
         }
     }
 
+    fun createFiberSerializer(context: CheckpointSerializationContext): KryoSerializer {
+//                    val serializer = Fiber.getFiberSerializer(classResolver, false) as KryoSerializer
+        //                    (this as ReplaceableObjectKryo).isIgnoreInaccessibleClasses = true
+        val kryo = Kryo(CordaClassResolver(context), MapReferenceResolver())
+        kryo.isRegistrationRequired = false
+        // Needed because of https://github.com/EsotericSoftware/kryo/issues/864
+        kryo.setOptimizedGenerics(false)
+        DefaultKryoCustomizer.customize(kryo)
+        return Fiber.getFiberSerializer(kryo, false) as KryoSerializer
+    }
+
     /**
      * Copy of [co.paralleluniverse.io.serialization.kryo.KryoUtil.registerCommonClasses] ...
      */
-    private fun registerCommonClasses(kryo: Kryo) {
+    fun registerCommonClasses(kryo: Kryo) {
         kryo.register(BooleanArray::class.java)
         kryo.register(ByteArray::class.java)
         kryo.register(ShortArray::class.java)
@@ -138,7 +144,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
             kryo.register(GregorianCalendar::class.java, GregorianCalendarSerializer())
         }
         kryo.register(InvocationHandler::class.java, JdkProxySerializer())
-        if (isJavaUtilOpen()) {
+        if (Collections::class.java.isPackageOpen) {
             SynchronizedCollectionsSerializer.registerSerializers(kryo)
         } else {
             kryo.registerAsInaccessible(Collections.synchronizedCollection(listOf(1)).javaClass)
@@ -159,11 +165,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.addDefaultSerializer(Pattern::class.java, DefaultSerializers.PatternSerializer::class.java)
     }
 
-    val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
-
-    val Class<*>.fullyQualifiedPackage: String get() = "${module.name}/$packageName"
-
-    fun isJavaUtilOpen(): Boolean = Collection::class.java.isPackageOpen
+    internal val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
 
     /**
      *

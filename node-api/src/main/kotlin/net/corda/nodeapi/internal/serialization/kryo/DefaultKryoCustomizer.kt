@@ -35,7 +35,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.addDefaultSerializerIfPackageOpen
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isJavaUtilOpen
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isPackageOpen
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAsInaccessible
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerIfPackageOpen
 import net.corda.serialization.internal.DefaultWhitelist
@@ -63,11 +63,7 @@ object DefaultKryoCustomizer {
 
     fun customize(kryo: Kryo, publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer): Kryo {
         return kryo.apply {
-            isRegistrationRequired = false
             references = true
-            // Needed because of https://github.com/EsotericSoftware/kryo/issues/864
-            setOptimizedGenerics(false)
-
             val defaultFactoryConfig = FieldSerializer.FieldSerializerConfig()
             // Take the safest route here and allow subclasses to have fields named the same as super classes.
             defaultFactoryConfig.extendedFieldNames = true
@@ -101,7 +97,7 @@ object DefaultKryoCustomizer {
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
-            if (isJavaUtilOpen()) {
+            if (Collections::class.java.isPackageOpen) {
                 UnmodifiableCollectionsSerializer.registerSerializers(this)
             } else {
                 registerAsInaccessible(Collections.unmodifiableCollection(listOf("")).javaClass)

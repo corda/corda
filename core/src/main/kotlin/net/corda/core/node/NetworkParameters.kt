@@ -14,7 +14,6 @@ import net.corda.core.utilities.days
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.Map.entry
 
 // DOCSTART 1
 /**
@@ -251,7 +250,7 @@ data class NetworkParameters(
             maxTransactionSize = maxTransactionSize,
             modifiedTime = modifiedTime,
             epoch = epoch,
-            whitelistedContractImplementations = whitelistedContractImplementations.toImmutableMap { entry(it.key, it.value.toImmutableList()) },
+            whitelistedContractImplementations = whitelistedContractImplementations.mapValues { it.value.toImmutableList() }.toImmutableMap(),
             eventHorizon = eventHorizon,
             packageOwnership = packageOwnership.toImmutableMap(),
             recoveryMaximumBackupInterval = recoveryMaximumBackupInterval,

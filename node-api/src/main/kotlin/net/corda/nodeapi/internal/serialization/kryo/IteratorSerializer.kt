@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.fullyQualifiedPackage
+import net.corda.core.internal.fullyQualifiedPackage
 import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isPackageOpen
 import org.apache.commons.lang3.reflect.FieldUtils
 import java.lang.reflect.Field
@@ -46,8 +46,8 @@ class IteratorSerializer(type: Class<*>, kryo: Kryo) : Serializer<Iterator<*>>(f
                         "If you wish to restore these checkpoints in your tests then use the out-of-process node driver, or add " +
                         "--add-opens=${type.fullyQualifiedPackage}=ALL-UNNAMED to the test JVM args.")
             } else {
-                // If the iterator didn't have any elements left then there's no need to make a fuss. We can return an empty iterator and
-                // move on.
+                // If the iterator didn't have any elements left (e.g. iterating over a singleton Collection) then there's no need to make a
+                // fuss. We can return an empty iterator and move on.
                 Collections.emptyIterator<Any>()
             }
         }

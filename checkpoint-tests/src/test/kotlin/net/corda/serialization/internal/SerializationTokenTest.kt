@@ -1,6 +1,5 @@
 package net.corda.serialization.internal
 
-import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.serialization.SerializationToken
@@ -14,9 +13,7 @@ import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.coretesting.internal.rigorousMock
-import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
-import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
-import net.corda.nodeapi.internal.serialization.kryo.DefaultKryoCustomizer
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
@@ -110,7 +107,7 @@ class SerializationTokenTest {
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
 
-        val kryo: Kryo = DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(this.context)))
+        val kryo = KryoCheckpointSerializer.createFiberSerializer(this.context).kryo
         val stream = ByteArrayOutputStream()
         Output(stream).use {
             kryoMagic.writeTo(it)
