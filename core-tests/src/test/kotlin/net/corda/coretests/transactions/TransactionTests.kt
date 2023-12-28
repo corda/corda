@@ -27,6 +27,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import org.mockito.kotlin.doCallRealMethod
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
@@ -154,6 +155,7 @@ class TransactionTests(private val digestService : DigestService) {
         val attachments = listOf<Attachment>(ContractAttachment(rigorousMock<Attachment>().also {
             doReturn(SecureHash.zeroHash).whenever(it).id
             doReturn(fakeAttachment("nothing", "nada").inputStream()).whenever(it).open()
+            doCallRealMethod().whenever(it).openAsJAR()
         }, DummyContract.PROGRAM_ID, uploader = "app"))
         val id = digestService.randomHash()
         val timeWindow: TimeWindow? = null
