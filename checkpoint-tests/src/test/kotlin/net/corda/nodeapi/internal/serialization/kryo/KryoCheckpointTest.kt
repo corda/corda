@@ -142,7 +142,7 @@ class KryoCheckpointTest {
      * This test just ensures that the checkpoints still work in light of [LinkedHashMapEntrySerializer].
      */
     @Test(timeout=300_000)
-	fun `linked hash set can checkpoint without error`() {
+	fun `LinkedHashSet iterator can checkpoint without error`() {
         var result: Any = 0L
         val dummySet = linkedSetOf<Any>().apply { addAll(0..testSize) }
         var it = dummySet.iterator()
@@ -154,28 +154,48 @@ class KryoCheckpointTest {
         assertEquals(testSize, result)
     }
 
-    /**
-     * This test just ensures that the checkpoints still work in light of [LinkedListItrSerializer].
-     */
     @Test(timeout=300_000)
-	fun `linked list can checkpoint without error`() {
-        var result: Any = 0L
-        val dummyList = LinkedList<Long>().apply { addAll(0..testSize) }
+    fun `ArrayList iterator can checkpoint without error`() {
+        testIteratorCheckpointing(ArrayList())
+    }
 
-        var it = dummyList.iterator()
-        while (it.hasNext()) {
-            result = it.next()
-            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-        assertEquals(testSize, result)
+    @Test(timeout=300_000)
+    fun `HashSet iterator can checkpoint without error`() {
+        testIteratorCheckpointing(HashSet())
+    }
+
+//    @Test(timeout=300_000)
+//    fun `LinkedHashSet iterator can checkpoint without error`() {
+//        testIteratorCheckpointing(LinkedHashSet())
+//    }
+
+    @Test(timeout=300_000)
+	fun `LinkedList iterator can checkpoint without error`() {
+        testIteratorCheckpointing(LinkedList())
     }
 
     @Test(timeout=300_000)
     fun `Instant can checkpoint without error`() {
         val original = Instant.now()
-        val bytes = KryoCheckpointSerializer.serialize(original, KRYO_CHECKPOINT_CONTEXT)
-        val roundtrip = KryoCheckpointSerializer.deserialize(bytes, Instant::class.java, KRYO_CHECKPOINT_CONTEXT)
-        assertThat(roundtrip).isEqualTo(original)
+        assertThat(checkpointRoundtrip(original)).isEqualTo(original)
     }
+
+    private fun testIteratorCheckpointing(collection: MutableCollection<Long>) {
+        collection.addAll(0..testSize)
+        val originalIterator = collection.iterator()
+        while (true) {
+            val roundtrip = checkpointRoundtrip(TestCheckpoint(collection, originalIterator))
+            assertThat(roundtrip.collection).isEqualTo(collection)
+            assertThat(roundtrip.iterator.hasNext()).isEqualTo(originalIterator.hasNext())
+            if (!originalIterator.hasNext()) break
+            assertThat(roundtrip.iterator.next()).isEqualTo(originalIterator.next())
+        }
+    }
+
+    private fun <T : Any> checkpointRoundtrip(obj: T): T {
+        val bytes = KryoCheckpointSerializer.serialize(obj, KRYO_CHECKPOINT_CONTEXT)
+        return KryoCheckpointSerializer.deserialize(bytes, obj.javaClass, KRYO_CHECKPOINT_CONTEXT)
+    }
+
+    private data class TestCheckpoint(val collection: Collection<*>, val iterator: Iterator<*>)
 }
