@@ -48,7 +48,7 @@ class NodeVersioningTest {
             users = listOf(superUser)
     )
 
-    private var notary: NodeProcess? = null
+    private lateinit var notary: NodeProcess
 
     @Before
     fun setUp() {
@@ -57,7 +57,7 @@ class NodeVersioningTest {
 
     @After
     fun done() {
-        notary?.close()
+        notary.close()
     }
 
     @Test(timeout=300_000)

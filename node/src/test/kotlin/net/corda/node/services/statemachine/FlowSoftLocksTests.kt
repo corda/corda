@@ -299,7 +299,7 @@ internal class LockingUnlockingFlow(private val softLockActions: Array<SoftLockA
             if (softLockAction.throwException != null) {
                 if (throwOnlyOnce) {
                     throwOnlyOnce = false
-                    softLockAction.throwException
+                    softLockAction.throwException.invoke()
                 }
             }
         }

@@ -225,10 +225,9 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         }
 
         override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
-            val isIterator = Iterator::class.java.isAssignableFrom(type)
-            throw UnsupportedOperationException("Restoring checkpoints containing ${if (isIterator) "iterators" else "${type.name} objects"} " +
-                    "is not supported in this test environment. If you wish to restore these checkpoints in your tests then use the " +
-                    "out-of-process node driver, or add --add-opens=${type.fullyQualifiedPackage}=ALL-UNNAMED to the test JVM args.")
+            throw UnsupportedOperationException("Restoring checkpoints containing ${type.name} objects is not supported in this test " +
+                    "environment. If you wish to restore these checkpoints in your tests then use the out-of-process node driver, or add " +
+                    "--add-opens=${type.fullyQualifiedPackage}=ALL-UNNAMED to the test JVM args.")
         }
     }
 
