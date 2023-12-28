@@ -16,7 +16,6 @@ import com.esotericsoftware.kryo.serializers.DefaultSerializers
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.GregorianCalendarSerializer
 import de.javakaffee.kryoserializers.SynchronizedCollectionsSerializer
-import net.corda.core.internal.fullyQualifiedPackage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
@@ -78,7 +77,6 @@ private object FutureSerialisationDetector : Serializer<Future<*>>() {
 }
 
 object KryoCheckpointSerializer : CheckpointSerializer {
-    private val logger = loggerFor<KryoCheckpointSerializer>()
     private val kryoPoolsForContexts = ConcurrentHashMap<Triple<ClassWhitelist, ClassLoader, Iterable<CheckpointCustomSerializer<*,*>>>, KryoPool>()
 
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
@@ -164,73 +162,6 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         kryo.addDefaultSerializer(AtomicLong::class.java, DefaultSerializers.AtomicLongSerializer::class.java)
         kryo.addDefaultSerializer(Pattern::class.java, DefaultSerializers.PatternSerializer::class.java)
     }
-
-    internal val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
-
-    /**
-     *
-     */
-    fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
-        register(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
-    }
-
-    /**
-     *
-     */
-    fun Kryo.registerIfPackageOpen(type: Class<*>, fallbackWrite: Boolean = true) {
-        if (type.isPackageOpen) {
-            register(type)
-        } else {
-            registerAsInaccessible(type, fallbackWrite)
-        }
-    }
-
-    /**
-     *
-     */
-    fun Kryo.registerAsInaccessible(type: Class<*>, fallbackWrite: Boolean = true) {
-        register(type, serializerForInaccesible(type, fallbackWrite))
-    }
-
-    /**
-     *
-     */
-    fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
-        addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
-    }
-
-    private fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true): Serializer<*> {
-        return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, fallbackWrite)
-    }
-
-    private fun Kryo.serializerForInaccesible(type: Class<*>, fallbackWrite: Boolean = true): Serializer<*> {
-        // Find the most specific serializer already registered to use for writing. This will be useful to make sure as much of the object
-        // graph is serialised and covered in the writing phase.
-        return InaccessibleSerializer<Any>(if (fallbackWrite) getSerializer(type) else null)
-    }
-
-
-    private class InaccessibleSerializer<T : Any>(private val fallbackWrite: Serializer<T>? = null) : Serializer<T>() {
-        companion object {
-            private val typesLogged = Collections.newSetFromMap<Class<*>>(ConcurrentHashMap())
-        }
-
-        override fun write(kryo: Kryo, output: Output, obj: T) {
-            val type = obj.javaClass
-            if (typesLogged.add(type)) {
-                logger.warn("${type.fullyQualifiedPackage} is not open to this test environment and so ${type.name} objects are not " +
-                        "supported in checkpoints. This will most likely not be an issue unless checkpoints are restored.")
-            }
-            fallbackWrite?.write(kryo, output, obj)
-        }
-
-        override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
-            throw UnsupportedOperationException("Restoring checkpoints containing ${type.name} objects is not supported in this test " +
-                    "environment. If you wish to restore these checkpoints in your tests then use the out-of-process node driver, or add " +
-                    "--add-opens=${type.fullyQualifiedPackage}=ALL-UNNAMED to the test JVM args.")
-        }
-    }
-
 
     /**
      * Returns a sorted list of CustomSerializerCheckpointAdaptor based on the custom serializers inside context.

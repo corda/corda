@@ -6,7 +6,6 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import net.corda.core.internal.fullyQualifiedPackage
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isPackageOpen
 import org.apache.commons.lang3.reflect.FieldUtils
 import java.lang.reflect.Field
 import java.util.Collections

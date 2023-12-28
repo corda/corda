@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.SerializerFactory
@@ -15,6 +14,7 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.internal.LazyMappedList
+import net.corda.core.internal.fullyQualifiedPackage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
@@ -26,26 +26,21 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.SgxSupport
+import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InputStream
-import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
-import kotlin.reflect.KMutableProperty
-import kotlin.reflect.KParameter
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.full.primaryConstructor
-import kotlin.reflect.jvm.isAccessible
-import kotlin.reflect.jvm.javaType
 
 /**
  * Serialization utilities, using the Kryo framework with a custom serializer for immutable data classes and a dead
@@ -68,94 +63,6 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<out SerializedBytes<Any>>): SerializedBytes<Any> {
         return SerializedBytes(input.readBytes(input.readVarInt(true)))
-    }
-}
-
-/**
- * Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
- * set via the constructor and the class is immutable.
- */
-class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() {
-    val props by lazy { klass.memberProperties.sortedBy { it.name } }
-    val propsByName by lazy { props.associateBy { it.name } }
-    val constructor by lazy { klass.primaryConstructor!! }
-
-    init {
-        // Verify that this class is immutable (all properties are final).
-        // We disable this check inside SGX as the reflection blows up.
-        if (!SgxSupport.isInsideEnclave) {
-            props.forEach {
-                require(it !is KMutableProperty<*>) { "$it mutable property of class: ${klass} is unsupported" }
-            }
-        }
-    }
-
-    // Just a utility to help us catch cases where nodes are running out of sync versions.
-    private fun hashParameters(params: List<KParameter>): Int {
-        return params.map {
-            (it.name ?: "") + it.index.toString() + it.type.javaType.typeName
-        }.hashCode()
-    }
-
-    override fun write(kryo: Kryo, output: Output, obj: T) {
-        output.writeVarInt(constructor.parameters.size, true)
-        output.writeInt(hashParameters(constructor.parameters))
-        for (param in constructor.parameters) {
-            val kProperty = propsByName[param.name!!]!!
-            kProperty.isAccessible = true
-            when (param.type.javaType.typeName) {
-                "int" -> output.writeVarInt(kProperty.get(obj) as Int, true)
-                "long" -> output.writeVarLong(kProperty.get(obj) as Long, true)
-                "short" -> output.writeShort(kProperty.get(obj) as Int)
-                "char" -> output.writeChar(kProperty.get(obj) as Char)
-                "byte" -> output.writeByte(kProperty.get(obj) as Byte)
-                "double" -> output.writeDouble(kProperty.get(obj) as Double)
-                "float" -> output.writeFloat(kProperty.get(obj) as Float)
-                "boolean" -> output.writeBoolean(kProperty.get(obj) as Boolean)
-                else -> try {
-                    kryo.writeClassAndObject(output, kProperty.get(obj))
-                } catch (e: Exception) {
-                    throw IllegalStateException("Failed to serialize ${param.name} in ${klass.qualifiedName}", e)
-                }
-            }
-        }
-    }
-
-    @Suppress("ComplexMethod")
-    override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
-        require(type.kotlin == klass)
-        val numFields = input.readVarInt(true)
-        val fieldTypeHash = input.readInt()
-
-        // A few quick checks for data evolution. Note that this is not guaranteed to catch every problem! But it's
-        // good enough for a prototype.
-        if (numFields != constructor.parameters.size)
-            throw KryoException("Mismatch between number of constructor parameters and number of serialised fields " +
-                    "for ${klass.qualifiedName} ($numFields vs ${constructor.parameters.size})")
-        if (fieldTypeHash != hashParameters(constructor.parameters))
-            throw KryoException("Hashcode mismatch for parameter types for ${klass.qualifiedName}: unsupported type evolution has happened.")
-
-        val args = arrayOfNulls<Any?>(numFields)
-        var cursor = 0
-        for (param in constructor.parameters) {
-            args[cursor++] = when (param.type.javaType.typeName) {
-                "int" -> input.readVarInt(true)
-                "long" -> input.readVarLong(true)
-                "short" -> input.readShort()
-                "char" -> input.readChar()
-                "byte" -> input.readByte()
-                "double" -> input.readDouble()
-                "float" -> input.readFloat()
-                "boolean" -> input.readBoolean()
-                else -> kryo.readClassAndObject(input)
-            }
-        }
-        // If the constructor throws an exception, pass it through instead of wrapping it.
-        return try {
-            constructor.call(*args)
-        } catch (e: InvocationTargetException) {
-            throw e.cause!!
-        }
     }
 }
 
@@ -186,7 +93,7 @@ object InputStreamSerializer : Serializer<InputStream>() {
                 chunks.add(chunk)
             }
         }
-        val flattened = ByteArray(chunks.sumBy { it.size })
+        val flattened = ByteArray(chunks.sumOf { it.size })
         var offset = 0
         for (chunk in chunks) {
             System.arraycopy(chunk, 0, flattened, offset, chunk.size)
@@ -195,16 +102,6 @@ object InputStreamSerializer : Serializer<InputStream>() {
         return flattened.inputStream()
     }
 
-}
-
-inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T): T {
-    val tmp = this.classLoader ?: ClassLoader.getSystemClassLoader()
-    this.classLoader = cl
-    try {
-        return body()
-    } finally {
-        this.classLoader = tmp
-    }
 }
 
 fun Output.writeBytesWithLength(byteArray: ByteArray) {
@@ -300,8 +197,8 @@ object PrivateKeySerializer : Serializer<PrivateKey>() {
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<out PrivateKey>): PrivateKey {
-        val A = input.readBytesWithLength()
-        return Crypto.decodePrivateKey(A)
+        val encodedKey = input.readBytesWithLength()
+        return Crypto.decodePrivateKey(encodedKey)
     }
 }
 
@@ -314,22 +211,9 @@ object PublicKeySerializer : Serializer<PublicKey>() {
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<out PublicKey>): PublicKey {
-        val A = input.readBytesWithLength()
-        return Crypto.decodePublicKey(A)
+        val encodedKey = input.readBytesWithLength()
+        return Crypto.decodePublicKey(encodedKey)
     }
-}
-
-/**
- * Helper function for reading lists with number of elements at the beginning.
- * @param minLen minimum number of elements we expect for list to include, defaults to 1
- * @param expectedLen expected length of the list, defaults to null if arbitrary length list read
- */
-inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 1, expectedLen: Int? = null): List<T> {
-    val elemCount = input.readInt()
-    if (elemCount < minLen) throw KryoException("Cannot deserialize list, too little elements. Minimum required: $minLen, got: $elemCount")
-    if (expectedLen != null && elemCount != expectedLen)
-        throw KryoException("Cannot deserialize list, expected length: $expectedLen, got: $elemCount.")
-    return (1..elemCount).map { kryo.readClassAndObject(input) as T }
 }
 
 inline fun <T : Any> Kryo.register(
@@ -345,23 +229,70 @@ inline fun <T : Any> Kryo.register(
     )
 }
 
+internal val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, KryoCheckpointSerializer::class.java.module)
+
 /**
- * Use this method to mark any types which can have the same instance within it more than once. This will make sure
- * the serialised form is stable across multiple serialise-deserialise cycles. Using this on a type with internal cyclic
- * references will throw a stack overflow exception during serialisation.
+ *
  */
-inline fun <reified T : Any> Kryo.noReferencesWithin() {
-    register(T::class.java, NoReferencesSerializer(getSerializer(T::class.java)))
+fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
+    register(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
 }
 
-class NoReferencesSerializer<T>(private val baseSerializer: Serializer<T>) : Serializer<T>() {
+/**
+ *
+ */
+fun Kryo.registerIfPackageOpen(type: Class<*>, fallbackWrite: Boolean = true) {
+    if (type.isPackageOpen) {
+        register(type)
+    } else {
+        registerAsInaccessible(type, fallbackWrite)
+    }
+}
 
-    override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
-        return kryo.withoutReferences { baseSerializer.read(kryo, input, type) }
+/**
+ *
+ */
+fun Kryo.registerAsInaccessible(type: Class<*>, fallbackWrite: Boolean = true) {
+    register(type, serializerForInaccesible(type, fallbackWrite))
+}
+
+/**
+ *
+ */
+fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
+    addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
+}
+
+private fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true): Serializer<*> {
+    return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, fallbackWrite)
+}
+
+private fun Kryo.serializerForInaccesible(type: Class<*>, fallbackWrite: Boolean = true): Serializer<*> {
+    // Find the most specific serializer already registered to use for writing. This will be useful to make sure as much of the object
+    // graph is serialised and covered in the writing phase.
+    return InaccessibleSerializer<Any>(if (fallbackWrite) getSerializer(type) else null)
+}
+
+
+private class InaccessibleSerializer<T : Any>(private val fallbackWrite: Serializer<T>? = null) : Serializer<T>() {
+    companion object {
+        private val logger = contextLogger()
+        private val typesLogged = Collections.newSetFromMap<Class<*>>(ConcurrentHashMap())
     }
 
     override fun write(kryo: Kryo, output: Output, obj: T) {
-        kryo.withoutReferences { baseSerializer.write(kryo, output, obj) }
+        val type = obj.javaClass
+        if (typesLogged.add(type)) {
+            logger.warn("${type.fullyQualifiedPackage} is not open to this test environment and so ${type.name} objects are not " +
+                    "supported in checkpoints. This will most likely not be an issue unless checkpoints are restored.")
+        }
+        fallbackWrite?.write(kryo, output, obj)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<out T>): T {
+        throw UnsupportedOperationException("Restoring checkpoints containing ${type.name} objects is not supported in this test " +
+                "environment. If you wish to restore these checkpoints in your tests then use the out-of-process node driver, or add " +
+                "--add-opens=${type.fullyQualifiedPackage}=ALL-UNNAMED to the test JVM args.")
     }
 }
 
@@ -447,7 +378,8 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
         }
     }
 
-    private val delegate: Serializer<Throwable> = uncheckedCast(SerializerFactory.ReflectionSerializerFactory.newSerializer(kryo, FieldSerializer::class.java, type)) as Serializer<Throwable>
+    @Suppress("UNCHECKED_CAST")
+    private val delegate: Serializer<Throwable> = SerializerFactory.ReflectionSerializerFactory.newSerializer(kryo, FieldSerializer::class.java, type) as Serializer<Throwable>
 
     override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
         delegate.write(kryo, output, throwable)
@@ -466,7 +398,6 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
 
 /** For serializing the utility [LazyMappedList]. It will serialize the fully resolved object.*/
 @ThreadSafe
-@SuppressWarnings("ALL")
 object LazyMappedListSerializer : Serializer<List<*>>() {
     // Using a MutableList so that Kryo will always write an instance of java.util.ArrayList.
     override fun write(kryo: Kryo, output: Output, obj: List<*>) = kryo.writeClassAndObject(output, obj.toMutableList())

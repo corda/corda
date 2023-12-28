@@ -34,10 +34,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.addDefaultSerializerIfPackageOpen
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.isPackageOpen
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerAsInaccessible
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer.registerIfPackageOpen
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.MutableClassWhitelist
