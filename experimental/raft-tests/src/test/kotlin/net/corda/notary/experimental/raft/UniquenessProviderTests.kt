@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.experimental.raft
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.contracts.TimeWindow
