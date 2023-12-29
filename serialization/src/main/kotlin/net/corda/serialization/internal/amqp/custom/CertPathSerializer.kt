@@ -2,9 +2,9 @@ package net.corda.serialization.internal.amqp.custom
 
 import net.corda.core.serialization.DESERIALIZATION_CACHE_PROPERTY
 import net.corda.core.serialization.SerializationContext
+import net.corda.serialization.internal.NotSerializableException
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
-import java.io.NotSerializableException
 import java.security.cert.CertPath
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
@@ -23,9 +23,7 @@ class CertPathSerializer(
             val cf = CertificateFactory.getInstance(proxy.type)
             return cf.generateCertPath(proxy.encoded.inputStream())
         } catch (ce: CertificateException) {
-            val nse = NotSerializableException("java.security.cert.CertPath: $type")
-            nse.initCause(ce)
-            throw nse
+            throw NotSerializableException("java.security.cert.CertPath: $type", ce)
         }
     }
 

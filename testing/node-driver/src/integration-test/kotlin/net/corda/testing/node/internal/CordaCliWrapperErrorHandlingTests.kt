@@ -9,7 +9,6 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.stream.Collectors
 
-
 @RunWith(value = Parameterized::class)
 class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputRegexPattern: String) {
 
@@ -31,10 +30,7 @@ class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputR
 
     @Test(timeout=300_000)
     fun `Run CordaCliWrapper sample app with arguments and check error output matches regExp`() {
-        val process = ProcessUtilities.startJavaProcess(
-                className = className,
-                arguments = arguments,
-                inheritIO = false)
+        val process = ProcessUtilities.startJavaProcess(className = className, arguments = arguments)
 
         process.waitFor()
 

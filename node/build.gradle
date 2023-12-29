@@ -280,10 +280,6 @@ tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
-
     // CertificateRevocationListNodeTests
     systemProperty 'net.corda.dpcrl.connect.timeout', '4000'
 }
@@ -292,9 +288,6 @@ tasks.register('slowIntegrationTest', Test) {
     testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
     classpath = sourceSets.slowIntegrationTest.runtimeClasspath
     maxParallelForks = 1
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }
 
 // quasar exclusions upon agent code instrumentation at run-time
@@ -332,9 +325,6 @@ quasar {
 
 jar {
     baseName 'corda-node'
-    manifest {
-        attributes('Add-Opens': 'java.base/java.time java.base/java.io java.base/java.util java.base/java.net')
-    }
 }
 
 tasks.named('test', Test) {

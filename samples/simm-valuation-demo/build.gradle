@@ -170,9 +170,6 @@ task deployNodes(type: net.corda.plugins.Cordform) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }
 
 cordapp {

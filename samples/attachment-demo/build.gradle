@@ -78,9 +78,6 @@ dependencies {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
@@ -147,9 +144,6 @@ task runSender(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
 
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
-
     args '--role'
     args 'SENDER'
 }
@@ -157,9 +151,6 @@ task runSender(type: JavaExec, dependsOn: jar) {
 task runRecipient(type: JavaExec, dependsOn: jar) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 
     args '--role'
     args 'RECIPIENT'

@@ -36,6 +36,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
 import java.lang.ProcessBuilder.Redirect
+import java.lang.management.ManagementFactory
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.file.Files
@@ -179,15 +180,18 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
         val fromVerifier: DataInputStream
 
         init {
-            val logsDirectory = (serviceHub.configuration.baseDirectory / "logs").createDirectories()
-            val command = listOf(
-                    "${Path(System.getProperty("java.home"), "bin", "java")}",
+            val inheritedJvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments.filter { "--add-opens" in it }
+            val command = ArrayList<String>()
+            command += "${Path(System.getProperty("java.home"), "bin", "java")}"
+            command += inheritedJvmArgs
+            command += listOf(
                     "-jar",
                     "$verifierJar",
                     "${server.localPort}",
-                    System.getProperty("log4j2.level")?.lowercase() ?: "info"  // TODO
+                    System.getProperty("log4j2.level")?.lowercase() ?: "info"
             )
             log.debug { "Verifier command: $command" }
+            val logsDirectory = (serviceHub.configuration.baseDirectory / "logs").createDirectories()
             verifierProcess = ProcessBuilder(command)
                     .redirectOutput(Redirect.appendTo((logsDirectory / "verifier-stdout.log").toFile()))
                     .redirectError(Redirect.appendTo((logsDirectory / "verifier-stderr.log").toFile()))

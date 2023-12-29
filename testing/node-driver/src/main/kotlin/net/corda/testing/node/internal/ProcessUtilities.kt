@@ -39,7 +39,6 @@ object ProcessUtilities {
             maximumHeapSize: String? = null,
             identifier: String = "",
             environmentVariables: Map<String,String> = emptyMap(),
-            inheritIO: Boolean = true
     ): Process {
         val command = mutableListOf<String>().apply {
             add(javaPath)
@@ -50,7 +49,6 @@ object ProcessUtilities {
             addAll(arguments)
         }
         return ProcessBuilder(command).apply {
-            if (inheritIO) inheritIO()
             environment().putAll(environmentVariables)
             environment()["CLASSPATH"] = classPath.joinToString(File.pathSeparator)
             if (workingDirectory != null) {
