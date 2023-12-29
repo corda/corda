@@ -1,132 +1,33 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Instant
 import java.util.LinkedList
 import kotlin.test.assertEquals
 
 class KryoCheckpointTest {
-
-    private val testSize = 1000L
-
-    /**
-     * This test just ensures that the checkpoints still work in light of [LinkedHashMapEntrySerializer].
-     */
-    @Test(timeout=300_000)
-	fun `linked hash map can checkpoint without error`() {
-        var lastKey = ""
-        val dummyMap = linkedMapOf<String, Long>()
-        for (i in 0..testSize) {
-            dummyMap[i.toString()] = i
-        }
-        var it = dummyMap.iterator()
-        while (it.hasNext()) {
-            lastKey = it.next().key
-            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-        assertEquals(testSize.toString(), lastKey)
+    companion object {
+        // A value big enough to trigger any stack overflow issues
+        private const val SIZE = 10_000
+        private const val CHUNK = 2
     }
 
-    @Test(timeout=300_000)
-    fun `empty linked hash map can checkpoint without error`() {
-        val dummyMap = linkedMapOf<String, Long>()
-        val it = dummyMap.iterator()
-        val itKeys = dummyMap.keys.iterator()
-        val itValues = dummyMap.values.iterator()
-        val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-        val bytesKeys = KryoCheckpointSerializer.serialize(itKeys, KRYO_CHECKPOINT_CONTEXT)
-        val bytesValues = KryoCheckpointSerializer.serialize(itValues, KRYO_CHECKPOINT_CONTEXT)
-        assertDoesNotThrow {
-            KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-            KryoCheckpointSerializer.deserialize(bytesKeys, itKeys.javaClass, KRYO_CHECKPOINT_CONTEXT)
-            KryoCheckpointSerializer.deserialize(bytesValues, itValues.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-    }
-
-    @Test(timeout=300_000)
-    fun `linked hash map with null values can checkpoint without error`() {
-        val dummyMap = linkedMapOf<String?, Long?>().apply {
-            put("foo", 2L)
-            put(null, null)
-            put("bar", 3L)
-        }
-        val it = dummyMap.iterator()
-        val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-
-        val itKeys = dummyMap.keys.iterator()
-        itKeys.next()
-        itKeys.next()
-        val bytesKeys = KryoCheckpointSerializer.serialize(itKeys, KRYO_CHECKPOINT_CONTEXT)
-
-        val itValues = dummyMap.values.iterator()
-        val bytesValues = KryoCheckpointSerializer.serialize(itValues, KRYO_CHECKPOINT_CONTEXT)
-
-        assertDoesNotThrow {
-            KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-            val desItKeys = KryoCheckpointSerializer.deserialize(bytesKeys, itKeys.javaClass, KRYO_CHECKPOINT_CONTEXT)
-            assertEquals("bar", desItKeys.next())
-            KryoCheckpointSerializer.deserialize(bytesValues, itValues.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-    }
-
-    @Test(timeout=300_000)
-    fun `linked hash map keys can checkpoint without error`() {
-        var lastKey = ""
-        val dummyMap = linkedMapOf<String, Long>()
-        for (i in 0..testSize) {
-            dummyMap[i.toString()] = i
-        }
-        var it = dummyMap.keys.iterator()
-        while (it.hasNext()) {
-            lastKey = it.next()
-            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-        assertEquals(testSize.toString(), lastKey)
-    }
-
-    @Test(timeout=300_000)
-	fun `linked hash map values can checkpoint without error`() {
-        var lastValue = 0L
-        val dummyMap = linkedMapOf<String, Long>()
-        for (i in 0..testSize) {
-            dummyMap[i.toString()] = i
-        }
-        var it = dummyMap.values.iterator()
-        while (it.hasNext()) {
-            lastValue = it.next()
-            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-        assertEquals(testSize, lastValue)
-    }
-
-    @Test(timeout = 300_000)
-    fun `linked hash map values can checkpoint without error, even with repeats`() {
-        var lastValue = "0"
-        val dummyMap = linkedMapOf<String, String>()
-        for (i in 0..testSize) {
-            dummyMap[i.toString()] = (i % 10).toString()
-        }
-        var it = dummyMap.values.iterator()
-        while (it.hasNext()) {
-            lastValue = it.next()
-            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-        assertEquals((testSize % 10).toString(), lastValue)
-    }
+    @Rule
+    @JvmField
+    val serializationRule = CheckpointSerializationEnvironmentRule()
 
     @Ignore("Kryo optimizes boxed primitives so this does not work.  Need to customise ReferenceResolver to stop it doing it.")
     @Test(timeout = 300_000)
     fun `linked hash map values can checkpoint without error, even with repeats for boxed primitives`() {
-        var lastValue = 0L
-        val dummyMap = linkedMapOf<String, Long>()
-        for (i in 0..testSize) {
+        var lastValue = 0
+        val dummyMap = linkedMapOf<String, Int>()
+        for (i in 0..SIZE) {
             dummyMap[i.toString()] = (i % 10)
         }
         var it = dummyMap.values.iterator()
@@ -135,23 +36,7 @@ class KryoCheckpointTest {
             val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
             it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
         }
-        assertEquals(testSize % 10, lastValue)
-    }
-
-    /**
-     * This test just ensures that the checkpoints still work in light of [LinkedHashMapEntrySerializer].
-     */
-    @Test(timeout=300_000)
-	fun `LinkedHashSet iterator can checkpoint without error`() {
-        var result: Any = 0L
-        val dummySet = linkedSetOf<Any>().apply { addAll(0..testSize) }
-        var it = dummySet.iterator()
-        while (it.hasNext()) {
-            result = it.next()
-            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
-            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-        }
-        assertEquals(testSize, result)
+        assertEquals(SIZE % 10, lastValue)
     }
 
     @Test(timeout=300_000)
@@ -160,18 +45,28 @@ class KryoCheckpointTest {
     }
 
     @Test(timeout=300_000)
+    fun `LinkedList iterator can checkpoint without error`() {
+        testIteratorCheckpointing(LinkedList())
+    }
+
+    @Test(timeout=300_000)
     fun `HashSet iterator can checkpoint without error`() {
         testIteratorCheckpointing(HashSet())
     }
 
-//    @Test(timeout=300_000)
-//    fun `LinkedHashSet iterator can checkpoint without error`() {
-//        testIteratorCheckpointing(LinkedHashSet())
-//    }
+    @Test(timeout=300_000)
+    fun `LinkedHashSet iterator can checkpoint without error`() {
+        testIteratorCheckpointing(LinkedHashSet())
+    }
 
     @Test(timeout=300_000)
-	fun `LinkedList iterator can checkpoint without error`() {
-        testIteratorCheckpointing(LinkedList())
+    fun `HashMap iterator can checkpoint without error`() {
+        testMapIteratorCheckpointing(HashMap())
+    }
+
+    @Test(timeout=300_000)
+    fun `LinkedHashMap iterator can checkpoint without error`() {
+        testMapIteratorCheckpointing(LinkedHashMap())
     }
 
     @Test(timeout=300_000)
@@ -180,22 +75,78 @@ class KryoCheckpointTest {
         assertThat(checkpointRoundtrip(original)).isEqualTo(original)
     }
 
-    private fun testIteratorCheckpointing(collection: MutableCollection<Long>) {
-        collection.addAll(0..testSize)
-        val originalIterator = collection.iterator()
-        while (true) {
-            val roundtrip = checkpointRoundtrip(TestCheckpoint(collection, originalIterator))
-            assertThat(roundtrip.collection).isEqualTo(collection)
-            assertThat(roundtrip.iterator.hasNext()).isEqualTo(originalIterator.hasNext())
-            if (!originalIterator.hasNext()) break
-            assertThat(roundtrip.iterator.next()).isEqualTo(originalIterator.next())
+    private fun testIteratorCheckpointing(collection: MutableCollection<Int>) {
+        collection.addAll(0 until SIZE)
+        testIteratorCheckpointing(collection.iterator())
+        if (collection is List<*>) {
+            testListIteratorCheckpointing(collection)
         }
     }
 
-    private fun <T : Any> checkpointRoundtrip(obj: T): T {
-        val bytes = KryoCheckpointSerializer.serialize(obj, KRYO_CHECKPOINT_CONTEXT)
-        return KryoCheckpointSerializer.deserialize(bytes, obj.javaClass, KRYO_CHECKPOINT_CONTEXT)
+    private fun testIteratorCheckpointing(originalIterator: Iterator<*>) {
+        var endReached = false
+        for ((_, skip) in testIndices) {
+            repeat(skip) {
+                originalIterator.next()
+            }
+            val hasNext = originalIterator.hasNext()
+            val roundtripIterator = checkpointRoundtrip(originalIterator)
+            assertThat(hasNext).isEqualTo(originalIterator.hasNext())  // Make sure serialising it doesn't change it
+            assertThat(roundtripIterator.hasNext()).isEqualTo(hasNext)
+            if (!hasNext) {
+                endReached = true
+                break
+            }
+            assertThat(roundtripIterator.next()).isEqualTo(originalIterator.next())
+        }
+        assertThat(endReached).isTrue()
     }
 
-    private data class TestCheckpoint(val collection: Collection<*>, val iterator: Iterator<*>)
+    private fun testListIteratorCheckpointing(list: List<*>) {
+        for ((index, _) in testIndices) {
+            val originalIterator = list.listIterator(index)
+            while (true) {
+                val roundtripIterator = checkpointRoundtrip(originalIterator)
+                assertThat(roundtripIterator.previousIndex()).isEqualTo(originalIterator.previousIndex())
+                assertThat(roundtripIterator.hasPrevious()).isEqualTo(originalIterator.hasPrevious())
+                if (originalIterator.hasPrevious()) {
+                    assertThat(roundtripIterator.previous()).isEqualTo(originalIterator.previous())
+                    roundtripIterator.next()
+                    originalIterator.next()
+                }
+                assertThat(roundtripIterator.nextIndex()).isEqualTo(originalIterator.nextIndex())
+                assertThat(roundtripIterator.hasNext()).isEqualTo(originalIterator.hasNext())
+                if (!originalIterator.hasNext()) break
+                assertThat(roundtripIterator.next()).isEqualTo(originalIterator.next())
+            }
+        }
+    }
+
+    private fun testMapIteratorCheckpointing(map: MutableMap<Int, Int>) {
+        repeat(SIZE) { index ->
+            map[index] = index
+        }
+        testIteratorCheckpointing(map.keys.iterator())
+        testIteratorCheckpointing(map.values.iterator())
+        testIteratorCheckpointing(map.entries.iterator())
+    }
+
+    private inline fun <reified T : Any> checkpointRoundtrip(obj: T): T {
+        val bytes = obj.checkpointSerialize(KRYO_CHECKPOINT_CONTEXT)
+        return bytes.checkpointDeserialize(KRYO_CHECKPOINT_CONTEXT)
+    }
+
+    /**
+     * Return a Sequence of indicies which just iterates over the first and last [CHUNK], otherwise the tests take too long. The second
+     * value of the [Pair] is the number of elements to skip over from the previous iteration.
+     */
+    private val testIndices: Sequence<Pair<Int, Int>>
+        get() = generateSequence(Pair(0, 0)) { (previous, _) ->
+            when {
+                previous < CHUNK - 1 -> Pair(previous + 1, 0)
+                previous == CHUNK - 1 -> Pair(SIZE - CHUNK, SIZE - CHUNK - previous)
+                previous < SIZE - 1 -> Pair(previous + 1, 0)
+                else -> null
+            }
+        }
 }

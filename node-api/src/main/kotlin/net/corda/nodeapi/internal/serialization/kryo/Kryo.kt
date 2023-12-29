@@ -235,7 +235,8 @@ internal val Class<*>.isPackageOpen: Boolean get() = module.isOpen(packageName, 
  *
  */
 fun Kryo.registerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
-    register(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
+    val serializer = if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, fallbackWrite)
+    register(type, serializer)
 }
 
 /**
@@ -254,17 +255,6 @@ fun Kryo.registerIfPackageOpen(type: Class<*>, fallbackWrite: Boolean = true) {
  */
 fun Kryo.registerAsInaccessible(type: Class<*>, fallbackWrite: Boolean = true) {
     register(type, serializerForInaccesible(type, fallbackWrite))
-}
-
-/**
- *
- */
-fun Kryo.addDefaultSerializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true) {
-    addDefaultSerializer(type, serializerIfPackageOpen(type, createSerializer, fallbackWrite))
-}
-
-private fun Kryo.serializerIfPackageOpen(type: Class<*>, createSerializer: () -> Serializer<*>, fallbackWrite: Boolean = true): Serializer<*> {
-    return if (type.isPackageOpen) createSerializer() else serializerForInaccesible(type, fallbackWrite)
 }
 
 private fun Kryo.serializerForInaccesible(type: Class<*>, fallbackWrite: Boolean = true): Serializer<*> {

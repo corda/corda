@@ -74,7 +74,6 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<Serializer<out Any>>() {
                 override fun newSerializer(kryo: Kryo, type: Class<*>) = IteratorSerializer(type, kryo)
             })
-            addDefaultSerializerIfPackageOpen(linkedMapOf(1 to 1).entries.iterator()::class.java.superclass, { LinkedHashMapIteratorSerializer }, fallbackWrite = false)
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
