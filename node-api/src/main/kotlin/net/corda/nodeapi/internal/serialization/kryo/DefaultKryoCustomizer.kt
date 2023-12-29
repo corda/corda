@@ -71,9 +71,7 @@ object DefaultKryoCustomizer {
 
             instantiatorStrategy = CustomInstantiatorStrategy()
 
-            addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<Serializer<out Any>>() {
-                override fun newSerializer(kryo: Kryo, type: Class<*>) = IteratorSerializer(type, kryo)
-            })
+            addDefaultSerializer(Iterator::class.java, IteratorSerializerFactory)
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
@@ -87,7 +85,6 @@ object DefaultKryoCustomizer {
             // Please add any new registrations to the end.
 
             registerIfPackageOpen(linkedMapOf(1 to 1).entries.first()::class.java, { LinkedHashMapEntrySerializer }, fallbackWrite = false)
-            registerIfPackageOpen(LinkedList<Any>().listIterator()::class.java, { LinkedListItrSerializer }, fallbackWrite = false)
             register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
