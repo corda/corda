@@ -21,7 +21,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.json.simple.JSONObject
-import org.junit.Ignore
 import org.junit.Test
 import java.util.LinkedList
 import java.util.concurrent.CountDownLatch
