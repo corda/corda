@@ -27,7 +27,6 @@ ext {
     pkg_macosxKeyUserName = 'R3CEV'
 }
 
-apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'application'
 
@@ -156,7 +155,8 @@ distributions {
  * Bundles the application using JavaPackager,
  * using the ZIP distribution as source.
  */
-task javapackage(dependsOn: distZip) {
+tasks.register('javapackage') {
+    dependsOn distZip
 
     doLast {
         delete([pkg_source, pkg_outDir])
@@ -190,15 +190,14 @@ task javapackage(dependsOn: distZip) {
                 include '**/*.manifest'
             }
             filter { line ->
-                line.replaceAll('@pkg_version@', pkg_version)
-                    .replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
+                line.replaceAll('@pkg_version@', pkg_version).replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
             }
             into "$pkg_source/package"
         }
 
         ant.taskdef(
-            resource: 'com/sun/javafx/tools/ant/antlib.xml',
-            classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
+                resource: 'com/sun/javafx/tools/ant/antlib.xml',
+                classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {

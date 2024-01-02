@@ -245,7 +245,7 @@ logger.lifecycle("Building Corda version: {}", corda_release_version)
 logger.lifecycle("User home: {}", System.getProperty('user.home'))
 
 allprojects {
-    apply plugin: 'org.jetbrains.kotlin.jvm'
+    apply plugin: 'java'
     apply plugin: 'kotlin-allopen'
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
@@ -437,10 +437,12 @@ allprojects {
     }
 
     configurations {
-        all {
+        configureEach {
             resolutionStrategy {
-                // Force dependencies to use the same version of Kotlin as Corda.
-                force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+                if (pluginManager.hasPlugin("org.jetbrains.kotlin.jvm")) {
+                    // Force dependencies to use the same version of Kotlin as Corda.
+                    force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+                }
 
                 // Force dependencies to use the same version of Guava as Corda.
                 force "com.google.guava:guava:$guava_version"
@@ -487,22 +489,24 @@ allprojects {
                     // Effectively delete this unused and unwanted transitive dependency of Artemis.
                     substitute module('org.jgroups:jgroups') with module("org.apache.activemq:artemis-commons:$artemis_version")
                 }
-            }
-        }
-
-        // Select all of the compileClasspath and runtimeClasspath etc configurations,
-        // but NOT the "classpath" configuration, as that is used by the Gradle plugins.
-        matching { it.name.endsWith("Classpath") }.configureEach { cfg ->
-            cfg.resolutionStrategy {
-                dependencySubstitution {
-                    // Force dependencies to use the same version of Kotlin as Corda.
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') with module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
-                    substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
-                    substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
-                }
 
                 // FORCE Gradle to use latest SNAPSHOT dependencies.
                 cacheChangingModulesFor 0, 'seconds'
+            }
+        }
+
+        if (pluginManager.hasPlugin("org.jetbrains.kotlin.jvm")) {
+            // Select all of the compileClasspath and runtimeClasspath etc configurations,
+            // but NOT the "classpath" configuration, as that is used by the Gradle plugins.
+            matching { it.name.endsWith("Classpath") }.configureEach { cfg ->
+                cfg.resolutionStrategy {
+                    dependencySubstitution {
+                        // Force dependencies to use the same version of Kotlin as Corda.
+                        substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') with module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
+                        substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
+                        substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
+                    }
+                }
             }
         }
     }
@@ -557,9 +561,9 @@ tasks.register('jacocoRootReport', JacocoReport) {
 //    classDirectories = files(subprojects.sourceSets.main.output)
 //    executionData = files(subprojects.jacocoTestReport.executionData)
     reports {
-        html.enabled = true
-        xml.enabled = true
-        csv.enabled = false
+        html.required = true
+        xml.required = true
+        csv.required = false
     }
     onlyIf = {
         true
@@ -595,7 +599,7 @@ tasks.register('detektBaseline', JavaExec) {
 }
 
 tasks.withType(Test).configureEach {
-    reports.html.destination = file("${reporting.baseDir}/${name}")
+    reports.html.outputLocation.set(file("${reporting.baseDir}/${name}"))
 }
 
 tasks.register('testReport', TestReport) {

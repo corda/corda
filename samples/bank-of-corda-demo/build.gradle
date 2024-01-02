@@ -1,4 +1,5 @@
-apply plugin: 'java'
+import net.corda.plugins.Cordform
+
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
@@ -54,10 +55,9 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 }
 
-def nodeTask = tasks.getByPath(':node:capsule:assemble')
-def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 configurations.cordaCordapp.canBeResolved = true
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+tasks.register('deployNodes', Cordform) {
+    dependsOn('jar', ':node:capsule:assemble', ':testing:testserver:testcapsule::assemble')
     nodeDefaults {
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
@@ -65,7 +65,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     }
     node {
         name "O=Notary Node,L=Zurich,C=CH"
-        notary = [validating: true,
+        notary = [validating      : true,
                   serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
         ]
         p2pPort 10002
@@ -113,9 +113,9 @@ idea {
     }
 }
 
-task runRPCCashIssue(type: JavaExec) {
+tasks.register('runRPCCashIssue', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.bank.IssueCash'
+    mainClass = 'net.corda.bank.IssueCash'
 
     jvmArgs test_add_opens
     jvmArgs test_add_exports
@@ -131,9 +131,9 @@ task runRPCCashIssue(type: JavaExec) {
     jvmArgs test_add_exports
 }
 
-task runWebCashIssue(type: JavaExec) {
+tasks.register('runWebCashIssue', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.bank.IssueCash'
+    mainClass = 'net.corda.bank.IssueCash'
 
     jvmArgs test_add_opens
     jvmArgs test_add_exports

@@ -6,7 +6,6 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
 apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
-apply plugin: 'java'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'corda.common-publishing'
 
@@ -73,7 +72,7 @@ jib.container {
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
     from file("$rootDir/config/dev/jolokia-access.xml")
-    from(tasks.findByPath(":verifier:shadowJar")) {
+    from(tasks.getByPath(":verifier:shadowJar")) {
         into("net/corda/node/verification")
         rename { "external-verifier.jar" }
     }

@@ -39,7 +39,8 @@ interface VerifyingServiceHub : ServiceHub, VerificationService {
 
     private fun loadContractAttachment(stateRef: StateRef, forContractClassName: String?): Attachment {
         val stx = getRequiredTransaction(stateRef.txhash)
-        return when (val ctx = stx.coreTransaction) {
+        val ctx = stx.coreTransaction
+        return when (ctx) {
             is WireTransaction -> {
                 val contractClassName = forContractClassName ?: ctx.outRef<ContractState>(stateRef.index).state.contract
                 ctx.attachments

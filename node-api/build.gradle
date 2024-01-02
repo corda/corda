@@ -11,6 +11,9 @@ dependencies {
     implementation project(':common-logging')
     implementation project(":common-validation")
 
+    implementation "io.opentelemetry:opentelemetry-api:$open_telemetry_version"
+    compileOnly project(':opentelemetry')
+
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
@@ -90,7 +93,7 @@ configurations {
     testArtifacts.extendsFrom testRuntimeOnlyClasspath
 }
 
-task testJar(type: Jar) {
+tasks.register('testJar', Jar) {
     classifier "tests"
     from sourceSets.test.output
 }

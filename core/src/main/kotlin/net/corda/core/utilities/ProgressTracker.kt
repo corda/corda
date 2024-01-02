@@ -8,7 +8,6 @@ import rx.Subscription
 import rx.functions.Action1
 import rx.subjects.ReplaySubject
 import java.io.Serializable
-import java.util.*
 
 /**
  * A progress tracker helps surface information about the progress of an operation to a user interface or API of some
@@ -34,12 +33,12 @@ import java.util.*
  */
 @CordaSerializable
 class ProgressTracker(vararg inputSteps: Step) {
-
     private companion object {
         private val log = contextLogger()
     }
 
-    private fun interface SerializableAction<T>: Action1<T>, Serializable
+    @FunctionalInterface
+    private interface SerializableAction1<T> : Action1<T>, Serializable
 
     @CordaSerializable
     sealed class Change(val progressTracker: ProgressTracker) {
@@ -61,7 +60,11 @@ class ProgressTracker(vararg inputSteps: Step) {
      */
     @CordaSerializable
     open class Step(open val label: String) {
-        private fun definitionLocation(): String = Exception().stackTrace.first { it.className != ProgressTracker.Step::class.java.name }.let { "${it.className}:${it.lineNumber}" }
+        private fun definitionLocation(): String {
+            return Exception().stackTrace
+                    .first { it.className != Step::class.java.name }
+                    .let { "${it.className}:${it.lineNumber}" }
+        }
 
         // Required when Steps with the same name are defined in multiple places.
         private val discriminator: String = definitionLocation()
@@ -149,10 +152,17 @@ class ProgressTracker(vararg inputSteps: Step) {
             stepIndex = index
             _changes.onNext(Change.Position(this, steps[index]))
             recalculateStepsTreeIndex()
-            curChangeSubscription = currentStep.changes.subscribe((SerializableAction<Change> {
-                _changes.onNext(it)
-                if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-            }), (SerializableAction { _changes.onError(it) }))
+            curChangeSubscription = currentStep.changes.subscribe(
+                    object : SerializableAction1<Change> {
+                        override fun call(c: Change) {
+                            _changes.onNext(c)
+                            if (c is Change.Structural || c is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
+                        }
+                    },
+                    object : SerializableAction1<Throwable> {
+                        override fun call(t: Throwable) = _changes.onError(t)
+                    }
+            )
 
             if (currentStep == DONE) {
                 _changes.onCompleted()
@@ -182,9 +192,7 @@ class ProgressTracker(vararg inputSteps: Step) {
      * The zero-based index of the current step in the [steps] array (i.e. with UNSTARTED and DONE)
      */
     var stepIndex: Int = 0
-        private set(value) {
-            field = value
-        }
+        private set
 
     /**
      * The zero-bases index of the current step in a [allStepsLabels] list
@@ -206,18 +214,25 @@ class ProgressTracker(vararg inputSteps: Step) {
 
     fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
-    fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
-        val subscription = childProgressTracker.changes.subscribe((SerializableAction<Change>{
-            _changes.onNext(it)
-            if (it is Change.Structural || it is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
-        }), (SerializableAction { _changes.onError(it) }))
+    fun setChildProgressTracker(step: Step, childProgressTracker: ProgressTracker) {
+        val subscription = childProgressTracker.changes.subscribe(
+                object : SerializableAction1<Change> {
+                    override fun call(c: Change) {
+                        _changes.onNext(c)
+                        if (c is Change.Structural || c is Change.Rendering) rebuildStepsTree() else recalculateStepsTreeIndex()
+                    }
+                },
+                object : SerializableAction1<Throwable> {
+                    override fun call(t: Throwable) = _changes.onError(t)
+                }
+        )
         childProgressTrackers[step] = Child(childProgressTracker, subscription)
         childProgressTracker.parent = this
         _changes.onNext(Change.Structural(this, step))
         rebuildStepsTree()
     }
 
-    private fun removeChildProgressTracker(step: ProgressTracker.Step) {
+    private fun removeChildProgressTracker(step: Step) {
         childProgressTrackers.remove(step)?.let {
             it.tracker.parent = null
             it.subscription?.unsubscribe()
