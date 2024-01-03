@@ -301,6 +301,10 @@ fun DriverDSL.assertUncompletedCheckpoints(name: CordaX500Name, expected: Long) 
     }
 }
 
+val nodeJvmArgs: List<String> by lazy {
+    DriverDSLImpl::class.java.getResourceAsStream("node-jvm-args.txt")!!.use { it.bufferedReader().readLines() }
+}
+
 /**
  * Should only be used by Driver and MockNode.
  */

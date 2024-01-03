@@ -40,7 +40,6 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.sleeping.SleepingFlow
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
-import org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM
 import org.hamcrest.text.MatchesPattern
 import org.junit.After
 import org.junit.Before
@@ -50,6 +49,7 @@ import org.junit.Test
 import org.junit.rules.ExpectedException
 import java.io.FilterInputStream
 import java.io.InputStream
+import java.io.OutputStream.nullOutputStream
 import java.util.Currency
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
@@ -67,7 +67,7 @@ class StandaloneCordaRPClientTest {
         val rpcUser = User("rpcUser", "test", permissions = setOf("InvokeRpc.startFlow", "InvokeRpc.killFlow"))
         val flowUser = User("flowUser", "test", permissions = setOf("StartFlow.net.corda.finance.flows.CashIssueFlow"))
         val port = AtomicInteger(15200)
-        const val attachmentSize = 2116
+        const val ATTACHMENT_SIZE = 2116
         val timeout = 60.seconds
     }
 
@@ -111,13 +111,13 @@ class StandaloneCordaRPClientTest {
 
     @Test(timeout=300_000)
 	fun `test attachments`() {
-        val attachment = InputStreamAndHash.createInMemoryTestZip(attachmentSize, 1)
+        val attachment = InputStreamAndHash.createInMemoryTestZip(ATTACHMENT_SIZE, 1)
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = attachment.inputStream.use { rpcProxy.uploadAttachment(it) }
         assertEquals(attachment.sha256, id, "Attachment has incorrect SHA256 hash")
 
-        val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
-            it.copyTo(NULL_OUTPUT_STREAM)
+        val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use {
+            it.copyTo(nullOutputStream())
             SecureHash.createSHA256(it.hash().asBytes())
         }
         assertEquals(attachment.sha256, hash)
@@ -126,13 +126,13 @@ class StandaloneCordaRPClientTest {
     @Ignore("CORDA-1520 - After switching from Kryo to AMQP this test won't work")
     @Test(timeout=300_000)
 	fun `test wrapped attachments`() {
-        val attachment = InputStreamAndHash.createInMemoryTestZip(attachmentSize, 1)
+        val attachment = InputStreamAndHash.createInMemoryTestZip(ATTACHMENT_SIZE, 1)
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = WrapperStream(attachment.inputStream).use { rpcProxy.uploadAttachment(it) }
         assertEquals(attachment.sha256, id, "Attachment has incorrect SHA256 hash")
 
-        val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
-            it.copyTo(NULL_OUTPUT_STREAM)
+        val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use {
+            it.copyTo(nullOutputStream())
             SecureHash.createSHA256(it.hash().asBytes())
         }
         assertEquals(attachment.sha256, hash)

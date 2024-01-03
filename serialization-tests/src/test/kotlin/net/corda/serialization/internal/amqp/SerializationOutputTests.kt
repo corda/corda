@@ -54,7 +54,6 @@ import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.catchThrowable
 import org.bouncycastle.asn1.x500.X500Name
@@ -73,6 +72,7 @@ import org.junit.runners.Parameterized.Parameters
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.whenever
 import java.io.IOException
+import java.io.InputStream
 import java.io.NotSerializableException
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -148,13 +148,13 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     data class Foo(val bar: String, val pub: Int)
 
-    data class testFloat(val f: Float)
+    data class TestFloat(val f: Float)
 
-    data class testDouble(val d: Double)
+    data class TestDouble(val d: Double)
 
-    data class testShort(val s: Short)
+    data class TestShort(val s: Short)
 
-    data class testBoolean(val b: Boolean)
+    data class TestBoolean(val b: Boolean)
 
     interface FooInterface {
         val pub: Int
@@ -340,25 +340,25 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test(timeout=300_000)
 	fun `test float`() {
-        val obj = testFloat(10.0F)
+        val obj = TestFloat(10.0F)
         serdes(obj)
     }
 
     @Test(timeout=300_000)
 	fun `test double`() {
-        val obj = testDouble(10.0)
+        val obj = TestDouble(10.0)
         serdes(obj)
     }
 
     @Test(timeout=300_000)
 	fun `test short`() {
-        val obj = testShort(1)
+        val obj = TestShort(1)
         serdes(obj)
     }
 
     @Test(timeout=300_000)
 	fun `test bool`() {
-        val obj = testBoolean(true)
+        val obj = TestBoolean(true)
         serdes(obj)
     }
 
@@ -377,7 +377,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test(timeout=300_000)
     fun `test dislike of HashMap`() {
         val obj = WrapHashMap(HashMap())
-        assertThatIllegalArgumentException().isThrownBy {
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
             serdes(obj)
         }
     }
@@ -1303,7 +1303,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.InputStreamSerializer)
         val bytes = ByteArray(10) { it.toByte() }
-        val obj = bytes.inputStream()
+        val obj: InputStream = bytes.inputStream()
         val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         val obj3 = bytes.inputStream()  // Can't use original since the stream pointer has moved.
         assertEquals(obj3.available(), obj2.available())

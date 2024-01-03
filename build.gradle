@@ -121,23 +121,6 @@ buildscript {
     ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
     ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
-    ext.test_add_opens = [
-            '--add-opens', 'java.base/java.time=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.io=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.util=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.net=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.nio=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.lang.invoke=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.security.cert=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.security=ALL-UNNAMED',
-            '--add-opens', 'java.base/javax.net.ssl=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.util.concurrent=ALL-UNNAMED',
-            '--add-opens', 'java.sql/java.sql=ALL-UNNAMED'
-    ]
-    ext.test_add_exports = [
-            '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
-    ]
 
     ext.corda_revision = {
         try {
@@ -282,11 +265,6 @@ allprojects {
         toolVersion = "0.8.7"
     }
 
-    test {
-        jvmArgs test_add_opens
-        jvmArgs test_add_exports
-    }
-
     java {
         withSourcesJar()
         withJavadocJar()
@@ -330,14 +308,13 @@ allprojects {
             attributes('Corda-Docs-Link': corda_docs_link)
         }
     }
-    
+
     tasks.withType(Test).configureEach {
+        jvmArgs += project(":node:capsule").file("src/main/resources/node-jvm-args.txt").readLines()
+        jvmArgs += "--add-modules=jdk.incubator.foreign"  // For the SharedMemoryIncremental
         forkEvery = 20
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
-
-        // Prevent the project from creating temporary files outside of the build directory.
-        systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
         maxHeapSize = "1g"
 
@@ -351,15 +328,15 @@ allprojects {
 //            ex.append = false
         }
 
-        maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_TESTING_FORKS".toInteger()
-
-        systemProperty 'java.security.egd', 'file:/dev/./urandom'
-    }
-
-    tasks.withType(Test).configureEach {
         if (name.contains("integrationTest")) {
             maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
+        } else {
+            maxParallelForks = (System.env.CORDA_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_TESTING_FORKS".toInteger()
         }
+
+        // Prevent the project from creating temporary files outside of the build directory.
+        systemProperty 'java.io.tmpdir', buildDir.absolutePath
+        systemProperty 'java.security.egd', 'file:/dev/./urandom'
     }
 
     group 'net.corda'
