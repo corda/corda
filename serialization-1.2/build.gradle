@@ -24,6 +24,10 @@ jar {
     archiveBaseName = 'corda-serialization-1.2'
 }
 
+tasks.withType(Javadoc).configureEach {
+    enabled = false
+}
+
 // TODO Don't publish publicly as it's only needed by the `verifier` module which consumes this into a fat jar.
 publishing {
     publications {
