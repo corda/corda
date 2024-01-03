@@ -44,7 +44,6 @@ class RigorousMockTest {
 	fun `callRealMethod is preferred by rigorousMock`() {
         rigorousMock<MyInterface>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
-            assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.kotlinDefaultFun() }.javaClass)
         }
         rigorousMock<MyAbstract>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
@@ -62,6 +61,7 @@ class RigorousMockTest {
 	fun `throw exception is preferred by participant`() {
         participant<MyInterface>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
+            assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.kotlinDefaultFun() }.javaClass)
         }
         participant<MyAbstract>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
