@@ -155,7 +155,6 @@ class TransactionTests(private val digestService : DigestService) {
         val attachments = listOf<Attachment>(ContractAttachment(rigorousMock<Attachment>().also {
             doReturn(SecureHash.zeroHash).whenever(it).id
             doReturn(fakeAttachment("nothing", "nada").inputStream()).whenever(it).open()
-            doCallRealMethod().whenever(it).openAsJAR()
         }, DummyContract.PROGRAM_ID, uploader = "app"))
         val id = digestService.randomHash()
         val timeWindow: TimeWindow? = null
