@@ -19,7 +19,6 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
-import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
@@ -171,12 +170,6 @@ class CordaClassResolverTests {
     @Test(timeout=300_000)
 	fun `Annotation not needed on interface`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(Interface::class.java)
-    }
-
-    @Test(timeout=300_000)
-	fun `Calling register method on modified Kryo does not consult the whitelist`() {
-        val kryo = CordaKryo(CordaClassResolver(emptyWhitelistContext))
-        kryo.register(NotSerializable::class.java)
     }
 
     @Test(timeout=300_000)

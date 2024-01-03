@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.experimental.raft
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.contracts.TimeWindow
@@ -25,9 +25,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.common.BatchSignature
-import net.corda.notary.experimental.raft.RaftConfig
-import net.corda.notary.experimental.raft.RaftNotarySchemaV1
-import net.corda.notary.experimental.raft.RaftUniquenessProvider
 import net.corda.notary.jpa.JPANotaryConfiguration
 import net.corda.notary.jpa.JPANotarySchemaV1
 import net.corda.notary.jpa.JPAUniquenessProvider

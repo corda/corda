@@ -5,7 +5,6 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy
-import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.Contract
@@ -58,7 +57,6 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Modifier
 import java.security.PublicKey
-import java.util.Arrays
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -305,8 +303,6 @@ class CustomSerializationSchemeDriverTest {
             kryo.isRegistrationRequired = false
             kryo.instantiatorStrategy = CustomInstantiatorStrategy()
             kryo.classLoader = classLoader
-            @Suppress("ReplaceJavaStaticMethodWithKotlinAnalog")
-            kryo.register(Arrays.asList("").javaClass, ArraysAsListSerializer())
         }
 
         //Stolen from DefaultKryoCustomizer.kt

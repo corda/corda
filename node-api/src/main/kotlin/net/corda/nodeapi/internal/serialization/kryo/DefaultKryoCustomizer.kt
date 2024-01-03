@@ -6,10 +6,8 @@ import com.esotericsoftware.kryo.SerializerFactory
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
-import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy
-import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.ImmutableListSerializer
@@ -20,7 +18,6 @@ import de.javakaffee.kryoserializers.guava.ImmutableSortedSetSerializer
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AbstractAttachment
@@ -40,29 +37,20 @@ import net.corda.core.utilities.toNonEmptySet
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.MutableClassWhitelist
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
-import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
-import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.objenesis.instantiator.ObjectInstantiator
 import org.objenesis.strategy.InstantiatorStrategy
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
-import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
-import java.io.FileInputStream
 import java.io.InputStream
+import java.lang.invoke.SerializedLambda
 import java.lang.reflect.Modifier.isPublic
+import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.*
-import kotlin.collections.ArrayList
 
 object DefaultKryoCustomizer {
     private val serializationWhitelists: List<SerializationWhitelist> by lazy {
@@ -71,11 +59,7 @@ object DefaultKryoCustomizer {
 
     fun customize(kryo: Kryo, publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer): Kryo {
         return kryo.apply {
-            isRegistrationRequired = false
             references = true
-            // Needed because of https://github.com/EsotericSoftware/kryo/issues/864
-            setOptimizedGenerics(false)
-
             val defaultFactoryConfig = FieldSerializer.FieldSerializerConfig()
             // Take the safest route here and allow subclasses to have fields named the same as super classes.
             defaultFactoryConfig.extendedFieldNames = true
@@ -83,78 +67,60 @@ object DefaultKryoCustomizer {
             // For checkpoints we still want all the synthetic fields.  This allows inner classes to reference
             // their parents after deserialization.
             defaultFactoryConfig.ignoreSyntheticFields = false
-            kryo.setDefaultSerializer(SerializerFactory.FieldSerializerFactory(defaultFactoryConfig))
+            setDefaultSerializer(SerializerFactory.FieldSerializerFactory(defaultFactoryConfig))
 
             instantiatorStrategy = CustomInstantiatorStrategy()
 
-            addDefaultSerializer(Iterator::class.java, object : SerializerFactory.BaseSerializerFactory<IteratorSerializer>() {
-                override fun newSerializer(kryo: Kryo, type: Class<*>): IteratorSerializer {
-                    val config = CompatibleFieldSerializer.CompatibleFieldSerializerConfig().apply {
-                        ignoreSyntheticFields = false
-                        extendedFieldNames = true
-                    }
-                    return IteratorSerializer(type, CompatibleFieldSerializer(kryo, type, config))
-                }
-            })
-
-            // Required for HashCheckingStream (de)serialization.
-            // Note that return type should be specifically set to InputStream, otherwise it may not work,
-            // i.e. val aStream : InputStream = HashCheckingStream(...).
+            addDefaultSerializer(Iterator::class.java, IteratorSerializerFactory)
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
             addDefaultSerializer(X509Certificate::class.java, X509CertificateSerializer)
+            addDefaultSerializer(CertPath::class.java, CertPathSerializer)
+            addDefaultSerializer(PrivateKey::class.java, PrivateKeySerializer)
+            addDefaultSerializer(PublicKey::class.java, publicKeySerializer)
 
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
 
-            addDefaultSerializer(LinkedHashMapIteratorSerializer.getIterator()::class.java.superclass, LinkedHashMapIteratorSerializer)
-            register(LinkedHashMapEntrySerializer.getEntry()::class.java, LinkedHashMapEntrySerializer)
-            register(LinkedListItrSerializer.getListItr()::class.java, LinkedListItrSerializer)
-            register(Arrays.asList("").javaClass, ArraysAsListSerializer())
+            registerIfPackageOpen(linkedMapOf(1 to 1).entries.first()::class.java, { LinkedHashMapEntrySerializer }, fallbackWrite = false)
             register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
-            UnmodifiableCollectionsSerializer.registerSerializers(this)
+            if (Collections::class.java.isPackageOpen) {
+                UnmodifiableCollectionsSerializer.registerSerializers(this)
+            } else {
+                registerAsInaccessible(Collections.unmodifiableCollection(listOf("")).javaClass)
+                registerAsInaccessible(Collections.unmodifiableList(ArrayList<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableList(LinkedList<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableSet(HashSet<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableSortedSet(TreeSet<Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableMap(HashMap<Any, Any>()).javaClass)
+                registerAsInaccessible(Collections.unmodifiableSortedMap(TreeMap<Any, Any>()).javaClass)
+            }
             ImmutableListSerializer.registerSerializers(this)
             ImmutableSetSerializer.registerSerializers(this)
             ImmutableSortedSetSerializer.registerSerializers(this)
             ImmutableMapSerializer.registerSerializers(this)
             ImmutableMultimapSerializer.registerSerializers(this)
-            // InputStream subclasses whitelisting, required for attachments.
-            register(BufferedInputStream::class.java, InputStreamSerializer)
-            register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
-            register(PublicKey::class.java, publicKeySerializer)
-            register(PrivateKey::class.java, PrivateKeySerializer)
-            register(EdDSAPublicKey::class.java, publicKeySerializer)
-            register(EdDSAPrivateKey::class.java, PrivateKeySerializer)
-            register(CompositeKey::class.java, publicKeySerializer)  // Using a custom serializer for compactness
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
             register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
             register(NonEmptySet::class.java, NonEmptySetSerializer)
             register(BitSet::class.java, BitSetSerializer())
             register(Class::class.java, ClassSerializer)
-            register(FileInputStream::class.java, InputStreamSerializer)
-            register(CertPath::class.java, CertPathSerializer)
-            register(BCECPrivateKey::class.java, PrivateKeySerializer)
-            register(BCECPublicKey::class.java, publicKeySerializer)
-            register(BCRSAPrivateCrtKey::class.java, PrivateKeySerializer)
-            register(BCRSAPublicKey::class.java, publicKeySerializer)
-            register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
-            register(BCSphincs256PublicKey::class.java, publicKeySerializer)
             register(NotaryChangeWireTransaction::class.java, NotaryChangeWireTransactionSerializer)
             register(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
 
             // Don't deserialize PrivacySalt via its default constructor.
             register(PrivacySalt::class.java, PrivacySaltSerializer)
-
+            register(KeyPair::class.java, KeyPairSerializer)
             // Used by the remote verifier, and will possibly be removed in future.
             register(ContractAttachment::class.java, ContractAttachmentSerializer)
 
-            register(java.lang.invoke.SerializedLambda::class.java)
+            registerIfPackageOpen(SerializedLambda::class.java, fallbackWrite = false)
             register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)

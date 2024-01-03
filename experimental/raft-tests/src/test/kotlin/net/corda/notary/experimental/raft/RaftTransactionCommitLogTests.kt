@@ -26,9 +26,8 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import org.hamcrest.Matchers.instanceOf
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
-import org.junit.Assert.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -119,7 +118,7 @@ class RaftTransactionCommitLogTests {
                 states, txId, requestingPartyName.toString(), requestSignature, timeWindow
         )
         val commitError = client.submit(commitCommand).getOrThrow()
-        assertThat(commitError, instanceOf(NotaryError.TimeWindowInvalid::class.java))
+        assertThat(commitError).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
     }
 
     @Test(timeout=300_000)
@@ -158,7 +157,7 @@ class RaftTransactionCommitLogTests {
         val address = Address(myAddress.host, myAddress.port)
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
         databases.add(database)
-        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), { RaftUniquenessProvider.createMap(TestingNamedCacheFactory()) }) }
+        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC()) { RaftUniquenessProvider.createMap(TestingNamedCacheFactory()) } }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)

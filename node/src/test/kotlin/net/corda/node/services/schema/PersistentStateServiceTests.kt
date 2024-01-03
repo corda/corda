@@ -1,25 +1,41 @@
 package net.corda.node.services.schema
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.schema.NodeSchemaServiceTest.TestSchema
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.hibernate.annotations.Cascade
+import org.hibernate.annotations.CascadeType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.FetchType
+import javax.persistence.GeneratedValue
+import javax.persistence.Id
+import javax.persistence.JoinColumn
+import javax.persistence.JoinColumns
+import javax.persistence.ManyToOne
+import javax.persistence.OneToMany
+import javax.persistence.OrderColumn
+import javax.persistence.Table
 import kotlin.test.assertEquals
 
 class PersistentStateServiceTests {
@@ -80,5 +96,33 @@ class PersistentStateServiceTests {
         }
 
         database.close()
+    }
+
+    class SchemaFamily
+
+    object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {
+        @Entity
+        @Table(name = "Parents")
+        class Parent : PersistentState() {
+            @OneToMany(fetch = FetchType.LAZY)
+            @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
+            @OrderColumn
+            @Cascade(CascadeType.PERSIST)
+            var children: MutableSet<Child> = mutableSetOf()
+        }
+
+        @Suppress("unused")
+        @Entity
+        @Table(name = "Children")
+        class Child {
+            @Id
+            @GeneratedValue
+            @Column(name = "child_id", unique = true, nullable = false)
+            var childId: Int? = null
+
+            @ManyToOne(fetch = FetchType.LAZY)
+            @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
+            var parent: Parent? = null
+        }
     }
 }

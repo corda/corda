@@ -4624,8 +4624,6 @@ public final class net.corda.core.node.NetworkParameters extends java.lang.Objec
   @NotNull
   public String toString()
 ##
-public final class net.corda.core.node.NetworkParametersKt extends java.lang.Object
-##
 @CordaSerializable
 public final class net.corda.core.node.NodeDiagnosticInfo extends java.lang.Object
   public <init>(String, String, int, String, java.util.List)
