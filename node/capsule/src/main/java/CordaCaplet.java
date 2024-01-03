@@ -2,23 +2,32 @@
 // must also be in the default package. When using Kotlin there are a whole host of exceptions
 // trying to construct this from Capsule, so it is written in Java.
 
-import com.typesafe.config.*;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigParseOptions;
+import com.typesafe.config.ConfigValue;
 import sun.misc.Signal;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.file.DirectoryStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.jar.JarInputStream;
-import java.util.jar.Manifest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.typesafe.config.ConfigUtil.splitPath;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class CordaCaplet extends Capsule {
@@ -47,7 +56,7 @@ public class CordaCaplet extends Capsule {
 
     File getConfigFile(List<String> args, String baseDir) {
         String config = getOptionMultiple(args, Arrays.asList("--config-file", "-f"));
-        return (config == null || config.equals("")) ? new File(baseDir, "node.conf") : new File(config);
+        return (config == null || config.isEmpty()) ? new File(baseDir, "node.conf") : new File(config);
     }
 
     String getBaseDirectory(List<String> args) {
@@ -77,7 +86,7 @@ public class CordaCaplet extends Capsule {
             }
 
             if (arg.toLowerCase().startsWith(lowerCaseOption)) {
-                if (arg.length() > option.length() && arg.substring(option.length(), option.length() + 1).equals("=")) {
+                if (arg.length() > option.length() && arg.charAt(option.length()) == '=') {
                     return arg.substring(option.length() + 1);
                 } else {
                     return null;
@@ -109,24 +118,16 @@ public class CordaCaplet extends Capsule {
     // For multiple instances Capsule jvm args handling works on basis that one overrides the other.
     @Override
     protected int launch(ProcessBuilder pb) throws IOException, InterruptedException {
-        if (isAtLeastJavaVersion11()) {
-            List<String> args = pb.command();
-            List<String> myArgs = Arrays.asList(
-                "--add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED",
-                "--add-opens=java.base/java.lang=ALL-UNNAMED",
-                "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
-                "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
-                "--add-opens=java.base/java.util=ALL-UNNAMED",
-                "--add-opens=java.base/java.time=ALL-UNNAMED",
-                "--add-opens=java.base/java.io=ALL-UNNAMED",
-                "--add-opens=java.base/java.net=ALL-UNNAMED",
-                "--add-opens=java.base/javax.net.ssl=ALL-UNNAMED",
-                "--add-opens=java.base/java.security.cert=ALL-UNNAMED",
-                "--add-opens=java.base/java.nio=ALL-UNNAMED");
-            args.addAll(1, myArgs);
-            pb.command(args);
-        }
+        List<String> args = pb.command();
+        args.addAll(1, getNodeJvmArgs());
+        pb.command(args);
         return super.launch(pb);
+    }
+
+    private List<String> getNodeJvmArgs() throws IOException {
+        try (InputStream resource = requireNonNull(getClass().getResourceAsStream("/node-jvm-args.txt"))) {
+            return new BufferedReader(new InputStreamReader(resource)).lines().collect(toList());
+        }
     }
 
     /**
@@ -148,12 +149,12 @@ public class CordaCaplet extends Capsule {
             }
 
             // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
-            augmentClasspath((List<Path>) cp, new File(baseDir, "drivers"));
+            augmentClasspath((List<Path>) cp, Path.of(baseDir, "drivers"));
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
                 for (String jarDir : jarDirs) {
-                    augmentClasspath((List<Path>) cp, new File(jarDir));
+                    augmentClasspath((List<Path>) cp, Path.of(jarDir));
                 }
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
@@ -183,9 +184,6 @@ public class CordaCaplet extends Capsule {
                 jvmArgs.add("-XX:+HeapDumpOnOutOfMemoryError");
                 jvmArgs.add("-XX:+CrashOnOutOfMemoryError");
             }
-            if (isAtLeastJavaVersion11()) {
-                jvmArgs.add("-Dnashorn.args=--no-deprecation-warning");
-            }
             return (T) jvmArgs;
         } else if (ATTR_SYSTEM_PROPERTIES == attr) {
             // Add system properties, if specified, from the config.
@@ -193,7 +191,7 @@ public class CordaCaplet extends Capsule {
             try {
                 Map<String, ?> overrideSystemProps = nodeConfig.getConfig("systemProperties").entrySet().stream()
                     .map(Property::create)
-                    .collect(toMap(Property::getKey, Property::getValue));
+                    .collect(toMap(Property::key, Property::value));
                 log(LOG_VERBOSE, "Configured system properties = " + overrideSystemProps);
                 for (Map.Entry<String, ?> entry : overrideSystemProps.entrySet()) {
                     systemProps.put(entry.getKey(), entry.getValue().toString());
@@ -207,18 +205,15 @@ public class CordaCaplet extends Capsule {
         } else return super.attribute(attr);
     }
 
-    private void augmentClasspath(List<Path> classpath, File dir) {
-        try {
-            if (dir.exists()) {
-                // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
-                for (File file : dir.listFiles()) {
-                    addToClasspath(classpath, file);
-                }
-            } else {
-                log(LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.getAbsolutePath());
+    private void augmentClasspath(List<Path> classpath, Path dir) {
+        if (Files.exists(dir)) {
+            try (var files = Files.list(dir)) {
+                files.forEach((file) -> addToClasspath(classpath, file));
+            } catch (IOException e) {
+                log(LOG_QUIET, e);
             }
-        } catch (SecurityException | NullPointerException e) {
-            log(LOG_QUIET, e);
+        } else {
+            log(LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.toAbsolutePath());
         }
     }
 
@@ -228,14 +223,6 @@ public class CordaCaplet extends Capsule {
             System.err.printf("Error: Unsupported Java version %s; currently only version 17 is supported.\n", version);
             System.exit(1);
         }
-    }
-
-    private static boolean isAtLeastJavaVersion11() {
-        String version = System.getProperty("java.specification.version");
-        if (version != null) {
-            return Float.parseFloat(version) >= 11f;
-        }
-        return false;
     }
 
     private Boolean checkIfCordappDirExists(File dir) {
@@ -256,18 +243,18 @@ public class CordaCaplet extends Capsule {
         log(LOG_VERBOSE, "Cordapps dir could not be created");
     }
 
-    private void addToClasspath(List<Path> classpath, File file) {
+    private void addToClasspath(List<Path> classpath, Path file) {
         try {
-            if (file.canRead()) {
-                if (file.isFile() && isJAR(file)) {
-                    classpath.add(file.toPath().toAbsolutePath());
-                } else if (file.isDirectory()) { // Search in nested folders as well. TODO: check for circular symlinks.
+            if (Files.isReadable(file)) {
+                if (Files.isRegularFile(file) && isJAR(file)) {
+                    classpath.add(file.toAbsolutePath());
+                } else if (Files.isDirectory(file)) { // Search in nested folders as well. TODO: check for circular symlinks.
                     augmentClasspath(classpath, file);
                 }
             } else {
-                log(LOG_VERBOSE, "File or directory to add in Classpath could not be read " + file.getAbsolutePath());
+                log(LOG_VERBOSE, "File or directory to add in Classpath could not be read " + file.toAbsolutePath());
             }
-        } catch (SecurityException | NullPointerException e) {
+        } catch (SecurityException e) {
             log(LOG_QUIET, e);
         }
     }
@@ -280,30 +267,14 @@ public class CordaCaplet extends Capsule {
         });
     }
 
-    private Boolean isJAR(File file) {
-        return file.getName().toLowerCase().endsWith(".jar");
+    private Boolean isJAR(Path file) {
+        return file.toString().toLowerCase().endsWith(".jar");
     }
 
     /**
      * Helper class so that we can parse the "systemProperties" element of node.conf.
      */
-    private static class Property {
-        private final String key;
-        private final Object value;
-
-        Property(String key, Object value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        String getKey() {
-            return key;
-        }
-
-        Object getValue() {
-            return value;
-        }
-
+    private record Property(String key, Object value) {
         static Property create(Map.Entry<String, ConfigValue> entry) {
             // String.join is preferred here over Typesafe's joinPath method, as the joinPath method would put quotes around the system
             // property key which is undesirable here.

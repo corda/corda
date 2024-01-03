@@ -102,17 +102,20 @@ dependencies {
 compileJava {
     doFirst {
         options.compilerArgs = [
-            '--add-exports', 'java.base/sun.nio.ch=ALL-UNNAMED'
+                '--add-modules', 'jdk.incubator.foreign'
         ]
+    }
+}
+
+processResources {
+    from(project(":node:capsule").files("src/main/resources/node-jvm-args.txt")) {
+        into("net/corda/testing/node/internal")
     }
 }
 
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-
-    jvmArgs test_add_opens
-    jvmArgs test_add_exports
 }
 
 jar {

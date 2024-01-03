@@ -2,14 +2,22 @@
 // must also be in the default package. When using Kotlin there are a whole host of exceptions
 // trying to construct this from Capsule, so it is written in Java.
 
-import com.typesafe.config.*;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigParseOptions;
+import com.typesafe.config.ConfigValue;
 import sun.misc.Signal;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class CordaWebserverCaplet extends Capsule {
@@ -35,11 +43,6 @@ public class CordaWebserverCaplet extends Capsule {
             log(LOG_DEBUG, e);
             return ConfigFactory.empty();
         }
-    }
-
-    File getConfigFile(List<String> args, String baseDir) {
-        String config = getOptionMultiple(args, Arrays.asList("--config-file", "-f"));
-        return (config == null || config.equals("")) ? new File(baseDir, "node.conf") : new File(config);
     }
 
     String getBaseDirectory(List<String> args) {
@@ -69,7 +72,7 @@ public class CordaWebserverCaplet extends Capsule {
             }
 
             if (arg.toLowerCase().startsWith(lowerCaseOption)) {
-                if (arg.length() > option.length() && arg.substring(option.length(), option.length() + 1).equals("=")) {
+                if (arg.length() > option.length() && arg.charAt(option.length()) == '=') {
                     return arg.substring(option.length() + 1);
                 } else {
                     return null;
@@ -85,23 +88,6 @@ public class CordaWebserverCaplet extends Capsule {
         checkJavaVersion();
         nodeConfig = parseConfigFile(args);
         return super.prelaunch(jvmArgs, args);
-    }
-
-    // Capsule does not handle multiple instances of same option hence we add in the args here to process builder
-    // For multiple instances Capsule jvm args handling works on basis that one overrides the other.
-    @Override
-    protected int launch(ProcessBuilder pb) throws IOException, InterruptedException {
-        if (isAtLeastJavaVersion11()) {
-            List<String> args = pb.command();
-            List<String> myArgs = Arrays.asList(
-                    "--add-opens=java.base/java.lang=ALL-UNNAMED",
-                    "--add-opens=java.base/java.time=ALL-UNNAMED",
-                    "--add-opens=java.base/java.io=ALL-UNNAMED",
-                    "--add-opens=java.base/java.nio=ALL-UNNAMED");
-            args.addAll(1, myArgs);
-            pb.command(args);
-        }
-        return super.launch(pb);
     }
 
     // Add working directory variable to capsules string replacement variables.
@@ -157,9 +143,6 @@ public class CordaWebserverCaplet extends Capsule {
             } catch (ConfigException e) {
                 log(LOG_QUIET, e);
             }
-            if (isAtLeastJavaVersion11()) {
-                jvmArgs.add("-Dnashorn.args=--no-deprecation-warning");
-            }
             return (T) jvmArgs;
         } else if (ATTR_SYSTEM_PROPERTIES == attr) {
             // Add system properties, if specified, from the config.
@@ -200,14 +183,6 @@ public class CordaWebserverCaplet extends Capsule {
             System.err.printf("Error: Unsupported Java version %s; currently only version 17 is supported.\n", version);
             System.exit(1);
         }
-    }
-
-    private static boolean isAtLeastJavaVersion11() {
-        String version = System.getProperty("java.specification.version");
-        if (version != null) {
-            return Float.parseFloat(version) >= 11f;
-        }
-        return false;
     }
 
     private Boolean checkIfCordappDirExists(File dir) {

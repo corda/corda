@@ -49,6 +49,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
@@ -76,7 +77,6 @@ import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
-import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.MockCryptoService
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.internal.MockNetworkParametersStorage
@@ -85,6 +85,7 @@ import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.getCallerPackage
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.ByteArrayOutputStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.sql.Connection
@@ -141,8 +142,8 @@ open class MockServices private constructor(
             val dbPath = dbDir.resolve("persistence")
             try {
                 DatabaseSnapshot.copyDatabaseSnapshot(dbDir)
-            } catch (ex: java.nio.file.FileAlreadyExistsException) {
-                DriverDSLImpl.log.warn("Database already exists on disk, not attempting to pre-migrate database.")
+            } catch (e: FileAlreadyExistsException) {
+                loggerFor<MockServices>().warn("Database already exists on disk, not attempting to pre-migrate database.")
             }
             val props = Properties()
             props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")

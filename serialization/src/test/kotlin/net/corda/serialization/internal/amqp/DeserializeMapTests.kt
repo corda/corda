@@ -3,7 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.io.NotSerializableException
@@ -86,8 +86,9 @@ class DeserializeMapTests {
         val c = C(v)
 
         // expected to throw
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
-                .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Dictionary.")
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+                .isInstanceOf(NotSerializableException::class.java)
+                .hasMessageContaining("Unable to serialise deprecated type class java.util.Dictionary.")
     }
 
     @Test(timeout=300_000)
@@ -100,7 +101,7 @@ class DeserializeMapTests {
         val c = C(v)
 
         // expected to throw
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Hashtable. Suggested fix: prefer java.util.map implementations")
     }
 
@@ -111,7 +112,7 @@ class DeserializeMapTests {
         val c = C(HashMap(mapOf("A" to 1, "B" to 2)))
 
         // expect this to throw
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
@@ -121,7 +122,7 @@ class DeserializeMapTests {
 
         val c = C(WeakHashMap(mapOf("A" to 1, "B" to 2)))
 
-        Assertions.assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
+        assertThatThrownBy { TestSerializationOutput(VERBOSE, sf).serialize(c) }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Weak references with map types not supported. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 

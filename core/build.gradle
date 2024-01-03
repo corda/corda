@@ -23,16 +23,18 @@ configurations {
 }
 
 dependencies {
+    // These are exposed in our public APIs and are thus "api" dependencies
+    api "org.slf4j:slf4j-api:$slf4j_version"
+    // RxJava: observable streams of events.
+    api "io.reactivex:rxjava:$rxjava_version"
+
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     // SLF4J: commons-logging bindings for a SLF4J back end
     implementation "org.slf4j:jcl-over-slf4j:$slf4j_version"
-    implementation "org.slf4j:slf4j-api:$slf4j_version"
     // Guava: Google utilities library.
     implementation "com.google.guava:guava:$guava_version"
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
-    // RxJava: observable streams of events.
-    implementation "io.reactivex:rxjava:$rxjava_version"
     implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     implementation "net.i2p.crypto:eddsa:$eddsa_version"
@@ -80,10 +82,6 @@ jar {
     finalizedBy(copyQuasarJar)
     archiveBaseName = 'corda-core'
     archiveClassifier = ''
-
-    manifest {
-        attributes('Add-Opens': 'java.base/java.net java.base/java.nio')
-    }
 }
 
 processTestResources {
@@ -103,6 +101,7 @@ compileTestJava {
 }
 
 test {
+    // TODO This obscures whether any Corda client APIs need these JVM flags as well (which they shouldn't do)
     jvmArgs += [
             '--add-exports', 'java.base/sun.security.util=ALL-UNNAMED',
             '--add-exports', 'java.base/sun.security.x509=ALL-UNNAMED'
