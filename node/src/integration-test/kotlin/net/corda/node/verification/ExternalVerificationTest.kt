@@ -6,7 +6,8 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.ContractRejection
+import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -16,6 +17,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -32,7 +34,6 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.verification.ExternalVerificationTest.FailExternallyContract.State
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.BOC_NAME
@@ -90,6 +91,30 @@ class ExternalVerificationTest {
     }
 
     @Test(timeout=300_000)
+    fun `external verifier is unable to verify contracts which use new Kotlin APIs`() {
+        check(!IntArray::maxOrNull.isInline)
+
+        internalDriver(
+                systemProperties = mapOf("net.corda.node.verification.external" to "true"),
+                cordappsForAllNodes = listOf(cordappWithPackages("net.corda.node.verification"))
+        ) {
+            val (alice, bob) = listOf(
+                    startNode(NodeParameters(providedName = ALICE_NAME)),
+                    startNode(NodeParameters(providedName = BOB_NAME)),
+            ).transpose().getOrThrow()
+
+            assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
+                alice.rpc.startFlow(::NewKotlinApiFlow, bob.nodeInfo).returnValue.getOrThrow()
+            }
+
+            assertThat(bob.externalVerifierLogs()).contains("""
+                java.lang.NoSuchMethodError: 'java.lang.Integer kotlin.collections.ArraysKt.maxOrNull(int[])'
+                	at net.corda.node.verification.ExternalVerificationTest${'$'}NewKotlinApiContract.verify(ExternalVerificationTest.kt:
+            """.trimIndent())
+        }
+    }
+
+    @Test(timeout=300_000)
     fun `regular transactions can fail verification in external verifier`() {
         internalDriver(
                 systemProperties = mapOf("net.corda.node.verification.external" to "true"),
@@ -104,7 +129,7 @@ class ExternalVerificationTest {
             // Create a transaction from Alice to Bob, where Charlie is specified as the contract verification trigger
             val firstState = alice.rpc.startFlow(::FailExternallyFlow, null, charlie.nodeInfo, bob.nodeInfo).returnValue.getOrThrow()
             // When the transaction chain tries to moves onto Charlie, it will trigger the failure
-            assertThatExceptionOfType(TransactionVerificationException.ContractRejection::class.java)
+            assertThatExceptionOfType(ContractRejection::class.java)
                     .isThrownBy { bob.rpc.startFlow(::FailExternallyFlow, firstState, charlie.nodeInfo, charlie.nodeInfo).returnValue.getOrThrow() }
                     .withMessageContaining("Fail in external verifier: ${firstState.ref.txhash}")
 
@@ -149,6 +174,7 @@ class ExternalVerificationTest {
         return verifierLogs[0].readText()
     }
 
+
     class FailExternallyContract : Contract {
         override fun verify(tx: LedgerTransaction) {
             val command = tx.commandsOfType<Command>().single()
@@ -165,40 +191,46 @@ class ExternalVerificationTest {
             }
         }
 
-        data class State(val party: Party) : ContractState {
-            override val participants: List<AbstractParty> get() = listOf(party)
-        }
-
+        data class State(override val party: Party) : TestState
         data class Command(val failForParty: Party) : CommandData
     }
 
+
     @StartableByRPC
     @InitiatingFlow
-    class FailExternallyFlow(private val inputState: StateAndRef<State>?,
+    class FailExternallyFlow(inputState: StateAndRef<FailExternallyContract.State>?,
                              private val failForParty: NodeInfo,
-                             private val recipient: NodeInfo) : FlowLogic<StateAndRef<State>>() {
-        @Suspendable
-        override fun call(): StateAndRef<State> {
-            val myParty = serviceHub.myInfo.legalIdentities[0]
-            val txBuilder = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities[0])
-            inputState?.let(txBuilder::addInputState)
-            txBuilder.addOutputState(State(myParty), FailExternallyContract::class.java.name)
-            txBuilder.addCommand(FailExternallyContract.Command(failForParty.legalIdentities[0]), myParty.owningKey)
-            val initialTx = serviceHub.signInitialTransaction(txBuilder)
-            val sessions = arrayListOf(initiateFlow(recipient.legalIdentities[0]))
-            inputState?.let { sessions += initiateFlow(it.state.data.party) }
-            val notarisedTx = subFlow(FinalityFlow(initialTx, sessions))
-            return notarisedTx.toLedgerTransaction(serviceHub).outRef(0)
-        }
+                             recipient: NodeInfo) : TestFlow<FailExternallyContract.State>(inputState, recipient) {
+        override fun newOutput() = FailExternallyContract.State(serviceHub.myInfo.legalIdentities[0])
+        override fun newCommand() = FailExternallyContract.Command(failForParty.legalIdentities[0])
+
+        @Suppress("unused")
+        @InitiatedBy(FailExternallyFlow::class)
+        class ReceiverFlow(otherSide: FlowSession) : TestReceiverFlow(otherSide)
     }
 
-    @Suppress("unused")
-    @InitiatedBy(FailExternallyFlow::class)
-    class ReceiverFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            subFlow(ReceiveFinalityFlow(otherSide))
+
+    class NewKotlinApiContract : Contract {
+        override fun verify(tx: LedgerTransaction) {
+            check(tx.commandsOfType<Command>().isNotEmpty())
+            // New post-1.2 API which is non-inlined
+            intArrayOf().maxOrNull()
         }
+
+        data class State(override val party: Party) : TestState
+        object Command : TypeOnlyCommandData()
+    }
+
+
+    @StartableByRPC
+    @InitiatingFlow
+    class NewKotlinApiFlow(recipient: NodeInfo) : TestFlow<NewKotlinApiContract.State>(null, recipient) {
+        override fun newOutput() = NewKotlinApiContract.State(serviceHub.myInfo.legalIdentities[0])
+        override fun newCommand() = NewKotlinApiContract.Command
+
+        @Suppress("unused")
+        @InitiatedBy(NewKotlinApiFlow::class)
+        class ReceiverFlow(otherSide: FlowSession) : TestReceiverFlow(otherSide)
     }
 
 
@@ -215,5 +247,40 @@ class ExternalVerificationTest {
             assertThat(notaryChangeTx?.coreTransaction).isInstanceOf(NotaryChangeWireTransaction::class.java)
             return notaryChangeTx!!.id
         }
+    }
+
+
+    abstract class TestFlow<T : TestState>(
+            private val inputState: StateAndRef<T>?,
+            private val recipient: NodeInfo
+    ) : FlowLogic<StateAndRef<T>>() {
+        @Suspendable
+        override fun call(): StateAndRef<T> {
+            val myParty = serviceHub.myInfo.legalIdentities[0]
+            val txBuilder = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities[0])
+            inputState?.let(txBuilder::addInputState)
+            txBuilder.addOutputState(newOutput())
+            txBuilder.addCommand(newCommand(), myParty.owningKey)
+            val initialTx = serviceHub.signInitialTransaction(txBuilder)
+            val sessions = arrayListOf(initiateFlow(recipient.legalIdentities[0]))
+            inputState?.let { sessions += initiateFlow(it.state.data.party) }
+            val notarisedTx = subFlow(FinalityFlow(initialTx, sessions))
+            return notarisedTx.toLedgerTransaction(serviceHub).outRef(0)
+        }
+
+        protected abstract fun newOutput(): T
+        protected abstract fun newCommand(): CommandData
+    }
+
+    abstract class TestReceiverFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveFinalityFlow(otherSide))
+        }
+    }
+
+    interface TestState : ContractState {
+        val party: Party
+        override val participants: List<AbstractParty> get() = listOf(party)
     }
 }

@@ -1,4 +1,4 @@
-package net.corda.core.internal.telemetry
+package net.corda.nodeapi.internal.telemetry
 
 import co.paralleluniverse.fibers.instrument.DontInstrument
 import io.opentelemetry.api.GlobalOpenTelemetry
@@ -12,14 +12,23 @@ import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
 import io.opentelemetry.context.Scope
-import net.corda.core.flows.FlowLogic
-import net.corda.core.serialization.CordaSerializable
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import net.corda.opentelemetrydriver.OpenTelemetryDriver
 import io.opentelemetry.context.propagation.TextMapGetter
+import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.telemetry.EndSpanEvent
+import net.corda.core.internal.telemetry.EndSpanForFlowEvent
+import net.corda.core.internal.telemetry.RecordExceptionEvent
+import net.corda.core.internal.telemetry.SetStatusEvent
+import net.corda.core.internal.telemetry.ShutdownTelemetryEvent
+import net.corda.core.internal.telemetry.StartSpanEvent
+import net.corda.core.internal.telemetry.StartSpanForFlowEvent
+import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryDataItem
+import net.corda.core.internal.telemetry.TelemetryEvent
+import net.corda.core.internal.telemetry.TelemetryStatusCode
+import net.corda.core.serialization.CordaSerializable
+import net.corda.opentelemetrydriver.OpenTelemetryDriver
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 
 @CordaSerializable
@@ -54,12 +63,11 @@ class TracerSetup(serviceName: String) {
 }
 
 @Suppress("TooManyFunctions")
-class OpenTelemetryComponent(val serviceName: String, val spanStartEndEventsEnabled: Boolean, val copyBaggageToTags: Boolean) : TelemetryComponent {
+class OpenTelemetryComponent(serviceName: String, val spanStartEndEventsEnabled: Boolean, val copyBaggageToTags: Boolean) : TelemetryComponent {
     val tracerSetup = TracerSetup(serviceName)
     val tracer: Tracer = tracerSetup.getTracer()
 
     companion object {
-        private val log: Logger = LoggerFactory.getLogger(OpenTelemetryComponent::class.java)
         const val OPENTELEMETRY_COMPONENT_NAME = "OpenTelemetry"
     }
 

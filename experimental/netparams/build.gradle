@@ -1,4 +1,3 @@
-apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
 
 description 'NetworkParameters signing tool'
@@ -24,7 +23,7 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    baseName = "netparams"
+    archiveBaseName = "netparams"
     manifest {
         attributes(
                 'Main-Class': 'net.corda.netparams.NetParamsKt'

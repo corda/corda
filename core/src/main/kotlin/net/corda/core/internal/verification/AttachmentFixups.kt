@@ -56,7 +56,7 @@ class AttachmentFixups {
     private fun parseIds(ids: String): Set<AttachmentId> {
         return ids.splitToSequence(",")
                 .map(String::trim)
-                .filterNot(String::isEmpty)
+                .filter { it.isNotEmpty() }
                 .mapTo(LinkedHashSet(), SecureHash.Companion::create)
     }
 

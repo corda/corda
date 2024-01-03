@@ -135,7 +135,7 @@ class ExternalVerifier(
 
     private fun verifyTransaction(request: VerificationRequest) {
         val verificationContext = ExternalVerificationContext(appClassLoader, attachmentsClassLoaderCache, this, request.stxInputsAndReferences)
-        val result = try {
+        val result: Try<Unit> = try {
             request.stx.verifyInternal(verificationContext, request.checkSufficientSignatures)
             log.info("${request.stx} verified")
             Try.Success(Unit)
@@ -213,7 +213,7 @@ class ExternalVerifier(
         override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
 
         companion object {
-            inline fun <reified T> Set<String>?.load(classLoader: ClassLoader?): Set<T> {
+            inline fun <reified T : Any> Set<String>?.load(classLoader: ClassLoader?): Set<T> {
                 return this?.mapToSet { loadClassOfType<T>(it, classLoader = classLoader).kotlin.objectOrNewInstance() } ?: emptySet()
             }
         }

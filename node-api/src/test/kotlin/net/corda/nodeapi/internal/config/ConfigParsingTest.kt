@@ -10,7 +10,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -109,7 +108,6 @@ class ConfigParsingTest {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme")
 	fun `test CordaX500Name`() {
         val name1 = CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB")
         testPropertyType<CordaX500NameData, CordaX500NameListData, CordaX500Name>(

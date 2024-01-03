@@ -1,4 +1,3 @@
-apply plugin: 'java'
 apply plugin: 'org.jetbrains.kotlin.jvm'
 
 description 'NodeInfo signing tool'
@@ -23,7 +22,7 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    baseName = "nodeinfo"
+    archiveBaseName = "nodeinfo"
     manifest {
         attributes(
                 'Main-Class': 'net.corda.nodeinfo.NodeInfoKt'

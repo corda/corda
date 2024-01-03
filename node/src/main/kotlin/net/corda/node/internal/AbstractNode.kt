@@ -42,7 +42,6 @@ import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.messaging.AttachmentTrustInfoRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
-import net.corda.core.internal.telemetry.OpenTelemetryComponent
 import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
@@ -167,6 +166,7 @@ import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.withoutDatabaseAccess
+import net.corda.nodeapi.internal.telemetry.OpenTelemetryComponent
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig

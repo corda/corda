@@ -46,8 +46,9 @@ repositories {
 }
 
 dependencies {
-    implementation group: 'com.github.docker-java', name: 'docker-java', version: constants.dockerJavaVersion
-    implementation group: 'com.github.docker-java', name: 'docker-java-transport-httpclient5', version: constants.dockerJavaVersion
+    implementation "com.github.docker-java:docker-java:$constants.dockerJavaVersion"
+    implementation "com.github.docker-java:docker-java-transport-httpclient5:$constants.dockerJavaVersion"
+    implementation "org.jooq:joor:$constants.joorVersion"
 
     if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('cordaArtifactoryUsername')) {
         implementation "com.r3.internal.gradle.plugins:publish:$internalPublishVersion"

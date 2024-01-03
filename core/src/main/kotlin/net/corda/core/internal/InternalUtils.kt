@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber")
+
 package net.corda.core.internal
 
 import net.corda.core.crypto.Crypto
@@ -34,6 +36,7 @@ import java.nio.ByteBuffer
 import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.PrivateKey
@@ -60,6 +63,8 @@ import java.util.Spliterator.SUBSIZED
 import java.util.Spliterators
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarEntry
+import java.util.jar.JarInputStream
 import java.util.stream.Collectors
 import java.util.stream.Collectors.toCollection
 import java.util.stream.IntStream
@@ -68,7 +73,6 @@ import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlin.io.path.toPath
 import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
@@ -132,14 +136,17 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
 /**
  * Similar to [Iterable.map] except it maps to a [Set] which preserves the iteration order.
  */
+@Suppress("INVISIBLE_MEMBER", "RemoveExplicitTypeArguments")   // Because the external verifier uses Kotlin 1.2
 inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> {
-    if (this is Collection) {
+    return if (this is Collection) {
         when (size) {
             0 -> return emptySet()
             1 -> return setOf(transform(first()))
+            else -> mapTo(LinkedHashSet<R>(mapCapacity(size)), transform)
         }
+    } else {
+        mapTo(LinkedHashSet<R>(), transform)
     }
-    return mapTo(LinkedHashSet(), transform)
 }
 
 /**
@@ -175,6 +182,8 @@ fun InputStream.hash(): SecureHash {
 }
 
 inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
+
+fun JarInputStream.entries(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else "${take(maxWidth - 1)}…"
 
@@ -370,17 +379,10 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
     val name: String = javaField.name
 
     private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
-        @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
-        val accessible = isAccessible
         isAccessible = true
-        try {
-            return action(this)
-        } finally {
-            isAccessible = accessible
-        }
+        return action(this)
     }
 
-    @Throws(NoSuchFieldException::class)
     private fun findField(fieldName: String, clazz: Class<*>?): Field {
         if (clazz == null) {
             throw NoSuchFieldException(fieldName)
@@ -436,7 +438,7 @@ inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
 inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
-fun URL.toPath(): Path = toURI().toPath()
+fun URL.toPath(): Path = Paths.get(toURI())
 
 val DEFAULT_HTTP_CONNECT_TIMEOUT = 30.seconds.toMillis()
 val DEFAULT_HTTP_READ_TIMEOUT = 30.seconds.toMillis()
