@@ -10,6 +10,9 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipients
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.services.CordaService
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
@@ -41,15 +44,15 @@ class FlowOperatorTests {
         val EUGENE_NAME = CordaX500Name("Eugene", "EugeneCorp", "GB")
     }
 
-    lateinit var mockNet: InternalMockNetwork
-    lateinit var aliceNode: TestStartedNode
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: TestStartedNode
     private lateinit var aliceParty: Party
-    lateinit var bobNode: TestStartedNode
+    private lateinit var bobNode: TestStartedNode
     private lateinit var bobParty: Party
-    lateinit var charlieNode: TestStartedNode
+    private lateinit var charlieNode: TestStartedNode
     private lateinit var charlieParty: Party
-    lateinit var daveNode: TestStartedNode
-    lateinit var daveParty: Party
+    private lateinit var daveNode: TestStartedNode
+    private lateinit var daveParty: Party
     private lateinit var eugeneNode: TestStartedNode
     private lateinit var eugeneParty: Party
 
@@ -216,8 +219,7 @@ class FlowOperatorTests {
     fun `mixed query should return all flows which are waiting for counter party to process`() {
         charlieNode.registerCordappFlowFactory(ReceiveFlow::class) { AcceptingFlow("Hello", it) }
 
-        val future = CompletableFuture<String>()
-        aliceNode.services.startFlow(ExternalAsyncOperationFlow(future))
+        aliceNode.services.startFlow(ExternalAsyncOperationFlow())
         val bobStart = aliceNode.services.startFlow(ReceiveFlow("Hello", listOf(bobParty)))
         val daveStart = aliceNode.services.startFlow(GetFlowInfoFlow(listOf(daveParty)))
         charlieNode.services.startFlow(ReceiveFlow("Hello", listOf(charlieParty)))
@@ -249,8 +251,7 @@ class FlowOperatorTests {
 
     @Test(timeout = 300_000)
     fun `query should return all flows which are waiting for counter party (the flow must have counter party) to process grouped by party`() {
-        val future = CompletableFuture<String>()
-        aliceNode.services.startFlow(ExternalAsyncOperationFlow(future))
+        aliceNode.services.startFlow(ExternalAsyncOperationFlow())
         val bobStart = aliceNode.services.startFlow(ReceiveFlow("Hello", listOf(bobParty)))
         val daveStart = aliceNode.services.startFlow(ReceiveFlow("Hello", listOf(daveParty)))
 
@@ -380,12 +381,11 @@ class FlowOperatorTests {
 
     @Test(timeout = 300_000)
     fun `query should return all flows which are waiting for async external operations`() {
-        val future = CompletableFuture<String>()
-        val start = aliceNode.services.startFlow(ExternalAsyncOperationFlow(future))
+        val start = aliceNode.services.startFlow(ExternalAsyncOperationFlow())
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        executeTest(5.seconds, { future.complete("Hello") }) {
+        executeTest(5.seconds, { aliceNode.services.startFlow(CompleteFutureFlow("Hello")) }) {
             val result = cut.queryWaitingFlows(WaitingFlowQuery(
                     waitingSources = mutableListOf(WaitingSource.EXTERNAL_OPERATION)
             )) // the list of counter parties must be empty to get any external operation
@@ -400,12 +400,11 @@ class FlowOperatorTests {
 
     @Test(timeout = 300_000)
     fun `query should return all flows which are waiting for external operations`() {
-        val future = CompletableFuture<String>()
-        val start = aliceNode.services.startFlow(ExternalOperationFlow(future))
+        val start = aliceNode.services.startFlow(ExternalOperationFlow())
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        executeTest(5.seconds, { future.complete("Hello") }) {
+        executeTest(5.seconds, { aliceNode.services.startFlow(CompleteFutureFlow("Hello")) }) {
             val result = cut.queryWaitingFlows(WaitingFlowQuery())
 
             assertEquals(1, result.size)
@@ -512,31 +511,44 @@ class FlowOperatorTests {
     }
 
     @InitiatingFlow
-    class ExternalAsyncOperationFlow(private val future: CompletableFuture<String>) : FlowLogic<Unit>() {
+    class ExternalAsyncOperationFlow : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            await(ExternalOperation(future))
+            await(ExternalOperation(serviceHub.cordaService(FutureService::class.java)))
         }
 
-        class ExternalOperation(private val future: CompletableFuture<String>) : FlowExternalAsyncOperation<String> {
+        class ExternalOperation(private val futureService: FutureService) : FlowExternalAsyncOperation<String> {
             override fun execute(deduplicationId: String): CompletableFuture<String> {
-                return future
+                return futureService.future
             }
         }
     }
 
     @InitiatingFlow
-    class ExternalOperationFlow(private val future: CompletableFuture<String>) : FlowLogic<Unit>() {
+    class ExternalOperationFlow : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            await(ExternalOperation(future))
+            await(ExternalOperation(serviceHub.cordaService(FutureService::class.java)))
         }
 
-        class ExternalOperation(private val future: CompletableFuture<String>) : FlowExternalOperation<String> {
+        class ExternalOperation(private val futureService: FutureService) : FlowExternalOperation<String> {
             override fun execute(deduplicationId: String): String {
-                return future.get()
+                return futureService.future.get()
             }
         }
+    }
+
+    class CompleteFutureFlow(private val value: String) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            serviceHub.cordaService(FutureService::class.java).future.complete(value)
+        }
+    }
+
+    @Suppress("unused")
+    @CordaService
+    class FutureService(private val services: AppServiceHub) : SingletonSerializeAsToken() {
+        val future = CompletableFuture<String>()
     }
 
     @InitiatingFlow

@@ -3,6 +3,7 @@ package net.corda.node.internal
 import co.paralleluniverse.fibers.instrument.Retransform
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
+import com.google.common.collect.ImmutableList
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.zaxxer.hikari.pool.HikariPool
@@ -210,6 +211,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     @Suppress("LeakingThis")
     private var tokenizableServices: MutableList<SerializeAsToken>? = mutableListOf(platformClock, this)
+    private var frozenTokenizableServices: List<SerializeAsToken>? = null
 
     val metricRegistry = MetricRegistry()
     protected val cacheFactory = cacheFactoryPrototype.bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
@@ -361,10 +363,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val nodeServicesContext = object : NodeServicesContext {
         override val platformVersion = versionInfo.platformVersion
         override val configurationWithOptions = configuration.configurationWithOptions
-        // Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will
-        // be reflected in the context as well. However, since context only has access to immutable collection it can only read (but not modify)
-        // the content.
-        override val tokenizableServices: List<SerializeAsToken> = this@AbstractNode.tokenizableServices!!
+        override val tokenizableServices: List<SerializeAsToken> get() = this@AbstractNode.frozenTokenizableServices!!
     }
 
     private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
@@ -483,6 +482,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 "Node's platform version is lower than network's required minimumPlatformVersion"
             }
             networkMapCache.start(netParams.notaries)
+            services.networkParameters = netParams
 
             database.transaction {
                 networkParametersStorage.setCurrentParameters(signedNetParams, trustRoots)
@@ -622,10 +622,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
 
-            val frozenTokenizableServices = tokenizableServices!!
+            frozenTokenizableServices = ImmutableList.copyOf(tokenizableServices!!)
             tokenizableServices = null
 
-            verifyCheckpointsCompatible(frozenTokenizableServices)
+            verifyCheckpointsCompatible(frozenTokenizableServices!!)
             partyInfoCache.start()
             encryptionService.start(nodeInfo.legalIdentities[0])
 
@@ -634,7 +634,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                state machine manager from starting (just below this) until the service is ready.
              */
             nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeStateMachineStart(nodeServicesContext)).get()
-            val callback = smm.start(frozenTokenizableServices)
+            val callback = smm.start(frozenTokenizableServices!!)
             val smmStartedFuture = rootFuture.map { callback() }
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -1205,8 +1205,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
 
         @Volatile
-        private lateinit var _networkParameters: NetworkParameters
-        override val networkParameters: NetworkParameters get() = _networkParameters
+        override lateinit var networkParameters: NetworkParameters
 
         init {
             this@AbstractNode.attachments.servicesForResolution = this
@@ -1214,7 +1213,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         fun start(myInfo: NodeInfo, networkParameters: NetworkParameters) {
             this._myInfo = myInfo
-            this._networkParameters = networkParameters
+            this.networkParameters = networkParameters
         }
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
@@ -1296,7 +1295,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
-            this._networkParameters = networkParameters
+            this.networkParameters = networkParameters
         }
 
         override fun tryExternalVerification(stx: SignedTransaction, checkSufficientSignatures: Boolean): Boolean {

@@ -2,6 +2,11 @@
 
 package net.corda.core.internal
 
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.ImmutableSortedMap
+import com.google.common.collect.ImmutableSortedSet
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
@@ -52,6 +57,8 @@ import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.Collections
 import java.util.PrimitiveIterator
+import java.util.SortedMap
+import java.util.SortedSet
 import java.util.Spliterator
 import java.util.Spliterator.DISTINCT
 import java.util.Spliterator.IMMUTABLE
@@ -61,6 +68,8 @@ import java.util.Spliterator.SIZED
 import java.util.Spliterator.SORTED
 import java.util.Spliterator.SUBSIZED
 import java.util.Spliterators
+import java.util.TreeMap
+import java.util.TreeSet
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarEntry
@@ -157,6 +166,79 @@ inline fun <T, R> Iterable<T>.flatMapToSet(transform: (T) -> Iterable<R>): Set<R
         emptySet()
     } else {
         flatMapTo(LinkedHashSet(), transform)
+    }
+}
+
+// The following "toImmutable" methods will try to return collections which are friendly to use in mock node checkpoints. This avoids the
+// tests from having to add the necessary `--add-opens` args (this is not an issue with normal nodes). This is primarily achieved by using
+// the Guava immutable collections. However, they don't support null values, which is why you will see checks for the presense of null
+// before using them.
+
+/**
+ * Returns an immutable [List] which cannot be modified, nor its contents changed indirectly via the receiver. Tries to avoid copying data.
+ */
+@Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+fun <T> Collection<T>.toImmutableList(): List<T> {
+    return when {
+        isEmpty() -> emptyList()
+        size == 1 -> listOf(first())
+        this is ImmutableList -> this
+        contains(null as T) -> (this as java.util.Collection<T>).toArray().asList() as List<T>
+        else -> ImmutableList.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable, iteration preserving, [Set] which cannot be modified, nor its contents changed indirectly via the receiver. Tries
+ * to avoid copying data.
+ */
+@Suppress("UNCHECKED_CAST")
+fun <T> Collection<T>.toImmutableSet(): Set<T> {
+    return when {
+        isEmpty() -> emptySet()
+        size == 1 -> setOf(first())
+        contains(null as T) -> Collections.unmodifiableSet(LinkedHashSet(this))
+        else -> ImmutableSet.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable [SortedSet] which cannot be modified, nor its contents changed indirectly via the receiver. Tries to avoid copying
+ * data.
+ */
+@Suppress("UNCHECKED_CAST")
+fun <T> Collection<T>.toImmutableSortedSet(): SortedSet<T> {
+    return when {
+        isEmpty() -> Collections.emptySortedSet()
+        contains(null as T) -> Collections.unmodifiableSortedSet(TreeSet(this))
+        else -> ImmutableSortedSet.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable, iteration preserving, [Map] which cannot be modified, nor its contents changed indirectly via the receiver. Tries
+ * to avoid copying data.
+ */
+@Suppress("UNCHECKED_CAST")
+fun <K, V> Map<K, V>.toImmutableMap(): Map<K, V> {
+    return when {
+        isEmpty() -> emptyMap()
+        size == 1 -> entries.first().let { Collections.singletonMap(it.key, it.value) }
+        containsValue(null as V) || containsKey(null as K) -> Collections.unmodifiableMap(LinkedHashMap(this))
+        else -> ImmutableMap.copyOf(this)
+    }
+}
+
+/**
+ * Returns an immutable [SortedMap] which cannot be modified, nor its contents changed indirectly via the receiver. Tries to avoid copying
+ * data.
+ */
+@Suppress("UNCHECKED_CAST")
+fun <K, V> Map<K, V>.toImmutableSortedMap(): SortedMap<K, V> {
+    return when {
+        isEmpty() -> Collections.emptySortedMap()
+        containsValue(null as V) || containsKey(null as K) -> Collections.unmodifiableSortedMap(TreeMap(this))
+        else -> ImmutableSortedMap.copyOf(this)
     }
 }
 
@@ -429,6 +511,8 @@ val Class<*>.packageNameOrNull: String? // This intentionally does not go via `p
             null
         }
     }
+
+val Class<*>.fullyQualifiedPackage: String get() = "${module.name}/$packageName"
 
 inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
 

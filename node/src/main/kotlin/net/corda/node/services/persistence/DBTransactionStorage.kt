@@ -10,6 +10,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.toImmutableList
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.SignedTransactionWithStatus
 import net.corda.core.serialization.SerializationContext
@@ -41,7 +42,6 @@ import org.hibernate.annotations.Type
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.time.Instant
-import java.util.Collections
 import javax.persistence.AttributeConverter
 import javax.persistence.Column
 import javax.persistence.Convert
@@ -398,20 +398,20 @@ open class DBTransactionStorage(private val database: CordaPersistence, cacheFac
     }
 
     // Cache value type to just store the immutable bits of a signed transaction plus conversion helpers
-    internal class TxCacheValue(
+    private class TxCacheValue(
             val txBits: SerializedBytes<CoreTransaction>,
             val sigs: List<TransactionSignature>,
             val status: TransactionStatus
     ) {
         constructor(stx: SignedTransaction, status: TransactionStatus) : this(
                 stx.txBits,
-                Collections.unmodifiableList(stx.sigs),
+                stx.sigs.toImmutableList(),
                 status
         )
 
         constructor(stx: SignedTransaction, status: TransactionStatus, sigs: List<TransactionSignature>?) : this(
                 stx.txBits,
-                if (sigs == null) Collections.unmodifiableList(stx.sigs) else Collections.unmodifiableList(stx.sigs + sigs).distinct(),
+                if (sigs == null) stx.sigs.toImmutableList() else stx.sigs.toMutableSet().apply { addAll(sigs) }.toImmutableList(),
                 status
         )
         fun toSignedTx() = SignedTransaction(txBits, sigs)
