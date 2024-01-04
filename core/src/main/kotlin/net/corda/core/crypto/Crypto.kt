@@ -62,6 +62,7 @@ import java.security.PrivateKey
 import java.security.Provider
 import java.security.PublicKey
 import java.security.SignatureException
+import java.security.interfaces.EdECPrivateKey
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -1002,6 +1003,7 @@ object Crypto {
     private fun convertIfBCEdDSAPrivateKey(key: PrivateKey): PrivateKey {
         return when (key) {
             is BCEdDSAPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
+            is EdECPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
             else -> key
         }
     }
@@ -1053,6 +1055,7 @@ object Crypto {
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
             is EdDSAPrivateKey -> key
+            is EdECPrivateKey -> convertIfBCEdDSAPrivateKey(key)
             is BCEdDSAPrivateKey -> convertIfBCEdDSAPrivateKey(key)
             else -> decodePrivateKey(key.encoded)
         }

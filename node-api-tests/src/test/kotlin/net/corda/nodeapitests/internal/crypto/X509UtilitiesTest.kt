@@ -32,6 +32,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.checkValidity
+import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.getSupportedKey
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
@@ -60,7 +61,6 @@ import org.bouncycastle.asn1.x509.CRLDistPoint
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
-import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.junit.Rule
 import org.junit.Test
@@ -76,6 +76,7 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
+import java.security.interfaces.EdECPrivateKey
 import java.util.*
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLParameters
@@ -254,8 +255,8 @@ class X509UtilitiesTest {
 
         // Load the keystore from file and make sure keys are intact.
         val reloadedKeystore = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
-        val reloadedPrivateKey = reloadedKeystore.getKey("Key", "password".toCharArray())
-        val reloadedPublicKey = reloadedKeystore.getCertificate("Key").publicKey
+        val reloadedPrivateKey = reloadedKeystore.getSupportedKey("Key", "password")
+        val reloadedPublicKey = reloadedKeystore.getCertificateAndKeyPair("Key", "password").keyPair.public
 
         assertNotNull(reloadedPublicKey)
         assertNotNull(reloadedPrivateKey)
@@ -452,7 +453,7 @@ class X509UtilitiesTest {
     private fun <U, C> getCorrectKeyFromKeystore(signatureScheme: SignatureScheme, uncastedClass: Class<U>, castedClass: Class<C>) {
         val keyPair = generateKeyPair(signatureScheme)
         val (keyFromKeystore, keyFromKeystoreCasted) = storeAndGetKeysFromKeystore(keyPair)
-        if (uncastedClass == EdDSAPrivateKey::class.java && keyFromKeystore !is BCEdDSAPrivateKey) {
+        if (uncastedClass == EdDSAPrivateKey::class.java && keyFromKeystore !is EdECPrivateKey) {
             assertThat(keyFromKeystore).isInstanceOf(uncastedClass)
         }
         assertThat(keyFromKeystoreCasted).isInstanceOf(castedClass)
@@ -531,10 +532,9 @@ class X509UtilitiesTest {
 
         // Load the keystore from file and make sure keys are intact.
         val reloadedKeystore = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
-        val reloadedPrivateKey = reloadedKeystore.getKey("Key", "password".toCharArray())
+        val reloadedPrivateKey = reloadedKeystore.getSupportedKey("Key", "password")
         val reloadedCerts = reloadedKeystore.getCertificateChain("Key")
-
-        val reloadedPublicKey = reloadedCerts.last().publicKey
+        val reloadedPublicKey = Crypto.toSupportedPublicKey(reloadedCerts.last().publicKey)
 
         assertEquals(2, reloadedCerts.size)
         assertNotNull(reloadedPublicKey)
