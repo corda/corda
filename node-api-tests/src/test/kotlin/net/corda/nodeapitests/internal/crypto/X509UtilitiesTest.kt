@@ -146,7 +146,8 @@ class X509UtilitiesTest {
         assertEquals(subject, caCert.subjectX500Principal) // using our subject common name
         assertEquals(caCert.issuerX500Principal, caCert.subjectX500Principal) //self-signed
         caCert.checkValidity(Date()) // throws on verification problems
-//        caCert.verify(caKey.public) // throws on verification problems
+        // See https://r3-cev.atlassian.net/browse/ENT-11333
+        // caCert.verify(caKey.public) // throws on verification problems
         caCert.toBc().run {
             val basicConstraints = BasicConstraints.getInstance(getExtension(Extension.basicConstraints).parsedValue)
             val keyUsage = KeyUsage.getInstance(getExtension(Extension.keyUsage).parsedValue)
@@ -181,7 +182,8 @@ class X509UtilitiesTest {
         assertEquals(childSubject, childCert.subjectX500Principal) // Using our subject common name.
         assertEquals(caCert.issuerX500Principal, childCert.issuerX500Principal) // Issued by our CA cert.
         childCert.checkValidity(Date()) // Throws on verification problems.
-//        childCert.verify(caKeyPair.public) // Throws on verification problems.
+        // See https://r3-cev.atlassian.net/browse/ENT-11333
+        // childCert.verify(caKeyPair.public) // Throws on verification problems.
         childCert.toBc().run {
             val basicConstraints = BasicConstraints.getInstance(getExtension(Extension.basicConstraints).parsedValue)
             val keyUsage = KeyUsage.getInstance(getExtension(Extension.keyUsage).parsedValue)

@@ -89,7 +89,8 @@ class BCCryptoServiceTests {
                 window)
 
         certificate.checkValidity()
-//        certificate.verify(pubKey)
+        // See https://r3-cev.atlassian.net/browse/ENT-11333
+        // certificate.verify(pubKey)
     }
 
     @Test(timeout=300_000)

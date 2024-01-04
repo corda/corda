@@ -342,7 +342,8 @@ object X509Utilities {
                 crlIssuer)
         return builder.build(signer).run {
             require(isValidOn(Date())){"Certificate is not valid at instant now"}
-//            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public))){"Invalid signature"}
+            // See https://r3-cev.atlassian.net/browse/ENT-11333
+            // require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public))){"Invalid signature"}
             toJca()
         }
     }
