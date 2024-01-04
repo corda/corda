@@ -46,6 +46,23 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     // This registration is needed for reading back EdDSA key from java keystore.
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
     Security.addProvider(it)
+
+    // Remove providers that class with bouncy castle
+    val bcProviders = it.keys
+
+    // JDK 17: Add SunEC provider as lowest priority, as we use Bouncycastle for EDDSA
+    // and remove amy algorithms that conflict with Bouncycastle
+    val sunEC = Security.getProvider("SunEC")
+    if (sunEC != null) {
+        Security.removeProvider("SunEC")
+        Security.addProvider(sunEC)
+
+        for(alg in sunEC.keys) {
+            if (bcProviders.contains(alg)) {
+                sunEC.remove(alg)
+            }
+        }
+    }
 }
 
 val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
