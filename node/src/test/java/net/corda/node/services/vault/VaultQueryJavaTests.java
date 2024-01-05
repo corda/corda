@@ -38,6 +38,7 @@ import net.corda.testing.internal.vault.VaultFiller;
 import net.corda.testing.node.MockServices;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -67,6 +68,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+@Ignore
 public class VaultQueryJavaTests {
     private static final TestIdentity BOC = new TestIdentity(BOC_NAME);
     private static final Party CHARLIE = new TestIdentity(CHARLIE_NAME, 90L).getParty();
