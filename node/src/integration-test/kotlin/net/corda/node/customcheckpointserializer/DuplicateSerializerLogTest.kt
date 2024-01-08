@@ -8,6 +8,8 @@ import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.logFile
+import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.time.Duration
@@ -15,7 +17,7 @@ import java.time.Duration
 class DuplicateSerializerLogTest{
     @Test(timeout=300_000)
     fun `check duplicate serialisers are logged`() {
-        driver {
+        internalDriver(cordappsForAllNodes = cordappsForPackages(javaClass.packageName)) {
             val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::TestFlow).returnValue.get()
 

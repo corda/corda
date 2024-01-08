@@ -8,7 +8,7 @@ class DifficultToSerialize {
     // This map breaks the rules for the put method. Making the normal map serializer fail.
 
     open class BrokenMapBaseImpl<K,V>(delegate: MutableMap<K, V> = mutableMapOf()) : MutableMap<K,V> by delegate {
-        override fun put(key: K, value: V): V? = throw FlowException("Broken on purpose")
+        override fun put(key: K, value: V): V? = throw FlowException("Broken on purpose BrokenMapBaseImpl")
     }
 
     // A class to test custom serializers applied to implementations

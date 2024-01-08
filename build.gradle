@@ -311,6 +311,7 @@ allprojects {
     }
 
     tasks.withType(Test).configureEach {
+        jvmArgs += project(":node:capsule").file("src/main/resources/node-jvm-args.txt").readLines()
         jvmArgs += "--add-modules=jdk.incubator.foreign"  // For the SharedMemoryIncremental
         forkEvery = 20
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false

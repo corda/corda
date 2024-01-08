@@ -191,11 +191,11 @@ class TestCorDapp {
     class BrokenPublicKeySerializer :
             CheckpointCustomSerializer<PublicKey, String> {
         override fun toProxy(obj: PublicKey): String {
-            throw FlowException("Broken on purpose")
+            throw FlowException("Broken on purpose BrokenPublicKeySerializer.toProxy")
         }
 
         override fun fromProxy(proxy: String): PublicKey {
-            throw FlowException("Broken on purpose")
+            throw FlowException("Broken on purpose BrokenPublicKeySerializer.fromProxy")
         }
     }
 
@@ -203,11 +203,11 @@ class TestCorDapp {
     class BrokenEdDSAPublicKeySerializer :
             CheckpointCustomSerializer<EdDSAPublicKey, String> {
         override fun toProxy(obj: EdDSAPublicKey): String {
-            throw FlowException("Broken on purpose")
+            throw FlowException("Broken on purpose BrokenEdDSAPublicKeySerializer.toProxy")
         }
 
         override fun fromProxy(proxy: String): EdDSAPublicKey {
-            throw FlowException("Broken on purpose")
+            throw FlowException("Broken on purpose BrokenEdDSAPublicKeySerializer.fromProxy")
         }
     }
 

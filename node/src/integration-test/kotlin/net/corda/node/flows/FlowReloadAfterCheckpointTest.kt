@@ -522,6 +522,6 @@ class FlowReloadAfterCheckpointTest {
 }
 
 internal class BrokenMap<K, V>(delegate: MutableMap<K, V> = mutableMapOf()) : MutableMap<K, V> by delegate {
-    override fun put(key: K, value: V): V = throw IllegalStateException("Broken on purpose")
+    override fun put(key: K, value: V): V = throw IllegalStateException("Broken on purpose BrokenMap")
 }
 

@@ -6,6 +6,7 @@ import co.paralleluniverse.io.serialization.kryo.ExternalizableKryoSerializer
 import co.paralleluniverse.io.serialization.kryo.JdkProxySerializer
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.io.serialization.kryo.ReferenceSerializer
+import com.esotericsoftware.kryo.ClassResolver
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
@@ -24,6 +25,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.AlwaysAcceptEncodingWhitelist
 import net.corda.serialization.internal.ByteBufferInputStream
@@ -103,12 +105,46 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     fun createFiberSerializer(context: CheckpointSerializationContext): KryoSerializer {
 //                    val serializer = Fiber.getFiberSerializer(classResolver, false) as KryoSerializer
         //                    (this as ReplaceableObjectKryo).isIgnoreInaccessibleClasses = true
-        val kryo = Kryo(CordaClassResolver(context), MapReferenceResolver())
+        val kryo = LoggingKryo(CordaClassResolver(context), MapReferenceResolver())
         kryo.isRegistrationRequired = false
         // Needed because of https://github.com/EsotericSoftware/kryo/issues/864
         kryo.setOptimizedGenerics(false)
         DefaultKryoCustomizer.customize(kryo)
         return Fiber.getFiberSerializer(kryo, false) as KryoSerializer
+    }
+
+    private class LoggingKryo(classResolver: ClassResolver, referenceResolver: MapReferenceResolver) : Kryo(classResolver, referenceResolver) {
+        private companion object {
+            private val log = contextLogger()
+        }
+        override fun writeObject(output: Output?, `object`: Any?, serializer: Serializer<*>?) {
+            log.info("writeObject ${`object`} serializer = $serializer")
+            super.writeObject(output, `object`, serializer)
+        }
+
+        override fun writeClassAndObject(output: Output?, `object`: Any?) {
+            log.info("writeClassAndObject ${`object`}")
+
+            super.writeClassAndObject(output, `object`)
+        }
+
+        override fun writeObject(output: Output?, `object`: Any?) {
+            log.info("writeObject ${`object`}")
+
+            super.writeObject(output, `object`)
+        }
+
+        override fun writeObjectOrNull(output: Output?, `object`: Any?, serializer: Serializer<*>?) {
+            log.info("writeObjectOrNull ${`object`} serializer = $serializer")
+
+            super.writeObjectOrNull(output, `object`, serializer)
+        }
+
+        override fun writeObjectOrNull(output: Output?, `object`: Any?, type: Class<*>?) {
+            log.info("writeObjectOrNull ${`object`}")
+
+            super.writeObjectOrNull(output, `object`, type)
+        }
     }
 
     /**
