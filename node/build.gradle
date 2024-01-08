@@ -241,11 +241,7 @@ dependencies {
     implementation "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
-<<<<<<< HEAD
     implementation "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
-=======
-    compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
->>>>>>> 974d81cf41 (Revert netty version)
 
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
