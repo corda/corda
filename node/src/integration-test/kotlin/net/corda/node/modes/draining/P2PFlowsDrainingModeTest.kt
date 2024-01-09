@@ -31,7 +31,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
-@Ignore("TODO JDK17: Fixme")
+@Ignore("TODO JDK17:Fixme")
 class P2PFlowsDrainingModeTest {
     companion object {
         private val logger = contextLogger()
