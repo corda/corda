@@ -483,6 +483,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 "Node's platform version is lower than network's required minimumPlatformVersion"
             }
             networkMapCache.start(netParams.notaries)
+            services.networkParameters = netParams
 
             database.transaction {
                 networkParametersStorage.setCurrentParameters(signedNetParams, trustRoots)
@@ -1205,8 +1206,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
 
         @Volatile
-        private lateinit var _networkParameters: NetworkParameters
-        override val networkParameters: NetworkParameters get() = _networkParameters
+        override lateinit var networkParameters: NetworkParameters
 
         init {
             this@AbstractNode.attachments.servicesForResolution = this
@@ -1214,7 +1214,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         fun start(myInfo: NodeInfo, networkParameters: NetworkParameters) {
             this._myInfo = myInfo
-            this._networkParameters = networkParameters
+            this.networkParameters = networkParameters
         }
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
@@ -1296,7 +1296,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
-            this._networkParameters = networkParameters
+            this.networkParameters = networkParameters
         }
 
         override fun tryExternalVerification(stx: SignedTransaction, checkSufficientSignatures: Boolean): Boolean {
