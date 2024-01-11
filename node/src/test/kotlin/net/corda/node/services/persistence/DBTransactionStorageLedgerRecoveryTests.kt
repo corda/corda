@@ -45,7 +45,6 @@ import net.corda.testing.node.internal.MockEncryptionService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.security.KeyPair
@@ -173,12 +172,12 @@ class DBTransactionStorageLedgerRecoveryTests {
     }
 
     @Test(timeout = 300_000)
-    @Ignore("TODO JDK17:Fixme datetime format issue")
     fun `test lightweight serialization and deserialization of hashed distribution list payload`() {
+
         val hashedDistList = HashedDistributionList(
                 ALL_VISIBLE,
                 mapOf(SecureHash.sha256(BOB.name.toString()) to NONE, SecureHash.sha256(CHARLIE_NAME.toString()) to ONLY_RELEVANT),
-                HashedDistributionList.PublicHeader(now(), 1)
+                HashedDistributionList.PublicHeader(Instant.ofEpochMilli(now().toEpochMilli()), 1)
         )
         val roundtrip = HashedDistributionList.decrypt(hashedDistList.encrypt(encryptionService), encryptionService)
         assertThat(roundtrip).isEqualTo(hashedDistList)
