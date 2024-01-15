@@ -256,7 +256,6 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     }
 }
 
-@Ignore("TODO JDK17: Flaky test")
 class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     private val databaseConfig: DatabaseConfig = DatabaseConfig()
 
