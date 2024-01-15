@@ -7,12 +7,12 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.ArgumentMatchers.contains
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.slf4j.Logger
+import java.lang.invoke.MethodHandles
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.nio.file.Files
@@ -71,13 +71,12 @@ class ConfigHelperTests {
     }
 
     @Test(timeout = 300_000)
-    @Ignore("TODO JDK17: Modifiers no longer supported")
     fun `bad keys are ignored and warned for`() {
         val loggerField = Node::class.java.getDeclaredField("staticLog")
         loggerField.isAccessible = true
-        val modifiersField = Field::class.java.getDeclaredField("modifiers")
-        modifiersField.isAccessible = true
-        modifiersField.setInt(loggerField, loggerField.modifiers and Modifier.FINAL.inv())
+        val fieldLookup = MethodHandles.privateLookupIn(Field::class.java, MethodHandles.lookup());
+        val modifiersField = fieldLookup.findVarHandle(Field::class.java, "modifiers", Int::class.javaPrimitiveType)
+        modifiersField.set(loggerField, loggerField.modifiers and Modifier.FINAL.inv())
         val originalLogger = loggerField.get(null) as Logger
         val spyLogger = spy(originalLogger)
         loggerField.set(null, spyLogger)
