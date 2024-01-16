@@ -5,6 +5,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.net.URL
 import java.util.concurrent.TimeUnit
@@ -24,17 +25,17 @@ object HttpUtils {
     }
 
     fun putJson(url: URL, data: String) {
-        val body = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), data)
+        val body = data.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
         makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").put(body).build())
     }
 
     fun postJson(url: URL, data: String) {
-        val body = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), data)
+        val body = data.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
         makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
     }
 
     fun postPlain(url: URL, data: String) {
-        val body = RequestBody.create("text/plain; charset=utf-8".toMediaTypeOrNull(), data)
+        val body = data.toRequestBody("text/plain; charset=utf-8".toMediaTypeOrNull())
         makeRequest(Request.Builder().url(url).post(body).build())
     }
 

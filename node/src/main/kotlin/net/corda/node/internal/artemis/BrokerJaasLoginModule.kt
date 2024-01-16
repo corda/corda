@@ -127,7 +127,7 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
             ArtemisMessagingComponent.NODE_P2P_USER -> {
                 requireTls(certificates)
                 CertificateChainCheckPolicy.LeafMustMatch.createCheck(nodeJaasConfig.keyStore, nodeJaasConfig.trustStore).checkCertificateChain(certificates)
-                Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(NODE_P2P_ROLE)))
+                Pair(certificates.first().getSubjectX500Principal().name, listOf(RolePrincipal(NODE_P2P_ROLE)))
             }
             ArtemisMessagingComponent.NODE_RPC_USER -> {
                 requireTls(certificates)
@@ -141,7 +141,7 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
                 CertificateChainCheckPolicy.RootMustMatch
                         .createCheck(p2pJaasConfig.keyStore, p2pJaasConfig.trustStore)
                         .checkCertificateChain(certificates)
-                Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(PEER_ROLE)))
+                Pair(certificates.first().getSubjectX500Principal().name, listOf(RolePrincipal(PEER_ROLE)))
             }
             else -> {
                 requireNotNull(rpcJaasConfig) { "Attempted to connect as an rpc user to the P2P broker." }

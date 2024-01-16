@@ -10,8 +10,10 @@ class ResourceGeneratorTest {
     private val classes = listOf(TestCodes1::class.qualifiedName!!, TestCodes2::class.qualifiedName!!)
 
     private fun expectedCodes() : List<String> {
-        val codes1 = TestCodes1.values().map { "${it.namespace.toLowerCase()}-${it.name.replace("_", "-").toLowerCase()}" }
-        val codes2 = TestCodes2.values().map { "${it.namespace.toLowerCase()}-${it.name.replace("_", "-").toLowerCase()}" }
+        val codes1 = TestCodes1.values().map { "${it.namespace.lowercase(Locale.getDefault())}-${it.name.replace("_", "-")
+                .lowercase(Locale.getDefault())}" }
+        val codes2 = TestCodes2.values().map { "${it.namespace.lowercase(Locale.getDefault())}-${it.name.replace("_", "-")
+                .lowercase(Locale.getDefault())}" }
         return codes1 + codes2
     }
 

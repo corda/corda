@@ -17,6 +17,7 @@ import org.junit.Assert.assertNotSame
 import org.junit.Test
 import java.io.NotSerializableException
 import java.time.DayOfWeek
+import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -308,7 +309,7 @@ class EnumTests {
         THREE;
 
         override fun toString(): String {
-            return "[${name.toLowerCase()}]"
+            return "[${name.lowercase(Locale.getDefault())}]"
         }
     }
 

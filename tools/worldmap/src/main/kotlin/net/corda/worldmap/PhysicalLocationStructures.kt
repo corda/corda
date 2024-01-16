@@ -66,11 +66,11 @@ object CityDatabase {
                 val matchResult = matcher.matchEntire(name) ?: throw Exception("Could not parse line: $line")
                 val (city, country) = matchResult.destructured
                 val location = WorldMapLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), city, country)
-                caseInsensitiveLookups[city.toLowerCase()] = location
+                caseInsensitiveLookups[city.lowercase(Locale.getDefault())] = location
                 cityMap[city] = location
             }
         }
     }
 
-    operator fun get(name: String) = caseInsensitiveLookups[name.toLowerCase()]
+    operator fun get(name: String) = caseInsensitiveLookups[name.lowercase(Locale.getDefault())]
 }
