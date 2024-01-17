@@ -68,17 +68,16 @@ class ConfigHelperTests {
 
     @Test(timeout = 300_000)
     fun `bad keys are ignored and warned for`() {
-        val outContent = ByteArrayOutputStream()
-        val errContent = ByteArrayOutputStream()
         val originalOut = System.out
-        val originalErr = System.err
-        System.setOut(PrintStream(outContent));
-        System.setErr(PrintStream(errContent));
-        val config = loadConfig("corda_bad_key" to "2077")
-        assertTrue(outContent.toString().contains("(property or environment variable) cannot be mapped to an existing Corda"))
-        assertFalse(config?.hasPath("corda_bad_key") ?: true)
-        System.setOut(originalOut);
-        System.setErr(originalErr);
+        try {
+            val outContent = ByteArrayOutputStream()
+            System.setOut(PrintStream(outContent));
+            val config = loadConfig("corda_bad_key" to "2077")
+            assertTrue(outContent.toString().contains("(property or environment variable) cannot be mapped to an existing Corda"))
+            assertFalse(config?.hasPath("corda_bad_key") ?: true)
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 
     /**
