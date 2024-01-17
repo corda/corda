@@ -2,24 +2,19 @@ package net.corda.node.services.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.node.internal.Node
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.mockito.ArgumentMatchers.contains
-import org.mockito.kotlin.spy
-import org.mockito.kotlin.verify
-import org.slf4j.Logger
-import java.lang.invoke.MethodHandles
-import java.lang.reflect.Field
-import java.lang.reflect.Modifier
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ConfigHelperTests {
     private var baseDir: Path? = null
@@ -70,23 +65,20 @@ class ConfigHelperTests {
         }
     }
 
+
     @Test(timeout = 300_000)
     fun `bad keys are ignored and warned for`() {
-        val loggerField = Node::class.java.getDeclaredField("staticLog")
-        loggerField.isAccessible = true
-        val fieldLookup = MethodHandles.privateLookupIn(Field::class.java, MethodHandles.lookup());
-        val modifiersField = fieldLookup.findVarHandle(Field::class.java, "modifiers", Int::class.javaPrimitiveType)
-        modifiersField.set(loggerField, loggerField.modifiers and Modifier.FINAL.inv())
-        val originalLogger = loggerField.get(null) as Logger
-        val spyLogger = spy(originalLogger)
-        loggerField.set(null, spyLogger)
-
+        val outContent = ByteArrayOutputStream()
+        val errContent = ByteArrayOutputStream()
+        val originalOut = System.out
+        val originalErr = System.err
+        System.setOut(PrintStream(outContent));
+        System.setErr(PrintStream(errContent));
         val config = loadConfig("corda_bad_key" to "2077")
-
-        verify(spyLogger).warn(contains("(property or environment variable) cannot be mapped to an existing Corda"))
+        assertTrue(outContent.toString().contains("(property or environment variable) cannot be mapped to an existing Corda"))
         assertFalse(config?.hasPath("corda_bad_key") ?: true)
-
-        loggerField.set(null, originalLogger)
+        System.setOut(originalOut);
+        System.setErr(originalErr);
     }
 
     /**
