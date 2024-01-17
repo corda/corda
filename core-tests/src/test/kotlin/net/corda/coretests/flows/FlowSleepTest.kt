@@ -47,7 +47,6 @@ class FlowSleepTest {
             val (start, middle, finish) = alice.rpc.startFlow(::AnotherSleepyFlow).returnValue.getOrThrow(1.minutes)
             val differenceBetweenStartAndMiddle = Duration.between(start, middle)
             val differenceBetweenMiddleAndFinish = Duration.between(middle, finish)
-            println("Start : $start , middle : $middle , finish : $finish" )
             assertTrue(differenceBetweenStartAndMiddle >= 5.seconds)
             assertTrue(differenceBetweenStartAndMiddle < 7.seconds)
             assertTrue(differenceBetweenMiddleAndFinish >= 10.seconds)
