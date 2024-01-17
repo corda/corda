@@ -20,6 +20,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.CordaClock
@@ -206,7 +207,7 @@ class NodeSchedulerService(private val clock: CordaClock,
             // This will block the scheduler single thread until the scheduled time (returns false) OR
             // the Future is cancelled due to rescheduling (returns true).
             if (scheduledState != null) {
-                if (!awaitWithDeadline(clock, scheduledState.scheduledAt, ourRescheduledFuture)) {
+                if (!awaitWithDeadline(clock, scheduledState.scheduledAt + idleWaitSeconds, ourRescheduledFuture)) {
                     log.trace { "Invoking as next $scheduledState" }
                     onTimeReached(scheduledState)
                 } else {
