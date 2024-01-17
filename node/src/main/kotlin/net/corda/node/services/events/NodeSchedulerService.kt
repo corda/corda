@@ -20,7 +20,6 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.CordaClock
