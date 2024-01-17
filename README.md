@@ -8,6 +8,12 @@
 
 Corda is an open source blockchain project, designed for business from the start. Only Corda allows you to build interoperable blockchain networks that transact in strict privacy. Corda's smart contract technology allows businesses to transact directly, with value.
 
+## Architecture Evolution
+
+The code present in this repository reflects the first version of the implementation of the Corda model for DLT technology. This first architecture version covers Corda versions 1 through 4 and continues to deliver on the promise of DLT for both the open source community and industry as a whole. 
+
+However, like all things, Corda must evolve to serve the more stringent needs of today. This is why the second (and current) version of the Corda Architecture can be found [here](https://github.com/corda/corda-runtime-os) and will form the basis of the Corda 5 release.
+
 ## Features
 
 * Smart contracts that can be written in Java and other JVM languages
@@ -31,7 +37,7 @@ Corda is an open source blockchain project, designed for business from the start
 * [Documentation](https://docs.corda.net)
 * [Stack Overflow Tag](https://stackoverflow.com/questions/tagged/corda)
 * [Slack Channel](https://slack.corda.net/)
-* [Twitter](https://twitter.com/cordadlt)
+* [Twitter](https://twitter.com/Cordablockchain)
 * [Meetups](https://www.meetup.com/pro/corda/)
 * [Training Courses](https://www.corda.net/corda-training/)
 

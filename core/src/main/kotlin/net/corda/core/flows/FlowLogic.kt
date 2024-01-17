@@ -16,6 +16,7 @@ import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.WaitForStateConsumption
 import net.corda.core.internal.abbreviate
 import net.corda.core.internal.checkPayloadIs
+import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
@@ -157,7 +158,7 @@ abstract class FlowLogic<out T> {
     fun initiateFlow(destination: Destination): FlowSession {
         require(destination is Party || destination is AnonymousParty) { "Unsupported destination type ${destination.javaClass.name}" }
         return stateMachine.initiateFlow(destination, serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty)
-            ?: throw IllegalArgumentException("Could not resolve destination: $destination"))
+            ?: throw IllegalArgumentException("Could not resolve destination: $destination"), serviceHub.telemetryServiceInternal.getCurrentTelemetryData())
     }
 
     /**
@@ -165,7 +166,7 @@ abstract class FlowLogic<out T> {
      * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
      */
     @Suspendable
-    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, party)
+    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, party, serviceHub.telemetryServiceInternal.getCurrentTelemetryData())
 
     /**
      * Specifies the identity, with certificate, to use for this flow. This will be one of the multiple identities that
@@ -285,11 +286,13 @@ abstract class FlowLogic<out T> {
 
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
-        val request = FlowIORequest.SendAndReceive(
-                sessionToMessage = stateMachine.serialize(mapOf(this to payload)),
-                shouldRetrySend = true
-        )
-        return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#sendAndReceiveWithRetry", mapOf("destination" to destination.toString())) {
+            val request = FlowIORequest.SendAndReceive(
+                    sessionToMessage = stateMachine.serialize(mapOf(this to payload)),
+                    shouldRetrySend = true
+            )
+            return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
+        }
     }
 
     @Suspendable

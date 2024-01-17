@@ -6,7 +6,9 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.context.Trace.SessionId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Id
@@ -116,7 +118,8 @@ object RPCApi {
                 val replyId: InvocationId,
                 val sessionId: SessionId,
                 val externalTrace: Trace? = null,
-                val impersonatedActor: Actor? = null
+                val impersonatedActor: Actor? = null,
+                val serializedTelemetry: SerializedTelemetry? = null
         ) : ClientToServer() {
             override fun writeToClientMessage(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
@@ -130,6 +133,8 @@ object RPCApi {
 
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
                 message.bodyBuffer.writeBytes(serialisedArguments.bytes)
+                val telemetryBytes: SerializedBytes<SerializedTelemetry>? = serializedTelemetry?.serialize()
+                telemetryBytes?.let { message.putBytesProperty(TELEMETRY_PROPERTY, it.bytes) }
             }
         }
 
@@ -148,15 +153,20 @@ object RPCApi {
             fun fromClientMessage(message: ClientMessage): ClientToServer {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
-                    RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
-                            clientAddress = MessageUtil.getJMSReplyTo(message),
-                            methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
-                            serialisedArguments = OpaqueBytes(message.getBodyAsByteArray()),
-                            replyId = message.replyId(),
-                            sessionId = message.sessionId(),
-                            externalTrace = message.externalTrace(),
-                            impersonatedActor = message.impersonatedActor()
-                    )
+                    RPCApi.ClientToServer.Tag.RPC_REQUEST -> {
+                        val telemetryBytes = message.getBytesProperty(TELEMETRY_PROPERTY)
+                        val serializedTelemetry: SerializedTelemetry? = telemetryBytes?.let {OpaqueBytes(it).deserialize()}
+                        RpcRequest(
+                                clientAddress = MessageUtil.getJMSReplyTo(message),
+                                methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
+                                serialisedArguments = OpaqueBytes(message.getBodyAsByteArray()),
+                                replyId = message.replyId(),
+                                sessionId = message.sessionId(),
+                                externalTrace = message.externalTrace(),
+                                impersonatedActor = message.impersonatedActor(),
+                                serializedTelemetry = serializedTelemetry
+                        )
+                    }
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<InvocationId>()
                         val buffer = message.bodyBuffer
@@ -279,6 +289,7 @@ private const val DEDUPLICATION_IDENTITY_FIELD_NAME = "deduplication-identity"
 private const val OBSERVABLE_ID_FIELD_NAME = "observable-id"
 private const val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
 private const val METHOD_NAME_FIELD_NAME = "method-name"
+private const val TELEMETRY_PROPERTY = "telemetry-data"
 
 fun ClientMessage.replyId(): InvocationId {
 
@@ -299,6 +310,11 @@ fun ClientMessage.externalTrace(): Trace? {
         invocationId == null || sessionId == null -> null
         else -> Trace(invocationId, sessionId)
     }
+}
+
+fun ClientMessage.serializedTelemetry(): SerializedTelemetry? {
+    val telemetryBytes = this.getBytesProperty(TELEMETRY_PROPERTY)
+    return telemetryBytes?.let { OpaqueBytes(it).deserialize() }
 }
 
 fun ClientMessage.impersonatedActor(): Actor? {
