@@ -91,9 +91,9 @@ class FlowSleepTest {
         @Suspendable
         override fun call(): Triple<Instant, Instant, Instant> {
             val start = Instant.now()
-            sleep(5.seconds)
+            sleep(6.seconds)
             val middle = Instant.now()
-            sleep(10.seconds)
+            sleep(11.seconds)
             return Triple(start, middle, Instant.now())
         }
     }
