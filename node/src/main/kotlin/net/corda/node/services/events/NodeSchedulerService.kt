@@ -207,7 +207,7 @@ class NodeSchedulerService(private val clock: CordaClock,
             // This will block the scheduler single thread until the scheduled time (returns false) OR
             // the Future is cancelled due to rescheduling (returns true).
             if (scheduledState != null) {
-                if (!awaitWithDeadline(clock, scheduledState.scheduledAt + idleWaitSeconds, ourRescheduledFuture)) {
+                if (!awaitWithDeadline(clock, scheduledState.scheduledAt, ourRescheduledFuture)) {
                     log.trace { "Invoking as next $scheduledState" }
                     onTimeReached(scheduledState)
                 } else {
