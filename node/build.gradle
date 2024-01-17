@@ -330,7 +330,6 @@ jar {
 tasks.named('test', Test) {
     maxHeapSize = "3g"
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
-    jvmArgs(['--add-opens', 'java.base/java.lang.reflect=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'])
 }
 
 publishing {
