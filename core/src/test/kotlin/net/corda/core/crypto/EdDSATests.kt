@@ -9,6 +9,7 @@ import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import org.junit.Test
 import java.security.PrivateKey
 import java.security.Signature
+import java.util.Locale
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
@@ -154,7 +155,8 @@ class EdDSATests {
         val testVectors = listOf(testVector1, testVector2, testVector3, testVector1024, testVectorSHAabc)
         testVectors.forEach {
             val privateKey = EdDSAPrivateKey(EdDSAPrivateKeySpec(it.privateKeyHex.hexToByteArray(), edParams))
-            assertEquals(it.signatureOutputHex, doSign(privateKey, it.messageToSignHex.hexToByteArray()).toHex().toLowerCase())
+            assertEquals(it.signatureOutputHex, doSign(privateKey, it.messageToSignHex.hexToByteArray()).toHex()
+                    .lowercase(Locale.getDefault()))
         }
 
         // Test vector for the variant Ed25519ctx, expected to fail.
@@ -171,7 +173,8 @@ class EdDSATests {
         )
 
         val privateKey = EdDSAPrivateKey(EdDSAPrivateKeySpec(testVectorEd25519ctx.privateKeyHex.hexToByteArray(), edParams))
-        assertNotEquals(testVectorEd25519ctx.signatureOutputHex, doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex().toLowerCase())
+        assertNotEquals(testVectorEd25519ctx.signatureOutputHex, doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex()
+                .lowercase(Locale.getDefault()))
     }
 
     /** A test vector object for digital signature schemes. */

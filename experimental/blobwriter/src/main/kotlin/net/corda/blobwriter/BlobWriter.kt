@@ -74,6 +74,7 @@ data class _L_i__ (val listy: List<_i_>)
 
 data class _ALd_ (val a: Array<List<Double>>)
 
+@Suppress("UNUSED_PARAMETER")
 fun main (args: Array<String>) {
     initialiseSerialization()
     val path = "../cpp-serializer/bin/test-files";

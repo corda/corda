@@ -72,7 +72,7 @@ class CheckpointAgent {
                         when (nvpItem[0].trim()) {
                             "instrumentClassname" -> instrumentClassname = nvpItem[1]
                             "instrumentType" -> try {
-                                instrumentType = InstrumentationType.valueOf(nvpItem[1].toUpperCase())
+                                instrumentType = InstrumentationType.valueOf(nvpItem[1].uppercase(Locale.getDefault()))
                             } catch (e: Exception) {
                                 display("Invalid value: ${nvpItem[1]}. Please specify read or write.")
                             }

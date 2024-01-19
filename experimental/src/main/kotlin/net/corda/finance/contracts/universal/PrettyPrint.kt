@@ -6,6 +6,7 @@ import net.corda.core.internal.uncheckedCast
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.Instant
+import java.util.Locale
 
 private class PrettyPrint(arr : Arrangement) {
     val parties = involvedParties(arr)
@@ -46,10 +47,10 @@ private class PrettyPrint(arr : Arrangement) {
     val usedPartyNames = mutableSetOf<String>()
 
     fun createPartyName(party : Party): String {
-        val parts = party.name.organisation.toLowerCase().split(' ')
+        val parts = party.name.organisation.lowercase(Locale.getDefault()).split(' ')
 
         var camelName = parts.drop(1).fold(parts.first()) {
-            s, i -> s + i.first().toUpperCase() + i.drop(1)
+            s, i -> s + i.first().uppercaseChar() + i.drop(1)
         }
 
         if (usedPartyNames.contains(camelName)) {

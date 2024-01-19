@@ -187,7 +187,7 @@ object InputStreamSerializer : Serializer<InputStream>() {
                 chunks.add(chunk)
             }
         }
-        val flattened = ByteArray(chunks.sumBy { it.size })
+        val flattened = ByteArray(chunks.sumOf { it.size })
         var offset = 0
         for (chunk in chunks) {
             System.arraycopy(chunk, 0, flattened, offset, chunk.size)

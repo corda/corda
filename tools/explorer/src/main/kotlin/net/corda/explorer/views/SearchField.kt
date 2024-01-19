@@ -17,6 +17,7 @@ import javafx.scene.input.MouseEvent
 import net.corda.client.jfx.utils.ChosenList
 import tornadofx.*
 import net.corda.client.jfx.utils.map
+import java.util.Locale
 
 /**
  * Generic search bar filters [ObservableList] with provided filterCriteria.
@@ -68,9 +69,9 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
         })
         textField.promptTextProperty().bind(searchCategory.valueProperty().map {
             val category = if (it == ALL) {
-                filterCriteria.joinToString(", ") { it.first.toLowerCase() }
+                filterCriteria.joinToString(", ") { it.first.lowercase(Locale.getDefault()) }
             } else {
-                it.toLowerCase()
+                it.lowercase(Locale.getDefault())
             }
             "Filter by $category."
         })

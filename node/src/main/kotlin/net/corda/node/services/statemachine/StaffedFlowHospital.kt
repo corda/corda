@@ -31,6 +31,7 @@ import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 import java.util.Timer
 import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.PersistenceException
@@ -726,7 +727,7 @@ private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>
         return false
     }
     val containsMessage = if (errorMessage != null) {
-        message?.toLowerCase()?.contains(errorMessage) ?: false
+        message?.lowercase(Locale.getDefault())?.contains(errorMessage) ?: false
     } else {
         true
     }

@@ -6,6 +6,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.util.Locale
 import java.util.jar.JarInputStream
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
@@ -43,7 +44,7 @@ class AttachmentDownloadServlet : HttpServlet() {
             val attachment = rpc.openAttachment(hash)
 
             // Don't allow case sensitive matches inside the jar, it'd just be confusing.
-            val subPath = reqPath.substringAfter('/', missingDelimiterValue = "").toLowerCase()
+            val subPath = reqPath.substringAfter('/', missingDelimiterValue = "").lowercase(Locale.getDefault())
 
             resp.contentType = MediaType.APPLICATION_OCTET_STREAM
             if (subPath.isEmpty()) {

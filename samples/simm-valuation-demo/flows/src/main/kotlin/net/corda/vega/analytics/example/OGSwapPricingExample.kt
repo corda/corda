@@ -51,6 +51,7 @@ import java.time.LocalDate
  */
 
 
+@Suppress("UNUSED_PARAMETER")
 fun main(args: Array<String>) {
     val swapPricingExample = SwapPricingExample()
     swapPricingExample.main()
