@@ -61,7 +61,7 @@ class SpecificationTest {
 
             override fun parseValid(configuration: Config, options: Configuration.Options): Valid<AtomicLong> {
                 val config = configuration.withOptions(options)
-                return valid(AtomicLong(config[maxElement]!!))
+                return valid(AtomicLong(config[maxElement]))
             }
         }
 
@@ -103,7 +103,7 @@ class SpecificationTest {
             if (elements.any { element -> element <= 1  }) {
                 return invalid(Configuration.Validation.Error.BadValue.of("elements cannot be less than or equal to 1"))
             }
-            return valid(elements.max()!!)
+            return valid(elements.max())
         }
 
         val spec = object : Configuration.Specification<AtomicLong>("AtomicLong") {

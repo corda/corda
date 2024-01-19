@@ -306,11 +306,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     log.info("Error ${index + 1} of ${errors.size}:", error)
                     val diagnoses: Map<Diagnosis, List<Staff>> = staff.groupBy { it.consult(flowFiber, currentState, error, medicalHistory) }
                     // We're only interested in the highest priority diagnosis for the error
-                    val (diagnosis, by) = diagnoses.entries.minBy { it.key }!!
+                    val (diagnosis, by) = diagnoses.entries.minBy { it.key }
                     ConsultationReport(error, diagnosis, by)
                 }
                 // And we're only interested in the error with the highest priority diagnosis
-                .minBy { it.diagnosis }!!
+                .minBy { it.diagnosis }
     }
 
     private data class ConsultationReport(val error: Throwable, val diagnosis: Diagnosis, val by: List<Staff>)

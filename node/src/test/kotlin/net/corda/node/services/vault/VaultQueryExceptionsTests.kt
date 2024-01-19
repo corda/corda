@@ -32,10 +32,6 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
 
     @Rule
     @JvmField
-    val expectedEx: ExpectedException = ExpectedException.none()
-
-    @Rule
-    @JvmField
     val rollbackRule = VaultQueryRollbackRule(this)
 
     @Test(timeout=300_000)

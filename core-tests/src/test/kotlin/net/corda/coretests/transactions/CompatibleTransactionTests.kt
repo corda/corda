@@ -292,7 +292,7 @@ class CompatibleTransactionTests {
         ftxCompatibleNoInputs.verify()
         assertFailsWith<ComponentVisibilityException> { ftxCompatibleNoInputs.checkAllComponentsVisible(INPUTS_GROUP) }
         assertEquals(wireTransactionCompatibleA.componentGroups.size - 1, ftxCompatibleNoInputs.filteredComponentGroups.size)
-        assertEquals(wireTransactionCompatibleA.componentGroups.map { it.groupIndex }.max()!!, ftxCompatibleNoInputs.groupHashes.size - 1)
+        assertEquals(wireTransactionCompatibleA.componentGroups.map { it.groupIndex }.max(), ftxCompatibleNoInputs.groupHashes.size - 1)
     }
 
     @Test(timeout=300_000)

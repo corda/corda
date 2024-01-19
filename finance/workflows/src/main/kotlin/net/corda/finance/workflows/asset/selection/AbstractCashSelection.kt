@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.utilities.*
@@ -138,7 +139,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
                 if (stateRefs.isNotEmpty()) {
                     // TODO: future implementation to retrieve contract states from a Vault BLOB store
-                    stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<out StateAndRef<Cash.State>>)
+                    stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
                 }
 
                 val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity

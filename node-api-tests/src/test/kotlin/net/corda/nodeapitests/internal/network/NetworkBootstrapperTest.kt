@@ -29,6 +29,7 @@ import net.corda.nodeapi.internal.network.PackageOwner
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.TestContractsJar
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
+import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -40,6 +41,7 @@ import org.junit.After
 import org.junit.AfterClass
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.rules.ExpectedException
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
@@ -54,15 +56,12 @@ import kotlin.io.path.readBytes
 import kotlin.io.path.useDirectoryEntries
 import kotlin.io.path.writeBytes
 import kotlin.io.path.writeText
+import kotlin.test.assertEquals
 
 class NetworkBootstrapperTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
-
-    @Rule
-    @JvmField
-    val expectedEx: ExpectedException = ExpectedException.none()
 
     @Rule
     @JvmField
@@ -304,9 +303,10 @@ class NetworkBootstrapperTest {
         assertContainsPackageOwner("alice", mapOf(Pair(greedyNamespace, alice.publicKey)))
         // register overlapping package name
         createNodeConfFile("bob", bobConfig)
-        expectedEx.expect(IllegalArgumentException::class.java)
-        expectedEx.expectMessage("Multiple packages added to the packageOwnership overlap.")
-        bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, alice.publicKey), Pair(bobPackageName, bob.publicKey)))
+        val anException = assertThrows<IllegalArgumentException> {
+            bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, alice.publicKey), Pair(bobPackageName, bob.publicKey)))
+        }
+        assertEquals("Multiple packages added to the packageOwnership overlap.", anException.message)
     }
 
     @Test(timeout=300_000)
