@@ -29,7 +29,6 @@ import net.corda.nodeapi.internal.network.PackageOwner
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.TestContractsJar
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
-import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -42,7 +41,6 @@ import org.junit.AfterClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.rules.ExpectedException
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
 import java.nio.file.Path

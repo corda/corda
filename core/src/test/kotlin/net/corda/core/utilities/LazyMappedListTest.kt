@@ -5,11 +5,8 @@ import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.eagerDeserialise
 import net.corda.core.serialization.MissingAttachmentsException
-import org.junit.Rule
 import org.junit.Test
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.assertThrows
-import org.junit.rules.ExpectedException
 import kotlin.test.assertEquals
 
 class LazyMappedListTest {

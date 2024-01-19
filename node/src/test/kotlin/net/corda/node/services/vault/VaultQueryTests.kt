@@ -7,15 +7,12 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.eagerDeserialise
-import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
 import net.corda.core.node.services.Vault.ConstraintInfo.Type.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
@@ -50,7 +47,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.assertThrows
-import org.junit.rules.ExpectedException
 import org.junit.rules.ExternalResource
 import java.time.Duration
 import java.time.Instant
@@ -58,7 +54,6 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
-import kotlin.test.assertEquals
 
 interface VaultQueryParties {
     val alice: TestIdentity

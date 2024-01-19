@@ -11,7 +11,6 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*
-import org.junit.rules.ExpectedException
 
 class VaultQueryExceptionsTests : VaultQueryParties by rule {
 

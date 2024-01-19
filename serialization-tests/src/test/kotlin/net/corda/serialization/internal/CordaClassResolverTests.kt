@@ -12,11 +12,8 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.contracts.TransactionVerificationException.UntrustedAttachmentsException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
-import net.corda.core.internal.eagerDeserialise
-import net.corda.core.internal.lazyMapped
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.coretesting.internal.rigorousMock
@@ -28,10 +25,8 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.rules.ExpectedException
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.verify

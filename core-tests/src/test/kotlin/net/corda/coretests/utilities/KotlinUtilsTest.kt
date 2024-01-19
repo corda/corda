@@ -2,11 +2,8 @@ package net.corda.coretests.utilities
 
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.eagerDeserialise
-import net.corda.core.internal.lazyMapped
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.transient
@@ -17,8 +14,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.rules.ExpectedException
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 object EmptyWhitelist : ClassWhitelist {
