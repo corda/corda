@@ -32,11 +32,11 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.isIdempotentFlow
 import net.corda.core.internal.location
-import net.corda.core.internal.toPath
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.telemetry.ComponentTelemetryIds
 import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.internal.telemetry.telemetryServiceInternal
+import net.corda.core.internal.toPath
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -363,7 +363,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
             }
             logFlowError(t)
-            Try.Failure<R>(t)
+            Try.Failure(t)
         }
         val softLocksId = if (softLockedStates.isNotEmpty()) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
@@ -499,7 +499,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 permissionName,
                 permissionGranted)
         serviceHub.auditService.recordAuditEvent(checkPermissionEvent)
-        @Suppress("ConstantConditionIf")
         if (!permissionGranted) {
             throw FlowPermissionException("User ${context.principal()} not permissioned for $permissionName on flow $id")
         }
@@ -540,7 +539,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val serializationContext = TransientReference(transientValues.checkpointSerializationContext)
         val transaction = extractThreadLocalTransaction()
         val telemetryIds = retrieveTelemetryIds()
-        parkAndSerialize { _, _ ->
+        parkAndCustomSerialize { _ ->
             setLoggingContext()
             logger.trace { "Suspended on $ioRequest" }
 

@@ -201,11 +201,9 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
         FlowWithExternalProcess(party) {
         @Suspendable
         override fun testCode(): Any {
-            val e = createException()
-
             return await(ExternalAsyncOperation(serviceHub, (SerializableLambda2 { _, _ ->
                 CompletableFuture<Any>().apply {
-                    completeExceptionally(e)
+                    completeExceptionally(createException())
                 }
             })))
         }

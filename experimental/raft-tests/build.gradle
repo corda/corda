@@ -1,0 +1,33 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+//apply plugin: 'net.corda.plugins.quasar-utils'
+
+description 'Raft tests'
+
+dependencies {
+//    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(":core")
+//    testImplementation project(":serialization")
+    testImplementation project(":node-api")
+    testImplementation project(":node")
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+    testImplementation project(":node-driver")
+    testImplementation "junit:junit:$junit_version"
+//    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+//    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
+//    testImplementation "com.esotericsoftware:kryo:$kryo_version"
+//    testImplementation "com.google.guava:guava:$guava_version"
+//    testImplementation "io.netty:netty-common:$netty_version"
+//    testImplementation "org.slf4j:slf4j-api:$slf4j_version"
+    testImplementation "io.dropwizard.metrics:metrics-jmx:$metrics_version"
+    testImplementation 'io.atomix.copycat:copycat-client:1.2.3'
+    testImplementation 'io.atomix.copycat:copycat-server:1.2.3'
+}
+
+test {
+    enabled = true  // Something is disabling the test
+    jvmArgs += [
+            "--add-opens=java.base/java.nio=ALL-UNNAMED"
+    ]
+}

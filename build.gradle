@@ -121,7 +121,6 @@ buildscript {
     ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
     ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
     ext.javaassist_version = constants.getProperty("javaassistVersion")
-
     ext.corda_revision = {
         try {
             "git rev-parse HEAD".execute().text.trim()
@@ -131,6 +130,8 @@ buildscript {
         }
     }()
     ext.corda_docs_link = "https://docs.corda.net/docs/corda-os/$baseVersion"
+    ext.node_jvm_args = project(":node:capsule").file("src/main/resources/node-jvm-args.txt").readLines()
+
     repositories {
         mavenLocal()
         // Use system environment to activate caching with Artifactory,
@@ -310,7 +311,6 @@ allprojects {
     }
 
     tasks.withType(Test).configureEach {
-        jvmArgs += project(":node:capsule").file("src/main/resources/node-jvm-args.txt").readLines()
         jvmArgs += "--add-modules=jdk.incubator.foreign"  // For the SharedMemoryIncremental
         forkEvery = 20
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
