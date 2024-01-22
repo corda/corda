@@ -44,6 +44,7 @@ tasks.register('buildCordaJAR', FatCapsule) {
     dependsOn(nodeProject.tasks.named('jar'))
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
+    archiveClassifier = ''
     archiveVersion = corda_release_version
     archiveName = archiveFileName.get()
     applicationSource = files(
@@ -89,10 +90,9 @@ publishing {
     publications {
         maven(MavenPublication) {
             artifactId 'corda'
-            artifact(buildCordaJAR) {
-                classifier ''
-            }
-            from components.java
+            artifact(buildCordaJAR)
+            artifact(javadocJar)
+            artifact(sourcesJar)
         }
     }
 }
