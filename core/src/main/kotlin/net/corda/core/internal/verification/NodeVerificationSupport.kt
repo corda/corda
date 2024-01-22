@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.TRUSTED_UPLOADERS
+import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.entries
 import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.node.NetworkParameters
@@ -36,26 +37,33 @@ import java.security.PublicKey
 /**
  * Implements [VerificationSupport] in terms of node-based services.
  */
-interface VerificationService : VerificationSupport {
-    val transactionStorage: TransactionStorage
+interface NodeVerificationSupport : VerificationSupport {
+    val networkParameters: NetworkParameters
+
+    val validatedTransactions: TransactionStorage
 
     val identityService: IdentityService
 
-    val attachmentStorage: AttachmentStorage
+    val attachments: AttachmentStorage
 
     val networkParametersService: NetworkParametersService
 
+    val cordappProvider: CordappProviderInternal
+
     val attachmentTrustCalculator: AttachmentTrustCalculator
 
-    val attachmentFixups: AttachmentFixups
+    val externalVerifierHandle: ExternalVerifierHandle
+
+    override val appClassLoader: ClassLoader
+        get() = cordappProvider.appClassLoader
 
     // TODO Bulk party lookup?
     override fun getParties(keys: Collection<PublicKey>): List<Party?> = keys.map(identityService::partyFromKey)
 
-    override fun getAttachment(id: SecureHash): Attachment? = attachmentStorage.openAttachment(id)
+    override fun getAttachment(id: SecureHash): Attachment? = attachments.openAttachment(id)
 
     override fun getNetworkParameters(id: SecureHash?): NetworkParameters? {
-        return networkParametersService.lookup(id ?: networkParametersService.defaultHash)
+        return if (id != null) networkParametersService.lookup(id) else networkParameters
     }
 
     /**
@@ -65,7 +73,7 @@ interface VerificationService : VerificationSupport {
      * correct classloader independent of the node's classpath.
      */
     override fun getSerializedState(stateRef: StateRef): SerializedTransactionState {
-        val coreTransaction = transactionStorage.getRequiredTransaction(stateRef.txhash).coreTransaction
+        val coreTransaction = validatedTransactions.getRequiredTransaction(stateRef.txhash).coreTransaction
         return when (coreTransaction) {
             is WireTransaction -> getRegularOutput(coreTransaction, stateRef.index)
             is ContractUpgradeWireTransaction -> getContractUpdateOutput(coreTransaction, stateRef.index)
@@ -127,14 +135,14 @@ interface VerificationService : VerificationSupport {
      */
     // TODO Should throw when the class is found in multiple contract attachments (not different versions).
     override fun getTrustedClassAttachment(className: String): Attachment? {
-        val allTrusted = attachmentStorage.queryAttachments(
+        val allTrusted = attachments.queryAttachments(
                 AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
                 AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         )
 
         // TODO - add caching if performance is affected.
         for (attId in allTrusted) {
-            val attch = attachmentStorage.openAttachment(attId)!!
+            val attch = attachments.openAttachment(attId)!!
             if (attch.hasFile("$className.class")) return attch
         }
         return null
@@ -145,6 +153,6 @@ interface VerificationService : VerificationSupport {
     override fun isAttachmentTrusted(attachment: Attachment): Boolean = attachmentTrustCalculator.calculate(attachment)
 
     override fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>): Set<SecureHash> {
-        return attachmentFixups.fixupAttachmentIds(attachmentIds)
+        return cordappProvider.attachmentFixups.fixupAttachmentIds(attachmentIds)
     }
 }

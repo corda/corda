@@ -124,9 +124,8 @@ class ExternalVerifier(
     }
 
     private fun createAppClassLoader(): ClassLoader {
-        val cordappJarUrls = (baseDirectory / "cordapps").listDirectoryEntries()
+        val cordappJarUrls = (baseDirectory / "cordapps").listDirectoryEntries("*.jar")
                 .stream()
-                .filter { it.toString().endsWith(".jar") }
                 .map { it.toUri().toURL() }
                 .toTypedArray()
         log.debug { "CorDapps: ${cordappJarUrls?.joinToString()}" }
@@ -136,7 +135,7 @@ class ExternalVerifier(
     private fun verifyTransaction(request: VerificationRequest) {
         val verificationContext = ExternalVerificationContext(appClassLoader, attachmentsClassLoaderCache, this, request.stxInputsAndReferences)
         val result: Try<Unit> = try {
-            request.stx.verifyInternal(verificationContext, request.checkSufficientSignatures)
+            request.stx.verifyInProcess(verificationContext, request.checkSufficientSignatures)
             log.info("${request.stx} verified")
             Try.Success(Unit)
         } catch (t: Throwable) {

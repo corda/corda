@@ -9,11 +9,13 @@ configurations {
     integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
-    smokeTestCompile.extendsFrom compile
+    smokeTestImplementation.extendsFrom implementation
     smokeTestRuntimeOnly.extendsFrom runtimeOnly
-}
 
-evaluationDependsOn(':node:capsule')
+    testArtifacts.extendsFrom testRuntimeOnlyClasspath
+
+    corda4_11
+}
 
 sourceSets {
     integrationTest {
@@ -42,9 +44,17 @@ sourceSets {
 
 processSmokeTestResources {
     // Bring in the fully built corda.jar for use by NodeFactory in the smoke tests
-    from(project(":node:capsule").tasks['buildCordaJAR']) {
+    from(tasks.getByPath(":node:capsule:buildCordaJAR")) {
         rename 'corda-(.*)', 'corda.jar'
     }
+    from(tasks.getByPath(":finance:workflows:jar")) {
+        rename 'corda-finance-workflows-.*.jar', 'corda-finance-workflows.jar'
+    }
+    from(tasks.getByPath(":finance:contracts:jar")) {
+        rename 'corda-finance-contracts-.*.jar', 'corda-finance-contracts.jar'
+    }
+    from(tasks.getByPath(":testing:cordapps:4.11-workflows:jar"))
+    from(configurations.corda4_11)
 }
 
 dependencies {
@@ -68,7 +78,6 @@ dependencies {
     testImplementation project(":core-test-utils")
     testImplementation project(":test-utils")
     testImplementation project(path: ':core', configuration: 'testArtifacts')
-
 
     // Guava: Google test library (collections test suite)
     testImplementation "com.google.guava:guava-testlib:$guava_version"
@@ -98,7 +107,12 @@ dependencies {
     smokeTestImplementation project(":core")
     smokeTestImplementation project(":node-api")
     smokeTestImplementation project(":client:rpc")
-
+    smokeTestImplementation project(':smoke-test-utils')
+    smokeTestImplementation project(':core-test-utils')
+    smokeTestImplementation project(":finance:contracts")
+    smokeTestImplementation project(":finance:workflows")
+    smokeTestImplementation project(":testing:cordapps:4.11-workflows")
+    smokeTestImplementation "org.assertj:assertj-core:${assertj_version}"
     smokeTestImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
     smokeTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
@@ -109,15 +123,12 @@ dependencies {
     smokeTestRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
     smokeTestRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
-    smokeTestCompile project(':smoke-test-utils')
-    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
-
     // used by FinalityFlowTests
     testImplementation project(':testing:cordapps:cashobservers')
-}
 
-configurations {
-    testArtifacts.extendsFrom testRuntimeOnlyClasspath
+    corda4_11 "net.corda:corda-finance-contracts:4.11"
+    corda4_11 "net.corda:corda-finance-workflows:4.11"
+    corda4_11 "net.corda:corda:4.11"
 }
 
 tasks.withType(Test).configureEach {
@@ -125,22 +136,24 @@ tasks.withType(Test).configureEach {
     forkEvery = 10
 }
 
-task testJar(type: Jar) {
+tasks.register('testJar', Jar) {
     classifier "tests"
     from sourceSets.test.output
 }
 
-task integrationTest(type: Test) {
+tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
-task smokeTestJar(type: Jar) {
+tasks.register('smokeTestJar', Jar) {
     classifier 'smokeTests'
-    from sourceSets.smokeTest.output
+    from(sourceSets.smokeTest.output) {
+        exclude("*.jar")
+    }
 }
 
-task smokeTest(type: Test) {
+tasks.register('smokeTest', Test) {
     dependsOn smokeTestJar
     testClassesDirs = sourceSets.smokeTest.output.classesDirs
     classpath = sourceSets.smokeTest.runtimeClasspath

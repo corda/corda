@@ -268,5 +268,9 @@ internal fun checkNotaryWhitelisted(ftx: FullTransaction) {
     }
 }
 
-
-
+val CoreTransaction.attachmentIds: List<SecureHash>
+    get() = when (this) {
+        is WireTransaction -> attachments
+        is ContractUpgradeWireTransaction -> listOf(legacyContractAttachmentId, upgradedContractAttachmentId)
+        else -> emptyList()
+    }

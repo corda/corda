@@ -12,7 +12,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.copyToDirectory
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
@@ -26,9 +25,8 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.smoketesting.NodeConfig
+import net.corda.smoketesting.NodeParams
 import net.corda.smoketesting.NodeProcess
-import net.corda.smoketesting.NodeProcess.Companion.CORDAPPS_DIR_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -41,8 +39,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
-import kotlin.io.path.useDirectoryEntries
 import kotlin.io.path.writeBytes
 
 class CordappSmokeTest {
@@ -53,43 +51,35 @@ class CordappSmokeTest {
 
     private val factory = NodeProcess.Factory()
 
-    private val notaryConfig = NodeConfig(
-            legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
-            p2pPort = port.andIncrement,
-            rpcPort = port.andIncrement,
-            rpcAdminPort = port.andIncrement,
-            isNotary = true,
-            users = listOf(superUser)
-    )
-
-    private val aliceConfig = NodeConfig(
+    private val aliceConfig = NodeParams(
             legalName = CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES"),
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             rpcAdminPort = port.andIncrement,
-            isNotary = false,
-            users = listOf(superUser)
+            users = listOf(superUser),
+            // Find the jar file for the smoke tests of this module
+            cordappJars = Path("build", "libs").listDirectoryEntries("*-smokeTests*")
     )
 
-    private lateinit var notary: NodeProcess
-
     @Before
-    fun setUp() {
-        notary = factory.create(notaryConfig)
+    fun startNotary() {
+        factory.createNotaries(NodeParams(
+                legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
+                p2pPort = port.andIncrement,
+                rpcPort = port.andIncrement,
+                rpcAdminPort = port.andIncrement,
+                users = listOf(superUser)
+        ))
     }
 
     @After
     fun done() {
-        notary.close()
+        factory.close()
     }
 
     @Test(timeout=300_000)
 	fun `FlowContent appName returns the filename of the CorDapp jar`() {
         val baseDir = factory.baseDirectory(aliceConfig)
-        val cordappsDir = (baseDir / CORDAPPS_DIR_NAME).createDirectories()
-        // Find the jar file for the smoke tests of this module
-        val selfCordapp = Path("build", "libs").useDirectoryEntries { it.single { "-smokeTests" in it.toString() } }
-        selfCordapp.copyToDirectory(cordappsDir)
 
         // The `nodeReadyFuture` in the persistent network map cache will not complete unless there is at least one other
         // node in the network. We work around this limitation by putting another node info file in the additional-node-info
@@ -98,22 +88,15 @@ class CordappSmokeTest {
         val additionalNodeInfoDir = (baseDir / "additional-node-infos").createDirectories()
         createDummyNodeInfo(additionalNodeInfoDir)
 
-        factory.create(aliceConfig).use { alice ->
-            alice.connect(superUser).use { connectionToAlice ->
-                val aliceIdentity = connectionToAlice.proxy.nodeInfo().legalIdentitiesAndCerts.first().party
-                val future = connectionToAlice.proxy.startFlow(CordappSmokeTest::GatherContextsFlow, aliceIdentity).returnValue
-                val (sessionInitContext, sessionConfirmContext) = future.getOrThrow()
-                val selfCordappName = selfCordapp.name.removeSuffix(".jar")
-                assertThat(sessionInitContext.appName).isEqualTo(selfCordappName)
-                assertThat(sessionConfirmContext.appName).isEqualTo(selfCordappName)
-            }
+        val alice = factory.createNode(aliceConfig)
+        alice.connect(superUser).use { connectionToAlice ->
+            val aliceIdentity = connectionToAlice.proxy.nodeInfo().legalIdentitiesAndCerts.first().party
+            val future = connectionToAlice.proxy.startFlow(CordappSmokeTest::GatherContextsFlow, aliceIdentity).returnValue
+            val (sessionInitContext, sessionConfirmContext) = future.getOrThrow()
+            val selfCordappName = aliceConfig.cordappJars[0].name.removeSuffix(".jar")
+            assertThat(sessionInitContext.appName).isEqualTo(selfCordappName)
+            assertThat(sessionConfirmContext.appName).isEqualTo(selfCordappName)
         }
-    }
-
-    @Test(timeout=300_000)
-	fun `empty cordapps directory`() {
-        (factory.baseDirectory(aliceConfig) / CORDAPPS_DIR_NAME).createDirectories()
-        factory.create(aliceConfig).close()
     }
 
     @InitiatingFlow

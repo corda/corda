@@ -1,22 +1,25 @@
 package net.corda.smoketesting
 
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
+import java.nio.file.Path
 
-class NodeConfig(
+class NodeParams @JvmOverloads constructor(
         val legalName: CordaX500Name,
         val p2pPort: Int,
         val rpcPort: Int,
         val rpcAdminPort: Int,
-        val isNotary: Boolean,
         val users: List<User>,
-        val devMode: Boolean = true
+        val cordappJars: List<Path> = emptyList(),
+        val clientRpcConfig: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+        val devMode: Boolean = true,
+        val version: String? = null
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
@@ -24,12 +27,7 @@ class NodeConfig(
 
     val commonName: String get() = legalName.organisation
 
-    /*
-     * The configuration object depends upon the networkMap,
-     * which is mutable.
-     */
-    //TODO Make use of Any.toConfig
-    private fun toFileConfig(): Config {
+    fun createNodeConfig(isNotary: Boolean): String {
         val config = empty()
                 .withValue("myLegalName", valueFor(legalName.toString()))
                 .withValue("p2pAddress", addressValueFor(p2pPort))
@@ -44,10 +42,8 @@ class NodeConfig(
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))
         } else {
             config
-        }
+        }.root().render(renderOptions)
     }
-
-    fun toText(): String = toFileConfig().root().render(renderOptions)
 
     private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)
 
