@@ -110,6 +110,7 @@ include 'testing:cordapps:dbfailure:dbfworkflows'
 include 'testing:cordapps:missingmigration'
 include 'testing:cordapps:sleeping'
 include 'testing:cordapps:cashobservers'
+include 'testing:cordapps:4.11-workflows'
 
 // Common libraries - start
 include 'common-validation'

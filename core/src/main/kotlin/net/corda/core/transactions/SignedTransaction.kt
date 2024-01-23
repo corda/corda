@@ -18,8 +18,11 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.attachmentIds
 import net.corda.core.internal.equivalent
 import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.kotlinMetadataVersion
+import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.internal.verification.VerificationSupport
 import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.ServiceHub
@@ -31,6 +34,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import java.io.NotSerializableException
 import java.security.KeyPair
 import java.security.PublicKey
@@ -155,9 +159,10 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
+        val verifyingServiceHub = services.toVerifyingServiceHub()
         // We need parameters check here, because finality flow calls stx.toLedgerTransaction() and then verify.
-        resolveAndCheckNetworkParameters(services)
-        return toLedgerTransactionInternal(services.toVerifyingServiceHub(), checkSufficientSignatures)
+        resolveAndCheckNetworkParameters(verifyingServiceHub)
+        return toLedgerTransactionInternal(verifyingServiceHub, checkSufficientSignatures)
     }
 
     @JvmSynthetic
@@ -191,16 +196,58 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @JvmOverloads
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
-        resolveAndCheckNetworkParameters(services)
-        val verifyingServiceHub = services.toVerifyingServiceHub()
-        if (verifyingServiceHub.tryExternalVerification(this, checkSufficientSignatures)) {
-            verifyInternal(verifyingServiceHub, checkSufficientSignatures)
+        verifyInternal(services.toVerifyingServiceHub(), checkSufficientSignatures)
+    }
+
+    /**
+     * Internal version of the public [verify] which takes in a [NodeVerificationSupport] instead of the heavier [ServiceHub].
+     *
+     * Depending on the contract attachments, this method will either verify this transaction in-process or send it to the external verifier
+     * for out-of-process verification.
+     */
+    @CordaInternal
+    @JvmSynthetic
+    fun verifyInternal(verificationSupport: NodeVerificationSupport, checkSufficientSignatures: Boolean = true) {
+        resolveAndCheckNetworkParameters(verificationSupport)
+        val verificationType = determineVerificationType(verificationSupport)
+        log.debug { "Transaction $id has verification type $verificationType" }
+        if (verificationType == VerificationType.IN_PROCESS || verificationType == VerificationType.BOTH) {
+            verifyInProcess(verificationSupport, checkSufficientSignatures)
+        }
+        if (verificationType == VerificationType.EXTERNAL || verificationType == VerificationType.BOTH) {
+            verificationSupport.externalVerifierHandle.verifyTransaction(this, checkSufficientSignatures)
         }
     }
 
+    private fun determineVerificationType(verificationSupport: VerificationSupport): VerificationType {
+        var old = false
+        var new = false
+        for (attachmentId in coreTransaction.attachmentIds) {
+            val (major, minor) = verificationSupport.getAttachment(attachmentId)?.kotlinMetadataVersion?.split(".") ?: continue
+            // Metadata version 1.1 maps to language versions 1.0 to 1.3
+            if (major == "1" && minor == "1") {
+                old = true
+            } else {
+                new = true
+            }
+        }
+        return when {
+            old && new -> VerificationType.BOTH
+            old -> VerificationType.EXTERNAL
+            else -> VerificationType.IN_PROCESS
+        }
+    }
+
+    private enum class VerificationType {
+        IN_PROCESS, EXTERNAL, BOTH
+    }
+
+    /**
+     * Verifies this transaction in-process. This assumes the current process has the correct classpath for all the contracts.
+     */
     @CordaInternal
     @JvmSynthetic
-    fun verifyInternal(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean) {
+    fun verifyInProcess(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean) {
         when (coreTransaction) {
             is NotaryChangeWireTransaction -> verifyNotaryChangeTransaction(verificationSupport, checkSufficientSignatures)
             is ContractUpgradeWireTransaction -> verifyContractUpgradeTransaction(verificationSupport, checkSufficientSignatures)
@@ -209,7 +256,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     @Suppress("ThrowsCount")
-    private fun resolveAndCheckNetworkParameters(services: ServiceHub) {
+    private fun resolveAndCheckNetworkParameters(services: NodeVerificationSupport) {
         val hashOrDefault = networkParametersHash ?: services.networkParametersService.defaultHash
         val txNetworkParameters = services.networkParametersService.lookup(hashOrDefault)
                 ?: throw TransactionResolutionException(id)

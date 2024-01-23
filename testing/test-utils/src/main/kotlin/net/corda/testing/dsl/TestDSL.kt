@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.verification.ExternalVerifierHandle
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
@@ -138,6 +139,9 @@ data class TestTransactionDSLInterpreter private constructor(
         override fun loadContractAttachment(stateRef: StateRef): Attachment {
             return ledgerInterpreter.services.loadContractAttachment(stateRef)
         }
+
+        override val externalVerifierHandle: ExternalVerifierHandle
+            get() = throw UnsupportedOperationException("External verification is not supported by TestTransactionDSLInterpreter")
 
         override fun recordUnnotarisedTransaction(txn: SignedTransaction) {}
 

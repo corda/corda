@@ -10,11 +10,12 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.CordappProviderInternal
@@ -23,6 +24,7 @@ import net.corda.core.internal.mapToSet
 import net.corda.core.internal.requireSupportedHashType
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
+import net.corda.core.internal.verification.ExternalVerifierHandle
 import net.corda.core.internal.verification.VerifyingServiceHub
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
@@ -302,22 +304,19 @@ open class MockServices private constructor(
         // Because Kotlin is dumb and makes not publicly visible objects public, thus changing the public API.
         private val mockStateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
 
-        private val dummyAttachment by lazy {
-            val inputStream = ByteArrayOutputStream().apply {
-                ZipOutputStream(this).use {
-                    with(it) {
-                        putNextEntry(ZipEntry(JarFile.MANIFEST_NAME))
-                    }
-                }
-            }.toByteArray().inputStream()
-            val attachment = object : Attachment {
-                override val id get() = throw UnsupportedOperationException()
-                override fun open() = inputStream
-                override val signerKeys get() = throw UnsupportedOperationException()
-                override val signers: List<Party> get() = throw UnsupportedOperationException()
-                override val size: Int = 512
+        private val dummyAttachment: Attachment by lazy {
+            object : AbstractAttachment(
+                    {
+                        val baos = ByteArrayOutputStream()
+                        ZipOutputStream(baos).use { zip ->
+                            zip.putNextEntry(ZipEntry(JarFile.MANIFEST_NAME))
+                        }
+                        baos.toByteArray()
+                    },
+                    null
+            ) {
+                override val id: SecureHash by lazy(attachmentData::sha256)
             }
-            attachment
         }
     }
 
@@ -576,6 +575,9 @@ open class MockServices private constructor(
         override fun loadState(stateRef: StateRef): TransactionState<*> = mockServices.loadState(stateRef)
 
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = mockServices.loadStates(stateRefs)
+
+        override val externalVerifierHandle: ExternalVerifierHandle
+            get() = throw UnsupportedOperationException("External verification is not supported by MockServices")
     }
 
 

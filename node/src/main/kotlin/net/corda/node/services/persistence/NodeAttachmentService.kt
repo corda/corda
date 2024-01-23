@@ -6,6 +6,8 @@ import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
+import kotlinx.metadata.jvm.KotlinModuleMetadata
+import kotlinx.metadata.jvm.UnstableMetadataApi
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
@@ -16,6 +18,7 @@ import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.InternalAttachment
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.P2P_UPLOADER
 import net.corda.core.internal.RPC_UPLOADER
@@ -25,6 +28,7 @@ import net.corda.core.internal.Version
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.entries
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.readFully
 import net.corda.core.internal.utilities.ZipBombDetector
@@ -53,6 +57,7 @@ import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
@@ -109,7 +114,7 @@ class NodeAttachmentService @JvmOverloads constructor(
             // Can be null for not-signed JARs.
             val allManifestEntries = jar.manifest?.entries?.keys?.toMutableList()
             val extraFilesNotFoundInEntries = mutableListOf<JarEntry>()
-            val manifestHasEntries= allManifestEntries != null && allManifestEntries.isNotEmpty()
+            val manifestHasEntries = !allManifestEntries.isNullOrEmpty()
 
             while (true) {
                 val cursor = jar.nextJarEntry ?: break
@@ -225,7 +230,7 @@ class NodeAttachmentService @JvmOverloads constructor(
 
         // This is invoked by [InputStreamSerializer], which does NOT close the stream afterwards.
         @Throws(IOException::class)
-        override fun read(b: ByteArray?, off: Int, len: Int): Int {
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
             return super.read(b, off, len).apply {
                 if (this == -1) {
                     validate()
@@ -256,12 +261,13 @@ class NodeAttachmentService @JvmOverloads constructor(
     }
 
     private class AttachmentImpl(
-        override val id: SecureHash,
-        dataLoader: () -> ByteArray,
-        private val checkOnLoad: Boolean,
-        uploader: String?,
-        override val signerKeys: List<PublicKey>
-    ) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
+            override val id: SecureHash,
+            dataLoader: () -> ByteArray,
+            private val checkOnLoad: Boolean,
+            uploader: String?,
+            override val signerKeys: List<PublicKey>,
+            override val kotlinMetadataVersion: String?
+    ) : AbstractAttachment(dataLoader, uploader), InternalAttachment, SerializeAsToken {
 
         override fun open(): InputStream {
             val stream = super.open()
@@ -270,22 +276,24 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
 
         private class Token(
-            private val id: SecureHash,
-            private val checkOnLoad: Boolean,
-            private val uploader: String?,
-            private val signerKeys: List<PublicKey>
+                private val id: SecureHash,
+                private val checkOnLoad: Boolean,
+                private val uploader: String?,
+                private val signerKeys: List<PublicKey>,
+                private val kotlinMetadataVersion: String?
         ) : SerializationToken {
             override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(
-                id,
-                context.attachmentDataLoader(id),
-                checkOnLoad,
-                uploader,
-                signerKeys
+                    id,
+                    context.attachmentDataLoader(id),
+                    checkOnLoad,
+                    uploader,
+                    signerKeys,
+                    kotlinMetadataVersion
             )
         }
 
         override fun toToken(context: SerializeAsTokenContext) =
-            Token(id, checkOnLoad, uploader, signerKeys)
+            Token(id, checkOnLoad, uploader, signerKeys, kotlinMetadataVersion)
     }
 
     private val attachmentContentCache = NonInvalidatingWeightBasedCache(
@@ -303,16 +311,27 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
     }
 
+    @OptIn(UnstableMetadataApi::class)
     private fun createAttachmentFromDatabase(attachment: DBAttachment): Attachment {
+        // TODO Cache this as a column in the database
+        val jis = JarInputStream(attachment.content.inputStream())
+        val kotlinMetadataVersions = jis.entries()
+                .filter { it.name.endsWith(".kotlin_module") }
+                .map { KotlinModuleMetadata.read(jis.readAllBytes()).version }
+                .toSortedSet()
+        if (kotlinMetadataVersions.size > 1) {
+            log.warn("Attachment ${attachment.attId} seems to be comprised of multiple Kotlin versions: $kotlinMetadataVersions")
+        }
         val attachmentImpl = AttachmentImpl(
-            id = SecureHash.create(attachment.attId),
-            dataLoader = { attachment.content },
-            checkOnLoad = checkAttachmentsOnLoad,
-            uploader = attachment.uploader,
-            signerKeys = attachment.signers?.toList() ?: emptyList()
+                id = SecureHash.create(attachment.attId),
+                dataLoader = { attachment.content },
+                checkOnLoad = checkAttachmentsOnLoad,
+                uploader = attachment.uploader,
+                signerKeys = attachment.signers?.toList() ?: emptyList(),
+                kotlinMetadataVersion = kotlinMetadataVersions.takeIf { it.isNotEmpty() }?.last()?.toString()
         )
         val contracts = attachment.contractClassNames
-        return if (contracts != null && contracts.isNotEmpty()) {
+        return if (!contracts.isNullOrEmpty()) {
             ContractAttachment.create(
                 attachment = attachmentImpl,
                 contract = contracts.first(),
@@ -336,7 +355,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         return null
     }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importAttachment(jar: InputStream): AttachmentId {
         return import(jar, UNKNOWN_UPLOADER, null)
     }
@@ -360,7 +379,7 @@ class NodeAttachmentService @JvmOverloads constructor(
     override fun privilegedImportOrGetAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return try {
             import(jar, uploader, filename)
-        } catch (faee: java.nio.file.FileAlreadyExistsException) {
+        } catch (faee: FileAlreadyExistsException) {
             AttachmentId.create(faee.message!!)
         }
     }
@@ -447,18 +466,14 @@ class NodeAttachmentService @JvmOverloads constructor(
 
     private fun getVersion(attachmentBytes: ByteArray) =
             JarInputStream(attachmentBytes.inputStream()).use {
-                try {
-                    it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
-                } catch (e: NumberFormatException) {
-                    DEFAULT_CORDAPP_VERSION
-                }
+                it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toIntOrNull() ?: DEFAULT_CORDAPP_VERSION
             }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         return try {
             import(jar, UNKNOWN_UPLOADER, null)
-        } catch (faee: java.nio.file.FileAlreadyExistsException) {
+        } catch (faee: FileAlreadyExistsException) {
             AttachmentId.create(faee.message!!)
         }
     }

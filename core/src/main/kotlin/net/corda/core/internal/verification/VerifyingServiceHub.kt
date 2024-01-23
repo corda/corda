@@ -8,30 +8,16 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 
 @Suppress("TooManyFunctions", "ThrowsCount")
-interface VerifyingServiceHub : ServiceHub, VerificationService {
-    override val cordappProvider: CordappProviderInternal
-
-    override val transactionStorage: TransactionStorage get() = validatedTransactions
-
-    override val attachmentStorage: AttachmentStorage get() = attachments
-
-    override val appClassLoader: ClassLoader get() = cordappProvider.appClassLoader
-
-    override val attachmentFixups: AttachmentFixups get() = cordappProvider.attachmentFixups
-
+interface VerifyingServiceHub : ServiceHub, NodeVerificationSupport {
     override fun loadContractAttachment(stateRef: StateRef): Attachment {
         // We may need to recursively chase transactions if there are notary changes.
         return loadContractAttachment(stateRef, null)
@@ -71,18 +57,6 @@ interface VerifyingServiceHub : ServiceHub, VerificationService {
 
     fun <T : ContractState, C : MutableCollection<StateAndRef<T>>> loadStatesInternal(input: Iterable<StateRef>, output: C): C {
         return input.mapTo(output, ::toStateAndRef)
-    }
-
-    /**
-     * Try to verify the given transaction on the external verifier, assuming it is available. It is not required to verify externally even
-     * if the verifier is available.
-     *
-     * The default implementation is to only do internal verification.
-     *
-     * @return true if the transaction should (also) be verified internally, regardless of whether it was verified externally.
-     */
-    fun tryExternalVerification(stx: SignedTransaction, checkSufficientSignatures: Boolean): Boolean {
-        return true
     }
 }
 

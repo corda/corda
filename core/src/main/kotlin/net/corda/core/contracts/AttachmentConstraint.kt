@@ -11,6 +11,7 @@ import net.corda.core.internal.utilities.Internable
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import java.lang.annotation.Inherited
 import java.security.PublicKey
@@ -70,7 +71,7 @@ object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
             val whitelist = attachment.whitelistedContractImplementations
-            log.debug("Checking ${attachment.contract} is in CZ whitelist $whitelist")
+            log.debug { "Checking ${attachment.contract} is in CZ whitelist $whitelist" }
             attachment.id in (whitelist[attachment.contract] ?: emptyList())
         } else {
             log.warn("CZ whitelisted constraint check failed: ${attachment.id} not in CZ whitelist")
@@ -111,8 +112,8 @@ object AutomaticPlaceholderConstraint : AttachmentConstraint {
  */
 data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
-        log.debug("Checking signature constraints: verifying $key in contract attachment signer keys: ${attachment.signerKeys}")
-        return if (!key.isFulfilledBy(attachment.signerKeys.map { it })) {
+        log.debug { "Checking signature constraints: verifying $key in contract attachment signer keys: ${attachment.signerKeys}" }
+        return if (!key.isFulfilledBy(attachment.signerKeys)) {
             log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}")
             false
         } else true
