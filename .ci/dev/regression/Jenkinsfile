@@ -71,6 +71,7 @@ pipeline {
         SNYK_TOKEN = credentials('c4-os-snyk-api-token-secret') //Jenkins credential type: Secret text
         C4_OS_SNYK_ORG_ID = credentials('corda4-os-snyk-org-id')
         JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
+        JAVA_8_HOME = "/usr/lib/jvm/java-1.8.0-amazon-corretto"
     }
 
     stages {

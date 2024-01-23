@@ -46,7 +46,6 @@ import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.internal.telemetry.TelemetryServiceImpl
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.internal.verification.VerifyingServiceHub
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -68,7 +67,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.toFuture
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -144,6 +142,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.BindableNamedCacheFactory
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NotaryLoader
+import net.corda.node.verification.ExternalVerifierHandleImpl
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.NodeStatus
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -1152,14 +1151,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
     }
 
-    /**
-     * Dy default only internal verification is done.
-     * @see VerifyingServiceHub.tryExternalVerification
-     */
-    protected open fun tryExternalVerification(stx: SignedTransaction, checkSufficientSignatures: Boolean): Boolean {
-        return true
-    }
-
     // JDK 11: switch to directly instantiating jolokia server (rather than indirectly via dynamically self attaching Java Agents,
     // which is no longer supported from JDK 9 onwards (https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8180425).
     // No longer need to use https://github.com/electronicarts/ea-agent-loader either (which is also deprecated)
@@ -1175,6 +1166,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     inner class ServiceHubImpl : SingletonSerializeAsToken(), ServiceHubInternal, NetworkParameterUpdateListener {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
+        override val externalVerifierHandle = ExternalVerifierHandleImpl(this, configuration.baseDirectory).also { runOnStop += it::close }
         override val identityService: IdentityService get() = this@AbstractNode.identityService
         override val keyManagementService: KeyManagementService get() = this@AbstractNode.keyManagementService
         override val schemaService: SchemaService get() = this@AbstractNode.schemaService
@@ -1297,10 +1289,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
             this.networkParameters = networkParameters
-        }
-
-        override fun tryExternalVerification(stx: SignedTransaction, checkSufficientSignatures: Boolean): Boolean {
-            return this@AbstractNode.tryExternalVerification(stx, checkSufficientSignatures)
         }
     }
 }

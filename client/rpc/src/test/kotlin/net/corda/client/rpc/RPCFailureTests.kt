@@ -9,11 +9,9 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.internal.rpcDriver
 import net.corda.testing.node.internal.startRpcClient
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
-@Ignore("TODO JDK17: Fixme")
 class RPCFailureTests {
     @Rule
     @JvmField
@@ -51,14 +49,14 @@ class RPCFailureTests {
     @Test(timeout=300_000)
 	fun `kotlin NPE`() = rpc {
         assertThatThrownBy { it.kotlinNPE() }.isInstanceOf(CordaRuntimeException::class.java)
-                .hasMessageContaining("kotlin.KotlinNullPointerException")
+                .hasMessageContaining("java.lang.NullPointerException")
     }
 
     @Test(timeout=300_000)
 	fun `kotlin NPE async`() = rpc {
         val future = it.kotlinNPEAsync()
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(CordaRuntimeException::class.java)
-                .hasMessageContaining("kotlin.KotlinNullPointerException")
+                .hasMessageContaining("java.lang.NullPointerException")
     }
 
     @Test(timeout=300_000)

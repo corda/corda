@@ -242,6 +242,7 @@ dependencies {
 
     // Adding native SSL library to allow using native SSL with Artemis and AMQP
     implementation "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
+    implementation 'org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.8.0'
 
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes

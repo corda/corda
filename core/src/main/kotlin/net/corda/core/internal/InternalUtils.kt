@@ -16,6 +16,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.seconds
 import org.slf4j.Logger
+import org.slf4j.event.Level
 import rx.Observable
 import rx.Observer
 import rx.observers.Subscribers
@@ -618,6 +619,16 @@ fun Logger.warnOnce(warning: String) {
         this.warn(warning)
     }
 }
+
+val Logger.level: Level
+    get() = when {
+        isTraceEnabled -> Level.TRACE
+        isDebugEnabled -> Level.DEBUG
+        isInfoEnabled -> Level.INFO
+        isWarnEnabled -> Level.WARN
+        isErrorEnabled -> Level.ERROR
+        else -> throw IllegalStateException("Unknown logging level")
+    }
 
 const val JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
 const val JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION = 61

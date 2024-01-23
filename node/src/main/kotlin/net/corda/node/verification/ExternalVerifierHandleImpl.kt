@@ -3,14 +3,16 @@ package net.corda.node.verification
 import net.corda.core.contracts.Attachment
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.copyTo
+import net.corda.core.internal.level
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
+import net.corda.core.internal.verification.ExternalVerifierHandle
+import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme.Companion.customSerializers
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme.Companion.serializationWhitelists
@@ -49,7 +51,10 @@ import kotlin.io.path.div
 /**
  * Handle to the node's external verifier. The verifier process is started lazily on the first verification request.
  */
-class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoCloseable {
+class ExternalVerifierHandleImpl(
+        private val verificationSupport: NodeVerificationSupport,
+        private val baseDirectory: Path
+) : ExternalVerifierHandle {
     companion object {
         private val log = contextLogger()
 
@@ -69,12 +74,12 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
     @Volatile
     private var connection: Connection? = null
 
-    fun verifyTransaction(stx: SignedTransaction, checkSufficientSignatures: Boolean) {
+    override fun verifyTransaction(stx: SignedTransaction, checkSufficientSignatures: Boolean) {
         log.info("Verify $stx externally, checkSufficientSignatures=$checkSufficientSignatures")
         // By definition input states are unique, and so it makes sense to eagerly send them across with the transaction.
         // Reference states are not, but for now we'll send them anyway and assume they aren't used often. If this assumption is not
         // correct, and there's a benefit, then we can send them lazily.
-        val stxInputsAndReferences = (stx.inputs + stx.references).associateWith(serviceHub::getSerializedState)
+        val stxInputsAndReferences = (stx.inputs + stx.references).associateWith(verificationSupport::getSerializedState)
         val request = VerificationRequest(stx, stxInputsAndReferences, checkSufficientSignatures)
 
         // To keep things simple the verifier only supports one verification request at a time.
@@ -140,11 +145,11 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
 
     private fun processVerifierRequest(request: VerifierRequest, connection: Connection) {
         val result = when (request) {
-            is GetParties -> PartiesResult(serviceHub.getParties(request.keys))
-            is GetAttachment -> AttachmentResult(prepare(serviceHub.attachments.openAttachment(request.id)))
-            is GetAttachments -> AttachmentsResult(serviceHub.getAttachments(request.ids).map(::prepare))
-            is GetNetworkParameters -> NetworkParametersResult(serviceHub.getNetworkParameters(request.id))
-            is GetTrustedClassAttachment -> TrustedClassAttachmentResult(serviceHub.getTrustedClassAttachment(request.className)?.id)
+            is GetParties -> PartiesResult(verificationSupport.getParties(request.keys))
+            is GetAttachment -> AttachmentResult(prepare(verificationSupport.getAttachment(request.id)))
+            is GetAttachments -> AttachmentsResult(verificationSupport.getAttachments(request.ids).map(::prepare))
+            is GetNetworkParameters -> NetworkParametersResult(verificationSupport.getNetworkParameters(request.id))
+            is GetTrustedClassAttachment -> TrustedClassAttachmentResult(verificationSupport.getTrustedClassAttachment(request.className)?.id)
         }
         log.debug { "Sending response to external verifier: $result" }
         connection.toVerifier.writeCordaSerializable(result)
@@ -152,7 +157,7 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
 
     private fun prepare(attachment: Attachment?): AttachmentWithTrust? {
         if (attachment == null) return null
-        val isTrusted = serviceHub.isAttachmentTrusted(attachment)
+        val isTrusted = verificationSupport.isAttachmentTrusted(attachment)
         val attachmentForSer = when (attachment) {
             // The Attachment retrieved from the database is not serialisable, so we have to convert it into one
             is AbstractAttachment -> GeneratedAttachment(attachment.open().readFully(), attachment.uploader)
@@ -188,20 +193,20 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
                     "-jar",
                     "$verifierJar",
                     "${server.localPort}",
-                    System.getProperty("log4j2.level")?.lowercase() ?: "info"
+                    log.level.name.lowercase()
             )
             log.debug { "Verifier command: $command" }
-            val logsDirectory = (serviceHub.configuration.baseDirectory / "logs").createDirectories()
+            val logsDirectory = (baseDirectory / "logs").createDirectories()
             verifierProcess = ProcessBuilder(command)
                     .redirectOutput(Redirect.appendTo((logsDirectory / "verifier-stdout.log").toFile()))
                     .redirectError(Redirect.appendTo((logsDirectory / "verifier-stderr.log").toFile()))
-                    .directory(serviceHub.configuration.baseDirectory.toFile())
+                    .directory(baseDirectory.toFile())
                     .start()
             log.info("External verifier process started; PID ${verifierProcess.pid()}")
 
             verifierProcess.onExit().whenComplete { _, _ ->
                 if (connection != null) {
-                    log.error("The external verifier has unexpectedly terminated with error code ${verifierProcess.exitValue()}. " +
+                    log.warn("The external verifier has unexpectedly terminated with error code ${verifierProcess.exitValue()}. " +
                             "Please check verifier logs for more details.")
                 }
                 // Allow a new process to be started on the next verification request
@@ -212,12 +217,12 @@ class ExternalVerifierHandle(private val serviceHub: ServiceHubInternal) : AutoC
             toVerifier = DataOutputStream(socket.outputStream)
             fromVerifier = DataInputStream(socket.inputStream)
 
-            val cordapps = serviceHub.cordappProvider.cordapps
+            val cordapps = verificationSupport.cordappProvider.cordapps
             val initialisation = Initialisation(
                     customSerializerClassNames = cordapps.customSerializers.mapToSet { it.javaClass.name },
                     serializationWhitelistClassNames = cordapps.serializationWhitelists.mapToSet { it.javaClass.name },
                     System.getProperty("experimental.corda.customSerializationScheme"), // See Node#initialiseSerialization
-                    serializedCurrentNetworkParameters = serviceHub.networkParameters.serialize()
+                    serializedCurrentNetworkParameters = verificationSupport.networkParameters.serialize()
             )
             toVerifier.writeCordaSerializable(initialisation)
         }

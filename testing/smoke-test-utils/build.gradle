@@ -9,6 +9,7 @@ dependencies {
     implementation project(':test-common')
     implementation project(':client:rpc')
 
+    implementation "com.google.guava:guava:$guava_version"
     implementation "com.typesafe:config:$typesafe_config_version"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
 }

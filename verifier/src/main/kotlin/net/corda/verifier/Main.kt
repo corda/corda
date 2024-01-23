@@ -10,15 +10,14 @@ import kotlin.io.path.div
 import kotlin.system.exitProcess
 
 object Main {
-    private val log = loggerFor<Main>()
-
     @JvmStatic
     fun main(args: Array<String>) {
         val port = args[0].toInt()
-        val loggingLevel = args[0]
+        val loggingLevel = args[1]
         val baseDirectory = Path.of("").toAbsolutePath()
 
         initLogging(baseDirectory, loggingLevel)
+        val log = loggerFor<Main>()
 
         log.info("External verifier started; PID ${ProcessHandle.current().pid()}")
         log.info("Node base directory: $baseDirectory")

@@ -27,6 +27,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
+import net.corda.finance.GBP
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.USD
@@ -35,14 +36,15 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.workflows.getCashBalances
-import net.corda.java.rpc.StandaloneCordaRPCJavaClientTest
 import net.corda.nodeapi.internal.config.User
 import net.corda.sleeping.SleepingFlow
-import net.corda.smoketesting.NodeConfig
+import net.corda.smoketesting.NodeParams
 import net.corda.smoketesting.NodeProcess
 import org.hamcrest.text.MatchesPattern
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -50,17 +52,19 @@ import org.junit.rules.ExpectedException
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.io.OutputStream.nullOutputStream
-import java.util.Currency
+import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
+import kotlin.io.path.Path
+import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class StandaloneCordaRPClientTest {
-    private companion object {
+    companion object {
         private val log = contextLogger()
         val superUser = User("superUser", "test", permissions = setOf("ALL"))
         val nonUser = User("nonUser", "test", permissions = emptySet())
@@ -69,45 +73,56 @@ class StandaloneCordaRPClientTest {
         val port = AtomicInteger(15200)
         const val ATTACHMENT_SIZE = 2116
         val timeout = 60.seconds
+
+        private val factory = NodeProcess.Factory()
+
+        private lateinit var notary: NodeProcess
+
+        private val notaryConfig = NodeParams(
+                legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
+                p2pPort = port.andIncrement,
+                rpcPort = port.andIncrement,
+                rpcAdminPort = port.andIncrement,
+                users = listOf(superUser, nonUser, rpcUser, flowUser),
+                cordappJars = gatherCordapps()
+        )
+
+        @BeforeClass
+        @JvmStatic
+        fun startNotary() {
+            notary = factory.createNotaries(notaryConfig)[0]
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun close() {
+            factory.close()
+        }
+
+        @JvmStatic
+        fun gatherCordapps(): List<Path> {
+            return Path("build", "resources", "smokeTest").listDirectoryEntries("cordapp*.jar")
+        }
     }
 
-    private lateinit var factory: NodeProcess.Factory
-    private lateinit var notary: NodeProcess
-    private lateinit var rpcProxy: CordaRPCOps
     private lateinit var connection: CordaRPCConnection
-    private lateinit var notaryNode: NodeInfo
+    private lateinit var rpcProxy: CordaRPCOps
     private lateinit var notaryNodeIdentity: Party
-
-    private val notaryConfig = NodeConfig(
-            legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
-            p2pPort = port.andIncrement,
-            rpcPort = port.andIncrement,
-            rpcAdminPort = port.andIncrement,
-            isNotary = true,
-            users = listOf(superUser, nonUser, rpcUser, flowUser)
-    )
 
     @get:Rule
     val exception: ExpectedException = ExpectedException.none()
 
     @Before
     fun setUp() {
-        factory = NodeProcess.Factory()
-        StandaloneCordaRPCJavaClientTest.copyCordapps(factory, notaryConfig)
-        notary = factory.create(notaryConfig)
         connection = notary.connect(superUser)
         rpcProxy = connection.proxy
-        notaryNode = fetchNotaryIdentity()
         notaryNodeIdentity = rpcProxy.nodeInfo().legalIdentitiesAndCerts.first().party
     }
 
     @After
-    fun done() {
-        connection.use {
-            notary.close()
-        }
+    fun closeConnection() {
+        connection.close()
     }
-
 
     @Test(timeout=300_000)
 	fun `test attachments`() {
@@ -168,8 +183,7 @@ class StandaloneCordaRPClientTest {
 
     @Test(timeout=300_000)
 	fun `test state machines`() {
-        val (stateMachines, updates) = rpcProxy.stateMachinesFeed()
-        assertEquals(0, stateMachines.size)
+        val (_, updates) = rpcProxy.stateMachinesFeed()
 
         val updateLatch = CountDownLatch(1)
         val updateCount = AtomicInteger(0)
@@ -190,8 +204,9 @@ class StandaloneCordaRPClientTest {
 
     @Test(timeout=300_000)
 	fun `test vault track by`() {
-        val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>(paging = PageSpecification(DEFAULT_PAGE_NUM))
-        assertEquals(0, vault.totalStatesAvailable)
+        val initialGbpBalance = rpcProxy.getCashBalance(GBP)
+
+        val (_, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>(paging = PageSpecification(DEFAULT_PAGE_NUM))
 
         val updateLatch = CountDownLatch(1)
         vaultUpdates.subscribe { update ->
@@ -207,34 +222,35 @@ class StandaloneCordaRPClientTest {
         // Check that this cash exists in the vault
         val cashBalance = rpcProxy.getCashBalances()
         log.info("Cash Balances: $cashBalance")
-        assertEquals(1, cashBalance.size)
-        assertEquals(629.POUNDS, cashBalance[Currency.getInstance("GBP")])
+        assertEquals(629.POUNDS, cashBalance[GBP]!! - initialGbpBalance)
     }
 
     @Test(timeout=300_000)
 	fun `test vault query by`() {
-        // Now issue some cash
-        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
-                .returnValue.getOrThrow(timeout)
-
         val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
         val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
         val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME), Sort.Direction.DESC)))
 
+        val initialStateCount = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting).totalStatesAvailable
+        val initialGbpBalance = rpcProxy.getCashBalance(GBP)
+
+        // Now issue some cash
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
+                .returnValue.getOrThrow(timeout)
+
         val queryResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
-        assertEquals(1, queryResults.totalStatesAvailable)
+        assertEquals(1, queryResults.totalStatesAvailable - initialStateCount)
         assertEquals(queryResults.states.first().state.data.amount.quantity, 629.POUNDS.quantity)
 
         rpcProxy.startFlow(::CashPaymentFlow, 100.POUNDS, notaryNodeIdentity, true, notaryNodeIdentity).returnValue.getOrThrow()
 
         val moreResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
-        assertEquals(3, moreResults.totalStatesAvailable)   // 629 - 100 + 100
+        assertEquals(3, moreResults.totalStatesAvailable - initialStateCount)   // 629 - 100 + 100
 
         // Check that this cash exists in the vault
         val cashBalances = rpcProxy.getCashBalances()
         log.info("Cash Balances: $cashBalances")
-        assertEquals(1, cashBalances.size)
-        assertEquals(629.POUNDS, cashBalances[Currency.getInstance("GBP")])
+        assertEquals(629.POUNDS, cashBalances[GBP]!! - initialGbpBalance)
     }
 
     @Test(timeout=300_000)

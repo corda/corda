@@ -25,7 +25,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.CordaClock
@@ -61,7 +60,6 @@ import net.corda.node.utilities.BindableNamedCacheFactory
 import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
-import net.corda.node.verification.ExternalVerifierHandle
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -200,8 +198,6 @@ open class Node(configuration: NodeConfiguration,
     private var rpcBroker: ArtemisBroker? = null
 
     protected open val journalBufferTimeout : Int? = null
-
-    private val externalVerifierHandle = ExternalVerifierHandle(services).also { runOnStop += it::close }
 
     private var shutdownHook: ShutdownHook? = null
 
@@ -586,17 +582,6 @@ open class Node(configuration: NodeConfiguration,
                 checkpointSerializer = KryoCheckpointSerializer,
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader).withCheckpointCustomSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers })
         )
-    }
-
-    override fun tryExternalVerification(stx: SignedTransaction, checkSufficientSignatures: Boolean): Boolean {
-        // TODO Determine from transaction whether it should be verified externally
-        // TODO If both old and new attachments are present then return true so that internal verification is also done.
-        return if (java.lang.Boolean.getBoolean("net.corda.node.verification.external")) {
-            externalVerifierHandle.verifyTransaction(stx, checkSufficientSignatures)
-            false
-        } else {
-            true
-        }
     }
 
     /** Starts a blocking event loop for message dispatch. */

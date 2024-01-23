@@ -7,6 +7,7 @@ import net.corda.nodeapi.internal.crypto.loadKeyStore
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -17,7 +18,11 @@ import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
+import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
+import kotlin.io.path.inputStream
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.outputStream
 import kotlin.test.assertEquals
 
 /**
@@ -36,7 +41,6 @@ object JarSignatureTestUtils {
     private fun Path.executeProcess(vararg command: String) {
         val shredder = (this / "_shredder").toFile() // No need to delete after each test.
         assertEquals(0, ProcessBuilder()
-                .inheritIO()
                 .redirectOutput(shredder)
                 .redirectError(shredder)
                 .directory(this.toFile())
@@ -67,6 +71,16 @@ object JarSignatureTestUtils {
         executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", storePassword, "-keypass", keyPassword, fileName, alias)
         val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
         return ks.getCertificate(alias).publicKey
+    }
+
+    fun Path.unsignJar() {
+        FileSystems.newFileSystem(this).use { zipFs ->
+            zipFs.getPath("META-INF").listDirectoryEntries("*.{SF,DSA,RSA,EC}").forEach(Path::deleteExisting)
+            val manifestFile = zipFs.getPath("META-INF", "MANIFEST.MF")
+            val manifest = manifestFile.inputStream().use(::Manifest)
+            manifest.entries.clear()  // Remove all the hash information of the jar contents
+            manifestFile.outputStream().use(manifest::write)
+        }
     }
 
     fun Path.getPublicKey(alias: String, storeName: String, storePassword: String) : PublicKey {
