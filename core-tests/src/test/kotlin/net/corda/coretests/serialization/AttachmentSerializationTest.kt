@@ -116,6 +116,7 @@ class AttachmentSerializationTest {
     private class CustomAttachment(override val id: SecureHash, internal val customContent: String) : Attachment {
         override fun open() = throw UnsupportedOperationException("Not implemented.")
         override val signerKeys get() = throw UnsupportedOperationException()
+        @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
         override val signers: List<Party> get() = throw UnsupportedOperationException()
         override val size get() = throw UnsupportedOperationException()
     }

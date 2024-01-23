@@ -25,6 +25,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
 import kotlin.io.path.Path
+import kotlin.io.path.createTempDirectory
 import kotlin.io.path.div
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -99,7 +100,7 @@ class NetworkBootstrapperRunnerTests {
     @Test(timeout=300_000)
 	fun `test when base directory is specified it is passed through to the bootstrapper`() {
         val (runner, mockBootstrapper) = getRunner()
-        val tempDir = createTempDir()
+        val tempDir = createTempDirectory().toFile()
         runner.dir = tempDir.toPath()
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(tempDir.toPath().toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides())

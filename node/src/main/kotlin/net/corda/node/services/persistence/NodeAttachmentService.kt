@@ -336,6 +336,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         return null
     }
 
+    @Deprecated("More attachment information is required", replaceWith = ReplaceWith("importAttachment(jar, uploader, filename)"))
     @Suppress("OverridingDeprecatedMember")
     override fun importAttachment(jar: InputStream): AttachmentId {
         return import(jar, UNKNOWN_UPLOADER, null)
@@ -454,6 +455,7 @@ class NodeAttachmentService @JvmOverloads constructor(
                 }
             }
 
+    @Deprecated("More attachment information is required", replaceWith = ReplaceWith("importAttachment(jar, uploader, filename)"))
     @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         return try {

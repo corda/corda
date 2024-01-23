@@ -314,6 +314,7 @@ open class MockServices private constructor(
                 override val id get() = throw UnsupportedOperationException()
                 override fun open() = inputStream
                 override val signerKeys get() = throw UnsupportedOperationException()
+                @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
                 override val signers: List<Party> get() = throw UnsupportedOperationException()
                 override val size: Int = 512
             }
