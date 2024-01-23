@@ -33,8 +33,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     /** A map of the currently stored files by their [SecureHash] */
     val files: Map<SecureHash, Pair<Attachment, ByteArray>> get() = _files
 
-    @Deprecated("More attachment information is required", replaceWith = ReplaceWith("importAttachment(jar, uploader, filename)"))
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importAttachment(jar: InputStream): AttachmentId = importAttachment(jar, UNKNOWN_UPLOADER, null)
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
@@ -79,8 +78,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun hasAttachment(attachmentId: AttachmentId) = files.containsKey(attachmentId)
 
-    @Deprecated("More attachment information is required", replaceWith = ReplaceWith("importAttachment(jar, uploader, filename)"))
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         return try {
             importAttachment(jar, UNKNOWN_UPLOADER, null)

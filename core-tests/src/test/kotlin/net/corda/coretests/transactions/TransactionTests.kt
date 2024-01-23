@@ -205,8 +205,7 @@ class TransactionTests(private val digestService : DigestService) {
         val attachments = listOf(ContractAttachment(object : AbstractAttachment({
             (AttachmentsClassLoaderTests::class.java.getResource(ISOLATED_JAR) ?: fail("Missing $ISOLATED_JAR")).openStream().readBytes()
         }, TESTDSL_UPLOADER) {
-            @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
-            @Suppress("OverridingDeprecatedMember")
+            @Suppress("OVERRIDE_DEPRECATION")
             override val signers: List<Party> = emptyList()
             override val signerKeys: List<PublicKey> = emptyList()
             override val size: Int = 1234

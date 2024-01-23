@@ -44,8 +44,7 @@ fun setupJSchWithSshAgent(): JSch {
                         override fun getName() = String(identity.comment)
                         override fun isEncrypted() = false
                         override fun getSignature(data: ByteArray?) = agentProxy.sign(identity.blob, data)
-                        @Deprecated("Deprecated in Java")
-                        @Suppress("OverridingDeprecatedMember")
+                        @Suppress("OVERRIDE_DEPRECATION")
                         override fun decrypt() = true
 
                         override fun getPublicKeyBlob() = identity.blob
