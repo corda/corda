@@ -20,13 +20,11 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IS_S390X
 import org.junit.Assume
-import org.junit.Ignore
 import org.junit.Test
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertTrue
 
-@Ignore("TODO JDK17: Fixme - flaky test")
 class FlowSleepTest {
 
     @Test(timeout = 300_000)
@@ -81,7 +79,7 @@ class FlowSleepTest {
         @Suspendable
         override fun call(): Pair<Instant, Instant> {
             val start = Instant.now()
-            sleep(5.seconds)
+            sleep(6.seconds)
             return start to Instant.now()
         }
     }
@@ -92,9 +90,9 @@ class FlowSleepTest {
         @Suspendable
         override fun call(): Triple<Instant, Instant, Instant> {
             val start = Instant.now()
-            sleep(5.seconds)
+            sleep(6.seconds)
             val middle = Instant.now()
-            sleep(10.seconds)
+            sleep(11.seconds)
             return Triple(start, middle, Instant.now())
         }
     }
