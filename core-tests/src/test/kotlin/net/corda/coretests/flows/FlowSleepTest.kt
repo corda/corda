@@ -79,7 +79,7 @@ class FlowSleepTest {
         @Suspendable
         override fun call(): Pair<Instant, Instant> {
             val start = Instant.now()
-            sleep(5.seconds)
+            sleep(6.seconds)
             return start to Instant.now()
         }
     }
