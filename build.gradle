@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 import static org.gradle.api.JavaVersion.VERSION_17
 import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-import static org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_8
+import static org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9
 
 buildscript {
     // For sharing constants between builds
@@ -284,8 +284,8 @@ allprojects {
 
     tasks.withType(KotlinCompile).configureEach {
         compilerOptions {
-            languageVersion = KOTLIN_1_8
-            apiVersion = KOTLIN_1_8
+            languageVersion = KOTLIN_1_9
+            apiVersion = KOTLIN_1_9
             jvmTarget = JVM_17
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=all-compatibility']
