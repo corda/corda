@@ -232,7 +232,7 @@ class NetworkMapServer(private val pollInterval: Duration,
                 null
             }
             requireNotNull(requestedParameters)
-            return Response.ok(requestedParameters!!.serialize().bytes).build()
+            return Response.ok(requestedParameters.serialize().bytes).build()
         }
 
         @GET

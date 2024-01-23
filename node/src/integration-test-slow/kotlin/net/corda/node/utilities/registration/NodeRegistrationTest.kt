@@ -65,7 +65,7 @@ class NodeRegistrationTest {
                 pollInterval = 1.seconds,
                 hostAndPort = portAllocation.nextHostAndPort(),
                 myHostNameValue = "localhost",
-                additionalServices = *arrayOf(registrationHandler))
+                additionalServices = arrayOf(registrationHandler))
         serverHostAndPort = server.start()
     }
 

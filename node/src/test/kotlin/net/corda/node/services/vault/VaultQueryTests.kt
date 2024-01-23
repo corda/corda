@@ -45,7 +45,8 @@ import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExpectedException
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.assertThrows
 import org.junit.rules.ExternalResource
 import java.time.Duration
 import java.time.Instant
@@ -148,7 +149,7 @@ open class VaultQueryTestRule(private val persistentServices: Boolean) : Externa
                     cordappPackages,
                     makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                     megaCorp,
-                    moreKeys = *arrayOf(DUMMY_NOTARY_KEY)
+                    moreKeys = arrayOf(DUMMY_NOTARY_KEY)
             )
         }
         database = databaseAndServices.first
@@ -183,10 +184,6 @@ class VaultQueryRollbackRule(private val vaultQueryParties: VaultQueryParties) :
 }
 
 abstract class VaultQueryTestsBase : VaultQueryParties {
-
-    @Rule
-    @JvmField
-    val expectedEx: ExpectedException = ExpectedException.none()
 
     companion object {
         @ClassRule @JvmField
@@ -1006,10 +1003,11 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(resultsUnlockedAndByLockIds.states).hasSize(5)
 
             // missing lockId
-            expectedEx.expect(VaultQueryException::class.java)
-            expectedEx.expectMessage("Must specify one or more lockIds")
-            val criteriaMissingLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED))
-            vaultService.queryBy<ContractState>(criteriaMissingLockId)
+            val anException = assertThrows<VaultQueryException> {
+                val criteriaMissingLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED))
+                vaultService.queryBy<ContractState>(criteriaMissingLockId)
+            }
+            anException.message?.let { assertTrue(it.contains("Must specify one or more lockIds")) }
         }
     }
 
@@ -1707,44 +1705,43 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     // pagination: invalid page number
     @Test(timeout=300_000)
 	fun `invalid page number`() {
-        expectedEx.expect(VaultQueryException::class.java)
-        expectedEx.expectMessage("Page specification: invalid page number")
-
-        database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 100, DUMMY_CASH_ISSUER)
-            val pagingSpec = PageSpecification(0, 10)
-
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
+        val anException = assertThrows<VaultQueryException> {
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 100, DUMMY_CASH_ISSUER)
+                val pagingSpec = PageSpecification(0, 10)
+                val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+                vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
+            }
         }
+        anException.message?.let { assertTrue(it.contains("Page specification: invalid page number")) }
     }
 
     // pagination: invalid page size
     @Suppress("INTEGER_OVERFLOW")
     @Test(timeout=300_000)
 	fun `invalid page size`() {
-        expectedEx.expect(VaultQueryException::class.java)
-        expectedEx.expectMessage("Page specification: invalid page size")
-
-        database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 100, DUMMY_CASH_ISSUER)
-            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, Integer.MAX_VALUE + 1)  // overflow = -2147483648
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
+        val anException = assertThrows<VaultQueryException> {
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 100, DUMMY_CASH_ISSUER)
+                val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, Integer.MAX_VALUE + 1)  // overflow = -2147483648
+                val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+                vaultService.queryBy<ContractState>(criteria, paging = pagingSpec)
+            }
         }
+        anException.message?.let { assertTrue(it.contains("Page specification: invalid page size")) }
     }
 
     // pagination not specified but more than DEFAULT_PAGE_SIZE results available (fail-fast test)
     @Test(timeout=300_000)
 	fun `pagination not specified but more than default results available`() {
-        expectedEx.expect(VaultQueryException::class.java)
-        expectedEx.expectMessage("provide a PageSpecification")
-
-        database.transaction {
-            vaultFiller.fillWithSomeTestCash(201.DOLLARS, notaryServices, 201, DUMMY_CASH_ISSUER)
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            vaultService.queryBy<ContractState>(criteria)
+        val anException = assertThrows<VaultQueryException> {
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(201.DOLLARS, notaryServices, 201, DUMMY_CASH_ISSUER)
+                val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+                vaultService.queryBy<ContractState>(criteria)
+            }
         }
+        anException.message?.let { assertTrue(it.contains("provide a PageSpecification")) }
     }
 
     // example of querying states with paging using totalStatesAvailable

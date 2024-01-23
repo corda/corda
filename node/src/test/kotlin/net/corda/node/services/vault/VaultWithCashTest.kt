@@ -83,7 +83,7 @@ class VaultWithCashTest {
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(MEGA_CORP.name, servicesKey),
                 networkParameters,
-                moreKeys = *arrayOf(dummyNotary.keyPair))
+                moreKeys = arrayOf(dummyNotary.keyPair))
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)

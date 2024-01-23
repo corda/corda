@@ -79,7 +79,7 @@ private class SpectatorDefaultAnswer : DefaultAnswer() {
                     ?: method.returnType!!
         }
 
-        private fun newSpectator(invocation: InvocationOnMock) = spectator(type)!!.also { log.info("New spectator {} for: {}", it, invocation.arguments) }
+        private fun newSpectator(invocation: InvocationOnMock) = spectator(type).also { log.info("New spectator {} for: {}", it, invocation.arguments) }
         private val spectators = try {
             val first = newSpectator(invocation)
             ConcurrentHashMap<InvocationOnMock, Any>().apply { put(invocation, first) }
