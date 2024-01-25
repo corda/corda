@@ -8,6 +8,7 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.signWithCert
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
@@ -424,7 +425,7 @@ val CertPath.x509Certificates: List<X509Certificate>
     get() {
         require(type == "X.509") { "Not an X.509 cert path: $this" }
         // We're not mapping the list to avoid creating a new one.
-        return certificates as List<X509Certificate>
+        return uncheckedCast(certificates)
     }
 
 val Certificate.x509: X509Certificate get() = requireNotNull(this as? X509Certificate) { "Not an X.509 certificate: $this" }

@@ -204,7 +204,7 @@ data class RPCDriverDSL(
                     QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).setAddress(NOTIFICATION_ADDRESS)
                             .setFilterString(RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION).setDurable(false)
             )
-            addressesSettings = mapOf(
+            addressSettings = mapOf(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                         maxSizeBytes = maxBufferedBytesPerClient
                         addressFullMessagePolicy = AddressFullMessagePolicy.PAGE

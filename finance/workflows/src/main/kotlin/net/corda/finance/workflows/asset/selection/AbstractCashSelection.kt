@@ -116,6 +116,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
         return stateAndRefs
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, stateAndRefs: MutableList<StateAndRef<Cash.State>>): Boolean {
         val connection = services.jdbcSession()
         try {

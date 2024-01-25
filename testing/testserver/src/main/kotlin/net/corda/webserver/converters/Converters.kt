@@ -14,9 +14,10 @@ object CordaX500NameConverter : ParamConverter<CordaX500Name> {
 
 @Provider
 object CordaConverterProvider : ParamConverterProvider {
+    @Suppress("UNCHECKED_CAST")
     override fun <T : Any> getConverter(rawType: Class<T>, genericType: Type?, annotations: Array<out Annotation>?): ParamConverter<T>? {
         if (rawType == CordaX500Name::class.java) {
-            return uncheckedCast(CordaX500NameConverter) as ParamConverter<T>?
+            return CordaX500NameConverter as ParamConverter<T>?
         }
         return null
     }

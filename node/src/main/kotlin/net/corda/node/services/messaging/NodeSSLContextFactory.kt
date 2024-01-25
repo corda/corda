@@ -125,4 +125,12 @@ private fun findResource(resourceName: String): URL {
  * This is an inline function for [InputStream] so it can be closed and
  * ignore an exception.
  */
-private fun InputStream?.closeQuietly() = IOUtils.closeQuietly(this)
+private fun InputStream?.closeQuietly() {
+    try {
+        this?.close()
+    }
+    catch ( ex : Exception ) {
+        // quietly absorb problems
+    }
+}
+

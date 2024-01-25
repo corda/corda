@@ -775,7 +775,7 @@ class FlowFrameworkTests {
         assertFailsWith<TimeoutException> {
             val fiber = aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("Overnight observation") })
             flowId = fiber.id
-            fiber.resultFuture.getOrThrow(10.seconds)
+            fiber.resultFuture.getOrThrow<Nothing>(10.seconds)
         }
 
         aliceNode.database.transaction {

@@ -594,6 +594,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             gen.writeEndArray()
         }
 
-        override fun handledType(): Class<Map<Any, Any>> = uncheckedCast(Map::class.java) as Class<Map<Any, Any>>
+        @Suppress("UNCHECKED_CAST")
+        override fun handledType(): Class<Map<Any, Any>> = Map::class.java as Class<Map<Any, Any>>
     }
 }

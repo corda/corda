@@ -257,7 +257,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         @Suspendable
         override fun testCode() {
             val e = createException()
-            await(ExternalOperation(serviceHub, (SerializableLambda2 { _, _ -> throw e })))
+            await<Nothing>(ExternalOperation(serviceHub, (SerializableLambda2 { _, _ -> throw e })))
         }
 
         private fun createException() = when (exceptionType) {
@@ -273,7 +273,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
         @Suspendable
         override fun testCode(): Any = try {
-            await(ExternalOperation(serviceHub) { _, _ ->
+            await<Nothing>(ExternalOperation(serviceHub) { _, _ ->
                 throw IllegalStateException("threw exception in background process")
             })
         } catch (e: IllegalStateException) {
@@ -287,7 +287,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
         @Suspendable
         override fun testCode(): Any =
-            await(ExternalOperation(serviceHub) { serviceHub, _ ->
+            await<Nothing>(ExternalOperation(serviceHub) { serviceHub, _ ->
                 serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
             })
     }
@@ -298,7 +298,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         @Suspendable
         override fun testCode(): Any {
             try {
-                await(ExternalOperation(serviceHub) { _, _ ->
+                await<Nothing>(ExternalOperation(serviceHub) { _, _ ->
                     serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
                 })
             } catch (e: NullPointerException) {

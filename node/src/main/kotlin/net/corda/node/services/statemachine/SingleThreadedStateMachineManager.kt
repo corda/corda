@@ -1232,6 +1232,7 @@ internal class SingleThreadedStateMachineManager(
         }
         )
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> reattachFlowWithClientId(clientId: String, user: Principal): FlowStateMachineHandle<T>? {
         return innerState.withLock {
             clientIdsToFlowIds[clientId]?.let {

@@ -86,7 +86,10 @@ class FastThreadLocalTest {
 
     private class UnserializableObj {
         @Suppress("unused")
-        private val fail: Nothing by lazy { throw UnsupportedOperationException("Nice try.") }
+        private val fail : Nothing
+            get() {
+                throw UnsupportedOperationException("Nice try.")
+            }
     }
 
     @Test(timeout=300_000)
