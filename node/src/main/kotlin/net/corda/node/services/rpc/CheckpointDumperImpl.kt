@@ -38,7 +38,6 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.WaitForStateConsumption
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.objectOrNewInstance
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken

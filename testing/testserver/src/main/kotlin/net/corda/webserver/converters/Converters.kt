@@ -1,7 +1,6 @@
 package net.corda.webserver.converters
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.uncheckedCast
 import java.lang.reflect.Type
 import javax.ws.rs.ext.ParamConverter
 import javax.ws.rs.ext.ParamConverterProvider
