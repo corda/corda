@@ -82,13 +82,19 @@ tasks.register('buildCordaJAR', FatCapsule) {
     }
 }
 
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("generateMetadataFileForCordaJARPublication")) {
+        task.enabled = false
+    }
+}
+
 artifacts {
     runtimeArtifacts buildCordaJAR
 }
 
 publishing {
     publications {
-        maven(MavenPublication) {
+        cordaJAR(MavenPublication) {
             artifactId 'corda'
             artifact(buildCordaJAR)
             artifact(javadocJar)
