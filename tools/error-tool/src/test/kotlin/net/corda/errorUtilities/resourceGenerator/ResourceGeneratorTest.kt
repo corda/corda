@@ -4,6 +4,7 @@ import junit.framework.TestCase.assertEquals
 import net.corda.common.logging.errorReporting.ResourceBundleProperties
 import org.junit.Test
 import java.util.*
+import kotlin.io.path.createTempDirectory
 
 class ResourceGeneratorTest {
 
@@ -42,7 +43,7 @@ class ResourceGeneratorTest {
         assertEquals(expectedCodes().map { "$it.properties" }.toSet(), missing.toSet())
 
         // Now check that all resource files that should be created are
-        val tempDir = createTempDir()
+        val tempDir = createTempDirectory().toFile()
         resourceGenerator.createResources(missing, tempDir.toPath())
         val createdFiles = tempDir.walkTopDown().filter { it.isFile && it.extension == "properties" }.map { it.name }.toSet()
         assertEquals(missing.toSet(), createdFiles)

@@ -29,6 +29,7 @@ import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.io.path.createTempFile
 
 /**
  * The idea of this test is upon start-up of the node check if cash been already issued and if not issue under certain reference.
@@ -40,7 +41,7 @@ class CordaServiceIssueOnceAtStartupTests {
         private val armedPropName = this::class.java.enclosingClass.name + "-armed"
         private val logger = contextLogger()
         private val tempFilePropertyName = this::class.java.enclosingClass.name + "-tmpFile"
-        private val tmpFile = createTempFile(prefix = tempFilePropertyName)
+        private val tmpFile = createTempFile(prefix = tempFilePropertyName).toFile()
         private const val vaultQueryExecutedMarker = "VaultQueryExecuted"
         private const val sentFlowMarker = "SentFlow"
     }
