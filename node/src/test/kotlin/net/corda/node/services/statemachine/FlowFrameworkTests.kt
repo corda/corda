@@ -820,8 +820,9 @@ class FlowFrameworkTests {
     }
 
     // When ported to ENT use the existing API there to properly retry the flow
+    @Suppress("FunctionNaming")  // For some reason this test produces invalid class names if the function name contains spaces
     @Test(timeout=300_000)
-    fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
+    fun Hospitalized_flow_resets_to_RUNNABLE_and_clears_exception_when_retried() {
         var firstRun = true
         var counter = 0
         val waitUntilHospitalizedTwice = Semaphore(-1)

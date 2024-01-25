@@ -10,7 +10,11 @@ import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
-import org.apache.shiro.authc.*
+import org.apache.shiro.authc.AuthenticationException
+import org.apache.shiro.authc.AuthenticationInfo
+import org.apache.shiro.authc.AuthenticationToken
+import org.apache.shiro.authc.SimpleAuthenticationInfo
+import org.apache.shiro.authc.UsernamePasswordToken
 import org.apache.shiro.authc.credential.PasswordMatcher
 import org.apache.shiro.authc.credential.SimpleCredentialsMatcher
 import org.apache.shiro.authz.AuthorizationInfo
@@ -34,13 +38,8 @@ private typealias AuthServiceConfig = SecurityConfiguration.AuthService
 class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCacheFactory) : RPCSecurityManager {
 
     override val id = config.id
-    private val manager: DefaultSecurityManager
+    private val manager: DefaultSecurityManager = buildImpl(config, cacheFactory)
 
-    init {
-        manager = buildImpl(config, cacheFactory)
-    }
-
-    @Throws(FailedLoginException::class)
     override fun authenticate(principal: String, password: Password): AuthorizingSubject {
         password.use {
             val authToken = UsernamePasswordToken(principal, it.value)
@@ -83,11 +82,12 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
             }
             return DefaultSecurityManager(realm).also {
                 // Setup optional cache layer if configured
-                it.cacheManager = config.options?.cache?.let {
+                it.cacheManager = config.options?.cache?.let { options ->
                     CaffeineCacheManager(
-                            timeToLiveSeconds = it.expireAfterSecs,
-                            maxSize = it.maxEntries,
-                            cacheFactory = cacheFactory)
+                            timeToLiveSeconds = options.expireAfterSecs,
+                            maxSize = options.maxEntries,
+                            cacheFactory = cacheFactory
+                    )
                 }
             }
         }
@@ -193,8 +193,7 @@ private typealias ShiroCache<K, V> = org.apache.shiro.cache.Cache<K, V>
 /*
  * Adapts a [com.github.benmanes.caffeine.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
  */
-private fun <K : Any, V> Cache<K, V>.toShiroCache() = object : ShiroCache<K, V> {
-
+private fun <K : Any, V : Any> Cache<K, V>.toShiroCache() = object : ShiroCache<K, V> {
     private val impl = this@toShiroCache
 
     override operator fun get(key: K) = impl.getIfPresent(key)
@@ -231,13 +230,13 @@ private class CaffeineCacheManager(val maxSize: Long,
 
     private val instances = ConcurrentHashMap<String, ShiroCache<*, *>>()
 
-    override fun <K : Any, V> getCache(name: String): ShiroCache<K, V> {
+    override fun <K : Any, V : Any> getCache(name: String): ShiroCache<K, V> {
         val result = instances[name] ?: buildCache<K, V>(name)
         instances.putIfAbsent(name, result)
         return uncheckedCast(result)
     }
 
-    private fun <K : Any, V> buildCache(name: String): ShiroCache<K, V> {
+    private fun <K : Any, V : Any> buildCache(name: String): ShiroCache<K, V> {
         logger.info("Constructing cache '$name' with maximumSize=$maxSize, TTL=${timeToLiveSeconds}s")
         return cacheFactory.buildNamed<K, V>("RPCSecurityManagerShiroCache_$name").toShiroCache()
     }

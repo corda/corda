@@ -10,7 +10,7 @@ import java.util.*
 /**
  * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
-class PersistentMap<K : Any, V, E, out EK>(
+class PersistentMap<K : Any, V : Any, E, out EK>(
         name: String,
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K, V>,
@@ -126,7 +126,7 @@ class PersistentMap<K : Any, V, E, out EK>(
         return result
     }
 
-    private class NotReallyMutableEntry<K, V>(key: K, value: V) : AbstractMap.SimpleImmutableEntry<K, V>(key, value), MutableMap.MutableEntry<K, V> {
+    private class NotReallyMutableEntry<K, V>(key: K, value: V) : SimpleImmutableEntry<K, V>(key, value), MutableMap.MutableEntry<K, V> {
         override fun setValue(newValue: V): V {
             throw UnsupportedOperationException("Not really mutable. Implement if really required.")
         }
