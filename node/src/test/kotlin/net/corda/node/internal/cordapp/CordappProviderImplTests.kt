@@ -2,6 +2,7 @@ package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import net.corda.core.internal.toPath
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
@@ -17,8 +18,8 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.io.FileOutputStream
-import java.net.URL
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.jar.JarOutputStream
 import java.util.zip.Deflater.NO_COMPRESSION
 import java.util.zip.ZipEntry
@@ -28,10 +29,10 @@ import kotlin.test.assertFailsWith
 
 class CordappProviderImplTests {
     private companion object {
-        val isolatedJAR: URL = this::class.java.getResource("/isolated.jar")!!
+        val isolatedJAR = this::class.java.getResource("/isolated.jar")!!.toPath()
         // TODO: Cordapp name should differ from the JAR name
         const val isolatedCordappName = "isolated"
-        val emptyJAR: URL = this::class.java.getResource("empty.jar")!!
+        val emptyJAR = this::class.java.getResource("empty.jar")!!.toPath()
         val validConfig: Config = ConfigFactory.parseString("key=value")
 
         @JvmField
@@ -108,7 +109,7 @@ class CordappProviderImplTests {
 	fun `test cordapp configuration`() {
         val configProvider = MockCordappConfigProvider()
         configProvider.cordappConfigs[isolatedCordappName] = validConfig
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN)
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(isolatedJAR), VersionInfo.UNKNOWN)
         val provider = CordappProviderImpl(loader, configProvider, attachmentStore).apply { start() }
 
         val expected = provider.getAppContext(provider.cordapps.first()).config
@@ -120,7 +121,7 @@ class CordappProviderImplTests {
 	fun `test fixup rule that adds attachment`() {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules("$ID1 => $ID2, $ID3")
-        val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
+        val fixedIDs = with(newCordappProvider(fixupJar.toPath())) {
             start()
             attachmentFixups.fixupAttachmentIds(listOf(ID1))
         }
@@ -131,7 +132,7 @@ class CordappProviderImplTests {
 	fun `test fixup rule that deletes attachment`() {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules("$ID1 =>")
-        val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
+        val fixedIDs = with(newCordappProvider(fixupJar.toPath())) {
             start()
             attachmentFixups.fixupAttachmentIds(listOf(ID1))
         }
@@ -143,7 +144,7 @@ class CordappProviderImplTests {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules(" => $ID2")
         val ex = assertFailsWith<IllegalArgumentException> {
-            newCordappProvider(fixupJar.toURI().toURL()).start()
+            newCordappProvider(fixupJar.toPath()).start()
         }
         assertThat(ex).hasMessageContaining(
             "Forbidden empty list of source attachment IDs in '${fixupJar.absolutePath}'"
@@ -156,7 +157,7 @@ class CordappProviderImplTests {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules(rule)
         val ex = assertFailsWith<IllegalArgumentException> {
-            newCordappProvider(fixupJar.toURI().toURL()).start()
+            newCordappProvider(fixupJar.toPath()).start()
         }
         assertThat(ex).hasMessageContaining(
             "Invalid fix-up line '${rule.trim()}' in '${fixupJar.absolutePath}'"
@@ -169,7 +170,7 @@ class CordappProviderImplTests {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules(rule)
         val ex = assertFailsWith<IllegalArgumentException> {
-            newCordappProvider(fixupJar.toURI().toURL()).start()
+            newCordappProvider(fixupJar.toPath()).start()
         }
         assertThat(ex).hasMessageContaining(
             "Invalid fix-up line '${rule.trim()}' in '${fixupJar.absolutePath}'"
@@ -185,7 +186,7 @@ class CordappProviderImplTests {
             "",
             "$ID3 => $ID4"
         )
-        val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
+        val fixedIDs = with(newCordappProvider(fixupJar.toPath())) {
             start()
             attachmentFixups.fixupAttachmentIds(listOf(ID2, ID1))
         }
@@ -200,8 +201,8 @@ class CordappProviderImplTests {
             val duplicateJarPath = signedJarPath.parent.resolve("duplicate-${signedJarPath.fileName}")
 
             Files.copy(signedJarPath, duplicateJarPath)
-            val urls = listOf(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
-            JarScanningCordappLoader.fromJarUrls(urls, VersionInfo.UNKNOWN).use {
+            val paths = setOf(signedJarPath, duplicateJarPath)
+            JarScanningCordappLoader.fromJarUrls(paths, VersionInfo.UNKNOWN).use {
                 assertFailsWith<DuplicateCordappsInstalledException> {
                     CordappProviderImpl(it, stubConfigProvider, attachmentStore).apply { start() }
                 }
@@ -214,8 +215,8 @@ class CordappProviderImplTests {
         SelfCleaningDir().use { file ->
             val jarA = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForA"), generateManifest = false, jarFileName = "sampleA.jar")
             val jarB = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForB"), generateManifest = false, jarFileName = "sampleB.jar")
-            val urls = listOf(jarA.toUri().toURL(), jarB.toUri().toURL())
-            JarScanningCordappLoader.fromJarUrls(urls, VersionInfo.UNKNOWN).use {
+            val paths = setOf(jarA, jarB)
+            JarScanningCordappLoader.fromJarUrls(paths, VersionInfo.UNKNOWN).use {
                 assertFailsWith<IllegalStateException> {
                     CordappProviderImpl(it, stubConfigProvider, attachmentStore).apply { start() }
                 }
@@ -238,8 +239,8 @@ class CordappProviderImplTests {
         return this
     }
 
-    private fun newCordappProvider(vararg urls: URL): CordappProviderImpl {
-        val loader = JarScanningCordappLoader.fromJarUrls(urls.toList(), VersionInfo.UNKNOWN)
+    private fun newCordappProvider(vararg paths: Path): CordappProviderImpl {
+        val loader = JarScanningCordappLoader.fromJarUrls(paths.toSet(), VersionInfo.UNKNOWN)
         return CordappProviderImpl(loader, stubConfigProvider, attachmentStore).apply { start() }
     }
 }

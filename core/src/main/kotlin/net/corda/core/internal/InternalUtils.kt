@@ -138,27 +138,19 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
  * Similar to [Iterable.map] except it maps to a [Set] which preserves the iteration order.
  */
 @Suppress("INVISIBLE_MEMBER", "RemoveExplicitTypeArguments")   // Because the external verifier uses Kotlin 1.2
-inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> {
-    return if (this is Collection) {
-        when (size) {
-            0 -> return emptySet()
-            1 -> return setOf(transform(first()))
-            else -> mapTo(LinkedHashSet<R>(mapCapacity(size)), transform)
-        }
-    } else {
-        mapTo(LinkedHashSet<R>(), transform)
+inline fun <T, R> Collection<T>.mapToSet(transform: (T) -> R): Set<R> {
+    return when (size) {
+        0 -> return emptySet()
+        1 -> return setOf(transform(first()))
+        else -> mapTo(LinkedHashSet<R>(mapCapacity(size)), transform)
     }
 }
 
 /**
  * Similar to [Iterable.flatMap] except it maps to a [Set] which preserves the iteration order.
  */
-inline fun <T, R> Iterable<T>.flatMapToSet(transform: (T) -> Iterable<R>): Set<R> {
-    return if (this is Collection && isEmpty()) {
-        emptySet()
-    } else {
-        flatMapTo(LinkedHashSet(), transform)
-    }
+inline fun <T, R> Collection<T>.flatMapToSet(transform: (T) -> Iterable<R>): Set<R> {
+    return if (isEmpty()) emptySet() else flatMapTo(LinkedHashSet(), transform)
 }
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)

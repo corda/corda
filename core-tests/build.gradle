@@ -109,9 +109,9 @@ dependencies {
     smokeTestImplementation project(":client:rpc")
     smokeTestImplementation project(':smoke-test-utils')
     smokeTestImplementation project(':core-test-utils')
-    smokeTestImplementation project(":finance:contracts")
     smokeTestImplementation project(":finance:workflows")
     smokeTestImplementation project(":testing:cordapps:4.11-workflows")
+    smokeTestImplementation project(":finance:contracts")
     smokeTestImplementation "org.assertj:assertj-core:${assertj_version}"
     smokeTestImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
     smokeTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"

@@ -9,6 +9,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
+import kotlin.io.path.absolutePathString
 
 class NodeParams @JvmOverloads constructor(
         val legalName: CordaX500Name,
@@ -17,6 +18,7 @@ class NodeParams @JvmOverloads constructor(
         val rpcAdminPort: Int,
         val users: List<User>,
         val cordappJars: List<Path> = emptyList(),
+        val jarDirs: List<Path> = emptyList(),
         val clientRpcConfig: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         val devMode: Boolean = true,
         val version: String? = null
@@ -37,6 +39,7 @@ class NodeParams @JvmOverloads constructor(
                         .root())
                 .withValue("rpcUsers", valueFor(users.map { it.toConfig().root().unwrapped() }.toList()))
                 .withValue("useTestClock", valueFor(true))
+                .withValue("jarDirs", valueFor(jarDirs.map(Path::absolutePathString)))
                 .withValue("devMode", valueFor(devMode))
         return if (isNotary) {
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))

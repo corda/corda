@@ -6,7 +6,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarOutputStream
@@ -31,7 +30,7 @@ class AttachmentFixupsTest {
     fun `test fixup rule that adds attachment`() {
         val fixupJar = Files.createTempFile("fixup", ".jar")
                 .writeFixupRules("$ID1 => $ID2, $ID3")
-        val fixedIDs = with(newFixupService(fixupJar.toUri().toURL())) {
+        val fixedIDs = with(newFixupService(fixupJar)) {
             fixupAttachmentIds(listOf(ID1))
         }
         assertThat(fixedIDs).containsExactly(ID2, ID3)
@@ -41,7 +40,7 @@ class AttachmentFixupsTest {
     fun `test fixup rule that deletes attachment`() {
         val fixupJar = Files.createTempFile("fixup", ".jar")
                 .writeFixupRules("$ID1 =>")
-        val fixedIDs = with(newFixupService(fixupJar.toUri().toURL())) {
+        val fixedIDs = with(newFixupService(fixupJar)) {
             fixupAttachmentIds(listOf(ID1))
         }
         assertThat(fixedIDs).isEmpty()
@@ -52,7 +51,7 @@ class AttachmentFixupsTest {
         val fixupJar = Files.createTempFile("fixup", ".jar")
                 .writeFixupRules(" => $ID2")
         val ex = assertFailsWith<IllegalArgumentException> {
-            newFixupService(fixupJar.toUri().toURL())
+            newFixupService(fixupJar)
         }
         assertThat(ex).hasMessageContaining(
                 "Forbidden empty list of source attachment IDs in '$fixupJar'"
@@ -65,7 +64,7 @@ class AttachmentFixupsTest {
         val fixupJar = Files.createTempFile("fixup", ".jar")
                 .writeFixupRules(rule)
         val ex = assertFailsWith<IllegalArgumentException> {
-            newFixupService(fixupJar.toUri().toURL())
+            newFixupService(fixupJar)
         }
         assertThat(ex).hasMessageContaining(
                 "Invalid fix-up line '${rule.trim()}' in '$fixupJar'"
@@ -78,7 +77,7 @@ class AttachmentFixupsTest {
         val fixupJar = Files.createTempFile("fixup", ".jar")
                 .writeFixupRules(rule)
         val ex = assertFailsWith<IllegalArgumentException> {
-            newFixupService(fixupJar.toUri().toURL())
+            newFixupService(fixupJar)
         }
         assertThat(ex).hasMessageContaining(
                 "Invalid fix-up line '${rule.trim()}' in '$fixupJar'"
@@ -94,7 +93,7 @@ class AttachmentFixupsTest {
                 "",
                 "$ID3 => $ID4"
         )
-        val fixedIDs = with(newFixupService(fixupJar.toUri().toURL())) {
+        val fixedIDs = with(newFixupService(fixupJar)) {
             fixupAttachmentIds(listOf(ID2, ID1))
         }
         assertThat(fixedIDs).containsExactlyInAnyOrder(ID2, ID4)
@@ -130,8 +129,8 @@ class AttachmentFixupsTest {
         }
     }
 
-    private fun newFixupService(vararg urls: URL): AttachmentFixups {
-        val loader = JarScanningCordappLoader.fromJarUrls(urls.toList(), VersionInfo.UNKNOWN)
+    private fun newFixupService(vararg paths: Path): AttachmentFixups {
+        val loader = JarScanningCordappLoader.fromJarUrls(paths.toSet(), VersionInfo.UNKNOWN)
         return AttachmentFixups().apply { load(loader.appClassLoader) }
     }
 }

@@ -3,10 +3,11 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 description 'Utilities needed for smoke tests in Corda'
 
 dependencies {
+    api project(':test-common')
+
     // Smoke tests do NOT have any Node code on the classpath!
     implementation project(':core')
     implementation project(':node-api')
-    implementation project(':test-common')
     implementation project(':client:rpc')
 
     implementation "com.google.guava:guava:$guava_version"
