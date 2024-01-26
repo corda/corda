@@ -116,7 +116,6 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
         return stateAndRefs
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, stateAndRefs: MutableList<StateAndRef<Cash.State>>): Boolean {
         val connection = services.jdbcSession()
         try {
@@ -139,6 +138,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
                 if (stateRefs.isNotEmpty()) {
                     // TODO: future implementation to retrieve contract states from a Vault BLOB store
+                    @Suppress("UNCHECKED_CAST")
                     stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<out StateAndRef<Cash.State>>)
                 }
 

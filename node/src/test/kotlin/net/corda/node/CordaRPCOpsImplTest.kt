@@ -405,9 +405,9 @@ class CordaRPCOpsImplTest {
     }
 
     @Test(timeout=300_000)
-    @Suppress("UNCHECKED_CAST")
 	fun `non-ContractState class for the contractStateType param in vault queries`() {
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
+        @Suppress("UNCHECKED_CAST")
         val nonContractStateClass = Cash::class.java as Class<ContractState>
         withPermissions(invokeRpc("vaultTrack"), invokeRpc("vaultQuery")) {
             assertThatThrownBy { rpc.vaultQuery(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)

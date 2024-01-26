@@ -837,9 +837,9 @@ class NodeVaultService(
      * transaction.
      */
     @Throws(VaultQueryException::class)
-    @Suppress("UNCHECKED_CAST")
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
+            @Suppress("UNCHECKED_CAST")
             val updates: Observable<Vault.Update<T>> = _updatesPublisher.bufferUntilSubscribed() as Observable<Vault.Update<T>>
             if (contextTransactionOrNull != null) {
                 log.warn("trackBy is called with an already existing, open DB transaction. As a result, there might be states missing from both the snapshot and observable, included in the returned data feed, because of race conditions.")

@@ -74,12 +74,12 @@ data class _L_i__ (val listy: List<_i_>)
 
 data class _ALd_ (val a: Array<List<Double>>)
 
-@Suppress("UNUSED_PARAMETER", "DEPRECATION", "REMOVAL")
+@Suppress("UNUSED_PARAMETER", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 fun main (args: Array<String>) {
     initialiseSerialization()
     val path = "../cpp-serializer/bin/test-files";
     File("$path/_i_").writeBytes (_i_ (69).serialize().bytes)
-    File("$path/_Oi_").writeBytes (_Oi_ (Integer (1)).serialize().bytes)
+    File("$path/_Oi_").writeBytes (_Oi_ (Integer.valueOf (1) as Integer).serialize().bytes)
     File("$path/_l_").writeBytes (_l_ (100000000000L).serialize().bytes)
     File("$path/_Li_").writeBytes (_Li_(listOf (1, 2, 3, 4, 5, 6)).serialize().bytes)
     File("$path/_Ai_").writeBytes (_Ai_(arrayOf (1, 2, 3, 4, 5, 6)).serialize().bytes)
