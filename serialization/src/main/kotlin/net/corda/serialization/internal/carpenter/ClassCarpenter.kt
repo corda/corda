@@ -13,6 +13,7 @@ import org.objectweb.asm.Type
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
 import java.lang.reflect.Method
+import java.util.Locale
 
 /**
  * Any object that implements this interface is expected to expose its own fields via the [get] method, exactly
@@ -285,7 +286,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
 
     private fun ClassWriter.generateGetters(schema: Schema) {
         for ((name, type) in schema.fields) {
-            visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null).apply {
+            visitMethod(ACC_PUBLIC, "get" + name.replaceFirstChar { it.titlecase(Locale.getDefault()) }, "()" + type.descriptor, null, null).apply {
                 (type as ClassField).addNullabilityAnnotation(this)
                 visitCode()
                 visitVarInsn(ALOAD, 0)  // Load 'this'
@@ -307,7 +308,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
         for ((name, field) in schema.fields) {
             val opcodes = ACC_ABSTRACT + ACC_PUBLIC
             // abstract method doesn't have any implementation so just end
-            visitMethod(opcodes, "get" + name.capitalize(), "()${field.descriptor}", null, null).visitEnd()
+            visitMethod(opcodes, "get" + name.replaceFirstChar { it.titlecase(Locale.getDefault()) }, "()${field.descriptor}", null, null).visitEnd()
         }
     }
 
@@ -456,7 +457,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             methodLoop@
             for (method in itf.methods) {
                 val fieldNameFromItf = if (method.name.startsWith("get")) {
-                    method.name.substring(3).decapitalize()
+                    method.name.substring(3).replaceFirstChar { it.lowercase(Locale.getDefault()) }
                 } else if (lenient) {
                     logger.debug { "Ignoring interface $method which is not a getter" }
                     continue@methodLoop
@@ -485,6 +486,6 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
 
         @JvmStatic
         @Suppress("UNUSED")
-        fun getField(obj: Any, name: String): Any? = obj.javaClass.getMethod("get" + name.capitalize()).invoke(obj)
+        fun getField(obj: Any, name: String): Any? = obj.javaClass.getMethod("get" + name.replaceFirstChar { it.titlecase(Locale.getDefault()) }).invoke(obj)
     }
 }

@@ -10,6 +10,7 @@ import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvel
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.model.*
 import org.junit.Assert.assertTrue
+import java.util.Locale
 
 /**
  * Custom implementation of a [SerializerFactory] where we need to give it a class carpenter
@@ -95,5 +96,5 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
             constructors[0].newInstance(*constructorParams)!!
 
     protected fun Any.get(propertyName: String): Any =
-            this::class.java.getMethod("get${propertyName.capitalize()}").invoke(this)
+            this::class.java.getMethod("get${propertyName.replaceFirstChar { it.titlecase(Locale.getDefault()) }}").invoke(this)
 }

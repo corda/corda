@@ -20,9 +20,9 @@ import java.util.*
  */
 data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter: Method?) {
     override fun toString() = StringBuilder("").apply {
-        appendln("Property - ${field?.name ?: "null field"}\n")
-        appendln("  getter - ${getter?.name ?: "no getter"}")
-        appendln("  setter - ${setter?.name ?: "no setter"}")
+        appendLine("Property - ${field?.name ?: "null field"}\n")
+        appendLine("  getter - ${getter?.name ?: "no getter"}")
+        appendLine("  setter - ${setter?.name ?: "no setter"}")
     }.toString()
 
     /**
@@ -143,7 +143,7 @@ private fun Sequence<Method>.toCalculatedProperties(): Map<String, PropertyDescr
             "Calculated property name must have no parameters, and a non-void return type"
         }
 
-        val propertyName = propertyNamedMethod.fieldName.decapitalize()
+        val propertyName = propertyNamedMethod.fieldName.replaceFirstChar { it.lowercaseChar().toString() }
         methodsByName.compute(propertyName) { _, existingMethod ->
             if (existingMethod == null) method
             else leastGenericBy({ genericReturnType }, existingMethod, method)
@@ -159,7 +159,7 @@ private fun getPropertyNamedMethod(method: Method): PropertyNamedMethod? {
     return propertyMethodRegex.find(method.name)?.let { result ->
         PropertyNamedMethod(
                 result.groups[2]!!.value,
-                MethodClassifier.valueOf(result.groups[1]!!.value.toUpperCase()),
+                MethodClassifier.valueOf(result.groups[1]!!.value.uppercase(Locale.getDefault())),
                 method)
     }
 }
@@ -196,7 +196,7 @@ private fun EnumMap<MethodClassifier, Method>.merge(classifier: MethodClassifier
 
 // Make the property name conform to the underlying field name, if there is one.
 private fun getPropertyName(propertyName: String, fieldNames: Set<String>) =
-        if (propertyName.decapitalize() in fieldNames) propertyName.decapitalize()
+        if (propertyName.replaceFirstChar { it.lowercaseChar().toString() } in fieldNames) propertyName.replaceFirstChar { it.lowercaseChar().toString() }
         else propertyName
 
 

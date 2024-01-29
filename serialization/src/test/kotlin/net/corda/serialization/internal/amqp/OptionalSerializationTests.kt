@@ -8,9 +8,9 @@ import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.`is`
-import org.junit.Assert
 import org.junit.Test
 import java.util.Optional
+import org.hamcrest.MatcherAssert.assertThat
 
 class OptionalSerializationTests {
 
@@ -28,7 +28,7 @@ class OptionalSerializationTests {
 
         val deserialized = DeserializationInput(factory).deserialize(bytes)
         val deserialized2 = DeserializationInput(deserializerFactory).deserialize(bytes)
-        Assert.assertThat(deserialized, `is`(equalTo(deserialized2)))
-        Assert.assertThat(obj, `is`(equalTo(deserialized2)))
+        assertThat(deserialized, `is`(equalTo(deserialized2)))
+        assertThat(obj, `is`(equalTo(deserialized2)))
     }
 }

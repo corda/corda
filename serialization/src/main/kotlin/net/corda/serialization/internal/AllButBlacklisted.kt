@@ -48,7 +48,6 @@ object AllButBlacklisted : ClassWhitelist {
             Runtime::class.java.name,
             ZipFile::class.java.name,
             Provider::class.java.name,
-            SecurityManager::class.java.name,
             Random::class.java.name,
 
             // Known blacklisted interfaces.

@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.corda.core.internal.LegalNameValidator.normalize
 import java.text.Normalizer
+import java.util.Locale
 import javax.security.auth.x500.X500Principal
 
 object LegalNameValidator {
@@ -145,7 +146,7 @@ object LegalNameValidator {
 
         private class CapitalLetterRule : Rule<String>() {
             override fun validate(legalName: String) {
-                val capitalizedLegalName = legalName.capitalize()
+                val capitalizedLegalName = legalName.replaceFirstChar {it.titlecase(Locale.getDefault()) }
                 require(legalName == capitalizedLegalName) { "Legal name should be capitalized. i.e. '$capitalizedLegalName'" }
             }
         }

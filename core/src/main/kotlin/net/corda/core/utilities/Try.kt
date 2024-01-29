@@ -60,6 +60,7 @@ sealed class Try<out A> {
      * Maps the given function to the values from this [Success] and [other], or returns `this` if this is a [Failure]
      * or [other] if [other] is a [Failure].
      */
+    @Suppress("UNCHECKED_CAST")
     inline fun <B, C> combine(other: Try<B>, function: (A, B) -> C): Try<C> = when (this) {
         is Success -> when (other) {
             is Success -> Success(function(value, other.value))
