@@ -138,6 +138,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
                 if (stateRefs.isNotEmpty()) {
                     // TODO: future implementation to retrieve contract states from a Vault BLOB store
+                    @Suppress("UNCHECKED_CAST")
                     stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<out StateAndRef<Cash.State>>)
                 }
 

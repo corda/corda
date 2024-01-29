@@ -1239,6 +1239,7 @@ internal class SingleThreadedStateMachineManager(
                     null
                 } else {
                     val existingFuture = activeOrRemovedClientIdFutureForReattach(it, clientId)
+                    @Suppress("UNCHECKED_CAST")
                     existingFuture?.let {existingFuture.get() } as FlowStateMachineHandle<T>
                 }
             }

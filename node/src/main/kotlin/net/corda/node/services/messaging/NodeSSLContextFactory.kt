@@ -9,7 +9,6 @@ import org.apache.activemq.artemis.core.remoting.impl.ssl.DefaultOpenSSLContextF
 import org.apache.activemq.artemis.core.remoting.impl.ssl.DefaultSSLContextFactory
 import org.apache.activemq.artemis.spi.core.remoting.ssl.SSLContextConfig
 import org.apache.activemq.artemis.utils.ClassloadingUtil
-import org.apache.commons.io.IOUtils
 import java.io.File
 import java.io.InputStream
 import java.net.MalformedURLException
@@ -125,4 +124,12 @@ private fun findResource(resourceName: String): URL {
  * This is an inline function for [InputStream] so it can be closed and
  * ignore an exception.
  */
-private fun InputStream?.closeQuietly() = IOUtils.closeQuietly(this)
+private fun InputStream?.closeQuietly() {
+    try {
+        this?.close()
+    }
+    catch ( ex : Exception ) {
+        // quietly absorb problems
+    }
+}
+

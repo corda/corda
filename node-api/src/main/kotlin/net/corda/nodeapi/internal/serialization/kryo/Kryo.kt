@@ -490,7 +490,8 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
         }
     }
 
-    private val delegate: Serializer<Throwable> = uncheckedCast(SerializerFactory.ReflectionSerializerFactory.newSerializer(kryo, FieldSerializer::class.java, type)) as Serializer<Throwable>
+    @Suppress("UNCHECKED_CAST")
+    private val delegate: Serializer<Throwable> = SerializerFactory.ReflectionSerializerFactory.newSerializer(kryo, FieldSerializer::class.java, type) as Serializer<Throwable>
 
     override fun write(kryo: Kryo, output: Output, throwable: Throwable) {
         delegate.write(kryo, output, throwable)

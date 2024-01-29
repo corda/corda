@@ -38,7 +38,6 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.WaitForStateConsumption
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.objectOrNewInstance
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
@@ -594,6 +593,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             gen.writeEndArray()
         }
 
-        override fun handledType(): Class<Map<Any, Any>> = uncheckedCast(Map::class.java) as Class<Map<Any, Any>>
+        @Suppress("UNCHECKED_CAST")
+        override fun handledType(): Class<Map<Any, Any>> = Map::class.java as Class<Map<Any, Any>>
     }
 }

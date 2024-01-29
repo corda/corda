@@ -40,7 +40,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         queueConfigs = queueConfigurations()
 
         managementNotificationAddress = SimpleString(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
-        addressesSettings = mapOf(
+        addressSettings = mapOf(
                 "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                     maxSizeBytes = 5L * maxMessageSize
                     addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
