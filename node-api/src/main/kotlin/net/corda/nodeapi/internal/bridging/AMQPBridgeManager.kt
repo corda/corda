@@ -205,10 +205,10 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 eventLoop.execute {
                     artemis(ArtemisState.STOPPING) {
                         stopSession(session)
-                        session = null
                         if(session != closingSession) {
                             stopSession(closingSession)
                         }
+                        session = null
                         ArtemisState.STOPPED
                     }
                 }
