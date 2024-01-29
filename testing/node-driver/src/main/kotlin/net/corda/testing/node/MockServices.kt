@@ -128,7 +128,7 @@ open class MockServices private constructor(
 ) : ServiceHub {
     companion object {
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-            return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).map { it.jarFile.toUri().toURL() }, versionInfo)
+            return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).mapToSet { it.jarFile }, versionInfo)
         }
 
         /**

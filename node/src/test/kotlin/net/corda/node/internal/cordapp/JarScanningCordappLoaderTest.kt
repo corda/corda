@@ -8,6 +8,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.packageName_
+import net.corda.core.internal.toPath
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.testing.node.internal.cordappWithPackages
@@ -55,8 +56,8 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
 	fun `isolated JAR contains a CorDapp with a contract and plugin`() {
-        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(isolatedJAR))
 
         assertThat(loader.cordapps).hasSize(1)
 
@@ -68,13 +69,13 @@ class JarScanningCordappLoaderTest {
         assertThat(actualCordapp.services).isEmpty()
         assertThat(actualCordapp.serializationWhitelists).hasSize(1)
         assertThat(actualCordapp.serializationWhitelists.first().javaClass.name).isEqualTo("net.corda.serialization.internal.DefaultWhitelist")
-        assertThat(actualCordapp.jarPath).isEqualTo(isolatedJAR)
+        assertThat(actualCordapp.jarFile).isEqualTo(isolatedJAR)
     }
 
     @Test(timeout=300_000)
 	fun `constructed CordappImpl contains the right cordapp classes`() {
-        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(isolatedJAR))
 
         val actualCordapp = loader.cordapps.single()
         val cordappClasses = actualCordapp.cordappClasses
@@ -86,7 +87,7 @@ class JarScanningCordappLoaderTest {
     @Test(timeout=300_000)
 	fun `flows are loaded by loader`() {
         val jarFile = cordappWithPackages(javaClass.packageName_).jarFile
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jarFile.toUri().toURL()))
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jarFile))
 
         // One cordapp from this source tree. In gradle it will also pick up the node jar.
         assertThat(loader.cordapps).isNotEmpty
@@ -101,8 +102,8 @@ class JarScanningCordappLoaderTest {
     // being used internally. Later iterations will use a classloader per cordapp and this test can be retired.
     @Test(timeout=300_000)
 	fun `cordapp classloader can load cordapp classes`() {
-        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN)
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("/isolated.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(isolatedJAR), VersionInfo.UNKNOWN)
 
         loader.appClassLoader.loadClass(isolatedContractId)
         loader.appClassLoader.loadClass(isolatedFlowName)
@@ -110,8 +111,8 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
 	fun `cordapp classloader sets target and min version to 1 if not specified`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/no-min-or-target-version.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/no-min-or-target-version.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jar), VersionInfo.UNKNOWN)
         loader.cordapps.forEach {
             assertThat(it.targetPlatformVersion).isEqualTo(1)
             assertThat(it.minimumPlatformVersion).isEqualTo(1)
@@ -122,8 +123,8 @@ class JarScanningCordappLoaderTest {
 	fun `cordapp classloader returns correct values for minPlatformVersion and targetVersion`() {
         // load jar with min and target version in manifest
         // make sure classloader extracts correct values
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jar), VersionInfo.UNKNOWN)
         val cordapp = loader.cordapps.first()
         assertThat(cordapp.targetPlatformVersion).isEqualTo(3)
         assertThat(cordapp.minimumPlatformVersion).isEqualTo(2)
@@ -132,8 +133,8 @@ class JarScanningCordappLoaderTest {
     @Test(timeout=300_000)
 	fun `cordapp classloader sets target version to min version if target version is not specified`() {
         // load jar with minVersion but not targetVersion in manifest
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jar), VersionInfo.UNKNOWN)
         // exclude the core cordapp
         val cordapp = loader.cordapps.first()
         assertThat(cordapp.targetPlatformVersion).isEqualTo(2)
@@ -142,8 +143,8 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout = 300_000)
 	fun `cordapp classloader does not load apps when their min platform version is greater than the node platform version`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
-        val cordappLoader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1))
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!.toPath()
+        val cordappLoader = JarScanningCordappLoader.fromJarUrls(setOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1))
         assertThatExceptionOfType(InvalidCordappException::class.java).isThrownBy {
             cordappLoader.cordapps
         }
@@ -151,29 +152,29 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
 	fun `cordapp classloader does load apps when their min platform version is less than the platform version`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1000))
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1000))
         assertThat(loader.cordapps).hasSize(1)
     }
 
     @Test(timeout=300_000)
 	fun `cordapp classloader does load apps when their min platform version is equal to the platform version`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 2))
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 2))
         assertThat(loader.cordapps).hasSize(1)
     }
 
     @Test(timeout=300_000)
 	fun `cordapp classloader loads app signed by allowed certificate`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = emptyList())
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jar), cordappsSignerKeyFingerprintBlacklist = emptyList())
         assertThat(loader.cordapps).hasSize(1)
     }
 
     @Test(timeout = 300_000)
 	fun `cordapp classloader does not load app signed by blacklisted certificate`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
-        val cordappLoader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!.toPath()
+        val cordappLoader = JarScanningCordappLoader.fromJarUrls(setOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
         assertThatExceptionOfType(InvalidCordappException::class.java).isThrownBy {
             cordappLoader.cordapps
         }
@@ -181,8 +182,8 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
 	fun `cordapp classloader loads app signed by both allowed and non-blacklisted certificate`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-two-keys.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-two-keys.jar")!!.toPath()
+        val loader = JarScanningCordappLoader.fromJarUrls(setOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
         assertThat(loader.cordapps).hasSize(1)
     }
 }
