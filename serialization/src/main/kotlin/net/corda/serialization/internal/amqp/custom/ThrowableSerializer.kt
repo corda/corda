@@ -2,13 +2,13 @@ package net.corda.serialization.internal.amqp.custom
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
+import net.corda.core.internal.capitalize
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.model.LocalConstructorInformation
 import net.corda.serialization.internal.model.LocalTypeInformation
 import java.io.NotSerializableException
-import java.util.Locale
 
 class ThrowableSerializer(
         factory: LocalSerializerFactory
@@ -71,7 +71,7 @@ class ThrowableSerializer(
                 val constructor = typeInformation.constructor
                 val params = constructor.parameters.map { parameter ->
                     proxy.additionalProperties[parameter.name] ?:
-                    proxy.additionalProperties[parameter.name.replaceFirstChar { it.titlecase(Locale.getDefault()) }]
+                    proxy.additionalProperties[parameter.name.capitalize()]
                 }
                 val throwable = constructor.observedMethod.newInstance(*params.toTypedArray())
                 (throwable as CordaThrowable).apply {

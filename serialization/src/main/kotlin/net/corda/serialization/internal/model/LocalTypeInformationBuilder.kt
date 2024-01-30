@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.model
 
+import net.corda.core.internal.decapitalize
 import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.isJdkClass
@@ -33,7 +34,6 @@ import java.lang.reflect.InaccessibleObjectException
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.util.Locale
 import kotlin.reflect.KFunction
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.findAnnotation
@@ -408,7 +408,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         return rawType.propertyDescriptors(validateProperties).asSequence().mapNotNull { (name, descriptor) ->
             val normalisedName = when {
                 name in constructorParameterIndices -> name
-                name.replaceFirstChar { it.lowercase(Locale.getDefault()) } in constructorParameterIndices -> name.replaceFirstChar { it.lowercase(Locale.getDefault()) }
+                name.decapitalize() in constructorParameterIndices -> name.decapitalize()
                 else -> return@mapNotNull null
             }
 

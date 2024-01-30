@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.reflect.TypeToken
+import net.corda.core.internal.decapitalize
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.amqp.MethodClassifier.*
@@ -143,7 +144,7 @@ private fun Sequence<Method>.toCalculatedProperties(): Map<String, PropertyDescr
             "Calculated property name must have no parameters, and a non-void return type"
         }
 
-        val propertyName = propertyNamedMethod.fieldName.replaceFirstChar { it.lowercaseChar().toString() }
+        val propertyName = propertyNamedMethod.fieldName.decapitalize()
         methodsByName.compute(propertyName) { _, existingMethod ->
             if (existingMethod == null) method
             else leastGenericBy({ genericReturnType }, existingMethod, method)
@@ -196,7 +197,7 @@ private fun EnumMap<MethodClassifier, Method>.merge(classifier: MethodClassifier
 
 // Make the property name conform to the underlying field name, if there is one.
 private fun getPropertyName(propertyName: String, fieldNames: Set<String>) =
-        if (propertyName.replaceFirstChar { it.lowercaseChar().toString() } in fieldNames) propertyName.replaceFirstChar { it.lowercaseChar().toString() }
+        if (propertyName.decapitalize() in fieldNames) propertyName.decapitalize()
         else propertyName
 
 
