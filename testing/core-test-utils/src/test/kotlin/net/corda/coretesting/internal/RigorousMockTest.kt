@@ -2,7 +2,7 @@ package net.corda.coretesting.internal
 
 import org.assertj.core.api.Assertions.catchThrowable
 import org.hamcrest.Matchers.isA
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
 import java.io.Closeable
 import java.io.InputStream

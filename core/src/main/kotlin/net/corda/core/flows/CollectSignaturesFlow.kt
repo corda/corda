@@ -292,7 +292,7 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
         try {
             checkTransaction(stx)
         } catch (e: Exception) {
-            if (e is IllegalStateException || e is IllegalArgumentException || e is AssertionError)
+            if (e is IllegalStateException || e is IllegalArgumentException)
                 throw FlowException(e)
             else
                 throw e

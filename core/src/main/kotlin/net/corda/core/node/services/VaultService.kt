@@ -123,24 +123,24 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         
         override fun toString(): String {
             val sb = StringBuilder()
-            sb.appendln("${consumed.size} consumed, ${produced.size} produced")
-            sb.appendln("")
-            sb.appendln("Consumed:")
+            sb.appendLine("${consumed.size} consumed, ${produced.size} produced")
+            sb.appendLine("")
+            sb.appendLine("Consumed:")
             consumed.forEach {
-                sb.appendln("${it.ref}: ${it.state}")
+                sb.appendLine("${it.ref}: ${it.state}")
             }
-            sb.appendln("")
-            sb.appendln("Produced:")
+            sb.appendLine("")
+            sb.appendLine("Produced:")
             produced.forEach {
-                sb.appendln("${it.ref}: ${it.state}")
+                sb.appendLine("${it.ref}: ${it.state}")
             }
-            sb.appendln("References:")
+            sb.appendLine("References:")
             references.forEach {
-                sb.appendln("${it.ref}: ${it.state}")
+                sb.appendLine("${it.ref}: ${it.state}")
             }
-            sb.appendln("Consuming TxIds:")
+            sb.appendLine("Consuming TxIds:")
             consumingTxIds.forEach {
-                sb.appendln("${it.key}: ${it.value}")
+                sb.appendLine("${it.key}: ${it.value}")
             }
             return sb.toString()
         }

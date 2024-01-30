@@ -5,6 +5,7 @@ import net.corda.core.internal.loadClassOfType
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.Collections
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 sealed class DigestAlgorithmFactory {
@@ -44,7 +45,7 @@ sealed class DigestAlgorithmFactory {
         private val factories = ConcurrentHashMap<String, DigestAlgorithmFactory>()
 
         private fun check(algorithm: String) {
-            require(algorithm.toUpperCase() == algorithm) { "Hash algorithm name $this must be in the upper case" }
+            require(algorithm.uppercase(Locale.getDefault()) == algorithm) { "Hash algorithm name $this must be in the upper case" }
             require(algorithm !in BANNED) { "$algorithm is forbidden!" }
         }
 

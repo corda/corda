@@ -2,6 +2,8 @@
 package net.corda.serialization.internal.carpenter
 
 import com.google.common.base.MoreObjects
+import net.corda.core.internal.capitalize
+import net.corda.core.internal.decapitalize
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger

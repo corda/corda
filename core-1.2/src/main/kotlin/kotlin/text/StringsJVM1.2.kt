@@ -5,6 +5,8 @@ package kotlin.text
 
 import java.util.Locale
 
+// String extensions
 inline fun String.lowercase(): String = (this as java.lang.String).toLowerCase(Locale.ROOT)
-
 inline fun String.lowercase(locale: Locale): String = (this as java.lang.String).toLowerCase(locale)
+inline fun String.uppercase(): String = (this as java.lang.String).toUpperCase(Locale.ROOT)
+inline fun String.uppercase(locale: Locale): String = (this as java.lang.String).toUpperCase(locale)

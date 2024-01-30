@@ -322,22 +322,22 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
         val sb = StringBuilder("")
         val indent = Indent("")
 
-        sb.appendln("$indent<type-transforms>")
+        sb.appendLine("$indent<type-transforms>")
         types.forEach { type ->
             val indent = Indent(indent)
-            sb.appendln("$indent<type name=${type.key.esc()}>")
+            sb.appendLine("$indent<type name=${type.key.esc()}>")
             type.value.forEach { transform ->
                 val indent = Indent(indent)
-                sb.appendln("$indent<transforms type=${transform.key.name.esc()}>")
+                sb.appendLine("$indent<transforms type=${transform.key.name.esc()}>")
                 transform.value.forEach {
                     val indent = Indent(indent)
-                    sb.appendln("$indent<transform ${it.params()} />")
+                    sb.appendLine("$indent<transform ${it.params()} />")
                 }
-                sb.appendln("$indent</transforms>")
+                sb.appendLine("$indent</transforms>")
             }
-            sb.appendln("$indent</type>")
+            sb.appendLine("$indent</type>")
         }
-        sb.appendln("$indent</type-transforms>")
+        sb.appendLine("$indent</type-transforms>")
 
         return sb.toString()
     }

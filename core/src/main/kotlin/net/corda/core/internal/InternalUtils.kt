@@ -52,6 +52,7 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.Collections
+import java.util.Locale
 import java.util.PrimitiveIterator
 import java.util.Spliterator
 import java.util.Spliterator.DISTINCT
@@ -341,9 +342,7 @@ val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
         field?.let {
             if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
                 it.isAccessible = true
-
-                // TODO JDK17: Why does uncheckedCast(...) cause class cast exception?
-                // uncheckedCast(it.get(null))
+                @Suppress("UNCHECKED_CAST")
                 it.get(null) as T
             } else {
                 null
@@ -624,3 +623,14 @@ val Logger.level: Level
 
 const val JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
 const val JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION = 61
+
+/**
+ * String extension functions - to keep calling code readable following upgrade to Kotlin 1.9
+ */
+fun String.capitalize() : String {
+    return this.replaceFirstChar { it.titlecase(Locale.getDefault()) }
+}
+fun String.decapitalize() : String {
+    return this.replaceFirstChar { it.lowercase(Locale.getDefault()) }
+}
+

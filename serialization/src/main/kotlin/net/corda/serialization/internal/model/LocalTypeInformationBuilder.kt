@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.model
 
+import net.corda.core.internal.decapitalize
 import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.isJdkClass
