@@ -32,7 +32,7 @@ import net.corda.core.internal.entries
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.readFully
 import net.corda.core.internal.utilities.ZipBombDetector
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
@@ -90,7 +90,7 @@ class NodeAttachmentService @JvmOverloads constructor(
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
 
     // This is to break the circular dependency.
-    lateinit var servicesForResolution: ServicesForResolution
+    lateinit var nodeVerificationSupport: NodeVerificationSupport
 
     companion object {
         private val log = contextLogger()
@@ -390,7 +390,7 @@ class NodeAttachmentService @JvmOverloads constructor(
 
     private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId: AttachmentId) =
             if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
-                val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }
+                val versions = contractClassNames.mapNotNull { nodeVerificationSupport.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }
                         .filter { it >= 0 }.map { it + 1 } // +1 as versions starts from 1 not 0
                 val max = versions.maxOrNull()
                 if (max != null && max > contractVersionFromFile) {
@@ -416,7 +416,7 @@ class NodeAttachmentService @JvmOverloads constructor(
                 // set the hash field of the new attachment record.
 
                 val bytes = inputStream.readFully()
-                require(!ZipBombDetector.scanZip(ByteArrayInputStream(bytes), servicesForResolution.networkParameters.maxTransactionSize.toLong())) {
+                require(!ZipBombDetector.scanZip(ByteArrayInputStream(bytes), nodeVerificationSupport.networkParameters.maxTransactionSize.toLong())) {
                     "The attachment is too large and exceeds both max transaction size and the maximum allowed compression ratio"
                 }
                 val id = bytes.sha256()

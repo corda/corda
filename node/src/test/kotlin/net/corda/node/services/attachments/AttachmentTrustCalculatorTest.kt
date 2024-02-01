@@ -6,7 +6,7 @@ import net.corda.core.internal.AttachmentTrustCalculator
 import net.corda.core.internal.AttachmentTrustInfo
 import net.corda.core.internal.hash
 import net.corda.core.internal.read
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -47,7 +47,7 @@ class AttachmentTrustCalculatorTest {
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
     private lateinit var attachmentTrustCalculator: AttachmentTrustCalculator
-    private val services = rigorousMock<ServicesForResolution>().also {
+    private val nodeVerificationSupport = rigorousMock<NodeVerificationSupport>().also {
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
     private val cacheFactory = TestingNamedCacheFactory()
@@ -61,7 +61,7 @@ class AttachmentTrustCalculatorTest {
                 it.start()
             }
         }
-        storage.servicesForResolution = services
+        storage.nodeVerificationSupport = nodeVerificationSupport
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, database, cacheFactory)
     }
 
