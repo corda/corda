@@ -19,7 +19,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VER
 import net.corda.core.internal.hash
 import net.corda.core.internal.read
 import net.corda.core.internal.readFully
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
@@ -84,7 +84,7 @@ class NodeAttachmentServiceTest {
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
     private lateinit var devModeStorage: NodeAttachmentService
-    private val services = rigorousMock<ServicesForResolution>().also {
+    private val nodeVerificationSupport = rigorousMock<NodeVerificationSupport>().also {
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
 
@@ -105,13 +105,13 @@ class NodeAttachmentServiceTest {
                 it.start()
             }
         }
-        storage.servicesForResolution = services
+        storage.nodeVerificationSupport = nodeVerificationSupport
         devModeStorage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database, true).also {
             database.transaction {
                 it.start()
             }
         }
-        devModeStorage.servicesForResolution = services
+        devModeStorage.nodeVerificationSupport = nodeVerificationSupport
     }
 
     @After

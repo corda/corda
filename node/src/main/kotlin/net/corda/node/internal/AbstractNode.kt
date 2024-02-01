@@ -1201,7 +1201,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override lateinit var networkParameters: NetworkParameters
 
         init {
-            this@AbstractNode.attachments.servicesForResolution = this
+            this@AbstractNode.attachments.nodeVerificationSupport = this
         }
 
         fun start(myInfo: NodeInfo, networkParameters: NetworkParameters) {
