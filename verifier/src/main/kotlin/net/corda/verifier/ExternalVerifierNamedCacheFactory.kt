@@ -12,12 +12,12 @@ class ExternalVerifierNamedCacheFactory : NamedCacheFactory {
         private const val DEFAULT_CACHE_SIZE = 1024L
     }
 
-    override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         checkCacheName(name)
         return configure(caffeine, name).build()
     }
 
-    override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
+    override fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
         checkCacheName(name)
         return configure(caffeine, name).build(loader)
     }

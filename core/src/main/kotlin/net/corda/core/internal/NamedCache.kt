@@ -22,11 +22,11 @@ interface NamedCacheFactory {
         require(allowedChars.matches(name)) { "Invalid characters in cache name" }
     }
 
-    fun <K, V> buildNamed(name: String): Cache<K, V> = buildNamed(Caffeine.newBuilder(), name)
+    fun <K : Any, V : Any> buildNamed(name: String): Cache<K, V> = buildNamed(Caffeine.newBuilder(), name)
 
-    fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V>
+    fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V>
 
-    fun <K, V> buildNamed(name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> = buildNamed(Caffeine.newBuilder(), name, loader)
+    fun <K : Any, V : Any> buildNamed(name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> = buildNamed(Caffeine.newBuilder(), name, loader)
 
-    fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V>
+    fun <K : Any, V : Any> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V>
 }
