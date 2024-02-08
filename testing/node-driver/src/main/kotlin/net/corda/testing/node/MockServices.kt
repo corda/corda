@@ -67,9 +67,11 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
+import net.corda.node.services.persistence.toInternal
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.cordappSchemas
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -78,7 +80,6 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.node.internal.MockCryptoService
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.internal.MockNetworkParametersStorage
@@ -128,7 +129,7 @@ open class MockServices private constructor(
 ) : ServiceHub {
     companion object {
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-            return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).mapToSet { it.jarFile }, versionInfo)
+            return JarScanningCordappLoader(cordappsForPackages(packages).mapToSet { it.jarFile }, versionInfo = versionInfo)
         }
 
         /**
@@ -488,7 +489,7 @@ open class MockServices private constructor(
         get() {
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
-    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
+    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments.toInternal()).also {
         it.start()
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
@@ -562,7 +563,7 @@ open class MockServices private constructor(
      */
     private class VerifyingView(private val mockServices: MockServices) : VerifyingServiceHub, ServiceHub by mockServices {
         override val attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-                attachmentStorage = InternalMockAttachmentStorage(mockServices.attachments),
+                attachmentStorage = mockServices.attachments.toInternal(),
                 cacheFactory = TestingNamedCacheFactory()
         )
 
@@ -577,7 +578,7 @@ open class MockServices private constructor(
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = mockServices.loadStates(stateRefs)
 
         override val externalVerifierHandle: ExternalVerifierHandle
-            get() = throw UnsupportedOperationException("External verification is not supported by MockServices")
+            get() = throw UnsupportedOperationException("`Verification of legacy transactions is not supported by MockServices. Use MockNode instead.")
     }
 
 

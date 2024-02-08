@@ -154,6 +154,24 @@ inline fun <T, R> Collection<T>.flatMapToSet(transform: (T) -> Iterable<R>): Set
     return if (isEmpty()) emptySet() else flatMapTo(LinkedHashSet(), transform)
 }
 
+/**
+ * Map the elements of the [Iterable] to multiple keys. By default duplicate mappings are not allowed. The returned [Map] preserves the
+ * iteration order of the values.
+ */
+inline fun <K, V> Iterable<V>.groupByMultipleKeys(
+        keysSelector: (V) -> Iterable<K>,
+        onDuplicate: (K, V, V) -> Unit = { key, value1, value2 -> throw IllegalArgumentException("Duplicate mapping for $key ($value1, $value2)") }
+): Map<K, V> {
+    val map = LinkedHashMap<K, V>()
+    for (value in this) {
+        for (key in keysSelector(value)) {
+            val duplicate = map.put(key, value) ?: continue
+            onDuplicate(key, value, duplicate)
+        }
+    }
+    return map
+}
+
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 /** Same as [InputStream.readBytes] but also closes the stream. */

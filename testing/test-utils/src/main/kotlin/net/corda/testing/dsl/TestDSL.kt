@@ -27,11 +27,10 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.node.services.DbTransactionsResolver
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
-import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.node.services.persistence.toInternal
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import java.io.InputStream
 import java.security.PublicKey
@@ -113,14 +112,7 @@ data class TestTransactionDSLInterpreter private constructor(
             ledgerInterpreter.services.attachments.let {
                 // Wrapping to a [InternalMockAttachmentStorage] is needed to prevent leaking internal api
                 // while still allowing the tests to work
-                NodeAttachmentTrustCalculator(
-                    attachmentStorage = if (it is MockAttachmentStorage) {
-                        InternalMockAttachmentStorage(it)
-                    } else {
-                        it as AttachmentStorageInternal
-                    },
-                    cacheFactory = TestingNamedCacheFactory()
-                )
+                NodeAttachmentTrustCalculator(attachmentStorage = it.toInternal(), cacheFactory = TestingNamedCacheFactory())
             }
 
         override fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver =
@@ -128,6 +120,10 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override fun loadState(stateRef: StateRef) =
             ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+
+        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
+            return ledgerInterpreter.services.loadStates(stateRefs)
+        }
 
         override val cordappProvider: CordappProviderInternal
             get() = ledgerInterpreter.services.cordappProvider as CordappProviderInternal
@@ -141,7 +137,7 @@ data class TestTransactionDSLInterpreter private constructor(
         }
 
         override val externalVerifierHandle: ExternalVerifierHandle
-            get() = throw UnsupportedOperationException("External verification is not supported by TestTransactionDSLInterpreter")
+            get() = throw UnsupportedOperationException("Verification of legacy transactions is not supported by TestTransactionDSLInterpreter")
 
         override fun recordUnnotarisedTransaction(txn: SignedTransaction) {}
 

@@ -3,11 +3,12 @@ package net.corda.testing.core.internal
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.deleteRecursively
+import net.corda.coretesting.internal.modifyJarManifest
+import net.corda.coretesting.internal.useZipFile
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -20,9 +21,7 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
-import kotlin.io.path.inputStream
 import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.outputStream
 import kotlin.test.assertEquals
 
 /**
@@ -74,12 +73,13 @@ object JarSignatureTestUtils {
     }
 
     fun Path.unsignJar() {
-        FileSystems.newFileSystem(this).use { zipFs ->
+        // Remove the signatures
+        useZipFile { zipFs ->
             zipFs.getPath("META-INF").listDirectoryEntries("*.{SF,DSA,RSA,EC}").forEach(Path::deleteExisting)
-            val manifestFile = zipFs.getPath("META-INF", "MANIFEST.MF")
-            val manifest = manifestFile.inputStream().use(::Manifest)
-            manifest.entries.clear()  // Remove all the hash information of the jar contents
-            manifestFile.outputStream().use(manifest::write)
+        }
+        // Remove all the hash information of the jar contents
+        modifyJarManifest { manifest ->
+            manifest.entries.clear()
         }
     }
 

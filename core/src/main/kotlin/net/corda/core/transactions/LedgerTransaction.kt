@@ -255,7 +255,7 @@ private constructor(
     internal fun verifyInternal(txAttachments: List<Attachment> = this.attachments) {
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
-        val verifier = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+        val verifier = AttachmentsClassLoaderBuilder.withAttachmentsClassLoaderContext(
                 txAttachments,
                 getParamsWithGoo(),
                 id,

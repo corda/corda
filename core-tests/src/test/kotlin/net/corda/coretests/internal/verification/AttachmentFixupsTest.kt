@@ -2,7 +2,6 @@ package net.corda.coretests.internal.verification
 
 import net.corda.core.internal.verification.AttachmentFixups
 import net.corda.core.node.services.AttachmentId
-import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -130,7 +129,7 @@ class AttachmentFixupsTest {
     }
 
     private fun newFixupService(vararg paths: Path): AttachmentFixups {
-        val loader = JarScanningCordappLoader.fromJarUrls(paths.toSet(), VersionInfo.UNKNOWN)
+        val loader = JarScanningCordappLoader(paths.toSet())
         return AttachmentFixups().apply { load(loader.appClassLoader) }
     }
 }

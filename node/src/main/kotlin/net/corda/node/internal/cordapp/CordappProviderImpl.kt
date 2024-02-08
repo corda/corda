@@ -1,32 +1,31 @@
 package net.corda.node.internal.cordapp
 
-import com.google.common.collect.HashBiMap
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
-import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappProviderInternal
+import net.corda.core.internal.groupByMultipleKeys
 import net.corda.core.internal.verification.AttachmentFixups
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import java.net.URL
-import java.nio.file.FileAlreadyExistsException
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.inputStream
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(val cordappLoader: CordappLoader,
+open class CordappProviderImpl(private val cordappLoader: CordappLoader,
                                private val cordappConfigProvider: CordappConfigProvider,
-                               private val attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
+                               private val attachmentStorage: AttachmentStorageInternal) : SingletonSerializeAsToken(), CordappProviderInternal {
     private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
-    private val cordappAttachments = HashBiMap.create<SecureHash, URL>()
+    private lateinit var flowToCordapp: Map<Class<out FlowLogic<*>>, CordappImpl>
 
     override val attachmentFixups = AttachmentFixups()
 
@@ -38,15 +37,10 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
     override val cordapps: List<CordappImpl> get() = cordappLoader.cordapps
 
     fun start() {
-        cordappAttachments.putAll(loadContractsIntoAttachmentStore())
-        verifyInstalledCordapps()
+        loadContractsIntoAttachmentStore(cordappLoader.cordapps)
+        flowToCordapp = makeFlowToCordapp()
         // Load the fix-ups after uploading any new contracts into attachment storage.
         attachmentFixups.load(cordappLoader.appClassLoader)
-    }
-
-    private fun verifyInstalledCordapps() {
-        // This will invoke the lazy flowCordappMap property, thus triggering the MultipleCordappsForFlow check.
-        cordappLoader.flowCordappMap
     }
 
     override fun getAppContext(): CordappContext {
@@ -62,41 +56,40 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
     }
 
     override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
-        return getCordappForClass(contractClassName)?.let(this::getCordappAttachmentId)
+        // loadContractsIntoAttachmentStore makes sure the jarHash is the attachment ID
+        return cordappLoader.cordapps.find { contractClassName in it.contractClassNames }?.jarHash
     }
 
-    /**
-     * Gets the attachment ID of this CorDapp. Only CorDapps with contracts have an attachment ID
-     *
-     * @param cordapp The cordapp to get the attachment ID
-     * @return An attachment ID if it exists, otherwise nothing
-     */
-    fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse()[cordapp.jarPath]
+    override fun getContractAttachment(contractClassName: ContractClassName): ContractAttachment? {
+        return getContractAttachmentID(contractClassName)?.let(::getContractAttachment)
+    }
 
-    private fun loadContractsIntoAttachmentStore(): Map<SecureHash, URL> {
-        return cordapps.filter { it.contractClassNames.isNotEmpty() }.associate { cordapp ->
-            cordapp.jarPath.openStream().use { stream ->
-                try {
-                    // This code can be reached by [MockNetwork] tests which uses [MockAttachmentStorage]
-                    // [MockAttachmentStorage] cannot implement [AttachmentStorageInternal] because
-                    // doing so results in internal functions being exposed in the public API.
-                    if (attachmentStorage is AttachmentStorageInternal) {
-                        attachmentStorage.privilegedImportAttachment(
-                                stream,
-                                DEPLOYED_CORDAPP_UPLOADER,
-                                cordapp.info.shortName
-                        )
-                    } else {
-                        attachmentStorage.importAttachment(
-                                stream,
-                                DEPLOYED_CORDAPP_UPLOADER,
-                                cordapp.info.shortName
-                        )
-                    }
-                } catch (faee: FileAlreadyExistsException) {
-                    AttachmentId.create(faee.message!!)
-                }
-            } to cordapp.jarPath
+    private fun loadContractsIntoAttachmentStore(cordapps: List<CordappImpl>) {
+        for (cordapp in cordapps) {
+            if (cordapp.contractClassNames.isEmpty()) continue
+            val attachmentId = cordapp.jarFile.inputStream().use { stream ->
+                attachmentStorage.privilegedImportOrGetAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, cordapp.info.shortName)
+            }
+            // TODO We could remove this check if we had an import method for CorDapps, since it wouldn't need to hash the InputStream.
+            //  As it stands, we just have to double-check the hashes match, which should be the case (see NodeAttachmentService).
+            check(attachmentId == cordapp.jarHash) {
+                "Something has gone wrong. SHA-256 hash of ${cordapp.jarFile} (${cordapp.jarHash}) does not match attachment ID ($attachmentId)"
+            }
+        }
+    }
+
+    private fun getContractAttachment(id: AttachmentId): ContractAttachment {
+        return checkNotNull(attachmentStorage.openAttachment(id) as? ContractAttachment) { "Contract attachment $id has gone missing!" }
+    }
+
+    private fun makeFlowToCordapp(): Map<Class<out FlowLogic<*>>, CordappImpl> {
+        return cordappLoader.cordapps.groupByMultipleKeys(CordappImpl::allFlows) { flowClass, _, _ ->
+            val overlappingCordapps = cordappLoader.cordapps.filter { flowClass in it.allFlows }
+            throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${flowClass.name}: " +
+                    "[ ${overlappingCordapps.joinToString { it.jarPath.toString() }} ].",
+                    flowClass.name,
+                    overlappingCordapps.joinToString { it.jarFile.absolutePathString() }
+            )
         }
     }
 
@@ -110,7 +103,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
         return contextCache.computeIfAbsent(cordapp) {
             CordappContext.create(
                     cordapp,
-                    getCordappAttachmentId(cordapp),
+                    cordapp.jarHash.takeIf(attachmentStorage::hasAttachment),  // Not all CorDapps are attachments
                     cordappLoader.appClassLoader,
                     TypesafeCordappConfig(cordappConfigProvider.getConfigByName(cordapp.name))
             )
@@ -123,7 +116,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
      * @param className The class name
      * @return cordapp A cordapp or null if no cordapp has the given class loaded
      */
-    fun getCordappForClass(className: String): Cordapp? = cordapps.find { it.cordappClasses.contains(className) }
+    fun getCordappForClass(className: String): CordappImpl? = cordapps.find { it.cordappClasses.contains(className) }
 
-    override fun getCordappForFlow(flowLogic: FlowLogic<*>) = cordappLoader.flowCordappMap[flowLogic.javaClass]
+    override fun getCordappForFlow(flowLogic: FlowLogic<*>): Cordapp? = flowToCordapp[flowLogic.javaClass]
 }

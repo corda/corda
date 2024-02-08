@@ -80,6 +80,15 @@ processResources {
 
 processTestResources {
     from file("$rootDir/config/test/jolokia-access.xml")
+    from(tasks.getByPath(":finance:contracts:jar")) {
+        rename 'corda-finance-contracts-.*.jar', 'corda-finance-contracts.jar'
+    }
+    from(tasks.getByPath(":finance:workflows:jar")) {
+        rename 'corda-finance-workflows-.*.jar', 'corda-finance-workflows.jar'
+    }
+    from(tasks.getByPath(":testing:cordapps:cashobservers:jar")) {
+        rename 'testing-cashobservers-cordapp-.*.jar', 'testing-cashobservers-cordapp.jar'
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
