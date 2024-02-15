@@ -147,6 +147,7 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.NodeStatus
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.cordappSchemas
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent

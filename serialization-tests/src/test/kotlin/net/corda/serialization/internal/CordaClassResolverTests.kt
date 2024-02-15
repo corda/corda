@@ -12,17 +12,18 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import net.corda.core.contracts.TransactionVerificationException.UntrustedAttachmentsException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.persistence.toInternal
 import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
@@ -223,14 +224,21 @@ class CordaClassResolverTests {
         }
     }
 
-    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
+    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER): AttachmentId {
+        return ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
+    }
 
     @Test(timeout=300_000)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
-        val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
+        val storage = MockAttachmentStorage().toInternal()
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage)
-        val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
+        val classLoader = AttachmentsClassLoader(
+                arrayOf(attachmentHash).map { storage.openAttachment(it)!! },
+                testNetworkParameters(),
+                SecureHash.zeroHash,
+                { attachmentTrustCalculator.calculate(it) }
+        )
         val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
         assertThatExceptionOfType(KryoException::class.java).isThrownBy {
             CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
@@ -239,7 +247,7 @@ class CordaClassResolverTests {
 
     @Test(timeout=300_000)
     fun `Attempt to load contract attachment with untrusted uploader should fail with UntrustedAttachmentsException`() {
-        val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
+        val storage = MockAttachmentStorage().toInternal()
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage, "some_uploader")
         assertThatExceptionOfType(UntrustedAttachmentsException::class.java).isThrownBy {

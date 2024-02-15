@@ -100,7 +100,7 @@ interface NodeVerificationSupport : VerificationSupport {
         val upgradedContractAttachment = getAttachment(wtx.upgradedContractAttachmentId) ?: throw MissingContractAttachments(emptyList())
         val networkParameters = getNetworkParameters(wtx.networkParametersHash) ?: throw TransactionResolutionException(wtx.id)
 
-        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassLoaderContext(
                 listOf(legacyContractAttachment, upgradedContractAttachment),
                 networkParameters,
                 wtx.id,

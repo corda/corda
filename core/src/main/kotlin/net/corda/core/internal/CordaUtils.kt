@@ -12,10 +12,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import org.slf4j.MDC
 import java.security.PublicKey
 
@@ -55,11 +52,6 @@ enum class JavaVersion(val versionString: String) {
         private val currentVersion: String = System.getProperty("java.specification.version") ?:
                                                throw IllegalStateException("Unable to retrieve system property java.specification.version")
     }
-}
-
-/** Provide access to internal method for AttachmentClassLoaderTests. */
-fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Checks if this flow is an idempotent flow. */

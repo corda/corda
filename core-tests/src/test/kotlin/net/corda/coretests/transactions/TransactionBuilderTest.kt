@@ -13,6 +13,7 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.HashAgility
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.digestService
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.serialization.internal._driverSerializationEnv
@@ -31,12 +32,14 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
+import kotlin.io.path.inputStream
 import kotlin.test.assertFailsWith
 
 class TransactionBuilderTest {
@@ -297,5 +300,26 @@ class TransactionBuilderTest {
         assertFailsWith<UnsupportedOperationException>("Could not find custom serialization scheme with SchemeId = $schemeId.") {
             builder.toWireTransaction(services, schemeId)
        }
+    }
+
+    @Test(timeout=300_000)
+    fun `contract overlap in explicit attachments`() {
+        val overlappingAttachmentId = cordappWithPackages("net.corda.testing").jarFile.inputStream().use {
+            services.attachments.importAttachment(it, RPC_UPLOADER, null)
+        }
+
+        val outputState = TransactionState(
+                data = DummyState(),
+                contract = DummyContract.PROGRAM_ID,
+                notary = notary
+        )
+        val builder = TransactionBuilder()
+                .addAttachment(contractAttachmentId)
+                .addAttachment(overlappingAttachmentId)
+                .addOutputState(outputState)
+                .addCommand(DummyCommandData, notary.owningKey)
+        assertThatIllegalArgumentException()
+                .isThrownBy { builder.toWireTransaction(services) }
+                .withMessageContaining("Multiple attachments specified for the same contract net.corda.testing.contracts.DummyContract")
     }
 }

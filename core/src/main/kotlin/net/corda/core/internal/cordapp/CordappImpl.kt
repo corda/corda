@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.hash
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.telemetry.TelemetryComponent
 import net.corda.core.schemas.MappedSchema
@@ -32,9 +33,9 @@ data class CordappImpl(
         override val customSchemas: Set<MappedSchema>,
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val info: Cordapp.Info,
-        override val jarHash: SecureHash.SHA256,
         override val minimumPlatformVersion: Int,
         override val targetPlatformVersion: Int,
+        override val jarHash: SecureHash.SHA256 = jarFile.hash,
         val notaryService: Class<out NotaryService>? = null,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,
@@ -52,6 +53,10 @@ data class CordappImpl(
         val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.flatMap { it.whitelist } + notaryService
         classList.mapNotNull { it?.name } + contractClassNames + explicitCordappClasses
     }
+
+    override fun equals(other: Any?): Boolean = other is CordappImpl && this.jarHash == other.jarHash
+
+    override fun hashCode(): Int = 31 * jarHash.hashCode()
 
     companion object {
         fun jarName(url: Path): String = url.name.removeSuffix(".jar")

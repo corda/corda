@@ -25,6 +25,7 @@ import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.persistence.toInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
@@ -36,7 +37,6 @@ import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fakeAttachment
-import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
@@ -87,7 +87,6 @@ class AttachmentsClassLoaderTests {
     val testSerialization = SerializationEnvironmentRule()
 
     private lateinit var storage: MockAttachmentStorage
-    private lateinit var internalStorage: InternalMockAttachmentStorage
     private lateinit var attachmentTrustCalculator: AttachmentTrustCalculator
     private val networkParameters = testNetworkParameters()
     private val cacheFactory = TestingNamedCacheFactory(1)
@@ -114,8 +113,7 @@ class AttachmentsClassLoaderTests {
     @Before
     fun setup() {
         storage = MockAttachmentStorage()
-        internalStorage = InternalMockAttachmentStorage(storage)
-        attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage, cacheFactory)
+        attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage.toInternal(), cacheFactory)
     }
 
     @Test(timeout=300_000)
@@ -449,7 +447,7 @@ class AttachmentsClassLoaderTests {
         val keyPairB = Crypto.generateKeyPair()
 
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-            InternalMockAttachmentStorage(storage),
+            storage.toInternal(),
             cacheFactory,
             blacklistedAttachmentSigningKeys = listOf(keyPairA.public.hash)
         )
@@ -486,7 +484,7 @@ class AttachmentsClassLoaderTests {
         val keyPairA = Crypto.generateKeyPair()
 
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(
-            InternalMockAttachmentStorage(storage),
+            storage.toInternal(),
             cacheFactory,
             blacklistedAttachmentSigningKeys = listOf(keyPairA.public.hash)
         )
