@@ -26,7 +26,11 @@ import org.bouncycastle.asn1.sec.SECObjectIdentifiers
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair
 import org.bouncycastle.crypto.CryptoServicesRegistrar
+import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
+import org.bouncycastle.crypto.util.PrivateKeyInfoFactory
+import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
@@ -790,7 +794,23 @@ object Crypto {
     }
 
     private fun deriveKeyPairEdDSA(parameterSpec: EdDSAParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        TODO("Deterministic EdDSA key generation")
+        // Compute HMAC(privateKey, seed).
+        val macBytes = deriveHMAC(privateKey, seed)
+        // Note this function only supports Ed25519 curve. Private key length for Ed25519 is 32bytes
+        val bytes = macBytes.copyOf(32) // Need to pad the entropy to the valid seed length.
+        val privateKeyParams = Ed25519PrivateKeyParameters(bytes)
+        val publicKeyParams = privateKeyParams.generatePublicKey()
+        val keyPair = AsymmetricCipherKeyPair(publicKeyParams, privateKeyParams)
+        return convertEd25519BcToJceKeyPair(keyPair)
+    }
+
+    private fun convertEd25519BcToJceKeyPair(bcKeyPair: AsymmetricCipherKeyPair): KeyPair {
+        val pkcs8Encoded: ByteArray = PrivateKeyInfoFactory.createPrivateKeyInfo(bcKeyPair.private).encoded
+        val pkcs8KeySpec = PKCS8EncodedKeySpec(pkcs8Encoded, EDDSA_ED25519_SHA512.algorithmName)
+        val spkiEncoded: ByteArray = SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(bcKeyPair.public).encoded
+        val spkiKeySpec = X509EncodedKeySpec(spkiEncoded, EDDSA_ED25519_SHA512.algorithmName)
+        val keyFac = KeyFactory.getInstance(EDDSA_ED25519_SHA512.algorithmName, providerMap[EDDSA_ED25519_SHA512.providerName])
+        return KeyPair(keyFac.generatePublic(spkiKeySpec), keyFac.generatePrivate(pkcs8KeySpec))
     }
 
     // Given the domain parameters, this routine deterministically generates an ECDSA key pair

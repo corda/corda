@@ -765,7 +765,6 @@ class CryptoUtilsTest {
     }
 
     @Test(timeout=300_000)
-    @Ignore("An operation is not implemented: Deterministic EdDSA key generation")
 	fun `EdDSA ed25519 deterministic key generation`() {
         val (priv, pub) = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val (dpriv, dpub) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
