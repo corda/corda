@@ -9,7 +9,6 @@ import org.junit.Test
 import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.Signature
-import java.util.Locale
 import java.security.spec.EdECPrivateKeySpec
 import java.security.spec.NamedParameterSpec
 import kotlin.test.assertEquals

@@ -146,7 +146,7 @@ object Crypto {
             "Ed25519",
             "EdDSA",
             EdDSAParameterSpec(EdDSAParameterSpec.Ed25519),
-            null,
+            256,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
 
@@ -797,7 +797,7 @@ object Crypto {
         // Compute HMAC(privateKey, seed).
         val macBytes = deriveHMAC(privateKey, seed)
         // Note this function only supports Ed25519 curve. Private key length for Ed25519 is 32bytes
-        val bytes = macBytes.copyOf(32) // Need to pad the entropy to the valid seed length.
+        val bytes = macBytes.copyOf(EDDSA_ED25519_SHA512.keySize!! / 8) // Need to pad the entropy to the valid seed length.
         val privateKeyParams = Ed25519PrivateKeyParameters(bytes)
         val publicKeyParams = privateKeyParams.generatePublicKey()
         val keyPair = AsymmetricCipherKeyPair(publicKeyParams, privateKeyParams)
