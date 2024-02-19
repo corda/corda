@@ -79,6 +79,7 @@ import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader.Companion.LEGACY_CONTRACTS_DIR_NAME
 import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
@@ -187,6 +188,7 @@ import java.util.function.Consumer
 import javax.persistence.EntityManager
 import javax.sql.DataSource
 import kotlin.io.path.div
+import kotlin.io.path.exists
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -853,6 +855,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
+                (configuration.baseDirectory / LEGACY_CONTRACTS_DIR_NAME).takeIf { it.exists() },
                 versionInfo,
                 extraCordapps = generatedCordapps,
                 signerKeyFingerprintBlacklist = blacklistedKeys

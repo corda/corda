@@ -1,6 +1,27 @@
 package net.corda.core.internal
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.ATTACHMENTS_V2_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.INPUTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.NOTARY_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.PARAMETERS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.REFERENCES_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.TIMEWINDOW_GROUP
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.NamedByHash
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.algorithm
@@ -8,8 +29,20 @@ import net.corda.core.crypto.internal.DigestAlgorithmFactory
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.*
-import net.corda.core.transactions.*
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.MissingAttachmentsRuntimeException
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.BaseTransaction
+import net.corda.core.transactions.ComponentGroup
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.FilteredComponentGroup
+import net.corda.core.transactions.FullTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
@@ -68,8 +101,7 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
                                         forceDeserialize: Boolean = false,
                                         factory: SerializationFactory = SerializationFactory.defaultFactory,
                                         context: SerializationContext = factory.defaultContext): List<T> {
-    val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
-
+    val group = componentGroups.getGroup(groupEnum)
     if (group == null || group.components.isEmpty()) {
         return emptyList()
     }
@@ -85,7 +117,7 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
             factory.deserialize(component, clazz.java, context)
         } catch (e: MissingAttachmentsException) {
             /**
-             * [ServiceHub.signInitialTransaction] forgets to declare that
+             * `ServiceHub.signInitialTransaction` forgets to declare that
              * it may throw any checked exceptions. Wrap this one inside
              * an unchecked version to avoid breaking Java CorDapps.
              */
@@ -96,7 +128,13 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
     }
 }
 
-/**
+fun <T : ComponentGroup> List<T>.getGroup(type: ComponentGroupEnum): T? = firstOrNull { it.groupIndex == type.ordinal }
+
+fun <T : ComponentGroup> List<T>.getRequiredGroup(type: ComponentGroupEnum): T {
+    return requireNotNull(getGroup(type)) { "Missing component group $type" }
+}
+
+/**x
  * Exception raised if an error was encountered while attempting to deserialise a component group in a transaction.
  */
 class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: Int, cause: Exception):
@@ -119,9 +157,9 @@ fun deserialiseCommands(
     // TODO: we could avoid deserialising unrelated signers.
     //      However, current approach ensures the transaction is not malformed
     //      and it will throw if any of the signers objects is not List of public keys).
-    val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, ComponentGroupEnum.SIGNERS_GROUP, forceDeserialize, factory, context))
-    val commandDataList: List<CommandData> = deserialiseComponentGroup(componentGroups, CommandData::class, ComponentGroupEnum.COMMANDS_GROUP, forceDeserialize, factory, context)
-    val group = componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.COMMANDS_GROUP.ordinal }
+    val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, SIGNERS_GROUP, forceDeserialize, factory, context))
+    val commandDataList: List<CommandData> = deserialiseComponentGroup(componentGroups, CommandData::class, COMMANDS_GROUP, forceDeserialize, factory, context)
+    val group = componentGroups.getGroup(COMMANDS_GROUP)
     return if (group is FilteredComponentGroup) {
         check(commandDataList.size <= signersList.size) {
             "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
@@ -141,10 +179,7 @@ fun deserialiseCommands(
     }
 }
 
-/**
- * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
- * for backwards compatibility purposes.
- */
+@Suppress("LongParameterList")
 fun createComponentGroups(inputs: List<StateRef>,
                           outputs: List<TransactionState<ContractState>>,
                           commands: List<Command<*>>,
@@ -152,24 +187,35 @@ fun createComponentGroups(inputs: List<StateRef>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
                           references: List<StateRef>,
-                          networkParametersHash: SecureHash?): List<ComponentGroup> {
+                          networkParametersHash: SecureHash?,
+                          // The old attachments group is now only used to create transaction compatible with 4.11 (or earlier) nodes
+                          legacyAttachments: List<SecureHash> = emptyList()): List<ComponentGroup> {
     val serializationFactory = SerializationFactory.defaultFactory
     val serializationContext = serializationFactory.defaultContext
     val serialize = { value: Any, _: Int -> value.serialize(serializationFactory, serializationContext) }
     val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
-    if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
-    if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
-    if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.OUTPUTS_GROUP.ordinal, outputs.lazyMapped(serialize)))
+    componentGroupMap.addListGroup(INPUTS_GROUP, inputs, serialize)
+    componentGroupMap.addListGroup(REFERENCES_GROUP, references, serialize)
+    componentGroupMap.addListGroup(OUTPUTS_GROUP, outputs, serialize)
     // Adding commandData only to the commands group. Signers are added in their own group.
-    if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.COMMANDS_GROUP.ordinal, commands.map { it.value }.lazyMapped(serialize)))
-    if (attachments.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.ATTACHMENTS_GROUP.ordinal, attachments.lazyMapped(serialize)))
-    if (notary != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
-    if (timeWindow != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
+    componentGroupMap.addListGroup(COMMANDS_GROUP, commands.map { it.value }, serialize)
+    // Attachments which can only be processed by 4.12 and later.
+    componentGroupMap.addListGroup(ATTACHMENTS_V2_GROUP, attachments, serialize)
+    // The original attachments group now only contains attachments which can be processed by 4.11 and ealier (and the external verifier).
+    componentGroupMap.addListGroup(ATTACHMENTS_GROUP, legacyAttachments, serialize)
+    if (notary != null) componentGroupMap.add(ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
+    if (timeWindow != null) componentGroupMap.add(ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
     // Adding signers to their own group. This is required for command visibility purposes: a party receiving
     // a FilteredTransaction can now verify it sees all the commands it should sign.
-    if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
-    if (networkParametersHash != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
+    componentGroupMap.addListGroup(SIGNERS_GROUP, commands.map { it.signers }, serialize)
+    if (networkParametersHash != null) componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
     return componentGroupMap
+}
+
+private fun MutableList<ComponentGroup>.addListGroup(type: ComponentGroupEnum, list: List<Any>, serialize: (Any, Int) -> SerializedBytes<Any>) {
+    if (list.isNotEmpty()) {
+        add(ComponentGroup(type.ordinal, list.lazyMapped(serialize)))
+    }
 }
 
 typealias SerializedTransactionState = SerializedBytes<TransactionState<ContractState>>
@@ -267,10 +313,3 @@ internal fun checkNotaryWhitelisted(ftx: FullTransaction) {
         }
     }
 }
-
-val CoreTransaction.attachmentIds: List<SecureHash>
-    get() = when (this) {
-        is WireTransaction -> attachments
-        is ContractUpgradeWireTransaction -> listOf(legacyContractAttachmentId, upgradedContractAttachmentId)
-        else -> emptyList()
-    }

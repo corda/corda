@@ -15,6 +15,11 @@ interface CordappLoader : AutoCloseable {
     val cordapps: List<CordappImpl>
 
     /**
+     * Returns all legacy (4.11 or older) contract CorDapps. These are used to form backward compatible transactions.
+     */
+    val legacyContractCordapps: List<CordappImpl>
+
+    /**
      * Returns a [ClassLoader] containing all types from all [Cordapp]s.
      */
     val appClassLoader: ClassLoader

@@ -36,8 +36,9 @@ import kotlin.test.assertFailsWith
 
 class CordappProviderImplTests {
     private companion object {
-        val financeContractsJar = this::class.java.getResource("/corda-finance-contracts.jar")!!.toPath()
-        val financeWorkflowsJar = this::class.java.getResource("/corda-finance-workflows.jar")!!.toPath()
+        val currentFinanceContractsJar = this::class.java.getResource("/corda-finance-contracts.jar")!!.toPath()
+        val currentFinanceWorkflowsJar = this::class.java.getResource("/corda-finance-workflows.jar")!!.toPath()
+        val legacyFinanceContractsJar = this::class.java.getResource("/corda-finance-contracts-4.11.jar")!!.toPath()
 
         @JvmField
         val ID1 = AttachmentId.randomSHA256()
@@ -83,7 +84,7 @@ class CordappProviderImplTests {
 
     @Test(timeout=300_000)
 	fun `test that we find a cordapp class that is loaded into the store`() {
-        val provider = newCordappProvider(setOf(financeContractsJar))
+        val provider = newCordappProvider(setOf(currentFinanceContractsJar))
 
         val expected = provider.cordapps.first()
         val actual = provider.getCordappForClass(Cash::class.java.name)
@@ -94,7 +95,7 @@ class CordappProviderImplTests {
 
     @Test(timeout=300_000)
 	fun `test that we find an attachment for a cordapp contract class`() {
-        val provider = newCordappProvider(setOf(financeContractsJar))
+        val provider = newCordappProvider(setOf(currentFinanceContractsJar))
         val expected = provider.getAppContext(provider.cordapps.first()).attachmentId
         val actual = provider.getContractAttachmentID(Cash::class.java.name)
 
@@ -106,7 +107,7 @@ class CordappProviderImplTests {
     fun `test cordapp configuration`() {
         val configProvider = MockCordappConfigProvider()
         configProvider.cordappConfigs["corda-finance-contracts"] = ConfigFactory.parseString("key=value")
-        val provider = newCordappProvider(setOf(financeContractsJar), cordappConfigProvider = configProvider)
+        val provider = newCordappProvider(setOf(currentFinanceContractsJar), cordappConfigProvider = configProvider)
 
         val expected = provider.getAppContext(provider.cordapps.first()).config
 
@@ -115,21 +116,31 @@ class CordappProviderImplTests {
 
     @Test(timeout=300_000)
     fun getCordappForFlow() {
-        val provider = newCordappProvider(setOf(financeWorkflowsJar))
+        val provider = newCordappProvider(setOf(currentFinanceWorkflowsJar))
         val cashIssueFlow = CashIssueFlow(10.DOLLARS, OpaqueBytes.of(0x00), TestIdentity(ALICE_NAME).party)
-        assertThat(provider.getCordappForFlow(cashIssueFlow)?.jarPath?.toPath()).isEqualTo(financeWorkflowsJar)
+        assertThat(provider.getCordappForFlow(cashIssueFlow)?.jarPath?.toPath()).isEqualTo(currentFinanceWorkflowsJar)
     }
 
     @Test(timeout=300_000)
     fun `does not load the same flow across different CorDapps`() {
         val unsignedJar = tempFolder.newFile("duplicate.jar").toPath()
-        financeWorkflowsJar.copyTo(unsignedJar, overwrite = true)
+        currentFinanceWorkflowsJar.copyTo(unsignedJar, overwrite = true)
         // We just need to change the file's hash and thus avoid the duplicate CorDapp check
         unsignedJar.unsignJar()
-        assertThat(unsignedJar.hash).isNotEqualTo(financeWorkflowsJar.hash)
+        assertThat(unsignedJar.hash).isNotEqualTo(currentFinanceWorkflowsJar.hash)
         assertFailsWith<MultipleCordappsForFlowException> {
-            newCordappProvider(setOf(financeWorkflowsJar, unsignedJar))
+            newCordappProvider(setOf(currentFinanceWorkflowsJar, unsignedJar))
         }
+    }
+
+    @Test(timeout=300_000)
+    fun `retrieving legacy attachment for contract`() {
+        val provider = newCordappProvider(setOf(currentFinanceContractsJar), setOf(legacyFinanceContractsJar))
+        val (current, legacy) = provider.getContractAttachments(Cash::class.java.name)!!
+        assertThat(current.id).isEqualTo(currentFinanceContractsJar.hash)
+        assertThat(legacy?.id).isEqualTo(legacyFinanceContractsJar.hash)
+        // getContractAttachmentID should always return the non-legacy attachment ID
+        assertThat(provider.getContractAttachmentID(Cash::class.java.name)).isEqualTo(currentFinanceContractsJar.hash)
     }
 
     @Test(timeout=300_000)
@@ -220,8 +231,10 @@ class CordappProviderImplTests {
         return this
     }
 
-    private fun newCordappProvider(cordappJars: Set<Path>, cordappConfigProvider: CordappConfigProvider = stubConfigProvider): CordappProviderImpl {
-        val loader = JarScanningCordappLoader(cordappJars)
+    private fun newCordappProvider(cordappJars: Set<Path>,
+                                   legacyContractJars: Set<Path> = emptySet(),
+                                   cordappConfigProvider: CordappConfigProvider = stubConfigProvider): CordappProviderImpl {
+        val loader = JarScanningCordappLoader(cordappJars, legacyContractJars)
         return CordappProviderImpl(loader, cordappConfigProvider, attachmentStore).apply { start() }
     }
 }

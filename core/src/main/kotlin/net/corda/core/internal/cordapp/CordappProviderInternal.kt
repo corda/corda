@@ -14,7 +14,10 @@ interface CordappProviderInternal : CordappProvider {
     fun getCordappForFlow(flowLogic: FlowLogic<*>): Cordapp?
 
     /**
-     * Similar to [getContractAttachmentID] except it returns the [ContractAttachment] object.
+     * Similar to [getContractAttachmentID] except it returns the [ContractAttachment] object and also returns an optional second attachment
+     * representing the legacy version (4.11 or earlier) of the contract, if one exists.
      */
-    fun getContractAttachment(contractClassName: ContractClassName): ContractAttachment?
+    fun getContractAttachments(contractClassName: ContractClassName): ContractAttachmentWithLegacy?
 }
+
+data class ContractAttachmentWithLegacy(val currentAttachment: ContractAttachment, val legacyAttachment: ContractAttachment? = null)

@@ -9,6 +9,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS
+import net.corda.core.internal.cordapp.ContractAttachmentWithLegacy
 import net.corda.core.internal.verification.VerifyingServiceHub
 import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
@@ -152,7 +153,7 @@ open class TransactionBuilder(
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution, schemeId: Int): WireTransaction {
-        return toWireTransaction(services, schemeId, emptyMap()).apply { checkSupportedHashType() }
+        return toWireTransaction(services, schemeId, emptyMap())
     }
 
     /**
@@ -195,7 +196,7 @@ open class TransactionBuilder(
 
         val wireTx = SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             // Sort the attachments to ensure transaction builds are stable.
-            val attachmentsBuilder = allContractAttachments.mapTo(TreeSet()) { it.id }
+            val attachmentsBuilder = allContractAttachments.mapTo(TreeSet()) { it.currentAttachment.id }
             attachmentsBuilder.addAll(attachments)
             attachmentsBuilder.removeAll(excludedAttachments)
             WireTransaction(
@@ -207,7 +208,8 @@ open class TransactionBuilder(
                             notary,
                             window,
                             referenceStates,
-                            serviceHub.networkParametersService.currentHash
+                            serviceHub.networkParametersService.currentHash,
+                            allContractAttachments.mapNotNullTo(TreeSet()) { it.legacyAttachment?.id }.toList()
                     ),
                     privacySalt,
                     serviceHub.digestService
@@ -237,6 +239,7 @@ open class TransactionBuilder(
     /**
      * @return true if a new dependency was successfully added.
      */
+    // TODO This entire code path needs to be updated to work with legacy attachments and automically adding their dependencies. ENT-11445
     private fun addMissingDependency(serviceHub: VerifyingServiceHub, wireTx: WireTransaction, tryCount: Int): Boolean {
         return try {
             wireTx.toLedgerTransactionInternal(serviceHub).verify()
@@ -249,11 +252,14 @@ open class TransactionBuilder(
                 // Handle various exceptions that can be thrown during verification and drill down the wrappings.
                 // Note: this is a best effort to preserve backwards compatibility.
                 rootError is ClassNotFoundException -> {
-                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, serviceHub, e))
+                    // Using nonLegacyAttachments here as the verification above was done in-process and thus only the nonLegacyAttachments
+                    // are used.
+                    // TODO This might change with ENT-11445 where we add support for legacy contract dependencies.
+                    ((tryCount == 0) && fixupAttachments(wireTx.nonLegacyAttachments, serviceHub, e))
                         || addMissingAttachment((rootError.message ?: throw e).replace('.', '/'), serviceHub, e)
                 }
                 rootError is NoClassDefFoundError -> {
-                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, serviceHub, e))
+                    ((tryCount == 0) && fixupAttachments(wireTx.nonLegacyAttachments, serviceHub, e))
                         || addMissingAttachment(rootError.message ?: throw e, serviceHub, e)
                 }
 
@@ -347,7 +353,7 @@ open class TransactionBuilder(
      */
     private fun selectContractAttachmentsAndOutputStateConstraints(
             serviceHub: VerifyingServiceHub
-    ): Pair<List<ContractAttachment>, List<TransactionState<*>>> {
+    ): Pair<List<ContractAttachmentWithLegacy>, List<TransactionState<*>>> {
         // Determine the explicitly set contract attachments.
         val explicitContractToAttachments = attachments
                 .mapNotNull { serviceHub.attachments.openAttachment(it) as? ContractAttachment }
@@ -367,7 +373,7 @@ open class TransactionBuilder(
                 = referencesWithTransactionState.groupBy { it.contract }
         val refStateContractAttachments = referenceStateGroups
                 .filterNot { it.key in allContracts }
-                .map { refStateEntry -> serviceHub.getInstalledContractAttachment(refStateEntry.key, refStateEntry::value) }
+                .map { refStateEntry -> serviceHub.getInstalledContractAttachments(refStateEntry.key, refStateEntry::value) }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates = allContracts.map { contract ->
@@ -413,10 +419,10 @@ open class TransactionBuilder(
             outputStates: List<TransactionState<ContractState>>?,
             explicitContractAttachment: ContractAttachment?,
             serviceHub: VerifyingServiceHub
-    ): Pair<ContractAttachment, List<TransactionState<*>>> {
+    ): Pair<ContractAttachmentWithLegacy, List<TransactionState<*>>> {
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
 
-        fun selectAttachmentForContract() = serviceHub.getInstalledContractAttachment(contractClassName) {
+        fun selectAttachmentForContract() = serviceHub.getInstalledContractAttachments(contractClassName) {
             inputsAndOutputs.filterNot { it.constraint in automaticConstraints }
         }
 
@@ -429,14 +435,15 @@ open class TransactionBuilder(
         a system parameter that disables the hash constraint check.
         */
         if (canMigrateFromHashToSignatureConstraint(inputStates, outputStates, serviceHub)) {
-            val attachment = selectAttachmentForContract()
+            val attachmentWithLegacy = selectAttachmentForContract()
+            val (attachment) = attachmentWithLegacy
             if (attachment.isSigned && (explicitContractAttachment == null || explicitContractAttachment.id == attachment.id)) {
                 val signatureConstraint = makeSignatureAttachmentConstraint(attachment.signerKeys)
                 require(signatureConstraint.isSatisfiedBy(attachment)) { "Selected output constraint: $signatureConstraint not satisfying ${attachment.id}" }
                 val resolvedOutputStates = outputStates?.map {
                     if (it.constraint in automaticConstraints) it.copy(constraint = signatureConstraint) else it
                 } ?: emptyList()
-                return attachment to resolvedOutputStates
+                return attachmentWithLegacy to resolvedOutputStates
             }
         }
 
@@ -467,9 +474,9 @@ open class TransactionBuilder(
                 }
             }
             // This *has* to be used by this transaction as it is explicit
-            explicitContractAttachment
+            ContractAttachmentWithLegacy(explicitContractAttachment, null)  // By definition there can be no legacy version
         } else {
-            hashAttachment ?: selectAttachmentForContract()
+            hashAttachment?.let { ContractAttachmentWithLegacy(it, null) } ?: selectAttachmentForContract()
         }
 
         // For Exit transactions (no output states) there is no need to resolve the output constraints.
@@ -491,10 +498,10 @@ open class TransactionBuilder(
         }
 
         // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
-        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, selectedAttachment, serviceHub)
+        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, selectedAttachment.currentAttachment, serviceHub)
 
         // Sanity check that the selected attachment actually passes.
-        val constraintAttachment = AttachmentWithContext(selectedAttachment, contractClassName, serviceHub.networkParameters.whitelistedContractImplementations)
+        val constraintAttachment = AttachmentWithContext(selectedAttachment.currentAttachment, contractClassName, serviceHub.networkParameters.whitelistedContractImplementations)
         require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) {
             "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachment"
         }
@@ -506,7 +513,7 @@ open class TransactionBuilder(
             } else {
                 // If the constraint on the output state is already set, and is not a valid transition or can't be transitioned, then fail early.
                 inputStates?.forEach { input ->
-                    require(outputConstraint.canBeTransitionedFrom(input.constraint, selectedAttachment)) {
+                    require(outputConstraint.canBeTransitionedFrom(input.constraint, selectedAttachment.currentAttachment)) {
                         "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}"
                     }
                 }
@@ -629,12 +636,18 @@ open class TransactionBuilder(
             SignatureAttachmentConstraint.create(CompositeKey.Builder().addKeys(attachmentSigners)
                     .build())
 
-    private inline fun VerifyingServiceHub.getInstalledContractAttachment(
+    private inline fun VerifyingServiceHub.getInstalledContractAttachments(
             contractClassName: String,
             statesForException: () -> List<TransactionState<*>>
-    ): ContractAttachment {
-        return cordappProvider.getContractAttachment(contractClassName)
+    ): ContractAttachmentWithLegacy {
+        // TODO Stop using legacy attachments when the 4.12 min platform version is reached https://r3-cev.atlassian.net/browse/ENT-11479
+        val attachmentWithLegacy = cordappProvider.getContractAttachments(contractClassName)
                 ?: throw MissingContractAttachments(statesForException(), contractClassName)
+        if (attachmentWithLegacy.legacyAttachment == null) {
+            log.warnOnce("Contract $contractClassName does not have a legacy (4.11 or earlier) version installed. This means the " +
+                    "transaction will not be compatible with older nodes.")
+        }
+        return attachmentWithLegacy
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters): Boolean {
@@ -646,6 +659,7 @@ open class TransactionBuilder(
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
+        // TODO ENT-11445: Need to verify via SignedTransaction to ensure legacy components also work
         toLedgerTransaction(services).verify()
     }
 

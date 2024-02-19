@@ -57,6 +57,10 @@ processSmokeTestResources {
     from(configurations.corda4_11)
 }
 
+processTestResources {
+    from(configurations.corda4_11)
+}
+
 dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

@@ -18,10 +18,8 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.attachmentIds
 import net.corda.core.internal.equivalent
 import net.corda.core.internal.isUploaderTrusted
-import net.corda.core.internal.kotlinMetadataVersion
 import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.internal.verification.VerificationSupport
 import net.corda.core.internal.verification.toVerifyingServiceHub
@@ -33,6 +31,9 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.Try.Failure
+import net.corda.core.utilities.Try.Success
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import java.io.NotSerializableException
@@ -204,37 +205,58 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      *
      * Depending on the contract attachments, this method will either verify this transaction in-process or send it to the external verifier
      * for out-of-process verification.
+     *
+     * @return The [FullTransaction] that was successfully verified in-process. Returns null if the verification was successfully done externally.
      */
     @CordaInternal
     @JvmSynthetic
-    fun verifyInternal(verificationSupport: NodeVerificationSupport, checkSufficientSignatures: Boolean = true) {
+    internal fun verifyInternal(verificationSupport: NodeVerificationSupport, checkSufficientSignatures: Boolean = true): FullTransaction? {
         resolveAndCheckNetworkParameters(verificationSupport)
-        val verificationType = determineVerificationType(verificationSupport)
+        val verificationType = determineVerificationType()
         log.debug { "Transaction $id has verification type $verificationType" }
-        if (verificationType == VerificationType.IN_PROCESS || verificationType == VerificationType.BOTH) {
-            verifyInProcess(verificationSupport, checkSufficientSignatures)
-        }
-        if (verificationType == VerificationType.EXTERNAL || verificationType == VerificationType.BOTH) {
-            verificationSupport.externalVerifierHandle.verifyTransaction(this, checkSufficientSignatures)
+        return when (verificationType) {
+            VerificationType.IN_PROCESS -> verifyInProcess(verificationSupport, checkSufficientSignatures)
+            VerificationType.BOTH -> {
+                val inProcessResult = Try.on { verifyInProcess(verificationSupport, checkSufficientSignatures) }
+                val externalResult = Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this, checkSufficientSignatures) }
+                ensureSameResult(inProcessResult, externalResult)
+            }
+            VerificationType.EXTERNAL -> {
+                verificationSupport.externalVerifierHandle.verifyTransaction(this, checkSufficientSignatures)
+                // We could create a LedgerTransaction here, and except for calling `verify()`, it would be valid to use. However, it's best
+                // we let the caller deal with that, since we can't control what they will do with it.
+                null
+            }
         }
     }
 
-    private fun determineVerificationType(verificationSupport: VerificationSupport): VerificationType {
-        var old = false
-        var new = false
-        for (attachmentId in coreTransaction.attachmentIds) {
-            val (major, minor) = verificationSupport.getAttachment(attachmentId)?.kotlinMetadataVersion?.split(".") ?: continue
-            // Metadata version 1.1 maps to language versions 1.0 to 1.3
-            if (major == "1" && minor == "1") {
-                old = true
-            } else {
-                new = true
+    private fun determineVerificationType(): VerificationType {
+        val ctx = coreTransaction
+        return when (ctx) {
+            is WireTransaction -> {
+                when {
+                    ctx.legacyAttachments.isEmpty() -> VerificationType.IN_PROCESS
+                    ctx.nonLegacyAttachments.isEmpty() -> VerificationType.EXTERNAL
+                    else -> VerificationType.BOTH
+                }
             }
+            // Contract upgrades only work on 4.11 and earlier
+            is ContractUpgradeWireTransaction -> VerificationType.EXTERNAL
+            else -> VerificationType.IN_PROCESS  // The default is always in-process
         }
-        return when {
-            old && new -> VerificationType.BOTH
-            old -> VerificationType.EXTERNAL
-            else -> VerificationType.IN_PROCESS
+    }
+
+    private fun ensureSameResult(inProcessResult: Try<FullTransaction>, externalResult: Try<*>): FullTransaction {
+        return when (externalResult) {
+            is Success -> when (inProcessResult) {
+                is Success -> inProcessResult.value
+                is Failure -> throw IllegalStateException("In-process verification of $id failed, but it succeeded in external verifier")
+                        .apply { addSuppressed(inProcessResult.exception) }
+            }
+            is Failure -> throw when (inProcessResult) {
+                is Success -> IllegalStateException("In-process verification of $id succeeded, but it failed in external verifier")
+                is Failure -> inProcessResult.exception  // Throw the in-process exception, with the external exception suppressed
+            }.apply { addSuppressed(externalResult.exception) }
         }
     }
 
@@ -244,11 +266,13 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
 
     /**
      * Verifies this transaction in-process. This assumes the current process has the correct classpath for all the contracts.
+     *
+     * @return The [FullTransaction] that was successfully verified
      */
     @CordaInternal
     @JvmSynthetic
-    fun verifyInProcess(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean) {
-        when (coreTransaction) {
+    internal fun verifyInProcess(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean): FullTransaction {
+        return when (coreTransaction) {
             is NotaryChangeWireTransaction -> verifyNotaryChangeTransaction(verificationSupport, checkSufficientSignatures)
             is ContractUpgradeWireTransaction -> verifyContractUpgradeTransaction(verificationSupport, checkSufficientSignatures)
             else -> verifyRegularTransaction(verificationSupport, checkSufficientSignatures)
@@ -272,23 +296,25 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /** No contract code is run when verifying notary change transactions, it is sufficient to check invariants during initialisation. */
-    private fun verifyNotaryChangeTransaction(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean) {
+    private fun verifyNotaryChangeTransaction(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean): NotaryChangeLedgerTransaction {
         val ntx = NotaryChangeLedgerTransaction.resolve(verificationSupport, coreTransaction as NotaryChangeWireTransaction, sigs)
         if (checkSufficientSignatures) ntx.verifyRequiredSignatures()
         else checkSignaturesAreValid()
+        return ntx
     }
 
     /** No contract code is run when verifying contract upgrade transactions, it is sufficient to check invariants during initialisation. */
-    private fun verifyContractUpgradeTransaction(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean) {
+    private fun verifyContractUpgradeTransaction(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean): ContractUpgradeLedgerTransaction {
         val ctx = ContractUpgradeLedgerTransaction.resolve(verificationSupport, coreTransaction as ContractUpgradeWireTransaction, sigs)
         if (checkSufficientSignatures) ctx.verifyRequiredSignatures()
         else checkSignaturesAreValid()
+        return ctx
     }
 
     // TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
     // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
     // objects from the TransactionState.
-    private fun verifyRegularTransaction(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean) {
+    private fun verifyRegularTransaction(verificationSupport: VerificationSupport, checkSufficientSignatures: Boolean): LedgerTransaction {
         val ltx = toLedgerTransactionInternal(verificationSupport, checkSufficientSignatures)
         try {
             ltx.verify()
@@ -304,6 +330,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             checkReverifyAllowed(e)
             retryVerification(e.cause, e, ltx, verificationSupport)
         }
+        return ltx
     }
 
     private fun checkReverifyAllowed(ex: Throwable) {

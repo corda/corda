@@ -51,7 +51,7 @@ cordapp {
     minimumPlatformVersion 1
     contract {
         name "Corda Finance Demo"
-        versionId 1
+        versionId 2
         vendor "R3"
         licence "Open Source (Apache 2)"
     }

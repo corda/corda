@@ -36,6 +36,7 @@ data class CordappImpl(
         override val minimumPlatformVersion: Int,
         override val targetPlatformVersion: Int,
         override val jarHash: SecureHash.SHA256 = jarFile.hash,
+        val languageVersion: LanguageVersion = LanguageVersion.Data,
         val notaryService: Class<out NotaryService>? = null,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,

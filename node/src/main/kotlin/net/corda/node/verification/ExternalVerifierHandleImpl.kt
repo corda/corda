@@ -195,7 +195,7 @@ class ExternalVerifierHandleImpl(
                     "${server.localPort}",
                     log.level.name.lowercase()
             )
-            log.debug { "Verifier command: $command" }
+            log.debug { "External verifier command: $command" }
             val logsDirectory = (baseDirectory / "logs").createDirectories()
             verifierProcess = ProcessBuilder(command)
                     .redirectOutput(Redirect.appendTo((logsDirectory / "verifier-stdout.log").toFile()))

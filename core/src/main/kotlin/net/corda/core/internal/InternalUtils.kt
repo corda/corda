@@ -79,7 +79,14 @@ import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
-val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
+val Throwable.rootCause: Throwable
+    get() {
+        var root = this
+        while (true) {
+            root = root.cause ?: return root
+        }
+    }
+
 val Throwable.rootMessage: String? get() {
     var message = this.message
     var throwable = cause
@@ -231,8 +238,6 @@ inline fun elapsedTime(block: () -> Unit): Duration {
 
 fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(label, this, body)
 
-// TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
-// returns in the IRSSimulationTest. If not, commit the inline back.
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
@@ -639,16 +644,10 @@ val Logger.level: Level
         else -> throw IllegalStateException("Unknown logging level")
     }
 
-const val JAVA_1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
-const val JAVA_17_CLASS_FILE_FORMAT_MAJOR_VERSION = 61
+const val JAVA_1_2_CLASS_FILE_MAJOR_VERSION = 46
+const val JAVA_8_CLASS_FILE_MAJOR_VERSION = 52
+const val JAVA_17_CLASS_FILE_MAJOR_VERSION = 61
 
-/**
- * String extension functions - to keep calling code readable following upgrade to Kotlin 1.9
- */
-fun String.capitalize() : String {
-    return this.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-}
-fun String.decapitalize() : String {
-    return this.replaceFirstChar { it.lowercase(Locale.getDefault()) }
-}
+fun String.capitalize(): String = replaceFirstChar { it.titlecase(Locale.getDefault()) }
 
+fun String.decapitalize(): String = replaceFirstChar { it.lowercase(Locale.getDefault()) }

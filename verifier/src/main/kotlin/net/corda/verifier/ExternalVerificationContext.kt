@@ -16,7 +16,7 @@ class ExternalVerificationContext(
         private val externalVerifier: ExternalVerifier,
         private val transactionInputsAndReferences: Map<StateRef, SerializedTransactionState>
 ) : VerificationSupport {
-    override val isResolutionLazy: Boolean get() = false
+    override val isInProcess: Boolean get() = false
 
     override fun getParties(keys: Collection<PublicKey>): List<Party?> = externalVerifier.getParties(keys)
 

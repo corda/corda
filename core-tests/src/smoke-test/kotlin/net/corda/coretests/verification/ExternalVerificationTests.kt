@@ -1,6 +1,5 @@
 package net.corda.coretests.verification
 
-import co.paralleluniverse.strands.concurrent.CountDownLatch
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.Amount
@@ -13,12 +12,18 @@ import net.corda.core.internal.toPath
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretests.verification.VerificationType.BOTH
+import net.corda.coretests.verification.VerificationType.EXTERNAL
 import net.corda.finance.DOLLARS
+import net.corda.finance.USD
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.workflows.getCashBalance
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeParams
 import net.corda.smoketesting.NodeProcess
@@ -31,15 +36,16 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
+import rx.Observable
 import java.net.InetAddress
 import java.nio.file.Path
 import java.util.Currency
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.div
 import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.name
 import kotlin.io.path.readText
 
 class ExternalVerificationSignedCordappsTest {
@@ -48,27 +54,30 @@ class ExternalVerificationSignedCordappsTest {
 
         private lateinit var notaries: List<NodeProcess>
         private lateinit var oldNode: NodeProcess
-        private lateinit var newNode: NodeProcess
+        private lateinit var currentNode: NodeProcess
 
         @BeforeClass
         @JvmStatic
         fun startNodes() {
-            // The 4.11 finance CorDapp jars
-            val oldCordapps = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it-4.11.jar") }
+            val (legacyContractsCordapp, legacyWorkflowsCordapp) = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it-4.11.jar") }
             // The current version finance CorDapp jars
-            val newCordapps = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it.jar") }
+            val currentCordapps = listOf("contracts", "workflows").map { smokeTestResource("corda-finance-$it.jar") }
 
             notaries = factory.createNotaries(
-                    nodeParams(DUMMY_NOTARY_NAME, oldCordapps),
-                    nodeParams(CordaX500Name("Notary Service 2", "Zurich", "CH"), newCordapps)
+                    nodeParams(DUMMY_NOTARY_NAME, cordappJars = currentCordapps, legacyContractJars = listOf(legacyContractsCordapp)),
+                    nodeParams(CordaX500Name("Notary Service 2", "Zurich", "CH"), currentCordapps)
             )
             oldNode = factory.createNode(nodeParams(
                     CordaX500Name("Old", "Delhi", "IN"),
-                    oldCordapps + listOf(smokeTestResource("4.11-workflows-cordapp.jar")),
-                    CordaRPCClientConfiguration(minimumServerProtocolVersion = 13),
+                    listOf(legacyContractsCordapp, legacyWorkflowsCordapp, smokeTestResource("4.11-workflows-cordapp.jar")),
+                    clientRpcConfig = CordaRPCClientConfiguration(minimumServerProtocolVersion = 13),
                     version = "4.11"
             ))
-            newNode = factory.createNode(nodeParams(CordaX500Name("New", "York", "US"), newCordapps))
+            currentNode = factory.createNode(nodeParams(
+                    CordaX500Name("New", "York", "US"),
+                    currentCordapps,
+                    listOf(legacyContractsCordapp)
+            ))
         }
 
         @AfterClass
@@ -79,8 +88,17 @@ class ExternalVerificationSignedCordappsTest {
     }
 
     @Test(timeout=300_000)
-    fun `transaction containing 4_11 contract sent to new node`() {
-        assertCashIssuanceAndPayment(issuer = oldNode, recipient = newNode)
+    fun `transaction containing 4_11 contract attachment only sent to current node`() {
+        val (issuanceTx, paymentTx) = cashIssuanceAndPayment(issuer = oldNode, recipient = currentNode)
+        notaries[0].assertTransactionsWereVerified(EXTERNAL, paymentTx.id)
+        currentNode.assertTransactionsWereVerified(EXTERNAL, issuanceTx.id, paymentTx.id)
+    }
+
+    @Test(timeout=300_000)
+    fun `transaction containing 4_11 and 4_12 contract attachments sent to old node`() {
+        val (issuanceTx, paymentTx) = cashIssuanceAndPayment(issuer = currentNode, recipient = oldNode)
+        notaries[0].assertTransactionsWereVerified(BOTH, paymentTx.id)
+        currentNode.assertTransactionsWereVerified(BOTH, issuanceTx.id, paymentTx.id)
     }
 
     @Test(timeout=300_000)
@@ -94,11 +112,13 @@ class ExternalVerificationSignedCordappsTest {
         oldRpc.startFlow(::IssueAndChangeNotaryFlow, notaryIdentities[0], notaryIdentities[1]).returnValue.getOrThrow()
     }
 
-    private fun assertCashIssuanceAndPayment(issuer: NodeProcess, recipient: NodeProcess) {
+    private fun cashIssuanceAndPayment(issuer: NodeProcess, recipient: NodeProcess): Pair<SignedTransaction, SignedTransaction> {
         val issuerRpc = issuer.connect(superUser).proxy
         val recipientRpc = recipient.connect(superUser).proxy
         val recipientNodeInfo = recipientRpc.nodeInfo()
         val notaryIdentity = issuerRpc.notaryIdentities()[0]
+
+        val beforeAmount = recipientRpc.getCashBalance(USD)
 
         val (issuanceTx) = issuerRpc.startFlow(
                 ::CashIssueFlow,
@@ -110,6 +130,9 @@ class ExternalVerificationSignedCordappsTest {
         issuerRpc.waitForVisibility(recipientNodeInfo)
         recipientRpc.waitForVisibility(issuerRpc.nodeInfo())
 
+        val (_, update) = recipientRpc.vaultTrack(Cash.State::class.java)
+        val cashArrived = update.waitForFirst { true }
+
         val (paymentTx) = issuerRpc.startFlow(
                 ::CashPaymentFlow,
                 10.DOLLARS,
@@ -117,8 +140,10 @@ class ExternalVerificationSignedCordappsTest {
                 false,
         ).returnValue.getOrThrow()
 
-        notaries[0].assertTransactionsWereVerifiedExternally(issuanceTx.id, paymentTx.id)
-        recipient.assertTransactionsWereVerifiedExternally(issuanceTx.id, paymentTx.id)
+        cashArrived.getOrThrow()
+        assertThat(recipientRpc.getCashBalance(USD) - beforeAmount).isEqualTo(10.DOLLARS)
+
+        return Pair(issuanceTx, paymentTx)
     }
 }
 
@@ -134,18 +159,18 @@ class ExternalVerificationUnsignedCordappsTest {
         @JvmStatic
         fun startNodes() {
             // The 4.11 finance CorDapp jars
-            val oldCordapps = listOf(unsignedResourceJar("corda-finance-contracts-4.11.jar"), smokeTestResource("corda-finance-workflows-4.11.jar"))
+            val legacyCordapps = listOf(unsignedResourceJar("corda-finance-contracts-4.11.jar"), smokeTestResource("corda-finance-workflows-4.11.jar"))
             // The current version finance CorDapp jars
-            val newCordapps = listOf(unsignedResourceJar("corda-finance-contracts.jar"), smokeTestResource("corda-finance-workflows.jar"))
+            val currentCordapps = listOf(unsignedResourceJar("corda-finance-contracts.jar"), smokeTestResource("corda-finance-workflows.jar"))
 
-            notary = factory.createNotaries(nodeParams(DUMMY_NOTARY_NAME, oldCordapps))[0]
+            notary = factory.createNotaries(nodeParams(DUMMY_NOTARY_NAME, currentCordapps))[0]
             oldNode = factory.createNode(nodeParams(
                     CordaX500Name("Old", "Delhi", "IN"),
-                    oldCordapps,
-                    CordaRPCClientConfiguration(minimumServerProtocolVersion = 13),
+                    legacyCordapps,
+                    clientRpcConfig = CordaRPCClientConfiguration(minimumServerProtocolVersion = 13),
                     version = "4.11"
             ))
-            newNode = factory.createNode(nodeParams(CordaX500Name("New", "York", "US"), newCordapps))
+            newNode = factory.createNode(nodeParams(CordaX500Name("New", "York", "US"), currentCordapps))
         }
 
         @AfterClass
@@ -200,6 +225,7 @@ private fun smokeTestResource(name: String): Path = ExternalVerificationSignedCo
 private fun nodeParams(
         legalName: CordaX500Name,
         cordappJars: List<Path> = emptyList(),
+        legacyContractJars: List<Path> = emptyList(),
         clientRpcConfig: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         version: String? = null
 ): NodeParams {
@@ -210,6 +236,7 @@ private fun nodeParams(
             rpcAdminPort = portCounter.andIncrement,
             users = listOf(superUser),
             cordappJars = cordappJars,
+            legacyContractJars = legacyContractJars,
             clientRpcConfig = clientRpcConfig,
             version = version
     )
@@ -220,28 +247,41 @@ private fun CordaRPCOps.waitForVisibility(other: NodeInfo) {
     if (other in snapshot) {
         updates.notUsed()
     } else {
-        val found = CountDownLatch(1)
-        val subscription = updates.subscribe {
-            if (it.node == other) {
-                found.countDown()
-            }
+        updates.waitForFirst { it.node == other }.getOrThrow()
+    }
+}
+
+private fun <T> Observable<T>.waitForFirst(predicate: (T) -> Boolean): CompletableFuture<Unit> {
+    val found = CompletableFuture<Unit>()
+    val subscription = subscribe {
+        if (predicate(it)) {
+            found.complete(Unit)
         }
-        found.await()
-        subscription.unsubscribe()
     }
+    return found.whenComplete { _, _ -> subscription.unsubscribe() }
 }
 
-private fun NodeProcess.assertTransactionsWereVerifiedExternally(vararg txIds: SecureHash) {
-    val verifierLogContent = externalVerifierLogs()
+private fun NodeProcess.assertTransactionsWereVerified(verificationType: VerificationType, vararg txIds: SecureHash) {
+    val nodeLogs = logs("node")!!
+    val externalVerifierLogs = externalVerifierLogs()
     for (txId in txIds) {
-        assertThat(verifierLogContent).contains("SignedTransaction(id=$txId) verified")
+        assertThat(nodeLogs).contains("Transaction $txId has verification type $verificationType")
+        if (verificationType != VerificationType.IN_PROCESS) {
+            assertThat(externalVerifierLogs).describedAs("External verifier was not started").isNotNull()
+            assertThat(externalVerifierLogs).contains("SignedTransaction(id=$txId) verified")
+        }
     }
 }
 
-private fun NodeProcess.externalVerifierLogs(): String {
-    val verifierLogs = (nodeDir / "logs")
-            .listDirectoryEntries()
-            .filter { it.name == "verifier-${InetAddress.getLocalHost().hostName}.log" }
-    assertThat(verifierLogs).describedAs("External verifier was not started").hasSize(1)
-    return verifierLogs[0].readText()
+private fun NodeProcess.externalVerifierLogs(): String? = logs("verifier")
+
+private fun NodeProcess.logs(name: String): String? {
+    return (nodeDir / "logs")
+            .listDirectoryEntries("$name-${InetAddress.getLocalHost().hostName}.log")
+            .singleOrNull()
+            ?.readText()
+}
+
+private enum class VerificationType {
+    IN_PROCESS, EXTERNAL, BOTH
 }
