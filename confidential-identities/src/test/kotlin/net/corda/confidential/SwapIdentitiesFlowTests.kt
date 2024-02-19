@@ -112,8 +112,8 @@ class SwapIdentitiesFlowTests {
         services.keyManagementService.freshKeyAndCert(services.myInfo.singleIdentityAndCert(), false)
     }
 
-    private fun TestStartedNode.signSwapIdentitiesFlowData(party: PartyAndCertificate, owningKey: PublicKey): DigitalSignature.WithKey {
-        return services.keyManagementService.sign(SwapIdentitiesFlow.buildDataToSign(party), owningKey)
+    private fun TestStartedNode.signSwapIdentitiesFlowData(party: PartyAndCertificate, owningKey: PublicKey) = database.transaction{
+        services.keyManagementService.sign(SwapIdentitiesFlow.buildDataToSign(party), owningKey)
     }
 
     private fun TestStartedNode.validateSwapIdentitiesFlow(party: Party,
