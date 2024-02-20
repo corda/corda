@@ -24,7 +24,6 @@ import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.AfterClass
-import org.junit.Ignore
 import org.junit.Test
 import java.security.PublicKey
 
