@@ -1005,7 +1005,6 @@ object Crypto {
             is BCECPublicKey -> internPublicKey(key)
             is BCRSAPublicKey -> internPublicKey(key)
             is BCSphincs256PublicKey -> internPublicKey(key)
-            is EdECPublicKey -> internPublicKey(key)
             is CompositeKey -> internPublicKey(key)
             is BCEdDSAPublicKey -> internPublicKey(key)
             else -> decodePublicKey(key.encoded)
@@ -1026,7 +1025,6 @@ object Crypto {
             is BCECPrivateKey -> key
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
-            is EdECPublicKey -> key
             is BCEdDSAPrivateKey -> key
             else -> decodePrivateKey(key.encoded)
         }

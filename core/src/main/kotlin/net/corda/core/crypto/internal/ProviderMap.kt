@@ -38,8 +38,6 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
 }.also {
     // This registration is needed for reading back EdDSA key from java keystore.
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
-    // Make sure we come before the SunEC provider which also supports Ed25519, and note cordaSecurityProvider is at position 1.
-    //Security.insertProviderAt(it, 2)
     Security.addProvider(it)
 }
 

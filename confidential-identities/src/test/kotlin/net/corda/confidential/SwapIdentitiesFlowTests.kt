@@ -48,7 +48,6 @@ class SwapIdentitiesFlowTests {
     private val bob = bobNode.info.singleIdentity()
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17:Fixme - Crypto - fix below by inserting BC in provider pos 2")
 	fun `issue key`() {
         assertThat(
             aliceNode.services.startFlow(SwapIdentitiesInitiator(bob)),
