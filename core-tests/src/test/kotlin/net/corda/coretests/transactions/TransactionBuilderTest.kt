@@ -3,7 +3,6 @@ package net.corda.coretests.transactions
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.contracts.PrivacySalt
-import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -16,7 +15,6 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.digestService
 import net.corda.core.node.ZoneVersionTooLowException
-import net.corda.core.serialization.internal._driverSerializationEnv
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -26,15 +24,12 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.DummyCommandData
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -56,6 +51,7 @@ class TransactionBuilderTest {
     private val contractAttachmentId = services.attachments.getLatestContractAttachments(DummyContract.PROGRAM_ID)[0]
 
     @Test(timeout=300_000)
+    @Suppress("INVISIBLE_MEMBER")
 	fun `bare minimum issuance tx`() {
         val outputState = TransactionState(
                 data = DummyState(),
@@ -70,6 +66,9 @@ class TransactionBuilderTest {
         assertThat(wtx.outputs).containsOnly(outputState)
         assertThat(wtx.commands).containsOnly(Command(DummyCommandData, notary.owningKey))
         assertThat(wtx.networkParametersHash).isEqualTo(services.networkParametersService.currentHash)
+        // From 4.12 attachments are added to the new component group by default
+        assertThat(wtx.nonLegacyAttachments).isNotEmpty
+        assertThat(wtx.legacyAttachments).isEmpty()
     }
 
     @Test(timeout=300_000)
@@ -102,41 +101,6 @@ class TransactionBuilderTest {
             val services = MockServices(listOf("net.corda.testing.contracts"), TestIdentity(ALICE_NAME), this)
             val wtx = builder.toWireTransaction(services)
             assertThat(wtx.references).containsOnly(referenceStateRef)
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `automatic signature constraint`() {
-        // We need to use a MockNetwork so that we can create a signed attachment. However, SerializationEnvironmentRule and MockNetwork
-        // don't work well together, so we temporarily clear out the driverSerializationEnv for this test.
-        val driverSerializationEnv = _driverSerializationEnv.get()
-        _driverSerializationEnv.set(null)
-        val mockNetwork = MockNetwork(
-                MockNetworkParameters(
-                        networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION),
-                        cordappsForAllNodes = listOf(cordappWithPackages("net.corda.testing.contracts").signed())
-                )
-        )
-
-        try {
-            val services = mockNetwork.notaryNodes[0].services
-
-            val attachment = services.attachments.openAttachment(services.attachments.getLatestContractAttachments(DummyContract.PROGRAM_ID)[0])
-            val attachmentSigner = attachment!!.signerKeys.single()
-
-            val expectedConstraint = SignatureAttachmentConstraint(attachmentSigner)
-            assertTrue(expectedConstraint.isSatisfiedBy(attachment))
-
-            val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
-            val builder = TransactionBuilder()
-                    .addOutputState(outputState)
-                    .addCommand(DummyCommandData, notary.owningKey)
-            val wtx = builder.toWireTransaction(services)
-
-            assertThat(wtx.outputs).containsOnly(outputState.copy(constraint = expectedConstraint))
-        } finally {
-            mockNetwork.stopNodes()
-            _driverSerializationEnv.set(driverSerializationEnv)
         }
     }
 

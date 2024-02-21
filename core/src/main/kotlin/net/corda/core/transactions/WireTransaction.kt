@@ -25,6 +25,7 @@ import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.flatMapToSet
+import net.corda.core.internal.getGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.mapToSet
@@ -162,7 +163,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @JvmSynthetic
     fun toLedgerTransactionInternal(verificationSupport: VerificationSupport): LedgerTransaction {
         // Look up public keys to authenticated identities.
-        val authenticatedCommands = if (verificationSupport.isResolutionLazy) {
+        val authenticatedCommands = if (verificationSupport.isInProcess) {
             commands.lazyMapped { cmd, _ ->
                 val parties = verificationSupport.getParties(cmd.signers).filterNotNull()
                 CommandWithParties(cmd.signers, parties, cmd.value)
@@ -193,13 +194,15 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         val resolvedReferences = serializedResolvedReferences.lazyMapped(toStateAndRef)
 
-        val resolvedAttachments = if (verificationSupport.isResolutionLazy) {
-            attachments.lazyMapped { id, _ ->
+        val resolvedAttachments = if (verificationSupport.isInProcess) {
+            // The 4.12+ node only looks at the new attachments group
+            nonLegacyAttachments.lazyMapped { id, _ ->
                 verificationSupport.getAttachment(id) ?: throw AttachmentResolutionException(id)
             }
         } else {
-            verificationSupport.getAttachments(attachments).mapIndexed { index, attachment ->
-                attachment ?: throw AttachmentResolutionException(attachments[index])
+            // The 4.11 external verifier only looks at the legacy attachments group since it will only contain attachments compatible with 4.11
+            verificationSupport.getAttachments(legacyAttachments).mapIndexed { index, attachment ->
+                attachment ?: throw AttachmentResolutionException(legacyAttachments[index])
             }
         }
 
@@ -248,7 +251,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         // This calculates a value that is slightly lower than the actual re-serialized version. But it is stable and does not depend on the classloader.
         fun componentGroupSize(componentGroup: ComponentGroupEnum): Int {
-            return this.componentGroups.firstOrNull { it.groupIndex == componentGroup.ordinal }?.let { cg -> cg.components.sumOf { it.size } + 4 } ?: 0
+            return componentGroups.getGroup(componentGroup)?.let { cg -> cg.components.sumOf { it.size } + 4 } ?: 0
         }
 
         // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
@@ -320,10 +323,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        if(digestService.hashAlgorithm == SecureHash.SHA2_256) {
+        if (digestService.hashAlgorithm == SecureHash.SHA2_256) {
             componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> digestService.componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) } }
         } else {
-            componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, _ -> digestService.computeNonce(privacySalt, it.groupIndex, internalIndex) } }
+            componentGroups.associate { it.groupIndex to List(it.components.size) { internalIndex -> digestService.computeNonce(privacySalt, it.groupIndex, internalIndex) } }
         }
     }
 
@@ -343,21 +346,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkSignature(sig: TransactionSignature) {
-        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
+        require(commands.any { it.signers.any { signer -> sig.by in signer.keys } }) { "Signature key doesn't match any command" }
         sig.verify(id)
-    }
-
-    companion object {
-        @CordaInternal
-        @Deprecated("Do not use, this is internal API")
-        fun createComponentGroups(inputs: List<StateRef>,
-                                  outputs: List<TransactionState<ContractState>>,
-                                  commands: List<Command<*>>,
-                                  attachments: List<SecureHash>,
-                                  notary: Party?,
-                                  timeWindow: TimeWindow?): List<ComponentGroup> {
-            return createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
-        }
     }
 
     override fun toString(): String {

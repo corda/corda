@@ -18,7 +18,7 @@ import java.security.PublicKey
  * Represents the operations required to resolve and verify a transaction.
  */
 interface VerificationSupport {
-    val isResolutionLazy: Boolean get() = true
+    val isInProcess: Boolean get() = true
 
     val appClassLoader: ClassLoader
 

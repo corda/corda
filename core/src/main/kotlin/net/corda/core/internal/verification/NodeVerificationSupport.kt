@@ -1,7 +1,7 @@
 package net.corda.core.internal.verification
 
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.ComponentGroupEnum
+import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.crypto.SecureHash
@@ -11,6 +11,7 @@ import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.TRUSTED_UPLOADERS
 import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.entries
+import net.corda.core.internal.getRequiredGroup
 import net.corda.core.internal.getRequiredTransaction
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentStorage
@@ -85,9 +86,7 @@ interface NodeVerificationSupport : VerificationSupport {
 
     private fun getRegularOutput(coreTransaction: WireTransaction, outputIndex: Int): SerializedTransactionState {
         @Suppress("UNCHECKED_CAST")
-        return coreTransaction.componentGroups
-                .first { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }
-                .components[outputIndex] as SerializedTransactionState
+        return coreTransaction.componentGroups.getRequiredGroup(OUTPUTS_GROUP).components[outputIndex] as SerializedTransactionState
     }
 
     /**
@@ -137,6 +136,8 @@ interface NodeVerificationSupport : VerificationSupport {
     override fun getTrustedClassAttachment(className: String): Attachment? {
         val allTrusted = attachments.queryAttachments(
                 AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                // JarScanningCordappLoader makes sure legacy contract CorDapps have a coresponding non-legacy CorDapp, and that the
+                // legacy CorDapp has a smaller version number. Thus sorting by the version here ensures we never return the legacy attachment.
                 AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         )
 

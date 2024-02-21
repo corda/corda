@@ -18,6 +18,7 @@ class NodeParams @JvmOverloads constructor(
         val rpcAdminPort: Int,
         val users: List<User>,
         val cordappJars: List<Path> = emptyList(),
+        val legacyContractJars: List<Path> = emptyList(),
         val jarDirs: List<Path> = emptyList(),
         val clientRpcConfig: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         val devMode: Boolean = true,

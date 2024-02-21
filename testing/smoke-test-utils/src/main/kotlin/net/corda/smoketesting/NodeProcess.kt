@@ -138,6 +138,10 @@ class NodeProcess(
             log.info("Node directory: {}", nodeDir)
             val cordappsDir = (nodeDir / CORDAPPS_DIR_NAME).createDirectory()
             params.cordappJars.forEach { it.copyToDirectory(cordappsDir) }
+            if (params.legacyContractJars.isNotEmpty()) {
+                val legacyContractsDir = (nodeDir / "legacy-contracts").createDirectories()
+                params.legacyContractJars.forEach { it.copyToDirectory(legacyContractsDir) }
+            }
             (nodeDir / "node.conf").writeText(params.createNodeConfig(isNotary))
             networkParametersCopier.install(nodeDir)
             nodeInfoFilesCopier.addConfig(nodeDir)

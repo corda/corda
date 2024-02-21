@@ -27,6 +27,7 @@ import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.getJarSigners
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
+import net.corda.testing.core.internal.JarSignatureTestUtils.unsignJar
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
@@ -69,8 +70,9 @@ class DummyRPCFlow : FlowLogic<Unit>() {
 
 class JarScanningCordappLoaderTest {
     private companion object {
-        val financeContractsJar = this::class.java.getResource("/corda-finance-contracts.jar")!!.toPath()
-        val financeWorkflowsJar = this::class.java.getResource("/corda-finance-workflows.jar")!!.toPath()
+        val legacyFinanceContractsJar = this::class.java.getResource("/corda-finance-contracts-4.11.jar")!!.toPath()
+        val currentFinanceContractsJar = this::class.java.getResource("/corda-finance-contracts.jar")!!.toPath()
+        val currentFinanceWorkflowsJar = this::class.java.getResource("/corda-finance-workflows.jar")!!.toPath()
 
         init {
             LogHelper.setLevel(JarScanningCordappLoaderTest::class)
@@ -90,20 +92,20 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
     fun `constructed CordappImpls contains the right classes`() {
-        val loader = JarScanningCordappLoader(setOf(financeContractsJar, financeWorkflowsJar))
+        val loader = JarScanningCordappLoader(setOf(currentFinanceContractsJar, currentFinanceWorkflowsJar))
         val (contractsCordapp, workflowsCordapp) = loader.cordapps
 
         assertThat(contractsCordapp.contractClassNames).contains(Cash::class.java.name, CommercialPaper::class.java.name)
         assertThat(contractsCordapp.customSchemas).contains(CashSchemaV1, CommercialPaperSchemaV1)
         assertThat(contractsCordapp.info).isInstanceOf(Cordapp.Info.Contract::class.java)
         assertThat(contractsCordapp.allFlows).isEmpty()
-        assertThat(contractsCordapp.jarFile).isEqualTo(financeContractsJar)
+        assertThat(contractsCordapp.jarFile).isEqualTo(currentFinanceContractsJar)
 
         assertThat(workflowsCordapp.allFlows).contains(CashIssueFlow::class.java, CashPaymentFlow::class.java)
         assertThat(workflowsCordapp.services).contains(ConfigHolder::class.java)
         assertThat(workflowsCordapp.info).isInstanceOf(Cordapp.Info.Workflow::class.java)
         assertThat(workflowsCordapp.contractClassNames).isEmpty()
-        assertThat(workflowsCordapp.jarFile).isEqualTo(financeWorkflowsJar)
+        assertThat(workflowsCordapp.jarFile).isEqualTo(currentFinanceWorkflowsJar)
 
         for (actualCordapp in loader.cordapps) {
             assertThat(actualCordapp.cordappClasses)
@@ -196,22 +198,32 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
     fun `loads app signed by allowed certificate`() {
-        val loader = JarScanningCordappLoader(setOf(financeContractsJar), signerKeyFingerprintBlacklist = emptyList())
+        val loader = JarScanningCordappLoader(setOf(currentFinanceContractsJar), signerKeyFingerprintBlacklist = emptyList())
         assertThat(loader.cordapps).hasSize(1)
     }
 
     @Test(timeout = 300_000)
 	fun `does not load app signed by blacklisted certificate`() {
-        val cordappLoader = JarScanningCordappLoader(setOf(financeContractsJar), signerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
+        val cordappLoader = JarScanningCordappLoader(setOf(currentFinanceContractsJar), signerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
         assertThatExceptionOfType(InvalidCordappException::class.java).isThrownBy {
             cordappLoader.cordapps
         }
     }
 
     @Test(timeout=300_000)
+    fun `does not load legacy contract CorDapp signed by blacklisted certificate`() {
+        val unsignedJar = currentFinanceContractsJar.duplicate { unsignJar() }
+        val loader = JarScanningCordappLoader(setOf(unsignedJar), setOf(legacyFinanceContractsJar), signerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
+        assertThatExceptionOfType(InvalidCordappException::class.java)
+                .isThrownBy { loader.cordapps }
+                .withMessageContaining("Corresponding contracts are signed by blacklisted key(s)")
+                .withMessageContaining(legacyFinanceContractsJar.name)
+    }
+
+    @Test(timeout=300_000)
     fun `does not load duplicate CorDapps`() {
-        val duplicateJar = financeWorkflowsJar.duplicate()
-        val loader = JarScanningCordappLoader(setOf(financeWorkflowsJar, duplicateJar))
+        val duplicateJar = currentFinanceWorkflowsJar.duplicate()
+        val loader = JarScanningCordappLoader(setOf(currentFinanceWorkflowsJar, duplicateJar))
         assertFailsWith<DuplicateCordappsInstalledException> {
             loader.cordapps
         }
@@ -235,13 +247,45 @@ class JarScanningCordappLoaderTest {
 
     @Test(timeout=300_000)
     fun `loads app signed by both allowed and non-blacklisted certificate`() {
-        val jar = financeWorkflowsJar.duplicate {
+        val jar = currentFinanceWorkflowsJar.duplicate {
             tempFolder.root.toPath().generateKey("testAlias", "testPassword", ALICE_NAME.toString())
             tempFolder.root.toPath().signJar(absolutePathString(), "testAlias", "testPassword")
         }
         assertThat(jar.parent.getJarSigners(jar.name)).hasSize(2)
         val loader = JarScanningCordappLoader(setOf(jar), signerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
         assertThat(loader.cordapps).hasSize(1)
+    }
+
+    @Test(timeout=300_000)
+    fun `loads both legacy and current versions of the same contracts CorDapp`() {
+        val loader = JarScanningCordappLoader(setOf(currentFinanceContractsJar), setOf(legacyFinanceContractsJar))
+        assertThat(loader.cordapps).hasSize(1)  // Legacy contract CorDapps are not part of the main list
+        assertThat(loader.legacyContractCordapps).hasSize(1)
+        assertThat(loader.legacyContractCordapps.single().jarFile).isEqualTo(legacyFinanceContractsJar)
+    }
+
+    @Test(timeout=300_000)
+    fun `does not load legacy contracts CorDapp without the corresponding current version`() {
+        val loader = JarScanningCordappLoader(setOf(currentFinanceWorkflowsJar), setOf(legacyFinanceContractsJar))
+        assertThatIllegalStateException()
+                .isThrownBy { loader.legacyContractCordapps }
+                .withMessageContaining("does not have a corresponding newer version (4.12 or later). Please add this corresponding CorDapp or remove the legacy one.")
+    }
+
+    @Test(timeout=300_000)
+    fun `checks if legacy contract CorDapp is actually legacy`() {
+        val loader = JarScanningCordappLoader(setOf(currentFinanceContractsJar), setOf(currentFinanceContractsJar))
+        assertThatIllegalStateException()
+                .isThrownBy { loader.legacyContractCordapps }
+                .withMessageContaining("${currentFinanceContractsJar.name} is not legacy; please remove or place it in the node's CorDapps directory.")
+    }
+
+    @Test(timeout=300_000)
+    fun `does not load if legacy CorDapp present in general list`() {
+        val loader = JarScanningCordappLoader(setOf(legacyFinanceContractsJar))
+        assertThatIllegalStateException()
+                .isThrownBy { loader.cordapps }
+                .withMessageContaining("${legacyFinanceContractsJar.name} is legacy contracts; please place it in the node's 'legacy-contracts' directory.")
     }
 
     private inline fun Path.duplicate(name: String = "duplicate.jar", modify: Path.() -> Unit = { }): Path {
@@ -252,7 +296,7 @@ class JarScanningCordappLoaderTest {
     }
 
     private fun minAndTargetCordapp(minVersion: Int?, targetVersion: Int?): Path {
-        return financeWorkflowsJar.duplicate {
+        return currentFinanceWorkflowsJar.duplicate {
             modifyJarManifest { manifest ->
                 manifest.setOrDeleteAttribute("Min-Platform-Version", minVersion?.toString())
                 manifest.setOrDeleteAttribute("Target-Platform-Version", targetVersion?.toString())

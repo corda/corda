@@ -6,8 +6,6 @@ import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
-import kotlinx.metadata.jvm.KotlinModuleMetadata
-import kotlinx.metadata.jvm.UnstableMetadataApi
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
@@ -18,7 +16,6 @@ import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.JarSignatureCollector
-import net.corda.core.internal.InternalAttachment
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.P2P_UPLOADER
 import net.corda.core.internal.RPC_UPLOADER
@@ -28,7 +25,6 @@ import net.corda.core.internal.Version
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
-import net.corda.core.internal.entries
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.readFully
 import net.corda.core.internal.utilities.ZipBombDetector
@@ -266,8 +262,7 @@ class NodeAttachmentService @JvmOverloads constructor(
             private val checkOnLoad: Boolean,
             uploader: String?,
             override val signerKeys: List<PublicKey>,
-            override val kotlinMetadataVersion: String?
-    ) : AbstractAttachment(dataLoader, uploader), InternalAttachment, SerializeAsToken {
+    ) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
 
         override fun open(): InputStream {
             val stream = super.open()
@@ -280,7 +275,6 @@ class NodeAttachmentService @JvmOverloads constructor(
                 private val checkOnLoad: Boolean,
                 private val uploader: String?,
                 private val signerKeys: List<PublicKey>,
-                private val kotlinMetadataVersion: String?
         ) : SerializationToken {
             override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(
                     id,
@@ -288,12 +282,10 @@ class NodeAttachmentService @JvmOverloads constructor(
                     checkOnLoad,
                     uploader,
                     signerKeys,
-                    kotlinMetadataVersion
             )
         }
 
-        override fun toToken(context: SerializeAsTokenContext) =
-            Token(id, checkOnLoad, uploader, signerKeys, kotlinMetadataVersion)
+        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad, uploader, signerKeys)
     }
 
     private val attachmentContentCache = NonInvalidatingWeightBasedCache(
@@ -311,24 +303,13 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
     }
 
-    @OptIn(UnstableMetadataApi::class)
     private fun createAttachmentFromDatabase(attachment: DBAttachment): Attachment {
-        // TODO Cache this as a column in the database
-        val jis = JarInputStream(attachment.content.inputStream())
-        val kotlinMetadataVersions = jis.entries()
-                .filter { it.name.endsWith(".kotlin_module") }
-                .map { KotlinModuleMetadata.read(jis.readAllBytes()).version }
-                .toSortedSet()
-        if (kotlinMetadataVersions.size > 1) {
-            log.warn("Attachment ${attachment.attId} seems to be comprised of multiple Kotlin versions: $kotlinMetadataVersions")
-        }
         val attachmentImpl = AttachmentImpl(
                 id = SecureHash.create(attachment.attId),
                 dataLoader = { attachment.content },
                 checkOnLoad = checkAttachmentsOnLoad,
                 uploader = attachment.uploader,
-                signerKeys = attachment.signers?.toList() ?: emptyList(),
-                kotlinMetadataVersion = kotlinMetadataVersions.takeIf { it.isNotEmpty() }?.last()?.toString()
+                signerKeys = attachment.signers?.toList() ?: emptyList()
         )
         val contracts = attachment.contractClassNames
         return if (!contracts.isNullOrEmpty()) {
@@ -374,14 +355,6 @@ class NodeAttachmentService @JvmOverloads constructor(
 
     override fun privilegedImportAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return import(jar, uploader, filename)
-    }
-
-    override fun privilegedImportOrGetAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
-        return try {
-            import(jar, uploader, filename)
-        } catch (faee: FileAlreadyExistsException) {
-            AttachmentId.create(faee.message!!)
-        }
     }
 
     override fun hasAttachment(attachmentId: AttachmentId): Boolean = database.transaction {

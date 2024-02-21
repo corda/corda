@@ -67,12 +67,12 @@ import java.security.PublicKey
 class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: SignedTransaction,
                                                       val sessionsToCollectFrom: Collection<FlowSession>,
                                                       val myOptionalKeys: Iterable<PublicKey>?,
-                                                      override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : FlowLogic<SignedTransaction>() {
+                                                      override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SignedTransaction>() {
     @JvmOverloads
     constructor(
             partiallySignedTx: SignedTransaction,
             sessionsToCollectFrom: Collection<FlowSession>,
-            progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()
+            progressTracker: ProgressTracker = tracker()
     ) : this(partiallySignedTx, sessionsToCollectFrom, null, progressTracker)
 
     companion object {
@@ -100,6 +100,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
 
         // The signatures must be valid and the transaction must be valid.
         partiallySignedTx.verifySignaturesExcept(notSigned)
+        // TODO Should this be calling SignedTransaction.verify directly? https://r3-cev.atlassian.net/browse/ENT-11458
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
         // Determine who still needs to sign.
@@ -235,7 +236,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  * - Call the flow via [FlowLogic.subFlow]
  * - The flow returns the transaction signed with the additional signature.
  *
- * Example - checking and signing a transaction involving a [net.corda.core.contracts.DummyContract], see
+ * Example - checking and signing a transaction involving a `DummyContract`, see
  * CollectSignaturesFlowTests.kt for further examples:
  *
  *     class Responder(val otherPartySession: FlowSession): FlowLogic<SignedTransaction>() {
@@ -259,7 +260,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  * @param otherSideSession The session which is providing you a transaction to sign.
  */
 abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSession: FlowSession,
-                                                             override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
+                                                             override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {
         object RECEIVING : ProgressTracker.Step("Receiving transaction proposal for signing.")
@@ -287,6 +288,7 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
         checkMySignaturesRequired(stx, signingKeys)
         // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
         checkSignatures(stx)
+        // TODO Should this be calling SignedTransaction.verify directly? https://r3-cev.atlassian.net/browse/ENT-11458
         stx.tx.toLedgerTransaction(serviceHub).verify()
         // Perform some custom verification over the transaction.
         try {

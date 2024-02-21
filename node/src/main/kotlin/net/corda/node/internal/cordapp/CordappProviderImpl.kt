@@ -6,6 +6,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.internal.cordapp.ContractAttachmentWithLegacy
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.groupByMultipleKeys
@@ -38,6 +39,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
 
     fun start() {
         loadContractsIntoAttachmentStore(cordappLoader.cordapps)
+        loadContractsIntoAttachmentStore(cordappLoader.legacyContractCordapps)
         flowToCordapp = makeFlowToCordapp()
         // Load the fix-ups after uploading any new contracts into attachment storage.
         attachmentFixups.load(cordappLoader.appClassLoader)
@@ -56,12 +58,18 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
     }
 
     override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
-        // loadContractsIntoAttachmentStore makes sure the jarHash is the attachment ID
-        return cordappLoader.cordapps.find { contractClassName in it.contractClassNames }?.jarHash
+        return cordappLoader.cordapps.findCordapp(contractClassName)
     }
 
-    override fun getContractAttachment(contractClassName: ContractClassName): ContractAttachment? {
-        return getContractAttachmentID(contractClassName)?.let(::getContractAttachment)
+    override fun getContractAttachments(contractClassName: ContractClassName): ContractAttachmentWithLegacy? {
+        val currentAttachmentId = getContractAttachmentID(contractClassName) ?: return null
+        val legacyAttachmentId = cordappLoader.legacyContractCordapps.findCordapp(contractClassName)
+        return ContractAttachmentWithLegacy(getContractAttachment(currentAttachmentId), legacyAttachmentId?.let(::getContractAttachment))
+    }
+
+    private fun List<CordappImpl>.findCordapp(contractClassName: ContractClassName): AttachmentId? {
+        // loadContractsIntoAttachmentStore makes sure the jarHash is the attachment ID
+        return find { contractClassName in it.contractClassNames }?.jarHash
     }
 
     private fun loadContractsIntoAttachmentStore(cordapps: List<CordappImpl>) {

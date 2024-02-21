@@ -132,6 +132,7 @@ class ExternalVerifier(
         return URLClassLoader(cordappJarUrls, javaClass.classLoader)
     }
 
+    @Suppress("INVISIBLE_MEMBER")
     private fun verifyTransaction(request: VerificationRequest) {
         val verificationContext = ExternalVerificationContext(appClassLoader, attachmentsClassLoaderCache, this, request.stxInputsAndReferences)
         val result: Try<Unit> = try {

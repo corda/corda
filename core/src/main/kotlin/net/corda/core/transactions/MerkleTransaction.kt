@@ -1,12 +1,15 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaException
+import net.corda.core.CordaInternal
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.deserialiseCommands
 import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.getGroup
+import net.corda.core.internal.getRequiredGroup
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
@@ -29,8 +32,34 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     @DeprecatedConstructorForDeserialization(1)
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, DigestService.sha2_256)
 
+    /**
+     * Returns the attachments compatible with 4.11 and earlier. This may be empty, which means this transaction cannot be verified by a
+     * 4.11 node. On 4.12 and later these attachments are ignored.
+     */
+    val legacyAttachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_GROUP)
+
+    /**
+     * Returns the attachments compatible with 4.12 and later. This will be empty for transactions created on 4.11 or earlier.
+     *
+     * [legacyAttachments] and [nonLegacyAttachments] are independent of each other and may contain the same attachments. This is to provide backwards
+     * compatiblity and enable both 4.11 and 4.12 nodes to verify the same transaction.
+     */
+    @CordaInternal
+    @JvmSynthetic
+    internal val nonLegacyAttachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_V2_GROUP)
+
     /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
-    val attachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_GROUP)
+    val attachments: List<SecureHash>
+        get() = when {
+            legacyAttachments.isEmpty() -> nonLegacyAttachments  // 4.12+ only transaction
+            nonLegacyAttachments.isEmpty() -> legacyAttachments  // 4.11 or earlier transaction
+            else -> nonLegacyAttachments  // This is a backwards compatible transaction, but from an API PoV we're not concerned with the legacy attachments
+        }
+
+    @CordaInternal
+    internal val allAttachments: Set<SecureHash>
+        @JvmSynthetic
+        get() = legacyAttachments.toMutableSet().apply { addAll(nonLegacyAttachments) }
 
     /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
     override val inputs: List<StateRef> = deserialiseComponentGroup(componentGroups, StateRef::class, INPUTS_GROUP)
@@ -67,18 +96,20 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - list of each input that is present
      * - list of each output that is present
      * - list of each command that is present
-     * - list of each attachment that is present
+     * - list of each legacy attachment that is present (only relevant if transaction is being verified on a legacy node)
      * - The notary [Party], if present (list with one element)
      * - The time-window of the transaction, if present (list with one element)
      * - list of each reference input that is present
      * - network parameters hash if present
+     * - list of each attachment that is present
      */
     val availableComponentGroups: List<List<Any>>
         get() {
-            val result = mutableListOf(inputs, outputs, commands, attachments, references)
+            val result = mutableListOf(inputs, outputs, commands, legacyAttachments, references)
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
             networkParametersHash?.let { result += listOf(it) }
+            result += nonLegacyAttachments
             return result
         }
 }
@@ -153,12 +184,10 @@ class FilteredTransaction internal constructor(
                 // This is required for visibility purposes, see FilteredTransaction.checkAllCommandsVisible() for more details.
                 if (componentGroupIndex == COMMANDS_GROUP.ordinal && !signersIncluded) {
                     signersIncluded = true
-                    val signersGroupIndex = SIGNERS_GROUP.ordinal
                     // There exist commands, thus the signers group is not empty.
-                    val signersGroupComponents = wtx.componentGroups.first { it.groupIndex == signersGroupIndex }
-                    filteredSerialisedComponents[signersGroupIndex] = signersGroupComponents.components.toMutableList()
-                    filteredComponentNonces[signersGroupIndex] = wtx.availableComponentNonces[signersGroupIndex]!!.toMutableList()
-                    filteredComponentHashes[signersGroupIndex] = wtx.availableComponentHashes[signersGroupIndex]!!.toMutableList()
+                    filteredSerialisedComponents[SIGNERS_GROUP.ordinal] = wtx.componentGroups.getRequiredGroup(SIGNERS_GROUP).components.toMutableList()
+                    filteredComponentNonces[SIGNERS_GROUP.ordinal] = wtx.availableComponentNonces[SIGNERS_GROUP.ordinal]!!.toMutableList()
+                    filteredComponentHashes[SIGNERS_GROUP.ordinal] = wtx.availableComponentHashes[SIGNERS_GROUP.ordinal]!!.toMutableList()
                 }
             }
 
@@ -166,7 +195,8 @@ class FilteredTransaction internal constructor(
                 wtx.inputs.forEachIndexed { internalIndex, it -> filter(it, INPUTS_GROUP.ordinal, internalIndex) }
                 wtx.outputs.forEachIndexed { internalIndex, it -> filter(it, OUTPUTS_GROUP.ordinal, internalIndex) }
                 wtx.commands.forEachIndexed { internalIndex, it -> filter(it, COMMANDS_GROUP.ordinal, internalIndex) }
-                wtx.attachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_GROUP.ordinal, internalIndex) }
+                wtx.legacyAttachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_GROUP.ordinal, internalIndex) }
+                wtx.nonLegacyAttachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_V2_GROUP.ordinal, internalIndex) }
                 if (wtx.notary != null) filter(wtx.notary, NOTARY_GROUP.ordinal, 0)
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
                 // Note that because [inputs] and [references] share the same type [StateRef], we use a wrapper for references [ReferenceStateRef],
@@ -269,7 +299,7 @@ class FilteredTransaction internal constructor(
      */
     @Throws(ComponentVisibilityException::class)
     fun checkAllComponentsVisible(componentGroupEnum: ComponentGroupEnum) {
-        val group = filteredComponentGroups.firstOrNull { it.groupIndex == componentGroupEnum.ordinal }
+        val group = filteredComponentGroups.getGroup(componentGroupEnum)
         if (group == null) {
             // If we don't receive elements of a particular component, check if its ordinal is bigger that the
             // groupHashes.size or if the group hash is allOnesHash,
@@ -300,7 +330,7 @@ class FilteredTransaction internal constructor(
      */
     @Throws(ComponentVisibilityException::class)
     fun checkCommandVisibility(publicKey: PublicKey) {
-        val commandSigners = componentGroups.firstOrNull { it.groupIndex == SIGNERS_GROUP.ordinal }
+        val commandSigners = componentGroups.getGroup(SIGNERS_GROUP)
         val expectedNumOfCommands = expectedNumOfCommands(publicKey, commandSigners)
         val receivedForThisKeyNumOfCommands = commands.filter { publicKey in it.signers }.size
         visibilityCheck(expectedNumOfCommands == receivedForThisKeyNumOfCommands) {

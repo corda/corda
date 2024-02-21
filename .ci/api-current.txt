@@ -7924,11 +7924,6 @@ public final class net.corda.core.transactions.WireTransaction extends net.corda
   public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServicesForResolution)
   @NotNull
   public String toString()
-  @NotNull
-  public static final net.corda.core.transactions.WireTransaction$Companion Companion
-##
-public static final class net.corda.core.transactions.WireTransaction$Companion extends java.lang.Object
-  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
 public final class net.corda.core.utilities.ByteArrays extends java.lang.Object
   @NotNull
