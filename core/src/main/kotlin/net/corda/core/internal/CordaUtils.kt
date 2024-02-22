@@ -20,7 +20,7 @@ import java.security.PublicKey
 
 
 // When incrementing platformVersion make sure to update PLATFORM_VERSION in constants.properties as well.
-const val PLATFORM_VERSION = 140
+const val PLATFORM_VERSION = 40
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
