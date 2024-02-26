@@ -110,11 +110,11 @@ class CordaRPCClientReconnectionTest {
 
             assertThatThrownBy {
                 val node = startNode ()
-                val client = CordaRPCClient(node.rpcAddress, config.copy(minimumServerProtocolVersion = 999, maxReconnectAttempts = 1))
+                val client = CordaRPCClient(node.rpcAddress, config.copy(minimumServerProtocolVersion = 100, maxReconnectAttempts = 1))
                 client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)
             }
                     .isInstanceOf(UnrecoverableRPCException::class.java)
-                    .hasMessageStartingWith("Requested minimum protocol version (999) is higher than the server's supported protocol version ")
+                    .hasMessageStartingWith("Requested minimum protocol version (100) is higher than the server's supported protocol version ")
         }
     }
 
