@@ -15,13 +15,13 @@ import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.time.Duration
 
-class DuplicateSerializerLogWithSameSerializerTest {
+class DuplSerializerLogWithSameSerializerTest {
     @Test(timeout=300_000)
     fun `check duplicate serialisers are logged not logged for the same class`() {
 
         // Duplicate the cordapp in this node
         driver(DriverParameters(cordappsForAllNodes = listOf(this.enclosedCordapp(), this.enclosedCordapp()))) {
-            val node = startNode(startInSameProcess = true).getOrThrow()
+            val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::TestFlow).returnValue.get()
 
             val text = node.logFile().readLines().filter { it.startsWith("[WARN") }
