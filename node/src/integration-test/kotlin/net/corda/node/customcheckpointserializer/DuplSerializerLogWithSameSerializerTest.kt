@@ -21,7 +21,7 @@ class DuplicateSerializerLogWithSameSerializerTest {
 
         // Duplicate the cordapp in this node
         driver(DriverParameters(cordappsForAllNodes = listOf(this.enclosedCordapp(), this.enclosedCordapp()))) {
-            val node = startNode(startInSameProcess = false).getOrThrow()
+            val node = startNode(startInSameProcess = true).getOrThrow()
             node.rpc.startFlow(::TestFlow).returnValue.get()
 
             val text = node.logFile().readLines().filter { it.startsWith("[WARN") }
