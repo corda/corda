@@ -28,7 +28,6 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.SgxSupport
 import net.corda.serialization.internal.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -83,11 +82,8 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
 
     init {
         // Verify that this class is immutable (all properties are final).
-        // We disable this check inside SGX as the reflection blows up.
-        if (!SgxSupport.isInsideEnclave) {
-            props.forEach {
-                require(it !is KMutableProperty<*>) { "$it mutable property of class: ${klass} is unsupported" }
-            }
+        props.forEach {
+            require(it !is KMutableProperty<*>) { "$it mutable property of class: $klass is unsupported" }
         }
     }
 

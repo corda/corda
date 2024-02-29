@@ -23,13 +23,12 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -37,7 +36,6 @@ import java.security.KeyPair
 import java.security.PublicKey
 import kotlin.io.path.div
 
-@Ignore("TODO JDK17: Fixme")
 class KeyStoreHandlerTest {
     @Rule
     @JvmField
@@ -49,7 +47,7 @@ class KeyStoreHandlerTest {
 
     private val keyStore get() = config.signingCertificateStore.get()
 
-    private lateinit var cryptoService: BCCryptoService
+    private lateinit var cryptoService: DefaultCryptoService
 
     private lateinit var keyStoreHandler: KeyStoreHandler
 
@@ -66,7 +64,7 @@ class KeyStoreHandlerTest {
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn(null).whenever(it).notary
         }
-        cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
+        cryptoService = DefaultCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
         keyStoreHandler = KeyStoreHandler(config, cryptoService)
     }
 
@@ -192,7 +190,7 @@ class KeyStoreHandlerTest {
         val devCertificateDir = tempFolder.root.toPath() / "certificates-dev"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(devCertificateDir)
         val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(devCertificateDir)
-        val devCryptoService = BCCryptoService(config.myLegalName.x500Principal, signingCertificateStore)
+        val devCryptoService = DefaultCryptoService(config.myLegalName.x500Principal, signingCertificateStore)
 
         doReturn(true).whenever(config).devMode
         doReturn(signingCertificateStore).whenever(config).signingCertificateStore

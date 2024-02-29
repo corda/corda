@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.crypto.internal.providerMap
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import java.security.KeyFactory
 import java.security.Signature
@@ -36,11 +37,6 @@ data class SignatureScheme(
     @Volatile
     private var memoizedKeyFactory: KeyFactory? = null
 
-    internal fun getKeyFactory(factoryFactory: () -> KeyFactory): KeyFactory {
-        return memoizedKeyFactory ?: run {
-            val newFactory = factoryFactory()
-            memoizedKeyFactory = newFactory
-            newFactory
-        }
-    }
+    internal val keyFactory: KeyFactory
+        get() = memoizedKeyFactory ?: KeyFactory.getInstance(algorithmName, providerMap[providerName]).also { memoizedKeyFactory = it }
 }

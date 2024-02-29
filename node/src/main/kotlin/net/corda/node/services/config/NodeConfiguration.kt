@@ -77,7 +77,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val baseDirectory: Path
     val certificatesDirectory: Path
     // signingCertificateStore is used to store certificate chains.
-    // However, BCCryptoService is reusing this to store keys as well.
+    // However, DefaultCryptoService is reusing this to store keys as well.
     val signingCertificateStore: FileBasedCertificateStoreSupplier
     val p2pSslOptions: MutualSslConfiguration
 

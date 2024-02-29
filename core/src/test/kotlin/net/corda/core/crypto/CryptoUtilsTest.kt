@@ -8,15 +8,10 @@ import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.internal.PlatformSecureRandomService
 import net.corda.core.utilities.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAKey
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.math.GroupElement
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
@@ -24,15 +19,18 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
+import org.bouncycastle.math.ec.rfc8032.Ed25519
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
-import org.junit.Ignore
 import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.security.Security
+import java.security.interfaces.EdECPrivateKey
+import java.security.interfaces.EdECPublicKey
+import java.security.spec.NamedParameterSpec
 import java.util.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -132,11 +130,8 @@ class CryptoUtilsTest {
 
         // test on malformed signatures (even if they change for 1 bit)
         signedData[0] = signedData[0].inc()
-        try {
+        assertThatThrownBy {
             Crypto.doVerify(pubKey, signedData, testBytes)
-            fail()
-        } catch (e: Exception) {
-            // expected
         }
     }
 
@@ -498,9 +493,9 @@ class CryptoUtilsTest {
         val (privEd, pubEd) = keyPairEd
 
         assertEquals(privEd.algorithm, "EdDSA")
-        assertEquals((privEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals((privEd as EdECPrivateKey).params.name, NamedParameterSpec.ED25519.name)
         assertEquals(pubEd.algorithm, "EdDSA")
-        assertEquals((pubEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals((pubEd as EdECPublicKey).params.name, NamedParameterSpec.ED25519.name)
     }
 
     @Test(timeout=300_000)
@@ -659,18 +654,23 @@ class CryptoUtilsTest {
 
     @Test(timeout=300_000)
 	fun `Check EdDSA public key on curve`() {
-        val keyPairEdDSA = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
-        val pubEdDSA = keyPairEdDSA.public
-        assertTrue(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, pubEdDSA))
-        // Use R1 curve for check.
-        assertFalse(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubEdDSA))
-        // Check for point at infinity.
-        val pubKeySpec = EdDSAPublicKeySpec((EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3), EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec)
-        assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
+        repeat(100) {
+            val keyPairEdDSA = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
+            val pubEdDSA = keyPairEdDSA.public
+            assertTrue(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, pubEdDSA))
+            // Use R1 curve for check.
+            assertFalse(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubEdDSA))
+        }
+        val invalidKey = run {
+            val bytes = ByteArray(Ed25519.PUBLIC_KEY_SIZE).also { it[0] = 2 }
+            val encoded = SubjectPublicKeyInfo(EDDSA_ED25519_SHA512.signatureOID, bytes).encoded
+            Crypto.decodePublicKey(encoded)
+        }
+        assertThat(invalidKey).isInstanceOf(EdECPublicKey::class.java)
+        assertThat(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, invalidKey)).isFalse()
     }
 
     @Test(timeout = 300_000)
-    @Ignore("TODO JDK17: Fixme")
     fun `Unsupported EC public key type on curve`() {
         val keyGen = KeyPairGenerator.getInstance("EC") // sun.security.ec.ECPublicKeyImpl
         keyGen.initialize(256, newSecureRandom())
@@ -772,10 +772,8 @@ class CryptoUtilsTest {
         // Check scheme.
         assertEquals(priv.algorithm, dpriv.algorithm)
         assertEquals(pub.algorithm, dpub.algorithm)
-        assertTrue(dpriv is EdDSAPrivateKey)
-        assertTrue(dpub is EdDSAPublicKey)
-        assertEquals((dpriv as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
-        assertEquals((dpub as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals((dpriv as EdECPrivateKey).params.name, NamedParameterSpec.ED25519.name)
+        assertEquals((dpub as EdECPublicKey).params.name, NamedParameterSpec.ED25519.name)
         assertEquals(Crypto.findSignatureScheme(dpriv), EDDSA_ED25519_SHA512)
         assertEquals(Crypto.findSignatureScheme(dpub), EDDSA_ED25519_SHA512)
 

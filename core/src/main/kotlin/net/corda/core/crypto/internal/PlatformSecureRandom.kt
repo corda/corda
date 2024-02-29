@@ -2,8 +2,6 @@
 package net.corda.core.crypto.internal
 
 import io.netty.util.concurrent.FastThreadLocal
-import net.corda.core.crypto.DummySecureRandom
-import net.corda.core.utilities.SgxSupport
 import net.corda.core.utilities.loggerFor
 import org.apache.commons.lang3.SystemUtils
 import java.io.DataInputStream
@@ -16,21 +14,8 @@ import java.security.SecureRandom
 import java.security.SecureRandomSpi
 import kotlin.system.exitProcess
 
-/**
- * This has been migrated into a separate class so that it
- * is easier to delete from the core-deterministic module.
- */
-val platformSecureRandom: () -> SecureRandom = when {
-    SgxSupport.isInsideEnclave -> {
-        { DummySecureRandom }
-    }
-    else -> {
-        { sharedSecureRandom }
-    }
-}
-
 class PlatformSecureRandomService(provider: Provider)
-    : Provider.Service(provider, "SecureRandom", ALGORITHM, PlatformSecureRandomSpi::javaClass.name, null, null) {
+    : Provider.Service(provider, "SecureRandom", ALGORITHM, PlatformSecureRandomSpi::class.java.name, null, null) {
 
     companion object {
         const val ALGORITHM = "CordaPRNG"
@@ -87,9 +72,4 @@ private class LinuxSecureRandomSpi : SecureRandomSpi() {
     }
 
     override fun engineGenerateSeed(numBytes: Int): ByteArray = ByteArray(numBytes).apply { engineNextBytes(this) }
-}
-
-// This is safe to share because of the underlying implementation of SecureRandomSpi
-private val sharedSecureRandom: SecureRandom by lazy(LazyThreadSafetyMode.PUBLICATION) {
-    SecureRandom.getInstance(PlatformSecureRandomService.ALGORITHM)
 }

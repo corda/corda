@@ -1,9 +1,8 @@
-package net.corda.nodeapi.internal.cryptoservice.bouncycastle
+package net.corda.nodeapi.internal.cryptoservice
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
-import net.corda.core.crypto.internal.Instances.getSignatureInstance
-import net.corda.core.crypto.internal.cordaBouncyCastleProvider
+import net.corda.core.crypto.internal.Instances.withSignature
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
 import net.corda.core.utilities.detailedLogger
@@ -14,27 +13,30 @@ import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
-import net.corda.nodeapi.internal.cryptoservice.*
-import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import org.bouncycastle.operator.ContentSigner
 import java.nio.file.Path
-import java.security.*
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.Provider
+import java.security.PublicKey
+import java.security.Signature
 import java.security.spec.ECGenParameterSpec
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.security.auth.x500.X500Principal
 
 /**
- * Basic implementation of a [CryptoService] that uses BouncyCastle for cryptographic operations
+ * Basic implementation of a [CryptoService] which uses Corda's [Provider]s for cryptographic operations
  * and a Java KeyStore in the form of [CertificateStore] to store private keys.
- * This service reuses the [NodeConfiguration.signingCertificateStore] to store keys.
  *
  * The [wrappingKeyStorePath] must be provided in order to execute any wrapping operations (e.g. [createWrappingKey], [generateWrappedKeyPair])
  */
-class BCCryptoService(private val legalName: X500Principal,
-                      private val certificateStoreSupplier: CertificateStoreSupplier,
-                      private val wrappingKeyStorePath: Path? = null) : CryptoService {
+@Suppress("TooManyFunctions")
+class DefaultCryptoService(private val legalName: X500Principal,
+                           private val certificateStoreSupplier: CertificateStoreSupplier,
+                           private val wrappingKeyStorePath: Path? = null) : CryptoService {
 
     private companion object {
         val detailedLogger = detailedLogger()
@@ -97,7 +99,7 @@ class BCCryptoService(private val legalName: X500Principal,
 
     private fun signWithAlgorithm(alias: String, data: ByteArray, signAlgorithm: String): ByteArray {
         val privateKey = certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }
-        val signature = Signature.getInstance(signAlgorithm, cordaBouncyCastleProvider)
+        val signature = Signature.getInstance(signAlgorithm)
         detailedLogger.trace { "CryptoService(action=signing_start;alias=$alias;algorithm=$signAlgorithm)" }
         signature.initSign(privateKey, newSecureRandom())
         signature.update(data)
@@ -126,7 +128,7 @@ class BCCryptoService(private val legalName: X500Principal,
 
     /**
      * If a node is running in [NodeConfiguration.devMode] and for backwards compatibility purposes, the same [KeyStore]
-     * is reused outside [BCCryptoService] to update certificate paths. [resyncKeystore] will sync [BCCryptoService]'s
+     * is reused outside [DefaultCryptoService] to update certificate paths. [resyncKeystore] will sync [DefaultCryptoService]'s
      * loaded [certificateStore] in memory with the contents of the corresponding [KeyStore] file.
      */
     fun resyncKeystore() {
@@ -178,7 +180,7 @@ class BCCryptoService(private val legalName: X500Principal,
         }
 
         val wrappingKey = wrappingKeyStore.getKey(masterKeyAlias, certificateStore.entryPassword.toCharArray())
-        val cipher = Cipher.getInstance("AESWRAPPAD", cordaBouncyCastleProvider)
+        val cipher = Cipher.getInstance("AESWRAPPAD")
         cipher.init(Cipher.WRAP_MODE, wrappingKey)
 
         val keyPairGenerator = keyPairGeneratorFromScheme(childKeyScheme)
@@ -199,22 +201,23 @@ class BCCryptoService(private val legalName: X500Principal,
             1 -> "AESWRAPPAD"
             else -> "AES"
         }
-        val cipher = Cipher.getInstance(algorithm, cordaBouncyCastleProvider)
+        val cipher = Cipher.getInstance(algorithm)
         cipher.init(Cipher.UNWRAP_MODE, wrappingKey)
 
         val privateKey = cipher.unwrap(wrappedPrivateKey.keyMaterial, keyAlgorithmFromScheme(wrappedPrivateKey.signatureScheme), Cipher.PRIVATE_KEY) as PrivateKey
 
-        val signature = getSignatureInstance(wrappedPrivateKey.signatureScheme.signatureName, cordaBouncyCastleProvider)
-        signature.initSign(privateKey, newSecureRandom())
-        signature.update(payloadToSign)
-        return signature.sign()
+        return withSignature(wrappedPrivateKey.signatureScheme) { signature ->
+            signature.initSign(privateKey, newSecureRandom())
+            signature.update(payloadToSign)
+            signature.sign()
+        }
     }
 
-    override fun getWrappingMode(): WrappingMode? = WrappingMode.DEGRADED_WRAPPED
+    override fun getWrappingMode(): WrappingMode = WrappingMode.DEGRADED_WRAPPED
 
     private fun keyPairGeneratorFromScheme(scheme: SignatureScheme): KeyPairGenerator {
         val algorithm = keyAlgorithmFromScheme(scheme)
-        val keyPairGenerator = KeyPairGenerator.getInstance(algorithm, cordaBouncyCastleProvider)
+        val keyPairGenerator = KeyPairGenerator.getInstance(algorithm)
         when (scheme) {
             Crypto.ECDSA_SECP256R1_SHA256 -> keyPairGenerator.initialize(ECGenParameterSpec("secp256r1"))
             Crypto.ECDSA_SECP256K1_SHA256 -> keyPairGenerator.initialize(ECGenParameterSpec("secp256k1"))

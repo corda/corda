@@ -8290,11 +8290,6 @@ public static final class net.corda.core.utilities.ProgressTracker$UNSTARTED ext
 public interface net.corda.core.utilities.PropertyDelegate
   public abstract T getValue(Object, kotlin.reflect.KProperty)
 ##
-public final class net.corda.core.utilities.SgxSupport extends java.lang.Object
-  public static final boolean isInsideEnclave()
-  @NotNull
-  public static final net.corda.core.utilities.SgxSupport INSTANCE
-##
 public final class net.corda.core.utilities.ThreadDumpUtilsKt extends java.lang.Object
   @NotNull
   public static final String asString(management.ThreadInfo, int)

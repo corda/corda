@@ -1,17 +1,16 @@
 package net.corda.core.crypto
 
+import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
+import net.corda.core.crypto.internal.Instances.withSignature
 import net.corda.core.utilities.hexToByteArray
 import net.corda.core.utilities.toHex
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
+import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.junit.Test
 import java.security.PrivateKey
-import java.security.Signature
-import java.util.Locale
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
+import java.security.spec.EdECPrivateKeySpec
+import java.security.spec.NamedParameterSpec
+import java.security.spec.X509EncodedKeySpec
 
 /**
  * Testing PureEdDSA Ed25519 using test vectors from https://tools.ietf.org/html/rfc8032#section-7.1
@@ -19,8 +18,6 @@ import kotlin.test.assertNotEquals
 class EdDSATests {
     @Test(timeout=300_000)
 	fun `PureEdDSA Ed25519 test vectors`() {
-        val edParams = Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-
         // MESSAGE (length 0 bytes).
         val testVector1 = SignatureTestVector(
                 "9d61b19deffd5a60ba844af492ec2cc4" +
@@ -152,11 +149,24 @@ class EdDSATests {
                         "3dca179c138ac17ad9bef1177331a704"
         )
 
+        val keyFactory = EDDSA_ED25519_SHA512.keyFactory
+
         val testVectors = listOf(testVector1, testVector2, testVector3, testVector1024, testVectorSHAabc)
-        testVectors.forEach {
-            val privateKey = EdDSAPrivateKey(EdDSAPrivateKeySpec(it.privateKeyHex.hexToByteArray(), edParams))
-            assertEquals(it.signatureOutputHex, doSign(privateKey, it.messageToSignHex.hexToByteArray()).toHex()
-                    .lowercase(Locale.getDefault()))
+        testVectors.forEach { testVector ->
+            val messageBytes = testVector.messageToSignHex.hexToByteArray()
+            val signatureBytes = testVector.signatureOutputHex.hexToByteArray()
+            // Check the private key produces the expected signature
+            val privateKey = keyFactory.generatePrivate(EdECPrivateKeySpec(NamedParameterSpec.ED25519, testVector.privateKeyHex.hexToByteArray()))
+            assertThat(doSign(privateKey, messageBytes)).isEqualTo(signatureBytes)
+            // Check the public key verifies the signature
+            val result = withSignature(EDDSA_ED25519_SHA512) { signature ->
+                val publicKeyInfo = SubjectPublicKeyInfo(EDDSA_ED25519_SHA512.signatureOID, testVector.publicKeyHex.hexToByteArray())
+                val publicKey = keyFactory.generatePublic(X509EncodedKeySpec(publicKeyInfo.encoded))
+                signature.initVerify(publicKey)
+                signature.update(messageBytes)
+                signature.verify(signatureBytes)
+            }
+            assertThat(result).isTrue()
         }
 
         // Test vector for the variant Ed25519ctx, expected to fail.
@@ -172,9 +182,8 @@ class EdDSATests {
                         "5a5ca2df6668346291c2043d4eb3e90d"
         )
 
-        val privateKey = EdDSAPrivateKey(EdDSAPrivateKeySpec(testVectorEd25519ctx.privateKeyHex.hexToByteArray(), edParams))
-        assertNotEquals(testVectorEd25519ctx.signatureOutputHex, doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex()
-                .lowercase(Locale.getDefault()))
+        val privateKey = keyFactory.generatePrivate(EdECPrivateKeySpec(NamedParameterSpec.ED25519, testVectorEd25519ctx.privateKeyHex.hexToByteArray()))
+        assertThat(doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex().lowercase()).isNotEqualTo(testVectorEd25519ctx.signatureOutputHex)
     }
 
     /** A test vector object for digital signature schemes. */
@@ -185,9 +194,10 @@ class EdDSATests {
 
     // Required to implement a custom doSign function, because Corda's Crypto.doSign does not allow empty messages (testVector1).
     private fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        val signature = Signature.getInstance(Crypto.EDDSA_ED25519_SHA512.signatureName, EdDSASecurityProvider())
-        signature.initSign(privateKey)
-        signature.update(clearData)
-        return signature.sign()
+        return withSignature(EDDSA_ED25519_SHA512) { signature ->
+            signature.initSign(privateKey)
+            signature.update(clearData)
+            signature.sign()
+        }
     }
 }
