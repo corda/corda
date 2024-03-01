@@ -86,7 +86,6 @@ class P2PFlowsDrainingModeTest {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17:Fixme - timed out")
 	fun `terminate node waiting for pending flows`() {
 
         driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
