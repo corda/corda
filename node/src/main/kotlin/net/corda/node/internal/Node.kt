@@ -17,7 +17,6 @@ import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.getJavaUpdateVersion
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
@@ -170,7 +169,7 @@ open class Node(configuration: NodeConfiguration,
 
         fun isInvalidJavaVersion(): Boolean {
             if (!hasMinimumJavaVersion()) {
-                println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
+                println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 17.")
                 println("Corda will now exit...")
                 return true
             }
@@ -178,17 +177,7 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private fun hasMinimumJavaVersion(): Boolean {
-            // JDK 11: review naming convention and checking of 'minUpdateVersion' and 'distributionType` (OpenJDK, Oracle, Zulu, AdoptOpenJDK, Cornetto)
-            return try {
-                if (SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11))
-                    return true
-                else {
-                    val update = getJavaUpdateVersion(SystemUtils.JAVA_VERSION) // To filter out cases like 1.8.0_202-ea
-                    (SystemUtils.IS_JAVA_1_8 && update >= 171)
-                }
-            } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
-                false
-            }
+            return SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_17)
         }
     }
 

@@ -33,30 +33,27 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
  * @return names of the identified classes.
  * @throws UnsupportedClassVersionError if the class version is not within range.
  */
-fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
-                                           classVersionRange: IntRange? = null): Set<String> {
-    val isJava11 = JavaVersion.isVersionAtLeast(JavaVersion.Java_11)
-
-    return ClassGraph().apply {
-            if (!isJava11 || classloader !== ClassLoader.getSystemClassLoader()) {
-                overrideClassLoaders(classloader)
-            }
-        }
-        .enableURLScheme(attachmentScheme)
-        .ignoreParentClassLoaders()
-        .enableClassInfo()
-        .pooledScan()
-        .use { result ->
-            classVersionRange?.let {
-                result.allClasses.firstOrNull { c -> c.classfileMajorVersion !in classVersionRange }?.also {
-                    throw UnsupportedClassVersionError("Class ${it.name} found in ${it.classpathElementURL} " +
-                            "has an unsupported class version of ${it.classfileMajorVersion}")
+fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>, classVersionRange: IntRange? = null): Set<String> {
+    val classGraph = ClassGraph()
+    if (classloader !== ClassLoader.getSystemClassLoader()) {
+        classGraph.overrideClassLoaders(classloader)
+    }
+    return classGraph
+            .enableURLScheme(attachmentScheme)
+            .ignoreParentClassLoaders()
+            .enableClassInfo()
+            .pooledScan()
+            .use { result ->
+                classVersionRange?.let {
+                    result.allClasses.firstOrNull { c -> c.classfileMajorVersion !in classVersionRange }?.also {
+                        throw UnsupportedClassVersionError("Class ${it.name} found in ${it.classpathElementURL} " +
+                                "has an unsupported class version of ${it.classfileMajorVersion}")
+                    }
                 }
+                result.getClassesImplementing(clazz.name)
+                        .filterNot(ClassInfo::isAbstract)
+                        .mapToSet(ClassInfo::getName)
             }
-            result.getClassesImplementing(clazz.name)
-                .filterNot(ClassInfo::isAbstract)
-                .mapToSet(ClassInfo::getName)
-        }
 }
 
 /**

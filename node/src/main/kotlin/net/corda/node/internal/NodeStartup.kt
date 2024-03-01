@@ -279,8 +279,6 @@ open class NodeStartup : NodeStartupLogging {
         logger.info("PID: ${ProcessHandle.current().pid()}")
         logger.info("Main class: ${NodeConfiguration::class.java.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
-        // JDK 11 (bootclasspath no longer supported from JDK 9)
-        if (info.isBootClassPathSupported) logger.info("bootclasspath: ${info.bootClassPath}")
         logger.info("classpath: ${info.classPath}")
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
         logger.info("Machine: ${lookupMachineNameAndMaybeWarn()}")

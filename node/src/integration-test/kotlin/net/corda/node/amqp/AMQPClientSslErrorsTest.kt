@@ -3,7 +3,6 @@ package net.corda.node.amqp
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import net.corda.core.internal.JavaVersion
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -23,8 +22,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.fixedCrlSource
-import org.junit.Assume.assumeFalse
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -43,6 +42,7 @@ import kotlin.test.assertTrue
  *
  * In order to have control over handshake internals a simple TLS server is created which may have a configurable handshake delay.
  */
+@Ignore  // These tests were disabled for JDK11+ very shortly after being introduced (https://github.com/corda/corda/pull/6560)
 @RunWith(Parameterized::class)
 class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
 
@@ -144,10 +144,7 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
     }
 
     @Test(timeout = 300_000)
-    fun trivialClientServerExchange() {
-        // SSL works quite differently in JDK 11 and re-work is needed
-        assumeFalse(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
-
+    fun `trivial client server exchange`() {
         val serverPort = portAllocation.nextPort()
         val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort).also { it.start() }
 
@@ -182,10 +179,7 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
     }
 
     @Test(timeout = 300_000)
-    fun amqpClientServerConnect() {
-        // SSL works quite differently in JDK 11 and re-work is needed
-        assumeFalse(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
-
+    fun `amqp client server connect`() {
         val serverPort = portAllocation.nextPort()
         val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort)
                 .also { it.start() }
@@ -205,10 +199,7 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
     }
 
     @Test(timeout = 300_000)
-    fun amqpClientServerHandshakeTimeout() {
-        // SSL works quite differently in JDK 11 and re-work is needed
-        assumeFalse(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
-
+    fun `amqp client server handshake timeout`() {
         val serverPort = portAllocation.nextPort()
         val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort, 5.seconds)
                 .also { it.start() }

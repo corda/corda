@@ -56,6 +56,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.catchThrowable
+import org.assertj.core.api.Assumptions.assumeThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509v2CRLBuilder
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
@@ -139,7 +140,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val MINI_CORP_PUBKEY get() = miniCorp.publicKey
         @Parameters(name = "{0}")
         @JvmStatic
-        fun compression() = arrayOf<CordaSerializationEncoding?>(null) + CordaSerializationEncoding.values()
+        fun compression(): List<CordaSerializationEncoding?> = CordaSerializationEncoding.entries + null
     }
 
     @Rule
@@ -534,7 +535,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test(timeout=300_000)
 	fun `class constructor is invoked on deserialisation`() {
-        compression == null || return // Manipulation of serialized bytes is invalid if they're compressed.
+        assumeThat(compression).isNull()
         val serializerFactory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
@@ -641,7 +642,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     private fun assertSerializedThrowableEquivalent(t: Throwable, desThrowable: Throwable) {
         assertTrue(desThrowable is CordaRuntimeException) // Since we don't handle the other case(s) yet
         assertEquals("${t.javaClass.name}: ${t.message}", desThrowable.message)
-        assertTrue(Objects.deepEquals(t.stackTrace.toStackTraceBasic, desThrowable.stackTrace.toStackTraceBasic))
+        assertTrue(Objects.deepEquals(t.stackTrace.map(::BasicStrackTraceElement), desThrowable.stackTrace.map(::BasicStrackTraceElement)))
         assertEquals(t.suppressed.size, desThrowable.suppressed.size)
         t.suppressed.zip(desThrowable.suppressed).forEach { (before, after) -> assertSerializedThrowableEquivalent(before, after) }
     }
@@ -1582,35 +1583,19 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         assertEquals(1018, compressedSize)
     }
 
-    // JDK11: backwards compatibility function to deal with StacktraceElement comparison pre-JPMS
     private fun deepEquals(a: Any?, b: Any?): Boolean {
-        return if (a === b)
-            true
-        else if (a == null || b == null)
-            false
-        else {
-            if (a is Exception && b is Exception)
-                (a.cause == b.cause && a.localizedMessage == b.localizedMessage && a.message == b.message) &&
-                        Objects.deepEquals(a.stackTrace.toStackTraceBasic, b.stackTrace.toStackTraceBasic)
-            else
-                Objects.deepEquals(a, b)
+        return when {
+            a is Throwable && b is Throwable -> BasicThrowable(a) == BasicThrowable(b)
+            else -> Objects.deepEquals(a, b)
         }
     }
 
-    private val <T> Array<T>.toStackTraceBasic: Unit
-        get() {
-            this.map { StackTraceElementBasic(it as StackTraceElement) }
-        }
+    private data class BasicThrowable(val cause: BasicThrowable?, val message: String?, val stackTrace: List<BasicStrackTraceElement>) {
+        constructor(t: Throwable) : this(t.cause?.let(::BasicThrowable), t.message, t.stackTrace.map(::BasicStrackTraceElement))
+    }
 
     // JPMS adds additional fields that are not equal according to classloader/module hierarchy
-    data class StackTraceElementBasic(val ste: StackTraceElement) {
-        override fun equals(other: Any?): Boolean {
-            return if (other is StackTraceElementBasic)
-                (ste.className == other.ste.className) &&
-                        (ste.methodName == other.ste.methodName) &&
-                        (ste.fileName == other.ste.fileName) &&
-                        (ste.lineNumber == other.ste.lineNumber)
-            else false
-        }
+    private data class BasicStrackTraceElement(val className: String, val methodName: String, val fileName: String?, val lineNumber: Int) {
+        constructor(ste: StackTraceElement) : this(ste.className, ste.methodName, ste.fileName, ste.lineNumber)
     }
 }

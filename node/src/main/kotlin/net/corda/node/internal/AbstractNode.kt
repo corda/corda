@@ -1155,9 +1155,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
     }
 
-    // JDK 11: switch to directly instantiating jolokia server (rather than indirectly via dynamically self attaching Java Agents,
-    // which is no longer supported from JDK 9 onwards (https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8180425).
-    // No longer need to use https://github.com/electronicarts/ea-agent-loader either (which is also deprecated)
     private fun initialiseJolokia() {
         configuration.jmxMonitoringHttpPort?.let { port ->
             val config = JolokiaServerConfig(mapOf("port" to port.toString()))

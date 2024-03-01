@@ -61,7 +61,6 @@ dependencies {
 
     runtimeOnly 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
-    // JDK11: required by Quasar at run-time
     runtimeOnly "com.esotericsoftware:kryo:$kryo_version"
 
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin_version"
