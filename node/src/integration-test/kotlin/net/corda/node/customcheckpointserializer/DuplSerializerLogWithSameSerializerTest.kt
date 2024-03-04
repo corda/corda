@@ -15,7 +15,7 @@ import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.time.Duration
 
-class DuplicateSerializerLogWithSameSerializerTest {
+class DuplSerializerLogWithSameSerializerTest {
     @Test(timeout=300_000)
     fun `check duplicate serialisers are logged not logged for the same class`() {
 
