@@ -29,7 +29,6 @@ import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -52,7 +51,6 @@ class FlowsDrainingModeContentionTest {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17:Fixme - timed out")
 	fun `draining mode does not deadlock with acks between 2 nodes`() {
         val message = "Ground control to Major Tom"
         driver(DriverParameters(
