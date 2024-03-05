@@ -47,6 +47,8 @@ import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.JVMAgentUtilities
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.LoggerContext
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
@@ -531,6 +533,7 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
         System.setProperty("consoleLogLevel", specifiedLogLevel)
         Node.renderBasicInfoToConsole = false
     }
+    (LogManager.getContext(false) as LoggerContext).reconfigure()
 
     //Test for access to the logging path and shutdown if we are unable to reach it.
     val logPath = baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME
