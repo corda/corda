@@ -36,8 +36,6 @@ dependencies {
     // For caches rather than guava
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
     implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
-    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
-    implementation "net.i2p.crypto:eddsa:$eddsa_version"
     // Bouncy castle support needed for X509 certificate manipulation
     implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
     // required to use @Type annotation
@@ -93,19 +91,7 @@ processTestResources {
     }
 }
 
-compileTestJava {
-    options.compilerArgs += [
-            '--add-exports', 'java.base/sun.security.util=ALL-UNNAMED',
-            '--add-exports', 'java.base/sun.security.x509=ALL-UNNAMED'
-    ]
-}
-
 test {
-    // TODO This obscures whether any Corda client APIs need these JVM flags as well (which they shouldn't do)
-    jvmArgs += [
-            '--add-exports', 'java.base/sun.security.util=ALL-UNNAMED',
-            '--add-exports', 'java.base/sun.security.x509=ALL-UNNAMED'
-    ]
     maxParallelForks = (System.env.CORDA_CORE_TESTING_FORKS == null) ? 1 :  "$System.env.CORDA_CORE_TESTING_FORKS".toInteger()
 }
 
@@ -129,7 +115,6 @@ quasar {
             "io.github.classgraph**",
             "io.netty*",
             "liquibase**",
-            "net.i2p.crypto.**",
             "nonapi.io.github.classgraph.**",
             "org.apiguardian.**",
             "org.bouncycastle**",

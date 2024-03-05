@@ -22,7 +22,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
@@ -98,7 +98,7 @@ open class NetworkRegistrationHelper(
         certificatesDirectory.safeSymbolicRead().createDirectories()
         // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
         // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
-        val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+        val certStore: CertificateStore = if (cryptoService is DefaultCryptoService) cryptoService.certificateStore else certificateStore
 
         // SELF_SIGNED_PRIVATE_KEY is used as progress indicator.
         if (certStore.contains(nodeCaKeyAlias) && !certStore.contains(SELF_SIGNED_PRIVATE_KEY)) {
@@ -169,7 +169,7 @@ open class NetworkRegistrationHelper(
         certificatesDirectory.safeSymbolicRead().createDirectories()
         // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
         // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
-        val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+        val certStore: CertificateStore = if (cryptoService is DefaultCryptoService) cryptoService.certificateStore else certificateStore
 
         if (!certStore.contains(nodeCaKeyAlias)) {
             logProgress("Node CA key doesn't exist, program will now terminate...")
@@ -374,7 +374,7 @@ class NodeRegistrationConfiguration(
             tlsCertCrlDistPoint = config.tlsCertCrlDistPoint,
             certificatesDirectory = config.certificatesDirectory,
             emailAddress = config.emailAddress,
-            cryptoService = BCCryptoService(config.myLegalName.x500Principal, config.signingCertificateStore),
+            cryptoService = DefaultCryptoService(config.myLegalName.x500Principal, config.signingCertificateStore),
             certificateStore = config.signingCertificateStore.get(true),
             notaryServiceConfig = config.notary?.let {
                 // Validation of the presence of the notary service legal name is only done here and not in the top level configuration

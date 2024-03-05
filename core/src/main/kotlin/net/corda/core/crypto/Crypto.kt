@@ -1,31 +1,26 @@
 package net.corda.core.crypto
 
 import net.corda.core.CordaOID
+import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.internal.AliasPrivateKey
+import net.corda.core.crypto.internal.Curve25519.isOnCurve25519
 import net.corda.core.crypto.internal.Instances.withSignature
 import net.corda.core.crypto.internal.PublicKeyCache
 import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
-import net.corda.core.crypto.internal.`id-Curve25519ph`
 import net.corda.core.crypto.internal.providerMap
+import net.corda.core.crypto.internal.sunEcProvider
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.math.GroupElement
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERNull
 import org.bouncycastle.asn1.DERUTF8String
 import org.bouncycastle.asn1.DLSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
+import org.bouncycastle.asn1.edec.EdECObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
@@ -34,6 +29,9 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.crypto.CryptoServicesRegistrar
+import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
+import org.bouncycastle.crypto.util.PrivateKeyInfoFactory
+import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
@@ -49,20 +47,24 @@ import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.bouncycastle.math.ec.ECConstants
 import org.bouncycastle.math.ec.FixedPointCombMultiplier
 import org.bouncycastle.math.ec.WNafUtil
+import org.bouncycastle.math.ec.rfc8032.Ed25519
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.InvalidKeyException
 import java.security.Key
-import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.Provider
 import java.security.PublicKey
+import java.security.Signature
 import java.security.SignatureException
+import java.security.interfaces.EdECPrivateKey
+import java.security.interfaces.EdECPublicKey
 import java.security.spec.InvalidKeySpecException
+import java.security.spec.NamedParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Mac
@@ -77,7 +79,7 @@ import javax.crypto.spec.SecretKeySpec
  * <li>RSA_SHA256 (RSA PKCS#1 using SHA256 as hash algorithm).
  * <li>ECDSA_SECP256K1_SHA256 (ECDSA using the secp256k1 Koblitz curve and SHA256 as hash algorithm).
  * <li>ECDSA_SECP256R1_SHA256 (ECDSA using the secp256r1 (NIST P-256) curve and SHA256 as hash algorithm).
- * <li>EDDSA_ED25519_SHA512 (EdDSA using the ed255519 twisted Edwards curve and SHA512 as hash algorithm).
+ * <li>EDDSA_ED25519_SHA512 (EdDSA using the ed25519 twisted Edwards curve and SHA512 as hash algorithm).
  * <li>SPHINCS256_SHA512 (SPHINCS-256 hash-based signature scheme using SHA512 as hash algorithm).
  * </ul>
  */
@@ -95,7 +97,7 @@ object Crypto {
             listOf(AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null)),
             cordaBouncyCastleProvider.name,
             "RSA",
-            "SHA256WITHRSA",
+            "SHA256withRSA",
             null,
             3072,
             "RSA_SHA256 signature scheme using SHA256 as hash algorithm."
@@ -140,13 +142,12 @@ object Crypto {
     val EDDSA_ED25519_SHA512: SignatureScheme = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
-            AlgorithmIdentifier(`id-Curve25519ph`, null),
-            emptyList(), // Both keys and the signature scheme use the same OID in i2p library.
-            // We added EdDSA to bouncy castle for certificate signing.
-            cordaBouncyCastleProvider.name,
-            "1.3.101.112",
-            EdDSAEngine.SIGNATURE_ALGORITHM,
-            EdDSANamedCurveTable.getByName("ED25519"),
+            AlgorithmIdentifier(EdECObjectIdentifiers.id_Ed25519, null),
+            emptyList(), // Both keys and the signature scheme use the same OID.
+            sunEcProvider.name,
+            "Ed25519",
+            "Ed25519",
+            NamedParameterSpec.ED25519,
             256,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
@@ -164,11 +165,11 @@ object Crypto {
     val SPHINCS256_SHA256 = SignatureScheme(
             5,
             "SPHINCS-256_SHA512",
-            AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, DLSequence(arrayOf(ASN1Integer(0), SHA512_256))),
+            AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, null),
             listOf(AlgorithmIdentifier(BCObjectIdentifiers.sphincs256, DLSequence(arrayOf(ASN1Integer(0), SHA512_256)))),
             bouncyCastlePQCProvider.name,
             "SPHINCS256",
-            "SHA512WITHSPHINCS256",
+            "SHA512withSPHINCS256",
             SPHINCS256KeyGenParameterSpec(SPHINCS256KeyGenParameterSpec.SHA512_256),
             256,
             "SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers " +
@@ -244,8 +245,9 @@ object Crypto {
 
     @JvmStatic
     fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
-        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)]
-                ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm.algorithm.id}")
+        return requireNotNull(algorithmMap[normaliseAlgorithmIdentifier(algorithm)]) {
+            "Unrecognised algorithm identifier: ${algorithm.algorithm} ${algorithm.parameters}"
+        }
     }
 
     /** Find [SignatureScheme] by platform specific schemeNumberID. */
@@ -307,12 +309,11 @@ object Crypto {
     @JvmStatic
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
-        if (keyInfo.privateKeyAlgorithm.algorithm == ASN1ObjectIdentifier(CordaOID.ALIAS_PRIVATE_KEY)) {
-            return convertIfBCEdDSAPrivateKey(decodeAliasPrivateKey(keyInfo))
+        return if (keyInfo.privateKeyAlgorithm.algorithm == ASN1ObjectIdentifier(CordaOID.ALIAS_PRIVATE_KEY)) {
+            decodeAliasPrivateKey(keyInfo)
+        } else {
+            findSignatureScheme(keyInfo.privateKeyAlgorithm).keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
         }
-        val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
-        val keyFactory = keyFactory(signatureScheme)
-        return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
     }
 
     private fun decodeAliasPrivateKey(keyInfo: PrivateKeyInfo): PrivateKey {
@@ -351,8 +352,7 @@ object Crypto {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
         try {
-            val keyFactory = keyFactory(signatureScheme)
-            return convertIfBCEdDSAPrivateKey(keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey)))
+            return signatureScheme.keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that " +
                     "it corresponds to the input scheme's code name.", ikse)
@@ -368,12 +368,11 @@ object Crypto {
      */
     @JvmStatic
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        return PublicKeyCache.publicKeyForCachedBytes(ByteSequence.of(encodedKey)) ?: {
+        return PublicKeyCache.publicKeyForCachedBytes(ByteSequence.of(encodedKey)) ?: run {
             val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
             val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
-            val keyFactory = keyFactory(signatureScheme)
-            convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
-        }()
+            internPublicKey(signatureScheme.keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+        }
     }
 
     @JvmStatic
@@ -412,8 +411,7 @@ object Crypto {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
         try {
-            val keyFactory = keyFactory(signatureScheme)
-            return convertIfBCEdDSAPublicKey(keyFactory.generatePublic(X509EncodedKeySpec(encodedKey)))
+            return signatureScheme.keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and " +
                     "that it corresponds to the input scheme's code name.", ikse)
@@ -471,12 +469,8 @@ object Crypto {
         return withSignature(signatureScheme) { signature ->
             // Note that deterministic signature schemes, such as EdDSA, original SPHINCS-256 and RSA PKCS#1, do not require
             // extra randomness, but we have to ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking
-            // SecureRandom implementation. Also, SPHINCS-256 implementation in BouncyCastle 1.60 fails with
-            // ClassCastException if we invoke initSign with a SecureRandom as an input.
-            // TODO Although we handle the above issue here, consider updating to BC 1.61+ which provides a fix.
-            if (signatureScheme == EDDSA_ED25519_SHA512
-                    || signatureScheme == SPHINCS256_SHA256
-                    || signatureScheme == RSA_SHA256) {
+            // SecureRandom implementation.
+            if (signatureScheme == EDDSA_ED25519_SHA512 || signatureScheme == SPHINCS256_SHA256 || signatureScheme == RSA_SHA256) {
                 signature.initSign(privateKey)
             } else {
                 // The rest of the algorithms will require a SecureRandom input (i.e., ECDSA or any new algorithm for which
@@ -716,8 +710,7 @@ object Crypto {
      * This operation is currently supported for ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
      *
      * Similarly to BIP32, the implemented algorithm uses an HMAC function based on SHA512 and it is actually
-     * an implementation the HKDF rfc - Step 1: Extract function,
-     * @see <a href="https://tools.ietf.org/html/rfc5869">HKDF</a>
+     * an implementation of the [HKDF rfc - Step 1: Extract function](https://tools.ietf.org/html/rfc5869),
      * which is practically a variation of the private-parent-key -> private-child-key hardened key generation of BIP32.
      *
      * Unlike BIP32, where both private and public keys are extended to prevent deterministically
@@ -725,8 +718,8 @@ object Crypto {
      * without a chain-code and the generated key relies solely on the security of the private key.
      *
      * Although without a chain-code we lose the aforementioned property of not depending solely on the key,
-     * it should be mentioned that the cryptographic strength of the HMAC depends upon the size of the secret key.
-     * @see <a href="https://en.wikipedia.org/wiki/Hash-based_message_authentication_code#Security">HMAC Security</a>
+     * it should be mentioned that the cryptographic strength of the HMAC depends upon the size of the secret key
+     * (see [HMAC Security](https://en.wikipedia.org/wiki/Hash-based_message_authentication_code#Security)).
      * Thus, as long as the master key is kept secret and has enough entropy (~256 bits for EC-schemes), the system
      * is considered secure.
      *
@@ -743,9 +736,9 @@ object Crypto {
      * <li>salt values should not be chosen by an attacker.
      * </ul></p>
      *
-     * Regarding the last requirement, according to Krawczyk's HKDF scheme: <i>While there is no need to keep the salt secret,
-     * it is assumed that salt values are independent of the input keying material</i>.
-     * @see <a href="http://eprint.iacr.org/2010/264.pdf">Cryptographic Extraction and Key Derivation - The HKDF Scheme</a>.
+     * Regarding the last requirement, according to Krawczyk's HKDF scheme: _While there is no need to keep the salt secret,
+     * it is assumed that salt values are independent of the input keying material_
+     * (see [Cryptographic Extraction and Key Derivation - The HKDF Scheme](http://eprint.iacr.org/2010/264.pdf)).
      *
      * There are also protocols that require an authenticated nonce (e.g. when a DH derived key is used as a seed) and thus
      * we need to make sure that nonces come from legitimate parties rather than selected by an attacker.
@@ -845,13 +838,7 @@ object Crypto {
     private fun deriveKeyPairEdDSA(privateKey: PrivateKey, seed: ByteArray): KeyPair {
         // Compute HMAC(privateKey, seed).
         val macBytes = deriveHMAC(privateKey, seed)
-
-        // Calculate key pair.
-        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-        val bytes = macBytes.copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
-        val privateKeyD = EdDSAPrivateKeySpec(bytes, params)
-        val publicKeyD = EdDSAPublicKeySpec(privateKeyD.a, params)
-        return KeyPair(internPublicKey(EdDSAPublicKey(publicKeyD)), EdDSAPrivateKey(privateKeyD))
+        return deriveEdDSAKeyPair(macBytes)
     }
 
     /**
@@ -882,15 +869,20 @@ object Crypto {
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // Custom key pair generator from entropy.
-    // The BigIntenger.toByteArray() uses the two's-complement representation.
+    // The BigInteger.toByteArray() uses the two's-complement representation.
     // The entropy is transformed to a byte array in big-endian byte-order and
     // only the first ed25519.field.getb() / 8 bytes are used.
     private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
-        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-        val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
-        val priv = EdDSAPrivateKeySpec(bytes, params)
-        val pub = EdDSAPublicKeySpec(priv.a, params)
-        return KeyPair(internPublicKey(EdDSAPublicKey(pub)), EdDSAPrivateKey(priv))
+        return deriveEdDSAKeyPair(entropy.toByteArray().copyOf(Ed25519.PUBLIC_KEY_SIZE))
+    }
+
+    private fun deriveEdDSAKeyPair(bytes: ByteArray): KeyPair {
+        val privateKeyParams = Ed25519PrivateKeyParameters(bytes, 0)  // This will copy the first 256 bits
+        val encodedPrivateKey = PrivateKeyInfoFactory.createPrivateKeyInfo(privateKeyParams).encoded
+        val privateKey = EDDSA_ED25519_SHA512.keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedPrivateKey))
+        val encodedPublicKey = SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(privateKeyParams.generatePublicKey()).encoded
+        val publicKey = EDDSA_ED25519_SHA512.keyFactory.generatePublic(X509EncodedKeySpec(encodedPublicKey))
+        return KeyPair(internPublicKey(publicKey), privateKey)
     }
 
     // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
@@ -925,7 +917,7 @@ object Crypto {
         val mac = Mac.getInstance("HmacSHA512", cordaBouncyCastleProvider)
         val keyData = when (privateKey) {
             is BCECPrivateKey -> privateKey.d.toByteArray()
-            is EdDSAPrivateKey -> privateKey.geta()
+            is EdECPrivateKey -> privateKey.bytes.get()
             else -> throw InvalidKeyException("Key type ${privateKey.algorithm} is not supported for deterministic key derivation")
         }
         val key = SecretKeySpec(keyData, "HmacSHA512")
@@ -936,12 +928,12 @@ object Crypto {
     /**
      * Check if a point's coordinates are on the expected curve to avoid certain types of ECC attacks.
      * Point-at-infinity is not permitted as well.
-     * @see <a href="https://safecurves.cr.yp.to/twist.html">Small subgroup and invalid-curve attacks</a> for a more descriptive explanation on such attacks.
+     * See [Small subgroup and invalid-curve attacks](https://safecurves.cr.yp.to/twist.html) for a more descriptive explanation on such attacks.
      * We use this function on [validatePublicKey], which is currently used for signature verification only.
      * Thus, as these attacks are mostly not relevant to signature verification, we should note that
      * we are doing it out of an abundance of caution and specifically to proactively protect developers
      * against using these points as part of a DH key agreement or for use cases as yet unimagined.
-     * This method currently applies to BouncyCastle's ECDSA (both R1 and K1 curves) and I2P's EdDSA (ed25519 curve).
+     * This method currently applies to BouncyCastle's ECDSA (both R1 and K1 curves) and JCA EdDSA (ed25519 curve).
      * @param publicKey a [PublicKey], usually used to validate a signer's public key in on the Curve.
      * @param signatureScheme a [SignatureScheme] object, retrieved from supported signature schemes, see [Crypto].
      * @return true if the point lies on the curve or false if it doesn't.
@@ -954,15 +946,9 @@ object Crypto {
         }
         return when (publicKey) {
             is BCECPublicKey -> publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid
-            is EdDSAPublicKey -> publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve
+            is EdECPublicKey -> signatureScheme == EDDSA_ED25519_SHA512 && publicKey.params.name.equals("Ed25519", ignoreCase = true) && publicKey.point.isOnCurve25519
             else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
         }
-    }
-
-    // Return true if EdDSA publicKey is point at infinity.
-    // For EdDSA a custom function is required as it is not supported by the I2P implementation.
-    private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey): Boolean {
-        return publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
     }
 
     /** Check if the requested [SignatureScheme] is supported by the system. */
@@ -981,7 +967,7 @@ object Crypto {
     // Check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
         return when (key) {
-            is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
+            is BCECPublicKey, is EdECPublicKey -> publicKeyOnCurve(signatureScheme, key)
             is BCRSAPublicKey -> key.modulus.bitLength() >= 2048 // Although the recommended RSA key size is 3072, we accept any key >= 2048bits.
             is BCSphincs256PublicKey -> true
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
@@ -990,21 +976,6 @@ object Crypto {
 
     private val interner = PrivateInterner<PublicKey>()
     private fun internPublicKey(key: PublicKey): PublicKey = PublicKeyCache.cachePublicKey(interner.intern(key))
-
-
-    private fun convertIfBCEdDSAPublicKey(key: PublicKey): PublicKey {
-        return internPublicKey(when (key) {
-            is BCEdDSAPublicKey -> EdDSAPublicKey(X509EncodedKeySpec(key.encoded))
-            else -> key
-        })
-    }
-
-    private fun convertIfBCEdDSAPrivateKey(key: PrivateKey): PrivateKey {
-        return when (key) {
-            is BCEdDSAPrivateKey -> EdDSAPrivateKey(PKCS8EncodedKeySpec(key.encoded))
-            else -> key
-        }
-    }
 
     /**
      * Convert a public key to a supported implementation.
@@ -1031,9 +1002,9 @@ object Crypto {
             is BCECPublicKey -> internPublicKey(key)
             is BCRSAPublicKey -> internPublicKey(key)
             is BCSphincs256PublicKey -> internPublicKey(key)
-            is EdDSAPublicKey -> internPublicKey(key)
+            is EdECPublicKey -> internPublicKey(key)
             is CompositeKey -> internPublicKey(key)
-            is BCEdDSAPublicKey -> convertIfBCEdDSAPublicKey(key)
+            is BCEdDSAPublicKey -> internPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }
     }
@@ -1052,8 +1023,8 @@ object Crypto {
             is BCECPrivateKey -> key
             is BCRSAPrivateKey -> key
             is BCSphincs256PrivateKey -> key
-            is EdDSAPrivateKey -> key
-            is BCEdDSAPrivateKey -> convertIfBCEdDSAPrivateKey(key)
+            is EdECPrivateKey -> key
+            is BCEdDSAPrivateKey -> key
             else -> decodePrivateKey(key.encoded)
         }
     }
@@ -1094,9 +1065,5 @@ object Crypto {
 
     private fun setBouncyCastleRNG() {
         CryptoServicesRegistrar.setSecureRandom(newSecureRandom())
-    }
-
-    private fun keyFactory(signatureScheme: SignatureScheme) = signatureScheme.getKeyFactory {
-        KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
     }
 }

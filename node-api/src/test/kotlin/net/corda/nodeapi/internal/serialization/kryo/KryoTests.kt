@@ -139,7 +139,12 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test(timeout=300_000)
 	fun `deserialised key pair functions the same as serialised one`() {
-        val keyPair = generateKeyPair()
+        // The default signature scheme, EDDSA_ED25519_SHA512, generates public keys which have a writeReplace method (EdDSAPublicKeyImpl).
+        // This is picked up by Quasar's custom ReplaceableObjectKryo, which will *always* use the writeReplace for serialisation, ignoring
+        // any Kryo serialisers that might have been configured. This thus means the deserialisation path does not go via
+        // Cryto.decodePublicKey, which interns the materialised PublicKey. To avoid all of this, and test the last assertion, we use
+        // ECDSA keys, whose implementation doesn't have a writeReplace method.
+        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val bitsToSign: ByteArray = Ints.toByteArray(0x01234567)
         val wrongBits: ByteArray = Ints.toByteArray(0x76543210)
         val signature = keyPair.sign(bitsToSign)

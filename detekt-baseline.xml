@@ -1426,7 +1426,6 @@
     <ID>TooManyFunctions:ActionExecutorImpl.kt$ActionExecutorImpl : ActionExecutor</ID>
     <ID>TooManyFunctions:AppendOnlyPersistentMap.kt$AppendOnlyPersistentMapBase&lt;K, V, E, out EK&gt;</ID>
     <ID>TooManyFunctions:ArtemisTcpTransport.kt$ArtemisTcpTransport$Companion</ID>
-    <ID>TooManyFunctions:BCCryptoService.kt$BCCryptoService : CryptoService</ID>
     <ID>TooManyFunctions:BFTSmart.kt$BFTSmart$Replica : DefaultRecoverable</ID>
     <ID>TooManyFunctions:BaseTransaction.kt$BaseTransaction : NamedByHash</ID>
     <ID>TooManyFunctions:ClassCarpenter.kt$ClassCarpenterImpl : ClassCarpenter</ID>
@@ -1669,9 +1668,6 @@
     <ID>WildcardImport:AttachmentsClassLoader.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:AttachmentsClassLoaderStaticContractTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:AutoOfferFlow.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:BCCryptoService.kt$import java.security.*</ID>
-    <ID>WildcardImport:BCCryptoService.kt$import net.corda.nodeapi.internal.cryptoservice.*</ID>
-    <ID>WildcardImport:BCCryptoServiceTests.kt$import java.security.*</ID>
     <ID>WildcardImport:BFTNotaryServiceTests.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:BFTNotaryServiceTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:BFTSmart.kt$import net.corda.core.crypto.*</ID>

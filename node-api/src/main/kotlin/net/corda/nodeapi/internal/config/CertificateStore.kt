@@ -78,7 +78,7 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
     }
 
     fun setCertPathOnly(alias: String, certificates: List<X509Certificate>) {
-        // In case CryptoService and CertificateStore share the same KeyStore (i.e., when BCCryptoService is used),
+        // In case CryptoService and CertificateStore share the same KeyStore (i.e., when DefaultCryptoService is used),
         // extract the existing key from the Keystore and store it again along with the new certificate chain.
         // This is because KeyStores do not support updateKeyEntry and thus we cannot update the certificate chain
         // without overriding the key entry.

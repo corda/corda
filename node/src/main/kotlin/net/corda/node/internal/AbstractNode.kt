@@ -150,7 +150,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.cordapp.cordappSchemas
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
 import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
@@ -1061,7 +1061,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     protected open fun makeCryptoService(): CryptoService {
-        return BCCryptoService(configuration.myLegalName.x500Principal, configuration.signingCertificateStore)
+        return DefaultCryptoService(configuration.myLegalName.x500Principal, configuration.signingCertificateStore)
     }
 
     @VisibleForTesting

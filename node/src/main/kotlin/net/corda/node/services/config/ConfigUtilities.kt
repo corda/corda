@@ -17,7 +17,7 @@ import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
+import net.corda.nodeapi.internal.cryptoservice.DefaultCryptoService
 import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
@@ -195,7 +195,7 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
         FileBasedCertificateStoreSupplier(keyStore.path, keyStore.storePassword, keyStore.entryPassword).get(true)
                 .also { it.registerDevP2pCertificates(myLegalName) }
         when (cryptoService) {
-            is BCCryptoService, null -> {
+            is DefaultCryptoService, null -> {
                 val signingKeyStore = FileBasedCertificateStoreSupplier(signingCertificateStore.path, signingCertificateStore.storePassword, signingCertificateStore.entryPassword).get(true)
                         .also {
                             it.installDevNodeCaCertPath(myLegalName)
