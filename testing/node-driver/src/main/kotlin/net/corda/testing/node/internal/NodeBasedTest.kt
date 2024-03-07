@@ -5,24 +5,27 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.node.VersionInfo
 import net.corda.node.internal.FlowManager
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeFlowManager
 import net.corda.node.internal.NodeWithInfo
-import net.corda.node.services.config.*
+import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.FlowOverrideConfig
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configOf
+import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.node.services.config.plus
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.coretesting.internal.testThreadFactory
 import net.corda.testing.node.User
-import org.apache.commons.lang3.SystemUtils
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -34,7 +37,6 @@ import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
-import kotlin.test.assertFalse
 
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
 // using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
@@ -161,12 +163,9 @@ class InProcessNode(
         configuration: NodeConfiguration,
         versionInfo: VersionInfo,
         flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
-        allowHibernateToManageAppSchema: Boolean = true) : Node(configuration, versionInfo, false, flowManager = flowManager, allowHibernateToManageAppSchema = allowHibernateToManageAppSchema) {
+        allowHibernateToManageAppSchema: Boolean = true
+) : Node(configuration, versionInfo, false, flowManager = flowManager, allowHibernateToManageAppSchema = allowHibernateToManageAppSchema) {
     override val runMigrationScripts: Boolean = true
-    override fun start(): NodeInfo {
-        assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
-        return super.start()
-    }
 
     override val rxIoScheduler get() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 

@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.getJavaUpdateVersion
 import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
@@ -25,7 +24,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -38,7 +36,6 @@ import kotlin.io.path.deleteExisting
 import kotlin.io.path.name
 import kotlin.io.path.useDirectoryEntries
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class NodeTest {
@@ -141,11 +138,11 @@ class NodeTest {
                 serial = nodeInfo1.serial
         )
 
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
-            it.transaction {
+        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use { persistence ->
+            persistence.transaction {
                 session.save(persistentNodeInfo1)
             }
-            it.transaction {
+            persistence.transaction {
                 session.save(persistentNodeInfo2)
             }
 
@@ -158,16 +155,6 @@ class NodeTest {
             //this throws an exception with old behaviour
             node.generateNodeInfo()
         }
-    }
-
-    // JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)
-    @Ignore
-    @Test(timeout=300_000)
-	fun `test getJavaUpdateVersion`() {
-        assertThat(getJavaUpdateVersion("1.8.0_202-ea")).isEqualTo(202)
-        assertThat(getJavaUpdateVersion("1.8.0_202")).isEqualTo(202)
-        assertFailsWith<NumberFormatException> { getJavaUpdateVersion("1.8.0_202wrong-format") }
-        assertFailsWith<NumberFormatException> { getJavaUpdateVersion("1.8.0-adoptopenjdk") }
     }
 
     private fun getAllInfos(database: CordaPersistence): List<NodeInfoSchemaV1.PersistentNodeInfo> {

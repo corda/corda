@@ -58,7 +58,6 @@ dependencies {
     testImplementation "org.bouncycastle:bcpkix-jdk18on:$bouncycastle_version"
     testImplementation "org.ow2.asm:asm:$asm_version"
 
-    // JDK11: required by Quasar at run-time
     testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
     testRuntimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
