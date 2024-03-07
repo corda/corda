@@ -8,6 +8,7 @@ import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.SIGNERS_GROUP
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateRef
@@ -24,11 +25,13 @@ import net.corda.core.internal.Emoji
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.internal.createComponentGroups
+import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.flatMapToSet
 import net.corda.core.internal.getGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.mapToSet
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.verification.VerificationSupport
 import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
@@ -106,13 +109,20 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
     val requiredSigningKeys: Set<PublicKey>
         get() {
-            val commandKeys = commands.flatMap { it.signers }.toSet()
-            // TODO: prevent notary field from being set if there are no inputs and no time-window.
-            return if (notary != null && (inputs.isNotEmpty() || references.isNotEmpty() || timeWindow != null)) {
-                commandKeys + notary.owningKey
+            val keys = LinkedHashSet<PublicKey>()
+            val signersGroup: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(componentGroups, List::class, SIGNERS_GROUP))
+            if (signersGroup.isNotEmpty()) {
+                signersGroup.forEach { keys.addAll(it) }
             } else {
-                commandKeys
+                // On the very odd chance we're dealing with a pre-3.x transaction, use the commands to get the signers. However, this has
+                // risk of not being deserialisable if the correct CorDapp is not installed. This is why this is only used as a last resort.
+                commands.flatMapTo(keys) { it.signers }
             }
+            // TODO: prevent notary field from being set if there are no inputs and no time-window.
+            if (notary != null && (inputs.isNotEmpty() || references.isNotEmpty() || timeWindow != null)) {
+                keys += notary.owningKey
+            }
+            return keys
         }
 
     /**
