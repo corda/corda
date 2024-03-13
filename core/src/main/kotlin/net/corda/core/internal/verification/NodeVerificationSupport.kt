@@ -128,25 +128,17 @@ interface NodeVerificationSupport : VerificationSupport {
 
     /**
      * Scans trusted (installed locally) attachments to find all that contain the [className].
-     * This is required as a workaround until explicit cordapp dependencies are implemented.
      *
-     * @return the attachments with the highest version.
+     * @return attachments containing the given class in descending version order. This means any legacy attachments will occur after the
+     * current version one.
      */
-    // TODO Should throw when the class is found in multiple contract attachments (not different versions).
-    override fun getTrustedClassAttachment(className: String): Attachment? {
+    override fun getTrustedClassAttachments(className: String): List<Attachment> {
         val allTrusted = attachments.queryAttachments(
                 AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
-                // JarScanningCordappLoader makes sure legacy contract CorDapps have a coresponding non-legacy CorDapp, and that the
-                // legacy CorDapp has a smaller version number. Thus sorting by the version here ensures we never return the legacy attachment.
                 AttachmentSort(listOf(AttachmentSortColumn(AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         )
-
-        // TODO - add caching if performance is affected.
-        for (attId in allTrusted) {
-            val attch = attachments.openAttachment(attId)!!
-            if (attch.hasFile("$className.class")) return attch
-        }
-        return null
+        val fileName = "$className.class"
+        return allTrusted.mapNotNull { id -> attachments.openAttachment(id)!!.takeIf { it.hasFile(fileName) } }
     }
 
     private fun Attachment.hasFile(className: String): Boolean = openAsJAR().use { it.entries().any { entry -> entry.name == className } }

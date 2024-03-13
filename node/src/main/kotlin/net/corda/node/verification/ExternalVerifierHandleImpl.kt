@@ -6,10 +6,11 @@ import net.corda.core.internal.copyTo
 import net.corda.core.internal.level
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.readFully
+import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.verification.ExternalVerifierHandle
 import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -22,7 +23,7 @@ import net.corda.serialization.internal.verifier.ExternalVerifierInbound.Attachm
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.Initialisation
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.NetworkParametersResult
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.PartiesResult
-import net.corda.serialization.internal.verifier.ExternalVerifierInbound.TrustedClassAttachmentResult
+import net.corda.serialization.internal.verifier.ExternalVerifierInbound.TrustedClassAttachmentsResult
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.VerificationRequest
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerificationResult
@@ -31,7 +32,7 @@ import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.Verifi
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetAttachments
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetNetworkParameters
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetParties
-import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetTrustedClassAttachment
+import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetTrustedClassAttachments
 import net.corda.serialization.internal.verifier.readCordaSerializable
 import net.corda.serialization.internal.verifier.writeCordaSerializable
 import java.io.DataInputStream
@@ -74,13 +75,13 @@ class ExternalVerifierHandleImpl(
     @Volatile
     private var connection: Connection? = null
 
-    override fun verifyTransaction(stx: SignedTransaction, checkSufficientSignatures: Boolean) {
-        log.info("Verify $stx externally, checkSufficientSignatures=$checkSufficientSignatures")
+    override fun verifyTransaction(ctx: CoreTransaction) {
+        log.info("Verify ${ctx.toSimpleString()} externally")
         // By definition input states are unique, and so it makes sense to eagerly send them across with the transaction.
         // Reference states are not, but for now we'll send them anyway and assume they aren't used often. If this assumption is not
         // correct, and there's a benefit, then we can send them lazily.
-        val stxInputsAndReferences = (stx.inputs + stx.references).associateWith(verificationSupport::getSerializedState)
-        val request = VerificationRequest(stx, stxInputsAndReferences, checkSufficientSignatures)
+        val ctxInputsAndReferences = (ctx.inputs + ctx.references).associateWith(verificationSupport::getSerializedState)
+        val request = VerificationRequest(ctx, ctxInputsAndReferences)
 
         // To keep things simple the verifier only supports one verification request at a time.
         synchronized(this) {
@@ -146,23 +147,22 @@ class ExternalVerifierHandleImpl(
     private fun processVerifierRequest(request: VerifierRequest, connection: Connection) {
         val result = when (request) {
             is GetParties -> PartiesResult(verificationSupport.getParties(request.keys))
-            is GetAttachment -> AttachmentResult(prepare(verificationSupport.getAttachment(request.id)))
-            is GetAttachments -> AttachmentsResult(verificationSupport.getAttachments(request.ids).map(::prepare))
+            is GetAttachment -> AttachmentResult(verificationSupport.getAttachment(request.id)?.withTrust())
+            is GetAttachments -> AttachmentsResult(verificationSupport.getAttachments(request.ids).map { it?.withTrust() })
             is GetNetworkParameters -> NetworkParametersResult(verificationSupport.getNetworkParameters(request.id))
-            is GetTrustedClassAttachment -> TrustedClassAttachmentResult(verificationSupport.getTrustedClassAttachment(request.className)?.id)
+            is GetTrustedClassAttachments -> TrustedClassAttachmentsResult(verificationSupport.getTrustedClassAttachments(request.className).map { it.id })
         }
         log.debug { "Sending response to external verifier: $result" }
         connection.toVerifier.writeCordaSerializable(result)
     }
 
-    private fun prepare(attachment: Attachment?): AttachmentWithTrust? {
-        if (attachment == null) return null
-        val isTrusted = verificationSupport.isAttachmentTrusted(attachment)
-        val attachmentForSer = when (attachment) {
+    private fun Attachment.withTrust(): AttachmentWithTrust {
+        val isTrusted = verificationSupport.isAttachmentTrusted(this)
+        val attachmentForSer = when (this) {
             // The Attachment retrieved from the database is not serialisable, so we have to convert it into one
-            is AbstractAttachment -> GeneratedAttachment(attachment.open().readFully(), attachment.uploader)
+            is AbstractAttachment -> GeneratedAttachment(open().readFully(), uploader)
             // For everything else we keep as is, in particular preserving ContractAttachment
-            else -> attachment
+            else -> this
         }
         return AttachmentWithTrust(attachmentForSer, isTrusted)
     }

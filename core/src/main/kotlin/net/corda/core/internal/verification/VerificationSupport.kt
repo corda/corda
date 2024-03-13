@@ -34,7 +34,7 @@ interface VerificationSupport {
 
     fun isAttachmentTrusted(attachment: Attachment): Boolean
 
-    fun getTrustedClassAttachment(className: String): Attachment?
+    fun getTrustedClassAttachments(className: String): List<Attachment>
 
     fun getNetworkParameters(id: SecureHash?): NetworkParameters?
 

@@ -11,12 +11,11 @@ import net.corda.core.internal.utilities.Internable
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import java.lang.annotation.Inherited
 import java.security.PublicKey
-
-private val log = loggerFor<AttachmentConstraint>()
 
 /**
  * This annotation should only be added to [Contract] classes.
@@ -49,8 +48,11 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
  */
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
     companion object {
+        private val log = contextLogger()
+
         val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
     }
+
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
             log.debug("Checking attachment uploader ${attachment.contractAttachment.uploader} is trusted")
@@ -68,6 +70,8 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
  * It allows for centralized control over the cordapps that can be used.
  */
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
+    private val log = loggerFor<WhitelistedByZoneAttachmentConstraint>()
+
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
             val whitelist = attachment.whitelistedContractImplementations
@@ -120,6 +124,8 @@ data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstra
     }
 
     companion object : Internable<SignatureAttachmentConstraint> {
+        private val log = contextLogger()
+
         @CordaInternal
         override val interner = PrivateInterner<SignatureAttachmentConstraint>()
 

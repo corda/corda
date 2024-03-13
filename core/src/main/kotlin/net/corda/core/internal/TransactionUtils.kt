@@ -166,8 +166,10 @@ fun deserialiseCommands(
         }
         val componentHashes = group.components.mapIndexed { index, component -> digestService.componentHash(group.nonces[index], component) }
         val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
-        if (leafIndices.isNotEmpty())
+        if (leafIndices.isNotEmpty()) {
+            @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")   // Because the external verifier uses Kotlin 1.2
             check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
+        }
         commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]]) }
     } else {
         // It is a WireTransaction
@@ -312,4 +314,15 @@ internal fun checkNotaryWhitelisted(ftx: FullTransaction) {
             }
         }
     }
+}
+
+fun getRequiredSigningKeysInternal(inputs: Sequence<StateAndRef<*>>, notary: Party?): Set<PublicKey> {
+    val keys = LinkedHashSet<PublicKey>()
+    for (input in inputs) {
+        input.state.data.participants.mapTo(keys) { it.owningKey }
+    }
+    if (notary != null) {
+        keys += notary.owningKey
+    }
+    return keys
 }

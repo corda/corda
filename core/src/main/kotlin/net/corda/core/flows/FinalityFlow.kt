@@ -450,7 +450,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         // The notary signature(s) are allowed to be missing but no others.
         if (notary != null) transaction.verifySignaturesExcept(notary.owningKey) else transaction.verifyRequiredSignatures()
         // TODO= [CORDA-3267] Remove duplicate signature verification
-        val ltx = transaction.verifyInternal(serviceHub.toVerifyingServiceHub(), checkSufficientSignatures = false) as LedgerTransaction?
+        val ltx = transaction.verifyInternal(serviceHub.toVerifyingServiceHub(), checkSufficientSignatures = false)
         // verifyInternal returns null if the transaction was verified externally, which *could* happen on a very odd scenerio of a 4.11
         // node creating the transaction but a 4.12 kicking off finality. In that case, we still want a LedgerTransaction object for
         // recording to the vault, etc. Note that calling verify() on this will fail as it doesn't have the necessary non-legacy attachments

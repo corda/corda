@@ -552,8 +552,6 @@ public interface net.corda.core.contracts.Attachment extends net.corda.core.cont
 public interface net.corda.core.contracts.AttachmentConstraint
   public abstract boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
-public final class net.corda.core.contracts.AttachmentConstraintKt extends java.lang.Object
-##
 @CordaSerializable
 public final class net.corda.core.contracts.AttachmentResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)

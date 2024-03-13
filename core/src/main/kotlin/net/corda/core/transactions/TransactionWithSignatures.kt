@@ -4,6 +4,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.internal.mapToSet
 import net.corda.core.transactions.SignedTransaction.SignaturesMissingException
 import net.corda.core.utilities.toNonEmptySet
 import java.security.InvalidKeyException
@@ -99,9 +100,9 @@ interface TransactionWithSignatures : NamedByHash {
      * Return the [PublicKey]s for which we still need signatures.
      */
     fun getMissingSigners(): Set<PublicKey> {
-        val sigKeys = sigs.map { it.by }.toSet()
+        val sigKeys = sigs.mapToSet { it.by }
         // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
         //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)
-        return requiredSigningKeys.filter { !it.isFulfilledBy(sigKeys) }.toSet()
+        return requiredSigningKeys.asSequence().filter { !it.isFulfilledBy(sigKeys) }.toSet()
     }
 }

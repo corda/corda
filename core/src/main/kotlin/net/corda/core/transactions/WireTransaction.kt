@@ -15,6 +15,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
@@ -24,14 +25,22 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.SerializedTransactionState
+import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.equivalent
 import net.corda.core.internal.flatMapToSet
 import net.corda.core.internal.getGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.lazyMapped
 import net.corda.core.internal.mapToSet
+import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.verification.NodeVerificationSupport
+import net.corda.core.internal.verification.VerificationResult
+import net.corda.core.internal.verification.VerificationResult.External
+import net.corda.core.internal.verification.VerificationResult.InProcess
+import net.corda.core.internal.verification.VerificationResult.InProcessAndExternal
 import net.corda.core.internal.verification.VerificationSupport
 import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
@@ -39,9 +48,15 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import java.io.NotSerializableException
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -71,7 +86,7 @@ import java.util.function.Predicate
  * </ul></p>
  */
 @CordaSerializable
-@Suppress("ThrowsCount")
+@Suppress("ThrowsCount", "TooManyFunctions", "MagicNumber")
 class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, digestService: DigestService) : TraversableTransaction(componentGroups, digestService) {
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
@@ -164,14 +179,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             }
             // These are not used
             override val appClassLoader: ClassLoader get() = throw AbstractMethodError()
-            override fun getTrustedClassAttachment(className: String) = throw AbstractMethodError()
+            override fun getTrustedClassAttachments(className: String) = throw AbstractMethodError()
             override fun fixupAttachmentIds(attachmentIds: Collection<SecureHash>) = throw AbstractMethodError()
         })
     }
 
     @CordaInternal
     @JvmSynthetic
-    fun toLedgerTransactionInternal(verificationSupport: VerificationSupport): LedgerTransaction {
+    internal fun toLedgerTransactionInternal(verificationSupport: VerificationSupport): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = if (verificationSupport.isInProcess) {
             commands.lazyMapped { cmd, _ ->
@@ -360,43 +375,211 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         sig.verify(id)
     }
 
+    @CordaInternal
+    @JvmSynthetic
+    internal fun tryVerify(verificationSupport: NodeVerificationSupport): VerificationResult {
+        return when {
+            legacyAttachments.isEmpty() -> {
+                log.debug { "${toSimpleString()} will be verified in-process" }
+                InProcess(Try.on { verifyInProcess(verificationSupport) })
+            }
+            nonLegacyAttachments.isEmpty() -> {
+                log.debug { "${toSimpleString()} will be verified by the external verifer" }
+                External(Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this) })
+            }
+            else -> {
+                log.debug { "${toSimpleString()} will be verified both in-process and by the external verifer" }
+                val inProcessResult = Try.on { verifyInProcess(verificationSupport) }
+                val externalResult = Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this) }
+                InProcessAndExternal(inProcessResult, externalResult)
+            }
+        }
+    }
+
+    @CordaInternal
+    @JvmSynthetic
+    internal fun verifyInProcess(verificationSupport: VerificationSupport): LedgerTransaction {
+        val ltx = toLedgerTransactionInternal(verificationSupport)
+        try {
+            ltx.verify()
+        } catch (e: NoClassDefFoundError) {
+            checkReverifyAllowed(e)
+            val missingClass = e.message ?: throw e
+            log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
+            reverifyWithFixups(ltx, verificationSupport, missingClass)
+        } catch (e: NotSerializableException) {
+            checkReverifyAllowed(e)
+            retryVerification(e, e, ltx, verificationSupport)
+        } catch (e: TransactionDeserialisationException) {
+            checkReverifyAllowed(e)
+            retryVerification(e.cause, e, ltx, verificationSupport)
+        }
+        return ltx
+    }
+
+    private fun checkReverifyAllowed(ex: Throwable) {
+        // If that transaction was created with and after Corda 4 then just fail.
+        // The lenient dependency verification is only supported for Corda 3 transactions.
+        // To detect if the transaction was created before Corda 4 we check if the transaction has the NetworkParameters component group.
+        if (networkParametersHash != null) {
+            log.warn("TRANSACTION VERIFY FAILED - No attempt to auto-repair as TX is Corda 4+")
+            throw ex
+        }
+    }
+
+    private fun retryVerification(cause: Throwable?, ex: Throwable, ltx: LedgerTransaction, verificationSupport: VerificationSupport) {
+        when (cause) {
+            is MissingSerializerException -> {
+                log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
+                reverifyWithFixups(ltx, verificationSupport, null)
+            }
+            is NotSerializableException -> {
+                val underlying = cause.cause
+                if (underlying is ClassNotFoundException) {
+                    val missingClass = underlying.message?.replace('.', '/') ?: throw ex
+                    log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
+                    reverifyWithFixups(ltx, verificationSupport, missingClass)
+                } else {
+                    throw ex
+                }
+            }
+            else -> throw ex
+        }
+    }
+
+    // Transactions created before Corda 4 can be missing dependencies on other CorDapps.
+    // This code has detected a missing custom serializer - probably located inside a workflow CorDapp.
+    // We need to extract this CorDapp from AttachmentStorage and try verifying this transaction again.
+    private fun reverifyWithFixups(ltx: LedgerTransaction, verificationSupport: VerificationSupport, missingClass: String?) {
+        log.warn("""Detected that transaction $id does not contain all cordapp dependencies.
+                    |This may be the result of a bug in a previous version of Corda.
+                    |Attempting to re-verify having applied this node's fix-up rules.
+                    |Please check with the originator that this is a valid transaction.""".trimMargin())
+
+        val replacementAttachments = computeReplacementAttachments(ltx, verificationSupport, missingClass)
+        log.warn("Reverifying transaction {} with attachments:{}", ltx.id, replacementAttachments)
+        ltx.verifyInternal(replacementAttachments.toList())
+    }
+
+    private fun computeReplacementAttachments(ltx: LedgerTransaction,
+                                              verificationSupport: VerificationSupport,
+                                              missingClass: String?): Collection<Attachment> {
+        val replacements = fixupAttachments(verificationSupport, ltx.attachments)
+        if (!replacements.equivalent(ltx.attachments)) {
+            return replacements
+        }
+
+        // We cannot continue unless we have some idea which class is missing from the attachments.
+        if (missingClass == null) {
+            throw TransactionVerificationException.BrokenTransactionException(
+                    txId = ltx.id,
+                    message = "No fix-up rules provided for broken attachments: $replacements"
+            )
+        }
+
+        /*
+         * The Node's fix-up rules have not been able to adjust the transaction's attachments,
+         * so resort to the original mechanism of trying to find an attachment that contains
+         * the missing class.
+         */
+        val extraAttachment = requireNotNull(verificationSupport.getTrustedClassAttachments(missingClass).firstOrNull()) {
+            """Transaction $ltx is incorrectly formed. Most likely it was created during version 3 of Corda
+                |when the verification logic was more lenient. Attempted to find local dependency for class: $missingClass,
+                |but could not find one.
+                |If you wish to verify this transaction, please contact the originator of the transaction and install the
+                |provided missing JAR.
+                |You can install it using the RPC command: `uploadAttachment` without restarting the node.
+                |""".trimMargin()
+        }
+
+        return replacements.toMutableSet().apply {
+            /*
+             * Check our transaction doesn't already contain this extra attachment.
+             * It seems unlikely that we would, but better safe than sorry!
+             */
+            if (!add(extraAttachment)) {
+                throw TransactionVerificationException.BrokenTransactionException(
+                        txId = ltx.id,
+                        message = "Unlinkable class $missingClass inside broken attachments: $replacements"
+                )
+            }
+
+            log.warn("""Detected that transaction $ltx does not contain all cordapp dependencies.
+                    |This may be the result of a bug in a previous version of Corda.
+                    |Attempting to verify using the additional trusted dependency: $extraAttachment for class $missingClass.
+                    |Please check with the originator that this is a valid transaction.
+                    |YOU ARE ONLY SEEING THIS MESSAGE BECAUSE THE CORDAPPS THAT CREATED THIS TRANSACTION ARE BROKEN!
+                    |WE HAVE TRIED TO REPAIR THE TRANSACTION AS BEST WE CAN, BUT CANNOT GUARANTEE WE HAVE SUCCEEDED!
+                    |PLEASE FIX THE CORDAPPS AND MIGRATE THESE BROKEN TRANSACTIONS AS SOON AS POSSIBLE!
+                    |THIS MESSAGE IS **SUPPOSED** TO BE SCARY!!
+                    |""".trimMargin()
+            )
+        }
+    }
+
+    /**
+     * Apply this node's attachment fix-up rules to the given attachments.
+     *
+     * @param attachments A collection of [Attachment] objects, e.g. as provided by a transaction.
+     * @return The [attachments] with the node's fix-up rules applied.
+     */
+    private fun fixupAttachments(verificationSupport: VerificationSupport, attachments: Collection<Attachment>): Collection<Attachment> {
+        val attachmentsById = attachments.associateByTo(LinkedHashMap(), Attachment::id)
+        val replacementIds = verificationSupport.fixupAttachmentIds(attachmentsById.keys)
+        attachmentsById.keys.retainAll(replacementIds)
+        val extraIds = replacementIds - attachmentsById.keys
+        val extraAttachments = verificationSupport.getAttachments(extraIds)
+        for ((index, extraId) in extraIds.withIndex()) {
+            val extraAttachment = extraAttachments[index]
+            if (extraAttachment == null || !extraAttachment.isUploaderTrusted()) {
+                throw MissingAttachmentsException(listOf(extraId))
+            }
+            attachmentsById[extraId] = extraAttachment
+        }
+        return attachmentsById.values
+    }
+
     override fun toString(): String {
-        val buf = StringBuilder()
-        buf.appendLine("Transaction:")
+        val buf = StringBuilder(1024)
+        buf.appendLine("Transaction $id:")
         for (reference in references) {
             val emoji = Emoji.rightArrow
-            buf.appendLine("${emoji}REFS:       $reference")
+            buf.appendLine("${emoji}REFS:           $reference")
         }
         for (input in inputs) {
             val emoji = Emoji.rightArrow
-            buf.appendLine("${emoji}INPUT:      $input")
+            buf.appendLine("${emoji}INPUT:          $input")
         }
         for ((data) in outputs) {
             val emoji = Emoji.leftArrow
-            buf.appendLine("${emoji}OUTPUT:     $data")
+            buf.appendLine("${emoji}OUTPUT:         $data")
         }
         for (command in commands) {
             val emoji = Emoji.diamond
-            buf.appendLine("${emoji}COMMAND:    $command")
+            buf.appendLine("${emoji}COMMAND:        $command")
         }
-        for (attachment in attachments) {
+        for (attachment in nonLegacyAttachments) {
             val emoji = Emoji.paperclip
-            buf.appendLine("${emoji}ATTACHMENT: $attachment")
+            buf.appendLine("${emoji}ATTACHMENT:     $attachment")
+        }
+        for (attachment in legacyAttachments) {
+            val emoji = Emoji.paperclip
+            buf.appendLine("${emoji}ATTACHMENT:     $attachment (legacy)")
         }
         if (networkParametersHash != null) {
-            buf.appendLine("PARAMETERS HASH:  $networkParametersHash")
+            val emoji = Emoji.newspaper
+            buf.appendLine("${emoji}NETWORK PARAMS: $networkParametersHash")
         }
         return buf.toString()
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (other is WireTransaction) {
-            return (this.id == other.id)
-        }
-        return false
-    }
+    override fun equals(other: Any?): Boolean = other is WireTransaction && this.id == other.id
 
     override fun hashCode(): Int = id.hashCode()
+
+    private companion object {
+        private val log = contextLogger()
+    }
 }
 
 /**

@@ -8,17 +8,13 @@ import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.hash
 import net.corda.core.internal.toPath
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.coretesting.internal.useZipFile
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DummyCommandData
-import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.unsignJar
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
@@ -28,18 +24,14 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.After
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
-import kotlin.io.path.absolutePathString
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
 import kotlin.io.path.inputStream
-import kotlin.io.path.listDirectoryEntries
 
 @Suppress("INVISIBLE_MEMBER")
 class TransactionBuilderMockNetworkTest {
@@ -107,9 +99,9 @@ class TransactionBuilderMockNetworkTest {
 
     @Test(timeout=300_000)
     fun `populates legacy attachment group if legacy contract CorDapp is present`() {
-        val node = mockNetwork.createNode {
-            it.copyToLegacyContracts(legacyFinanceContractsJar)
-            InternalMockNetwork.MockNode(it)
+        val node = mockNetwork.createNode { args ->
+            args.copyToLegacyContracts(legacyFinanceContractsJar)
+            InternalMockNetwork.MockNode(args)
         }
         val builder = TransactionBuilder()
         val identity = node.info.singleIdentity()
@@ -118,45 +110,6 @@ class TransactionBuilderMockNetworkTest {
         assertThat(stx.tx.nonLegacyAttachments).contains(FINANCE_CONTRACTS_CORDAPP.jarFile.hash)
         assertThat(stx.tx.legacyAttachments).contains(legacyFinanceContractsJar.hash)
         stx.verify(node.services)
-    }
-
-    @Test(timeout=300_000)
-    @Ignore // https://r3-cev.atlassian.net/browse/ENT-11445
-    fun `adds legacy CorDapp dependencies`() {
-        val cordapp1 = tempFolder.newFile("cordapp1.jar").toPath()
-        val cordapp2 = tempFolder.newFile("cordapp2.jar").toPath()
-        // Split the contracts CorDapp into two
-        legacyFinanceContractsJar.copyTo(cordapp1, overwrite = true)
-        cordapp1.useZipFile { zipFs1 ->
-            cordapp2.useZipFile { zipFs2 ->
-                val destinationDir = zipFs2.getPath("net/corda/finance/contracts/asset").createDirectories()
-                zipFs1.getPath("net/corda/finance/contracts/asset")
-                        .listDirectoryEntries("OnLedgerAsset*")
-                        .forEach {
-                            it.copyToDirectory(destinationDir)
-                            it.deleteExisting()
-                        }
-            }
-        }
-        reSignJar(cordapp1)
-
-        val node = mockNetwork.createNode {
-            it.copyToLegacyContracts(cordapp1, cordapp2)
-            InternalMockNetwork.MockNode(it)
-        }
-        val builder = TransactionBuilder()
-        val identity = node.info.singleIdentity()
-        Cash().generateIssue(builder, 10.DOLLARS.issuedBy(identity.ref(0x00)), identity, mockNetwork.defaultNotaryIdentity)
-        val stx = node.services.signInitialTransaction(builder)
-        assertThat(stx.tx.nonLegacyAttachments).contains(FINANCE_CONTRACTS_CORDAPP.jarFile.hash)
-        assertThat(stx.tx.legacyAttachments).contains(cordapp1.hash, cordapp2.hash)
-        stx.verify(node.services)
-    }
-
-    private fun reSignJar(jar: Path) {
-        jar.unsignJar()
-        tempFolder.root.toPath().generateKey("testAlias", "testPassword", ALICE_NAME.toString())
-        tempFolder.root.toPath().signJar(jar.absolutePathString(), "testAlias", "testPassword")
     }
 
     private fun MockNodeArgs.copyToLegacyContracts(vararg jars: Path) {

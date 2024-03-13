@@ -11,7 +11,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.utilities.Try
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -40,16 +40,17 @@ sealed class ExternalVerifierInbound {
     }
 
     data class VerificationRequest(
-            val stx: SignedTransaction,
-            val stxInputsAndReferences: Map<StateRef, SerializedTransactionState>,
-            val checkSufficientSignatures: Boolean
-    ) : ExternalVerifierInbound()
+            val ctx: CoreTransaction,
+            val ctxInputsAndReferences: Map<StateRef, SerializedTransactionState>
+    ) : ExternalVerifierInbound() {
+        override fun toString(): String = "VerificationRequest(ctx=$ctx)"
+    }
 
     data class PartiesResult(val parties: List<Party?>) : ExternalVerifierInbound()
     data class AttachmentResult(val attachment: AttachmentWithTrust?) : ExternalVerifierInbound()
     data class AttachmentsResult(val attachments: List<AttachmentWithTrust?>) : ExternalVerifierInbound()
     data class NetworkParametersResult(val networkParameters: NetworkParameters?) : ExternalVerifierInbound()
-    data class TrustedClassAttachmentResult(val id: SecureHash?) : ExternalVerifierInbound()
+    data class TrustedClassAttachmentsResult(val ids: List<SecureHash>) : ExternalVerifierInbound()
 }
 
 @CordaSerializable
@@ -59,12 +60,12 @@ data class AttachmentWithTrust(val attachment: Attachment, val isTrusted: Boolea
 sealed class ExternalVerifierOutbound {
     sealed class VerifierRequest : ExternalVerifierOutbound() {
         data class GetParties(val keys: Set<PublicKey>) : VerifierRequest() {
-            override fun toString(): String = "GetParty(keys=${keys.map { it.toStringShort() }}})"
+            override fun toString(): String = "GetParties(keys=${keys.map { it.toStringShort() }}})"
         }
         data class GetAttachment(val id: SecureHash) : VerifierRequest()
         data class GetAttachments(val ids: Set<SecureHash>) : VerifierRequest()
         data class GetNetworkParameters(val id: SecureHash) : VerifierRequest()
-        data class GetTrustedClassAttachment(val className: String) : VerifierRequest()
+        data class GetTrustedClassAttachments(val className: String) : VerifierRequest()
     }
 
     data class VerificationResult(val result: Try<Unit>) : ExternalVerifierOutbound()
