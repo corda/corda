@@ -41,8 +41,8 @@ docker run -d --name corda-test-${SALT} --network=host --hostname=127.0.0.1 \
         -e CORDA_ARGS="--log-to-console --no-local-shell" \
         $IMAGE  config-generator --generic
 
-# Succesfully registered (with http://localhost:8080)
-docker logs -f corda-test-${SALT} | grep -q "Succesfully registered"
+# Successfully registered (with http://localhost:8080)
+docker logs -f corda-test-${SALT} | grep -q "Successfully registered"
 if [ ! "$(docker ps -q -f name=corda-test-${SALT})" ]; then
     echo "TEST-IMAGE-${IMAGE}: FAIL corda-test has exited."
     docker logs corda-test-${SALT}
@@ -50,7 +50,7 @@ if [ ! "$(docker ps -q -f name=corda-test-${SALT})" ]; then
     docker rm -f corda-test-${SALT}
     exit 1
 else
-    echo "TEST-IMAGE-${IMAGE}: SUCCESS : Succesfully registered with http://localhost:8080"
+    echo "TEST-IMAGE-${IMAGE}: SUCCESS : Successfully registered with http://localhost:8080"
 fi
 
 # Node started up and registered

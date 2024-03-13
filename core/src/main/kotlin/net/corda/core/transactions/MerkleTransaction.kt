@@ -42,7 +42,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * Returns the attachments compatible with 4.12 and later. This will be empty for transactions created on 4.11 or earlier.
      *
      * [legacyAttachments] and [nonLegacyAttachments] are independent of each other and may contain the same attachments. This is to provide backwards
-     * compatiblity and enable both 4.11 and 4.12 nodes to verify the same transaction.
+     * compatibility and enable both 4.11 and 4.12 nodes to verify the same transaction.
      */
     @CordaInternal
     @JvmSynthetic

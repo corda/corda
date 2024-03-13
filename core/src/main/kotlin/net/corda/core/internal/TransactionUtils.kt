@@ -201,7 +201,7 @@ fun createComponentGroups(inputs: List<StateRef>,
     componentGroupMap.addListGroup(COMMANDS_GROUP, commands.map { it.value }, serialize)
     // Attachments which can only be processed by 4.12 and later.
     componentGroupMap.addListGroup(ATTACHMENTS_V2_GROUP, attachments, serialize)
-    // The original attachments group now only contains attachments which can be processed by 4.11 and ealier (and the external verifier).
+    // The original attachments group now only contains attachments which can be processed by 4.11 and earlier (and the external verifier).
     componentGroupMap.addListGroup(ATTACHMENTS_GROUP, legacyAttachments, serialize)
     if (notary != null) componentGroupMap.add(ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
     if (timeWindow != null) componentGroupMap.add(ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
