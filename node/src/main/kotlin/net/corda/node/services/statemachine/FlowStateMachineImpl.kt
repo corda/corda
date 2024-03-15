@@ -30,7 +30,6 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.cordapp.CordappProviderInternal
 import net.corda.core.internal.isIdempotentFlow
 import net.corda.core.internal.location
 import net.corda.core.internal.telemetry.ComponentTelemetryIds
