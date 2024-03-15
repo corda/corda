@@ -276,7 +276,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                     closeConsumer()
                     consumer = null
                     val closingSession = session
-                    eventLoop.execute {
+                    eventLoop.execute @DontInstrument {
                         synchronized(artemis!!) {
                             if (session == closingSession) {
                                 artemis(ArtemisState.STOPPING) {
