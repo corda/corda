@@ -41,6 +41,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.nodeapi.internal.serialization.kryo.PublicKeySerializer
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.testing.core.ALICE_NAME
@@ -51,6 +52,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.enclosedCordapp
+import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPublicKey
 import org.junit.Test
 import org.objenesis.instantiator.ObjectInstantiator
 import org.objenesis.strategy.InstantiatorStrategy
@@ -307,6 +309,7 @@ class CustomSerializationSchemeDriverTest {
             kryo.classLoader = classLoader
             @Suppress("ReplaceJavaStaticMethodWithKotlinAnalog")
             kryo.register(Arrays.asList("").javaClass, ArraysAsListSerializer())
+            kryo.addDefaultSerializer(BCEdDSAPublicKey::class.java, PublicKeySerializer)
         }
 
         //Stolen from DefaultKryoCustomizer.kt

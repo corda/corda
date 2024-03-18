@@ -10,7 +10,6 @@ import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
 import net.corda.core.crypto.internal.providerMap
-import net.corda.core.crypto.internal.sunEcProvider
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
@@ -38,6 +37,7 @@ import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.edec.BCEdDSAPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
+import org.bouncycastle.jcajce.spec.EdDSAParameterSpec
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
@@ -64,7 +64,6 @@ import java.security.SignatureException
 import java.security.interfaces.EdECPrivateKey
 import java.security.interfaces.EdECPublicKey
 import java.security.spec.InvalidKeySpecException
-import java.security.spec.NamedParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Mac
@@ -144,10 +143,10 @@ object Crypto {
             "EDDSA_ED25519_SHA512",
             AlgorithmIdentifier(EdECObjectIdentifiers.id_Ed25519, null),
             emptyList(), // Both keys and the signature scheme use the same OID.
-            sunEcProvider.name,
+            cordaBouncyCastleProvider.name,
             "Ed25519",
             "Ed25519",
-            NamedParameterSpec.ED25519,
+            EdDSAParameterSpec(EdDSAParameterSpec.Ed25519),
             256,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
@@ -946,8 +945,10 @@ object Crypto {
         }
         return when (publicKey) {
             is BCECPublicKey -> publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid
+            // It's not clear if the isOnCurve25519 check is necessary since we use BC for Ed25519, and it seems the BCEdDSAPublicKey c'tor
+            // does a validation check.
             is EdECPublicKey -> signatureScheme == EDDSA_ED25519_SHA512 && publicKey.params.name.equals("Ed25519", ignoreCase = true) && publicKey.point.isOnCurve25519
-            else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
+            else -> throw IllegalArgumentException("Unsupported key type: ${publicKey.javaClass.name}")
         }
     }
 
@@ -970,7 +971,7 @@ object Crypto {
             is BCECPublicKey, is EdECPublicKey -> publicKeyOnCurve(signatureScheme, key)
             is BCRSAPublicKey -> key.modulus.bitLength() >= 2048 // Although the recommended RSA key size is 3072, we accept any key >= 2048bits.
             is BCSphincs256PublicKey -> true
-            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
+            else -> throw IllegalArgumentException("Unsupported key type: ${key.javaClass.name}")
         }
     }
 
@@ -998,13 +999,12 @@ object Crypto {
      */
     @JvmStatic
     fun toSupportedPublicKey(key: PublicKey): PublicKey {
-        return when (key) {
-            is BCECPublicKey -> internPublicKey(key)
-            is BCRSAPublicKey -> internPublicKey(key)
-            is BCSphincs256PublicKey -> internPublicKey(key)
-            is EdECPublicKey -> internPublicKey(key)
-            is CompositeKey -> internPublicKey(key)
-            is BCEdDSAPublicKey -> internPublicKey(key)
+        return when {
+            key is BCEdDSAPublicKey && key is EdECPublicKey -> internPublicKey(key)  // The BC implementation is not public
+            key is BCECPublicKey -> internPublicKey(key)
+            key is BCRSAPublicKey -> internPublicKey(key)
+            key is BCSphincs256PublicKey -> internPublicKey(key)
+            key is CompositeKey -> internPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }
     }
@@ -1019,12 +1019,11 @@ object Crypto {
      */
     @JvmStatic
     fun toSupportedPrivateKey(key: PrivateKey): PrivateKey {
-        return when (key) {
-            is BCECPrivateKey -> key
-            is BCRSAPrivateKey -> key
-            is BCSphincs256PrivateKey -> key
-            is EdECPrivateKey -> key
-            is BCEdDSAPrivateKey -> key
+        return when {
+            key is BCEdDSAPrivateKey && key is EdECPrivateKey -> key  // The BC implementation is not public
+            key is BCECPrivateKey -> key
+            key is BCRSAPrivateKey -> key
+            key is BCSphincs256PrivateKey -> key
             else -> decodePrivateKey(key.encoded)
         }
     }

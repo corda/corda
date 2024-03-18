@@ -36,6 +36,6 @@ val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
 // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
 // The val is immutable to avoid any harmful state changes.
 internal val providerMap: Map<String, Provider> = unmodifiableMap(
-    listOf(sunEcProvider, cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider)
+    listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider)
         .associateByTo(LinkedHashMap(), Provider::getName)
 )
