@@ -2,9 +2,11 @@
 
 package net.corda.core.crypto.internal
 
+import net.corda.core.crypto.Crypto
+import org.bouncycastle.jcajce.provider.asymmetric.util.EC5Util
+import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import java.math.BigInteger
-import java.math.BigInteger.ZERO
+import org.bouncycastle.jce.spec.ECNamedCurveSpec
 import java.security.AlgorithmParameters
 import java.security.KeyPair
 import java.security.KeyPairGeneratorSpi
@@ -17,15 +19,15 @@ import java.security.SignatureSpi
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.ECPublicKey
 import java.security.spec.AlgorithmParameterSpec
-import java.security.spec.ECFieldFp
 import java.security.spec.ECParameterSpec
-import java.security.spec.ECPoint
-import java.security.spec.EllipticCurve
 import java.security.spec.NamedParameterSpec
 
 /**
  * Augment the SunEC provider with secp256k1 curve support by delegating to [BouncyCastleProvider] when secp256k1 keys or params are
  * requested. Otherwise delegates to SunEC.
+ *
+ * Note, this class only exists to cater for the scenerio where [Signature.getInstance] is called directly without a provider (which happens
+ * to be the JCE recommendation) and thus the `SunEC` provider is selected. Bouncy Castle is already automatically used via [Crypto].
  */
 class Secp256k1SupportProvider : Provider("Secp256k1Support", "1.0", "Augmenting SunEC with support for the secp256k1 curve via BC") {
     init {
@@ -164,25 +166,12 @@ class Secp256k1SupportProvider : Provider("Secp256k1Support", "1.0", "Augmenting
     }
 }
 
-/**
- * Parameters for the secp256k1 curve
- */
-private object Secp256k1 {
-    val n = BigInteger("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
-    val g = ECPoint(
-            BigInteger("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", 16),
-            BigInteger("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", 16)
-    )
-    val curve = EllipticCurve(
-            ECFieldFp(BigInteger("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f", 16)),
-            ZERO,
-            7.toBigInteger()
-    )
-}
+private val bcSecp256k1Spec = ECNamedCurveTable.getParameterSpec("secp256k1")
 
 val AlgorithmParameterSpec?.isSecp256k1: Boolean
     get() = when (this) {
-        is ECParameterSpec -> cofactor == 1 && order == Secp256k1.n && curve == Secp256k1.curve && generator == Secp256k1.g
         is NamedParameterSpec -> name.equals("secp256k1", ignoreCase = true)
+        is ECNamedCurveSpec -> name.equals("secp256k1", ignoreCase = true)
+        is ECParameterSpec -> EC5Util.convertSpec(this) == bcSecp256k1Spec
         else -> false
     }

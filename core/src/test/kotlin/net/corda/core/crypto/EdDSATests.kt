@@ -7,6 +7,7 @@ import net.corda.core.utilities.toHex
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.junit.Test
+import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.spec.EdECPrivateKeySpec
 import java.security.spec.NamedParameterSpec
@@ -149,19 +150,17 @@ class EdDSATests {
                         "3dca179c138ac17ad9bef1177331a704"
         )
 
-        val keyFactory = EDDSA_ED25519_SHA512.keyFactory
-
         val testVectors = listOf(testVector1, testVector2, testVector3, testVector1024, testVectorSHAabc)
         testVectors.forEach { testVector ->
             val messageBytes = testVector.messageToSignHex.hexToByteArray()
             val signatureBytes = testVector.signatureOutputHex.hexToByteArray()
             // Check the private key produces the expected signature
-            val privateKey = keyFactory.generatePrivate(EdECPrivateKeySpec(NamedParameterSpec.ED25519, testVector.privateKeyHex.hexToByteArray()))
+            val privateKey = KeyFactory.getInstance("Ed25519", "SunEC").generatePrivate(EdECPrivateKeySpec(NamedParameterSpec.ED25519, testVector.privateKeyHex.hexToByteArray()))
             assertThat(doSign(privateKey, messageBytes)).isEqualTo(signatureBytes)
             // Check the public key verifies the signature
             val result = withSignature(EDDSA_ED25519_SHA512) { signature ->
                 val publicKeyInfo = SubjectPublicKeyInfo(EDDSA_ED25519_SHA512.signatureOID, testVector.publicKeyHex.hexToByteArray())
-                val publicKey = keyFactory.generatePublic(X509EncodedKeySpec(publicKeyInfo.encoded))
+                val publicKey = EDDSA_ED25519_SHA512.keyFactory.generatePublic(X509EncodedKeySpec(publicKeyInfo.encoded))
                 signature.initVerify(publicKey)
                 signature.update(messageBytes)
                 signature.verify(signatureBytes)
@@ -182,7 +181,7 @@ class EdDSATests {
                         "5a5ca2df6668346291c2043d4eb3e90d"
         )
 
-        val privateKey = keyFactory.generatePrivate(EdECPrivateKeySpec(NamedParameterSpec.ED25519, testVectorEd25519ctx.privateKeyHex.hexToByteArray()))
+        val privateKey = KeyFactory.getInstance("Ed25519", "SunEC").generatePrivate(EdECPrivateKeySpec(NamedParameterSpec.ED25519, testVectorEd25519ctx.privateKeyHex.hexToByteArray()))
         assertThat(doSign(privateKey, testVectorEd25519ctx.messageToSignHex.hexToByteArray()).toHex().lowercase()).isNotEqualTo(testVectorEd25519ctx.signatureOutputHex)
     }
 
