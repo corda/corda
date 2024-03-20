@@ -1,3 +1,4 @@
+@file:JvmName("InternalUtils")
 @file:Suppress("MagicNumber")
 
 package net.corda.core.internal
