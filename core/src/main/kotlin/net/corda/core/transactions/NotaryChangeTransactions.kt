@@ -11,8 +11,10 @@ import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
+import net.corda.core.internal.getRequiredSigningKeysInternal
 import net.corda.core.internal.indexOfOrThrow
-import net.corda.core.internal.mapToSet
+import net.corda.core.internal.verification.NodeVerificationSupport
+import net.corda.core.internal.verification.VerificationResult
 import net.corda.core.internal.verification.VerificationSupport
 import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
@@ -27,6 +29,7 @@ import net.corda.core.transactions.NotaryChangeWireTransaction.Component.NEW_NOT
 import net.corda.core.transactions.NotaryChangeWireTransaction.Component.NOTARY
 import net.corda.core.transactions.NotaryChangeWireTransaction.Component.PARAMETERS_HASH
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
 
@@ -107,6 +110,16 @@ data class NotaryChangeWireTransaction(
         return resolve(services as ServicesForResolution, sigs)
     }
 
+    @CordaInternal
+    @JvmSynthetic
+    internal fun tryVerify(verificationSupport: NodeVerificationSupport): VerificationResult.InProcess {
+        return VerificationResult.InProcess(Try.on {
+            // No contract code is run when verifying notary change transactions, it is sufficient to check invariants during initialisation.
+            NotaryChangeLedgerTransaction.resolve(verificationSupport, this, emptyList())
+            null
+        })
+    }
+
     enum class Component {
         INPUTS, NOTARY, NEW_NOTARY, PARAMETERS_HASH
     }
@@ -180,7 +193,7 @@ private constructor(
         get() = inputs.map { computeOutput(it, newNotary) { inputs.map(StateAndRef<ContractState>::ref) } }
 
     override val requiredSigningKeys: Set<PublicKey>
-        get() = inputs.flatMap { it.state.data.participants }.mapToSet { it.owningKey } + notary.owningKey
+        get() = getRequiredSigningKeysInternal(inputs.asSequence(), notary)
 
     override fun getKeyDescriptions(keys: Set<PublicKey>): List<String> {
         return keys.map { it.toBase58String() }

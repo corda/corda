@@ -148,8 +148,8 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
 @Suppress("INVISIBLE_MEMBER", "RemoveExplicitTypeArguments")   // Because the external verifier uses Kotlin 1.2
 inline fun <T, R> Collection<T>.mapToSet(transform: (T) -> R): Set<R> {
     return when (size) {
-        0 -> return emptySet()
-        1 -> return setOf(transform(first()))
+        0 -> emptySet()
+        1 -> setOf(transform(first()))
         else -> mapTo(LinkedHashSet<R>(mapCapacity(size)), transform)
     }
 }

@@ -28,8 +28,8 @@ class ExternalVerificationContext(
 
     override fun isAttachmentTrusted(attachment: Attachment): Boolean = externalVerifier.getAttachment(attachment.id)!!.isTrusted
 
-    override fun getTrustedClassAttachment(className: String): Attachment? {
-        return externalVerifier.getTrustedClassAttachment(className)
+    override fun getTrustedClassAttachments(className: String): List<Attachment> {
+        return externalVerifier.getTrustedClassAttachments(className)
     }
 
     override fun getNetworkParameters(id: SecureHash?): NetworkParameters? = externalVerifier.getNetworkParameters(id)

@@ -22,8 +22,10 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.combinedHash
+import net.corda.core.internal.getRequiredSigningKeysInternal
 import net.corda.core.internal.loadClassOfType
-import net.corda.core.internal.mapToSet
+import net.corda.core.internal.verification.NodeVerificationSupport
+import net.corda.core.internal.verification.VerificationResult
 import net.corda.core.internal.verification.VerificationSupport
 import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.NetworkParameters
@@ -40,6 +42,7 @@ import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.PARA
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.UPGRADED_ATTACHMENT
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.UPGRADED_CONTRACT
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
 
@@ -157,6 +160,20 @@ data class ContractUpgradeWireTransaction(
         }.toMap()
 
         return ContractUpgradeFilteredTransaction(visibleComponents, hiddenComponents, digestService)
+    }
+
+    @CordaInternal
+    @JvmSynthetic
+    internal fun tryVerify(verificationSupport: NodeVerificationSupport): VerificationResult.External {
+        // Contract upgrades only work on 4.11 and earlier
+        return VerificationResult.External(Try.on { verificationSupport.externalVerifierHandle.verifyTransaction(this) })
+    }
+
+    @CordaInternal
+    @JvmSynthetic
+    internal fun verifyInProcess(verificationSupport: VerificationSupport) {
+        // No contract code is run when verifying contract upgrade transactions, it is sufficient to check invariants during initialisation.
+        ContractUpgradeLedgerTransaction.resolve(verificationSupport, this, emptyList())
     }
 
     enum class Component {
@@ -344,7 +361,7 @@ private constructor(
 
     /** The required signers are the set of all input states' participants. */
     override val requiredSigningKeys: Set<PublicKey>
-        get() = inputs.flatMap { it.state.data.participants }.mapToSet { it.owningKey } + notary.owningKey
+        get() = getRequiredSigningKeysInternal(inputs.asSequence(), notary)
 
     override fun getKeyDescriptions(keys: Set<PublicKey>): List<String> {
         return keys.map { it.toBase58String() }

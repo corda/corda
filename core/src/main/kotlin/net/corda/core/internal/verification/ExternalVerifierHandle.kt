@@ -1,7 +1,7 @@
 package net.corda.core.internal.verification
 
-import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.CoreTransaction
 
 interface ExternalVerifierHandle : AutoCloseable {
-    fun verifyTransaction(stx: SignedTransaction, checkSufficientSignatures: Boolean)
+    fun verifyTransaction(ctx: CoreTransaction)
 }

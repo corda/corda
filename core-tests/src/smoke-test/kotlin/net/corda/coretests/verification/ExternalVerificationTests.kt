@@ -213,7 +213,7 @@ class ExternalVerificationUnsignedCordappsTest {
             ).returnValue.getOrThrow()
         }
 
-        assertThat(newNode.externalVerifierLogs()).contains("$issuanceTx failed to verify")
+        assertThat(newNode.externalVerifierLogs()).contains("WireTransaction(id=${issuanceTx.id}) failed to verify")
     }
 }
 
@@ -265,10 +265,10 @@ private fun NodeProcess.assertTransactionsWereVerified(verificationType: Verific
     val nodeLogs = logs("node")!!
     val externalVerifierLogs = externalVerifierLogs()
     for (txId in txIds) {
-        assertThat(nodeLogs).contains("Transaction $txId has verification type $verificationType")
+        assertThat(nodeLogs).contains("WireTransaction(id=$txId) will be verified ${verificationType.logStatement}")
         if (verificationType != VerificationType.IN_PROCESS) {
             assertThat(externalVerifierLogs).describedAs("External verifier was not started").isNotNull()
-            assertThat(externalVerifierLogs).contains("SignedTransaction(id=$txId) verified")
+            assertThat(externalVerifierLogs).contains("WireTransaction(id=$txId) verified")
         }
     }
 }
@@ -283,5 +283,12 @@ private fun NodeProcess.logs(name: String): String? {
 }
 
 private enum class VerificationType {
-    IN_PROCESS, EXTERNAL, BOTH
+    IN_PROCESS, EXTERNAL, BOTH;
+
+    val logStatement: String
+        get() = when (this) {
+            IN_PROCESS -> "in-process"
+            EXTERNAL -> "by the external verifer"
+            BOTH -> "both in-process and by the external verifer"
+        }
 }

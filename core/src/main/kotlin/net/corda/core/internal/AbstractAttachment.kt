@@ -68,7 +68,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: Str
 
     override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
     override fun hashCode() = id.hashCode()
-    override fun toString() = "${javaClass.simpleName}(id=$id)"
+    override fun toString() = toSimpleString()
 }
 
 @Throws(IOException::class)
