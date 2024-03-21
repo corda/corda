@@ -27,6 +27,7 @@ import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getCustomSerializationMagicFromSchemeId
 import net.corda.core.utilities.Try.Failure
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -241,14 +242,17 @@ open class TransactionBuilder(
      * @return true if a new dependency was successfully added.
      */
     private fun addMissingDependency(serviceHub: VerifyingServiceHub, wireTx: WireTransaction, tryCount: Int): Boolean {
+        log.debug { "Checking if there are any missing attachment dependencies for transaction ${wireTx.id}..." }
         val verificationResult = wireTx.tryVerify(serviceHub)
         // Check both legacy and non-legacy components are working, and try to add any missing dependencies if either are not.
         (verificationResult.inProcessResult as? Failure)?.let { (inProcessException) ->
             return addMissingDependency(inProcessException, wireTx, false, serviceHub, tryCount)
         }
+        log.debug("Non-legacy portion of transaction does not have any missing attachments, checking legacy portion...")
         (verificationResult.externalResult as? Failure)?.let { (externalException) ->
             return addMissingDependency(externalException, wireTx, true, serviceHub, tryCount)
         }
+        log.debug("Legacy portion of transaction also does not have any missing attachments")
         // The transaction verified successfully without needing any extra dependency.
         return false
     }
@@ -256,7 +260,7 @@ open class TransactionBuilder(
     private fun addMissingDependency(e: Throwable, wireTx: WireTransaction, isLegacy: Boolean, serviceHub: VerifyingServiceHub, tryCount: Int): Boolean {
         val missingClass = extractMissingClass(e)
         if (log.isDebugEnabled) {
-            log.debug("Checking if transaction has missing attachment (missingClass=$missingClass) (legacy=$isLegacy) $wireTx", e)
+            log.debug("${if (isLegacy) "Legacy" else "Non-legacy"} portion of transaction has missing dependency (missingClass=$missingClass) $wireTx", e)
         }
         return when {
             missingClass != null -> {
@@ -353,11 +357,9 @@ open class TransactionBuilder(
         }
 
         if (attachment == null) {
-            log.error("""The transaction currently built is missing an attachment for class: $missingClass.
-                        Attempted to find a suitable attachment but could not find any in the storage.
-                        Please contact the developer of the CorDapp for further instructions.
-                    """.trimIndent())
-            throw originalException
+            throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
+                    "$missingClass. Could not find a suitable attachment from storage. Please contact the developer of the CorDapp for " +
+                    "further instructions.", originalException)
         }
 
         log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
