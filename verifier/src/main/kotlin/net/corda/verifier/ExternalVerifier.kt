@@ -47,9 +47,8 @@ import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.Verifi
 import net.corda.serialization.internal.verifier.loadCustomSerializationScheme
 import net.corda.serialization.internal.verifier.readCordaSerializable
 import net.corda.serialization.internal.verifier.writeCordaSerializable
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.net.URLClassLoader
+import java.nio.channels.SocketChannel
 import java.nio.file.Path
 import java.security.PublicKey
 import java.util.Optional
@@ -57,11 +56,7 @@ import kotlin.io.path.div
 import kotlin.io.path.listDirectoryEntries
 
 @Suppress("MagicNumber")
-class ExternalVerifier(
-        private val baseDirectory: Path,
-        private val fromNode: DataInputStream,
-        private val toNode: DataOutputStream
-) {
+class ExternalVerifier(private val baseDirectory: Path, private val channel: SocketChannel) {
     companion object {
         private val log = contextLogger()
     }
@@ -88,7 +83,7 @@ class ExternalVerifier(
     fun run() {
         initialise()
         while (true) {
-            val request = fromNode.readCordaSerializable<VerificationRequest>()
+            val request = channel.readCordaSerializable(VerificationRequest::class)
             log.debug { "Received $request" }
             verifyTransaction(request)
         }
@@ -102,7 +97,7 @@ class ExternalVerifier(
         ))
 
         log.info("Waiting for initialisation message from node...")
-        val initialisation = fromNode.readCordaSerializable<Initialisation>()
+        val initialisation = channel.readCordaSerializable(Initialisation::class)
         log.info("Received $initialisation")
 
         appClassLoader = createAppClassLoader()
@@ -151,7 +146,7 @@ class ExternalVerifier(
             log.info("${request.ctx.toSimpleString()} failed to verify", t)
             Try.Failure(t)
         }
-        toNode.writeCordaSerializable(VerificationResult(result))
+        channel.writeCordaSerializable(VerificationResult(result))
     }
 
     fun getParties(keys: Collection<PublicKey>): List<Party?> {
@@ -195,8 +190,8 @@ class ExternalVerifier(
 
     private inline fun <reified T : Any> request(request: Any): T {
         log.debug { "Sending request to node: $request" }
-        toNode.writeCordaSerializable(request)
-        val response = fromNode.readCordaSerializable<T>()
+        channel.writeCordaSerializable(request)
+        val response = channel.readCordaSerializable(T::class)
         log.debug { "Received response from node: $response" }
         return response
     }

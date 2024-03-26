@@ -2,9 +2,9 @@ package net.corda.verifier
 
 import net.corda.core.utilities.loggerFor
 import org.slf4j.bridge.SLF4JBridgeHandler
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.net.Socket
+import java.net.StandardProtocolFamily
+import java.net.UnixDomainSocketAddress
+import java.nio.channels.SocketChannel
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.system.exitProcess
@@ -12,7 +12,7 @@ import kotlin.system.exitProcess
 object Main {
     @JvmStatic
     fun main(args: Array<String>) {
-        val port = args[0].toInt()
+        val socketFile = args[0]
         val loggingLevel = args[1]
         val baseDirectory = Path.of("").toAbsolutePath()
 
@@ -23,11 +23,10 @@ object Main {
         log.info("Node base directory: $baseDirectory")
 
         try {
-            val socket = Socket("localhost", port)
-            log.info("Connected to node on port $port")
-            val fromNode = DataInputStream(socket.getInputStream())
-            val toNode = DataOutputStream(socket.getOutputStream())
-            ExternalVerifier(baseDirectory, fromNode, toNode).run()
+            val channel = SocketChannel.open(StandardProtocolFamily.UNIX)
+            channel.connect(UnixDomainSocketAddress.of(socketFile))
+            log.info("Connected to node on UNIX domain file $socketFile")
+            ExternalVerifier(baseDirectory, channel).run()
         } catch (t: Throwable) {
             log.error("Unexpected error which has terminated the verifier", t)
             exitProcess(1)
