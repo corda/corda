@@ -8,15 +8,19 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.SerializedTransactionState
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.utilities.Try
-import java.io.DataInputStream
-import java.io.DataOutputStream
+import net.corda.core.utilities.sequence
 import java.io.EOFException
+import java.nio.ByteBuffer
+import java.nio.channels.SocketChannel
 import java.security.PublicKey
+import kotlin.math.min
+import kotlin.reflect.KClass
 
 typealias SerializedNetworkParameters = SerializedBytes<NetworkParameters>
 
@@ -71,18 +75,37 @@ sealed class ExternalVerifierOutbound {
     data class VerificationResult(val result: Try<Unit>) : ExternalVerifierOutbound()
 }
 
-fun DataOutputStream.writeCordaSerializable(payload: Any) {
+fun SocketChannel.writeCordaSerializable(payload: Any) {
     val serialised = payload.serialize()
-    writeInt(serialised.size)
-    serialised.writeTo(this)
-    flush()
+    val buffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE)
+    buffer.putInt(serialised.size)
+    var writtenSoFar = 0
+    while (writtenSoFar < serialised.size) {
+        val length = min(buffer.remaining(), serialised.size - writtenSoFar)
+        serialised.subSequence(writtenSoFar, length).putTo(buffer)
+        buffer.flip()
+        write(buffer)
+        writtenSoFar += length
+        buffer.clear()
+    }
 }
 
-inline fun <reified T : Any> DataInputStream.readCordaSerializable(): T {
-    val length = readInt()
-    val bytes = readNBytes(length)
-    if (bytes.size != length) {
-        throw EOFException("Incomplete read of ${T::class.java.name}")
+fun <T : Any> SocketChannel.readCordaSerializable(clazz: KClass<T>): T {
+    val length = ByteBuffer.wrap(read(clazz, Integer.BYTES)).getInt()
+    val bytes = read(clazz, length)
+    return SerializationFactory.defaultFactory.deserialize(bytes.sequence(), clazz.java, SerializationFactory.defaultFactory.defaultContext)
+}
+
+private fun SocketChannel.read(clazz: KClass<*>, length: Int): ByteArray {
+    val bytes = ByteArray(length)
+    var readSoFar = 0
+    while (readSoFar < bytes.size) {
+        // Wrap a ByteBuffer around the byte array to read directly into it
+        val n = read(ByteBuffer.wrap(bytes, readSoFar, bytes.size - readSoFar))
+        if (n == -1) {
+            throw EOFException("Incomplete read of ${clazz.java.name}")
+        }
+        readSoFar += n
     }
-    return bytes.deserialize<T>()
+    return bytes
 }

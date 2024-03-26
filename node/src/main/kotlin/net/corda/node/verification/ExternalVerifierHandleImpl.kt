@@ -1,6 +1,7 @@
 package net.corda.node.verification
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.level
@@ -35,19 +36,27 @@ import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.Verifi
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetTrustedClassAttachments
 import net.corda.serialization.internal.verifier.readCordaSerializable
 import net.corda.serialization.internal.verifier.writeCordaSerializable
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.io.IOException
+import java.lang.Character.MAX_RADIX
 import java.lang.ProcessBuilder.Redirect
 import java.lang.management.ManagementFactory
-import java.net.ServerSocket
-import java.net.Socket
+import java.net.StandardProtocolFamily
+import java.net.UnixDomainSocketAddress
+import java.nio.channels.ServerSocketChannel
+import java.nio.channels.SocketChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.nio.file.attribute.PosixFileAttributeView
+import java.nio.file.attribute.PosixFilePermissions.fromString
 import kotlin.io.path.Path
+import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
+import kotlin.io.path.fileAttributesViewOrNull
+import kotlin.io.path.isExecutable
+import kotlin.io.path.isWritable
 
 /**
  * Handle to the node's external verifier. The verifier process is started lazily on the first verification request.
@@ -67,11 +76,13 @@ class ExternalVerifierHandleImpl(
             Companion::class.java.getResourceAsStream("external-verifier.jar")!!.use {
                 it.copyTo(verifierJar, REPLACE_EXISTING)
             }
+            log.debug { "Extracted external verifier jar to ${verifierJar.absolutePathString()}" }
             verifierJar.toFile().deleteOnExit()
         }
     }
 
-    private lateinit var server: ServerSocket
+    private lateinit var socketFile: Path
+    private lateinit var serverChannel: ServerSocketChannel
     @Volatile
     private var connection: Connection? = null
 
@@ -104,8 +115,16 @@ class ExternalVerifierHandleImpl(
     }
 
     private fun startServer() {
-        if (::server.isInitialized) return
-        server = ServerSocket(0)
+        if (::socketFile.isInitialized) return
+        // Try to create the UNIX domain file in /tmp to keep the full path under the 100 char limit. If we don't have access to it then
+        // fallback to the temp dir specified by the JVM and hope it's short enough.
+        val tempDir = Path("/tmp").takeIf { it.isWritable() && it.isExecutable() } ?: Path(System.getProperty("java.io.tmpdir"))
+        socketFile = tempDir / "corda-external-verifier-${random63BitValue().toString(MAX_RADIX)}.socket"
+        serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
+        log.debug { "Binding to UNIX domain file $socketFile" }
+        serverChannel.bind(UnixDomainSocketAddress.of(socketFile), 1)
+        // Lock down access to the file
+        socketFile.fileAttributesViewOrNull<PosixFileAttributeView>()?.setPermissions(fromString("rwx------"))
         // Just in case...
         Runtime.getRuntime().addShutdownHook(Thread(::close))
     }
@@ -126,11 +145,11 @@ class ExternalVerifierHandleImpl(
 
     private fun tryVerification(request: VerificationRequest): Try<Unit> {
         val connection = getConnection()
-        connection.toVerifier.writeCordaSerializable(request)
+        connection.channel.writeCordaSerializable(request)
         // Send the verification request and then wait for any requests from verifier for more information. The last message will either
         // be a verification success or failure message.
         while (true) {
-            val message = connection.fromVerifier.readCordaSerializable<ExternalVerifierOutbound>()
+            val message = connection.channel.readCordaSerializable(ExternalVerifierOutbound::class)
             log.debug { "Received from external verifier: $message" }
             when (message) {
                 // Process the information the verifier needs and then loop back and wait for more messages
@@ -153,7 +172,7 @@ class ExternalVerifierHandleImpl(
             is GetTrustedClassAttachments -> TrustedClassAttachmentsResult(verificationSupport.getTrustedClassAttachments(request.className).map { it.id })
         }
         log.debug { "Sending response to external verifier: $result" }
-        connection.toVerifier.writeCordaSerializable(result)
+        connection.channel.writeCordaSerializable(result)
     }
 
     private fun Attachment.withTrust(): AttachmentWithTrust {
@@ -168,21 +187,19 @@ class ExternalVerifierHandleImpl(
     }
 
     override fun close() {
-        connection?.let {
-            connection = null
-            try {
-                it.close()
-            } finally {
-                server.close()
-            }
+        connection?.close()
+        connection = null
+        if (::serverChannel.isInitialized) {
+            serverChannel.close()
+        }
+        if (::socketFile.isInitialized) {
+            socketFile.deleteIfExists()
         }
     }
 
     private inner class Connection : AutoCloseable {
         private val verifierProcess: Process
-        private val socket: Socket
-        val toVerifier: DataOutputStream
-        val fromVerifier: DataInputStream
+        val channel: SocketChannel
 
         init {
             val inheritedJvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments.filter { "--add-opens" in it }
@@ -192,7 +209,7 @@ class ExternalVerifierHandleImpl(
             command += listOf(
                     "-jar",
                     "$verifierJar",
-                    "${server.localPort}",
+                    socketFile.absolutePathString(),
                     log.level.name.lowercase()
             )
             log.debug { "External verifier command: $command" }
@@ -213,9 +230,7 @@ class ExternalVerifierHandleImpl(
                 connection = null
             }
 
-            socket = server.accept()
-            toVerifier = DataOutputStream(socket.outputStream)
-            fromVerifier = DataInputStream(socket.inputStream)
+            channel = serverChannel.accept()
 
             val cordapps = verificationSupport.cordappProvider.cordapps
             val initialisation = Initialisation(
@@ -224,12 +239,12 @@ class ExternalVerifierHandleImpl(
                     System.getProperty("experimental.corda.customSerializationScheme"), // See Node#initialiseSerialization
                     serializedCurrentNetworkParameters = verificationSupport.networkParameters.serialize()
             )
-            toVerifier.writeCordaSerializable(initialisation)
+            channel.writeCordaSerializable(initialisation)
         }
 
         override fun close() {
             try {
-                socket.close()
+                channel.close()
             } finally {
                 verifierProcess.destroyForcibly()
             }
