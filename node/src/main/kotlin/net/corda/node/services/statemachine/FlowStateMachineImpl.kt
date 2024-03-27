@@ -318,6 +318,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun openThreadLocalWormhole() {
+        // This sets the Cordapp classloader on the contextClassLoader of the current thread.
+        // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
+        Thread.currentThread().contextClassLoader = serviceHub.cordappProvider.appClassLoader
         val threadLocal = transientValues.database.hikariPoolThreadLocal
         if (threadLocal != null) {
             val valueFromThread = swappedOutThreadLocalValue(threadLocal)

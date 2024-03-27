@@ -25,7 +25,9 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializationMagic
 import net.corda.core.serialization.SerializationSchemeContext
 import net.corda.core.serialization.internal.CustomSerializationSchemeUtils.Companion.getCustomSerializationMagicFromSchemeId
+import net.corda.core.utilities.Try.Failure
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -89,6 +91,7 @@ open class TransactionBuilder(
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private var excludedAttachments: Set<AttachmentId> = emptySet()
+    private var extraLegacyAttachments: MutableSet<AttachmentId>? = null
 
     /**
      * Creates a copy of the builder.
@@ -196,20 +199,26 @@ open class TransactionBuilder(
 
         val wireTx = SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             // Sort the attachments to ensure transaction builds are stable.
-            val attachmentsBuilder = allContractAttachments.mapTo(TreeSet()) { it.currentAttachment.id }
-            attachmentsBuilder.addAll(attachments)
-            attachmentsBuilder.removeAll(excludedAttachments)
+            val nonLegacyAttachments = allContractAttachments.mapTo(TreeSet()) { it.currentAttachment.id }.apply {
+                addAll(attachments)
+                removeAll(excludedAttachments)
+            }.toList()
+            val legacyAttachments = allContractAttachments.mapNotNullTo(TreeSet()) { it.legacyAttachment?.id }.apply {
+                if (extraLegacyAttachments != null) {
+                    addAll(extraLegacyAttachments!!)
+                }
+            }.toList()
             WireTransaction(
                     createComponentGroups(
                             inputStates(),
                             resolvedOutputs,
                             commands(),
-                            attachmentsBuilder.toList(),
+                            nonLegacyAttachments,
                             notary,
                             window,
                             referenceStates,
                             serviceHub.networkParametersService.currentHash,
-                            allContractAttachments.mapNotNullTo(TreeSet()) { it.legacyAttachment?.id }.toList()
+                            legacyAttachments
                     ),
                     privacySalt,
                     serviceHub.digestService
@@ -229,57 +238,72 @@ open class TransactionBuilder(
         }
     }
 
-    // Returns the first exception in the hierarchy that matches one of the [types].
-    private tailrec fun Throwable.rootClassNotFoundCause(vararg types: KClass<*>): Throwable = when {
-        this::class in types -> this
-        this.cause == null -> this
-        else -> this.cause!!.rootClassNotFoundCause(*types)
-    }
-
     /**
      * @return true if a new dependency was successfully added.
      */
-    // TODO This entire code path needs to be updated to work with legacy attachments and automically adding their dependencies. ENT-11445
     private fun addMissingDependency(serviceHub: VerifyingServiceHub, wireTx: WireTransaction, tryCount: Int): Boolean {
-        return try {
-            wireTx.toLedgerTransactionInternal(serviceHub).verify()
-            // The transaction verified successfully without adding any extra dependency.
-            false
-        } catch (e: Throwable) {
-            val rootError = e.rootClassNotFoundCause(ClassNotFoundException::class, NoClassDefFoundError::class)
+        log.debug { "Checking if there are any missing attachment dependencies for transaction ${wireTx.id}..." }
+        val verificationResult = wireTx.tryVerify(serviceHub)
+        // Check both legacy and non-legacy components are working, and try to add any missing dependencies if either are not.
+        (verificationResult.inProcessResult as? Failure)?.let { (inProcessException) ->
+            return addMissingDependency(inProcessException, wireTx, false, serviceHub, tryCount)
+        }
+        log.debug("Non-legacy portion of transaction does not have any missing attachments, checking legacy portion...")
+        (verificationResult.externalResult as? Failure)?.let { (externalException) ->
+            return addMissingDependency(externalException, wireTx, true, serviceHub, tryCount)
+        }
+        log.debug("Legacy portion of transaction also does not have any missing attachments")
+        // The transaction verified successfully without needing any extra dependency.
+        return false
+    }
 
-            when {
-                // Handle various exceptions that can be thrown during verification and drill down the wrappings.
-                // Note: this is a best effort to preserve backwards compatibility.
-                rootError is ClassNotFoundException -> {
-                    // Using nonLegacyAttachments here as the verification above was done in-process and thus only the nonLegacyAttachments
-                    // are used.
-                    // TODO This might change with ENT-11445 where we add support for legacy contract dependencies.
-                    ((tryCount == 0) && fixupAttachments(wireTx.nonLegacyAttachments, serviceHub, e))
-                        || addMissingAttachment((rootError.message ?: throw e).replace('.', '/'), serviceHub, e)
-                }
-                rootError is NoClassDefFoundError -> {
-                    ((tryCount == 0) && fixupAttachments(wireTx.nonLegacyAttachments, serviceHub, e))
-                        || addMissingAttachment(rootError.message ?: throw e, serviceHub, e)
-                }
-
-                // Ignore these exceptions as they will break unit tests.
-                // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
-                e is TransactionVerificationException -> false
-                e is TransactionResolutionException -> false
-                e is IllegalStateException -> false
-                e is IllegalArgumentException -> false
-
-                // Fail early if none of the expected scenarios were hit.
-                else -> {
-                    log.error("""The transaction currently built will not validate because of an unknown error most likely caused by a
-                        missing dependency in the transaction attachments.
-                        Please contact the developer of the CorDapp for further instructions.
-                    """.trimIndent(), e)
-                    throw e
-                }
+    private fun addMissingDependency(e: Throwable, wireTx: WireTransaction, isLegacy: Boolean, serviceHub: VerifyingServiceHub, tryCount: Int): Boolean {
+        val missingClass = extractMissingClass(e)
+        if (log.isDebugEnabled) {
+            log.debug("${if (isLegacy) "Legacy" else "Non-legacy"} portion of transaction has missing dependency (missingClass=$missingClass) $wireTx", e)
+        }
+        return when {
+            missingClass != null -> {
+                val attachments = if (isLegacy) wireTx.legacyAttachments else wireTx.nonLegacyAttachments
+                (tryCount == 0 && fixupAttachments(attachments, serviceHub, e)) || addMissingAttachment(missingClass, isLegacy, serviceHub, e)
+            }
+            // Ignore these exceptions as they will break unit tests.
+            // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+            e is TransactionVerificationException -> false
+            e is TransactionResolutionException -> false
+            e is IllegalStateException -> false
+            e is IllegalArgumentException -> false
+            // Fail early if none of the expected scenarios were hit.
+            else -> {
+                log.error("""The transaction currently built will not validate because of an unknown error most likely caused by a
+                            missing dependency in the transaction attachments.
+                            Please contact the developer of the CorDapp for further instructions.
+                        """.trimIndent(), e)
+                throw e
             }
         }
+    }
+
+    private fun extractMissingClass(throwable: Throwable): String? {
+        var current = throwable
+        while (true) {
+            if (current is ClassNotFoundException) {
+                return current.message?.replace('.', '/')
+            }
+            if (current is NoClassDefFoundError) {
+                return current.message
+            }
+            val message = current.message
+            if (message != null) {
+                message.extractClassAfter(NoClassDefFoundError::class)?.let { return it }
+                message.extractClassAfter(ClassNotFoundException::class)?.let { return it.replace('.', '/') }
+            }
+            current = current.cause ?: return null
+        }
+    }
+
+    private fun String.extractClassAfter(exceptionClass: KClass<out Throwable>): String? {
+        return substringAfterLast("${exceptionClass.java.name}: ", "").takeIf { it.isNotEmpty() }
     }
 
     private fun fixupAttachments(
@@ -314,7 +338,7 @@ open class TransactionBuilder(
         return true
     }
 
-    private fun addMissingAttachment(missingClass: String, serviceHub: VerifyingServiceHub, originalException: Throwable): Boolean {
+    private fun addMissingAttachment(missingClass: String, isLegacy: Boolean, serviceHub: VerifyingServiceHub, originalException: Throwable): Boolean {
         if (!isValidJavaClass(missingClass)) {
             log.warn("Could not autodetect a valid attachment for the transaction being built.")
             throw originalException
@@ -323,14 +347,19 @@ open class TransactionBuilder(
             throw originalException
         }
 
-        val attachment = serviceHub.getTrustedClassAttachment(missingClass)
+        val attachments = serviceHub.getTrustedClassAttachments(missingClass)
+        val attachment = if (isLegacy) {
+            // Any attachment which contains the class but isn't a non-legacy CorDapp is *probably* the legacy attachment we're looking for
+            val nonLegacyCordapps = serviceHub.cordappProvider.cordapps.mapToSet { it.jarHash }
+            attachments.firstOrNull { it.id !in nonLegacyCordapps }
+        } else {
+            attachments.firstOrNull()
+        }
 
         if (attachment == null) {
-            log.error("""The transaction currently built is missing an attachment for class: $missingClass.
-                        Attempted to find a suitable attachment but could not find any in the storage.
-                        Please contact the developer of the CorDapp for further instructions.
-                    """.trimIndent())
-            throw originalException
+            throw IllegalStateException("Transaction being built has a missing ${if (isLegacy) "legacy " else ""}attachment for class " +
+                    "$missingClass. Could not find a suitable attachment from storage. Please contact the developer of the CorDapp for " +
+                    "further instructions.", originalException)
         }
 
         log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
@@ -338,7 +367,12 @@ open class TransactionBuilder(
                         Please contact the developer of the CorDapp and install the latest version, as this approach might be insecure.
                     """.trimIndent())
 
-        addAttachment(attachment.id)
+        if (isLegacy) {
+            (extraLegacyAttachments ?: LinkedHashSet<AttachmentId>().also { extraLegacyAttachments = it }) += attachment.id
+        } else {
+            addAttachment(attachment.id)
+        }
+
         return true
     }
 

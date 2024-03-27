@@ -15,7 +15,7 @@ import java.security.SecureRandomSpi
 import kotlin.system.exitProcess
 
 class PlatformSecureRandomService(provider: Provider)
-    : Provider.Service(provider, "SecureRandom", ALGORITHM, PlatformSecureRandomSpi::class.java.name, null, null) {
+    : Provider.Service(provider, "SecureRandom", ALGORITHM, PlatformSecureRandomSpi::class.java.name, null, mapOf("ThreadSafe" to "true")) {
 
     companion object {
         const val ALGORITHM = "CordaPRNG"

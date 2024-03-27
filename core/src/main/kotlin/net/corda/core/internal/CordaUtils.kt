@@ -2,6 +2,7 @@
 package net.corda.core.internal
 
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.DataVendingFlow
@@ -93,3 +94,5 @@ fun TransactionStorage.getRequiredTransaction(txhash: SecureHash): SignedTransac
 }
 
 fun ServiceHub.getRequiredTransaction(txhash: SecureHash): SignedTransaction = validatedTransactions.getRequiredTransaction(txhash)
+
+fun NamedByHash.toSimpleString(): String = "${javaClass.simpleName}(id=$id)"

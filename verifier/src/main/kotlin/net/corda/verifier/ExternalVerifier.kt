@@ -7,6 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.loadClassOfType
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.toSimpleString
 import net.corda.core.internal.toSynchronised
 import net.corda.core.internal.toTypedArray
 import net.corda.core.internal.verification.AttachmentFixups
@@ -16,6 +17,8 @@ import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -33,20 +36,19 @@ import net.corda.serialization.internal.verifier.ExternalVerifierInbound.Attachm
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.Initialisation
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.NetworkParametersResult
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.PartiesResult
-import net.corda.serialization.internal.verifier.ExternalVerifierInbound.TrustedClassAttachmentResult
+import net.corda.serialization.internal.verifier.ExternalVerifierInbound.TrustedClassAttachmentsResult
 import net.corda.serialization.internal.verifier.ExternalVerifierInbound.VerificationRequest
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerificationResult
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetAttachment
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetAttachments
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetNetworkParameters
 import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetParties
-import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetTrustedClassAttachment
+import net.corda.serialization.internal.verifier.ExternalVerifierOutbound.VerifierRequest.GetTrustedClassAttachments
 import net.corda.serialization.internal.verifier.loadCustomSerializationScheme
 import net.corda.serialization.internal.verifier.readCordaSerializable
 import net.corda.serialization.internal.verifier.writeCordaSerializable
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.net.URLClassLoader
+import java.nio.channels.SocketChannel
 import java.nio.file.Path
 import java.security.PublicKey
 import java.util.Optional
@@ -54,11 +56,7 @@ import kotlin.io.path.div
 import kotlin.io.path.listDirectoryEntries
 
 @Suppress("MagicNumber")
-class ExternalVerifier(
-        private val baseDirectory: Path,
-        private val fromNode: DataInputStream,
-        private val toNode: DataOutputStream
-) {
+class ExternalVerifier(private val baseDirectory: Path, private val channel: SocketChannel) {
     companion object {
         private val log = contextLogger()
     }
@@ -68,7 +66,7 @@ class ExternalVerifier(
     private val parties: OptionalCache<PublicKey, Party>
     private val attachments: OptionalCache<SecureHash, AttachmentWithTrust>
     private val networkParametersMap: OptionalCache<SecureHash, NetworkParameters>
-    private val trustedClassAttachments: OptionalCache<String, SecureHash>
+    private val trustedClassAttachments: Cache<String, List<SecureHash>>
 
     private lateinit var appClassLoader: ClassLoader
     private lateinit var currentNetworkParameters: NetworkParameters
@@ -85,7 +83,7 @@ class ExternalVerifier(
     fun run() {
         initialise()
         while (true) {
-            val request = fromNode.readCordaSerializable<VerificationRequest>()
+            val request = channel.readCordaSerializable(VerificationRequest::class)
             log.debug { "Received $request" }
             verifyTransaction(request)
         }
@@ -99,7 +97,7 @@ class ExternalVerifier(
         ))
 
         log.info("Waiting for initialisation message from node...")
-        val initialisation = fromNode.readCordaSerializable<Initialisation>()
+        val initialisation = channel.readCordaSerializable(Initialisation::class)
         log.info("Received $initialisation")
 
         appClassLoader = createAppClassLoader()
@@ -134,16 +132,21 @@ class ExternalVerifier(
 
     @Suppress("INVISIBLE_MEMBER")
     private fun verifyTransaction(request: VerificationRequest) {
-        val verificationContext = ExternalVerificationContext(appClassLoader, attachmentsClassLoaderCache, this, request.stxInputsAndReferences)
+        val verificationContext = ExternalVerificationContext(appClassLoader, attachmentsClassLoaderCache, this, request.ctxInputsAndReferences)
         val result: Try<Unit> = try {
-            request.stx.verifyInProcess(verificationContext, request.checkSufficientSignatures)
-            log.info("${request.stx} verified")
+            val ctx = request.ctx
+            when (ctx) {
+                is WireTransaction -> ctx.verifyInProcess(verificationContext)
+                is ContractUpgradeWireTransaction -> ctx.verifyInProcess(verificationContext)
+                else -> throw IllegalArgumentException("${ctx.toSimpleString()} not supported")
+            }
+            log.info("${ctx.toSimpleString()} verified")
             Try.Success(Unit)
         } catch (t: Throwable) {
-            log.info("${request.stx} failed to verify", t)
+            log.info("${request.ctx.toSimpleString()} failed to verify", t)
             Try.Failure(t)
         }
-        toNode.writeCordaSerializable(VerificationResult(result))
+        channel.writeCordaSerializable(VerificationResult(result))
     }
 
     fun getParties(keys: Collection<PublicKey>): List<Party?> {
@@ -164,13 +167,13 @@ class ExternalVerifier(
         }
     }
 
-    fun getTrustedClassAttachment(className: String): Attachment? {
-        val attachmentId = trustedClassAttachments.retrieve(className) {
-            // GetTrustedClassAttachment returns back the attachment ID, not the whole attachment. This lets us avoid downloading the whole
-            // attachment again if we already have it.
-            request<TrustedClassAttachmentResult>(GetTrustedClassAttachment(className)).id
-        }
-        return attachmentId?.let(::getAttachment)?.attachment
+    fun getTrustedClassAttachments(className: String): List<Attachment> {
+        val attachmentIds = trustedClassAttachments.get(className) {
+            // GetTrustedClassAttachments returns back the attachment IDs, not the whole attachments. This lets us avoid downloading the
+            // entire attachments again if we already have them.
+            request<TrustedClassAttachmentsResult>(GetTrustedClassAttachments(className)).ids
+        }!!
+        return attachmentIds.map { getAttachment(it)!!.attachment }
     }
 
     fun getNetworkParameters(id: SecureHash?): NetworkParameters? {
@@ -187,8 +190,8 @@ class ExternalVerifier(
 
     private inline fun <reified T : Any> request(request: Any): T {
         log.debug { "Sending request to node: $request" }
-        toNode.writeCordaSerializable(request)
-        val response = fromNode.readCordaSerializable<T>()
+        channel.writeCordaSerializable(request)
+        val response = channel.readCordaSerializable(T::class)
         log.debug { "Received response from node: $response" }
         return response
     }

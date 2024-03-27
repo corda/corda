@@ -121,8 +121,11 @@ open class NetworkRegistrationHelper(
         requestIdStore.deleteIfExists()
     }
 
-    private fun generateKeyPairAndCertificate(keyAlias: String, legalName: CordaX500Name, certificateRole: CertRole, certStore: CertificateStore): Pair<PublicKey, List<X509Certificate>> {
-        val entityPublicKey = loadOrGenerateKeyPair(keyAlias)
+    private fun generateKeyPairAndCertificate(keyAlias: String,
+                                              legalName: CordaX500Name,
+                                              certificateRole: CertRole,
+                                              certStore: CertificateStore): Pair<PublicKey, List<X509Certificate>> {
+        val entityPublicKey = loadOrGenerateKeyPair(keyAlias, certificateRole)
 
         val requestId = submitOrResumeCertificateSigningRequest(entityPublicKey, legalName, certificateRole, cryptoService.getSigner(keyAlias))
 
@@ -209,11 +212,16 @@ open class NetworkRegistrationHelper(
         logProgress("Node identity private key and certificate chain stored in $nodeIdentityAlias.")
     }
 
-    private fun loadOrGenerateKeyPair(keyAlias: String): PublicKey {
+    private fun loadOrGenerateKeyPair(keyAlias: String, certificateRole: CertRole): PublicKey {
         return if (cryptoService.containsKey(keyAlias)) {
             cryptoService.getPublicKey(keyAlias)!!
         } else {
-            cryptoService.generateKeyPair(keyAlias, cryptoService.defaultTLSSignatureScheme())
+            val signatureScheme = if (certificateRole == CertRole.SERVICE_IDENTITY) {
+                cryptoService.defaultIdentitySignatureScheme()
+            } else {
+                cryptoService.defaultTLSSignatureScheme()
+            }
+            cryptoService.generateKeyPair(keyAlias, signatureScheme)
         }
     }
 

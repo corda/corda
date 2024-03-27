@@ -47,6 +47,7 @@ import kotlin.io.path.copyTo
 import kotlin.io.path.div
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
+import kotlin.io.path.useLines
 
 class ExternalVerificationSignedCordappsTest {
     private companion object {
@@ -84,6 +85,16 @@ class ExternalVerificationSignedCordappsTest {
         @JvmStatic
         fun close() {
             factory.close()
+            // Make sure all UNIX domain files are deleted
+            (notaries + currentNode).forEach { node ->
+                node.logFile("node")!!.useLines { lines ->
+                    for (line in lines) {
+                        if ("ExternalVerifierHandleImpl" in line && "Binding to UNIX domain file " in line) {
+                            assertThat(Path(line.substringAfterLast("Binding to UNIX domain file "))).doesNotExist()
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -213,7 +224,7 @@ class ExternalVerificationUnsignedCordappsTest {
             ).returnValue.getOrThrow()
         }
 
-        assertThat(newNode.externalVerifierLogs()).contains("$issuanceTx failed to verify")
+        assertThat(newNode.externalVerifierLogs()).contains("WireTransaction(id=${issuanceTx.id}) failed to verify")
     }
 }
 
@@ -262,26 +273,32 @@ private fun <T> Observable<T>.waitForFirst(predicate: (T) -> Boolean): Completab
 }
 
 private fun NodeProcess.assertTransactionsWereVerified(verificationType: VerificationType, vararg txIds: SecureHash) {
-    val nodeLogs = logs("node")!!
+    val nodeLogs = logContents("node")!!
     val externalVerifierLogs = externalVerifierLogs()
     for (txId in txIds) {
-        assertThat(nodeLogs).contains("Transaction $txId has verification type $verificationType")
+        assertThat(nodeLogs).contains("WireTransaction(id=$txId) will be verified ${verificationType.logStatement}")
         if (verificationType != VerificationType.IN_PROCESS) {
             assertThat(externalVerifierLogs).describedAs("External verifier was not started").isNotNull()
-            assertThat(externalVerifierLogs).contains("SignedTransaction(id=$txId) verified")
+            assertThat(externalVerifierLogs).contains("WireTransaction(id=$txId) verified")
         }
     }
 }
 
-private fun NodeProcess.externalVerifierLogs(): String? = logs("verifier")
+private fun NodeProcess.externalVerifierLogs(): String? = logContents("verifier")
 
-private fun NodeProcess.logs(name: String): String? {
-    return (nodeDir / "logs")
-            .listDirectoryEntries("$name-${InetAddress.getLocalHost().hostName}.log")
-            .singleOrNull()
-            ?.readText()
+private fun NodeProcess.logFile(name: String): Path? {
+    return (nodeDir / "logs").listDirectoryEntries("$name-${InetAddress.getLocalHost().hostName}.log").singleOrNull()
 }
 
+private fun NodeProcess.logContents(name: String): String? = logFile(name)?.readText()
+
 private enum class VerificationType {
-    IN_PROCESS, EXTERNAL, BOTH
+    IN_PROCESS, EXTERNAL, BOTH;
+
+    val logStatement: String
+        get() = when (this) {
+            IN_PROCESS -> "in-process"
+            EXTERNAL -> "by the external verifer"
+            BOTH -> "both in-process and by the external verifer"
+        }
 }

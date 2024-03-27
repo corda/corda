@@ -205,8 +205,8 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
                                 "corresponding newer version (4.12 or later). Please add this corresponding CorDapp or remove the legacy one."
                     }
                     check(newerCordapp.contractVersionId > legacyCordapp.contractVersionId) {
-                        "Newer contract CorDapp '${newerCordapp.jarFile}' does not have a higher version number " +
-                                "(${newerCordapp.contractVersionId}) compared to corresponding legacy contract CorDapp " +
+                        "Newer contract CorDapp '${newerCordapp.jarFile}' does not have a higher versionId " +
+                                "(${newerCordapp.contractVersionId}) than corresponding legacy contract CorDapp " +
                                 "'${legacyCordapp.jarFile}' (${legacyCordapp.contractVersionId})"
                     }
                 }
