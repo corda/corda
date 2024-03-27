@@ -383,6 +383,7 @@ allprojects {
                 url "${publicArtifactURL}/corda-dependencies-dev"
                 content {
                     includeGroup 'co.paralleluniverse'
+                    includeGroup 'org.bouncycastle'
                 }
             }
             maven {

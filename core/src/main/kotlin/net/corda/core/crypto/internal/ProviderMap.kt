@@ -2,7 +2,6 @@ package net.corda.core.crypto.internal
 
 import net.corda.core.crypto.CordaSecurityProvider
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import java.security.Provider
 import java.security.Security
 import java.util.Collections.unmodifiableMap
@@ -26,16 +25,11 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().also {
     Security.addProvider(it)
 }
 
-val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
-    require(name == "BCPQC") { "Invalid PQCProvider name" }
-}.also {
-    Security.addProvider(it)
-}
 // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
 // that could cause unexpected and suspicious behaviour.
 // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
 // The val is immutable to avoid any harmful state changes.
 internal val providerMap: Map<String, Provider> = unmodifiableMap(
-    listOf(sunEcProvider, cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider)
+    listOf(sunEcProvider, cordaBouncyCastleProvider, cordaSecurityProvider)
         .associateByTo(LinkedHashMap(), Provider::getName)
 )
