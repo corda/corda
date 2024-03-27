@@ -469,6 +469,7 @@ class TransactionVerifier(private val transactionClassLoader: ClassLoader) : Fun
     }
 
     override fun apply(transactionFactory: Supplier<LedgerTransaction>) {
+        @Suppress("VARIABLE_WITH_REDUNDANT_INITIALIZER")   // Because the external verifier uses Kotlin 1.2
         var firstLtx: LedgerTransaction? = null
 
         transactionFactory.get().let { ltx ->

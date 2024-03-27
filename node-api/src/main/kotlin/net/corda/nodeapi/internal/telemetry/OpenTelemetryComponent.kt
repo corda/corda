@@ -98,15 +98,15 @@ class OpenTelemetryComponent(serviceName: String, val spanStartEndEventsEnabled:
     }
 
     private fun extractContext(carrier: ContextCarrier): Context {
-        val getter = object : TextMapGetter<ContextCarrier?> {
+        val getter = object : TextMapGetter<ContextCarrier> {
             override fun get(carrier: ContextCarrier?, key: String): String? {
                 return if (carrier?.context?.containsKey(key) == true) {
                     val value = carrier.context[key]
                     value
                 } else null
             }
-            override fun keys(carrier: ContextCarrier?): MutableIterable<String> {
-                return carrier?.context?.keys ?: mutableListOf()
+            override fun keys(carrier: ContextCarrier): MutableIterable<String> {
+                return carrier.context.keys
             }
         }
         return carrier.let {

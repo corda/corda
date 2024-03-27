@@ -25,7 +25,7 @@ private class PrettyPrint(arr : Arrangement) {
     private fun println(message: Any?) {
         if (atStart)
             repeat(indentLevel) { sb.append(' ') }
-        sb.appendln(message)
+        sb.appendLine(message)
         atStart = true
     }
 

@@ -31,10 +31,6 @@ class CarpenterClassLoader(private val parentClassLoader: ClassLoader = Thread.c
     @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String?, resolve: Boolean): Class<*>? {
         return synchronized(getClassLoadingLock(name)) {
-            /**
-             * Search parent classloaders using lock-less [Class.forName],
-             * bypassing [parent] to avoid its [SecurityManager] overhead.
-             */
             (findLoadedClass(name) ?: Class.forName(name, false, parentClassLoader)).also { clazz ->
                 if (resolve) {
                     resolveClass(clazz)
@@ -294,7 +290,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
                 when (type.field) {
                     java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                    java.lang.Character.TYPE -> visitInsn(IRETURN)
+                    Character.TYPE -> visitInsn(IRETURN)
                     java.lang.Long.TYPE -> visitInsn(LRETURN)
                     java.lang.Double.TYPE -> visitInsn(DRETURN)
                     java.lang.Float.TYPE -> visitInsn(FRETURN)
@@ -423,7 +419,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
     private fun MethodVisitor.load(slot: Int, type: Field): Int {
         when (type.field) {
             java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-            java.lang.Character.TYPE -> visitVarInsn(ILOAD, slot)
+            Character.TYPE -> visitVarInsn(ILOAD, slot)
             java.lang.Long.TYPE -> visitVarInsn(LLOAD, slot)
             java.lang.Double.TYPE -> visitVarInsn(DLOAD, slot)
             java.lang.Float.TYPE -> visitVarInsn(FLOAD, slot)

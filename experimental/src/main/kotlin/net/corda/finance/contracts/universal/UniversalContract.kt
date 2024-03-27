@@ -1,6 +1,12 @@
 package net.corda.finance.contracts.universal
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.requireSingleCommand
+import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
@@ -182,7 +188,7 @@ class UniversalContract : Contract {
             "transaction has a single command".using(tx.commands.size == 1)
         }
 
-        val cmd = tx.commands.requireSingleCommand<UniversalContract.Commands>()
+        val cmd = tx.commands.requireSingleCommand<Commands>()
 
         val value = cmd.value
 
@@ -275,13 +281,14 @@ class UniversalContract : Contract {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun <T> replaceFixing(tx: LedgerTransaction, perceivable: Perceivable<T>,
                           fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Perceivable<T> =
             when (perceivable) {
                 is Const -> perceivable
                 is UnaryPlus -> UnaryPlus(replaceFixing(tx, perceivable.arg, fixings, unusedFixings))
                 is PerceivableOperation -> PerceivableOperation(replaceFixing(tx, perceivable.left, fixings, unusedFixings),
-                        perceivable.op, replaceFixing(tx, perceivable.right, fixings, unusedFixings)) as Perceivable<T>
+                        perceivable.op, replaceFixing(tx, perceivable.right, fixings, unusedFixings))
                 is Interest -> Interest(replaceFixing(tx, perceivable.amount, fixings, unusedFixings),
                         perceivable.dayCountConvention, replaceFixing(tx, perceivable.interest, fixings, unusedFixings),
                         perceivable.start, perceivable.end) as Perceivable<T>

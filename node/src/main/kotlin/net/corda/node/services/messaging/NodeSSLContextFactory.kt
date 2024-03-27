@@ -7,15 +7,14 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.TRUST_MANAGER_FA
 import net.corda.nodeapi.internal.protonwrapper.netty.createAndInitSslContext
 import org.apache.activemq.artemis.core.remoting.impl.ssl.DefaultOpenSSLContextFactory
 import org.apache.activemq.artemis.core.remoting.impl.ssl.DefaultSSLContextFactory
+import org.apache.activemq.artemis.core.remoting.impl.ssl.SSLSupport
 import org.apache.activemq.artemis.spi.core.remoting.ssl.SSLContextConfig
 import org.apache.activemq.artemis.utils.ClassloadingUtil
 import java.io.File
 import java.io.InputStream
 import java.net.MalformedURLException
 import java.net.URL
-import java.security.AccessController
 import java.security.KeyStore
-import java.security.PrivilegedAction
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
@@ -79,7 +78,7 @@ private fun loadKeystore(
     val keyStore = keystoreProvider?.let { KeyStore.getInstance(keystoreType, it) } ?: KeyStore.getInstance(keystoreType)
     var inputStream : InputStream? = null
     try {
-        if (keystorePath != null && keystorePath.isNotEmpty()) {
+        if (!keystorePath.isNullOrEmpty()) {
             val keystoreURL = validateStoreURL(keystorePath)
             inputStream = keystoreURL.openStream()
         }
@@ -103,22 +102,10 @@ private fun validateStoreURL(storePath: String): URL {
         if (file.exists() && file.isFile) {
             file.toURI().toURL()
         } else {
-            findResource(storePath)
+            ClassloadingUtil.findResource(storePath)
         }
     }
 }
-
-
-/**
- * This is a copy of [SSLSupport.findResource] so we can have a full copy of
- * [SSLSupport.validateStoreURL] and.
- */
-private fun findResource(resourceName: String): URL {
-    return AccessController.doPrivileged(PrivilegedAction {
-        ClassloadingUtil.findResource(resourceName)
-    })
-}
-
 
 /**
  * This is an inline function for [InputStream] so it can be closed and
@@ -132,4 +119,3 @@ private fun InputStream?.closeQuietly() {
         // quietly absorb problems
     }
 }
-
