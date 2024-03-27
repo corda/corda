@@ -8,14 +8,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
@@ -32,13 +31,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      *
      * Only the responding node keeps a checkpoint. The initiating flow has completed successfully as it has complete its
      * send to the responding node and the responding node successfully received it.
-     *
-     * Note : This test case is failing because of byteman instrumentation issue where byteman is not able to instrument method
-     * with default method implementation in interface ServiceHubInternal its probably
-     * because of changes in bytecode of kotlin 1.2 to 1.9
-     *
      */
-    @Ignore("JDK 17 Failure because of byteman instrumentation issue") 
     @Test(timeout = 300_000)
     fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
@@ -63,7 +56,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception when recording transaction
-                INTERFACE ${ServiceHubInternal::class.java.name}
+                CLASS ${DBTransactionStorage::class.java.name}
                 METHOD finalizeTransactionWithExtraSignatures
                 AT ENTRY
                 IF flagged("finality_flag") && flagged("resolve_tx_flag")
@@ -100,7 +93,6 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      * Only the responding node keeps a checkpoint. The initiating flow has completed successfully as it has complete its
      * send to the responding node and the responding node successfully received it.
      */
-    @Ignore("JDK 17 Failure because of byteman instrumentation issue") 
     @Test(timeout = 300_000)
     fun `error resolving a transaction's dependencies inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
@@ -125,7 +117,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception when recording transaction
-                INTERFACE ${ServiceHubInternal::class.java.name}
+                CLASS ${DBTransactionStorage::class.java.name}
                 METHOD finalizeTransactionWithExtraSignatures
                 AT ENTRY
                 IF flagged("finality_flag") && flagged("resolve_tx_flag")
