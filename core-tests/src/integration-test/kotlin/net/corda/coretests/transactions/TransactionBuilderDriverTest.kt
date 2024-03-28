@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.hash
 import net.corda.core.internal.mapToSet
 import net.corda.core.internal.toPath
@@ -23,30 +22,26 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.issuedBy
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.unsignJar
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
+import net.corda.testing.node.internal.TestCordappInternal
+import net.corda.testing.node.internal.UriTestCordapp
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy
-import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
-import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
-import kotlin.io.path.div
 import kotlin.io.path.inputStream
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.moveTo
@@ -57,30 +52,16 @@ class TransactionBuilderDriverTest {
         val legacyFinanceContractsJar = this::class.java.getResource("/corda-finance-contracts-4.11.jar")!!.toPath()
     }
 
-    @Rule
-    @JvmField
-    val tempFolder = TemporaryFolder()
-
-    @Before
-    fun initJarSigner() {
-        tempFolder.root.toPath().generateKey("testAlias", "testPassword", ALICE_NAME.toString())
-    }
-
-    private fun signJar(jar: Path) {
-        tempFolder.root.toPath().signJar(jar.absolutePathString(), "testAlias", "testPassword")
-    }
-
     @Test(timeout=300_000)
     fun `adds CorDapp dependencies`() {
         internalDriver(cordappsForAllNodes = listOf(FINANCE_WORKFLOWS_CORDAPP), startNodesInProcess = false) {
             val (cordapp, dependency) = splitFinanceContractCordapp(currentFinanceContractsJar)
 
-            cordapp.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
-            dependency.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            cordapp.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            dependency.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
 
             // Start the node with the CorDapp but without the dependency
-            cordapp.copyToDirectory((baseDirectory(ALICE_NAME) / "cordapps").createDirectories())
-            val node = startNode(NodeParameters(ALICE_NAME)).getOrThrow()
+            val node = startNode(NodeParameters(ALICE_NAME, additionalCordapps = listOf(cordapp))).getOrThrow()
 
             // First make sure the missing dependency causes an issue
             assertThatThrownBy {
@@ -88,10 +69,10 @@ class TransactionBuilderDriverTest {
             }.hasMessageContaining("Transaction being built has a missing attachment for class net/corda/finance/contracts/asset/")
 
             // Upload the missing dependency
-            dependency.inputStream().use(node.rpc::uploadAttachment)
+            dependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
 
             val stx = createTransaction(node)
-            assertThat(stx.tx.attachments).contains(cordapp.hash, dependency.hash)
+            assertThat(stx.tx.attachments).contains(cordapp.jarFile.hash, dependency.jarFile.hash)
         }
     }
 
@@ -103,17 +84,16 @@ class TransactionBuilderDriverTest {
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         ) {
             val (legacyContracts, legacyDependency) = splitFinanceContractCordapp(legacyFinanceContractsJar)
-            // Re-sign the current finance contracts CorDapp with the same key as the split legacy CorDapp
-            val currentContracts = currentFinanceContractsJar.copyTo(Path("${currentFinanceContractsJar.toString().substringBeforeLast(".")}-RESIGNED.jar"), overwrite = true)
-            currentContracts.unsignJar()
-            signJar(currentContracts)
+            val currentContracts = TestCordapp.of(currentFinanceContractsJar.toUri()).asSigned() as TestCordappInternal
 
-            currentContracts.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            currentContracts.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
 
             // Start the node with the legacy CorDapp but without the dependency
-            legacyContracts.copyToDirectory((baseDirectory(ALICE_NAME) / "legacy-contracts").createDirectories())
-            currentContracts.copyToDirectory((baseDirectory(ALICE_NAME) / "cordapps").createDirectories())
-            val node = startNode(NodeParameters(ALICE_NAME)).getOrThrow()
+            val node = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(currentContracts),
+                    legacyContracts = listOf(legacyContracts)
+            )).getOrThrow()
 
             // First make sure the missing dependency causes an issue
             assertThatThrownBy {
@@ -121,10 +101,10 @@ class TransactionBuilderDriverTest {
             }.hasMessageContaining("Transaction being built has a missing legacy attachment for class net/corda/finance/contracts/asset/")
 
             // Upload the missing dependency
-            legacyDependency.inputStream().use(node.rpc::uploadAttachment)
+            legacyDependency.jarFile.inputStream().use(node.rpc::uploadAttachment)
 
             val stx = createTransaction(node)
-            assertThat(stx.tx.legacyAttachments).contains(legacyContracts.hash, legacyDependency.hash)
+            assertThat(stx.tx.legacyAttachments).contains(legacyContracts.jarFile.hash, legacyDependency.jarFile.hash)
         }
     }
 
@@ -139,16 +119,16 @@ class TransactionBuilderDriverTest {
             val (currentCashContract, currentCpContract) = splitJar(currentFinanceContractsJar) { "CommercialPaper" in it.absolutePathString() }
             val (legacyCashContract, _) = splitJar(legacyFinanceContractsJar) { "CommercialPaper" in it.absolutePathString() }
 
-            currentCashContract.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
-            currentCpContract.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            currentCashContract.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
+            currentCpContract.jarFile.inputStream().use(defaultNotaryNode.getOrThrow().rpc::uploadAttachment)
 
             // The node has the legacy CommericalPaper contract missing
-            val cordappsDir = (baseDirectory(ALICE_NAME) / "cordapps").createDirectories()
-            currentCashContract.copyToDirectory(cordappsDir)
-            currentCpContract.copyToDirectory(cordappsDir)
-            legacyCashContract.copyToDirectory((baseDirectory(ALICE_NAME) / "legacy-contracts").createDirectories())
+            val node = startNode(NodeParameters(
+                    ALICE_NAME,
+                    additionalCordapps = listOf(currentCashContract, currentCpContract),
+                    legacyContracts = listOf(legacyCashContract)
+            )).getOrThrow()
 
-            val node = startNode(NodeParameters(ALICE_NAME)).getOrThrow()
             assertThatThrownBy { node.rpc.startFlow(::TwoContractTransactionFlow).returnValue.getOrThrow() }
                     .hasMessageContaining("Transaction being built has a missing legacy attachment")
                     .hasMessageContaining("CommercialPaper")
@@ -158,11 +138,11 @@ class TransactionBuilderDriverTest {
     /**
      * Split the given finance contracts jar into two such that the second jar becomes a dependency to the first.
      */
-    private fun DriverDSLImpl.splitFinanceContractCordapp(contractsJar: Path): Pair<Path, Path> {
+    private fun DriverDSLImpl.splitFinanceContractCordapp(contractsJar: Path): Pair<UriTestCordapp, UriTestCordapp> {
         return splitJar(contractsJar) { it.absolutePathString() == "/net/corda/finance/contracts/asset/CashUtilities.class" }
     }
 
-    private fun DriverDSLImpl.splitJar(path: Path, move: (Path) -> Boolean): Pair<Path, Path> {
+    private fun DriverDSLImpl.splitJar(path: Path, move: (Path) -> Boolean): Pair<UriTestCordapp, UriTestCordapp> {
         val jar1 = Files.createTempFile(driverDirectory, "jar1-", ".jar")
         val jar2 = Files.createTempFile(driverDirectory, "jar2-", ".jar")
 
@@ -181,10 +161,10 @@ class TransactionBuilderDriverTest {
         }
         jar1.unsignJar()
 
-        signJar(jar1)
-        signJar(jar2)
-
-        return Pair(jar1, jar2)
+        return Pair(
+                TestCordapp.of(jar1.toUri()).asSigned() as UriTestCordapp,
+                TestCordapp.of(jar2.toUri()).asSigned() as UriTestCordapp
+        )
     }
 
     private fun DriverDSLImpl.createTransaction(node: NodeHandle): SignedTransaction {

@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
 import net.corda.core.internal.attributes
+import net.corda.core.internal.mapToSet
 import net.corda.core.internal.pooledScan
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.node.TestCordapp
@@ -23,38 +24,42 @@ import kotlin.io.path.useDirectoryEntries
  * the [scanPackage] may reference a gradle CorDapp project on the local system. In this scenerio the project's "jar" task is executed to
  * build the CorDapp jar. This allows us to inherit the CorDapp's MANIFEST information without having to do any extra processing.
  */
-data class TestCordappImpl(val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal() {
-    override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
+data class ScanPackageTestCordapp(val scanPackage: String,
+                                  override val config: Map<String, Any> = emptyMap(),
+                                  val signed: Boolean = false) : TestCordappInternal() {
+    override fun withConfig(config: Map<String, Any>): ScanPackageTestCordapp = copy(config = config)
 
-    override fun withOnlyJarContents(): TestCordappImpl = copy(config = emptyMap())
+    override fun asSigned(): TestCordapp = copy(signed = true)
 
-    override val jarFile: Path
-        get() {
-            val jars = findJars(scanPackage)
-            when (jars.size) {
-                0 -> throw IllegalArgumentException("There are no CorDapps containing the package $scanPackage on the classpath. Make sure " +
-                        "the package name is correct and that the CorDapp is added as a gradle dependency.")
-                1 -> return jars.first()
-                else -> throw IllegalArgumentException("There is more than one CorDapp containing the package $scanPackage on the classpath " +
-                        "$jars. Specify a package name which is unique to the CorDapp.")
-            }
+    override fun withOnlyJarContents(): ScanPackageTestCordapp = copy(config = emptyMap(), signed = false)
+
+    override val jarFile: Path by lazy {
+        val jars = findJars()
+        val jar = when (jars.size) {
+            0 -> throw IllegalArgumentException("There are no CorDapps containing the package $scanPackage on the classpath. Make sure " +
+                    "the package name is correct and that the CorDapp is added as a gradle dependency.")
+            1 -> jars.first()
+            else -> throw IllegalArgumentException("There is more than one CorDapp containing the package $scanPackage on the classpath " +
+                    "$jars. Specify a package name which is unique to the CorDapp.")
         }
+        if (signed) TestCordappSigner.signJarCopy(jar) else jar
+    }
+
+    private fun findJars(): Set<Path> {
+        val rootPaths = findRootPaths(scanPackage)
+        return if (rootPaths.all { it.toString().endsWith(".jar") }) {
+            // We don't need to do anything more if all the root paths are jars
+            rootPaths
+        } else {
+            // Otherwise we need to build those paths which are local projects and extract the built jar from them
+            rootPaths.mapToSet { if (it.toString().endsWith(".jar")) it else buildCordappJar(it) }
+        }
+    }
 
     companion object {
         private val packageToRootPaths = ConcurrentHashMap<String, Set<Path>>()
         private val projectRootToBuiltJar = ConcurrentHashMap<Path, Path>()
         private val log = contextLogger()
-
-        fun findJars(scanPackage: String): Set<Path> {
-            val rootPaths = findRootPaths(scanPackage)
-            return if (rootPaths.all { it.toString().endsWith(".jar") }) {
-                // We don't need to do anything more if all the root paths are jars
-                rootPaths
-            } else {
-                // Otherwise we need to build those paths which are local projects and extract the built jar from them
-                rootPaths.mapTo(HashSet()) { if (it.toString().endsWith(".jar")) it else buildCordappJar(it) }
-            }
-        }
 
         private fun findRootPaths(scanPackage: String): Set<Path> {
             return packageToRootPaths.computeIfAbsent(scanPackage) {

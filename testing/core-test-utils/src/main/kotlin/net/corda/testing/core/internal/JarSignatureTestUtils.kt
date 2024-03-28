@@ -21,6 +21,7 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.div
+import kotlin.io.path.exists
 import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertEquals
 
@@ -75,7 +76,7 @@ object JarSignatureTestUtils {
     fun Path.unsignJar() {
         // Remove the signatures
         useZipFile { zipFs ->
-            zipFs.getPath("META-INF").listDirectoryEntries("*.{SF,DSA,RSA,EC}").forEach(Path::deleteExisting)
+            zipFs.getPath("META-INF").takeIf { it.exists() }?.listDirectoryEntries("*.{SF,DSA,RSA,EC}")?.forEach(Path::deleteExisting)
         }
         // Remove all the hash information of the jar contents
         modifyJarManifest { manifest ->
