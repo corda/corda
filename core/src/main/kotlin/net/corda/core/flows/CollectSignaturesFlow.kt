@@ -8,7 +8,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
-import net.corda.core.internal.verification.toVerifyingServiceHub
+import net.corda.core.internal.mapToSet
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -91,7 +91,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an oracle would have signed at this point.
         val myKeys: Iterable<PublicKey> = myOptionalKeys ?: listOf(ourIdentity.owningKey)
-        val signed = partiallySignedTx.sigs.map { it.by }
+        val signed = partiallySignedTx.sigs.mapToSet { it.by }
         val notSigned = partiallySignedTx.tx.requiredSigningKeys - signed
 
         // One of the signatures collected so far MUST be from the initiator of this flow.
@@ -100,8 +100,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         }
 
         // The signatures must be valid and the transaction must be valid.
-        partiallySignedTx.verifySignaturesExcept(notSigned)
-        partiallySignedTx.tx.tryVerify(serviceHub.toVerifyingServiceHub()).enforceSuccess()
+        partiallySignedTx.verify(serviceHub, checkSufficientSignatures = false)
 
         // Determine who still needs to sign.
         progressTracker.currentStep = COLLECTING
@@ -286,11 +285,7 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
         progressTracker.currentStep = VERIFYING
         // Check that the Responder actually needs to sign.
         checkMySignaturesRequired(stx, signingKeys)
-        // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
-        checkSignatures(stx)
-        // It's possible the node sending the transaction is 4.11 or older, in which case it's a legacy transaction which needs to be
-        // verified by the external verifier. WireTransaction.tryVerify deals with and other scenarios.
-        stx.tx.tryVerify(serviceHub.toVerifyingServiceHub()).enforceSuccess()
+        stx.verify(serviceHub, checkSufficientSignatures = false)
         // Perform some custom verification over the transaction.
         try {
             checkTransaction(stx)
@@ -309,14 +304,6 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
 
         // Return the additionally signed transaction.
         return stx + mySignatures
-    }
-
-    @Suspendable
-    private fun checkSignatures(stx: SignedTransaction) {
-        val signed = stx.sigs.map { it.by }
-        val allSigners = stx.tx.requiredSigningKeys
-        val notSigned = allSigners - signed
-        stx.verifySignaturesExcept(notSigned)
     }
 
     /**
