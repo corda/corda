@@ -12,6 +12,7 @@ import java.nio.file.Path
 import java.util.jar.Attributes
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
+import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
@@ -36,9 +37,10 @@ inline fun <T> Path.useZipFile(block: (FileSystem) -> T): T {
     return FileSystems.newFileSystem(this).use(block)
 }
 
-inline fun <T> Path.modifyJarManifest(block: (Manifest) -> T): T {
+inline fun <T> Path.modifyJarManifest(block: (Manifest) -> T): T? {
     return useZipFile { zipFs ->
         val manifestFile = zipFs.getPath("META-INF", "MANIFEST.MF")
+        if (!manifestFile.exists()) return null
         val manifest = manifestFile.inputStream().use(::Manifest)
         val result = block(manifest)
         manifestFile.outputStream().use(manifest::write)
