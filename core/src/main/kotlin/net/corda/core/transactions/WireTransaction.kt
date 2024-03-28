@@ -375,6 +375,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         sig.verify(id)
     }
 
+    /**
+     * Perform verification of this [WireTransaction] and return the result as a [VerificationResult]. Depending on what types of attachments
+     * this transaction has, verification may have been done in-process by the node, or via the external verifier, or both.
+     *
+     * It's important that [VerificationResult.enforceSuccess] be called to make sure the verification was successful or its value analysed.
+     */
     @CordaInternal
     @JvmSynthetic
     internal fun tryVerify(verificationSupport: NodeVerificationSupport): VerificationResult {

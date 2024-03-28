@@ -183,7 +183,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
     @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
     private fun checkAttachments(attachments: List<Attachment>) {
-        require(attachments.isNotEmpty()) { "attachments list is empty" }
+        require(attachments.isNotEmpty()) {
+            "Transaction attachments list is empty. This can happen if verifying a legacy transaction (4.11 or older) with " +
+                    "LedgerTransaction.verify(). Try using SignedTransaction.verify() instead."
+        }
 
         // Here is where we enforce the no-overlap and package ownership rules.
         //
