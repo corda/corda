@@ -1,7 +1,6 @@
 package net.corda.node.utilities
 
 import com.github.benmanes.caffeine.cache.LoadingCache
-import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
@@ -248,7 +247,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
         cache.invalidateAll()
     }
 
-    fun clear(id: SecureHash) = cache.invalidate(id)
+    fun clear(id: K) = cache.invalidate(id)
 
     // Helpers to know if transaction(s) are currently writing the given key.
     private fun weAreWriting(key: K): Boolean = pendingKeys[key]?.transactions?.contains(contextTransaction) ?: false

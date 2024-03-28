@@ -54,7 +54,7 @@ dependencies {
     testImplementation(project(':node-driver')) {
         // We already have a SLF4J implementation on our runtime classpath,
         // and we don't need another one.
-        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j2-impl'
     }
     
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

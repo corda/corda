@@ -51,13 +51,14 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     // Bouncy castle support needed for X509 certificate manipulation
-    implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
-    implementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcpkix-lts8on:${bouncycastle_version}"
 
     implementation "io.reactivex:rxjava:$rxjava_version"
     implementation "javax.persistence:javax.persistence-api:2.2"
     implementation "org.hibernate:hibernate-core:$hibernate_version"
     implementation "co.paralleluniverse:quasar-osgi-annotations:$quasar_version"
+    implementation "com.google.guava:guava:$guava_version"
 
     runtimeOnly 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
