@@ -8,6 +8,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
+import net.corda.core.internal.verification.toVerifyingServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -100,8 +101,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
 
         // The signatures must be valid and the transaction must be valid.
         partiallySignedTx.verifySignaturesExcept(notSigned)
-        // TODO Should this be calling SignedTransaction.verify directly? https://r3-cev.atlassian.net/browse/ENT-11458
-        partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
+        partiallySignedTx.tx.tryVerify(serviceHub.toVerifyingServiceHub()).enforceSuccess()
 
         // Determine who still needs to sign.
         progressTracker.currentStep = COLLECTING
@@ -288,8 +288,9 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
         checkMySignaturesRequired(stx, signingKeys)
         // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
         checkSignatures(stx)
-        // TODO Should this be calling SignedTransaction.verify directly? https://r3-cev.atlassian.net/browse/ENT-11458
-        stx.tx.toLedgerTransaction(serviceHub).verify()
+        // It's possible the node sending the transaction is 4.11 or older, in which case it's a legacy transaction which needs to be
+        // verified by the external verifier. WireTransaction.tryVerify deals with and other scenarios.
+        stx.tx.tryVerify(serviceHub.toVerifyingServiceHub()).enforceSuccess()
         // Perform some custom verification over the transaction.
         try {
             checkTransaction(stx)

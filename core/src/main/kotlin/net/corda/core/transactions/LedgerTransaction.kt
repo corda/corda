@@ -240,6 +240,10 @@ private constructor(
      * The reason for this is that classes (contract states) deserialized in this classloader would actually be a different type from what
      * the calling code would expect.
      *
+     * If receiving [SignedTransaction]s over the wire from other nodes, then it is recommended the verification be done via
+     * [SignedTransaction.verify] directly rather than via [SignedTransaction.toLedgerTransaction]. If transaction is from a legacy node
+     * (4.11 or older) then the later solution will not work.
+     *
      * @throws TransactionVerificationException if anything goes wrong.
      */
     @Throws(TransactionVerificationException::class)
