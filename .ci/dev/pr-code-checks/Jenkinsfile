@@ -34,10 +34,7 @@ pipeline {
 
         stage('Compilation warnings check') {
             steps {
-                /*
-                 * TODO JDK17: Re-enable warnings as errors
-                 */
-                sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=false compileAll"
+                sh "./gradlew --no-daemon -Pcompilation.warningsAsErrors=true compileAll"
             }
         }
 

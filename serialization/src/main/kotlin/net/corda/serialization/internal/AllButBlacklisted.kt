@@ -11,7 +11,6 @@ import java.net.DatagramSocket
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLConnection
-import java.security.AccessController
 import java.security.KeyStore
 import java.security.Permission
 import java.security.Provider
@@ -30,7 +29,7 @@ import kotlin.collections.LinkedHashSet
  * Inheritance works for blacklisted items, but one can specifically exclude classes from blacklisting as well.
  * Note: Custom serializer registration trumps white/black lists. So if a given type has a custom serializer and has its name
  * in the blacklist - it will still be serialized as specified by custom serializer.
- * For more details, see [net.corda.serialization.internal.CordaClassResolver.getRegistration]
+ * For more details, see [net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver.getRegistration]
  */
 object AllButBlacklisted : ClassWhitelist {
 
@@ -56,7 +55,6 @@ object AllButBlacklisted : ClassWhitelist {
 
             // java.security.
             KeyStore::class.java.name,
-            AccessController::class.java.name,
             Permission::class.java.name,
 
             // java.net.

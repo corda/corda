@@ -34,6 +34,7 @@ class AttachmentTest {
             override val id get() = throw UnsupportedOperationException()
             override fun open() = inputStream
             override val signerKeys get() = throw UnsupportedOperationException()
+            @Suppress("OVERRIDE_DEPRECATION")
             override val signers: List<Party> get() = throw UnsupportedOperationException()
             override val size: Int = 512
         }
