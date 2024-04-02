@@ -240,8 +240,6 @@ allprojects {
         )
     }
 
-    tasks.register("allDependencies", DependencyReportTask) {}
-
     dependencyCheck {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
