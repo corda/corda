@@ -9,7 +9,7 @@ dependencies {
     implementation project(":common-logging")
 
     implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
-    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version"
     implementation "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
