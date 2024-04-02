@@ -693,8 +693,8 @@ open class TransactionBuilder(
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
-        // TODO ENT-11445: Need to verify via SignedTransaction to ensure legacy components also work
-        toLedgerTransaction(services).verify()
+        // Make sure the external verifier is involved if the transaction has a legacy component.
+        toWireTransaction(services).tryVerify(services.toVerifyingServiceHub()).enforceSuccess()
     }
 
     private fun checkNotary(stateAndRef: StateAndRef<*>) {
