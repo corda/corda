@@ -248,7 +248,7 @@ abstract class AppendOnlyPersistentMapBase<K : Any, V, E, out EK>(
         cache.invalidateAll()
     }
 
-    fun clear(id: SecureHash) = cache.invalidate(id)
+    fun clear(id: K) = cache.invalidate(id)
 
     // Helpers to know if transaction(s) are currently writing the given key.
     private fun weAreWriting(key: K): Boolean = pendingKeys[key]?.transactions?.contains(contextTransaction) ?: false
