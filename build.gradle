@@ -383,6 +383,8 @@ allprojects {
                 url "${publicArtifactURL}/corda-dependencies-dev"
                 content {
                     includeGroup 'co.paralleluniverse'
+                    // Remove below when BC 2.73.6 is released
+                    includeGroup 'org.bouncycastle'
                 }
             }
             maven {
