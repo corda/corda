@@ -6,7 +6,6 @@ import net.corda.serialization.internal.amqp.custom.BigIntegerSerializer;
 import net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
@@ -14,6 +13,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings("unchecked")
@@ -160,7 +160,7 @@ public class JavaGenericsTest {
         SerializedBytes<?> bytes = ser.serialize(genericList, TestSerializationContext.testSerializationContext);
         DeserializationInput des = new DeserializationInput(factory);
         HolderOfGeneric<GenericClassWithList<ConcreteClass>> genericList2 = des.deserialize(bytes, HolderOfGeneric.class, TestSerializationContext.testSerializationContext);
-        Assert.assertThat(genericList, CoreMatchers.is(CoreMatchers.equalTo(genericList2)));
+        assertThat(genericList, CoreMatchers.is(CoreMatchers.equalTo(genericList2)));
 
     }
 
@@ -174,7 +174,7 @@ public class JavaGenericsTest {
         SerializedBytes<?> bytes = ser.serialize(genericMap, TestSerializationContext.testSerializationContext);
         DeserializationInput des = new DeserializationInput(factory);
         GenericClassWithMap<ConcreteClass, BigInteger> genericMap2 = des.deserialize(bytes, GenericClassWithMap.class, TestSerializationContext.testSerializationContext);
-        Assert.assertThat(genericMap2, CoreMatchers.is(CoreMatchers.equalTo(genericMap2)));
+        assertThat(genericMap2, CoreMatchers.is(CoreMatchers.equalTo(genericMap2)));
     }
 
     @Test

@@ -345,7 +345,7 @@ internal class RPCClientProxyHandler(
                     impersonatedActor,
                     rpcClientTelemetry.telemetryService.getCurrentTelemetryData()
             )
-            val replyFuture = SettableFuture.create<Any>()
+            val replyFuture = SettableFuture.create<Any?>()
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
                 "Generated several RPC requests with same ID $replyId"
             }
