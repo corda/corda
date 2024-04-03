@@ -453,7 +453,7 @@ allprojects {
                     substitute module('commons-logging:commons-logging') with module("org.slf4j:jcl-over-slf4j:$slf4j_version")
 
                     // Remove any transitive dependency on Logback (e.g. Liquibase 3.6 introduces this dependency)
-                    substitute module('ch.qos.logback:logback-classic') with module("org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version")
+                    substitute module('ch.qos.logback:logback-classic') with module("org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version")
 
                     // Netty-All is an uber-jar which contains every Netty module.
                     // Exclude it to force us to use the individual Netty modules instead.
