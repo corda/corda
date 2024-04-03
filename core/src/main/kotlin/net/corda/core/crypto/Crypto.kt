@@ -6,19 +6,16 @@ import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.internal.Curve25519.isOnCurve25519
 import net.corda.core.crypto.internal.Instances.withSignature
 import net.corda.core.crypto.internal.PublicKeyCache
-import net.corda.core.crypto.internal.bouncyCastlePQCProvider
 import net.corda.core.crypto.internal.cordaBouncyCastleProvider
 import net.corda.core.crypto.internal.cordaSecurityProvider
 import net.corda.core.crypto.internal.providerMap
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
-import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERNull
 import org.bouncycastle.asn1.DERUTF8String
 import org.bouncycastle.asn1.DLSequence
-import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.edec.EdECObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
@@ -48,9 +45,6 @@ import org.bouncycastle.math.ec.ECConstants
 import org.bouncycastle.math.ec.FixedPointCombMultiplier
 import org.bouncycastle.math.ec.WNafUtil
 import org.bouncycastle.math.ec.rfc8032.Ed25519
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
-import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.InvalidKeyException
 import java.security.Key
@@ -79,7 +73,6 @@ import javax.crypto.spec.SecretKeySpec
  * <li>ECDSA_SECP256K1_SHA256 (ECDSA using the secp256k1 Koblitz curve and SHA256 as hash algorithm).
  * <li>ECDSA_SECP256R1_SHA256 (ECDSA using the secp256r1 (NIST P-256) curve and SHA256 as hash algorithm).
  * <li>EDDSA_ED25519_SHA512 (EdDSA using the ed25519 twisted Edwards curve and SHA512 as hash algorithm).
- * <li>SPHINCS256_SHA512 (SPHINCS-256 hash-based signature scheme using SHA512 as hash algorithm).
  * </ul>
  */
 object Crypto {
@@ -155,26 +148,6 @@ object Crypto {
     @JvmField
     val SHA512_256 = DLSequence(arrayOf(NISTObjectIdentifiers.id_sha512_256))
 
-    /**
-     * SPHINCS-256 hash-based signature scheme using SHA512 for message hashing. It provides 128bit security against
-     * post-quantum attackers at the cost of larger key nd signature sizes and loss of compatibility.
-     */
-    // TODO: change val name to SPHINCS256_SHA512. This will break backwards compatibility.
-    @JvmField
-    val SPHINCS256_SHA256 = SignatureScheme(
-            5,
-            "SPHINCS-256_SHA512",
-            AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, null),
-            listOf(AlgorithmIdentifier(BCObjectIdentifiers.sphincs256, DLSequence(arrayOf(ASN1Integer(0), SHA512_256)))),
-            bouncyCastlePQCProvider.name,
-            "SPHINCS256",
-            "SHA512withSPHINCS256",
-            SPHINCS256KeyGenParameterSpec(SPHINCS256KeyGenParameterSpec.SHA512_256),
-            256,
-            "SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers " +
-                    "at the cost of larger key sizes and loss of compatibility."
-    )
-
     /** Corda [CompositeKey] signature type. */
     // TODO: change the val name to a more descriptive one as it's now confusing and looks like a Key type.
     @JvmField
@@ -204,7 +177,6 @@ object Crypto {
             ECDSA_SECP256K1_SHA256,
             ECDSA_SECP256R1_SHA256,
             EDDSA_ED25519_SHA512,
-            SPHINCS256_SHA256,
             COMPOSITE_KEY
     ).associateBy { it.schemeCodeName }
 
@@ -469,7 +441,7 @@ object Crypto {
             // Note that deterministic signature schemes, such as EdDSA, original SPHINCS-256 and RSA PKCS#1, do not require
             // extra randomness, but we have to ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking
             // SecureRandom implementation.
-            if (signatureScheme == EDDSA_ED25519_SHA512 || signatureScheme == SPHINCS256_SHA256 || signatureScheme == RSA_SHA256) {
+            if (signatureScheme == EDDSA_ED25519_SHA512 || signatureScheme == RSA_SHA256) {
                 signature.initSign(privateKey)
             } else {
                 // The rest of the algorithms will require a SecureRandom input (i.e., ECDSA or any new algorithm for which
@@ -970,7 +942,6 @@ object Crypto {
         return when (key) {
             is BCECPublicKey, is EdECPublicKey -> publicKeyOnCurve(signatureScheme, key)
             is BCRSAPublicKey -> key.modulus.bitLength() >= 2048 // Although the recommended RSA key size is 3072, we accept any key >= 2048bits.
-            is BCSphincs256PublicKey -> true
             else -> throw IllegalArgumentException("Unsupported key type: ${key.javaClass.name}")
         }
     }
@@ -1003,7 +974,6 @@ object Crypto {
             key is BCEdDSAPublicKey && key is EdECPublicKey -> internPublicKey(key)  // The BC implementation is not public
             key is BCECPublicKey -> internPublicKey(key)
             key is BCRSAPublicKey -> internPublicKey(key)
-            key is BCSphincs256PublicKey -> internPublicKey(key)
             key is CompositeKey -> internPublicKey(key)
             else -> decodePublicKey(key.encoded)
         }
@@ -1023,7 +993,6 @@ object Crypto {
             key is BCEdDSAPrivateKey && key is EdECPrivateKey -> key  // The BC implementation is not public
             key is BCECPrivateKey -> key
             key is BCRSAPrivateKey -> key
-            key is BCSphincs256PrivateKey -> key
             else -> decodePrivateKey(key.encoded)
         }
     }

@@ -9,7 +9,6 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
-import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
@@ -58,7 +57,6 @@ import org.bouncycastle.asn1.x509.CRLDistPoint
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
-import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -108,12 +106,10 @@ class X509UtilitiesTest {
                 Pair(DEFAULT_TLS_SIGNATURE_SCHEME, DEFAULT_TLS_SIGNATURE_SCHEME),
                 Pair(DEFAULT_IDENTITY_SIGNATURE_SCHEME, DEFAULT_IDENTITY_SIGNATURE_SCHEME),
                 Pair(DEFAULT_TLS_SIGNATURE_SCHEME, DEFAULT_IDENTITY_SIGNATURE_SCHEME),
-                Pair(ECDSA_SECP256R1_SHA256, SPHINCS256_SHA256),
                 Pair(ECDSA_SECP256K1_SHA256, RSA_SHA256),
                 Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256K1_SHA256),
                 Pair(RSA_SHA256, EDDSA_ED25519_SHA512),
                 Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256R1_SHA256),
-                Pair(SPHINCS256_SHA256, ECDSA_SECP256R1_SHA256)
         )
 
         val schemeToKeyTypes = listOf(
@@ -121,8 +117,6 @@ class X509UtilitiesTest {
                 Triple(ECDSA_SECP256R1_SHA256, java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
                 Triple(ECDSA_SECP256K1_SHA256, java.security.interfaces.ECPrivateKey::class.java, org.bouncycastle.jce.interfaces.ECPrivateKey::class.java),
                 Triple(EDDSA_ED25519_SHA512, EdECPrivateKey::class.java, EdECPrivateKey::class.java),
-                // By default, JKS returns SUN RSA key.
-                Triple(SPHINCS256_SHA256, BCSphincs256PrivateKey::class.java, BCSphincs256PrivateKey::class.java)
         )
     }
 

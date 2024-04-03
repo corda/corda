@@ -105,7 +105,7 @@ dependencies {
     testImplementation "com.esotericsoftware:kryo:$kryo_version"
     testImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     testImplementation "org.hibernate:hibernate-core:$hibernate_version"
-    testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    testImplementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     testImplementation "io.netty:netty-common:$netty_version"
     testImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
@@ -123,7 +123,7 @@ dependencies {
     smokeTestImplementation project(":testing:cordapps:4.11-workflows")
     smokeTestImplementation project(":finance:contracts")
     smokeTestImplementation "org.assertj:assertj-core:${assertj_version}"
-    smokeTestImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    smokeTestImplementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     smokeTestImplementation "co.paralleluniverse:quasar-core:$quasar_version"
     smokeTestImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     smokeTestImplementation "junit:junit:$junit_version"

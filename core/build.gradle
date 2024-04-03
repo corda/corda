@@ -37,7 +37,7 @@ dependencies {
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
     implementation "org.apache.commons:commons-lang3:$commons_lang3_version"
     // Bouncy castle support needed for X509 certificate manipulation
-    implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastle_version}"
+    implementation "org.bouncycastle:bcprov-lts8on:${bouncycastle_version}"
     // required to use @Type annotation
     implementation "org.hibernate:hibernate-core:$hibernate_version"
     // FastThreadLocal
@@ -55,7 +55,7 @@ dependencies {
     testImplementation "com.natpryce:hamkrest:$hamkrest_version"
     // AssertJ: for fluent assertions for testing
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    testImplementation "org.bouncycastle:bcpkix-jdk18on:$bouncycastle_version"
+    testImplementation "org.bouncycastle:bcpkix-lts8on:$bouncycastle_version"
     testImplementation "org.ow2.asm:asm:$asm_version"
 
     testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
