@@ -240,6 +240,8 @@ allprojects {
         )
     }
 
+    tasks.register("allDependencies", DependencyReportTask) {}
+
     dependencyCheck {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
@@ -464,6 +466,11 @@ allprojects {
 
                     // Effectively delete this unused and unwanted transitive dependency of Artemis.
                     substitute module('org.jgroups:jgroups') with module("org.apache.activemq:artemis-commons:$artemis_version")
+
+                    // Force use of LTS version of BC everywhere
+                    substitute module('org.bouncycastle:bcutil-jdk18on') with module("org.bouncycastle:bcutil-lts8on:$bouncycastle_version")
+                    substitute module('org.bouncycastle:bcprov-jdk18on') with module("org.bouncycastle:bcprov-lts8on:$bouncycastle_version")
+                    substitute module('org.bouncycastle:bcpkix-jdk18on') with module("org.bouncycastle:bcpkix-lts8on:$bouncycastle_version")
                 }
 
                 // FORCE Gradle to use latest SNAPSHOT dependencies.
