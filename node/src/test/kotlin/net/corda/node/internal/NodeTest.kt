@@ -196,6 +196,7 @@ class NodeTest {
                 rpcUsers = emptyList(),
                 verifierType = VerifierType.InMemory,
                 flowTimeout = FlowTimeoutConfiguration(timeout = Duration.ZERO, backoffBase = 1.0, maxRestartCount = 1),
+                telemetry = TelemetryConfiguration(openTelemetryEnabled = true, simpleLogTelemetryEnabled = false, spanStartEndEventsEnabled = false, copyBaggageToTags = false),
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
                 notary = null,

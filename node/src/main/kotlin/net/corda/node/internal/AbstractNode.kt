@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import co.paralleluniverse.fibers.instrument.Retransform
+import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
@@ -55,6 +56,11 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.internal.telemetry.SimpleLogTelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryComponent
+import net.corda.core.internal.telemetry.OpenTelemetryComponent
+import net.corda.core.internal.telemetry.TelemetryServiceImpl
+import net.corda.core.node.services.TelemetryService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.schemas.MappedSchema
@@ -147,6 +153,7 @@ import net.corda.node.utilities.BindableNamedCacheFactory
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NotaryLoader
 import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.NodeStatus
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
@@ -247,6 +254,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         NotaryLoader(it, versionInfo)
     }
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop(false)
+    val telemetryService: TelemetryServiceImpl = TelemetryServiceImpl().also {
+        val openTelemetryComponent = OpenTelemetryComponent(configuration.myLegalName.toString(), configuration.telemetry.spanStartEndEventsEnabled, configuration.telemetry.copyBaggageToTags)
+        if (configuration.telemetry.openTelemetryEnabled && openTelemetryComponent.isEnabled()) {
+            it.addTelemetryComponent(openTelemetryComponent)
+        }
+        if (configuration.telemetry.simpleLogTelemetryEnabled) {
+            it.addTelemetryComponent(SimpleLogTelemetryComponent())
+        }
+        runOnStop += { it.shutdownTelemetry() }
+    }.tokenize()
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
@@ -334,6 +351,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val schedulerService = makeNodeSchedulerService()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
+    private val cordappTelemetryComponents = MutableClassToInstanceMap.create<TelemetryComponent>()
     private val shutdownExecutor = Executors.newSingleThreadExecutor(DefaultThreadFactory("Shutdown"))
 
     protected abstract val transactionVerifierWorkerCount: Int
@@ -381,6 +399,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
 
     protected val keyStoreHandler = KeyStoreHandler(configuration, cryptoService)
+
+    @Volatile
+    private var nodeStatus = NodeStatus.WAITING_TO_START
 
     private fun <T : Any> T.tokenize(): T {
         tokenizableServices?.add(this as? SerializeAsToken ?:
@@ -523,6 +544,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         Node.printBasicNodeInfo("CorDapp schemas synchronised")
     }
 
+    private fun setNodeStatus(st : NodeStatus) {
+        log.info("Node status update: [$nodeStatus] -> [$st]")
+        nodeStatus = st
+    }
+
+
     @Suppress("ComplexMethod")
     open fun start(): S {
         check(started == null) { "Node has already been started" }
@@ -532,9 +559,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
+        setNodeStatus(NodeStatus.STARTING)
+
+        initialiseJolokia()
+        monitoringService.metrics.register(MetricRegistry.name("Node", "Status"), Gauge { nodeStatus })
 
         val trustRoots = initKeyStores()
-        initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
             val warning = it.toWarning()
@@ -614,6 +644,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(keyStoreHandler.signingKeys.map { it.key to it.alias })
+            installTelemetryComponents()
             installCordaServices()
             notaryService = maybeStartNotaryService(keyStoreHandler.notaryIdentity)
             contractUpgradeService.start()
@@ -624,6 +655,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
+            /* Note the .get() at the end of the distributeEvent call, below.
+               This will block until all Corda Services have returned from processing the event, allowing a service to prevent the
+               state machine manager from starting (just below this) until the service is ready.
+             */
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeStateMachineStart(nodeServicesContext)).get()
             val callback = smm.start(frozenTokenizableServices)
             val smmStartedFuture = rootFuture.map { callback() }
             // Shut down the SMM so no Fibers are scheduled.
@@ -657,6 +693,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.warn("Not distributing events as NetworkMap is not ready")
             }
         }
+        setNodeStatus(NodeStatus.STARTED)
         return resultingNodeInfo
     }
 
@@ -950,6 +987,62 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return service
     }
 
+    private class TelemetryComponentInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
+
+    @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
+    private fun installTelemetryComponents() {
+        val loadedTelemetryComponents: List<Class<out TelemetryComponent>> = cordappLoader.cordapps.flatMap { it.telemetryComponents }.filterNot {
+                  it.name == OpenTelemetryComponent::class.java.name ||
+                  it.name == SimpleLogTelemetryComponent::class.java.name }
+
+        // This sets the Cordapp classloader on the contextClassLoader of the current thread, prior to initializing telemetry components
+        // Needed because of bug CORDA-2653 - some telemetry components can utilise third-party libraries that require access to
+        // the Thread context class loader. (Same as installCordaServices).
+        val oldContextClassLoader: ClassLoader? = Thread.currentThread().contextClassLoader
+        try {
+            Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader
+
+            loadedTelemetryComponents.forEach {
+                try {
+                    installTelemetryComponent(it)
+                } catch (e: NoSuchMethodException) {
+                    log.error("Missing no arg ctor for ${it.name}")
+                    throw e
+                } catch (e: TelemetryComponentInstantiationException) {
+                    if (e.cause != null) {
+                        log.error("Corda telemetry component ${it.name} failed to instantiate. Reason was: ${e.cause?.rootMessage}", e.cause)
+                    } else {
+                        log.error("Corda telemetry component ${it.name} failed to instantiate", e)
+                    }
+                    throw e
+                } catch (e: Exception) {
+                    log.error("Unable to install Corda telemetry component ${it.name}", e)
+                    throw e
+                }
+            }
+        } finally {
+            Thread.currentThread().contextClassLoader = oldContextClassLoader
+        }
+    }
+
+    private fun <T : TelemetryComponent> installTelemetryComponent(telemetryComponentClass: Class<T>) {
+        val telemetryComponent = try {
+            val extendedTelemetryComponentConstructor = telemetryComponentClass.getDeclaredConstructor().apply { isAccessible = true }
+            val telemetryComponent = extendedTelemetryComponentConstructor.newInstance()
+            telemetryComponent
+        } catch (e: InvocationTargetException) {
+            throw TelemetryComponentInstantiationException(e.cause)
+        }
+        cordappTelemetryComponents.putInstance(telemetryComponentClass, telemetryComponent)
+        if (telemetryComponent.isEnabled()) {
+            telemetryService.addTelemetryComponent(telemetryComponent)
+            log.info("Installed ${telemetryComponentClass.name} Telemetry component")
+        }
+        else {
+            log.info("${telemetryComponentClass.name} not enabled so not installing")
+        }
+    }
+
     private fun registerCordappFlows() {
         cordappLoader.cordapps.forEach { cordapp ->
             cordapp.initiatedFlows.groupBy { it.requireAnnotation<InitiatedBy>().value.java }.forEach { initiator, responders ->
@@ -1043,10 +1136,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
+        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService, telemetryService)
     }
 
     open fun stop() {
+
+        setNodeStatus(NodeStatus.STOPPING)
 
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStopped(nodeServicesContext))
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStop(nodeServicesContext))
@@ -1122,6 +1217,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
         override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
+        override val telemetryService: TelemetryService get() = this@AbstractNode.telemetryService
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
@@ -1141,6 +1237,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
             return cordappServices.getInstance(type)
                     ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+        }
+
+        override fun <T : TelemetryComponent> cordaTelemetryComponent(type: Class<T>): T {
+            return cordappTelemetryComponents.getInstance(type)
+                    ?: throw IllegalArgumentException("Corda telemetry component ${type.name} does not exist")
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {

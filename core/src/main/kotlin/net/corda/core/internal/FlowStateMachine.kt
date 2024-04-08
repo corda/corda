@@ -8,6 +8,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
+import net.corda.core.internal.telemetry.SerializedTelemetry
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
 
@@ -30,7 +31,7 @@ interface FlowStateMachine<FLOWRETURN> : FlowStateMachineHandle<FLOWRETURN> {
     fun serialize(payloads: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>>
 
     @Suspendable
-    fun initiateFlow(destination: Destination, wellKnownParty: Party): FlowSession
+    fun initiateFlow(destination: Destination, wellKnownParty: Party, serializedTelemetry: SerializedTelemetry?): FlowSession
 
     fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>)
 

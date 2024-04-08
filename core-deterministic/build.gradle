@@ -1,6 +1,7 @@
 import net.corda.gradle.jarfilter.JarFilterTask
 import net.corda.gradle.jarfilter.MetaFixerTask
 import proguard.gradle.ProGuardTask
+
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
@@ -43,6 +44,9 @@ dependencies {
     api "com.google.code.findbugs:jsr305:$jsr305_version"
     api "org.slf4j:slf4j-api:$slf4j_version"
 
+    compileOnly "io.opentelemetry:opentelemetry-api:${open_telemetry_version}"
+    compileOnly project(':opentelemetry')
+
     // These dependencies will become "runtime" scoped in our published POM.
     // See publish.dependenciesFrom.defaultScope.
     deterministicLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
@@ -77,6 +81,7 @@ def patchCore = tasks.register('patchCore', Zip) {
         exclude 'net/corda/core/serialization/internal/AttachmentsHolderImpl.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
+        exclude 'net/corda/core/internal/utilities/PrivateInterner*.class'
     }
 
     reproducibleFileOrder = true

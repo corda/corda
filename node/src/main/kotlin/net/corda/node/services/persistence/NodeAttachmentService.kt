@@ -12,10 +12,21 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.*
+import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.internal.FetchAttachmentsFlow
+import net.corda.core.internal.JarSignatureCollector
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.P2P_UPLOADER
+import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.TRUSTED_UPLOADERS
+import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.Version
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.readFully
 import net.corda.core.internal.utilities.ZipBombDetector
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
@@ -23,7 +34,11 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.InfrequentlyMutatedCache
@@ -46,7 +61,17 @@ import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import java.util.stream.Stream
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.CollectionTable
+import javax.persistence.Column
+import javax.persistence.ElementCollection
+import javax.persistence.Entity
+import javax.persistence.FetchType
+import javax.persistence.ForeignKey
+import javax.persistence.Id
+import javax.persistence.Index
+import javax.persistence.JoinColumn
+import javax.persistence.Lob
+import javax.persistence.Table
 
 /**
  * Stores attachments using Hibernate to database.
@@ -211,7 +236,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         private fun validate() {
             if (counter.count != expectedSize.toLong()) return
 
-            val actual = SecureHash.SHA256(hash.asBytes())
+            val actual = SecureHash.createSHA256(hash.asBytes())
             if (actual != expected)
                 throw HashMismatchException(expected, actual)
         }
