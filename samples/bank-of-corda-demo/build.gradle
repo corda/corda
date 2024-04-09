@@ -43,6 +43,7 @@ dependencies {
 
     // Javax is required for webapis
     implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    implementation "org.glassfish.jersey.inject:jersey-hk2:$jersey_version"
     implementation "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 

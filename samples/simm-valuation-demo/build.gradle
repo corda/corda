@@ -54,6 +54,7 @@ dependencies {
 
     // Javax is required for webapis
     implementation "org.glassfish.jersey.core:jersey-server:$jersey_version"
+    implementation "org.glassfish.jersey.inject:jersey-hk2:$jersey_version"
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps

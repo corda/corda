@@ -30,7 +30,6 @@ class SimmValuationTest {
     }
 
     @Test(timeout=300_000)
-    @Ignore("TODO JDK17: Fixme - Stage 2")
 	fun `runs SIMM valuation demo`() {
         driver(DriverParameters(isDebug = true,
                 startNodesInProcess = false, // starting nodes in separate processes to ensure system class path does not contain 3rd party libraries (masking serialization issues)
