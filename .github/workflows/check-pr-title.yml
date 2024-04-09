@@ -7,7 +7,7 @@ jobs:
   check-pr-title:
     runs-on: ubuntu-latest
     steps:
-      - uses: morrisoncole/pr-lint-action@v1.6.1
+      - uses: morrisoncole/pr-lint-action@v1.7.1
         with:
           title-regex: '^((CORDA|AG|EG|ENT|INFRA|ES)-\d+)(.*)'
           on-failed-regex-comment: "PR title failed to match regex -> `%regex%`"
