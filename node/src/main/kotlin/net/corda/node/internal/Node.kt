@@ -582,14 +582,12 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun start(): NodeInfo {
+        registerJmxReporter(services.monitoringService.metrics)
         registerDefaultExceptionHandler()
         initialiseSerialization()
         val nodeInfo: NodeInfo = super.start()
         nodeReadyFuture.thenMatch({
             serverThread.execute {
-
-                registerJmxReporter(services.monitoringService.metrics)
-
                 _startupComplete.set(Unit)
             }
         },

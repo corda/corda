@@ -392,7 +392,11 @@ interface CordaRPCOps : RPCOps {
     /** Queries attachments metadata */
     fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId>
 
-    /** Returns the node's current time. */
+    /** Returns the node's current time.
+     *
+     * Is a quick RPC, meaning that it is handled outside the node's standard thread pool in order to provide a
+     * quick response even when the node is dealing with a high volume of RPC calls.
+     */
     fun currentNodeTime(): Instant
 
     /**

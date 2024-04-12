@@ -11,7 +11,6 @@ jobs:
       - name: Close
         uses: corda/jira-sync-closed-action@master
         with:
-          project: CORDA
           jiraBaseUrl: https://r3-cev.atlassian.net
           jiraEmail: ${{ secrets.JIRA_USER_EMAIL }}
           jiraToken: ${{ secrets.JIRA_API_TOKEN }}

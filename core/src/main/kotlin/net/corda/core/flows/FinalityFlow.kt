@@ -7,6 +7,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.pushToLoggingContext
+import net.corda.core.internal.telemetry.telemetryServiceInternal
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
@@ -221,18 +222,22 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
     @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
-        val notarised = if (needsNotarySignature(transaction)) {
-            progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
-            transaction + notarySignatures
-        } else {
-            logger.info("No need to notarise this transaction.")
-            transaction
+        serviceHub.telemetryServiceInternal.span("${this::class.java.name}#notariseAndRecord", flowLogic = this) {
+            val notarised = if (needsNotarySignature(transaction)) {
+                progressTracker.currentStep = NOTARISING
+                val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
+                transaction + notarySignatures
+            } else {
+                logger.info("No need to notarise this transaction.")
+                transaction
+            }
+            serviceHub.telemetryServiceInternal.span("${this::class.java.name}#notariseAndRecord:recordTransactions", flowLogic = this) {
+                logger.info("Recording transaction locally.")
+                serviceHub.recordTransactions(statesToRecord, listOf(notarised))
+                logger.info("Recorded transaction locally successfully.")
+            }
+            return notarised
         }
-        logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(statesToRecord, listOf(notarised))
-        logger.info("Recorded transaction locally successfully.")
-        return notarised
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {

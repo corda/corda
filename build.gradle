@@ -56,21 +56,19 @@ buildscript {
             'org.opentest4j**'
     ]
 
-    // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
-    // We must configure it manually to use the latest capsule version.
-    ext.capsule_version = '1.0.3'
-
-    ext.asm_version = '7.1'
-    ext.artemis_version = '2.19.1'
-    // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
-    ext.jackson_version = '2.13.5'
-    ext.jackson_kotlin_version = '2.9.7'
-    ext.jetty_version = '9.4.53.v20231009'
-    ext.jersey_version = '2.25'
-    ext.servlet_version = '4.0.1'
-    ext.assertj_version = '3.12.2'
-    ext.slf4j_version = '1.7.30'
-    ext.log4j_version = '2.17.1'
+    ext.capsule_version = constants.getProperty("capsuleVersion")
+    ext.open_telemetry_version = constants.getProperty("openTelemetryVersion")
+    ext.open_telemetry_sem_conv_version = constants.getProperty("openTelemetrySemConvVersion")
+    ext.asm_version = constants.getProperty("asmVersion")
+    ext.artemis_version = constants.getProperty("artemisVersion")
+    ext.jackson_version = constants.getProperty("jacksonVersion")
+    ext.jackson_kotlin_version = constants.getProperty("jacksonKotlinVersion")
+    ext.jetty_version = constants.getProperty("jettyVersion")
+    ext.jersey_version = constants.getProperty("jerseyVersion")
+    ext.servlet_version = constants.getProperty("servletVersion")
+    ext.assertj_version = constants.getProperty("assertjVersion")
+    ext.slf4j_version = constants.getProperty("slf4JVersion")
+    ext.log4j_version = constants.getProperty("log4JVersion")
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
@@ -79,66 +77,61 @@ buildscript {
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
     ext.djvm_version = constants.getProperty("djvmVersion")
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
-    ext.okhttp_version = '3.14.2'
-    ext.netty_version = '4.1.77.Final'
+    ext.okhttp_version = constants.getProperty("okhttpVersion")
+    ext.netty_version = constants.getProperty("nettyVersion")
     ext.tcnative_version = constants.getProperty("tcnativeVersion")
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
-    ext.fileupload_version = '1.4'
-    ext.kryo_version = '4.0.2'
-    ext.kryo_serializer_version = '0.43'
-    // Legacy JUnit 4 version
-    ext.junit_version = '4.12'
-    // Need this version to access classpath scanning error handling fix -
-    // see https://github.com/junit-team/junit5/commit/389de48c2a18c5a93a7203ef424aa47a8a835a74
-    // Upgrade to 5.5.x when GA release is available.
-    ext.junit_vintage_version = '5.5.0-RC1'
-    ext.junit_jupiter_version = '5.5.0-RC1'
-    ext.junit_platform_version = '1.5.0-RC1'
-    ext.mockito_version = '2.28.2'
-    ext.mockito_kotlin_version = '1.6.0'
-    ext.hamkrest_version = '1.7.0.0'
-    ext.jopt_simple_version = '5.0.2'
-    ext.jansi_version = '1.18'
-    ext.hibernate_version = '5.4.32.Final'
-    ext.h2_version = '1.4.199' // Update docs if renamed or removed.
-    ext.rxjava_version = '1.3.8'
-    ext.dokka_version = '0.10.1'
-    ext.eddsa_version = '0.3.0'
-    ext.dependency_checker_version = '5.2.0'
-    ext.commons_collections_version = '4.3'
-    ext.beanutils_version = '1.9.4'
+    ext.fileupload_version = constants.getProperty("fileuploadVersion")
+    ext.kryo_version = constants.getProperty("kryoVersion")
+    ext.kryo_serializer_version = constants.getProperty("kryoSerializerVersion")
+    ext.junit_version = constants.getProperty("junitVersion")
+    ext.junit_vintage_version = constants.getProperty("junitVintageVersion")
+    ext.junit_jupiter_version = constants.getProperty("junitJupiterVersion")
+    ext.junit_platform_version = constants.getProperty("junitPlatformVersion")
+    ext.mockito_version = constants.getProperty("mockitoVersion")
+    ext.mockito_kotlin_version = constants.getProperty("mockitoKotlinVersion")
+    ext.hamkrest_version = constants.getProperty("hamkrestVersion")
+    ext.jopt_simple_version = constants.getProperty("joptSimpleVersion")
+    ext.jansi_version = constants.getProperty("jansiVersion")
+    ext.hibernate_version = constants.getProperty("hibernateVersion")
+    ext.h2_version = constants.getProperty("h2Version")
+    ext.rxjava_version = constants.getProperty("rxjavaVersion")
+    ext.dokka_version = constants.getProperty("dokkaVersion")
+    ext.eddsa_version = constants.getProperty("eddsaVersion")
+    ext.dependency_checker_version = constants.getProperty("dependencyCheckerVersion")
+    ext.commons_collections_version = constants.getProperty("commonsCollectionsVersion")
+    ext.beanutils_version = constants.getProperty("beanutilsVersion")
     ext.jsr305_version = constants.getProperty("jsr305Version")
-    ext.shiro_version = '1.10.0'
+    ext.shiro_version = constants.getProperty("shiroVersion")
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
-    ext.hikari_version = '3.3.1'
-    ext.liquibase_version = '3.6.3'
+    ext.hikari_version = constants.getProperty("hikariVersion")
+    ext.liquibase_version = constants.getProperty("liquibaseVersion")
     ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
     ext.publicArtifactURL = 'https://download.corda.net/maven'
-    ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
-    ext.docker_compose_rule_version = '1.5.0'
-    ext.selenium_version = '3.141.59'
-    ext.ghostdriver_version = '2.1.0'
+    ext.docker_compose_rule_version = constants.getProperty("dockerComposeRuleVersion")
+    ext.selenium_version = constants.getProperty("seleniumVersion")
+    ext.ghostdriver_version = constants.getProperty("ghostdriverVersion")
     ext.proguard_version = constants.getProperty('proguardVersion')
-    ext.jsch_version = '0.1.55'
-    ext.protonj_version = '0.33.0' // Overide Artemis version
-    ext.snappy_version = '0.4'
+    ext.jsch_version = constants.getProperty("jschVersion")
+    ext.protonj_version = constants.getProperty("protonjVersion")
+    ext.snappy_version = constants.getProperty("snappyVersion")
     ext.class_graph_version = constants.getProperty('classgraphVersion')
-    ext.jcabi_manifests_version = '1.1'
-    ext.picocli_version = '3.9.6'
-    ext.commons_lang_version = '3.9'
-    ext.commons_io_version = '2.6'
-    ext.controlsfx_version = '8.40.15'
+    ext.jcabi_manifests_version = constants.getProperty("jcabiManifestsVersion")
+    ext.picocli_version = constants.getProperty("picocliVersion")
+    ext.commons_lang_version = constants.getProperty("commonsLangVersion")
+    ext.commons_io_version = constants.getProperty("commonsIoVersion")
+    ext.controlsfx_version = constants.getProperty("controlsfxVersion")
     ext.detekt_version = constants.getProperty('detektVersion')
     ext.docker_java_version = constants.getProperty("dockerJavaVersion")
-    ext.commons_configuration2_version = "2.10.1"
-    ext.commons_text_version = "1.10.0"
+    ext.commons_configuration2_version = constants.getProperty("commonsConfiguration2Version")
+    ext.commons_text_version = constants.getProperty("commonsTextVersion")
+    ext.snake_yaml_version = constants.getProperty("snakeYamlVersion")
     if (JavaVersion.current().isJava8()) {
-        ext.fontawesomefx_commons_version = '8.15'
-        ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+        ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsJava8Version")
+        ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeJava8Version")
     } else {
-        // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
-        ext.fontawesomefx_commons_version = '11.0'
-        ext.fontawesomefx_fontawesome_version = '4.7.0-11'
+        ext.fontawesomefx_commons_version = constants.getProperty("fontawesomefxCommonsVersion")
+        ext.fontawesomefx_fontawesome_version = constants.getProperty("fontawesomefxFontawesomeVersion")
     }
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
@@ -220,7 +213,8 @@ buildscript {
         classpath "com.gradle:common-custom-user-data-gradle-plugin:$customUserDataGradlePlugin"
     }
 
-    configurations.all {
+    configurations.classpath {
+        // FORCE Gradle to use latest SNAPSHOT plugins.
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }
 }
@@ -488,7 +482,7 @@ allprojects {
                 // * Apache commons-configuration2
                 eachDependency { details ->
                     if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
-                        if (details.requested.name.startsWith('netty-tcnative')){
+                        if (details.requested.name.startsWith('netty-tcnative')) {
                             details.useVersion tcnative_version
                         } else {
                             details.useVersion netty_version
@@ -506,25 +500,48 @@ allprojects {
                         details.useVersion snake_yaml_version
                     }
                 }
+
+                dependencySubstitution {
+                    // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+                    // Remove any transitive dependency on Apache's version.
+                    substitute module('commons-logging:commons-logging') with module("org.slf4j:jcl-over-slf4j:$slf4j_version")
+
+                    // Remove any transitive dependency on Logback (e.g. Liquibase 3.6 introduces this dependency)
+                    substitute module('ch.qos.logback:logback-classic') with module("org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version")
+
+                    // Netty-All is an uber-jar which contains every Netty module.
+                    // Exclude it to force us to use the individual Netty modules instead.
+                    substitute module('io.netty:netty-all') with module("io.netty:netty-common:$netty_version")
+
+                    // Force dependencies to use the same version of Guava as Corda.
+                    substitute module('com.google.guava:guava') with module("com.google.guava:guava:$guava_version")
+
+                    // Effectively delete this unused and unwanted transitive dependency of Artemis.
+                    substitute module('org.jgroups:jgroups') with module("org.apache.activemq:artemis-commons:$artemis_version")
+                }
             }
         }
-        compile {
-            // We want to use SLF4J's version of these bindings: jcl-over-slf4j
-            // Remove any transitive dependency on Apache's version.
-            exclude group: 'commons-logging', module: 'commons-logging'
-            // Remove any transitive dependency on Logback (e.g. Liquibase 3.6 introduces this dependency)
-            exclude group: 'ch.qos.logback'
 
-            // Netty-All is an uber-jar which contains every Netty module.
-            // Exclude it to force us to use the individual Netty modules instead.
-            exclude group: 'io.netty', module: 'netty-all'
-        }
-        runtime {
-            // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
-            exclude module: 'isolated'
+        // Select all of the compileClasspath and runtimeClasspath etc configurations,
+        // but NOT the "classpath" configuration, as that is used by the Gradle plugins.
+        matching { it.name.endsWith("Classpath") }.configureEach { cfg ->
+            cfg.resolutionStrategy {
+                dependencySubstitution {
+                    // Force dependencies to use the same version of Kotlin as Corda.
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk8') with module("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-jdk7') with module("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib-common') with module("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-stdlib') with module("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
+                    substitute module('org.jetbrains.kotlin:kotlin-reflect') with module("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
+                }
+
+                // FORCE Gradle to use latest SNAPSHOT dependencies.
+                cacheChangingModulesFor 0, 'seconds'
+            }
         }
     }
 }
+
 sonarqube {
     properties {
         property "sonar.projectName", "Corda"
@@ -662,6 +679,8 @@ bintrayConfig {
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
     publications = [
+            'corda-opentelemetry',
+            'corda-opentelemetry-driver',
             'corda-jfx',
             'corda-mock',
             'corda-rpc',
