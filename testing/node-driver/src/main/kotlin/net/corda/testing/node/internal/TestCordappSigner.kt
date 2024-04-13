@@ -35,7 +35,10 @@ object TestCordappSigner {
         val signerDirToUse = signerDir ?: defaultSignerDir
         for (i in 1 .. signatureCount) {
             println("On signer $i")
-            val alias = "testcordapp-$algorithm-$i"
+            // Note in the jarsigner tool if -sigfile is not specified then the first 8 chars of alias are used as the file
+            // name for the .SF and .DSA files. (See jarsigner doc). So $i below needs to be at beginning so unique files are
+            // created.
+            val alias = "$i-testcordapp-$algorithm"
             val password = "secret!"
             if (!signerDirToUse.containsKey(alias, password)) {
                 signerDirToUse.generateKey(alias, password, "O=Test Company Ltd $i,OU=Test,L=London,C=GB", algorithm)

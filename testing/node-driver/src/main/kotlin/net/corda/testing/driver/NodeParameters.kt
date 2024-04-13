@@ -55,6 +55,9 @@ data class NodeParameters(
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
     fun withLogLevelOverride(logLevelOverride: String?): NodeParameters = copy(logLevelOverride = logLevelOverride)
+    fun withRpcAddress(rpcAddress: NetworkHostAndPort?): NodeParameters = copy(rpcAddress = rpcAddress)
+    fun withSystemProperties(systemProperties: Map<String, String>): NodeParameters = copy(systemProperties = systemProperties)
+    fun withLegacyContracts(legacyContracts: Collection<TestCordapp>): NodeParameters = copy(legacyContracts = legacyContracts)
 
     constructor(
             providedName: CordaX500Name?,
@@ -222,4 +225,58 @@ data class NodeParameters(
             logLevelOverride = logLevelOverride,
             rpcAddress = rpcAddress,
             systemProperties = systemProperties)
+
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String? = null,
+            rpcAddress: NetworkHostAndPort? = null,
+            systemProperties: Map<String, String> = emptyMap()
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            additionalCordapps,
+            flowOverrides,
+            logLevelOverride,
+            rpcAddress,
+            systemProperties,
+            legacyContracts = emptySet())
+
+    @Suppress("LongParameterList")
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Collection<TestCordapp> = emptySet(),
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            logLevelOverride: String? = null,
+            rpcAddress: NetworkHostAndPort? = null,
+            systemProperties: Map<String, String> = emptyMap()
+    ) = this.copy(
+            providedName = providedName,
+            rpcUsers = rpcUsers,
+            verifierType = verifierType,
+            customOverrides = customOverrides,
+            startInSameProcess = startInSameProcess,
+            maximumHeapSize = maximumHeapSize,
+            additionalCordapps = additionalCordapps,
+            flowOverrides = flowOverrides,
+            logLevelOverride = logLevelOverride,
+            rpcAddress = rpcAddress,
+            systemProperties = systemProperties,
+            legacyContracts = legacyContracts)
+
 }
