@@ -25,7 +25,7 @@ import net.corda.testing.node.User
  * log level argument.
  * @property rpcAddress optional override for RPC address on which node will be accepting RPC connections from the clients. Port provided must be vacant.
  */
-@Suppress("unused")
+@Suppress("unused", "TooManyFunctions")
 data class NodeParameters(
         val providedName: CordaX500Name? = null,
         val rpcUsers: List<User> = emptyList(),
