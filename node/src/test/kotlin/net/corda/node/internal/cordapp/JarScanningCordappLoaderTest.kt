@@ -265,6 +265,33 @@ class JarScanningCordappLoaderTest {
     }
 
     @Test(timeout=300_000)
+    fun `exception raised if legacy and non legacy version of same contract signed by differet keys`() {
+        val jar = currentFinanceContractsJar.duplicate {
+            tempFolder.root.toPath().generateKey("testAlias", "testPassword", ALICE_NAME.toString())
+            tempFolder.root.toPath().signJar(absolutePathString(), "testAlias", "testPassword")
+        }
+        assertThatIllegalStateException()
+                .isThrownBy { JarScanningCordappLoader(setOf(jar), setOf(legacyFinanceContractsJar)).cordapps }
+                .withMessageContaining("signers do not match legacy contract CorDapp")
+    }
+
+    @Test(timeout=300_000)
+    fun `loads legacy and non legacy version of same contract both signed by 2 keys`() {
+        val jar = currentFinanceContractsJar.duplicate {
+            tempFolder.root.toPath().generateKey("testAlias", "testPassword", ALICE_NAME.toString())
+            tempFolder.root.toPath().signJar(absolutePathString(), "testAlias", "testPassword")
+        }
+        val legacyJar = legacyFinanceContractsJar.duplicate(name = "duplicate2.jar") {
+            tempFolder.root.toPath().signJar(absolutePathString(), "testAlias", "testPassword")
+        }
+        val loader = JarScanningCordappLoader(setOf(jar), setOf(legacyJar))
+        assertThat(jar.parent.getJarSigners(jar.name)).hasSize(2)
+        assertThat(legacyJar.parent.getJarSigners(legacyJar.name)).hasSize(2)
+        assertThat(loader.cordapps).hasSize(1)
+        assertThat(loader.legacyContractCordapps).hasSize(1)
+    }
+
+    @Test(timeout=300_000)
     fun `does not load legacy contracts CorDapp without the corresponding current version`() {
         val loader = JarScanningCordappLoader(setOf(currentFinanceWorkflowsJar), setOf(legacyFinanceContractsJar))
         assertThatIllegalStateException()
