@@ -58,8 +58,8 @@ dependencies {
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets
-    implementation "org.eclipse.jetty:jetty-servlet:${jetty_version}"
-    implementation "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    implementation "org.eclipse.jetty.ee10:jetty-ee10-servlet:${jetty_version}"
+    implementation "org.eclipse.jetty.ee10:jetty-ee10-webapp:${jetty_version}"
     implementation "javax.servlet:javax.servlet-api:${servlet_version}"
 
     implementation "org.gradle:gradle-tooling-api:7.1"
@@ -68,6 +68,7 @@ dependencies {
     implementation "org.glassfish.jersey.core:jersey-server:${jersey_version}"
     implementation "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     implementation "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+    implementation "org.glassfish.jersey.inject:jersey-hk2:$jersey_version"
 
     implementation "io.reactivex:rxjava:$rxjava_version"
     implementation("org.apache.activemq:artemis-core-client:${artemis_version}") {

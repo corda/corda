@@ -1,5 +1,15 @@
 package net.corda.testing.node.internal.network
 
+import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
+import jakarta.ws.rs.core.Response.ok
+import jakarta.ws.rs.core.Response.status
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.identity.CordaX500Name
@@ -14,11 +24,11 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.testing.common.internal.testNetworkParameters
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler
+import org.eclipse.jetty.ee10.servlet.ServletHolder
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.Closeable
@@ -29,11 +39,6 @@ import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant
 import java.util.*
-import javax.ws.rs.*
-import javax.ws.rs.core.MediaType
-import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.ok
-import javax.ws.rs.core.Response.status
 
 class NetworkMapServer(private val pollInterval: Duration,
                        hostAndPort: NetworkHostAndPort = NetworkHostAndPort("localhost", 0),
@@ -54,7 +59,7 @@ class NetworkMapServer(private val pollInterval: Duration,
 
     init {
         server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
-            handler = HandlerCollection().apply {
+            handler = ContextHandlerCollection().apply {
                 addHandler(ServletContextHandler().apply {
                     contextPath = "/"
                     val resourceConfig = ResourceConfig().apply {

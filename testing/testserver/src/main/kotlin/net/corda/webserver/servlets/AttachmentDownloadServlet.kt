@@ -1,5 +1,10 @@
 package net.corda.webserver.servlets
 
+import jakarta.servlet.http.HttpServlet
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import jakarta.ws.rs.core.HttpHeaders
+import jakarta.ws.rs.core.MediaType
 import net.corda.core.internal.extractFile
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.CordaRPCOps
@@ -8,11 +13,6 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.Locale
 import java.util.jar.JarInputStream
-import javax.servlet.http.HttpServlet
-import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
-import javax.ws.rs.core.HttpHeaders
-import javax.ws.rs.core.MediaType
 
 /**
  * Allows the node administrator to either download full attachment zips, or individual files within those zips.

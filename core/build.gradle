@@ -47,7 +47,7 @@ dependencies {
     testImplementation sourceSets.obfuscator.output
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_jupiter_version"
     testImplementation "junit:junit:$junit_version"
-    testImplementation "commons-fileupload:commons-fileupload:$fileupload_version"
+    testImplementation "org.apache.commons:commons-fileupload2-jakarta:$fileupload_version"
     // Guava: Google test library (collections test suite)
     testImplementation "com.google.guava:guava-testlib:$guava_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"

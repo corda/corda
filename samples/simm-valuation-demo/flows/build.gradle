@@ -1,3 +1,5 @@
+import net.corda.plugins.SignJar
+
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
@@ -14,6 +16,9 @@ cordapp {
         versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
+    }
+    signing {
+        enabled false
     }
 }
 
@@ -43,3 +48,9 @@ dependencies {
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+tasks.register('sign', SignJar) {
+    inputJars jar
+}
+
+jar.finalizedBy sign

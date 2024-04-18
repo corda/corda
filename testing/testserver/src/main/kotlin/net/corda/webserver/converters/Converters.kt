@@ -1,10 +1,10 @@
 package net.corda.webserver.converters
 
+import jakarta.ws.rs.ext.ParamConverter
+import jakarta.ws.rs.ext.ParamConverterProvider
+import jakarta.ws.rs.ext.Provider
 import net.corda.core.identity.CordaX500Name
 import java.lang.reflect.Type
-import javax.ws.rs.ext.ParamConverter
-import javax.ws.rs.ext.ParamConverterProvider
-import javax.ws.rs.ext.Provider
 
 object CordaX500NameConverter : ParamConverter<CordaX500Name> {
     override fun toString(value: CordaX500Name) = value.toString()
