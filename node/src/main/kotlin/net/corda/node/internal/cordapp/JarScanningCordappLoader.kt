@@ -215,13 +215,11 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
         }
 
         private fun checkSignersMatch(legacyCordapp: CordappImpl, nonLegacyCordapp: CordappImpl) {
-            val legacyCertificates = legacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectCertificates)
-            val nonLegacyCertificates = nonLegacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectCertificates)
-            if (legacyCertificates != nonLegacyCertificates) {
-                val errorMsg = "Newer contract CorDapp '${nonLegacyCordapp.jarFile}' signers do not match legacy contract CorDapp " +
+            val legacySigners = legacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
+            val nonLegacySigners = nonLegacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
+            check(legacySigners == nonLegacySigners) {
+                "Newer contract CorDapp '${nonLegacyCordapp.jarFile}' signers do not match legacy contract CorDapp " +
                         "'${legacyCordapp.jarFile}' signers."
-                logger.debug { "$errorMsg Non legacy certificates: ${nonLegacyCertificates}, Legacy certificates: ${legacyCertificates}." }
-                throw IllegalStateException(errorMsg)
             }
         }
 
