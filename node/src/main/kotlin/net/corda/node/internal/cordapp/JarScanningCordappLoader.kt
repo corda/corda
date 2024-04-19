@@ -209,7 +209,17 @@ class JarScanningCordappLoader(private val cordappJars: Set<Path>,
                                 "(${newerCordapp.contractVersionId}) than corresponding legacy contract CorDapp " +
                                 "'${legacyCordapp.jarFile}' (${legacyCordapp.contractVersionId})"
                     }
+                    checkSignersMatch(legacyCordapp, newerCordapp)
                 }
+            }
+        }
+
+        private fun checkSignersMatch(legacyCordapp: CordappImpl, nonLegacyCordapp: CordappImpl) {
+            val legacySigners = legacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
+            val nonLegacySigners = nonLegacyCordapp.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectSigners)
+            check(legacySigners == nonLegacySigners) {
+                "Newer contract CorDapp '${nonLegacyCordapp.jarFile}' signers do not match legacy contract CorDapp " +
+                        "'${legacyCordapp.jarFile}' signers."
             }
         }
 
