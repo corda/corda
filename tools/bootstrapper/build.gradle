@@ -49,6 +49,8 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+jar.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+
 publishing {
     publications {
         maven(MavenPublication) {

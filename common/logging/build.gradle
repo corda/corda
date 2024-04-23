@@ -31,6 +31,8 @@ task generateSource(type: Copy) {
     into 'src/main'
 }
 compileKotlin.dependsOn generateSource
+processResources.dependsOn generateSource
+sourcesJar.dependsOn generateSource
 
 jar {
     baseName 'corda-common-logging'

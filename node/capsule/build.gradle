@@ -88,6 +88,11 @@ tasks.whenTaskAdded { task ->
     }
 }
 
+javadoc.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+javadoc.dependsOn buildCordaJAR
+compileTestJava.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+compileTestJava.dependsOn buildCordaJAR
+
 artifacts {
     runtimeArtifacts buildCordaJAR
 }
