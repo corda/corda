@@ -34,7 +34,6 @@ object TestCordappSigner {
         jar.unsignJar()
         val signerDirToUse = signerDir ?: defaultSignerDir
         for (i in 1 .. signatureCount) {
-            println("On signer $i")
             // Note in the jarsigner tool if -sigfile is not specified then the first 8 chars of alias are used as the file
             // name for the .SF and .DSA files. (See jarsigner doc). So $i below needs to be at beginning so unique files are
             // created.
@@ -44,7 +43,6 @@ object TestCordappSigner {
                 signerDirToUse.generateKey(alias, password, "O=Test Company Ltd $i,OU=Test,L=London,C=GB", algorithm)
             }
             signerDirToUse.signJar(jar.absolutePathString(), alias, password)
-            println("Number of actual signers: ${JarInputStream(jar.inputStream()).use { JarSignatureCollector.collectSigners(it).size }}")
         }
     }
 }
