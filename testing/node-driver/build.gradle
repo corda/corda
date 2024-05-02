@@ -37,7 +37,7 @@ dependencies {
     implementation project(':test-utils')
     implementation project(':tools:cliutils')
 
-    implementation group: 'org.apache.sshd', name: 'sshd-common', version: '2.3.0'
+    implementation group: 'org.apache.sshd', name: 'sshd-common', version: '2.12.1'
     implementation "javax.persistence:javax.persistence-api:2.2"
 
     // Integration test helpers
