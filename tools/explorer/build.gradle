@@ -70,6 +70,10 @@ dependencies {
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 }
 
+compileJava.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+startScripts.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+startScripts.dependsOn ':node:capsule:buildCordaJAR'
+
 tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'

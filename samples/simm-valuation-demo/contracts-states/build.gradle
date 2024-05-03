@@ -78,6 +78,7 @@ tasks.register('generateDependencies') {
     }
 }
 processResources.finalizedBy generateDependencies
+jar.dependsOn generateDependencies
 
 jar {
     // Test CorDapp filters out *-tests.jar. We only want the shrinked jar not this one.

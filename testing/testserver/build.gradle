@@ -83,6 +83,9 @@ jar {
     baseName 'corda-testserver-impl'
 }
 
+compileJava.dependsOn ':node:capsule:buildCordaJAR'
+javadoc.dependsOn ':testing:testserver:testcapsule:buildWebserverJar'
+
 publishing {
     publications {
         maven(MavenPublication) {
