@@ -1,6 +1,5 @@
 package net.corda.testing.node.internal
 
-import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.deleteRecursively
 import net.corda.testing.core.internal.JarSignatureTestUtils.containsKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
@@ -8,10 +7,8 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.unsignJar
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.jar.JarInputStream
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.copyTo
-import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
 object TestCordappSigner {
