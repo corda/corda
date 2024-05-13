@@ -438,16 +438,9 @@ allprojects {
                     includeGroup 'com.github.detro'
                 }
             }
-            // required until h2database 2.2.229 is released
+            // required until next version of h2database is released post 2.2.224
             maven {
-                url "${artifactory_contextUrl}/corda-dependencies-dev"
-                authentication {
-                    basic(BasicAuthentication)
-                }
-                credentials {
-                    username = findProperty('cordaArtifactoryUsername') ?: System.getenv('CORDA_ARTIFACTORY_USERNAME')
-                    password = findProperty('cordaArtifactoryPassword') ?: System.getenv('CORDA_ARTIFACTORY_PASSWORD')
-                }
+                url "${publicArtifactURL}/corda-dependencies-dev"
                 content {
                     includeGroupByRegex 'com\\.h2database(\\..*)?'
                 }
