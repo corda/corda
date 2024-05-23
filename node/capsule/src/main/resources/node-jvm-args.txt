@@ -22,5 +22,6 @@
 --add-opens=java.management/sun.management=ALL-UNNAMED
 --add-opens=java.logging/java.util.logging=ALL-UNNAMED
 --add-opens=java.sql/java.sql=ALL-UNNAMED
+--add-opens=jdk.crypto.ec/sun.security.ec=ALL-UNNAMED
 --add-opens=jdk.crypto.ec/sun.security.ec.ed=ALL-UNNAMED
 --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
