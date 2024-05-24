@@ -438,13 +438,6 @@ allprojects {
                     includeGroup 'com.github.detro'
                 }
             }
-            // required until next version of h2database is released post 2.2.224
-            maven {
-                url "${publicArtifactURL}/corda-dependencies-dev"
-                content {
-                    includeGroupByRegex 'com\\.h2database(\\..*)?'
-                }
-            }
             maven {
                 url "${publicArtifactURL}/corda-dev"
                 content {
