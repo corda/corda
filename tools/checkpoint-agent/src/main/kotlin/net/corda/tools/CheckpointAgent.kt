@@ -127,7 +127,8 @@ object CheckpointHook : ClassFileTransformer {
             protectionDomain: ProtectionDomain?,
             classfileBuffer: ByteArray
     ): ByteArray? {
-        if (className.startsWith("java") || className.startsWith("javassist") || className.startsWith("kotlin")) {
+        if (className.startsWith("java") || className.startsWith("javassist") || className.startsWith("kotlin")
+                || className.startsWith("jdk")) {
             return null
         }
         return try {
