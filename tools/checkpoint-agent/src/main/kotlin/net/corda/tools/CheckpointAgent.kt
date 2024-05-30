@@ -127,6 +127,7 @@ object CheckpointHook : ClassFileTransformer {
             protectionDomain: ProtectionDomain?,
             classfileBuffer: ByteArray
     ): ByteArray? {
+        @Suppress("ComplexCondition")
         if (className.startsWith("java") || className.startsWith("javassist") || className.startsWith("kotlin")
                 || className.startsWith("jdk")) {
             return null
