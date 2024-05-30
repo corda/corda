@@ -1,21 +1,27 @@
-apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
-apply plugin: 'kotlin-jpa'
-apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
-apply plugin: 'com.jfrog.artifactory'
-apply from: "${rootProject.projectDir}/java8.gradle"
+apply plugin: 'corda.common-publishing'
 
 description 'Corda finance module - contracts'
 
 dependencies {
-    cordaCompile project(':core')
+    cordaProvided project(':core')
 
-    testCompile project(':test-utils')
-    testCompile project(path: ':core', configuration: 'testArtifacts')
-    testCompile project(':node-driver')
+    implementation "javax.persistence:javax.persistence-api:2.2"
+    implementation "org.hibernate:hibernate-core:$hibernate_version"
+    implementation "org.slf4j:slf4j-api:$slf4j_version"
+
+    testImplementation project(path: ':core', configuration: 'testArtifacts')
+    testImplementation project(':node')
+    testImplementation project(':node-api')
+    testImplementation project(':finance:workflows')
+    testImplementation project(':core-test-utils')
+    testImplementation project(':test-utils')
+    testImplementation project(':node-driver')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
@@ -24,11 +30,11 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntimeClasspath
+    testArtifacts.extendsFrom testRuntimeOnlyClasspath
 }
 
 jar {
@@ -45,7 +51,7 @@ cordapp {
     minimumPlatformVersion 1
     contract {
         name "Corda Finance Demo"
-        versionId 1
+        versionId 2
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
@@ -53,6 +59,11 @@ cordapp {
     // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 }
 
-publish {
-    name jar.baseName
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId 'corda-finance-contracts'
+            from components.cordapp
+        }
+    }
 }

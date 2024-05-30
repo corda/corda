@@ -13,7 +13,8 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExpectedException
+import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertTrue
 
 object EmptyWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = false
@@ -23,9 +24,6 @@ class KotlinUtilsTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    @JvmField
-    @Rule
-    val expectedEx: ExpectedException = ExpectedException.none()
 
     private val KRYO_CHECKPOINT_NOWHITELIST_CONTEXT = CheckpointSerializationContextImpl(
             javaClass.classLoader,
@@ -54,10 +52,11 @@ class KotlinUtilsTest {
 
     @Test(timeout=300_000)
 	fun `deserialise transient property with non-capturing lambda`() {
-        expectedEx.expect(KryoException::class.java)
-        expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
-        val original = NonCapturingTransientProperty()
-        original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        val anException = assertThrows<KryoException> {
+            val original = NonCapturingTransientProperty()
+            original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        }
+        anException.message?.let { assertTrue(it.contains("is not annotated or on the whitelist, so cannot be used in serialization")) }
     }
 
     @Test(timeout=300_000)
@@ -73,12 +72,11 @@ class KotlinUtilsTest {
 
     @Test(timeout=300_000)
 	fun `deserialise transient property with capturing lambda`() {
-        expectedEx.expect(KryoException::class.java)
-        expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
-
-        val original = CapturingTransientProperty("Hello")
-
-        original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        val anException = assertThrows<KryoException> {
+            val original = CapturingTransientProperty("Hello")
+            original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        }
+        anException.message?.let { assertTrue(it.contains("is not annotated or on the whitelist, so cannot be used in serialization")) }
     }
 
     private class NullTransientProperty {

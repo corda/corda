@@ -11,11 +11,11 @@ import net.corda.core.internal.utilities.Internable
 import net.corda.core.internal.utilities.PrivateInterner
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import java.lang.annotation.Inherited
 import java.security.PublicKey
-
-private val log = loggerFor<AttachmentConstraint>()
 
 /**
  * This annotation should only be added to [Contract] classes.
@@ -48,8 +48,11 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
  */
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
     companion object {
+        private val log = contextLogger()
+
         val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
     }
+
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
             log.debug("Checking attachment uploader ${attachment.contractAttachment.uploader} is trusted")
@@ -67,10 +70,12 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
  * It allows for centralized control over the cordapps that can be used.
  */
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
+    private val log = loggerFor<WhitelistedByZoneAttachmentConstraint>()
+
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
             val whitelist = attachment.whitelistedContractImplementations
-            log.debug("Checking ${attachment.contract} is in CZ whitelist $whitelist")
+            log.debug { "Checking ${attachment.contract} is in CZ whitelist $whitelist" }
             attachment.id in (whitelist[attachment.contract] ?: emptyList())
         } else {
             log.warn("CZ whitelisted constraint check failed: ${attachment.id} not in CZ whitelist")
@@ -111,14 +116,16 @@ object AutomaticPlaceholderConstraint : AttachmentConstraint {
  */
 data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
-        log.debug("Checking signature constraints: verifying $key in contract attachment signer keys: ${attachment.signerKeys}")
-        return if (!key.isFulfilledBy(attachment.signerKeys.map { it })) {
+        log.debug { "Checking signature constraints: verifying $key in contract attachment signer keys: ${attachment.signerKeys}" }
+        return if (!key.isFulfilledBy(attachment.signerKeys)) {
             log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}")
             false
         } else true
     }
 
     companion object : Internable<SignatureAttachmentConstraint> {
+        private val log = contextLogger()
+
         @CordaInternal
         override val interner = PrivateInterner<SignatureAttachmentConstraint>()
 

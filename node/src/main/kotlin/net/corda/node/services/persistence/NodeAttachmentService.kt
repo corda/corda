@@ -28,7 +28,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VER
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.readFully
 import net.corda.core.internal.utilities.ZipBombDetector
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.internal.verification.NodeVerificationSupport
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
@@ -53,6 +53,7 @@ import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
@@ -85,7 +86,7 @@ class NodeAttachmentService @JvmOverloads constructor(
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
 
     // This is to break the circular dependency.
-    lateinit var servicesForResolution: ServicesForResolution
+    lateinit var nodeVerificationSupport: NodeVerificationSupport
 
     companion object {
         private val log = contextLogger()
@@ -109,7 +110,7 @@ class NodeAttachmentService @JvmOverloads constructor(
             // Can be null for not-signed JARs.
             val allManifestEntries = jar.manifest?.entries?.keys?.toMutableList()
             val extraFilesNotFoundInEntries = mutableListOf<JarEntry>()
-            val manifestHasEntries= allManifestEntries != null && allManifestEntries.isNotEmpty()
+            val manifestHasEntries = !allManifestEntries.isNullOrEmpty()
 
             while (true) {
                 val cursor = jar.nextJarEntry ?: break
@@ -225,7 +226,7 @@ class NodeAttachmentService @JvmOverloads constructor(
 
         // This is invoked by [InputStreamSerializer], which does NOT close the stream afterwards.
         @Throws(IOException::class)
-        override fun read(b: ByteArray?, off: Int, len: Int): Int {
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
             return super.read(b, off, len).apply {
                 if (this == -1) {
                     validate()
@@ -256,11 +257,11 @@ class NodeAttachmentService @JvmOverloads constructor(
     }
 
     private class AttachmentImpl(
-        override val id: SecureHash,
-        dataLoader: () -> ByteArray,
-        private val checkOnLoad: Boolean,
-        uploader: String?,
-        override val signerKeys: List<PublicKey>
+            override val id: SecureHash,
+            dataLoader: () -> ByteArray,
+            private val checkOnLoad: Boolean,
+            uploader: String?,
+            override val signerKeys: List<PublicKey>,
     ) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
 
         override fun open(): InputStream {
@@ -270,22 +271,21 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
 
         private class Token(
-            private val id: SecureHash,
-            private val checkOnLoad: Boolean,
-            private val uploader: String?,
-            private val signerKeys: List<PublicKey>
+                private val id: SecureHash,
+                private val checkOnLoad: Boolean,
+                private val uploader: String?,
+                private val signerKeys: List<PublicKey>,
         ) : SerializationToken {
             override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(
-                id,
-                context.attachmentDataLoader(id),
-                checkOnLoad,
-                uploader,
-                signerKeys
+                    id,
+                    context.attachmentDataLoader(id),
+                    checkOnLoad,
+                    uploader,
+                    signerKeys,
             )
         }
 
-        override fun toToken(context: SerializeAsTokenContext) =
-            Token(id, checkOnLoad, uploader, signerKeys)
+        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad, uploader, signerKeys)
     }
 
     private val attachmentContentCache = NonInvalidatingWeightBasedCache(
@@ -305,14 +305,14 @@ class NodeAttachmentService @JvmOverloads constructor(
 
     private fun createAttachmentFromDatabase(attachment: DBAttachment): Attachment {
         val attachmentImpl = AttachmentImpl(
-            id = SecureHash.create(attachment.attId),
-            dataLoader = { attachment.content },
-            checkOnLoad = checkAttachmentsOnLoad,
-            uploader = attachment.uploader,
-            signerKeys = attachment.signers?.toList() ?: emptyList()
+                id = SecureHash.create(attachment.attId),
+                dataLoader = { attachment.content },
+                checkOnLoad = checkAttachmentsOnLoad,
+                uploader = attachment.uploader,
+                signerKeys = attachment.signers?.toList() ?: emptyList()
         )
         val contracts = attachment.contractClassNames
-        return if (contracts != null && contracts.isNotEmpty()) {
+        return if (!contracts.isNullOrEmpty()) {
             ContractAttachment.create(
                 attachment = attachmentImpl,
                 contract = contracts.first(),
@@ -336,7 +336,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         return null
     }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importAttachment(jar: InputStream): AttachmentId {
         return import(jar, UNKNOWN_UPLOADER, null)
     }
@@ -357,23 +357,15 @@ class NodeAttachmentService @JvmOverloads constructor(
         return import(jar, uploader, filename)
     }
 
-    override fun privilegedImportOrGetAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
-        return try {
-            import(jar, uploader, filename)
-        } catch (faee: java.nio.file.FileAlreadyExistsException) {
-            AttachmentId.create(faee.message!!)
-        }
-    }
-
     override fun hasAttachment(attachmentId: AttachmentId): Boolean = database.transaction {
         currentDBSession().find(DBAttachment::class.java, attachmentId.toString()) != null
     }
 
     private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId: AttachmentId) =
             if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
-                val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }
+                val versions = contractClassNames.mapNotNull { nodeVerificationSupport.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }
                         .filter { it >= 0 }.map { it + 1 } // +1 as versions starts from 1 not 0
-                val max = versions.max()
+                val max = versions.maxOrNull()
                 if (max != null && max > contractVersionFromFile) {
                     val msg = "Updating version of attachment $attachmentId from '$contractVersionFromFile' to '$max'"
                     if (versions.toSet().size > 1)
@@ -397,7 +389,7 @@ class NodeAttachmentService @JvmOverloads constructor(
                 // set the hash field of the new attachment record.
 
                 val bytes = inputStream.readFully()
-                require(!ZipBombDetector.scanZip(ByteArrayInputStream(bytes), servicesForResolution.networkParameters.maxTransactionSize.toLong())) {
+                require(!ZipBombDetector.scanZip(ByteArrayInputStream(bytes), nodeVerificationSupport.networkParameters.maxTransactionSize.toLong())) {
                     "The attachment is too large and exceeds both max transaction size and the maximum allowed compression ratio"
                 }
                 val id = bytes.sha256()
@@ -447,18 +439,14 @@ class NodeAttachmentService @JvmOverloads constructor(
 
     private fun getVersion(attachmentBytes: ByteArray) =
             JarInputStream(attachmentBytes.inputStream()).use {
-                try {
-                    it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
-                } catch (e: NumberFormatException) {
-                    DEFAULT_CORDAPP_VERSION
-                }
+                it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toIntOrNull() ?: DEFAULT_CORDAPP_VERSION
             }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
         return try {
             import(jar, UNKNOWN_UPLOADER, null)
-        } catch (faee: java.nio.file.FileAlreadyExistsException) {
+        } catch (faee: FileAlreadyExistsException) {
             AttachmentId.create(faee.message!!)
         }
     }

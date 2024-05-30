@@ -1,6 +1,5 @@
 package net.corda.node.services.rpc
 
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.SecureArtemisConfiguration
@@ -18,6 +17,7 @@ import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import java.nio.file.Path
+import kotlin.io.path.div
 
 internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean,
                                       address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: BrokerRpcSslOptions?,
@@ -40,7 +40,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         queueConfigs = queueConfigurations()
 
         managementNotificationAddress = SimpleString(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
-        addressesSettings = mapOf(
+        addressSettings = mapOf(
                 "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                     maxSizeBytes = 5L * maxMessageSize
                     addressFullMessagePolicy = AddressFullMessagePolicy.PAGE

@@ -1,9 +1,14 @@
 package net.corda.finance.contracts.asset
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -16,25 +21,44 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
-import net.corda.finance.*
+import net.corda.coretesting.internal.TEST_TX_TIME
+import net.corda.finance.DOLLARS
+import net.corda.finance.GBP
+import net.corda.finance.POUNDS
+import net.corda.finance.USD
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.NetType
 import net.corda.finance.contracts.asset.Obligation.Lifecycle
+import net.corda.finance.`issued by`
 import net.corda.finance.workflows.asset.ObligationUtils
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.*
-import net.corda.testing.dsl.*
-import net.corda.coretesting.internal.TEST_TX_TIME
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.DummyCommandData
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.dsl.EnforceVerifyOrFail
+import net.corda.testing.dsl.LedgerDSL
+import net.corda.testing.dsl.TestLedgerDSLInterpreter
+import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.dsl.TransactionDSL
+import net.corda.testing.dsl.TransactionDSLInterpreter
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
+import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.Currency
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -253,7 +277,7 @@ class ObligationTests {
      * Test that the issuance builder rejects building into a transaction with existing
      * cash inputs.
      */
-    @Test(expected = IllegalStateException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `reject issuance with inputs`() {
         // Issue some obligation
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -265,8 +289,10 @@ class ObligationTests {
         // Include the previously issued obligation in a new issuance command
         val ptx = TransactionBuilder(DUMMY_NOTARY)
         ptx.addInputState(tx.outRef<Obligation.State<Currency>>(0))
-        ObligationUtils.generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
-                beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
+        assertThatIllegalStateException().isThrownBy {
+            ObligationUtils.generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
+                    beneficiary = MINI_CORP, notary = DUMMY_NOTARY)
+        }
     }
 
     /** Test generating a transaction to net two obligations of the same size, and therefore there are no outputs. */
@@ -576,7 +602,7 @@ class ObligationTests {
         val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
         val obligationDef = Obligation.Terms(NonEmptySet.of(commodityContractBytes.sha256() as SecureHash), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
-        val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
+        val oneUnitFcojObligation = Obligation.State(Lifecycle.NORMAL, ALICE,
                 obligationDef, oneUnitFcoj.quantity, NULL_PARTY)
         // Try settling a simple commodity obligation
         ledgerServices.ledger(DUMMY_NOTARY) {
@@ -853,9 +879,11 @@ class ObligationTests {
                 fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableIssuedProducts = miniCorpIssuer)).bilateralNetState)
     }
 
-    @Test(expected = IllegalStateException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun `states cannot be netted if not in the normal state`() {
-        inState.copy(lifecycle = Lifecycle.DEFAULTED).bilateralNetState
+        assertThatIllegalStateException().isThrownBy {
+            inState.copy(lifecycle = Lifecycle.DEFAULTED).bilateralNetState
+        }
     }
 
     /**
@@ -968,5 +996,5 @@ class ObligationTests {
     private val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
         get() = Obligation.Terms(NonEmptySet.of(cashContractBytes.sha256() as SecureHash), NonEmptySet.of(this), TEST_TX_TIME)
     private val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
-        get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)
+        get() = Obligation.State(Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)
 }

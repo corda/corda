@@ -15,6 +15,7 @@ import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.custom.InstantSerializer
+import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
@@ -23,6 +24,7 @@ import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.amqp.testutils.testName
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertNotSame
@@ -68,7 +70,7 @@ class EvolvabilityTests {
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: Int, val a: Int)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
@@ -90,7 +92,7 @@ class EvolvabilityTests {
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: String, val a: Int)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
@@ -110,7 +112,7 @@ class EvolvabilityTests {
 
         data class C(val a: Int, val b: Int?)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
@@ -118,10 +120,10 @@ class EvolvabilityTests {
         assertEquals(null, deserializedC.b)
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     fun addAdditionalParam() {
         val sf = testDefaultFactory()
-        val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAdditionalParam")
+        val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAdditionalParam")!!
         @Suppress("UNUSED_VARIABLE")
         val A = 1
 
@@ -140,7 +142,9 @@ class EvolvabilityTests {
         // Expected to throw as we can't construct the new type as it contains a newly
         // added parameter that isn't optional, i.e. not nullable and there isn't
         // a constructor that takes the old parameters
-        DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
+        }
     }
 
     @Suppress("UNUSED_VARIABLE")
@@ -159,7 +163,7 @@ class EvolvabilityTests {
 
         data class CC(val b: String, val d: Int)
 
-        val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.removeParameters")
+        val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.removeParameters")!!
         val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -167,7 +171,6 @@ class EvolvabilityTests {
         assertEquals(D, deserializedCC.d)
     }
 
-    @Suppress("UNUSED_VARIABLE")
     @Test(timeout=300_000)
 	fun removeParameterWithCalculatedParameter() {
         val sf = testDefaultFactory()
@@ -186,7 +189,7 @@ class EvolvabilityTests {
             val e: String get() = "$b sailor"
         }
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -213,7 +216,7 @@ class EvolvabilityTests {
 
         data class CC(val a: Int, val e: Boolean?, val d: Int)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -238,7 +241,7 @@ class EvolvabilityTests {
             constructor (a: Int) : this(a, "hello")
         }
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -263,7 +266,7 @@ class EvolvabilityTests {
             constructor (z: Int, y: Int) : this(z, y, "10")
         }
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(url.readBytes()))
 
         assertEquals("10", deserializedCC.a)
@@ -322,16 +325,16 @@ class EvolvabilityTests {
         //                 9,
         //                 mapOf("A" to listOf(1, 2, 3), "B" to listOf (4, 5, 6)))).bytes)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         DeserializationInput(factory).deserialize(SerializedBytes<NetworkParametersExample>(url.readBytes()))
     }
 
-    @Test(expected = NotSerializableException::class, timeout=300_000)
+    @Test(timeout=300_000)
     @Suppress("UNUSED")
     fun addMandatoryFieldWithAltConstructorUnAnnotated() {
         val sf = testDefaultFactory()
         val url = EvolvabilityTests::class.java.getResource(
-                "EvolvabilityTests.addMandatoryFieldWithAltConstructorUnAnnotated")
+                "EvolvabilityTests.addMandatoryFieldWithAltConstructorUnAnnotated")!!
         @Suppress("UNUSED_VARIABLE")
         val A = 1
 
@@ -349,7 +352,9 @@ class EvolvabilityTests {
 
         // we expect this to throw as we should not find any constructors
         // capable of dealing with this
-        DeserializationInput(sf).deserialize(SerializedBytes<CC>(url.readBytes()))
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            DeserializationInput(sf).deserialize(SerializedBytes<CC>(url.readBytes()))
+        }
     }
 
     @Test(timeout=300_000)
@@ -372,7 +377,7 @@ class EvolvabilityTests {
             constructor (c: String, a: Int, b: Int) : this(a, b, c, "wibble")
         }
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -404,7 +409,7 @@ class EvolvabilityTests {
             constructor (c: String, a: Int) : this(a, c, "wibble")
         }
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
@@ -451,9 +456,9 @@ class EvolvabilityTests {
             constructor (a: Int, b: Int, c: Int, d: Int) : this(-1, c, b, a, d)
         }
 
-        val url1 = EvolvabilityTests::class.java.getResource(resource1)
-        val url2 = EvolvabilityTests::class.java.getResource(resource2)
-        val url3 = EvolvabilityTests::class.java.getResource(resource3)
+        val url1 = EvolvabilityTests::class.java.getResource(resource1)!!
+        val url2 = EvolvabilityTests::class.java.getResource(resource2)!!
+        val url3 = EvolvabilityTests::class.java.getResource(resource3)!!
 
         val sb1 = url1.readBytes()
         val db1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb1))
@@ -500,7 +505,7 @@ class EvolvabilityTests {
 
         data class Outer(val a: Int, val b: Inner)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val outer = DeserializationInput(sf).deserialize(SerializedBytes<Outer>(sc2))
 
@@ -565,9 +570,9 @@ class EvolvabilityTests {
             constructor (b: Int, c: Int, d: Int, e: Int, f: Int) : this(b, c, d, e, f, -1)
         }
 
-        val url1 = EvolvabilityTests::class.java.getResource(resource1)
-        val url2 = EvolvabilityTests::class.java.getResource(resource2)
-        val url3 = EvolvabilityTests::class.java.getResource(resource3)
+        val url1 = EvolvabilityTests::class.java.getResource(resource1)!!
+        val url2 = EvolvabilityTests::class.java.getResource(resource2)!!
+        val url3 = EvolvabilityTests::class.java.getResource(resource3)!!
 
         val sb1 = url1.readBytes()
         val db1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb1))
@@ -616,8 +621,8 @@ class EvolvabilityTests {
 @Ignore("Test fails after moving NetworkParameters and NotaryInfo into core from node-api")
     fun readBrokenNetworkParameters() {
         val sf = testDefaultFactory()
-        sf.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(sf))
-        sf.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        sf.register(InstantSerializer(sf))
+        sf.register(PublicKeySerializer)
 
         //
         // filename breakdown
@@ -627,7 +632,7 @@ class EvolvabilityTests {
         //
         val resource = "networkParams.r3corda.6a6b6f256"
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<SignedData<NetworkParameters>>(sc2))
         val networkParams = DeserializationInput(sf).deserialize(deserializedC.raw)
@@ -654,8 +659,8 @@ class EvolvabilityTests {
     @Test(timeout=300_000)
     fun `read corda 4-11 network parameters`() {
         val sf = testDefaultFactory()
-        sf.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(sf))
-        sf.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        sf.register(InstantSerializer(sf))
+        sf.register(PublicKeySerializer)
         sf.register(net.corda.serialization.internal.amqp.custom.DurationSerializer(sf))
 
         //
@@ -666,7 +671,7 @@ class EvolvabilityTests {
         //
         val resource = "networkParams.4.11.58ecce1"
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<SignedData<NetworkParameters>>(sc2))
         val networkParams = DeserializationInput(sf).deserialize(deserializedC.raw)
@@ -691,8 +696,8 @@ class EvolvabilityTests {
                 3, listOf(NotaryInfo(DUMMY_NOTARY_PARTY, false)), 1000, 1000, Instant.EPOCH, 1, emptyMap())
 
         val sf = testDefaultFactory()
-        sf.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(sf))
-        sf.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        sf.register(InstantSerializer(sf))
+        sf.register(PublicKeySerializer)
 
         val testOutput = TestSerializationOutput(true, sf)
         val serialized = testOutput.serialize(networkParameters)
@@ -704,7 +709,6 @@ class EvolvabilityTests {
         File(URI("$localPath/$resource")).writeBytes(signedAndSerialized.bytes)
     }
 
-    @Suppress("UNCHECKED_CAST")
     @Test(timeout=300_000)
 	fun getterSetterEvolver1() {
         val resource = "EvolvabilityTests.getterSetterEvolver1"
@@ -734,7 +738,7 @@ class EvolvabilityTests {
             constructor() : this(0, 0, 0, 0)
         }
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
 
         val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
@@ -759,7 +763,7 @@ class EvolvabilityTests {
         // Uncomment to recreate
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(Evolved("dronf", NewEnum.BUCKLE_MY_SHOE)).bytes)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
 
         val sc2 = url.readBytes()
         val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<Evolved>(sc2))
@@ -786,7 +790,7 @@ class EvolvabilityTests {
         // Uncomment to recreate
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(ParameterizedContainer(Parameterized(10, setOf(20)))).bytes)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
 
         val sc2 = url.readBytes()
         val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<ParameterizedContainer>(sc2))
@@ -900,7 +904,7 @@ class EvolvabilityTests {
         File(URI("$localPath/$resource")).writeBytes(currentForm.bytes)
          */
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val previousForm = SerializedBytes<NotarisationRequest>(sc2)
         val deserialized = DeserializationInput(sf).deserialize(previousForm)
@@ -932,7 +936,7 @@ class EvolvabilityTests {
         //val A = MaybeSerializedSignedTransaction(SecureHash.randomSHA256(), null, null)
         //File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(A).bytes)
 
-        val url = EvolvabilityTests::class.java.getResource(resource)
+        val url = EvolvabilityTests::class.java.getResource(resource)!!
         val sc2 = url.readBytes()
         val deserializedA = DeserializationInput(sf).deserialize(SerializedBytes<MaybeSerializedSignedTransaction>(sc2))
 

@@ -1,9 +1,8 @@
 package net.corda.node.amqp
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
 import net.corda.core.crypto.toStringShort
-import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.NodeConfiguration
@@ -32,6 +31,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.util.*
+import kotlin.io.path.div
 import kotlin.test.assertEquals
 
 class AMQPBridgeTest {
@@ -41,7 +41,7 @@ class AMQPBridgeTest {
 
     private val log = loggerFor<AMQPBridgeTest>()
 
-    private val BOB = TestIdentity(BOB_NAME)
+    private val bob = TestIdentity(BOB_NAME)
 
     private val portAllocation = incrementalPortAllocation()
     private val artemisAddress = portAllocation.nextHostAndPort()
@@ -52,7 +52,7 @@ class AMQPBridgeTest {
     @Test(timeout=300_000)
 	fun `test acked and nacked messages`() {
         // Create local queue
-        val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
+        val sourceQueueName = "internal.peers." + bob.publicKey.toStringShort()
         val (artemisServer, artemisClient, bridgeManager) = createArtemis(sourceQueueName)
 
         // Pre-populate local queue with 3 messages
@@ -174,7 +174,7 @@ class AMQPBridgeTest {
 	fun `bridge with strict CRL checking does not connect to server with invalid certificates`() {
         // Note that the opposite of this test (that a connection is established if strict checking is disabled) is carried out by the
         // ack/nack test above. "Strict CRL checking" means that soft fail mode is disabled.
-        val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
+        val sourceQueueName = "internal.peers." + bob.publicKey.toStringShort()
         val (artemisServer, artemisClient, bridge) = createArtemis(sourceQueueName, crlCheckSoftFail = false)
 
         createAMQPServer().use {
@@ -225,7 +225,7 @@ class AMQPBridgeTest {
             // Local queue for outgoing messages
             artemis.session.createQueue(
                     QueueConfiguration(sourceQueueName).setRoutingType(RoutingType.ANYCAST).setAddress(sourceQueueName).setDurable(true))
-            bridgeManager.deployBridge(ALICE_NAME.toString(), sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
+            bridgeManager.deployBridge(ALICE_NAME.toString(), sourceQueueName, listOf(amqpAddress), setOf(bob.name))
         }
         return Triple(artemisServer, artemisClient, bridgeManager)
     }

@@ -14,7 +14,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
@@ -59,6 +58,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
 import java.util.*
+import kotlin.io.path.div
 import net.corda.nodeapi.internal.config.User as InternalUser
 
 inline fun <reified I : RPCOps> RPCDriverDSL.startInVmRpcClient(
@@ -188,23 +188,23 @@ data class RPCDriverDSL(
         private val driverDSL: DriverDSLImpl, private val externalTrace: Trace?
 ) : InternalDriverDSL by driverDSL {
     private companion object {
-        const val notificationAddress = "notifications"
+        const val NOTIFICATION_ADDRESS = "notifications"
 
         private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
             name = "RPCDriver"
-            managementNotificationAddress = SimpleString(notificationAddress)
+            managementNotificationAddress = SimpleString(NOTIFICATION_ADDRESS)
             isPopulateValidatedUser = true
             journalBufferSize_NIO = maxFileSize
             journalBufferSize_AIO = maxFileSize
             journalFileSize = maxFileSize
             queueConfigs = listOf(
                     QueueConfiguration(RPCApi.RPC_SERVER_QUEUE_NAME).setAddress(RPCApi.RPC_SERVER_QUEUE_NAME).setDurable(false),
-                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_REMOVALS).setAddress(notificationAddress)
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_REMOVALS).setAddress(NOTIFICATION_ADDRESS)
                             .setFilterString(RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION).setDurable(false),
-                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).setAddress(notificationAddress)
+                    QueueConfiguration(RPCApi.RPC_CLIENT_BINDING_ADDITIONS).setAddress(NOTIFICATION_ADDRESS)
                             .setFilterString(RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION).setDurable(false)
             )
-            addressesSettings = mapOf(
+            addressSettings = mapOf(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                         maxSizeBytes = maxBufferedBytesPerClient
                         addressFullMessagePolicy = AddressFullMessagePolicy.PAGE

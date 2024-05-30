@@ -660,7 +660,7 @@ private class P2PMessagingConsumer(
         private val metricsRegistry : MetricRegistry) : LifecycleSupport {
 
     private companion object {
-        private const val initialSessionMessages = "${P2PMessagingHeaders.Type.KEY}<>'${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}'"
+        private const val initialSessionMessages = "${P2PMessagingHeaders.Type.KEY} is null or ${P2PMessagingHeaders.Type.KEY}<>'${P2PMessagingHeaders.Type.SESSION_INIT_VALUE}'"
         private val logger by lazy { loggerFor<P2PMessagingClient>() }
     }
 

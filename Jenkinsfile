@@ -53,6 +53,8 @@ pipeline {
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
         CORDA_USE_CACHE = "corda-remotes"
+        JAVA_HOME="/usr/lib/jvm/java-17-amazon-corretto"
+        JAVA_8_HOME = "/usr/lib/jvm/java-1.8.0-amazon-corretto"
     }
 
     stages {
@@ -116,6 +118,24 @@ pipeline {
                                         './gradlew',
                                         COMMON_GRADLE_PARAMS,
                                         'test'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Smoke Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'smokeTest'
+                                ].join(' ')
+                            }
+                        }
+                        stage('Slow Integration Test') {
+                            steps {
+                                sh script: [
+                                        './gradlew',
+                                        COMMON_GRADLE_PARAMS,
+                                        'slowIntegrationTest'
                                 ].join(' ')
                             }
                         }

@@ -138,18 +138,18 @@ internal class CordaRPCOpsImpl(
         return services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
     }
 
-    @Suppress("OverridingDeprecatedMember", "DEPRECATION")
+    @Suppress("OVERRIDE_DEPRECATION", "OverridingDeprecatedMember", "DEPRECATION")
     override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
         val (snapshot, updates) = internalVerifiedTransactionsFeed()
         updates.notUsed()
         return snapshot
     }
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction? =
             services.validatedTransactions.getTransaction(txnId)
 
-    @Suppress("OverridingDeprecatedMember")
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return services.validatedTransactions.track()
     }

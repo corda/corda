@@ -1,9 +1,7 @@
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
-apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'corda.common-publishing'
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
@@ -11,7 +9,7 @@ dependencies {
 
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "org.slf4j:slf4j-api:$slf4j_version"
-    testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version"
 }
 
 jar {
@@ -23,6 +21,11 @@ jar {
     }
 }
 
-publish {
-    name jar.baseName
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId jar.baseName
+            from components.java
+        }
+    }
 }

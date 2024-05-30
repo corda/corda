@@ -1,6 +1,6 @@
 package net.corda.node.services.events
 
-import com.nhaarman.mockito_kotlin.*
+import org.mockito.kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigestService
 import net.corda.core.crypto.SecureHash
