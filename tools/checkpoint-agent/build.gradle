@@ -6,7 +6,7 @@ description 'A javaagent to allow hooking into Kryo checkpoints'
 
 dependencies {
     compileOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compileOnly "org.javassist:javassist:$javaassist_version"
+    implementation "org.javassist:javassist:$javaassist_version"
     compileOnly "com.esotericsoftware:kryo:$kryo_version"
     compileOnly "co.paralleluniverse:quasar-core:$quasar_version"
 
