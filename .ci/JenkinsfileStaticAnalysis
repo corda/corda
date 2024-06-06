@@ -1,0 +1,7 @@
+@Library('corda-shared-build-pipeline-steps@5.2') _
+import com.r3.build.enums.SnykOrganisation
+
+staticCodeAnalysisPipeline(
+    snykCodeEnabled : true,
+    snykOrg: SnykOrganisation.CORDA_4_OS
+)
