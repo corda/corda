@@ -635,7 +635,7 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 }
 
 wrapper {
-    gradleVersion = '7.6.2'
+    gradleVersion = '7.6.4'
     distributionType = Wrapper.DistributionType.ALL
 }
 
