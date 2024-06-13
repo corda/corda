@@ -46,10 +46,42 @@ pipeline {
             }
         }
 
-        stage('No API change check') {
-            steps {
-                sh "./gradlew --no-daemon generateApi"
-                sh ".ci/check-api-changes.sh"
+        stage('API compatability check') {
+            parallel {
+                stage('No API change check') {
+                    steps {
+                        sh "./gradlew --no-daemon generateApi"
+                        sh ".ci/check-api-changes.sh"
+                    }
+                }
+                stage('Scan API Changes (new plugin)') {
+                    steps {
+                        catchError(message: "API Scan failed - breaking changes detected", stageResult: 'FAILURE') {
+                            gradlew('apiDiff')
+                        }
+                    }
+                    post {
+                        success {
+                            script {
+                                String commentText = """\
+                                |Scanning for breaking API changes introduced by this PR\n
+                                |Scan Succeeded\n
+                                """.stripMargin()
+                                githubPRComment(commentText, "Scanning for breaking API changes introduced by this PR")
+                            }
+                        }
+                        failure {
+                            script {
+                                String commentText = """\
+                                |Scanning for breaking API changes introduced by this PR\n
+                                |Scan Failed: ${env.BUILD_URL}\n
+                                |If the breaking changes are intentional, run `./gradlew cementApi` and get approval from the Corda team leads.
+                                """.stripMargin()
+                                githubPRComment(commentText, "Scanning for breaking API changes introduced by this PR")
+                            }
+                        }
+                    }
+                }
             }
         }
 

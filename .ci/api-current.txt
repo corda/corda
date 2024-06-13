@@ -83,7 +83,11 @@ public final class net.corda.core.Utils extends java.lang.Object
 public final class net.corda.core.concurrent.ConcurrencyUtils extends java.lang.Object
   @NotNull
   public static final net.corda.core.concurrent.CordaFuture firstOf(net.corda.core.concurrent.CordaFuture<? extends V>[], kotlin.jvm.functions.Function1)
+  @NotNull
+  public static final net.corda.core.concurrent.CordaFuture firstOf(net.corda.core.concurrent.CordaFuture<? extends V>[], org.slf4j.Logger, kotlin.jvm.functions.Function1)
   public static final W match(java.util.concurrent.Future, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function1)
+  @NotNull
+  public static final String shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 ##
 public interface net.corda.core.concurrent.CordaFuture extends java.util.concurrent.Future
   public abstract void then(kotlin.jvm.functions.Function1)
@@ -552,6 +556,8 @@ public interface net.corda.core.contracts.Attachment extends net.corda.core.cont
 public interface net.corda.core.contracts.AttachmentConstraint
   public abstract boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
+public final class net.corda.core.contracts.AttachmentConstraintKt extends java.lang.Object
+##
 @CordaSerializable
 public final class net.corda.core.contracts.AttachmentResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)
@@ -643,8 +649,6 @@ public final class net.corda.core.contracts.CommandWithParties extends java.lang
   public String toString()
 ##
 public final class net.corda.core.contracts.ComponentGroupEnum extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.contracts.ComponentGroupEnum valueOf(String)
   public static net.corda.core.contracts.ComponentGroupEnum[] values()
 ##
@@ -660,7 +664,6 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   public <init>(net.corda.core.contracts.Attachment, String, java.util.Set, String)
   public <init>(net.corda.core.contracts.Attachment, String, java.util.Set, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.contracts.Attachment, String, java.util.Set, String, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public void extractFile(String, java.io.OutputStream)
   @NotNull
   public final java.util.Set getAdditionalContracts()
   @NotNull
@@ -682,8 +685,6 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   public final boolean isSigned()
   @NotNull
   public java.io.InputStream open()
-  @NotNull
-  public java.util.jar.JarInputStream openAsJAR()
   @NotNull
   public String toString()
   @NotNull
@@ -1200,8 +1201,6 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
 ##
 @CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$Direction extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.contracts.TransactionVerificationException$Direction valueOf(String)
   public static net.corda.core.contracts.TransactionVerificationException.Direction[] values()
 ##
@@ -1882,6 +1881,8 @@ public final class net.corda.core.crypto.Crypto extends java.lang.Object
   public static final net.corda.core.crypto.SignatureScheme RSA_SHA256
   @NotNull
   public static final org.bouncycastle.asn1.DLSequence SHA512_256
+  @NotNull
+  public static final net.corda.core.crypto.SignatureScheme SPHINCS256_SHA256
 ##
 public final class net.corda.core.crypto.CryptoUtils extends java.lang.Object
   @NotNull
@@ -2610,8 +2611,6 @@ public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.F
   @NotNull
   public final java.util.Set getOtherSessions()
   @NotNull
-  public final net.corda.core.flows.FlowSession getOtherSideSession()
-  @NotNull
   public final Object getPayload()
   protected boolean isFinality()
   @Suspendable
@@ -2623,12 +2622,10 @@ public class net.corda.core.flows.DataVendingFlow extends net.corda.core.flows.F
 @DoNotImplement
 public interface net.corda.core.flows.Destination
 ##
-@DoNotImplement
 @CordaSerializable
 public abstract class net.corda.core.flows.DistributionList extends java.lang.Object
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
-@DoNotImplement
 @CordaSerializable
 public static final class net.corda.core.flows.DistributionList$ReceiverDistributionList extends net.corda.core.flows.DistributionList
   public <init>(byte[], net.corda.core.node.StatesToRecord)
@@ -2647,7 +2644,6 @@ public static final class net.corda.core.flows.DistributionList$ReceiverDistribu
   @NotNull
   public String toString()
 ##
-@DoNotImplement
 @CordaSerializable
 public static final class net.corda.core.flows.DistributionList$SenderDistributionList extends net.corda.core.flows.DistributionList
   public <init>(net.corda.core.node.StatesToRecord, java.util.Map)
@@ -2666,7 +2662,6 @@ public static final class net.corda.core.flows.DistributionList$SenderDistributi
   @NotNull
   public String toString()
 ##
-@DoNotImplement
 @CordaSerializable
 public abstract class net.corda.core.flows.DistributionRecord extends java.lang.Object implements net.corda.core.contracts.NamedByHash
   public <init>()
@@ -2700,8 +2695,6 @@ public final class net.corda.core.flows.DistributionRecordKey extends java.lang.
 ##
 @CordaSerializable
 public final class net.corda.core.flows.DistributionRecordType extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.flows.DistributionRecordType valueOf(String)
   public static net.corda.core.flows.DistributionRecordType[] values()
 ##
@@ -2789,8 +2782,8 @@ public static final class net.corda.core.flows.FinalityFlow$Companion$RECORD_UNN
 @StartableByRPC
 public final class net.corda.core.flows.FinalityRecoveryFlow extends net.corda.core.flows.FlowLogic
   public <init>()
-  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, java.util.Collection, net.corda.core.utilities.ProgressTracker)
-  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, java.util.Collection, net.corda.core.utilities.ProgressTracker, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, net.corda.core.utilities.ProgressTracker)
+  public <init>(java.util.Collection, java.util.Collection, net.corda.core.flows.FlowRecoveryQuery, boolean, boolean, net.corda.core.utilities.ProgressTracker, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(java.util.Collection, boolean)
   public <init>(java.util.Collection, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(java.util.Collection, boolean, boolean)
@@ -3054,21 +3047,21 @@ public final class net.corda.core.flows.FlowRecoveryException extends net.corda.
 @CordaSerializable
 public final class net.corda.core.flows.FlowRecoveryQuery extends java.lang.Object
   public <init>()
-  public <init>(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List)
-  public <init>(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List)
+  public <init>(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @Nullable
   public final net.corda.core.flows.FlowTimeWindow component1()
   @Nullable
-  public final java.util.List component2()
+  public final net.corda.core.identity.CordaX500Name component2()
   @Nullable
   public final java.util.List component3()
   @NotNull
-  public final net.corda.core.flows.FlowRecoveryQuery copy(net.corda.core.flows.FlowTimeWindow, java.util.List, java.util.List)
+  public final net.corda.core.flows.FlowRecoveryQuery copy(net.corda.core.flows.FlowTimeWindow, net.corda.core.identity.CordaX500Name, java.util.List)
   public boolean equals(Object)
   @Nullable
   public final java.util.List getCounterParties()
   @Nullable
-  public final java.util.List getInitiatedBy()
+  public final net.corda.core.identity.CordaX500Name getInitiatedBy()
   @Nullable
   public final net.corda.core.flows.FlowTimeWindow getTimeframe()
   public int hashCode()
@@ -3188,26 +3181,26 @@ public static final class net.corda.core.flows.FlowTimeWindow$Companion extends 
 ##
 @CordaSerializable
 public final class net.corda.core.flows.FlowTransactionInfo extends java.lang.Object
-  public <init>(net.corda.core.flows.StateMachineRunId, String, net.corda.core.node.services.TransactionStatus, java.time.Instant, net.corda.core.flows.TransactionMetadata)
+  public <init>(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.TransactionStatus, java.time.Instant, net.corda.core.flows.TransactionMetadata)
   @NotNull
   public final net.corda.core.flows.StateMachineRunId component1()
   @NotNull
   public final String component2()
   @NotNull
-  public final net.corda.core.node.services.TransactionStatus component3()
+  public final net.corda.core.flows.TransactionStatus component3()
   @NotNull
   public final java.time.Instant component4()
   @Nullable
   public final net.corda.core.flows.TransactionMetadata component5()
   @NotNull
-  public final net.corda.core.flows.FlowTransactionInfo copy(net.corda.core.flows.StateMachineRunId, String, net.corda.core.node.services.TransactionStatus, java.time.Instant, net.corda.core.flows.TransactionMetadata)
+  public final net.corda.core.flows.FlowTransactionInfo copy(net.corda.core.flows.StateMachineRunId, String, net.corda.core.flows.TransactionStatus, java.time.Instant, net.corda.core.flows.TransactionMetadata)
   public boolean equals(Object)
   @Nullable
   public final net.corda.core.flows.TransactionMetadata getMetadata()
   @NotNull
   public final net.corda.core.flows.StateMachineRunId getStateMachineRunId()
   @NotNull
-  public final net.corda.core.node.services.TransactionStatus getStatus()
+  public final net.corda.core.flows.TransactionStatus getStatus()
   @NotNull
   public final java.time.Instant getTimestamp()
   @NotNull
@@ -3253,25 +3246,8 @@ public final class net.corda.core.flows.LedgerRecoveryException extends net.cord
 ##
 @StartableByRPC
 public final class net.corda.core.flows.LedgerRecoveryFlow extends net.corda.core.flows.FlowLogic
-  public <init>(java.util.Collection)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int)
   public <init>(net.corda.core.flows.LedgerRecoveryParameters, net.corda.core.utilities.ProgressTracker)
   public <init>(net.corda.core.flows.LedgerRecoveryParameters, net.corda.core.utilities.ProgressTracker, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(net.corda.core.identity.Party)
-  public <init>(net.corda.core.identity.Party, net.corda.core.flows.RecoveryTimeWindow)
-  public <init>(net.corda.core.identity.Party, net.corda.core.flows.RecoveryTimeWindow, boolean)
-  public <init>(net.corda.core.identity.Party, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean)
-  public <init>(net.corda.core.identity.Party, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean)
-  public <init>(boolean)
-  public <init>(boolean, net.corda.core.flows.RecoveryTimeWindow)
-  public <init>(boolean, net.corda.core.flows.RecoveryTimeWindow, boolean)
-  public <init>(boolean, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean)
-  public <init>(boolean, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, int)
-  public <init>(boolean, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, int, boolean)
   @Suspendable
   @NotNull
   public net.corda.core.flows.LedgerRecoveryResult call()
@@ -3280,8 +3256,8 @@ public final class net.corda.core.flows.LedgerRecoveryFlow extends net.corda.cor
 ##
 @CordaSerializable
 public final class net.corda.core.flows.LedgerRecoveryParameters extends java.lang.Object
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int, boolean)
-  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int)
+  public <init>(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final java.util.Collection component1()
   @Nullable
@@ -3291,11 +3267,9 @@ public final class net.corda.core.flows.LedgerRecoveryParameters extends java.la
   public final boolean component5()
   public final boolean component6()
   public final int component7()
-  public final boolean component8()
   @NotNull
-  public final net.corda.core.flows.LedgerRecoveryParameters copy(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int, boolean)
+  public final net.corda.core.flows.LedgerRecoveryParameters copy(java.util.Collection, net.corda.core.flows.RecoveryTimeWindow, boolean, boolean, boolean, boolean, int)
   public boolean equals(Object)
-  public final boolean getAlsoFinalize()
   public final boolean getDryRun()
   public final int getRecoveryBatchSize()
   @NotNull
@@ -3311,16 +3285,14 @@ public final class net.corda.core.flows.LedgerRecoveryParameters extends java.la
 ##
 @CordaSerializable
 public final class net.corda.core.flows.LedgerRecoveryResult extends java.lang.Object
-  public <init>(long, long, long, long)
+  public <init>(long, long, long)
   public final long component1()
   public final long component2()
   public final long component3()
-  public final long component4()
   @NotNull
-  public final net.corda.core.flows.LedgerRecoveryResult copy(long, long, long, long)
+  public final net.corda.core.flows.LedgerRecoveryResult copy(long, long, long)
   public boolean equals(Object)
   public final long getTotalErrors()
-  public final long getTotalRecoveredInFlightTransactions()
   public final long getTotalRecoveredRecords()
   public final long getTotalRecoveredTransactions()
   public int hashCode()
@@ -3329,14 +3301,11 @@ public final class net.corda.core.flows.LedgerRecoveryResult extends java.lang.O
 ##
 @CordaSerializable
 public final class net.corda.core.flows.MaybeSerializedSignedTransaction extends java.lang.Object implements net.corda.core.contracts.NamedByHash
-  @DeprecatedConstructorForDeserialization
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.serialization.SerializedBytes, net.corda.core.transactions.SignedTransaction)
-  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.serialization.SerializedBytes, net.corda.core.transactions.SignedTransaction, boolean)
   @Nullable
   public final net.corda.core.transactions.SignedTransaction get()
   @NotNull
   public net.corda.core.crypto.SecureHash getId()
-  public final boolean getInFlight()
   @Nullable
   public final net.corda.core.transactions.SignedTransaction getNonSerialised()
   @Nullable
@@ -3609,7 +3578,6 @@ public class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.
   @NotNull
   public net.corda.core.transactions.SignedTransaction resolvePayload(Object)
 ##
-@DoNotImplement
 @CordaSerializable
 public final class net.corda.core.flows.ReceiverDistributionRecord extends net.corda.core.flows.DistributionRecord
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, java.time.Instant, int, net.corda.core.utilities.OpaqueBytes, net.corda.core.node.StatesToRecord)
@@ -3711,7 +3679,6 @@ public static final class net.corda.core.flows.SendTransactionFlow$Companion ext
   @Nullable
   public final net.corda.core.flows.TransactionMetadata makeMetaData(net.corda.core.transactions.SignedTransaction, boolean, net.corda.core.node.StatesToRecord, java.util.Set, java.util.Set)
 ##
-@DoNotImplement
 @CordaSerializable
 public final class net.corda.core.flows.SenderDistributionRecord extends net.corda.core.flows.DistributionRecord
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, java.time.Instant, int, net.corda.core.node.StatesToRecord, net.corda.core.node.StatesToRecord)
@@ -3845,8 +3812,6 @@ public final class net.corda.core.flows.StateConsumptionDetails extends java.lan
 ##
 @CordaSerializable
 public static final class net.corda.core.flows.StateConsumptionDetails$ConsumedStateType extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.flows.StateConsumptionDetails$ConsumedStateType valueOf(String)
   public static net.corda.core.flows.StateConsumptionDetails.ConsumedStateType[] values()
 ##
@@ -3895,6 +3860,11 @@ public final class net.corda.core.flows.TransactionMetadata extends java.lang.Ob
   public int hashCode()
   @NotNull
   public String toString()
+##
+@CordaSerializable
+public final class net.corda.core.flows.TransactionStatus extends java.lang.Enum
+  public static net.corda.core.flows.TransactionStatus valueOf(String)
+  public static net.corda.core.flows.TransactionStatus[] values()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.UnexpectedFlowEndException extends net.corda.core.CordaRuntimeException implements net.corda.core.flows.IdentifiableException
@@ -4756,6 +4726,8 @@ public interface net.corda.core.node.ServiceHub extends net.corda.core.node.Serv
   @NotNull
   public abstract net.corda.core.node.services.TelemetryService getTelemetryService()
   @NotNull
+  public abstract net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
+  @NotNull
   public abstract net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull
   public abstract net.corda.core.node.services.VaultService getVaultService()
@@ -4801,8 +4773,6 @@ public interface net.corda.core.node.ServicesForResolution
 ##
 @CordaSerializable
 public final class net.corda.core.node.StatesToRecord extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.StatesToRecord valueOf(String)
   public static net.corda.core.node.StatesToRecord[] values()
 ##
@@ -5040,33 +5010,11 @@ public static final class net.corda.core.node.services.PartyInfo$SingleNode exte
   public String toString()
 ##
 public final class net.corda.core.node.services.ServiceLifecycleEvent extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.ServiceLifecycleEvent valueOf(String)
   public static net.corda.core.node.services.ServiceLifecycleEvent[] values()
 ##
 public interface net.corda.core.node.services.ServiceLifecycleObserver
   public abstract void onServiceLifecycleEvent(net.corda.core.node.services.ServiceLifecycleEvent)
-##
-@CordaSerializable
-public final class net.corda.core.node.services.SignedTransactionWithStatus extends java.lang.Object implements net.corda.core.contracts.NamedByHash
-  public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.node.services.TransactionStatus)
-  @NotNull
-  public final net.corda.core.transactions.SignedTransaction component1()
-  @NotNull
-  public final net.corda.core.node.services.TransactionStatus component2()
-  @NotNull
-  public final net.corda.core.node.services.SignedTransactionWithStatus copy(net.corda.core.transactions.SignedTransaction, net.corda.core.node.services.TransactionStatus)
-  public boolean equals(Object)
-  @NotNull
-  public net.corda.core.crypto.SecureHash getId()
-  @NotNull
-  public final net.corda.core.node.services.TransactionStatus getStatus()
-  @NotNull
-  public final net.corda.core.transactions.SignedTransaction getStx()
-  public int hashCode()
-  @NotNull
-  public String toString()
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.StatesNotAvailableException extends net.corda.core.flows.FlowException
@@ -5092,25 +5040,21 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
   public final java.time.Clock getClock()
   public final boolean isValid(net.corda.core.contracts.TimeWindow)
 ##
-@CordaSerializable
-public final class net.corda.core.node.services.TransactionStatus extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
-  public static net.corda.core.node.services.TransactionStatus valueOf(String)
-  public static net.corda.core.node.services.TransactionStatus[] values()
-##
 @DoNotImplement
 public interface net.corda.core.node.services.TransactionStorage
   @Nullable
   public abstract net.corda.core.transactions.SignedTransaction getTransaction(net.corda.core.crypto.SecureHash)
-  @Nullable
-  public abstract net.corda.core.node.services.SignedTransactionWithStatus getTransactionWithStatus(net.corda.core.crypto.SecureHash)
   @NotNull
   public abstract rx.Observable getUpdates()
   @NotNull
   public abstract net.corda.core.messaging.DataFeed track()
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture trackTransaction(net.corda.core.crypto.SecureHash)
+##
+@DoNotImplement
+public interface net.corda.core.node.services.TransactionVerifierService
+  @NotNull
+  public abstract net.corda.core.concurrent.CordaFuture verify(net.corda.core.transactions.LedgerTransaction)
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.UnknownAnonymousPartyException extends net.corda.core.CordaException
@@ -5158,8 +5102,6 @@ public static final class net.corda.core.node.services.Vault$ConstraintInfo$Comp
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$ConstraintInfo$Type extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$ConstraintInfo$Type valueOf(String)
   public static net.corda.core.node.services.Vault.ConstraintInfo.Type[] values()
 ##
@@ -5201,8 +5143,6 @@ public static final class net.corda.core.node.services.Vault$Page extends java.l
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$RelevancyStatus extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$RelevancyStatus valueOf(String)
   public static net.corda.core.node.services.Vault.RelevancyStatus[] values()
 ##
@@ -5265,8 +5205,6 @@ public static final class net.corda.core.node.services.Vault$StateMetadata exten
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$StateStatus extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$StateStatus valueOf(String)
   public static net.corda.core.node.services.Vault.StateStatus[] values()
 ##
@@ -5325,8 +5263,6 @@ public static final class net.corda.core.node.services.Vault$Update extends java
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$UpdateType extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.Vault$UpdateType valueOf(String)
   public static net.corda.core.node.services.Vault.UpdateType[] values()
 ##
@@ -5426,8 +5362,6 @@ public final class net.corda.core.node.services.diagnostics.NodeVersionInfo exte
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.vault.AggregateFunctionType extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.AggregateFunctionType valueOf(String)
   public static net.corda.core.node.services.vault.AggregateFunctionType[] values()
 ##
@@ -5537,8 +5471,6 @@ public final class net.corda.core.node.services.vault.AttachmentSort extends net
 public static final class net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute extends java.lang.Enum
   @NotNull
   public final String getColumnName()
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.AttachmentSort$AttachmentSortAttribute valueOf(String)
   public static net.corda.core.node.services.vault.AttachmentSort.AttachmentSortAttribute[] values()
 ##
@@ -5579,16 +5511,12 @@ public abstract class net.corda.core.node.services.vault.BaseSort extends java.l
 @DoNotImplement
 @CordaSerializable
 public final class net.corda.core.node.services.vault.BinaryComparisonOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.BinaryComparisonOperator valueOf(String)
   public static net.corda.core.node.services.vault.BinaryComparisonOperator[] values()
 ##
 @DoNotImplement
 @CordaSerializable
 public final class net.corda.core.node.services.vault.BinaryLogicalOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.BinaryLogicalOperator valueOf(String)
   public static net.corda.core.node.services.vault.BinaryLogicalOperator[] values()
 ##
@@ -5834,8 +5762,6 @@ public final class net.corda.core.node.services.vault.Builder extends java.lang.
 @DoNotImplement
 @CordaSerializable
 public final class net.corda.core.node.services.vault.CollectionOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.CollectionOperator valueOf(String)
   public static net.corda.core.node.services.vault.CollectionOperator[] values()
 ##
@@ -6061,8 +5987,6 @@ public static final class net.corda.core.node.services.vault.CriteriaExpression$
 @DoNotImplement
 @CordaSerializable
 public final class net.corda.core.node.services.vault.EqualityComparisonOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.EqualityComparisonOperator valueOf(String)
   public static net.corda.core.node.services.vault.EqualityComparisonOperator[] values()
 ##
@@ -6115,16 +6039,12 @@ public interface net.corda.core.node.services.vault.IQueryCriteriaParser extends
 @DoNotImplement
 @CordaSerializable
 public final class net.corda.core.node.services.vault.LikenessOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.LikenessOperator valueOf(String)
   public static net.corda.core.node.services.vault.LikenessOperator[] values()
 ##
 @DoNotImplement
 @CordaSerializable
 public final class net.corda.core.node.services.vault.NullOperator extends java.lang.Enum implements net.corda.core.node.services.vault.Operator
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.NullOperator valueOf(String)
   public static net.corda.core.node.services.vault.NullOperator[] values()
 ##
@@ -6432,8 +6352,6 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$SoftL
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.QueryCriteria$SoftLockingType extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.QueryCriteria$SoftLockingType valueOf(String)
   public static net.corda.core.node.services.vault.QueryCriteria.SoftLockingType[] values()
 ##
@@ -6457,8 +6375,6 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$TimeC
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.QueryCriteria$TimeInstantType extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.QueryCriteria$TimeInstantType valueOf(String)
   public static net.corda.core.node.services.vault.QueryCriteria.TimeInstantType[] values()
 ##
@@ -6663,15 +6579,11 @@ public static final class net.corda.core.node.services.vault.Sort$CommonStateAtt
   public final String getAttributeChild()
   @NotNull
   public final String getAttributeParent()
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$CommonStateAttribute valueOf(String)
   public static net.corda.core.node.services.vault.Sort.CommonStateAttribute[] values()
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.Sort$Direction extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$Direction valueOf(String)
   public static net.corda.core.node.services.vault.Sort.Direction[] values()
 ##
@@ -6680,8 +6592,6 @@ public static final class net.corda.core.node.services.vault.Sort$Direction exte
 public static final class net.corda.core.node.services.vault.Sort$FungibleStateAttribute extends java.lang.Enum implements net.corda.core.node.services.vault.Sort$Attribute
   @NotNull
   public final String getAttributeName()
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$FungibleStateAttribute valueOf(String)
   public static net.corda.core.node.services.vault.Sort.FungibleStateAttribute[] values()
 ##
@@ -6690,8 +6600,6 @@ public static final class net.corda.core.node.services.vault.Sort$FungibleStateA
 public static final class net.corda.core.node.services.vault.Sort$LinearStateAttribute extends java.lang.Enum implements net.corda.core.node.services.vault.Sort$Attribute
   @NotNull
   public final String getAttributeName()
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$LinearStateAttribute valueOf(String)
   public static net.corda.core.node.services.vault.Sort.LinearStateAttribute[] values()
 ##
@@ -6719,8 +6627,6 @@ public static final class net.corda.core.node.services.vault.Sort$SortColumn ext
 public static final class net.corda.core.node.services.vault.Sort$VaultStateAttribute extends java.lang.Enum implements net.corda.core.node.services.vault.Sort$Attribute
   @NotNull
   public final String getAttributeName()
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.node.services.vault.Sort$VaultStateAttribute valueOf(String)
   public static net.corda.core.node.services.vault.Sort.VaultStateAttribute[] values()
 ##
@@ -6901,8 +6807,6 @@ public interface net.corda.core.serialization.ClassWhitelist
 public @interface net.corda.core.serialization.ConstructorForDeserialization
 ##
 public final class net.corda.core.serialization.ContextPropertyKeys extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.serialization.ContextPropertyKeys valueOf(String)
   public static net.corda.core.serialization.ContextPropertyKeys[] values()
 ##
@@ -7036,8 +6940,6 @@ public interface net.corda.core.serialization.SerializationContext
   public abstract net.corda.core.serialization.SerializationContext withoutReferences()
 ##
 public static final class net.corda.core.serialization.SerializationContext$UseCase extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.serialization.SerializationContext$UseCase valueOf(String)
   public static net.corda.core.serialization.SerializationContext.UseCase[] values()
 ##
@@ -7377,8 +7279,6 @@ public static final class net.corda.core.transactions.ContractUpgradeWireTransac
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
 public static final class net.corda.core.transactions.ContractUpgradeWireTransaction$Component extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.transactions.ContractUpgradeWireTransaction$Component valueOf(String)
   public static net.corda.core.transactions.ContractUpgradeWireTransaction.Component[] values()
 ##
@@ -7610,8 +7510,6 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
   @NotNull
   public String toString()
 ##
-public final class net.corda.core.transactions.LedgerTransactionKt extends java.lang.Object
-##
 @CordaSerializable
 public final class net.corda.core.transactions.MissingContractAttachments extends net.corda.core.flows.FlowException
   public <init>(java.util.List)
@@ -7726,8 +7624,6 @@ public final class net.corda.core.transactions.NotaryChangeWireTransaction exten
   public String toString()
 ##
 public static final class net.corda.core.transactions.NotaryChangeWireTransaction$Component extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.core.transactions.NotaryChangeWireTransaction$Component valueOf(String)
   public static net.corda.core.transactions.NotaryChangeWireTransaction.Component[] values()
 ##
@@ -7914,6 +7810,8 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   @NotNull
   public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServiceHub)
   @NotNull
+  public final net.corda.core.transactions.LedgerTransaction toLedgerTransactionWithContext(net.corda.core.node.ServicesForResolution, net.corda.core.serialization.SerializationContext)
+  @NotNull
   public final net.corda.core.transactions.SignedTransaction toSignedTransaction(net.corda.core.node.services.KeyManagementService, java.security.PublicKey, net.corda.core.crypto.SignatureMetadata, net.corda.core.node.ServicesForResolution)
   @NotNull
   public final net.corda.core.transactions.WireTransaction toWireTransaction(net.corda.core.node.ServicesForResolution)
@@ -7921,6 +7819,8 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   public final net.corda.core.transactions.WireTransaction toWireTransaction(net.corda.core.node.ServicesForResolution, int)
   @NotNull
   public final net.corda.core.transactions.WireTransaction toWireTransaction(net.corda.core.node.ServicesForResolution, int, java.util.Map)
+  @NotNull
+  public final net.corda.core.transactions.WireTransaction toWireTransactionWithContext(net.corda.core.node.ServicesForResolution, net.corda.core.serialization.SerializationContext)
   public final void verify(net.corda.core.node.ServiceHub)
   @NotNull
   public final net.corda.core.transactions.TransactionBuilder withItems(Object...)
@@ -7958,8 +7858,6 @@ public abstract class net.corda.core.transactions.TraversableTransaction extends
   public final net.corda.core.crypto.DigestService getDigestService()
   @NotNull
   public java.util.List getInputs()
-  @NotNull
-  public final java.util.List getLegacyAttachments()
   @Nullable
   public net.corda.core.crypto.SecureHash getNetworkParametersHash()
   @Nullable
@@ -8001,6 +7899,11 @@ public final class net.corda.core.transactions.WireTransaction extends net.corda
   public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServicesForResolution)
   @NotNull
   public String toString()
+  @NotNull
+  public static final net.corda.core.transactions.WireTransaction$Companion Companion
+##
+public static final class net.corda.core.transactions.WireTransaction$Companion extends java.lang.Object
+  public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
 ##
 public final class net.corda.core.utilities.ByteArrays extends java.lang.Object
   @NotNull
@@ -8344,6 +8247,8 @@ public static final class net.corda.core.utilities.ProgressTracker$STARTING exte
   @NotNull
   public static final net.corda.core.utilities.ProgressTracker$STARTING INSTANCE
 ##
+public static interface net.corda.core.utilities.ProgressTracker$SerializableAction extends java.io.Serializable, rx.functions.Action1
+##
 @CordaSerializable
 public static class net.corda.core.utilities.ProgressTracker$Step extends java.lang.Object
   public <init>(String)
@@ -8366,6 +8271,13 @@ public static final class net.corda.core.utilities.ProgressTracker$UNSTARTED ext
 ##
 public interface net.corda.core.utilities.PropertyDelegate
   public abstract T getValue(Object, kotlin.reflect.KProperty)
+##
+public interface net.corda.core.utilities.SerializableLambda2 extends java.io.Serializable, kotlin.jvm.functions.Function2
+##
+public final class net.corda.core.utilities.SgxSupport extends java.lang.Object
+  public static final boolean isInsideEnclave()
+  @NotNull
+  public static final net.corda.core.utilities.SgxSupport INSTANCE
 ##
 public final class net.corda.core.utilities.ThreadDumpUtilsKt extends java.lang.Object
   @NotNull
@@ -9520,8 +9432,6 @@ public class net.corda.testing.driver.SharedMemoryIncremental extends net.corda.
   public static net.corda.testing.driver.SharedMemoryIncremental INSTANCE
 ##
 public final class net.corda.testing.driver.VerifierType extends java.lang.Enum
-  @NotNull
-  public static kotlin.enums.EnumEntries getEntries()
   public static net.corda.testing.driver.VerifierType valueOf(String)
   public static net.corda.testing.driver.VerifierType[] values()
 ##
@@ -9945,6 +9855,8 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @NotNull
   public net.corda.core.internal.telemetry.TelemetryServiceImpl getTelemetryService()
+  @NotNull
+  public net.corda.core.node.services.TransactionVerifierService getTransactionVerifierService()
   @NotNull
   public net.corda.core.node.services.TransactionStorage getValidatedTransactions()
   @NotNull
