@@ -57,7 +57,7 @@ pipeline {
                 stage('Scan API Changes (new plugin)') {
                     steps {
                         catchError(message: "API Scan failed - breaking changes detected", stageResult: 'FAILURE') {
-                            gradlew('apiDiff')
+                            sh "./gradlew apiDiff"
                         }
                     }
                     post {
