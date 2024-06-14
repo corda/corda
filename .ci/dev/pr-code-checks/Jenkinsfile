@@ -46,19 +46,16 @@ pipeline {
             }
         }
 
-        stage('API compatability check') {
-            parallel {
-                stage('No API change check') {
-                    steps {
-                        sh "./gradlew --no-daemon generateApi"
-                        sh ".ci/check-api-changes.sh"
-                    }
-                }
-                stage('Scan API Changes (new plugin)') {
-                    steps {
-                        sh "./gradlew apiDiff"
-                    }
-                }
+        stage('Scan API Changes (new plugin)') {
+            steps {
+                sh "./gradlew apiDiff"
+            }
+        }
+
+        stage('No API change check') {
+            steps {
+                sh "./gradlew --no-daemon generateApi"
+                sh ".ci/check-api-changes.sh"
             }
         }
 
