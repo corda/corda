@@ -1,6 +1,10 @@
 @Library('corda-shared-build-pipeline-steps')
+import groovy.transform.Field
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-import static com.r3.build.utils.PipelineUtils
+import com.r3.build.utils.PipelineUtils
+
+@Field
+PipelineUtils pipelineUtils = new PipelineUtils(this)
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
@@ -61,9 +65,9 @@ pipeline {
                         |Scan Succeeded\n
                         |\n
                         |Please check if there are any new API additions as these will need to be updated before this PR is merged
-                        | ```\n
-                        | ./gradlew cementApi\n
-                        | ```
+                        |```\n
+                        |./gradlew cementApi\n
+                        |```
                         """.stripMargin()
                         githubPRComment(commentText, "Scanning for breaking API changes introduced by this PR")
                     }
@@ -103,6 +107,6 @@ pipeline {
 }
 
 def githubPRComment(String commentText, String pattern) {
-    Long userCommentId = PipelineUtils.getUserCommentIdMatchingPattern(pattern)
-    userCommentId == null ? PipelineUtils.addGitHubComment(commentText) : PipelineUtils.editGitHubComment(commentText, userCommentId)
+    Long userCommentId = pipelineUtils.getUserCommentIdMatchingPattern(pattern)
+    userCommentId == null ? pipelineUtils.addGitHubComment(commentText) : pipelineUtils.editGitHubComment(commentText, userCommentId)
 }
