@@ -1,9 +1,6 @@
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-import com.r3.build.utils.PipelineUtils
-
-@Field
-PipelineUtils pipelineUtils = new PipelineUtils(this)
+import static com.r3.build.utils.PipelineUtils
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
@@ -106,6 +103,6 @@ pipeline {
 }
 
 def githubPRComment(String commentText, String pattern) {
-    Long userCommentId = pipelineUtils.getUserCommentIdMatchingPattern(pattern)
-    userCommentId == null ? pipelineUtils.addGitHubComment(commentText) : pipelineUtils.editGitHubComment(commentText, userCommentId)
+    Long userCommentId = PipelineUtils.getUserCommentIdMatchingPattern(pattern)
+    userCommentId == null ? PipelineUtils.addGitHubComment(commentText) : PipelineUtils.editGitHubComment(commentText, userCommentId)
 }
