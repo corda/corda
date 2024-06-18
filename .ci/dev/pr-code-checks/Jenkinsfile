@@ -1,5 +1,9 @@
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+import com.r3.build.utils.PipelineUtils
+
+@Field
+PipelineUtils pipelineUtils = new PipelineUtils(this)
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
@@ -48,7 +52,35 @@ pipeline {
 
         stage('Scan API Changes (new plugin)') {
             steps {
-                sh "./gradlew apiDiff"
+                catchError(message: "API Scan failed - breaking changes detected", stageResult: 'FAILURE') {
+                    gradlew('apiDiff')
+                }
+            }
+            post {
+                success {
+                    script {
+                        String commentText = """\
+                        |Scanning for breaking API changes introduced by this PR\n
+                        |Scan Succeeded\n
+                        |\n
+                        |Please check if there are any new API additions as these will need to be updated before this PR is merged
+                        | ```\n
+                        | ./gradlew cementApi\n
+                        | ```
+                        """.stripMargin()
+                        githubPRComment(commentText, "Scanning for breaking API changes introduced by this PR")
+                    }
+                }
+                failure {
+                    script {
+                        String commentText = """\
+                        |Scanning for breaking API changes introduced by this PR\n
+                        |Scan Failed: ${env.BUILD_URL}\n
+                        |If the breaking changes are intentional, run `./gradlew cementApi` and get approval from the Corda team leads.
+                        """.stripMargin()
+                        githubPRComment(commentText, "Scanning for breaking API changes introduced by this PR")
+                    }
+                }
             }
         }
 
@@ -71,4 +103,9 @@ pipeline {
             deleteDir() /* clean up our workspace */
         }
     }
+}
+
+def githubPRComment(String commentText, String pattern) {
+    Long userCommentId = pipelineUtils.getUserCommentIdMatchingPattern(pattern)
+    userCommentId == null ? pipelineUtils.addGitHubComment(commentText) : pipelineUtils.editGitHubComment(commentText, userCommentId)
 }
