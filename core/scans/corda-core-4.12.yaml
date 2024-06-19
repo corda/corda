@@ -2224,13 +2224,6 @@ net.corda.core.contracts.AttachmentConstraint:
           annotation:
             - NotNull
           type: net.corda.core.contracts.Attachment
-net.corda.core.contracts.AttachmentConstraintKt:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods: {}
 net.corda.core.contracts.AttachmentResolutionException:
   annotations:
     - CordaSerializable
@@ -4046,7 +4039,8 @@ net.corda.core.contracts.SignatureAttachmentConstraint$Companion:
   annotations: []
   type: public static final class
   extends: null
-  implements: []
+  implements:
+    - net.corda.core.internal.utilities.Internable
   interface: false
   methods:
     create:
@@ -10711,10 +10705,6 @@ net.corda.core.crypto.Crypto:
       annotation:
         - NotNull
       type: public static final org.bouncycastle.asn1.DLSequence
-    SPHINCS256_SHA256:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.crypto.SignatureScheme
     COMPOSITE_KEY:
       annotation:
         - NotNull
@@ -12509,7 +12499,8 @@ net.corda.core.crypto.SecureHash$Companion:
   annotations: []
   type: public static final class
   extends: null
-  implements: []
+  implements:
+    - net.corda.core.internal.utilities.Internable
   interface: false
   methods:
     allOnesHashFor:
@@ -14045,365 +14036,6 @@ net.corda.core.crypto.TransactionSignature:
       annotation:
         - NotNull
       type: public static final net.corda.core.utilities.OpaqueBytes$Companion
-net.corda.core.crypto.internal.AliasPrivateKey:
-  annotations: []
-  type: public final class
-  extends: null
-  implements:
-    - java.security.PrivateKey
-  interface: false
-  methods:
-    component1:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: String
-    copy:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.crypto.internal.AliasPrivateKey
-      params:
-        alias:
-          annotation:
-            - NotNull
-          type: String
-    equals:
-      annotations: []
-      default: false
-      type: public
-      returnType: boolean
-      params:
-        other:
-          annotation:
-            - Nullable
-          type: Object
-    getAlgorithm:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: String
-    getAlias:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: String
-    getEncoded:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: "byte[]"
-    getFormat:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: String
-    hashCode:
-      annotations: []
-      default: false
-      type: public
-      returnType: int
-    toString:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: String
-  fields:
-    Companion:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.crypto.internal.AliasPrivateKey$Companion
-    ALIAS_KEY_ALGORITHM:
-      annotation:
-        - NotNull
-      type: public static final String
-      initialised value: AliasPrivateKey
-net.corda.core.crypto.internal.AliasPrivateKey$Companion:
-  annotations: []
-  type: public static final class
-  extends: null
-  implements: []
-  interface: false
-  methods: {}
-net.corda.core.crypto.internal.DigestAlgorithmFactory:
-  annotations: []
-  type: public abstract class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    create:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.crypto.DigestAlgorithm
-    getAlgorithm:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: String
-  fields:
-    Companion:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.crypto.internal.DigestAlgorithmFactory$Companion
-net.corda.core.crypto.internal.DigestAlgorithmFactory$Companion:
-  annotations: []
-  type: public static final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    create:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.crypto.DigestAlgorithm
-      params:
-        algorithm:
-          annotation:
-            - NotNull
-          type: String
-    registerClass:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: String
-      params:
-        className:
-          annotation:
-            - NotNull
-          type: String
-net.corda.core.crypto.internal.Instances:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    getSignatureInstance:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: java.security.Signature
-      params:
-        algorithm:
-          annotation:
-            - NotNull
-          type: String
-        provider:
-          annotation:
-            - Nullable
-          type: java.security.Provider
-    releaseSignatureInstance:
-      annotations: []
-      default: false
-      type: public final
-      returnType: void
-      params:
-        sig:
-          annotation:
-            - NotNull
-          type: java.security.Signature
-    withSignature:
-      annotations: []
-      default: false
-      type: public final
-      returnType: A
-      params:
-        signatureScheme:
-          annotation:
-            - NotNull
-          type: net.corda.core.crypto.SignatureScheme
-        func:
-          annotation:
-            - NotNull
-          type: "kotlin.jvm.functions.Function1<? super java.security.Signature, ?\
-            \ extends A>"
-  fields:
-    INSTANCE:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.crypto.internal.Instances
-net.corda.core.crypto.internal.PlatformSecureRandom:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    getPlatformSecureRandom:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: kotlin.jvm.functions.Function0<java.security.SecureRandom>
-net.corda.core.crypto.internal.PlatformSecureRandomService:
-  annotations: []
-  type: public final class
-  extends: java.security.Provider$Service
-  implements: []
-  interface: false
-  methods:
-    newInstance:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: java.security.SecureRandomSpi
-      params:
-        constructorParameter:
-          annotation:
-            - Nullable
-          type: Object
-  fields:
-    Companion:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.crypto.internal.PlatformSecureRandomService$Companion
-    ALGORITHM:
-      annotation:
-        - NotNull
-      type: public static final String
-      initialised value: CordaPRNG
-net.corda.core.crypto.internal.PlatformSecureRandomService$Companion:
-  annotations: []
-  type: public static final class
-  extends: null
-  implements: []
-  interface: false
-  methods: {}
-net.corda.core.crypto.internal.ProviderMapKt:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    getBouncyCastlePQCProvider:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
-    getCordaBouncyCastleProvider:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: org.bouncycastle.jce.provider.BouncyCastleProvider
-    getCordaSecurityProvider:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: net.corda.core.crypto.CordaSecurityProvider
-    getId-Curve25519ph:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: org.bouncycastle.asn1.ASN1ObjectIdentifier
-    getProviderMap:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: "java.util.Map<String, java.security.Provider>"
-    platformSecureRandomFactory:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: java.security.SecureRandom
-net.corda.core.crypto.internal.PublicKeyCache:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    bytesForCachedPublicKey:
-      annotations:
-        - Nullable
-      default: false
-      type: public final
-      returnType: net.corda.core.utilities.ByteSequence
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: java.security.PublicKey
-    cachePublicKey:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: java.security.PublicKey
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: java.security.PublicKey
-    publicKeyForCachedBytes:
-      annotations:
-        - Nullable
-      default: false
-      type: public final
-      returnType: java.security.PublicKey
-      params:
-        bytes:
-          annotation:
-            - NotNull
-          type: net.corda.core.utilities.ByteSequence
-  fields:
-    INSTANCE:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.crypto.internal.PublicKeyCache
-net.corda.core.crypto.internal.SignatureFactory:
-  annotations: []
-  type: public interface
-  extends: []
-  interface: true
-  methods:
-    borrow:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: java.security.Signature
-      params:
-        algorithm:
-          annotation:
-            - NotNull
-          type: String
-        provider:
-          annotation:
-            - Nullable
-          type: java.security.Provider
-    release:
-      annotations: []
-      default: true
-      type: public
-      returnType: void
-      params:
-        sig:
-          annotation:
-            - NotNull
-          type: java.security.Signature
 net.corda.core.flows.AbstractStateReplacementFlow:
   annotations: []
   type: public abstract class
@@ -22941,10 +22573,36 @@ net.corda.core.flows.NotaryFlow$Client:
   annotations:
     - InitiatingFlow
   type: public static class
-  extends: net.corda.core.internal.BackpressureAwareTimedFlow
+  extends: net.corda.core.internal.TimedFlow
   implements: []
   interface: false
   methods:
+    applyWaitTimeUpdate:
+      annotations: []
+      default: false
+      type: public
+      returnType: void
+      params:
+        session:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowSession
+        update:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.WaitTimeUpdate
+    await:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public final
+      returnType: R
+      params:
+        operation:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowExternalOperation<R>
     call:
       annotations:
         - Suspendable
@@ -22952,18 +22610,125 @@ net.corda.core.flows.NotaryFlow$Client:
       default: false
       type: public
       returnType: java.util.List<net.corda.core.crypto.TransactionSignature>
+    checkFlowIsNotKilled:
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        lazyMessage:
+          annotation:
+            - NotNull
+          type: kotlin.jvm.functions.Function0<?>
+    checkFlowPermission:
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        permissionName:
+          annotation:
+            - NotNull
+          type: String
+        extraAuditData:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
     checkTransaction:
       annotations:
         - NotNull
       default: false
       type: protected final
       returnType: net.corda.core.identity.Party
+    close:
+      annotations:
+        - Suspendable
+      default: false
+      type: public final
+      returnType: void
+      params:
+        sessions:
+          annotation:
+            - NotNull
+          type: net.corda.core.utilities.NonEmptySet<net.corda.core.flows.FlowSession>
+    flowStackSnapshot:
+      annotations:
+        - Suspendable
+        - Nullable
+      default: false
+      type: public final
+      returnType: net.corda.core.flows.FlowStackSnapshot
+    getCurrentTopLevel:
+      annotations:
+        - Nullable
+      default: false
+      type: public static final
+      returnType: net.corda.core.flows.FlowLogic<?>
+    getFlowInfo:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.flows.FlowInfo
+      params:
+        otherParty:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+    getLogger:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: org.slf4j.Logger
+    getOurIdentity:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.identity.Party
+    getOurIdentityAndCert:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.identity.PartyAndCertificate
     getProgressTracker:
       annotations:
         - NotNull
       default: false
       type: public
       returnType: net.corda.core.utilities.ProgressTracker
+    getRunId:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.flows.StateMachineRunId
+    getServiceHub:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.node.ServiceHub
+    initiateFlow:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.flows.FlowSession
+      params:
+        party:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+    isKilled:
+      annotations: []
+      default: false
+      type: public final
+      returnType: boolean
     notarise:
       annotations:
         - Suspendable
@@ -22976,6 +22741,176 @@ net.corda.core.flows.NotaryFlow$Client:
           annotation:
             - NotNull
           type: net.corda.core.identity.Party
+    persistFlowStackSnapshot:
+      annotations:
+        - Suspendable
+      default: false
+      type: public final
+      returnType: void
+    receive:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public
+      returnType: net.corda.core.utilities.UntrustworthyData<R>
+      params:
+        receiveType:
+          annotation:
+            - NotNull
+          type: Class<R>
+        otherParty:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+    receiveAll:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public final
+      returnType: java.util.List<net.corda.core.utilities.UntrustworthyData<R>>
+      params:
+        receiveType:
+          annotation:
+            - NotNull
+          type: Class<R>
+        sessions:
+          annotation:
+            - NotNull
+          type: java.util.List<? extends net.corda.core.flows.FlowSession>
+    receiveAllMap:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public final
+      returnType: "java.util.Map<net.corda.core.flows.FlowSession, net.corda.core.utilities.UntrustworthyData<Object>>"
+      params:
+        sessions:
+          annotation:
+            - NotNull
+          type: "java.util.Map<net.corda.core.flows.FlowSession, ? extends Class<?>>"
+    recordAuditEvent:
+      annotations: []
+      default: false
+      type: public final
+      returnType: void
+      params:
+        eventType:
+          annotation:
+            - NotNull
+          type: String
+        comment:
+          annotation:
+            - NotNull
+          type: String
+        extraAuditData:
+          annotation:
+            - NotNull
+          type: "java.util.Map<String, String>"
+    send:
+      annotations:
+        - Suspendable
+      default: false
+      type: public
+      returnType: void
+      params:
+        otherParty:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+        payload:
+          annotation:
+            - NotNull
+          type: Object
+    sendAll:
+      annotations:
+        - Suspendable
+      default: false
+      type: public final
+      returnType: void
+      params:
+        payload:
+          annotation:
+            - NotNull
+          type: Object
+        sessions:
+          annotation:
+            - NotNull
+          type: java.util.Set<? extends net.corda.core.flows.FlowSession>
+    sendAllMap:
+      annotations:
+        - Suspendable
+      default: false
+      type: public final
+      returnType: void
+      params:
+        payloadsPerSession:
+          annotation:
+            - NotNull
+          type: "java.util.Map<net.corda.core.flows.FlowSession, ?>"
+    sendAndReceive:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public
+      returnType: net.corda.core.utilities.UntrustworthyData<R>
+      params:
+        receiveType:
+          annotation:
+            - NotNull
+          type: Class<R>
+        otherParty:
+          annotation:
+            - NotNull
+          type: net.corda.core.identity.Party
+        payload:
+          annotation:
+            - NotNull
+          type: Object
+    sleep:
+      annotations:
+        - Suspendable
+      default: false
+      type: public static final
+      returnType: void
+      params:
+        duration:
+          annotation:
+            - NotNull
+          type: java.time.Duration
+    subFlow:
+      annotations:
+        - Suspendable
+      default: false
+      type: public
+      returnType: R
+      params:
+        subLogic:
+          annotation:
+            - NotNull
+          type: net.corda.core.flows.FlowLogic<? extends R>
+    track:
+      annotations:
+        - Nullable
+      default: false
+      type: public final
+      returnType: "net.corda.core.messaging.DataFeed<String, String>"
+    trackStepsTree:
+      annotations:
+        - Nullable
+      default: false
+      type: public final
+      returnType: "net.corda.core.messaging.DataFeed<java.util.List<kotlin.Pair<Integer,\
+        \ String>>, java.util.List<kotlin.Pair<Integer, String>>>"
+    trackStepsTreeIndex:
+      annotations:
+        - Nullable
+      default: false
+      type: public final
+      returnType: "net.corda.core.messaging.DataFeed<Integer, Integer>"
     validateResponse:
       annotations:
         - NotNull
@@ -22991,6 +22926,29 @@ net.corda.core.flows.NotaryFlow$Client:
           annotation:
             - NotNull
           type: net.corda.core.identity.Party
+    waitForLedgerCommit:
+      annotations:
+        - Suspendable
+        - NotNull
+      default: false
+      type: public final
+      returnType: net.corda.core.transactions.SignedTransaction
+      params:
+        hash:
+          annotation:
+            - NotNull
+          type: net.corda.core.crypto.SecureHash
+    waitForStateConsumption:
+      annotations:
+        - Suspendable
+      default: false
+      type: public final
+      returnType: void
+      params:
+        stateRefs:
+          annotation:
+            - NotNull
+          type: java.util.Set<net.corda.core.contracts.StateRef>
   fields:
     Companion:
       annotation:
@@ -27200,10 +27158,12 @@ net.corda.core.flows.WithReferencedStatesFlow$Companion$SUCCESS:
         - NotNull
       type: public static final net.corda.core.flows.WithReferencedStatesFlow$Companion$SUCCESS
 net.corda.core.flows.WrappedFlowExternalAsyncOperation:
-  annotations: []
+  annotations:
+    - CordaSerializable
   type: public final class
   extends: null
-  implements: []
+  implements:
+    - net.corda.core.internal.FlowAsyncOperation
   interface: false
   methods:
     execute:
@@ -27224,10 +27184,12 @@ net.corda.core.flows.WrappedFlowExternalAsyncOperation:
       type: public final
       returnType: net.corda.core.flows.FlowExternalAsyncOperation<R>
 net.corda.core.flows.WrappedFlowExternalOperation:
-  annotations: []
+  annotations:
+    - CordaSerializable
   type: public final class
   extends: null
-  implements: []
+  implements:
+    - net.corda.core.internal.FlowAsyncOperation
   interface: false
   methods:
     execute:
@@ -27574,7 +27536,8 @@ net.corda.core.identity.CordaX500Name$Companion:
   annotations: []
   type: public static final class
   extends: null
-  implements: []
+  implements:
+    - net.corda.core.internal.utilities.Internable
   interface: false
   methods:
     build:
@@ -38184,73 +38147,6 @@ net.corda.core.observable.Observables:
           annotation:
             - NotNull
           type: rx.Observable<T>
-net.corda.core.observable.internal.OnNextFailedException:
-  annotations: []
-  type: public final class
-  extends: rx.exceptions.OnErrorNotImplementedException
-  implements: []
-  interface: false
-  methods: {}
-net.corda.core.observable.internal.OnResilientSubscribe:
-  annotations: []
-  type: public final class
-  extends: null
-  implements:
-    - rx.Observable$OnSubscribe
-  interface: false
-  methods:
-    call:
-      annotations: []
-      default: false
-      type: public
-      returnType: void
-      params:
-        subscriber:
-          annotation:
-            - NotNull
-          type: rx.Subscriber<? super T>
-    getSource:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: rx.Observable<T>
-net.corda.core.observable.internal.ResilientSubscriber:
-  annotations: []
-  type: public final class
-  extends: rx.observers.SafeSubscriber
-  implements: []
-  interface: false
-  methods:
-    _onError:
-      annotations: []
-      default: false
-      type: protected
-      returnType: void
-      params:
-        e:
-          annotation:
-            - NotNull
-          type: Throwable
-    onError:
-      annotations: []
-      default: false
-      type: public
-      returnType: void
-      params:
-        e:
-          annotation:
-            - NotNull
-          type: Throwable
-    onNext:
-      annotations: []
-      default: false
-      type: public
-      returnType: void
-      params:
-        t:
-          annotation: []
-          type: T
 net.corda.core.schemas.CommonSchema:
   annotations: []
   type: public final class
@@ -40100,758 +39996,6 @@ net.corda.core.serialization.SingletonSerializeAsToken:
           annotation:
             - NotNull
           type: net.corda.core.serialization.SerializeAsTokenContext
-net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory:
-  annotations: []
-  type: public final class
-  extends: null
-  implements:
-    - java.net.URLStreamHandlerFactory
-  interface: false
-  methods:
-    createURLStreamHandler:
-      annotations:
-        - Nullable
-      default: false
-      type: public
-      returnType: java.net.URLStreamHandler
-      params:
-        protocol:
-          annotation:
-            - NotNull
-          type: String
-    loadedAttachmentsSize:
-      annotations: []
-      default: false
-      type: public final
-      returnType: int
-    toUrl:
-      annotations:
-        - NotNull
-      default: false
-      type: public final synchronized
-      returnType: java.net.URL
-      params:
-        attachment:
-          annotation:
-            - NotNull
-          type: net.corda.core.contracts.Attachment
-  fields:
-    INSTANCE:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
-    attachmentScheme:
-      annotation:
-        - NotNull
-      type: public static final String
-      initialised value: attachment
-net.corda.core.serialization.internal.AttachmentsClassLoader:
-  annotations: []
-  type: public final class
-  extends: java.net.URLClassLoader
-  implements: []
-  interface: false
-  methods:
-    getParams:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.node.NetworkParameters
-    loadClass:
-      annotations:
-        - Nullable
-      default: false
-      type: protected
-      returnType: Class<?>
-      params:
-        name:
-          annotation:
-            - NotNull
-          type: String
-        resolve:
-          annotation: []
-          type: boolean
-  fields:
-    Companion:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.serialization.internal.AttachmentsClassLoader$Companion
-net.corda.core.serialization.internal.AttachmentsClassLoader$Companion:
-  annotations: []
-  type: public static final class
-  extends: null
-  implements: []
-  interface: false
-  methods: {}
-net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    withAttachmentsClassloaderContext:
-      annotations: []
-      default: false
-      type: public final
-      returnType: T
-      params:
-        attachments:
-          annotation:
-            - NotNull
-          type: java.util.List<? extends net.corda.core.contracts.Attachment>
-        params:
-          annotation:
-            - NotNull
-          type: net.corda.core.node.NetworkParameters
-        txId:
-          annotation:
-            - NotNull
-          type: net.corda.core.crypto.SecureHash
-        isAttachmentTrusted:
-          annotation:
-            - NotNull
-          type: "kotlin.jvm.functions.Function1<? super net.corda.core.contracts.Attachment,\
-            \ Boolean>"
-        parent:
-          annotation:
-            - NotNull
-          type: ClassLoader
-        attachmentsClassLoaderCache:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.internal.AttachmentsClassLoaderCache
-        block:
-          annotation:
-            - NotNull
-          type: "kotlin.jvm.functions.Function1<? super net.corda.core.serialization.SerializationContext,\
-            \ ? extends T>"
-  fields:
-    INSTANCE:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
-net.corda.core.serialization.internal.AttachmentsClassLoaderCache:
-  annotations: []
-  type: public interface
-  extends: []
-  interface: true
-  methods:
-    computeIfAbsent:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializationContext
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.internal.AttachmentsClassLoaderKey
-        mappingFunction:
-          annotation:
-            - NotNull
-          type: "kotlin.jvm.functions.Function1<? super net.corda.core.serialization.internal.AttachmentsClassLoaderKey,\
-            \ ? extends net.corda.core.serialization.SerializationContext>"
-net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl:
-  annotations:
-    - CordaSerializable
-  type: public final class
-  extends: net.corda.core.serialization.SerializeAsToken
-  implements:
-    - net.corda.core.serialization.internal.AttachmentsClassLoaderCache
-  interface: false
-  methods:
-    computeIfAbsent:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: net.corda.core.serialization.SerializationContext
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.internal.AttachmentsClassLoaderKey
-        mappingFunction:
-          annotation:
-            - NotNull
-          type: "kotlin.jvm.functions.Function1<? super net.corda.core.serialization.internal.AttachmentsClassLoaderKey,\
-            \ ? extends net.corda.core.serialization.SerializationContext>"
-    toToken:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: net.corda.core.serialization.SingletonSerializationToken
-      params:
-        context:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.SerializeAsTokenContext
-net.corda.core.serialization.internal.AttachmentsClassLoaderKey:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    component1:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: java.util.Set<net.corda.core.crypto.SecureHash>
-    component2:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.node.NetworkParameters
-    copy:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.serialization.internal.AttachmentsClassLoaderKey
-      params:
-        hashes:
-          annotation:
-            - NotNull
-          type: java.util.Set<? extends net.corda.core.crypto.SecureHash>
-        params:
-          annotation:
-            - NotNull
-          type: net.corda.core.node.NetworkParameters
-    equals:
-      annotations: []
-      default: false
-      type: public
-      returnType: boolean
-      params:
-        other:
-          annotation:
-            - Nullable
-          type: Object
-    getHashes:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: java.util.Set<net.corda.core.crypto.SecureHash>
-    getParams:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.node.NetworkParameters
-    hashCode:
-      annotations: []
-      default: false
-      type: public
-      returnType: int
-    toString:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: String
-net.corda.core.serialization.internal.AttachmentsClassLoaderSimpleCacheImpl:
-  annotations: []
-  type: public final class
-  extends: null
-  implements:
-    - net.corda.core.serialization.internal.AttachmentsClassLoaderCache
-  interface: false
-  methods:
-    computeIfAbsent:
-      annotations:
-        - NotNull
-      default: false
-      type: public
-      returnType: net.corda.core.serialization.SerializationContext
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.internal.AttachmentsClassLoaderKey
-        mappingFunction:
-          annotation:
-            - NotNull
-          type: "kotlin.jvm.functions.Function1<? super net.corda.core.serialization.internal.AttachmentsClassLoaderKey,\
-            \ ? extends net.corda.core.serialization.SerializationContext>"
-net.corda.core.serialization.internal.AttachmentsHolder:
-  annotations: []
-  type: public interface
-  extends: []
-  interface: true
-  methods:
-    get:
-      annotations:
-        - Nullable
-      default: false
-      type: public abstract
-      returnType: net.corda.core.contracts.Attachment
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: java.net.URL
-    getKey:
-      annotations:
-        - Nullable
-      default: false
-      type: public abstract
-      returnType: java.net.URL
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: java.net.URL
-    getSize:
-      annotations: []
-      default: false
-      type: public abstract
-      returnType: int
-    set:
-      annotations: []
-      default: false
-      type: public abstract
-      returnType: void
-      params:
-        key:
-          annotation:
-            - NotNull
-          type: java.net.URL
-        value:
-          annotation:
-            - NotNull
-          type: net.corda.core.contracts.Attachment
-net.corda.core.serialization.internal.CheckpointSerializationAPIKt:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    checkpointDeserialize:
-      annotations: []
-      default: false
-      type: public static final synthetic
-      returnType: T
-      params:
-        "null":
-          annotation: []
-          type: "byte[]"
-    checkpointSerialize:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: net.corda.core.serialization.SerializedBytes<T>
-      params:
-        $this$checkpointSerialize:
-          annotation:
-            - NotNull
-          type: T
-net.corda.core.serialization.internal.CheckpointSerializationContext:
-  annotations: []
-  type: public interface
-  extends: []
-  interface: true
-  methods:
-    getCheckpointCustomSerializers:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: "Iterable<net.corda.core.serialization.CheckpointCustomSerializer<?,\
-        \ ?>>"
-    getDeserializationClassLoader:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: ClassLoader
-    getEncoding:
-      annotations:
-        - Nullable
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializationEncoding
-    getEncodingWhitelist:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.EncodingWhitelist
-    getObjectReferencesEnabled:
-      annotations: []
-      default: false
-      type: public abstract
-      returnType: boolean
-    getProperties:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: "java.util.Map<Object, Object>"
-    getWhitelist:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.ClassWhitelist
-    withCheckpointCustomSerializers:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-      params:
-        checkpointCustomSerializers:
-          annotation:
-            - NotNull
-          type: "Iterable<? extends net.corda.core.serialization.CheckpointCustomSerializer<?,\
-            \ ?>>"
-    withClassLoader:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-      params:
-        classLoader:
-          annotation:
-            - NotNull
-          type: ClassLoader
-    withEncoding:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-      params:
-        encoding:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.SerializationEncoding
-    withEncodingWhitelist:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-      params:
-        encodingWhitelist:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.EncodingWhitelist
-    withProperty:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-      params:
-        property:
-          annotation:
-            - NotNull
-          type: Object
-        value:
-          annotation:
-            - NotNull
-          type: Object
-    withWhitelisted:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-      params:
-        clazz:
-          annotation:
-            - NotNull
-          type: Class<?>
-    withoutReferences:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-net.corda.core.serialization.internal.CheckpointSerializationDefaults:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    getCHECKPOINT_CONTEXT:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-    getCHECKPOINT_SERIALIZER:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.serialization.internal.CheckpointSerializer
-  fields:
-    INSTANCE:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.serialization.internal.CheckpointSerializationDefaults
-net.corda.core.serialization.internal.CheckpointSerializer:
-  annotations: []
-  type: public interface
-  extends: []
-  interface: true
-  methods:
-    deserialize:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: T
-      params:
-        byteSequence:
-          annotation:
-            - NotNull
-          type: net.corda.core.utilities.ByteSequence
-        clazz:
-          annotation:
-            - NotNull
-          type: Class<T>
-        context:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.internal.CheckpointSerializationContext
-    serialize:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializedBytes<T>
-      params:
-        obj:
-          annotation:
-            - NotNull
-          type: T
-        context:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.internal.CheckpointSerializationContext
-net.corda.core.serialization.internal.CustomSerializationSchemeUtils:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods: {}
-  fields:
-    Companion:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.serialization.internal.CustomSerializationSchemeUtils$Companion
-net.corda.core.serialization.internal.CustomSerializationSchemeUtils$Companion:
-  annotations: []
-  type: public static final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    getCustomSerializationMagicFromSchemeId:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.utilities.ByteSequence
-      params:
-        schemeId:
-          annotation: []
-          type: int
-    getSchemeIdIfCustomSerializationMagic:
-      annotations:
-        - Nullable
-      default: false
-      type: public final
-      returnType: Integer
-      params:
-        magic:
-          annotation:
-            - NotNull
-          type: net.corda.core.utilities.ByteSequence
-net.corda.core.serialization.internal.MissingSerializerException:
-  annotations: []
-  type: public class
-  extends: java.io.NotSerializableException
-  implements: []
-  interface: false
-  methods:
-    getTypeDescriptor:
-      annotations:
-        - Nullable
-      default: false
-      type: public final
-      returnType: String
-    getTypeNames:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: java.util.List<String>
-net.corda.core.serialization.internal.SerializationEnvironment:
-  annotations: []
-  type: public interface
-  extends: []
-  interface: true
-  methods:
-    getCheckpointContext:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializationContext
-    getCheckpointSerializer:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.internal.CheckpointSerializer
-    getP2pContext:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializationContext
-    getRpcClientContext:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializationContext
-    getRpcServerContext:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializationContext
-    getSerializationFactory:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializationFactory
-    getStorageContext:
-      annotations:
-        - NotNull
-      default: false
-      type: public abstract
-      returnType: net.corda.core.serialization.SerializationContext
-net.corda.core.serialization.internal.SerializationEnvironment$Companion:
-  annotations: []
-  type: public static final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    with:
-      annotations:
-        - NotNull
-      default: false
-      type: public final
-      returnType: net.corda.core.serialization.internal.SerializationEnvironment
-      params:
-        serializationFactory:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.SerializationFactory
-        p2pContext:
-          annotation:
-            - NotNull
-          type: net.corda.core.serialization.SerializationContext
-        rpcServerContext:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.SerializationContext
-        rpcClientContext:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.SerializationContext
-        storageContext:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.SerializationContext
-        checkpointContext:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.internal.CheckpointSerializationContext
-        checkpointSerializer:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.internal.CheckpointSerializer
-net.corda.core.serialization.internal.SerializationEnvironmentKt:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    getEffectiveSerializationEnv:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: net.corda.core.serialization.internal.SerializationEnvironment
-    getNodeSerializationEnv:
-      annotations:
-        - Nullable
-      default: false
-      type: public static final
-      returnType: net.corda.core.serialization.internal.SerializationEnvironment
-    get_allEnabledSerializationEnvs:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: "java.util.List<kotlin.Pair<String, net.corda.core.serialization.internal.SerializationEnvironment>>"
-    get_contextSerializationEnv:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: net.corda.core.internal.ThreadLocalToggleField<net.corda.core.serialization.internal.SerializationEnvironment>
-    get_driverSerializationEnv:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: net.corda.core.internal.SimpleToggleField<net.corda.core.serialization.internal.SerializationEnvironment>
-    get_inheritableContextSerializationEnv:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: net.corda.core.internal.InheritableThreadLocalToggleField<net.corda.core.serialization.internal.SerializationEnvironment>
-    get_rpcClientSerializationEnv:
-      annotations:
-        - NotNull
-      default: false
-      type: public static final
-      returnType: net.corda.core.internal.SimpleToggleField<net.corda.core.serialization.internal.SerializationEnvironment>
-    setNodeSerializationEnv:
-      annotations: []
-      default: false
-      type: public static final
-      returnType: void
-      params:
-        <set-?>:
-          annotation:
-            - Nullable
-          type: net.corda.core.serialization.internal.SerializationEnvironment
 net.corda.core.transactions.BaseTransaction:
   annotations: []
   type: public abstract class
@@ -42290,6 +41434,12 @@ net.corda.core.transactions.FilteredTransaction:
       default: false
       type: public
       returnType: java.util.List<net.corda.core.contracts.StateRef>
+    getLegacyAttachments:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: java.util.List<net.corda.core.crypto.SecureHash>
     getNetworkParametersHash:
       annotations:
         - Nullable
@@ -44730,6 +43880,12 @@ net.corda.core.transactions.TraversableTransaction:
       default: false
       type: public
       returnType: java.util.List<net.corda.core.contracts.StateRef>
+    getLegacyAttachments:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: java.util.List<net.corda.core.crypto.SecureHash>
     getNetworkParametersHash:
       annotations:
         - Nullable
@@ -44925,6 +44081,12 @@ net.corda.core.transactions.WireTransaction:
       default: false
       type: public
       returnType: java.util.List<net.corda.core.contracts.StateRef>
+    getLegacyAttachments:
+      annotations:
+        - NotNull
+      default: false
+      type: public final
+      returnType: java.util.List<net.corda.core.crypto.SecureHash>
     getMerkleTree:
       annotations:
         - NotNull
@@ -45047,18 +44209,6 @@ net.corda.core.transactions.WireTransaction:
       default: false
       type: public
       returnType: String
-  fields:
-    Companion:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.transactions.WireTransaction$Companion
-net.corda.core.transactions.WireTransaction$Companion:
-  annotations: []
-  type: public static final class
-  extends: null
-  implements: []
-  interface: false
-  methods: {}
 net.corda.core.utilities.ByteArrays:
   annotations: []
   type: public final class
@@ -46967,23 +46117,6 @@ net.corda.core.utilities.PropertyDelegate:
           annotation:
             - NotNull
           type: kotlin.reflect.KProperty<?>
-net.corda.core.utilities.SgxSupport:
-  annotations: []
-  type: public final class
-  extends: null
-  implements: []
-  interface: false
-  methods:
-    isInsideEnclave:
-      annotations: []
-      default: false
-      type: public static final
-      returnType: boolean
-  fields:
-    INSTANCE:
-      annotation:
-        - NotNull
-      type: public static final net.corda.core.utilities.SgxSupport
 net.corda.core.utilities.ThreadDumpUtilsKt:
   annotations: []
   type: public final class

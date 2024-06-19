@@ -139,8 +139,7 @@ scanApi {
 exportApis {
     excludeClasses = [
         // Kotlin should probably have declared this class as "synthetic".
-        "net.corda.core.Utils\$toFuture\$1\$subscription\$1",
-        "net.corda.core.internal.*"
+        "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
     ]
 }
 
