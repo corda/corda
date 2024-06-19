@@ -34,6 +34,8 @@ public class CordaCaplet extends Capsule {
     private Config nodeConfig = null;
     private String baseDir = null;
 
+    private final List<String> cmdLineAddOpens = new ArrayList<>();
+
     protected CordaCaplet(Capsule pred) {
         super(pred);
     }
@@ -101,6 +103,7 @@ public class CordaCaplet extends Capsule {
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
         checkJavaVersion();
         nodeConfig = parseConfigFile(args);
+        cmdLineAddOpens.addAll(jvmArgs.stream().filter(arg -> arg.startsWith("--add-opens")).collect(toList()));
         return super.prelaunch(jvmArgs, args);
     }
 
@@ -119,7 +122,9 @@ public class CordaCaplet extends Capsule {
     @Override
     protected int launch(ProcessBuilder pb) throws IOException, InterruptedException {
         List<String> args = pb.command();
-        args.addAll(1, getNodeJvmArgs());
+        List<String> nodeJvmArgs = getNodeJvmArgs();
+        nodeJvmArgs.addAll(cmdLineAddOpens);
+        args.addAll(1, nodeJvmArgs);
         pb.command(args);
         return super.launch(pb);
     }
@@ -168,6 +173,7 @@ public class CordaCaplet extends Capsule {
             boolean defaultOutOfMemoryErrorHandling = true;
             try {
                 List<String> configJvmArgs = nodeConfig.getStringList("custom.jvmArgs");
+                cmdLineAddOpens.addAll(configJvmArgs.stream().filter(arg -> arg.startsWith("--add-opens")).collect(toList()));
                 jvmArgs.clear();
                 jvmArgs.addAll(configJvmArgs);
                 log(LOG_VERBOSE, "Configured JVM args = " + jvmArgs);
