@@ -5,6 +5,38 @@ import groovy.transform.CompileStatic
 if (System.getenv('CORDA_ARTIFACTORY_USERNAME') != null || project.hasProperty('cordaArtifactoryUsername')) {
     logger.info("Internal R3 user - resolving publication build dependencies from internal plugins")
     pluginManager.apply('com.r3.internal.gradle.plugins.r3Publish')
+    afterEvaluate {
+        publishing {
+            publications {
+                configureEach {
+                    def repo = "https://github.com/corda/corda"
+                    pom {
+                        description = project.description
+                        name = project.name
+                        url = repo
+                        scm {
+                            url = repo
+                        }
+                        licenses {
+                            license {
+                                name = 'Apache-2.0'
+                                url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                                distribution = 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id = 'R3'
+                                name = 'R3'
+                                email = 'dev@corda.net'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 } else {
     logger.info("External user - using standard maven publishing")
     pluginManager.apply('maven-publish')
