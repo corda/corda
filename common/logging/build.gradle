@@ -3,6 +3,8 @@ import org.apache.tools.ant.filters.ReplaceTokens
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'corda.common-publishing'
 
+description 'Corda common-logging module'
+
 dependencies {
     implementation group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
 

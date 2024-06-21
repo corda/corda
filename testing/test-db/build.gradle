@@ -1,6 +1,8 @@
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
 
+description 'Corda test-db module'
+
 dependencies {
     implementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     

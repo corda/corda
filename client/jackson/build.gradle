@@ -2,6 +2,8 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'corda.common-publishing'
 
+description 'Corda Jackson module'
+
 dependencies {
     api project(':core')
 

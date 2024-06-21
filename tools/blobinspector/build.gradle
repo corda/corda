@@ -1,6 +1,8 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'corda.common-publishing'
 
+description 'Corda blob inspector module'
+
 dependencies {
     implementation project(':core')
     implementation project(':serialization')

@@ -4,6 +4,8 @@ plugins {
     id 'corda.common-publishing'
 }
 
+description 'Corda Network Builder module'
+
 apply plugin: 'org.openjfx.javafxplugin'
 
 javafx {
