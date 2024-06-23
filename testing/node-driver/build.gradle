@@ -66,6 +66,10 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
+integrationTest {
+    useJUnitPlatform()
+}
+
 jar {
     baseName 'corda-node-driver'
     manifest {
@@ -99,4 +103,34 @@ scanApi {
             "<init>(Lnet/corda/testing/node/InMemoryMessagingNetwork\$PeerHandle;Lnet/corda/node/services/messaging/Message;Lnet/corda/core/messaging/MessageRecipients;Lkotlin/jvm/internal/DefaultConstructorMarker;)V"
         ]
     ]
+}
+
+// quasar exclusions upon agent code instrumentation at run-time
+quasar {
+    excludePackages.addAll(
+            "antlr**",
+            "com.codahale**",
+            "com.fasterxml.**",
+            "com.github.benmanes.caffeine.**",
+            "com.google.**",
+            "com.lmax.**",
+            "com.zaxxer.**",
+            "net.bytebuddy**",
+            "io.github.classgraph**",
+            "io.netty*",
+            "liquibase**",
+            "nonapi.io.github.classgraph.**",
+            "org.apiguardian.**",
+            "org.bouncycastle**",
+            "org.codehaus.**",
+            "org.h2**",
+            "org.hibernate**",
+            "org.jboss.**",
+            "org.objenesis**",
+            "org.w3c.**",
+            "org.xml**",
+            "org.yaml**",
+            "rx**",
+            "net.corda.testing.core**"
+    )
 }
