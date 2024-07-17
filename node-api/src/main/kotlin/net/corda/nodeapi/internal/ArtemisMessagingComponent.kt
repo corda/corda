@@ -42,18 +42,18 @@ class ArtemisMessagingComponent {
             // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
             // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
             // confusion.
-            val topicProperty = SimpleString("platform-topic")
-            val cordaVendorProperty = SimpleString("corda-vendor")
-            val releaseVersionProperty = SimpleString("release-version")
-            val platformVersionProperty = SimpleString("platform-version")
-            val senderUUID = SimpleString("sender-uuid")
-            val senderSeqNo = SimpleString("send-seq-no")
+            val topicProperty = SimpleString.of("platform-topic")
+            val cordaVendorProperty = SimpleString.of("corda-vendor")
+            val releaseVersionProperty = SimpleString.of("release-version")
+            val platformVersionProperty = SimpleString.of("platform-version")
+            val senderUUID = SimpleString.of("sender-uuid")
+            val senderSeqNo = SimpleString.of("send-seq-no")
             /**
              * In the operation mode where we have an out of process bridge we cannot correctly populate the Artemis validated user header
              * as the TLS does not terminate directly onto Artemis. We therefore use this internal only header to forward
              * the equivalent information from the Float.
              */
-            val bridgedCertificateSubject = SimpleString("sender-subject-name")
+            val bridgedCertificateSubject = SimpleString.of("sender-subject-name")
 
             object Type {
                 const val KEY = "corda_p2p_message_type"
